@@ -8,6 +8,7 @@ import MetricCard from "../components/MetricCard";
 import EventFeed from "../components/EventFeed";
 import ActiveSessions from "../components/ActiveSessions";
 import PulseChart from "../components/PulseChart";
+import AgentTopology from "../components/AgentTopology";
 import ToolBreakdown from "../components/ToolBreakdown";
 import DockerPanel from "../components/DockerPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
@@ -94,6 +95,9 @@ export default function Dashboard() {
 
       {/* Activity Pulse */}
       <PulseChart events={events} />
+
+      {/* Agent Topology */}
+      <AgentTopology />
 
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
