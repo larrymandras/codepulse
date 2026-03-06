@@ -57,7 +57,7 @@ export const syncInventory = mutation({
         await ctx.db.insert("configChanges", {
           configKey: `mcpServer:${existing.name}`,
           oldValue: existing,
-          newValue: undefined as any,
+          newValue: null,
           changedBy: "scanner",
           changedAt: now,
         });
@@ -101,7 +101,7 @@ export const syncInventory = mutation({
         await ctx.db.insert("configChanges", {
           configKey: `plugin:${existing.name}`,
           oldValue: existing,
-          newValue: undefined as any,
+          newValue: null,
           changedBy: "scanner",
           changedAt: now,
         });
@@ -144,7 +144,7 @@ export const syncInventory = mutation({
         await ctx.db.insert("configChanges", {
           configKey: `skill:${existing.name}`,
           oldValue: existing,
-          newValue: undefined as any,
+          newValue: null,
           changedBy: "scanner",
           changedAt: now,
         });
