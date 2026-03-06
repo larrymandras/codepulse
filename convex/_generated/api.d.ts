@@ -19,6 +19,7 @@ import type * as coordination from "../coordination.js";
 import type * as docker from "../docker.js";
 import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
+import type * as health from "../health.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as llm from "../llm.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   docker: typeof docker;
   events: typeof events;
   fileOps: typeof fileOps;
+  health: typeof health;
   http: typeof http;
   ingest: typeof ingest;
   llm: typeof llm;

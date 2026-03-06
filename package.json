@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "deploy": "npx convex deploy && npx vite build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",

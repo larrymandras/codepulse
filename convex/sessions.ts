@@ -58,3 +58,44 @@ export const getById = query({
       .first();
   },
 });
+
+export const listAll = query({
+  args: {
+    limit: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    return await ctx.db
+      .query("sessions")
+      .order("desc")
+      .take(limit);
+  },
+});
+
+export const comparison = query({
+  args: {
+    sessionIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const sid of args.sessionIds) {
+      const session = await ctx.db
+        .query("sessions")
+        .withIndex("by_sessionId", (q) => q.eq("sessionId", sid))
+        .first();
+      if (session) {
+        const duration = session.lastEventAt - session.startedAt;
+        results.push({
+          sessionId: session.sessionId,
+          model: session.model ?? "unknown",
+          eventCount: session.eventCount,
+          duration,
+          status: session.status,
+          startedAt: session.startedAt,
+          lastEventAt: session.lastEventAt,
+        });
+      }
+    }
+    return results;
+  },
+});

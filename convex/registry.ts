@@ -282,6 +282,66 @@ export const listConfigChanges = query({
   },
 });
 
+export const capabilityGrowth = query({
+  args: {},
+  handler: async (ctx) => {
+    const tools = await ctx.db.query("discoveredTools").collect();
+    const servers = await ctx.db.query("mcpServers").collect();
+    const plugins = await ctx.db.query("plugins").collect();
+    const skills = await ctx.db.query("skills").collect();
+
+    // Group by day using discoveredAt/installedAt/lastSeenAt
+    const dayMap: Record<string, { tools: number; mcpServers: number; plugins: number; skills: number }> = {};
+
+    const toDayKey = (ts: number) => {
+      const d = new Date(ts * 1000);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+
+    const ensure = (day: string) => {
+      if (!dayMap[day]) dayMap[day] = { tools: 0, mcpServers: 0, plugins: 0, skills: 0 };
+    };
+
+    for (const t of tools) {
+      const day = toDayKey(t.discoveredAt);
+      ensure(day);
+      dayMap[day].tools++;
+    }
+    for (const s of servers) {
+      const day = toDayKey(s.lastSeenAt);
+      ensure(day);
+      dayMap[day].mcpServers++;
+    }
+    for (const p of plugins) {
+      const day = toDayKey(p.installedAt);
+      ensure(day);
+      dayMap[day].plugins++;
+    }
+    for (const sk of skills) {
+      const day = toDayKey(sk.discoveredAt);
+      ensure(day);
+      dayMap[day].skills++;
+    }
+
+    // Sort by date and compute cumulative
+    const sorted = Object.entries(dayMap).sort((a, b) => a[0].localeCompare(b[0]));
+    let cumTools = 0, cumServers = 0, cumPlugins = 0, cumSkills = 0;
+    return sorted.map(([date, counts]) => {
+      cumTools += counts.tools;
+      cumServers += counts.mcpServers;
+      cumPlugins += counts.plugins;
+      cumSkills += counts.skills;
+      return {
+        date,
+        tools: cumTools,
+        mcpServers: cumServers,
+        plugins: cumPlugins,
+        skills: cumSkills,
+      };
+    });
+  },
+});
+
 export const summary = query({
   args: {},
   handler: async (ctx) => {

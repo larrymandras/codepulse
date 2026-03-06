@@ -87,3 +87,36 @@ export const providerBreakdown = query({
     }));
   },
 });
+
+export const costOverTime = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp")
+      .order("asc")
+      .collect();
+    return all.map((r) => ({
+      timestamp: r.timestamp,
+      provider: r.provider,
+      cost: r.cost ?? 0,
+      tokens: r.totalTokens,
+    }));
+  },
+});
+
+export const latencyOverTime = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp")
+      .order("asc")
+      .collect();
+    return all.map((r) => ({
+      timestamp: r.timestamp,
+      provider: r.provider,
+      latencyMs: r.latencyMs,
+    }));
+  },
+});

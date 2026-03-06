@@ -3,8 +3,11 @@ import { api } from "../../convex/_generated/api";
 import { useRecentEvents } from "../hooks/useRecentEvents";
 import { useLlmMetrics } from "../hooks/useLlmMetrics";
 import { formatCost } from "../lib/formatters";
-import ToolBreakdown from "../components/ToolBreakdown";
-import PulseChart from "../components/PulseChart";
+import MetricCard from "../components/MetricCard";
+import CostTrendChart from "../components/CostTrendChart";
+import LlmAnalyticsPanel from "../components/LlmAnalyticsPanel";
+import CapabilityGrowthChart from "../components/CapabilityGrowthChart";
+import SessionComparison from "../components/SessionComparison";
 
 export default function Analytics() {
   const events = useRecentEvents(100);
@@ -16,47 +19,27 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Analytics</h1>
+      <h1 className="text-2xl font-bold text-gray-100">Analytics</h1>
 
+      {/* Summary row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-gray-500">Total Events</p>
-          <p className="text-2xl font-bold text-gray-100">{events.length}</p>
-        </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-gray-500">LLM Calls</p>
-          <p className="text-2xl font-bold text-gray-100">{llmCalls.length}</p>
-        </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-gray-500">Total Tokens</p>
-          <p className="text-2xl font-bold text-gray-100">{totalTokens.toLocaleString()}</p>
-        </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-gray-500">Total Cost</p>
-          <p className="text-2xl font-bold text-gray-100">{formatCost(totalCost)}</p>
-        </div>
+        <MetricCard label="Total Events" value={events.length} />
+        <MetricCard label="LLM Calls" value={llmCalls.length} />
+        <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+        <MetricCard label="Total Cost" value={formatCost(totalCost)} />
       </div>
 
+      {/* Cost Trend — full width */}
+      <CostTrendChart />
+
+      {/* Two-column: LLM Analytics + Capability Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PulseChart events={events} />
-        <ToolBreakdown events={events} />
+        <LlmAnalyticsPanel />
+        <CapabilityGrowthChart />
       </div>
 
-      {Object.keys(costByProvider).length > 0 && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost by Provider</h2>
-          <div className="space-y-2">
-            {Object.entries(costByProvider)
-              .sort((a, b) => (b[1] as number) - (a[1] as number))
-              .map(([provider, cost]) => (
-                <div key={provider} className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">{provider}</span>
-                  <span className="text-sm font-mono text-gray-200">{formatCost(cost as number)}</span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
+      {/* Session Comparison — full width */}
+      <SessionComparison />
     </div>
   );
 }
