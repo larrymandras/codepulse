@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
+import AlertBanner from "../components/AlertBanner";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "grid" },
@@ -86,6 +87,7 @@ export default function DashboardLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto bg-gray-900 p-6">
+          <AlertBanner />
           <Outlet />
         </main>
       </div>

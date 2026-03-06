@@ -10,6 +10,7 @@
 
 import type * as agentProfiles from "../agentProfiles.js";
 import type * as agents from "../agents.js";
+import type * as alertRules from "../alertRules.js";
 import type * as alerts from "../alerts.js";
 import type * as avatars from "../avatars.js";
 import type * as build from "../build.js";
@@ -41,6 +42,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   agentProfiles: typeof agentProfiles;
   agents: typeof agents;
+  alertRules: typeof alertRules;
   alerts: typeof alerts;
   avatars: typeof avatars;
   build: typeof build;
