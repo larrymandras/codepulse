@@ -51,3 +51,39 @@ export const costByProvider = query({
     return grouped;
   },
 });
+
+export const costByModel = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("llmMetrics").collect();
+    const grouped: Record<string, { calls: number; tokens: number; cost: number }> = {};
+    for (const r of all) {
+      const key = r.model;
+      if (!grouped[key]) grouped[key] = { calls: 0, tokens: 0, cost: 0 };
+      grouped[key].calls++;
+      grouped[key].tokens += r.totalTokens;
+      grouped[key].cost += r.cost ?? 0;
+    }
+    return grouped;
+  },
+});
+
+export const providerBreakdown = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("llmMetrics").collect();
+    const grouped: Record<string, { calls: number; totalLatency: number; cost: number }> = {};
+    for (const r of all) {
+      if (!grouped[r.provider]) grouped[r.provider] = { calls: 0, totalLatency: 0, cost: 0 };
+      grouped[r.provider].calls++;
+      grouped[r.provider].totalLatency += r.latencyMs;
+      grouped[r.provider].cost += r.cost ?? 0;
+    }
+    return Object.entries(grouped).map(([provider, data]) => ({
+      provider,
+      calls: data.calls,
+      avgLatency: Math.round(data.totalLatency / data.calls),
+      cost: data.cost,
+    }));
+  },
+});
