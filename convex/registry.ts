@@ -342,6 +342,38 @@ export const capabilityGrowth = query({
   },
 });
 
+export const upsertMcpServer = mutation({
+  args: {
+    name: v.string(),
+    status: v.string(),
+    url: v.optional(v.string()),
+    toolCount: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    const existing = await ctx.db
+      .query("mcpServers")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        status: args.status,
+        url: args.url ?? existing.url,
+        toolCount: args.toolCount ?? existing.toolCount,
+        lastSeenAt: now,
+      });
+    } else {
+      await ctx.db.insert("mcpServers", {
+        name: args.name,
+        status: args.status,
+        url: args.url,
+        toolCount: args.toolCount,
+        lastSeenAt: now,
+      });
+    }
+  },
+});
+
 export const summary = query({
   args: {},
   handler: async (ctx) => {

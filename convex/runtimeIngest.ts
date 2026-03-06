@@ -55,11 +55,11 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           await ctx.runMutation(api.llm.recordCall, {
             provider: d.provider ?? "unknown",
             model: d.model ?? "unknown",
-            promptTokens: d.promptTokens ?? d.prompt_tokens ?? 0,
-            completionTokens: d.completionTokens ?? d.completion_tokens ?? 0,
-            totalTokens: d.totalTokens ?? d.total_tokens ?? 0,
+            promptTokens: d.promptTokens ?? d.prompt_tokens ?? d.inputTokens ?? d.input_tokens ?? 0,
+            completionTokens: d.completionTokens ?? d.completion_tokens ?? d.outputTokens ?? d.output_tokens ?? 0,
+            totalTokens: d.totalTokens ?? d.total_tokens ?? ((d.promptTokens ?? d.prompt_tokens ?? d.inputTokens ?? d.input_tokens ?? 0) + (d.completionTokens ?? d.completion_tokens ?? d.outputTokens ?? d.output_tokens ?? 0)),
             latencyMs: d.latencyMs ?? d.latency_ms ?? 0,
-            cost: d.cost,
+            cost: d.cost ?? d.costUsd ?? d.cost_usd,
             sessionId: d.sessionId ?? d.session_id,
             timestamp,
           });
@@ -156,6 +156,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             eventType: d.coordinationType ?? d.coordination_type ?? "message",
             payload: d.payload,
             status: d.status,
+          });
+          break;
+        }
+        case "mcp_connection": {
+          const d = data as any;
+          await ctx.runMutation(api.registry.upsertMcpServer, {
+            name: d.name ?? d.serverName ?? d.server_name ?? "unknown",
+            status: d.status ?? "connected",
+            url: d.url,
+            toolCount: d.toolCount ?? d.tool_count,
           });
           break;
         }
