@@ -38,3 +38,85 @@ export const overview = query({
     return grouped;
   },
 });
+
+// Batch ingest from Astridr profile_activity telemetry
+// Astridr sends: { activeProfiles, activeChannels, profileActivity: {profile_id: sender_count} }
+export const recordActivityBatch = mutation({
+  args: {
+    activeProfiles: v.optional(v.float64()),
+    activeChannels: v.optional(v.any()),
+    profileActivity: v.optional(v.any()),
+    timestamp: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    const now = args.timestamp;
+
+    // Record aggregate active-profiles metric
+    if (args.activeProfiles !== undefined) {
+      await ctx.db.insert("profileMetrics", {
+        profileId: "_aggregate",
+        metric: "active_profiles",
+        value: args.activeProfiles,
+        tags: { activeChannels: args.activeChannels },
+        timestamp: now,
+      });
+    }
+
+    // Flatten per-profile activity into individual metric records
+    if (args.profileActivity && typeof args.profileActivity === "object") {
+      const activity = args.profileActivity as Record<string, number>;
+      for (const [profileId, senderCount] of Object.entries(activity)) {
+        await ctx.db.insert("profileMetrics", {
+          profileId,
+          metric: "sender_count",
+          value: typeof senderCount === "number" ? senderCount : 0,
+          timestamp: now,
+        });
+      }
+    }
+  },
+});
+
+// Profile config sync
+export const upsertConfig = mutation({
+  args: {
+    profileId: v.string(),
+    channels: v.optional(v.any()),
+    budget: v.optional(v.any()),
+    modelPreferences: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    const existing = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        channels: args.channels ?? existing.channels,
+        budget: args.budget ?? existing.budget,
+        modelPreferences: args.modelPreferences ?? existing.modelPreferences,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("profileConfigs", {
+        profileId: args.profileId,
+        channels: args.channels,
+        budget: args.budget,
+        modelPreferences: args.modelPreferences,
+        updatedAt: now,
+      });
+    }
+  },
+});
+
+export const listConfigs = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_updatedAt")
+      .order("desc")
+      .collect();
+  },
+});

@@ -394,4 +394,34 @@ export default defineSchema({
   })
     .index("by_hookId", ["hookId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // EPISODIC MEMORY TABLE
+  // ============================================================
+
+  episodicEvents: defineTable({
+    agentId: v.optional(v.string()),
+    eventType: v.string(), // "memory_stored" | "memory_recalled" | "memory_pruned"
+    summary: v.string(),
+    detail: v.optional(v.any()),
+    occurredAt: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_agent", ["agentId", "timestamp"])
+    .index("by_type", ["eventType", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // PROFILE CONFIG TABLE — syncs Astridr ProfileConfig
+  // ============================================================
+
+  profileConfigs: defineTable({
+    profileId: v.string(),
+    channels: v.optional(v.any()), // array of channel configs
+    budget: v.optional(v.any()), // spending limits
+    modelPreferences: v.optional(v.any()),
+    updatedAt: v.float64(),
+  })
+    .index("by_profileId", ["profileId"])
+    .index("by_updatedAt", ["updatedAt"]),
 });

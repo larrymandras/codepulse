@@ -89,12 +89,23 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "profile_activity": {
           const d = data as any;
-          await ctx.runMutation(api.profiles.recordMetrics, {
-            profileId: d.profileId ?? d.profile_id ?? "unknown",
-            metric: d.metric ?? "activity",
-            value: d.value ?? 0,
-            tags: d.tags,
-          });
+          // Astridr sends batch: { activeProfiles, activeChannels, profileActivity: {id: count} }
+          // Route to batch handler if batch format detected, else fall back to single record
+          if (d.profileActivity || d.activeProfiles !== undefined) {
+            await ctx.runMutation(api.profiles.recordActivityBatch, {
+              activeProfiles: d.activeProfiles ?? d.active_profiles,
+              activeChannels: d.activeChannels ?? d.active_channels,
+              profileActivity: d.profileActivity ?? d.profile_activity,
+              timestamp,
+            });
+          } else {
+            await ctx.runMutation(api.profiles.recordMetrics, {
+              profileId: d.profileId ?? d.profile_id ?? "unknown",
+              metric: d.metric ?? "activity",
+              value: d.value ?? 0,
+              tags: d.tags,
+            });
+          }
           break;
         }
         case "docker_status": {
@@ -250,6 +261,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             version: d.new ?? d.version ?? "unknown",
             previousVersion: d.previous ?? d.previousVersion,
             changeType: d.change_type ?? d.changeType,
+          });
+          break;
+        }
+        case "episodic_event": {
+          const d = data as any;
+          await ctx.runMutation(api.episodic.recordEvent, {
+            agentId: d.agentId ?? d.agent_id,
+            eventType: d.memoryType ?? d.memory_type ?? d.eventType ?? d.event_type ?? "unknown",
+            summary: d.summary ?? d.description ?? "",
+            detail: d.detail ?? d.details ?? d.metadata,
+            occurredAt: d.occurredAt ?? d.occurred_at ?? timestamp,
+          });
+          break;
+        }
+        case "profile_config": {
+          const d = data as any;
+          await ctx.runMutation(api.profiles.upsertConfig, {
+            profileId: d.profileId ?? d.profile_id ?? "unknown",
+            channels: d.channels,
+            budget: d.budget,
+            modelPreferences: d.modelPreferences ?? d.model_preferences,
           });
           break;
         }

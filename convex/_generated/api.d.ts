@@ -21,6 +21,7 @@ import type * as contextSnapshots from "../contextSnapshots.js";
 import type * as coordination from "../coordination.js";
 import type * as docker from "../docker.js";
 import type * as drift from "../drift.js";
+import type * as episodic from "../episodic.js";
 import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
 import type * as forge from "../forge.js";
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   coordination: typeof coordination;
   docker: typeof docker;
   drift: typeof drift;
+  episodic: typeof episodic;
   events: typeof events;
   fileOps: typeof fileOps;
   forge: typeof forge;
