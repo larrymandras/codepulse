@@ -3,6 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
 import { useActiveAlerts, useAllAlerts, useAlertCounts } from "../hooks/useAlerts";
+import AlertRulesEngine from "../components/AlertRulesEngine";
 
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
 
@@ -183,6 +184,9 @@ export default function Alerts() {
           })}
         </div>
       )}
+
+      {/* Alert Rules Engine */}
+      <AlertRulesEngine />
     </div>
   );
 }

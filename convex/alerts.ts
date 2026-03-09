@@ -130,9 +130,18 @@ export const evaluate = mutation({
       .collect();
     const activeSourceSet = new Set(activeAlerts.map((a) => a.source));
 
+    // Load disabled rules from config
+    const disabledConfig = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "alert-rules-disabled"))
+      .first();
+    const disabledRules = new Set<string>((disabledConfig?.value as string[]) ?? []);
+
     const created: string[] = [];
 
     async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
+      // Skip disabled rules
+      if (disabledRules.has(ruleId)) return;
       // Deduplicate: skip if an active alert with this source already exists
       if (activeSourceSet.has(ruleId)) return;
       await ctx.db.insert("alerts", {

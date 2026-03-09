@@ -8,6 +8,10 @@ import CostTrendChart from "../components/CostTrendChart";
 import LlmAnalyticsPanel from "../components/LlmAnalyticsPanel";
 import CapabilityGrowthChart from "../components/CapabilityGrowthChart";
 import SessionComparison from "../components/SessionComparison";
+import ActivityHeatmap from "../components/ActivityHeatmap";
+import SankeyFlow from "../components/SankeyFlow";
+import TokenSunburst from "../components/TokenSunburst";
+import TokenWaterfall from "../components/TokenWaterfall";
 
 export default function Analytics() {
   const events = useRecentEvents(100);
@@ -40,6 +44,21 @@ export default function Analytics() {
 
       {/* Session Comparison — full width */}
       <SessionComparison />
+
+      {/* Advanced Visualizations */}
+      <h2 className="text-lg font-semibold text-gray-200 pt-4">Advanced Visualizations</h2>
+
+      {/* Activity Heatmap — full width */}
+      <ActivityHeatmap />
+
+      {/* Sankey + Sunburst — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SankeyFlow />
+        <TokenSunburst />
+      </div>
+
+      {/* Token Waterfall — full width */}
+      <TokenWaterfall />
     </div>
   );
 }
