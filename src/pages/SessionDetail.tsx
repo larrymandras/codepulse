@@ -2,10 +2,13 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { formatTimestamp, formatDuration } from "../lib/formatters";
+import { formatTimestamp } from "../lib/formatters";
 import { getEventIcon, getEventColor } from "../lib/eventIcons";
 import MetricCard from "../components/MetricCard";
 import SessionHeader from "../components/SessionHeader";
+import GanttTimeline from "../components/GanttTimeline";
+import ContextGauge from "../components/ContextGauge";
+import FileTree from "../components/FileTree";
 import SessionTimeline from "../components/SessionTimeline";
 import BashLog from "../components/BashLog";
 
@@ -76,6 +79,18 @@ export default function SessionDetail() {
             <MetricCard label="Files Touched" value={fileCount} />
           </div>
 
+          {/* Context Gauge + Gantt side by side on large screens */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <ContextGauge sessionId={id} />
+            <div className="lg:col-span-2">
+              <GanttTimeline
+                events={events}
+                agents={agents}
+                sessionStart={session?.startedAt ?? 0}
+              />
+            </div>
+          </div>
+
           {agents.length > 0 && (
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
               <h2 className="text-sm font-semibold text-gray-300 mb-3">
@@ -110,15 +125,18 @@ export default function SessionDetail() {
 
       {/* Timeline Tab */}
       {activeTab === "timeline" && (
-        <SessionTimeline events={events} agents={agents} />
+        <div className="space-y-4">
+          <GanttTimeline
+            events={events}
+            agents={agents}
+            sessionStart={session?.startedAt ?? 0}
+          />
+          <SessionTimeline events={events} agents={agents} />
+        </div>
       )}
 
       {/* Files Tab */}
-      {activeTab === "files" && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-          <p className="text-gray-500">File operations panel — coming soon</p>
-        </div>
-      )}
+      {activeTab === "files" && <FileTree sessionId={id} />}
 
       {/* Bash Tab */}
       {activeTab === "bash" && <BashLog sessionId={id} />}
