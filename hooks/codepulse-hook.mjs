@@ -65,10 +65,36 @@ async function main() {
   const filePath = event.filePath || undefined;
   const hookType = event.hookType || undefined;
 
+  // Map hookType to richer eventType
+  let mappedEventType = eventType;
+  const hType = hookType || event.hookType || "";
+
+  if (hType === "SessionEnd" || eventType === "SessionEnd") {
+    mappedEventType = "session_end";
+  } else if (hType === "SubagentStart" || eventType === "SubagentStart") {
+    mappedEventType = "subagent_start";
+  } else if (hType === "SubagentStop" || eventType === "SubagentStop") {
+    mappedEventType = "subagent_stop";
+  } else if (hType === "UserPromptSubmit" || eventType === "UserPromptSubmit") {
+    mappedEventType = "user_prompt";
+  } else if (hType === "Stop" || eventType === "Stop") {
+    mappedEventType = "session_stop";
+  } else if (hType === "PostToolUseFailure" || eventType === "PostToolUseFailure") {
+    mappedEventType = "tool_error";
+  } else if (hType === "PermissionRequest" || eventType === "PermissionRequest") {
+    mappedEventType = "permission_request";
+  } else if (hType === "PreCompact" || eventType === "PreCompact") {
+    mappedEventType = "pre_compact";
+  } else if (hType === "Notification" || eventType === "Notification") {
+    mappedEventType = "notification";
+  } else if (hType === "Setup" || eventType === "Setup") {
+    mappedEventType = "setup";
+  }
+
   // POST to /ingest
   const ingestBody = {
     sessionId,
-    eventType,
+    eventType: mappedEventType,
     toolName,
     filePath,
     hookType,
@@ -92,8 +118,8 @@ async function main() {
     clearTimeout(timeout);
   }
 
-  // On SessionStart, also run the environment scanner
-  if (eventType === "SessionStart") {
+  // On SessionStart or Setup, also run the environment scanner
+  if (eventType === "SessionStart" || mappedEventType === "setup") {
     try {
       const scannerPath = pathToFileURL(join(__dirname, "scanner.mjs")).href;
       const { runScan } = await import(scannerPath);

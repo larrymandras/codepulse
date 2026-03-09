@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "PostToolUse": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "PreCompact": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "SessionStart": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "SessionEnd": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "UserPromptSubmit": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "PostToolUseFailure": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "PermissionRequest": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "Notification": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "Stop": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "SubagentStart": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "SubagentStop": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }],
+    "Setup": [{ "command": "node /path/to/codepulse/hooks/codepulse-hook.mjs" }]
+  }
+}

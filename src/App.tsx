@@ -13,6 +13,7 @@ import Security from "./pages/Security";
 import SelfHealing from "./pages/SelfHealing";
 import BuildProgress from "./pages/BuildProgress";
 import Settings from "./pages/Settings";
+import Memory from "./pages/Memory";
 
 // Lazy-load Forge (Three.js is ~1MB) — only downloaded when user navigates to /forge
 const Forge = lazy(() => import("./pages/Forge"));
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/self-healing" element={<SelfHealing />} />
             <Route path="/build" element={<BuildProgress />} />
             <Route path="/forge" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Forge...</div>}><Forge /></Suspense>} />
+            <Route path="/memory" element={<Memory />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>

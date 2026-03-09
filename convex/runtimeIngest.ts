@@ -285,6 +285,37 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "git_commit": {
+          const d = data as any;
+          await ctx.runMutation(api.git.recordCommit, {
+            sha: d.sha ?? d.hash ?? "unknown",
+            message: d.message ?? d.commit_message ?? "",
+            branch: d.branch ?? "unknown",
+            author: d.author ?? "unknown",
+            filesChanged: d.filesChanged ?? d.files_changed ?? 0,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "profile_switch": {
+          const d = data as any;
+          await ctx.runMutation(api.profiles.recordSwitch, {
+            fromProfile: d.fromProfile ?? d.from_profile ?? "unknown",
+            toProfile: d.toProfile ?? d.to_profile ?? "unknown",
+            reason: d.reason,
+          });
+          break;
+        }
+        case "wsl2_status": {
+          const d = data as any;
+          await ctx.runMutation(api.wsl2.upsertStatus, {
+            distro: d.distro ?? "unknown",
+            status: d.status ?? "unknown",
+            memoryMb: d.memoryMb ?? d.memory_mb,
+            cpuPercent: d.cpuPercent ?? d.cpu_percent,
+          });
+          break;
+        }
       }
     }
 

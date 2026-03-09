@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -18,6 +18,7 @@ const navItems = [
   { to: "/self-healing", label: "Self-Healing", icon: "refresh" },
   { to: "/build", label: "Build", icon: "hammer" },
   { to: "/forge", label: "Forge", icon: "tree" },
+  { to: "/memory", label: "Memory", icon: "brain" },
   { to: "/settings", label: "Settings", icon: "gear" },
 ];
 
@@ -32,6 +33,7 @@ const iconMap: Record<string, string> = {
   refresh: "<>",
   hammer: "T",
   tree: "Y",
+  brain: "(~)",
   gear: "*",
 };
 
@@ -88,6 +90,54 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const [crtEnabled, setCrtEnabled] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codepulse-crt") ?? "false");
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const handler = () => {
+      try {
+        setCrtEnabled(JSON.parse(localStorage.getItem("codepulse-crt") ?? "false"));
+      } catch {}
+    };
+    window.addEventListener("storage", handler);
+    // Also listen for custom event for same-tab updates
+    window.addEventListener("codepulse-crt-toggle", handler);
+    return () => {
+      window.removeEventListener("storage", handler);
+      window.removeEventListener("codepulse-crt-toggle", handler);
+    };
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Don't trigger when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      switch (e.key.toLowerCase()) {
+        case "m":
+          // Toggle audio mute (dispatch event for AmbientAudioPlayer)
+          window.dispatchEvent(new Event("codepulse-toggle-audio"));
+          break;
+        case "p":
+          // Cycle privacy level
+          window.dispatchEvent(new Event("codepulse-cycle-privacy"));
+          break;
+        case "escape":
+          // Close mobile sidebar
+          setSidebarOpen(false);
+          break;
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -179,6 +229,9 @@ export default function DashboardLayout() {
 
       {/* Onboarding Guide */}
       <OnboardingGuide />
+
+      {/* CRT Overlay */}
+      {crtEnabled && <div className="crt-overlay" />}
     </div>
   );
 }

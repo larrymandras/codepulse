@@ -5,7 +5,8 @@
 
 import { readFileSync, existsSync, readdirSync } from "fs";
 import { join, dirname } from "path";
-import { homedir } from "os";
+import { homedir, cpus, totalmem, freemem } from "os";
+import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 
 /**
@@ -96,6 +97,82 @@ export async function runScan(sessionId, codepulseUrl) {
       snapshot.projectVersion = pkg.version || undefined;
     } catch {
       // ignore parse errors
+    }
+  }
+
+  // ── Docker containers ───────────────────────────────────────────
+  snapshot.docker = [];
+  try {
+    const dockerOutput = execSync("docker ps --format json", {
+      encoding: "utf-8",
+      timeout: 5000,
+    });
+    const lines = dockerOutput.trim().split("\n").filter(Boolean);
+    for (const line of lines) {
+      try {
+        const container = JSON.parse(line);
+        snapshot.docker.push({
+          id: container.ID,
+          name: container.Names,
+          image: container.Image,
+          status: container.Status,
+          state: container.State,
+          ports: container.Ports,
+        });
+      } catch {
+        // skip unparseable lines
+      }
+    }
+  } catch {
+    // Docker not available or not running — non-fatal
+  }
+
+  // ── System resources ────────────────────────────────────────────
+  snapshot.system = {
+    cpus: cpus().length,
+    cpuModel: cpus()[0]?.model ?? "unknown",
+    totalMemoryMb: Math.round(totalmem() / 1024 / 1024),
+    freeMemoryMb: Math.round(freemem() / 1024 / 1024),
+    arch: process.arch,
+    platform: process.platform,
+    nodeVersion: process.version,
+  };
+
+  // ── WSL2 detection (Windows only) ──────────────────────────────
+  snapshot.wsl2 = [];
+  if (process.platform === "win32") {
+    try {
+      const wslOutput = execSync("wsl --list --quiet", {
+        encoding: "utf-8",
+        timeout: 5000,
+      });
+      const distros = wslOutput
+        .trim()
+        .split("\n")
+        .map((d) => d.trim().replace(/\0/g, ""))
+        .filter(Boolean);
+      snapshot.wsl2 = distros.map((name) => ({ distro: name, status: "available" }));
+    } catch {
+      // WSL not available — non-fatal
+    }
+  }
+
+  // ── Supabase project detection ─────────────────────────────────
+  snapshot.supabase = null;
+  const supabaseConfigPath = join(cwd, "supabase", "config.toml");
+  if (existsSync(supabaseConfigPath)) {
+    snapshot.supabase = {
+      detected: true,
+      configPath: supabaseConfigPath,
+    };
+    try {
+      const configContent = readFileSync(supabaseConfigPath, "utf-8");
+      const projectMatch = configContent.match(/^project_id\s*=\s*"?(.+?)"?\s*$/m);
+      if (projectMatch) {
+        snapshot.supabase.projectId = projectMatch[1];
+      }
+    } catch {
+      // ignore read errors
     }
   }
 

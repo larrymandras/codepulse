@@ -19,17 +19,20 @@ import type * as avatars from "../avatars.js";
 import type * as build from "../build.js";
 import type * as contextSnapshots from "../contextSnapshots.js";
 import type * as coordination from "../coordination.js";
+import type * as crons from "../crons.js";
 import type * as docker from "../docker.js";
 import type * as drift from "../drift.js";
 import type * as episodic from "../episodic.js";
 import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
 import type * as forge from "../forge.js";
+import type * as git from "../git.js";
 import type * as health from "../health.js";
 import type * as heroStats from "../heroStats.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as llm from "../llm.js";
+import type * as memory from "../memory.js";
 import type * as metrics from "../metrics.js";
 import type * as pipelines from "../pipelines.js";
 import type * as profiles from "../profiles.js";
@@ -40,6 +43,7 @@ import type * as security from "../security.js";
 import type * as selfHealing from "../selfHealing.js";
 import type * as sessions from "../sessions.js";
 import type * as supabase from "../supabase.js";
+import type * as wsl2 from "../wsl2.js";
 
 import type {
   ApiFromModules,
@@ -59,17 +63,20 @@ declare const fullApi: ApiFromModules<{
   build: typeof build;
   contextSnapshots: typeof contextSnapshots;
   coordination: typeof coordination;
+  crons: typeof crons;
   docker: typeof docker;
   drift: typeof drift;
   episodic: typeof episodic;
   events: typeof events;
   fileOps: typeof fileOps;
   forge: typeof forge;
+  git: typeof git;
   health: typeof health;
   heroStats: typeof heroStats;
   http: typeof http;
   ingest: typeof ingest;
   llm: typeof llm;
+  memory: typeof memory;
   metrics: typeof metrics;
   pipelines: typeof pipelines;
   profiles: typeof profiles;
@@ -80,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   selfHealing: typeof selfHealing;
   sessions: typeof sessions;
   supabase: typeof supabase;
+  wsl2: typeof wsl2;
 }>;
 
 /**

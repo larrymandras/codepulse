@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const recordHealth = mutation({
@@ -34,5 +34,13 @@ export const currentHealth = query({
       }
     }
     return Array.from(byService.values());
+  },
+});
+
+export const pollHealth = internalMutation({
+  args: {},
+  handler: async (_ctx) => {
+    // Stub: real polling comes from scanner or external triggers
+    return { status: "ok" };
   },
 });

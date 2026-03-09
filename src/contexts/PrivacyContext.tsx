@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 
 interface PrivacyState {
   enabled: boolean;
@@ -6,11 +6,13 @@ interface PrivacyState {
   maskEmails: boolean;
   maskKeys: boolean;
   maskIps: boolean;
+  level: "off" | "demo" | "screenshot";
 }
 
 interface PrivacyContextValue extends PrivacyState {
   toggle: () => void;
-  setSetting: (key: keyof Omit<PrivacyState, "enabled">, value: boolean) => void;
+  setSetting: (key: keyof Omit<PrivacyState, "enabled" | "level">, value: boolean) => void;
+  setLevel: (level: "off" | "demo" | "screenshot") => void;
 }
 
 const STORAGE_KEY = "codepulse-privacy";
@@ -18,9 +20,12 @@ const STORAGE_KEY = "codepulse-privacy";
 function loadState(): PrivacyState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { level: "off", ...parsed };
+    }
   } catch {}
-  return { enabled: false, maskPaths: true, maskEmails: true, maskKeys: true, maskIps: true };
+  return { enabled: false, maskPaths: true, maskEmails: true, maskKeys: true, maskIps: true, level: "off" };
 }
 
 function saveState(state: PrivacyState) {
@@ -41,7 +46,7 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSetting = useCallback(
-    (key: keyof Omit<PrivacyState, "enabled">, value: boolean) => {
+    (key: keyof Omit<PrivacyState, "enabled" | "level">, value: boolean) => {
       setState((prev) => {
         const next = { ...prev, [key]: value };
         saveState(next);
@@ -51,8 +56,39 @@ export function PrivacyProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const setLevel = useCallback((level: "off" | "demo" | "screenshot") => {
+    setState((prev) => {
+      const next = { ...prev, level };
+      saveState(next);
+      return next;
+    });
+  }, []);
+
+  // Apply CSS classes for privacy level
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("privacy-demo", "privacy-screenshot");
+    if (state.level === "demo") root.classList.add("privacy-demo");
+    else if (state.level === "screenshot") root.classList.add("privacy-screenshot");
+  }, [state.level]);
+
+  // Listen for keyboard shortcut cycle event
+  useEffect(() => {
+    const handler = () => {
+      setState((prev) => {
+        const levels: Array<"off" | "demo" | "screenshot"> = ["off", "demo", "screenshot"];
+        const idx = levels.indexOf(prev.level);
+        const next = { ...prev, level: levels[(idx + 1) % levels.length] };
+        saveState(next);
+        return next;
+      });
+    };
+    window.addEventListener("codepulse-cycle-privacy", handler);
+    return () => window.removeEventListener("codepulse-cycle-privacy", handler);
+  }, []);
+
   return (
-    <PrivacyContext.Provider value={{ ...state, toggle, setSetting }}>
+    <PrivacyContext.Provider value={{ ...state, toggle, setSetting, setLevel }}>
       {children}
     </PrivacyContext.Provider>
   );

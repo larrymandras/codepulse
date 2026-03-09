@@ -36,6 +36,25 @@ export const upsert = mutation({
   },
 });
 
+export const markCompleted = mutation({
+  args: {
+    sessionId: v.string(),
+    status: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+    if (session) {
+      await ctx.db.patch(session._id, {
+        status: args.status,
+        lastEventAt: Date.now() / 1000,
+      });
+    }
+  },
+});
+
 export const listActive = query({
   args: {},
   handler: async (ctx) => {

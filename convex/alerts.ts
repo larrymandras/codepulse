@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { alertRules } from "./alertRules";
 
@@ -575,6 +575,74 @@ export const evaluate = mutation({
     if (escalated.length > 0 && allFailed.length > 5) {
       const rule = alertRules.find((r) => r.id === "sh-manual-intervention")!;
       await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+    }
+
+    return { evaluated: alertRules.length, created: created.length, alerts: created };
+  },
+});
+
+// Internal version for cron jobs and scheduler
+export const evaluateInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const oneHourAgo = now - 3600;
+    const thirtyMinAgo = now - 1800;
+    const fifteenMinAgo = now - 900;
+    const tenMinAgo = now - 600;
+    const fiveMinAgo = now - 300;
+
+    const activeAlerts = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .collect();
+    const activeSourceSet = new Set(activeAlerts.map((a) => a.source));
+
+    const disabledConfig = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "alert-rules-disabled"))
+      .first();
+    const disabledRules = new Set<string>((disabledConfig?.value as string[]) ?? []);
+
+    const created: string[] = [];
+
+    async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
+      if (disabledRules.has(ruleId)) return;
+      if (activeSourceSet.has(ruleId)) return;
+      await ctx.db.insert("alerts", {
+        severity,
+        source: ruleId,
+        message,
+        acknowledged: false,
+        createdAt: now,
+      });
+      activeSourceSet.add(ruleId);
+      created.push(ruleId);
+    }
+
+    // Quick checks — sessions and events only (lightweight for 1-min interval)
+    const recentEvents = await ctx.db
+      .query("events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(100);
+    const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);
+    const errorEvents = hourEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error");
+    if (hourEvents.length > 10 && errorEvents.length / hourEvents.length > 0.2) {
+      const rule = alertRules.find((r) => r.id === "std-high-error-rate");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+    }
+
+    const activeSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+    for (const s of activeSessions) {
+      if (now - s.lastEventAt > 1800) {
+        const rule = alertRules.find((r) => r.id === "std-stale-sessions");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        break;
+      }
     }
 
     return { evaluated: alertRules.length, created: created.length, alerts: created };

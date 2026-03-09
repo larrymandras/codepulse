@@ -97,6 +97,35 @@ export const buildIngest = httpAction(async (ctx, request) => {
       });
     }
 
+    // 7. Session lifecycle events
+    if (eventType === "session_end" || eventType === "session_stop") {
+      await ctx.runMutation(api.sessions.markCompleted, {
+        sessionId: sessionId ?? "unknown",
+        status: eventType === "session_end" ? "completed" : "errored",
+      });
+    }
+
+    // 8. Subagent tracking from hooks
+    if (eventType === "subagent_start") {
+      const data = payload ?? body;
+      await ctx.runMutation(api.agents.register, {
+        sessionId: sessionId ?? "unknown",
+        agentId: data.agentId ?? data.agent_id ?? `agent-${Date.now()}`,
+        parentAgentId: data.parentAgentId ?? data.parent_agent_id,
+        agentType: data.agentType ?? data.agent_type ?? "subagent",
+        model: data.model,
+      });
+    }
+
+    if (eventType === "subagent_stop") {
+      const data = payload ?? body;
+      await ctx.runMutation(api.agents.updateStatus, {
+        agentId: data.agentId ?? data.agent_id ?? "unknown",
+        status: data.status ?? "completed",
+        endedAt: timestamp,
+      });
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

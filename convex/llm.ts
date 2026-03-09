@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const recordCall = mutation({
@@ -118,5 +118,41 @@ export const latencyOverTime = query({
       provider: r.provider,
       latencyMs: r.latencyMs,
     }));
+  },
+});
+
+export const rollupCosts = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const oneDayAgo = now - 86400;
+
+    const recent = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(1000);
+
+    const dayMetrics = recent.filter((m) => m.timestamp >= oneDayAgo);
+    const byProvider: Record<string, { cost: number; tokens: number; calls: number }> = {};
+
+    for (const m of dayMetrics) {
+      if (!byProvider[m.provider]) byProvider[m.provider] = { cost: 0, tokens: 0, calls: 0 };
+      byProvider[m.provider].cost += m.cost ?? 0;
+      byProvider[m.provider].tokens += m.totalTokens;
+      byProvider[m.provider].calls++;
+    }
+
+    // Store daily rollup as metricSnapshots
+    for (const [provider, data] of Object.entries(byProvider)) {
+      await ctx.db.insert("metricSnapshots", {
+        metricName: `llm_daily_cost_${provider}`,
+        value: data.cost,
+        tags: { provider, tokens: data.tokens, calls: data.calls, type: "daily_rollup" },
+        timestamp: now,
+      });
+    }
+
+    return { providers: Object.keys(byProvider).length };
   },
 });

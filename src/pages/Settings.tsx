@@ -48,6 +48,13 @@ export default function Settings() {
   const [creatingProfile, setCreatingProfile] = useState(false);
   const privacy = usePrivacy();
   const ambient = useAmbient();
+  const [crtEnabled, setCrtEnabled] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codepulse-crt") ?? "false");
+    } catch {
+      return false;
+    }
+  });
 
   const getAvatar = (avatarId?: string) => {
     if (!avatarId) return null;
@@ -132,6 +139,27 @@ export default function Settings() {
         <p className="text-[10px] text-gray-600 mt-3">
           When active, sensitive data is redacted across all dashboard views. Stored data is not modified.
         </p>
+          <div className="mt-3 pt-3 border-t border-gray-700">
+            <span className="text-sm text-gray-400 mb-2 block">Privacy Level</span>
+            <div className="flex gap-2">
+              {(["off", "demo", "screenshot"] as const).map((level) => (
+                <button
+                  key={level}
+                  onClick={() => privacy.setLevel(level)}
+                  className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-colors ${
+                    privacy.level === level
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-gray-600 mt-2">
+              Demo: blurs sensitive values. Screenshot: hides all data.
+            </p>
+          </div>
       </div>
 
       {/* Ambient Audio */}
@@ -175,6 +203,42 @@ export default function Settings() {
         </div>
         <p className="text-[10px] text-gray-600 mt-3">
           Generative soundscape that responds to system health. Green = consonant, Yellow = tense, Red = dissonant.
+        </p>
+      </div>
+
+      {/* CRT Overlay */}
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-300">CRT Overlay</h2>
+          <span
+            className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+              crtEnabled
+                ? "bg-green-600/20 text-green-400"
+                : "bg-gray-700/50 text-gray-500"
+            }`}
+          >
+            {crtEnabled ? "ON" : "OFF"}
+          </span>
+        </div>
+        <Toggle
+          enabled={crtEnabled}
+          onToggle={() => {
+            const next = !crtEnabled;
+            setCrtEnabled(next);
+            localStorage.setItem("codepulse-crt", JSON.stringify(next));
+            if (next) {
+              document.body.classList.add("crt-active");
+            } else {
+              document.body.classList.remove("crt-active");
+              const el = document.querySelector(".crt-overlay");
+              if (el) el.remove();
+            }
+            window.dispatchEvent(new Event("codepulse-crt-toggle"));
+          }}
+          label="Enable CRT scanline effect"
+        />
+        <p className="text-[10px] text-gray-600 mt-3">
+          Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
       </div>
 

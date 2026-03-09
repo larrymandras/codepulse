@@ -261,6 +261,7 @@ export default defineSchema({
     description: v.string(),
     details: v.optional(v.any()),
     mitigated: v.boolean(),
+    resolvedAt: v.optional(v.float64()),
     timestamp: v.float64(),
   })
     .index("by_severity", ["severity", "timestamp"])
@@ -285,6 +286,7 @@ export default defineSchema({
     previousVersion: v.optional(v.string()),
     changedAt: v.float64(),
     changedBy: v.optional(v.string()),
+    changeType: v.optional(v.string()),
   })
     .index("by_component", ["component", "changedAt"])
     .index("by_changedAt", ["changedAt"]),
@@ -424,4 +426,42 @@ export default defineSchema({
   })
     .index("by_profileId", ["profileId"])
     .index("by_updatedAt", ["updatedAt"]),
+
+  // ============================================================
+  // GIT INTEGRATION
+  // ============================================================
+
+  gitCommits: defineTable({
+    sha: v.string(),
+    message: v.string(),
+    branch: v.string(),
+    author: v.string(),
+    filesChanged: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_branch", ["branch", "timestamp"]),
+
+  // ============================================================
+  // PROFILE SWITCHES
+  // ============================================================
+
+  profileSwitches: defineTable({
+    fromProfile: v.string(),
+    toProfile: v.string(),
+    reason: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // WSL2 STATUS
+  // ============================================================
+
+  wsl2Status: defineTable({
+    distro: v.string(),
+    status: v.string(),
+    memoryMb: v.optional(v.float64()),
+    cpuPercent: v.optional(v.float64()),
+    updatedAt: v.float64(),
+  }).index("by_distro", ["distro"]),
 });

@@ -11,7 +11,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const hookScript = resolve(join(__dirname, "codepulse-hook.mjs"));
 
 // The hook types we need to register
-const HOOK_TYPES = ["PreToolUse", "PostToolUse", "SessionStart"];
+const HOOK_TYPES = [
+  "PreToolUse",
+  "PostToolUse",
+  "PreCompact",
+  "SessionStart",
+  "SessionEnd",
+  "UserPromptSubmit",
+  "PostToolUseFailure",
+  "PermissionRequest",
+  "Notification",
+  "Stop",
+  "SubagentStart",
+  "SubagentStop",
+  "Setup",
+];
 
 function main() {
   const targetDir = resolve(process.argv[2] || process.cwd());
