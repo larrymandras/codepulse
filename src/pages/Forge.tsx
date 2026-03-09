@@ -1,4 +1,5 @@
 import YggdrasilForge from "../components/YggdrasilForge";
+import ProviderGlobe from "../components/ProviderGlobe";
 import MemoryConstellation from "../components/MemoryConstellation";
 import ContextReactor from "../components/ContextReactor";
 
@@ -12,6 +13,9 @@ export default function Forge() {
 
       {/* Yggdrasil — full width */}
       <YggdrasilForge />
+
+      {/* Provider Network Globe */}
+      <ProviderGlobe />
 
       {/* Constellation + Reactor — side by side on large screens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

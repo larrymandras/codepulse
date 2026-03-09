@@ -60,8 +60,8 @@ function Stars({ stars }: { stars: StarData[] }) {
   return (
     <points ref={ref}>
       <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={stars.length} array={positions} itemSize={3} />
-        <bufferAttribute attach="attributes-color" count={stars.length} array={colors} itemSize={3} />
+        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
+        <bufferAttribute attach="attributes-color" args={[colors, 3]} />
       </bufferGeometry>
       <pointsMaterial
         size={0.15}

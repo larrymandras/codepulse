@@ -19,7 +19,8 @@ export default function ActiveSessions() {
               className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-3 hover:border-gray-600/50 transition-colors"
             >
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 rounded-full bg-green-500" />
+                <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden="true" />
+                <span className="sr-only">Active session:</span>
                 <span className="text-xs font-mono text-gray-300 truncate">
                   {session.sessionId}
                 </span>

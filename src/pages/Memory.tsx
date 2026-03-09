@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import MemoryIndexHealth from "../components/MemoryIndexHealth";
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
@@ -38,6 +39,9 @@ export default function Memory() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Memory Browser</h1>
+
+      {/* Index Health */}
+      <MemoryIndexHealth />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

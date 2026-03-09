@@ -24,7 +24,7 @@ export const recordEvent = mutation({
 export const componentHealth = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("selfHealingEvents").collect();
+    const all = await ctx.db.query("selfHealingEvents").order("desc").take(1000);
     const byComponent = new Map<string, (typeof all)[0]>();
     for (const record of all) {
       const existing = byComponent.get(record.component);
@@ -50,7 +50,7 @@ export const recentRecoveries = query({
 export const uptimeStats = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("selfHealingEvents").collect();
+    const all = await ctx.db.query("selfHealingEvents").order("desc").take(1000);
     const resolved = all.filter((e) => e.outcome === "resolved").length;
     const failed = all.filter((e) => e.outcome === "failed").length;
     const pending = all.filter((e) => e.outcome === "pending").length;
@@ -59,6 +59,50 @@ export const uptimeStats = query({
       actionCounts[e.action] = (actionCounts[e.action] ?? 0) + 1;
     }
     return { total: all.length, resolved, failed, pending, actionCounts };
+  },
+});
+
+export const recordRecoveryWithCommit = mutation({
+  args: {
+    component: v.string(),
+    issue: v.string(),
+    action: v.string(),
+    outcome: v.string(),
+    details: v.optional(v.any()),
+    commitSha: v.optional(v.string()),
+    commitMessage: v.optional(v.string()),
+    commitBranch: v.optional(v.string()),
+    filesChanged: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+
+    // Record self-healing event
+    await ctx.db.insert("selfHealingEvents", {
+      component: args.component,
+      issue: args.issue,
+      action: args.action,
+      outcome: args.outcome,
+      details: {
+        ...(args.details ?? {}),
+        commitSha: args.commitSha,
+      },
+      timestamp: now,
+    });
+
+    // Record associated git commit if provided
+    if (args.commitSha) {
+      await ctx.db.insert("gitCommits", {
+        sha: args.commitSha,
+        message:
+          args.commitMessage ??
+          `[self-healing] ${args.action}: ${args.issue}`,
+        branch: args.commitBranch ?? "main",
+        author: "astridr-self-healing",
+        filesChanged: args.filesChanged ?? 1,
+        timestamp: now,
+      });
+    }
   },
 });
 

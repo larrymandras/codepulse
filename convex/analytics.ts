@@ -131,6 +131,79 @@ export const tokenSunburst = query({
   },
 });
 
+export const errorRateTrend = query({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const dayAgo = now - 86400;
+
+    // Fetch recent error-type events from the events table
+    const errors = await ctx.db
+      .query("events")
+      .withIndex("by_type", (q) => q.eq("eventType", "Error"))
+      .order("desc")
+      .take(500);
+
+    const toolErrors = await ctx.db
+      .query("events")
+      .withIndex("by_type", (q) => q.eq("eventType", "ToolError"))
+      .order("desc")
+      .take(500);
+
+    const allErrors = [...errors, ...toolErrors];
+    const recentErrors = allErrors.filter((e) => e.timestamp >= dayAgo);
+
+    // Bucket by hour (0 = oldest, 23 = most recent)
+    const buckets: Record<number, number> = {};
+    for (let h = 0; h < 24; h++) {
+      const bucketStart = dayAgo + h * 3600;
+      buckets[h] = recentErrors.filter(
+        (e) => e.timestamp >= bucketStart && e.timestamp < bucketStart + 3600
+      ).length;
+    }
+
+    return Object.entries(buckets).map(([hour, count]) => ({
+      hour: Number(hour),
+      label: `${Number(hour)}h ago`,
+      errors: count,
+    }));
+  },
+});
+
+export const sessionDurations = query({
+  args: {},
+  handler: async (ctx) => {
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .order("desc")
+      .take(200);
+
+    const completed = sessions.filter(
+      (s) => s.lastEventAt && s.startedAt
+    );
+
+    // Bucket durations: <1m, 1-5m, 5-15m, 15-30m, 30-60m, 1-2h, 2h+
+    const buckets = [
+      { label: "<1m", min: 0, max: 60, count: 0 },
+      { label: "1-5m", min: 60, max: 300, count: 0 },
+      { label: "5-15m", min: 300, max: 900, count: 0 },
+      { label: "15-30m", min: 900, max: 1800, count: 0 },
+      { label: "30-60m", min: 1800, max: 3600, count: 0 },
+      { label: "1-2h", min: 3600, max: 7200, count: 0 },
+      { label: "2h+", min: 7200, max: Infinity, count: 0 },
+    ];
+
+    for (const s of completed) {
+      const dur = s.lastEventAt - s.startedAt;
+      const bucket = buckets.find((b) => dur >= b.min && dur < b.max);
+      if (bucket) bucket.count++;
+    }
+
+    return buckets.map(({ label, count }) => ({ label, count }));
+  },
+});
+
 export const tokenWaterfall = query({
   args: {},
   handler: async (ctx) => {

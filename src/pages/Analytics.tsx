@@ -12,6 +12,8 @@ import ActivityHeatmap from "../components/ActivityHeatmap";
 import SankeyFlow from "../components/SankeyFlow";
 import TokenSunburst from "../components/TokenSunburst";
 import TokenWaterfall from "../components/TokenWaterfall";
+import ErrorRateTrend from "../components/ErrorRateTrend";
+import SessionDurationHistogram from "../components/SessionDurationHistogram";
 
 export default function Analytics() {
   const events = useRecentEvents(100);
@@ -55,6 +57,12 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SankeyFlow />
         <TokenSunburst />
+      </div>
+
+      {/* Error Rate + Session Duration — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ErrorRateTrend />
+        <SessionDurationHistogram />
       </div>
 
       {/* Token Waterfall — full width */}

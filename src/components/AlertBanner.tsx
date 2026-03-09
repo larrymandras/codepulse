@@ -13,7 +13,7 @@ export default function AlertBanner() {
       onClick={() => navigate("/alerts")}
       className="w-full flex items-center gap-3 px-4 py-2.5 mb-4 rounded-xl border transition-colors cursor-pointer bg-red-500/10 border-red-500/30 hover:bg-red-500/20"
     >
-      <span className="relative flex h-2.5 w-2.5">
+      <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
         <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${counts.critical > 0 ? "bg-red-500" : "bg-orange-500"}`} />
       </span>

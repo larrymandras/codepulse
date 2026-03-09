@@ -4,6 +4,7 @@ import { useAvatarMutations } from "../hooks/useAvatars";
 import AvatarGallery from "./AvatarGallery";
 import AgentAvatar from "./AgentAvatar";
 import type { Id } from "../../convex/_generated/dataModel";
+import type { AgentProfile } from "../types";
 
 const MODELS = [
   "claude-opus-4-6",
@@ -14,7 +15,7 @@ const MODELS = [
 ];
 
 interface AgentProfileEditorProps {
-  profile?: any;
+  profile?: AgentProfile;
   onSave: () => void;
   onCancel: () => void;
 }

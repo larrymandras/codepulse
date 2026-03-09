@@ -87,7 +87,10 @@ export default function TeamStatusCards({ components, pipelines }: TeamStatusCar
                     {badge.label}
                   </span>
                   {team.status === "active" && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                    <>
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" aria-hidden="true" />
+                      <span className="sr-only">Active</span>
+                    </>
                   )}
                 </div>
                 <span className="text-xs text-gray-500">

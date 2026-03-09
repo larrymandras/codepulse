@@ -422,6 +422,17 @@ export const recordVersionBump = mutation({
   },
 });
 
+export const getSessionSnapshot = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("environmentSnapshots")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("desc")
+      .first();
+  },
+});
+
 export const summary = query({
   args: {},
   handler: async (ctx) => {

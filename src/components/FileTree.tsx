@@ -193,13 +193,13 @@ export default function FileTree({ sessionId }: FileTreeProps) {
         </h2>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-[9px] text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-green-400" /> Write ({writeCount})
+            <span className="w-2 h-2 rounded-full bg-green-400" aria-hidden="true" /> Write ({writeCount})
           </span>
           <span className="flex items-center gap-1 text-[9px] text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-yellow-400" /> Edit ({editCount})
+            <span className="w-2 h-2 rounded-full bg-yellow-400" aria-hidden="true" /> Edit ({editCount})
           </span>
           <span className="flex items-center gap-1 text-[9px] text-gray-500">
-            <span className="w-2 h-2 rounded-full bg-blue-400" /> Read ({readCount})
+            <span className="w-2 h-2 rounded-full bg-blue-400" aria-hidden="true" /> Read ({readCount})
           </span>
         </div>
       </div>

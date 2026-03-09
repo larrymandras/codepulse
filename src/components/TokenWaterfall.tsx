@@ -94,9 +94,9 @@ export default function TokenWaterfall() {
               borderRadius: "8px",
               fontSize: "12px",
             }}
-            formatter={(value: any, name: string) => [
+            formatter={(value: any, name: string | undefined) => [
               Math.abs(Number(value)).toLocaleString(),
-              name.replace(/_out$/, " (output)").replace(/_in$/, " (input)"),
+              (name ?? "").replace(/_out$/, " (output)").replace(/_in$/, " (input)"),
             ]}
           />
           <Legend

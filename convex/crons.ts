@@ -30,4 +30,27 @@ crons.interval("profile summary", { minutes: 15 }, internal.profiles.summarize);
 // 9. Episodic memory pruning — daily
 crons.interval("memory prune", { hours: 24 }, internal.episodic.prune);
 
+// ── Data retention purge jobs ──────────────────────────────────────
+
+// 10. Purge telemetry events older than 30 days — daily at 3:00 AM UTC
+crons.daily(
+  "purge old telemetry events",
+  { hourUTC: 3, minuteUTC: 0 },
+  internal.dataRetention.purgeOldTelemetryEvents
+);
+
+// 11. Purge agent heartbeat alerts older than 7 days — daily at 3:15 AM UTC
+crons.daily(
+  "purge old heartbeat alerts",
+  { hourUTC: 3, minuteUTC: 15 },
+  internal.dataRetention.purgeOldHeartbeatAlerts
+);
+
+// 12. Purge memory events older than 90 days — daily at 3:30 AM UTC
+crons.daily(
+  "purge old memory events",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.dataRetention.purgeOldMemoryEvents
+);
+
 export default crons;

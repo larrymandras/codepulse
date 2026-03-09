@@ -11,6 +11,7 @@ import ContextGauge from "../components/ContextGauge";
 import FileTree from "../components/FileTree";
 import SessionTimeline from "../components/SessionTimeline";
 import BashLog from "../components/BashLog";
+import SessionCapabilities from "../components/SessionCapabilities";
 
 type Tab = "overview" | "timeline" | "files" | "bash" | "errors";
 
@@ -71,6 +72,8 @@ export default function SessionDetail() {
       {activeTab === "overview" && (
         <div className="space-y-4">
           {session && <SessionHeader session={session} />}
+
+          <SessionCapabilities sessionId={id} />
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard label="Events" value={session?.eventCount ?? 0} />

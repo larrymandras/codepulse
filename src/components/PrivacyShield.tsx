@@ -1,20 +1,34 @@
 import { usePrivacy } from "../contexts/PrivacyContext";
 
 export default function PrivacyShield() {
-  const { enabled, toggle } = usePrivacy();
+  const { enabled, level, toggle } = usePrivacy();
+
+  const titleText =
+    level === "demo"
+      ? "Demo mode — click to toggle privacy"
+      : level === "screenshot"
+        ? "Screenshot mode — click to toggle privacy"
+        : enabled
+          ? "Privacy mode ON — click to disable"
+          : "Privacy mode OFF — click to enable";
 
   return (
     <button
       onClick={toggle}
-      title={enabled ? "Privacy mode ON — click to disable" : "Privacy mode OFF — click to enable"}
-      className={`p-1.5 rounded-lg transition-colors text-xs font-mono ${
-        enabled
-          ? "bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30"
-          : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+      aria-label={titleText}
+      title={titleText}
+      className={`p-1.5 rounded-lg transition-colors text-xs font-mono flex items-center gap-1.5 ${
+        level === "demo"
+          ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30"
+          : level === "screenshot"
+            ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
+            : enabled
+              ? "bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30"
+              : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
       }`}
     >
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        {enabled ? (
+        {enabled || level !== "off" ? (
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -30,6 +44,12 @@ export default function PrivacyShield() {
           />
         )}
       </svg>
+      {level === "demo" && (
+        <span className="text-[10px] font-medium">DEMO</span>
+      )}
+      {level === "screenshot" && (
+        <span className="text-[10px] font-medium">SAFE</span>
+      )}
     </button>
   );
 }

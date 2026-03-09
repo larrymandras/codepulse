@@ -94,9 +94,9 @@ function TokenRing({
 
   return (
     <group ref={groupRef}>
-      <line geometry={ringGeometry}>
+      <lineLoop geometry={ringGeometry}>
         <lineBasicMaterial color={color} transparent opacity={0.3} />
-      </line>
+      </lineLoop>
       {Array.from({ length: particleCount }).map((_, i) => {
         const angle = (i / particleCount) * Math.PI * 2;
         return (

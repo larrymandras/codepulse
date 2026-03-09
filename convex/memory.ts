@@ -53,6 +53,48 @@ export const search = query({
   },
 });
 
+export const indexHealth = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("episodicEvents").order("desc").take(1000);
+    const now = Date.now() / 1000;
+    const last24h = all.filter((e) => now - e.timestamp < 86400);
+    const last7d = all.filter((e) => now - e.timestamp < 604800);
+
+    const byType: Record<string, number> = {};
+    for (const e of all) {
+      byType[e.eventType] = (byType[e.eventType] ?? 0) + 1;
+    }
+
+    const byAgent: Record<string, number> = {};
+    for (const e of all) {
+      const agent = e.agentId ?? "system";
+      byAgent[agent] = (byAgent[agent] ?? 0) + 1;
+    }
+
+    const lastEvent =
+      all.length > 0 ? Math.max(...all.map((e) => e.timestamp)) : null;
+
+    const staleness = lastEvent
+      ? now - lastEvent > 86400
+        ? "stale"
+        : now - lastEvent > 3600
+          ? "aging"
+          : "fresh"
+      : "empty";
+
+    return {
+      totalEvents: all.length,
+      last24h: last24h.length,
+      last7d: last7d.length,
+      byType,
+      byAgent,
+      lastEvent,
+      staleness,
+    };
+  },
+});
+
 export const timeline = query({
   args: {
     agentId: v.optional(v.string()),

@@ -12,6 +12,7 @@ import AgentNode from "./AgentNode";
 import AgentDetailPanel from "./AgentDetailPanel";
 import { useAllAgents, useCoordinationEvents } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
+import type { Agent } from "../types";
 
 const nodeTypes = { agent: AgentNode };
 
@@ -34,7 +35,7 @@ export default function AgentTopology() {
     () =>
       statusFilter === "all"
         ? allAgents
-        : allAgents.filter((a: any) => a.status === statusFilter),
+        : allAgents.filter((a) => a.status === statusFilter),
     [allAgents, statusFilter]
   );
 
@@ -44,11 +45,11 @@ export default function AgentTopology() {
 
   const { nodes, edges } = useMemo(() => {
     const now = Date.now() / 1000;
-    const agentIds = new Set(agents.map((a: any) => a.agentId));
+    const agentIds = new Set(agents.map((a) => a.agentId));
 
-    // Build adjacency: parent → children[]
-    const childrenOf: Record<string, any[]> = {};
-    const roots: any[] = [];
+    // Build adjacency: parent -> children[]
+    const childrenOf: Record<string, typeof agents> = {};
+    const roots: typeof agents = [];
 
     for (const agent of agents) {
       if (!agent.parentAgentId || !agentIds.has(agent.parentAgentId)) {
@@ -74,7 +75,7 @@ export default function AgentTopology() {
       return kids.reduce((sum, k) => sum + measureWidth(k.agentId), 0) + (kids.length - 1) * H_GAP;
     }
 
-    function layoutNode(agent: any, x: number, y: number) {
+    function layoutNode(agent: (typeof agents)[number], x: number, y: number) {
       const dur =
         agent.endedAt && agent.startedAt
           ? formatDuration(agent.endedAt - agent.startedAt)
@@ -170,7 +171,7 @@ export default function AgentTopology() {
   const statusCounts = useMemo(() => {
     const c = { running: 0, completed: 0, failed: 0 };
     for (const a of allAgents) {
-      const s = (a as any).status as keyof typeof c;
+      const s = a.status as keyof typeof c;
       if (s in c) c[s]++;
     }
     return c;

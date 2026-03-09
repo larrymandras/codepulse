@@ -2,6 +2,8 @@ import MetricCard from "../components/MetricCard";
 import ComponentHealthGrid from "../components/ComponentHealthGrid";
 import RecoveryTimeline from "../components/RecoveryTimeline";
 import VersionHistory from "../components/VersionHistory";
+import RecoveryCommits from "../components/RecoveryCommits";
+import RecentGitActivity from "../components/RecentGitActivity";
 import {
   useComponentHealth,
   useRecentRecoveries,
@@ -60,6 +62,12 @@ export default function SelfHealing() {
 
       {/* Recovery Timeline */}
       <RecoveryTimeline events={recoveries} />
+
+      {/* Recovery Commits — git commits tied to self-healing actions */}
+      <RecoveryCommits />
+
+      {/* Recent Git Activity — all commits for full picture */}
+      <RecentGitActivity />
 
       {/* Version History */}
       <VersionHistory versions={versions} />

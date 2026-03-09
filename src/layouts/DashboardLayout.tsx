@@ -6,6 +6,7 @@ import OnboardingGuide from "../components/OnboardingGuide";
 import UserMenu from "../components/UserMenu";
 import PrivacyShield from "../components/PrivacyShield";
 import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
+import { useAudioEvents } from "../hooks/useAudioEvents";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "grid" },
@@ -13,6 +14,7 @@ const navItems = [
   { to: "/analytics", label: "Analytics", icon: "chart" },
   { to: "/alerts", label: "Alerts", icon: "bell" },
   { to: "/infrastructure", label: "Infrastructure", icon: "server" },
+  { to: "/agents", label: "Agents", icon: "bot" },
   { to: "/profiles", label: "Profiles", icon: "users" },
   { to: "/security", label: "Security", icon: "shield" },
   { to: "/self-healing", label: "Self-Healing", icon: "refresh" },
@@ -31,6 +33,7 @@ const iconMap: Record<string, string> = {
   users: "(:)",
   shield: "{!}",
   refresh: "<>",
+  bot: "@",
   hammer: "T",
   tree: "Y",
   brain: "(~)",
@@ -54,7 +57,7 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-2 px-2">
+      <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -80,15 +83,51 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Connection Status */}
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
-          Connected to Convex
+          <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden="true" />
+          <span>Connected to Convex</span>
         </div>
       </div>
     </>
   );
 }
 
+function CrtToggle({
+  crtEnabled,
+  setCrtEnabled,
+}: {
+  crtEnabled: boolean;
+  setCrtEnabled: (v: boolean) => void;
+}) {
+  const toggle = () => {
+    const next = !crtEnabled;
+    setCrtEnabled(next);
+    localStorage.setItem("codepulse-crt", JSON.stringify(next));
+    if (next) {
+      document.body.classList.add("crt-active");
+    } else {
+      document.body.classList.remove("crt-active");
+    }
+    window.dispatchEvent(new Event("codepulse-crt-toggle"));
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      aria-label={crtEnabled ? "Disable CRT effect" : "Enable CRT effect"}
+      title={crtEnabled ? "CRT effect ON — click to disable" : "CRT effect OFF — click to enable"}
+      className={`p-1.5 rounded-lg transition-colors text-[10px] font-mono font-medium ${
+        crtEnabled
+          ? "bg-green-600/20 text-green-400 hover:bg-green-600/30"
+          : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+      }`}
+    >
+      CRT
+    </button>
+  );
+}
+
 export default function DashboardLayout() {
+  useAudioEvents();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
@@ -164,6 +203,7 @@ export default function DashboardLayout() {
         <div className="absolute top-3 right-3">
           <button
             onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
             className="p-1 text-gray-400 hover:text-gray-200 transition-colors"
           >
             <svg
@@ -191,6 +231,7 @@ export default function DashboardLayout() {
           {/* Hamburger button - mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar menu"
             className="p-1 -ml-1 mr-3 text-gray-400 hover:text-gray-200 transition-colors md:hidden"
           >
             <svg
@@ -212,6 +253,7 @@ export default function DashboardLayout() {
           </span>
           <div className="flex items-center gap-2">
             <PrivacyShield />
+            <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
             <div className="w-px h-5 bg-gray-800 mx-1" />
             <UserMenu />

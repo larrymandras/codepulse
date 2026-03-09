@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { usePrivacy } from "../contexts/PrivacyContext";
-import { useAmbient } from "../contexts/AmbientContext";
+import { useAmbient, type PresetName, type Category } from "../contexts/AmbientContext";
 import AgentAvatar from "../components/AgentAvatar";
 import AgentProfileEditor from "../components/AgentProfileEditor";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import type { AgentProfile } from "../types";
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -44,7 +46,7 @@ export default function Settings() {
   const convexUrl = import.meta.env.VITE_CONVEX_URL ?? "Not configured";
   const profiles = useAgentProfiles();
   const avatars = useAvatars();
-  const [editingProfile, setEditingProfile] = useState<any | null>(null);
+  const [editingProfile, setEditingProfile] = useState<AgentProfile | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const privacy = usePrivacy();
   const ambient = useAmbient();
@@ -58,7 +60,7 @@ export default function Settings() {
 
   const getAvatar = (avatarId?: string) => {
     if (!avatarId) return null;
-    return avatars.find((a: any) => a._id === avatarId) ?? null;
+    return avatars.find((a) => a._id === avatarId) ?? null;
   };
 
   return (
@@ -66,6 +68,7 @@ export default function Settings() {
       <h1 className="text-2xl font-bold">Settings</h1>
 
       {/* Authentication */}
+      <SectionErrorBoundary name="Authentication">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">Authentication</h2>
         {CLERK_KEY ? (
@@ -90,19 +93,31 @@ export default function Settings() {
           </div>
         )}
       </div>
+      </SectionErrorBoundary>
 
       {/* Privacy Masking */}
+      <SectionErrorBoundary name="Privacy Masking">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-300">Privacy Masking</h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
-              privacy.enabled
-                ? "bg-indigo-600/20 text-indigo-400"
-                : "bg-gray-700/50 text-gray-500"
+              privacy.level === "demo"
+                ? "bg-amber-600/20 text-amber-400"
+                : privacy.level === "screenshot"
+                  ? "bg-red-600/20 text-red-400"
+                  : privacy.enabled
+                    ? "bg-indigo-600/20 text-indigo-400"
+                    : "bg-gray-700/50 text-gray-500"
             }`}
           >
-            {privacy.enabled ? "ACTIVE" : "OFF"}
+            {privacy.level === "demo"
+              ? "DEMO MODE"
+              : privacy.level === "screenshot"
+                ? "SCREENSHOT"
+                : privacy.enabled
+                  ? "ACTIVE"
+                  : "OFF"}
           </span>
         </div>
         <div className="space-y-1">
@@ -156,13 +171,23 @@ export default function Settings() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-gray-600 mt-2">
-              Demo: blurs sensitive values. Screenshot: hides all data.
-            </p>
+            <div className="mt-2 space-y-0.5">
+              <p className={`text-[10px] ${privacy.level === "off" ? "text-gray-400" : "text-gray-600"}`}>
+                <span className="font-medium">Off:</span> Normal view — all data visible
+              </p>
+              <p className={`text-[10px] ${privacy.level === "demo" ? "text-amber-400/80" : "text-gray-600"}`}>
+                <span className="font-medium">Demo:</span> Demo mode — sensitive values blurred for presentations
+              </p>
+              <p className={`text-[10px] ${privacy.level === "screenshot" ? "text-red-400/80" : "text-gray-600"}`}>
+                <span className="font-medium">Screenshot:</span> Screenshot safe — all data hidden
+              </p>
+            </div>
           </div>
       </div>
+      </SectionErrorBoundary>
 
       {/* Ambient Audio */}
+      <SectionErrorBoundary name="Ambient Audio">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-300">Ambient Audio</h2>
@@ -183,21 +208,87 @@ export default function Settings() {
             label="Enable ambient soundscape"
           />
           {ambient.enabled && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Volume</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {Math.round(ambient.volume * 100)}%
-                </span>
+            <div className="space-y-4">
+              {/* Preset Selector */}
+              <div>
+                <span className="text-sm text-gray-400 mb-2 block">Soundscape</span>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { value: "forge", label: "Forge" },
+                      { value: "deepSpace", label: "Deep Space" },
+                      { value: "rain", label: "Rain" },
+                      { value: "serverRoom", label: "Server Room" },
+                      { value: "lofi", label: "Lo-fi" },
+                      { value: "silent", label: "Silent" },
+                    ] as { value: PresetName; label: string }[]
+                  ).map((p) => (
+                    <button
+                      key={p.value}
+                      onClick={() => ambient.setPreset(p.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                        ambient.preset === p.value
+                          ? "bg-emerald-600 text-white"
+                          : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                value={Math.round(ambient.volume * 100)}
-                onChange={(e) => ambient.setVolume(Number(e.target.value) / 100)}
-                className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
-              />
+
+              {/* Master Volume */}
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">Master Volume</span>
+                  <span className="text-xs text-gray-500 font-mono">
+                    {Math.round(ambient.volume * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(ambient.volume * 100)}
+                  onChange={(e) => ambient.setVolume(Number(e.target.value) / 100)}
+                  className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
+                />
+              </div>
+
+              {/* Category Volumes */}
+              <div>
+                <span className="text-sm text-gray-400 mb-2 block">Channel Volumes</span>
+                <div className="space-y-2 pl-3 border-l border-gray-700 ml-1">
+                  {(
+                    [
+                      { cat: "alerts" as Category, label: "Alerts" },
+                      { cat: "ambience" as Category, label: "Ambience" },
+                      { cat: "events" as Category, label: "Events" },
+                      { cat: "transitions" as Category, label: "Transitions" },
+                    ]
+                  ).map(({ cat, label }) => (
+                    <div key={cat}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">{label}</span>
+                        <span className="text-[10px] text-gray-600 font-mono">
+                          {Math.round(ambient.categoryVolumes[cat] * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={Math.round(ambient.categoryVolumes[cat] * 100)}
+                        onChange={(e) =>
+                          ambient.setCategoryVolume(cat, Number(e.target.value) / 100)
+                        }
+                        className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -205,8 +296,10 @@ export default function Settings() {
           Generative soundscape that responds to system health. Green = consonant, Yellow = tense, Red = dissonant.
         </p>
       </div>
+      </SectionErrorBoundary>
 
       {/* CRT Overlay */}
+      <SectionErrorBoundary name="CRT Overlay">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-300">CRT Overlay</h2>
@@ -241,8 +334,10 @@ export default function Settings() {
           Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
       </div>
+      </SectionErrorBoundary>
 
       {/* Connection */}
+      <SectionErrorBoundary name="Connection">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">Connection</h2>
         <div className="space-y-2">
@@ -256,8 +351,10 @@ export default function Settings() {
           </div>
         </div>
       </div>
+      </SectionErrorBoundary>
 
       {/* Agent Profiles Section */}
+      <SectionErrorBoundary name="Agent Profiles">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-300">Agent Profiles</h2>
@@ -293,7 +390,7 @@ export default function Settings() {
                 No agent profiles yet. Create one to get started.
               </p>
             ) : (
-              profiles.map((p: any) => (
+              profiles.map((p) => (
                 <div
                   key={p._id}
                   className="flex items-center gap-3 bg-gray-900/30 rounded-lg px-3 py-2"
@@ -319,7 +416,9 @@ export default function Settings() {
           </div>
         )}
       </div>
+      </SectionErrorBoundary>
 
+      <SectionErrorBoundary name="Hooks">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">Hooks</h2>
         <p className="text-sm text-gray-500">
@@ -334,7 +433,9 @@ export default function Settings() {
   }
 }`}</pre>
       </div>
+      </SectionErrorBoundary>
 
+      <SectionErrorBoundary name="About">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">About</h2>
         <div className="space-y-1 text-sm text-gray-500">
@@ -342,6 +443,7 @@ export default function Settings() {
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>
         </div>
       </div>
+      </SectionErrorBoundary>
     </div>
   );
 }

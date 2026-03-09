@@ -137,6 +137,17 @@ export const recordSwitch = mutation({
   },
 });
 
+export const recentSwitches = query({
+  args: { limit: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("profileSwitches")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(args.limit ?? 20);
+  },
+});
+
 export const summarize = internalMutation({
   args: {},
   handler: async (ctx) => {
