@@ -374,6 +374,54 @@ export const upsertMcpServer = mutation({
   },
 });
 
+export const upsertPlugin = mutation({
+  args: {
+    name: v.string(),
+    version: v.optional(v.string()),
+    pluginType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    const existing = await ctx.db
+      .query("plugins")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        version: args.version ?? existing.version,
+        config: args.pluginType ? { ...((existing.config as any) ?? {}), pluginType: args.pluginType } : existing.config,
+      });
+    } else {
+      await ctx.db.insert("plugins", {
+        name: args.name,
+        version: args.version,
+        enabled: true,
+        config: args.pluginType ? { pluginType: args.pluginType } : undefined,
+        installedAt: now,
+      });
+    }
+  },
+});
+
+export const recordVersionBump = mutation({
+  args: {
+    component: v.string(),
+    version: v.string(),
+    previousVersion: v.optional(v.string()),
+    changeType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    await ctx.db.insert("versionHistory", {
+      component: args.component,
+      version: args.version,
+      previousVersion: args.previousVersion,
+      changedAt: now,
+      changedBy: args.changeType ?? "runtime",
+    });
+  },
+});
+
 export const summary = query({
   args: {},
   handler: async (ctx) => {

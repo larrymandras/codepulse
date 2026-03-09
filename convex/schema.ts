@@ -335,4 +335,63 @@ export default defineSchema({
     .index("by_fromAgent", ["fromAgent", "timestamp"])
     .index("by_toAgent", ["toAgent", "timestamp"])
     .index("by_type", ["eventType", "timestamp"]),
+
+  // ============================================================
+  // AUTOMATION TABLES (6) — Astridr runtime event sync
+  // ============================================================
+
+  cronExecutions: defineTable({
+    jobName: v.string(),
+    startedAt: v.float64(),
+    durationMs: v.float64(),
+    success: v.boolean(),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_jobName", ["jobName", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  heartbeatAlerts: defineTable({
+    alerts: v.any(), // array of check results
+    alertCount: v.float64(),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  jobLifecycle: defineTable({
+    jobId: v.string(),
+    status: v.string(), // "pending" | "running" | "completed" | "failed" | "cancelled"
+    trigger: v.optional(v.string()), // "manual" | "cron:..." | "webhook:..."
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_jobId", ["jobId", "timestamp"])
+    .index("by_status", ["status", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  proactiveMessages: defineTable({
+    messageType: v.string(), // "alert" | "reminder" | etc.
+    channelId: v.optional(v.string()),
+    chatId: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  subagentExecutions: defineTable({
+    agentId: v.string(),
+    success: v.boolean(),
+    durationMs: v.float64(),
+    tokensUsed: v.float64(),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_agentId", ["agentId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  webhookEvents: defineTable({
+    hookId: v.string(),
+    taskId: v.optional(v.string()),
+    source: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_hookId", ["hookId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 });

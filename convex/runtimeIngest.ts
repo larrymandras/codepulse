@@ -169,6 +169,90 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "cron_execution": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordCron, {
+            jobName: d.jobName ?? d.job_name ?? "unknown",
+            startedAt: d.startedAt ?? d.started_at ?? timestamp,
+            durationMs: d.durationMs ?? d.duration_ms ?? 0,
+            success: d.success ?? true,
+            error: d.error,
+            timestamp,
+          });
+          break;
+        }
+        case "heartbeat_alerts": {
+          const d = data as any;
+          const alerts = d.alerts ?? [];
+          await ctx.runMutation(api.automation.recordHeartbeat, {
+            alerts,
+            alertCount: Array.isArray(alerts) ? alerts.length : 0,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "job_lifecycle": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordJob, {
+            jobId: d.jobId ?? d.job_id ?? "unknown",
+            status: d.status ?? "pending",
+            trigger: d.trigger,
+            error: d.error,
+            timestamp,
+          });
+          break;
+        }
+        case "proactive_message": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordProactiveMessage, {
+            messageType: d.type ?? d.messageType ?? d.message_type ?? "alert",
+            channelId: d.channelId ?? d.channel_id,
+            chatId: d.chatId ?? d.chat_id,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "subagent_execution": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordSubagentExecution, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            success: d.success ?? true,
+            durationMs: d.durationMs ?? d.duration_ms ?? 0,
+            tokensUsed: d.tokensUsed ?? d.tokens_used ?? 0,
+            error: d.error,
+            timestamp,
+          });
+          break;
+        }
+        case "webhook_received": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordWebhook, {
+            hookId: d.hookId ?? d.hook_id ?? "unknown",
+            taskId: d.taskId ?? d.task_id,
+            source: d.source,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "plugin_loaded": {
+          const d = data as any;
+          await ctx.runMutation(api.registry.upsertPlugin, {
+            name: d.name ?? "unknown",
+            version: d.version,
+            pluginType: d.pluginType ?? d.plugin_type,
+          });
+          break;
+        }
+        case "version_bump": {
+          const d = data as any;
+          await ctx.runMutation(api.registry.recordVersionBump, {
+            component: d.component ?? "astridr",
+            version: d.new ?? d.version ?? "unknown",
+            previousVersion: d.previous ?? d.previousVersion,
+            changeType: d.change_type ?? d.changeType,
+          });
+          break;
+        }
       }
     }
 

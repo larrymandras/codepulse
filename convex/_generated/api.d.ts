@@ -14,6 +14,7 @@ import type * as alertRules from "../alertRules.js";
 import type * as alertRulesConfig from "../alertRulesConfig.js";
 import type * as alerts from "../alerts.js";
 import type * as analytics from "../analytics.js";
+import type * as automation from "../automation.js";
 import type * as avatars from "../avatars.js";
 import type * as build from "../build.js";
 import type * as contextSnapshots from "../contextSnapshots.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   alertRulesConfig: typeof alertRulesConfig;
   alerts: typeof alerts;
   analytics: typeof analytics;
+  automation: typeof automation;
   avatars: typeof avatars;
   build: typeof build;
   contextSnapshots: typeof contextSnapshots;
