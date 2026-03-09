@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useFileOpsSummary, useFileOps } from "../hooks/useFileOps";
 import { truncatePath } from "../lib/formatters";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 interface FileOpsPanelProps {
   sessionId: string;
@@ -45,6 +46,8 @@ export default function FileOpsPanel({ sessionId }: FileOpsPanelProps) {
   const [sortMode, setSortMode] = useState<SortMode>("recency");
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
+  const { maskFilePath } = usePrivacyMask();
+
   const sorted = [...summary].sort((a, b) =>
     sortMode === "recency"
       ? b.lastTimestamp - a.lastTimestamp
@@ -81,7 +84,7 @@ export default function FileOpsPanel({ sessionId }: FileOpsPanelProps) {
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
           {Array.from(groups.entries()).map(([dir, files]) => (
             <div key={dir}>
-              <p className="text-xs text-gray-500 font-mono mb-1">{truncatePath(dir, 50)}/</p>
+              <p className="text-xs text-gray-500 font-mono mb-1">{maskFilePath(truncatePath(dir, 50))}/</p>
               <div className="space-y-1 ml-2">
                 {files.map((file) => {
                   const fileName = file.filePath.split("/").pop() ?? file.filePath;

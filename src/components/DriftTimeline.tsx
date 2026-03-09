@@ -1,4 +1,5 @@
 import { useDriftChanges, useDriftSummary } from "../hooks/useDrift";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 function relativeTime(ts: number): string {
   const now = Date.now() / 1000;
@@ -36,6 +37,7 @@ function VelocityBar({ data }: { data: number[] }) {
 export default function DriftTimeline() {
   const changes = useDriftChanges();
   const summary = useDriftSummary();
+  const { mask } = usePrivacyMask();
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
@@ -111,8 +113,8 @@ export default function DriftTimeline() {
                   </div>
                   {c.changeType === "modified" && c.oldValue != null && (
                     <p className="text-[10px] text-gray-500 truncate mt-0.5">
-                      {typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue)} →{" "}
-                      {typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue)}
+                      {mask(typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue))} →{" "}
+                      {mask(typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue))}
                     </p>
                   )}
                 </div>

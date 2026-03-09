@@ -3,6 +3,9 @@ import { NavLink, Outlet } from "react-router-dom";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import OnboardingGuide from "../components/OnboardingGuide";
+import UserMenu from "../components/UserMenu";
+import PrivacyShield from "../components/PrivacyShield";
+import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "grid" },
@@ -157,7 +160,12 @@ export default function DashboardLayout() {
           <span className="text-sm text-gray-400">
             Astridr Runtime Telemetry
           </span>
-          <span className="text-xs text-gray-600 font-mono">v0.1.0</span>
+          <div className="flex items-center gap-2">
+            <PrivacyShield />
+            <AmbientAudioPlayer />
+            <div className="w-px h-5 bg-gray-800 mx-1" />
+            <UserMenu />
+          </div>
         </header>
 
         {/* Page Content */}

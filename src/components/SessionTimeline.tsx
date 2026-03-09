@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { getEventIcon, getEventColor } from "../lib/eventIcons";
 import { formatTimestamp } from "../lib/formatters";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 interface SessionTimelineProps {
   events: any[];
@@ -25,6 +26,7 @@ const EVENT_TYPES = [
 export default function SessionTimeline({ events, agents }: SessionTimelineProps) {
   const [activeAgents, setActiveAgents] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState("");
+  const { mask, maskFilePath } = usePrivacyMask();
 
   const toggleAgent = (agentId: string) => {
     setActiveAgents((prev) => {
@@ -104,11 +106,11 @@ export default function SessionTimeline({ events, agents }: SessionTimelineProps
                 {e.payload && (
                   <span className="text-xs text-gray-600 truncate">
                     {typeof e.payload === "string"
-                      ? e.payload.slice(0, 80)
+                      ? mask(e.payload.slice(0, 80))
                       : e.payload.command
-                        ? String(e.payload.command).slice(0, 80)
+                        ? mask(String(e.payload.command).slice(0, 80))
                         : e.payload.file_path
-                          ? String(e.payload.file_path).slice(0, 80)
+                          ? maskFilePath(String(e.payload.file_path).slice(0, 80))
                           : ""}
                   </span>
                 )}

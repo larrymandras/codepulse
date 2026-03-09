@@ -1,5 +1,6 @@
 import { useAgentDetail } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 const eventTypeColors: Record<string, string> = {
   handoff: "text-purple-400 bg-purple-400/10",
@@ -23,6 +24,7 @@ interface Props {
 
 export default function AgentDetailPanel({ agentId, onClose }: Props) {
   const detail = useAgentDetail(agentId);
+  const { redact } = usePrivacyMask();
 
   if (!detail) {
     return (
@@ -50,7 +52,7 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-gray-200 truncate">{detail.agentId}</h3>
+          <h3 className="text-sm font-semibold text-gray-200 truncate">{redact(detail.agentId, `A-${detail.agentId.slice(-4)}`)}</h3>
           <p className="text-[10px] text-gray-500">{detail.agentType}</p>
         </div>
         <button
@@ -83,12 +85,12 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
         </div>
         <div className="col-span-2">
           <p className="text-[9px] text-gray-500 uppercase">Session</p>
-          <p className="text-[10px] text-gray-400 font-mono truncate">{detail.sessionId}</p>
+          <p className="text-[10px] text-gray-400 font-mono truncate">{redact(detail.sessionId, `S-${detail.sessionId.slice(-4)}`)}</p>
         </div>
         {detail.parentAgentId && (
           <div className="col-span-2">
             <p className="text-[9px] text-gray-500 uppercase">Parent</p>
-            <p className="text-[10px] text-gray-400 font-mono truncate">{detail.parentAgentId}</p>
+            <p className="text-[10px] text-gray-400 font-mono truncate">{redact(detail.parentAgentId, `A-${detail.parentAgentId.slice(-4)}`)}</p>
           </div>
         )}
       </div>

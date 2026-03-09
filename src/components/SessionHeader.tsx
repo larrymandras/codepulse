@@ -1,4 +1,5 @@
 import { formatTimestamp, formatDuration, truncatePath } from "../lib/formatters";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 interface SessionHeaderProps {
   session: {
@@ -13,10 +14,12 @@ interface SessionHeaderProps {
 }
 
 export default function SessionHeader({ session }: SessionHeaderProps) {
+  const { redact, maskFilePath } = usePrivacyMask();
+
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <span className="text-sm font-mono text-gray-200">{session.sessionId}</span>
+        <span className="text-sm font-mono text-gray-200">{redact(session.sessionId, `S-${session.sessionId.slice(-4)}`)}</span>
         <span
           className={`text-xs px-2 py-1 rounded ${
             session.status === "active"
@@ -34,8 +37,8 @@ export default function SessionHeader({ session }: SessionHeaderProps) {
         </div>
         <div>
           <p className="text-xs text-gray-500">CWD</p>
-          <p className="text-sm font-mono text-gray-200 mt-0.5" title={session.cwd}>
-            {session.cwd ? truncatePath(session.cwd) : "—"}
+          <p className="text-sm font-mono text-gray-200 mt-0.5" title={session.cwd ? maskFilePath(session.cwd) : undefined}>
+            {session.cwd ? maskFilePath(truncatePath(session.cwd)) : "—"}
           </p>
         </div>
         <div>

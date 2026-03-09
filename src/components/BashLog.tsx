@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
+import { usePrivacyMask } from "../hooks/usePrivacyMask";
 
 interface BashLogProps {
   sessionId: string;
@@ -10,6 +11,7 @@ interface BashLogProps {
 export default function BashLog({ sessionId }: BashLogProps) {
   const commands = useQuery(api.events.listBashCommands, { sessionId }) ?? [];
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const { mask } = usePrivacyMask();
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -60,12 +62,12 @@ export default function BashLog({ sessionId }: BashLogProps) {
                         className="text-left w-full"
                       >
                         <span className="font-mono text-gray-200 break-all">
-                          {isExpanded ? command : command.slice(0, 120) + (command.length > 120 ? "..." : "")}
+                          {mask(isExpanded ? command : command.slice(0, 120) + (command.length > 120 ? "..." : ""))}
                         </span>
                       </button>
                       {isExpanded && output && (
                         <pre className="mt-2 p-2 bg-gray-900/60 rounded text-gray-400 font-mono text-[11px] max-h-48 overflow-auto whitespace-pre-wrap break-all">
-                          {typeof output === "string" ? output : JSON.stringify(output, null, 2)}
+                          {mask(typeof output === "string" ? output : JSON.stringify(output, null, 2))}
                         </pre>
                       )}
                     </td>

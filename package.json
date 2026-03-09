@@ -14,6 +14,7 @@
     "deploy": "npx convex deploy && npx vite build"
   },
   "dependencies": {
+    "@clerk/clerk-react": "^5.61.3",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
     "@tailwindcss/vite": "^4.2.1",
