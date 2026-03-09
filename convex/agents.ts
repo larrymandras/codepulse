@@ -64,3 +64,50 @@ export const topology = query({
       .collect();
   },
 });
+
+export const listAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("agents")
+      .order("desc")
+      .take(200);
+  },
+});
+
+export const detail = query({
+  args: { agentId: v.string() },
+  handler: async (ctx, args) => {
+    const agent = await ctx.db
+      .query("agents")
+      .withIndex("by_agentId", (q) => q.eq("agentId", args.agentId))
+      .first();
+    if (!agent) return null;
+
+    // Get coordination events involving this agent
+    const outgoing = await ctx.db
+      .query("agentCoordination")
+      .withIndex("by_fromAgent", (q) => q.eq("fromAgent", args.agentId))
+      .order("desc")
+      .take(20);
+    const incoming = await ctx.db
+      .query("agentCoordination")
+      .withIndex("by_toAgent", (q) => q.eq("toAgent", args.agentId))
+      .order("desc")
+      .take(20);
+
+    // Get event count for this agent's session
+    const sessionEvents = await ctx.db
+      .query("events")
+      .withIndex("by_session", (q) => q.eq("sessionId", agent.sessionId))
+      .take(500);
+
+    return {
+      ...agent,
+      coordination: [...outgoing, ...incoming]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 30),
+      eventCount: sessionEvents.length,
+    };
+  },
+});

@@ -31,3 +31,13 @@ export const activeHandoffs = query({
       .take(20);
   },
 });
+
+export const recentAll = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("agentCoordination")
+      .order("desc")
+      .take(100);
+  },
+});
