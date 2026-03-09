@@ -22,6 +22,7 @@ import type * as docker from "../docker.js";
 import type * as drift from "../drift.js";
 import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
+import type * as forge from "../forge.js";
 import type * as health from "../health.js";
 import type * as heroStats from "../heroStats.js";
 import type * as http from "../http.js";
@@ -59,6 +60,7 @@ declare const fullApi: ApiFromModules<{
   drift: typeof drift;
   events: typeof events;
   fileOps: typeof fileOps;
+  forge: typeof forge;
   health: typeof health;
   heroStats: typeof heroStats;
   http: typeof http;

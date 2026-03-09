@@ -14,6 +14,7 @@ const navItems = [
   { to: "/security", label: "Security", icon: "shield" },
   { to: "/self-healing", label: "Self-Healing", icon: "refresh" },
   { to: "/build", label: "Build", icon: "hammer" },
+  { to: "/forge", label: "Forge", icon: "tree" },
   { to: "/settings", label: "Settings", icon: "gear" },
 ];
 
@@ -27,6 +28,7 @@ const iconMap: Record<string, string> = {
   shield: "{!}",
   refresh: "<>",
   hammer: "T",
+  tree: "Y",
   gear: "*",
 };
 

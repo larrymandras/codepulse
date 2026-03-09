@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
@@ -11,6 +12,9 @@ import Security from "./pages/Security";
 import SelfHealing from "./pages/SelfHealing";
 import BuildProgress from "./pages/BuildProgress";
 import Settings from "./pages/Settings";
+
+// Lazy-load Forge (Three.js is ~1MB) — only downloaded when user navigates to /forge
+const Forge = lazy(() => import("./pages/Forge"));
 
 export default function App() {
   return (
@@ -27,6 +31,7 @@ export default function App() {
           <Route path="/security" element={<Security />} />
           <Route path="/self-healing" element={<SelfHealing />} />
           <Route path="/build" element={<BuildProgress />} />
+          <Route path="/forge" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Forge...</div>}><Forge /></Suspense>} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
