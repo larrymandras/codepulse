@@ -29,7 +29,6 @@ import type * as drift from "../drift.js";
 import type * as episodic from "../episodic.js";
 import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
-import type * as forge from "../forge.js";
 import type * as git from "../git.js";
 import type * as gitActivity from "../gitActivity.js";
 import type * as health from "../health.js";
@@ -88,7 +87,6 @@ declare const fullApi: ApiFromModules<{
   episodic: typeof episodic;
   events: typeof events;
   fileOps: typeof fileOps;
-  forge: typeof forge;
   git: typeof git;
   gitActivity: typeof gitActivity;
   health: typeof health;
