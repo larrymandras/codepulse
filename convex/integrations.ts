@@ -1,16 +1,41 @@
 import { query } from "./_generated/server";
 
-type IntegrationStatus = "Connected" | "Degraded" | "Disconnected";
+type IntegrationStatus = "Connected" | "Idle" | "Degraded" | "Disconnected";
 
-function statusFromTimestamp(
+/**
+ * Determine integration status with per-type thresholds.
+ *
+ * "polled" integrations (Supabase, Docker) have expected poll intervals,
+ *   so missing a window means something is actually wrong.
+ * "event-driven" integrations (GitHub, Telegram, Slack, Email) only
+ *   produce data when the user acts, so absence of recent data is normal.
+ */
+function statusForPolled(
   lastActivity: number | null,
-  nowMs: number
+  nowMs: number,
+  pollIntervalMs: number
 ): IntegrationStatus {
   if (lastActivity == null) return "Disconnected";
   const ageMs = nowMs - lastActivity;
-  if (ageMs <= 15 * 60 * 1000) return "Connected";
-  if (ageMs <= 60 * 60 * 1000) return "Degraded";
+  // Within 2× the poll interval → Connected
+  if (ageMs <= pollIntervalMs * 2) return "Connected";
+  // Within 4× → Degraded (missed a cycle)
+  if (ageMs <= pollIntervalMs * 4) return "Degraded";
   return "Disconnected";
+}
+
+function statusForEventDriven(
+  lastActivity: number | null,
+  hasAnyRecords: boolean,
+  nowMs: number
+): IntegrationStatus {
+  if (lastActivity == null && !hasAnyRecords) return "Disconnected";
+  if (lastActivity == null) return "Idle";
+  const ageMs = nowMs - lastActivity;
+  // Active within the last hour → Connected
+  if (ageMs <= 60 * 60 * 1000) return "Connected";
+  // Has records but nothing recent → Idle (normal for event-driven)
+  return "Idle";
 }
 
 export const healthStatus = query({
@@ -95,12 +120,16 @@ export const healthStatus = query({
     }
 
     return {
-      github: statusFromTimestamp(githubTs, now),
-      supabase: statusFromTimestamp(supabaseTs, now),
-      docker: statusFromTimestamp(dockerTs, now),
-      telegram: statusFromTimestamp(telegramTs, now),
-      slack: statusFromTimestamp(slackTs, now),
-      email: statusFromTimestamp(emailTs, now),
+      // Event-driven: GitHub only produces data when user commits/pushes
+      github: statusForEventDriven(githubTs, recentCommit != null, now),
+      // Polled every 1 hour (3_600_000 ms)
+      supabase: statusForPolled(supabaseTs, now, 3_600_000),
+      // Polled every 2 minutes (120_000 ms)
+      docker: statusForPolled(dockerTs, now, 120_000),
+      // Event-driven: only when messages are sent/received
+      telegram: statusForEventDriven(telegramTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("telegram")), now),
+      slack: statusForEventDriven(slackTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("slack")), now),
+      email: statusForEventDriven(emailTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("email")), now),
     };
   },
 });

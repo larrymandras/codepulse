@@ -132,6 +132,7 @@ export default function OrbitalStatusRings() {
     // Ring 4 — Integrations (outermost, wired to real health data)
     function integrationNodeStatus(status: string): NodeStatus {
       if (status === "Connected") return "healthy";
+      if (status === "Idle") return "healthy";
       if (status === "Degraded") return "degraded";
       if (status === "Disconnected") return "down";
       return "unknown";

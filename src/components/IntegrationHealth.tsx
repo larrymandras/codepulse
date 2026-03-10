@@ -14,6 +14,7 @@ const INTEGRATIONS = [
 function statusBadge(status: string) {
   const colors: Record<string, string> = {
     Connected: "text-green-400 bg-green-400/10",
+    Idle: "text-blue-400 bg-blue-400/10",
     Degraded: "text-yellow-400 bg-yellow-400/10",
     Disconnected: "text-red-400 bg-red-400/10",
     Unknown: "text-gray-400 bg-gray-400/10",
