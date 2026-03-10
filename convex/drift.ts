@@ -1,6 +1,13 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+export const acknowledgeChange = mutation({
+  args: { id: v.id("configChanges") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const recordChange = mutation({
   args: {
     configKey: v.string(),

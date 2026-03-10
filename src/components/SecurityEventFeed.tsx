@@ -1,3 +1,5 @@
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
 
 const severityStyles: Record<string, { badge: string; icon: string }> = {
@@ -12,6 +14,8 @@ interface SecurityEventFeedProps {
 }
 
 export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
+  const acknowledgeEvent = useMutation(api.security.acknowledgeEvent);
+
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <h2 className="text-sm font-semibold text-gray-300 mb-3">Security Event Feed</h2>
@@ -40,6 +44,18 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
                 <span className="font-mono text-gray-400">{e.eventType}</span>
                 <span className="text-gray-300 truncate flex-1 min-w-0">{e.description}</span>
                 <span className="text-gray-500 whitespace-nowrap">{e.source}</span>
+                {e._id && (
+                  e.mitigated ? (
+                    <span className="text-[10px] text-green-500/70 whitespace-nowrap">Reviewed</span>
+                  ) : (
+                    <button
+                      onClick={() => acknowledgeEvent({ eventId: e._id })}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
+                    >
+                      Acknowledge
+                    </button>
+                  )
+                )}
               </div>
             );
           })}

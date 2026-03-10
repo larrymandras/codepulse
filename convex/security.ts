@@ -22,6 +22,16 @@ export const recordEvent = mutation({
   },
 });
 
+export const acknowledgeEvent = mutation({
+  args: { eventId: v.id("securityEvents") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.eventId, {
+      mitigated: true,
+      resolvedAt: Date.now() / 1000,
+    });
+  },
+});
+
 export const recentEvents = query({
   args: {},
   handler: async (ctx) => {

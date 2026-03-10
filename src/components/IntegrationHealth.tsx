@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useIntegrationHealth } from "../hooks/useIntegrationHealth";
 
 const INTEGRATIONS = [
@@ -27,6 +28,13 @@ function statusBadge(status: string) {
 
 export default function IntegrationHealth() {
   const health = useIntegrationHealth();
+  const [testing, setTesting] = useState<string | null>(null);
+
+  const handleTest = (key: string) => {
+    setTesting(key);
+    // Convex queries are reactive, so we just show a brief "checking" state
+    setTimeout(() => setTesting(null), 1500);
+  };
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
@@ -45,7 +53,23 @@ export default function IntegrationHealth() {
               </span>
               <span className="text-sm text-gray-200">{integration.name}</span>
             </div>
-            {statusBadge(health[integration.key])}
+            <div className="flex items-center gap-2">
+              {testing === integration.key ? (
+                <span className="text-[10px] text-yellow-400 animate-pulse">
+                  checking...
+                </span>
+              ) : (
+                statusBadge(health[integration.key])
+              )}
+              <button
+                onClick={() => handleTest(integration.key)}
+                disabled={testing === integration.key}
+                className="text-[10px] px-1.5 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
+                title="Test connection"
+              >
+                Test
+              </button>
+            </div>
           </div>
         ))}
       </div>

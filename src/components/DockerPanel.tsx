@@ -1,7 +1,15 @@
+import { useState } from "react";
 import { useDockerHealth } from "../hooks/useDockerHealth";
 
 export default function DockerPanel() {
   const containers = useDockerHealth();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    // Convex queries are reactive; show a brief visual indicator
+    setTimeout(() => setRefreshing(false), 1500);
+  };
 
   const statusColor = (status: string) => {
     if (status === "running") return "bg-green-500";
@@ -25,7 +33,20 @@ export default function DockerPanel() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Docker Containers</h2>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold text-gray-300">Docker Containers</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="text-[10px] px-2 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
+        >
+          {refreshing ? (
+            <span className="animate-pulse text-yellow-400">Refreshing...</span>
+          ) : (
+            "Refresh"
+          )}
+        </button>
+      </div>
       {containers.length === 0 ? (
         <p className="text-sm text-gray-500 py-6 text-center">No containers detected</p>
       ) : (

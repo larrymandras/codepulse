@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useAgentDetail } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
@@ -25,6 +28,8 @@ interface Props {
 export default function AgentDetailPanel({ agentId, onClose }: Props) {
   const detail = useAgentDetail(agentId);
   const { redact } = usePrivacyMask();
+  const navigate = useNavigate();
+  const updateStatus = useMutation(api.agents.updateStatus);
 
   if (!detail) {
     return (
@@ -132,6 +137,30 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       {detail.coordination.length === 0 && (
         <p className="text-[10px] text-gray-600">No coordination events</p>
       )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700/50">
+        {detail.status === "running" && (
+          <button
+            onClick={() =>
+              updateStatus({
+                agentId: detail.agentId,
+                status: "completed",
+                endedAt: Date.now() / 1000,
+              })
+            }
+            className="flex-1 text-[11px] font-medium px-2 py-1.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors"
+          >
+            Stop Agent
+          </button>
+        )}
+        <button
+          onClick={() => navigate(`/sessions/${detail.sessionId}`)}
+          className="flex-1 text-[11px] font-medium px-2 py-1.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors"
+        >
+          View Session
+        </button>
+      </div>
     </div>
   );
 }

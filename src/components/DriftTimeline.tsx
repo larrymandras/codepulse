@@ -1,5 +1,9 @@
+import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useDriftChanges, useDriftSummary } from "../hooks/useDrift";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
+import type { Id } from "../../convex/_generated/dataModel";
 
 function relativeTime(ts: number): string {
   const now = Date.now() / 1000;
@@ -38,6 +42,16 @@ export default function DriftTimeline() {
   const changes = useDriftChanges();
   const summary = useDriftSummary();
   const { mask } = usePrivacyMask();
+  const acknowledge = useMutation(api.drift.acknowledgeChange);
+  const [fadingIds, setFadingIds] = useState<Set<string>>(new Set());
+
+  const handleAcknowledge = async (id: string) => {
+    setFadingIds((prev) => new Set(prev).add(id));
+    // Wait for fade animation, then delete
+    setTimeout(async () => {
+      await acknowledge({ id: id as Id<"configChanges"> });
+    }, 300);
+  };
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
@@ -90,9 +104,15 @@ export default function DriftTimeline() {
             const keyParts = c.configKey.split(":");
             const prefix = keyParts[0];
             const name = keyParts.slice(1).join(":") || c.configKey;
+            const isFading = fadingIds.has(c.id);
 
             return (
-              <div key={c.id} className="flex items-start gap-3 py-1.5 border-b border-gray-700/30 last:border-0">
+              <div
+                key={c.id}
+                className={`flex items-start gap-3 py-1.5 border-b border-gray-700/30 last:border-0 transition-opacity duration-300 ${
+                  isFading ? "opacity-0" : "opacity-100"
+                }`}
+              >
                 {/* Timeline dot + line */}
                 <div className="flex flex-col items-center pt-1.5 shrink-0">
                   <span className={`w-2 h-2 rounded-full ${ct.dot}`} />
@@ -118,6 +138,16 @@ export default function DriftTimeline() {
                     </p>
                   )}
                 </div>
+
+                {/* Acknowledge button */}
+                <button
+                  onClick={() => handleAcknowledge(c.id)}
+                  disabled={isFading}
+                  className="text-gray-600 hover:text-green-400 transition-colors text-xs px-1 pt-0.5 shrink-0"
+                  title="Acknowledge change"
+                >
+                  ✓
+                </button>
 
                 {/* Timestamp */}
                 <span className="text-[10px] text-gray-600 shrink-0 pt-0.5">

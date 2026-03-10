@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSecurityEvents } from "../hooks/useSecurityEvents";
 import SecurityStats from "../components/SecurityStats";
 import SecurityEventFeed from "../components/SecurityEventFeed";
+
+const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
+type SeverityFilter = (typeof SEVERITY_TABS)[number];
 
 function formatRelativeTime(epochSeconds: number | null): string {
   if (!epochSeconds) return "--";
@@ -21,7 +25,12 @@ function statusColor(value: number, thresholds: { warn: number; danger: number }
 }
 
 export default function Security() {
+  const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const events = useSecurityEvents();
+  const filteredEvents =
+    severityFilter === "all"
+      ? events
+      : events.filter((e: any) => e.severity === severityFilter);
   const rlsStats = useQuery(api.security.rlsStats);
   const hitlStats = useQuery(api.security.hitlStats);
   const webhookStats = useQuery(api.security.webhookStats);
@@ -37,8 +46,25 @@ export default function Security() {
       {/* Severity Stats */}
       <SecurityStats />
 
+      {/* Severity filter tabs */}
+      <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-1 w-fit">
+        {SEVERITY_TABS.map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setSeverityFilter(tab)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+              severityFilter === tab
+                ? "bg-gray-700 text-gray-100"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Security Event Feed */}
-      <SecurityEventFeed events={events} />
+      <SecurityEventFeed events={filteredEvents} />
 
       {/* Audit & Compliance */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">

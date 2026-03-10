@@ -41,18 +41,21 @@ export default function HeroStatsBar() {
       value: stats.activeSessions,
       sub: `${stats.runningAgents} agents`,
       color: "#60a5fa",
+      onClick: () => navigate("/agents"),
     },
     {
       label: "Events / hr",
       value: stats.eventsThisHour,
       sparkline: stats.eventSparkline,
       color: "#a78bfa",
+      onClick: () => navigate("/analytics"),
     },
     {
       label: "Error Rate",
       value: `${stats.errorRate}%`,
       sub: `${stats.errorsThisHour} errors`,
       color: stats.errorRate > 20 ? "#f87171" : stats.errorRate > 10 ? "#fbbf24" : "#34d399",
+      onClick: () => navigate("/alerts"),
     },
     {
       label: "Alerts",
@@ -71,22 +74,26 @@ export default function HeroStatsBar() {
       value: formatCost(stats.hourlyCost),
       sparkline: stats.costSparkline,
       color: "#fbbf24",
+      onClick: () => navigate("/analytics"),
     },
     {
       label: "Tokens / hr",
       value: stats.hourlyTokens > 1000 ? `${(stats.hourlyTokens / 1000).toFixed(1)}k` : stats.hourlyTokens,
       color: "#22d3ee",
+      onClick: () => navigate("/analytics"),
     },
     {
       label: "Tools",
       value: stats.knownTools,
       color: "#a78bfa",
+      onClick: () => navigate("/capabilities"),
     },
     {
       label: "Security",
       value: stats.securityEvents,
       sub: "this hour",
       color: stats.securityEvents > 0 ? "#fb923c" : "#34d399",
+      onClick: () => navigate("/security"),
     },
   ];
 
@@ -108,7 +115,7 @@ export default function HeroStatsBar() {
           <div
             key={kpi.label}
             onClick={kpi.onClick}
-            className={`group flex flex-col gap-1 ${kpi.onClick ? "cursor-pointer" : ""}`}
+            className="group flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 transition-colors hover:bg-gray-800/70"
           >
             <span className="text-[10px] text-gray-500 uppercase tracking-wider">
               {kpi.label}
