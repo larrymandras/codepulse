@@ -78,9 +78,11 @@ export default defineSchema({
     tools: v.optional(v.array(v.string())),
     avatarId: v.optional(v.id("avatars")),
     displayName: v.optional(v.string()),
+    sortOrder: v.optional(v.float64()),
     createdAt: v.float64(),
     updatedAt: v.float64(),
-  }).index("by_profileId", ["profileId"]),
+  }).index("by_profileId", ["profileId"])
+    .index("by_sortOrder", ["sortOrder"]),
 
   contextSnapshots: defineTable({
     sessionId: v.string(),

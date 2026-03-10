@@ -45,7 +45,25 @@ export const update = mutation({
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("agentProfiles").order("desc").collect();
+    const all = await ctx.db.query("agentProfiles").collect();
+    // Sort by sortOrder (ascending), falling back to createdAt desc for unordered items
+    return all.sort((a, b) => {
+      const aOrder = a.sortOrder ?? Infinity;
+      const bOrder = b.sortOrder ?? Infinity;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      return b.createdAt - a.createdAt;
+    });
+  },
+});
+
+export const updateSortOrder = mutation({
+  args: {
+    orderedIds: v.array(v.id("agentProfiles")),
+  },
+  handler: async (ctx, args) => {
+    for (let i = 0; i < args.orderedIds.length; i++) {
+      await ctx.db.patch(args.orderedIds[i], { sortOrder: i });
+    }
   },
 });
 

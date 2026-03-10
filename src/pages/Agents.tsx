@@ -1,6 +1,22 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAllAgents } from "../hooks/useAgentTopology";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
@@ -15,6 +31,124 @@ import type { AgentProfile, Avatar } from "../types";
 
 type Tab = "registry" | "runtime" | "topology";
 type StatusFilter = "all" | "running" | "completed" | "failed";
+
+/* ── Sortable profile card wrapper ─────────────────────────────── */
+function SortableProfileCard({
+  profile,
+  avatar,
+  runtimeCount,
+  runningCount,
+  onEdit,
+}: {
+  profile: AgentProfile;
+  avatar: Avatar | null;
+  runtimeCount: number;
+  runningCount: number;
+  onEdit: (p: AgentProfile) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: profile._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 hover:border-gray-600/50 transition-colors group"
+    >
+      {/* Header */}
+      <div className="flex items-start gap-3 mb-3">
+        {/* Drag handle */}
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-1 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 transition-colors touch-none"
+          title="Drag to reorder"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="3" r="1.2" />
+            <circle cx="11" cy="3" r="1.2" />
+            <circle cx="5" cy="8" r="1.2" />
+            <circle cx="11" cy="8" r="1.2" />
+            <circle cx="5" cy="13" r="1.2" />
+            <circle cx="11" cy="13" r="1.2" />
+          </svg>
+        </button>
+        <AgentAvatar
+          avatar={avatar ?? { name: profile.name }}
+          status={runningCount > 0 ? "active" : "idle"}
+          size="md"
+        />
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-semibold text-gray-100 truncate">
+            {profile.displayName ?? profile.name}
+          </h3>
+          <p className="text-[10px] text-gray-500 font-mono">
+            {profile.profileId}
+          </p>
+        </div>
+        <button
+          onClick={() => onEdit(profile)}
+          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 text-xs transition-opacity"
+        >
+          Edit
+        </button>
+      </div>
+
+      {/* Model badge */}
+      {profile.model && (
+        <div className="mb-3">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+            {profile.model}
+          </span>
+        </div>
+      )}
+
+      {/* Avatar description & capabilities */}
+      {avatar?.description && (
+        <p className="text-xs text-gray-400 mb-2">{avatar.description}</p>
+      )}
+
+      {avatar?.capabilities && avatar.capabilities.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {avatar.capabilities.map((cap: string) => (
+            <span
+              key={cap}
+              className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-400"
+            >
+              {cap}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Runtime stats */}
+      <div className="flex items-center gap-3 pt-2 border-t border-gray-700/30 text-[10px] text-gray-500">
+        <span>
+          {runtimeCount} instance{runtimeCount !== 1 ? "s" : ""}
+        </span>
+        {runningCount > 0 && (
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            {runningCount} active
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const STATUS_BADGE: Record<string, string> = {
   running: "bg-green-500/20 text-green-400",
@@ -36,6 +170,7 @@ export default function Agents() {
   const profiles = useAgentProfiles();
   const avatars = useAvatars();
   const seedTeams = useMutation(api.seedTeams.seed);
+  const updateSortOrder = useMutation(api.agentProfiles.updateSortOrder);
 
   const [tab, setTab] = useState<Tab>("registry");
   const [filter, setFilter] = useState<StatusFilter>("all");
@@ -84,6 +219,30 @@ export default function Agents() {
   }, [avatars]);
 
   const now = Date.now() / 1000;
+
+  // Drag-and-drop sensors (10px activation distance to avoid accidental drags)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(KeyboardSensor),
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = profiles.findIndex((p) => p._id === active.id);
+      const newIndex = profiles.findIndex((p) => p._id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(profiles, oldIndex, newIndex);
+      // Persist the new order
+      updateSortOrder({
+        orderedIds: reordered.map((p) => p._id),
+      });
+    },
+    [profiles, updateSortOrder],
+  );
 
   const tabs: { label: string; value: Tab; count?: number }[] = [
     { label: "Registry", value: "registry", count: profiles.length },
@@ -214,106 +373,46 @@ export default function Agents() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {profiles.map((profile) => {
-                    const avatar = profile.avatarId
-                      ? avatarMap[profile.avatarId]
-                      : null;
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={profiles.map((p) => p._id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {profiles.map((profile) => {
+                        const avatar = profile.avatarId
+                          ? avatarMap[profile.avatarId]
+                          : null;
+                        const runtimeCount = allAgents.filter(
+                          (a) =>
+                            a.agentType === profile.profileId ||
+                            a.agentType === profile.name,
+                        ).length;
+                        const runningCount = allAgents.filter(
+                          (a) =>
+                            (a.agentType === profile.profileId ||
+                              a.agentType === profile.name) &&
+                            a.status === "running",
+                        ).length;
 
-                    // Count runtime agents matching this profile
-                    const runtimeCount = allAgents.filter(
-                      (a) =>
-                        a.agentType === profile.profileId ||
-                        a.agentType === profile.name,
-                    ).length;
-                    const runningCount = allAgents.filter(
-                      (a) =>
-                        (a.agentType === profile.profileId ||
-                          a.agentType === profile.name) &&
-                        a.status === "running",
-                    ).length;
-
-                    return (
-                      <div
-                        key={profile._id}
-                        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 hover:border-gray-600/50 transition-colors group"
-                      >
-                        {/* Header */}
-                        <div className="flex items-start gap-3 mb-3">
-                          <AgentAvatar
-                            avatar={
-                              avatar ?? { name: profile.name }
-                            }
-                            status={
-                              runningCount > 0 ? "active" : "idle"
-                            }
-                            size="md"
+                        return (
+                          <SortableProfileCard
+                            key={profile._id}
+                            profile={profile}
+                            avatar={avatar}
+                            runtimeCount={runtimeCount}
+                            runningCount={runningCount}
+                            onEdit={setEditingProfile}
                           />
-                          <div className="flex-1 min-w-0">
-                            <h3 className="text-sm font-semibold text-gray-100 truncate">
-                              {profile.displayName ?? profile.name}
-                            </h3>
-                            <p className="text-[10px] text-gray-500 font-mono">
-                              {profile.profileId}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => setEditingProfile(profile)}
-                            className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 text-xs transition-opacity"
-                          >
-                            Edit
-                          </button>
-                        </div>
-
-                        {/* Model badge */}
-                        {profile.model && (
-                          <div className="mb-3">
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
-                              {profile.model}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Avatar description & capabilities */}
-                        {avatar?.description && (
-                          <p className="text-xs text-gray-400 mb-2">
-                            {avatar.description}
-                          </p>
-                        )}
-
-                        {avatar?.capabilities &&
-                          avatar.capabilities.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-3">
-                              {avatar.capabilities.map(
-                                (cap: string) => (
-                                  <span
-                                    key={cap}
-                                    className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-400"
-                                  >
-                                    {cap}
-                                  </span>
-                                ),
-                              )}
-                            </div>
-                          )}
-
-                        {/* Runtime stats */}
-                        <div className="flex items-center gap-3 pt-2 border-t border-gray-700/30 text-[10px] text-gray-500">
-                          <span>
-                            {runtimeCount} instance
-                            {runtimeCount !== 1 ? "s" : ""}
-                          </span>
-                          {runningCount > 0 && (
-                            <span className="flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                              {runningCount} active
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </>
           )}
