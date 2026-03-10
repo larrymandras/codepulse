@@ -6,6 +6,7 @@ import { useAmbient, type PresetName, type Category } from "../contexts/AmbientC
 import AgentAvatar from "../components/AgentAvatar";
 import AgentProfileEditor from "../components/AgentProfileEditor";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import InfoTooltip from "../components/InfoTooltip";
 import type { AgentProfile } from "../types";
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -99,7 +100,7 @@ export default function Settings() {
       <SectionErrorBoundary name="Privacy Masking">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Privacy Masking</h2>
+          <h2 className="text-sm font-semibold text-gray-300">Privacy Masking<InfoTooltip text="Control data masking levels for screenshots and demos — hides sensitive session IDs, file paths, and values" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               privacy.level === "demo"
@@ -190,7 +191,7 @@ export default function Settings() {
       <SectionErrorBoundary name="Ambient Audio">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Ambient Audio</h2>
+          <h2 className="text-sm font-semibold text-gray-300">Ambient Audio<InfoTooltip text="Background audio presets for focus and immersion — choose from ambient, lofi, nature, and synth categories" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               ambient.enabled
@@ -302,7 +303,7 @@ export default function Settings() {
       <SectionErrorBoundary name="CRT Overlay">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">CRT Overlay</h2>
+          <h2 className="text-sm font-semibold text-gray-300">CRT Overlay<InfoTooltip text="Retro CRT monitor effect with scanlines, glow, and flicker — purely cosmetic" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               crtEnabled
@@ -357,7 +358,7 @@ export default function Settings() {
       <SectionErrorBoundary name="Agent Profiles">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Agent Profiles</h2>
+          <h2 className="text-sm font-semibold text-gray-300">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
           {!creatingProfile && !editingProfile && (
             <button
               onClick={() => setCreatingProfile(true)}

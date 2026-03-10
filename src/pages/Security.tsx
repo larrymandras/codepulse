@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { useSecurityEvents } from "../hooks/useSecurityEvents";
 import SecurityStats from "../components/SecurityStats";
 import SecurityEventFeed from "../components/SecurityEventFeed";
+import InfoTooltip from "../components/InfoTooltip";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -68,7 +69,7 @@ export default function Security() {
 
       {/* Audit & Compliance */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-4">Audit & Compliance</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-4">Audit & Compliance<InfoTooltip text="Security audit metrics: RLS isolation tests, audit chain integrity, human-in-the-loop status, webhook validation, and credential vault access" /></h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* RLS Isolation */}
           <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-3">

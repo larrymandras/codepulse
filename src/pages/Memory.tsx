@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MemoryIndexHealth from "../components/MemoryIndexHealth";
+import InfoTooltip from "../components/InfoTooltip";
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
@@ -119,7 +120,7 @@ export default function Memory() {
       {/* Timeline */}
       <div className="space-y-2">
         <h2 className="text-sm font-semibold text-gray-300">
-          {searchText.length >= 2 ? "Search Results" : "Timeline"}
+          {searchText.length >= 2 ? "Search Results" : "Timeline"}<InfoTooltip text="Chronological log of episodic memory events — context snapshots, learnings, and agent observations" />
         </h2>
         {!displayEvents || displayEvents.length === 0 ? (
           <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">

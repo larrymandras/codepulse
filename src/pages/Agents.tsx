@@ -26,6 +26,7 @@ import AgentDetailPanel from "../components/AgentDetailPanel";
 import AgentProfileEditor from "../components/AgentProfileEditor";
 import MetricCard from "../components/MetricCard";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import InfoTooltip from "../components/InfoTooltip";
 import { formatDuration } from "../lib/formatters";
 import type { AgentProfile, Avatar } from "../types";
 
@@ -426,7 +427,7 @@ export default function Agents() {
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 className="text-sm font-semibold text-gray-300">
-              Runtime Instances
+              Runtime Instances<InfoTooltip text="Live agent instances currently running or recently completed — click to view details" />
             </h2>
             <div className="flex items-center gap-1 bg-gray-900/50 border border-gray-700/30 rounded-lg p-0.5">
               {statusFilters.map((f) => (
