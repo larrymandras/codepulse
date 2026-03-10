@@ -364,6 +364,46 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "mcp_server_sync": {
+          const d = data as any;
+          if (Array.isArray(d.items)) {
+            await ctx.runMutation(api.registry.importMcpServers, {
+              items: d.items,
+              importSource: d.importSource ?? "github:mandras-mcp-servers",
+            });
+          }
+          break;
+        }
+        case "skills_sync": {
+          const d = data as any;
+          if (Array.isArray(d.items)) {
+            await ctx.runMutation(api.registry.importSkills, {
+              items: d.items,
+              importSource: d.importSource ?? "github:mandras-skills",
+            });
+          }
+          break;
+        }
+        case "hooks_sync": {
+          const d = data as any;
+          if (Array.isArray(d.items)) {
+            await ctx.runMutation(api.registry.importHooks, {
+              items: d.items,
+              importSource: d.importSource ?? "github:mandras-hooks",
+            });
+          }
+          break;
+        }
+        case "plugins_sync": {
+          const d = data as any;
+          if (Array.isArray(d.items)) {
+            await ctx.runMutation(api.registry.importPlugins, {
+              items: d.items,
+              importSource: d.importSource ?? "github:mandras-plugins",
+            });
+          }
+          break;
+        }
       }
     }
 

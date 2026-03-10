@@ -521,6 +521,162 @@ export const recordVersionBump = mutation({
   },
 });
 
+/**
+ * Bulk-import MCP servers from Mandras_MCP_Servers manifest.
+ */
+export const importMcpServers = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+        url: v.optional(v.string()),
+        category: v.optional(v.string()),
+      })
+    ),
+    importSource: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    let created = 0;
+    for (const item of args.items) {
+      const existing = await ctx.db
+        .query("mcpServers")
+        .withIndex("by_name", (q) => q.eq("name", item.name))
+        .first();
+      if (existing) {
+        await ctx.db.patch(existing._id, { lastSeenAt: now });
+      } else {
+        await ctx.db.insert("mcpServers", {
+          name: item.name,
+          url: item.url,
+          status: "configured",
+          toolCount: undefined,
+          lastSeenAt: now,
+        });
+        created++;
+      }
+    }
+    return { created, total: args.items.length };
+  },
+});
+
+/**
+ * Bulk-import skills from Mandras_Skills / Mandras_Made_Skills manifests.
+ */
+export const importSkills = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+        source: v.optional(v.string()),
+        category: v.optional(v.string()),
+      })
+    ),
+    importSource: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    let created = 0;
+    for (const item of args.items) {
+      const existing = await ctx.db
+        .query("skills")
+        .withIndex("by_name", (q) => q.eq("name", item.name))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("skills", {
+          name: item.name,
+          description: item.description,
+          source: item.source ?? args.importSource,
+          discoveredAt: now,
+        });
+        created++;
+      }
+    }
+    return { created, total: args.items.length };
+  },
+});
+
+/**
+ * Bulk-import hooks from Mandras_Hooks manifest.
+ */
+export const importHooks = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        name: v.string(),
+        hookType: v.string(),
+        description: v.optional(v.string()),
+        command: v.string(),
+        matcher: v.optional(v.string()),
+        category: v.optional(v.string()),
+      })
+    ),
+    importSource: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    let created = 0;
+    for (const item of args.items) {
+      const existing = await ctx.db
+        .query("registeredHooks")
+        .withIndex("by_hookType", (q) => q.eq("hookType", item.hookType))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("registeredHooks", {
+          hookType: item.hookType,
+          command: item.command,
+          matcher: item.matcher,
+          registeredAt: now,
+        });
+        created++;
+      }
+    }
+    return { created, total: args.items.length };
+  },
+});
+
+/**
+ * Bulk-import plugins from Mandras_Plugins manifest.
+ */
+export const importPlugins = mutation({
+  args: {
+    items: v.array(
+      v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+        version: v.optional(v.string()),
+        category: v.optional(v.string()),
+      })
+    ),
+    importSource: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    let created = 0;
+    for (const item of args.items) {
+      const existing = await ctx.db
+        .query("plugins")
+        .withIndex("by_name", (q) => q.eq("name", item.name))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("plugins", {
+          name: item.name,
+          version: item.version,
+          enabled: true,
+          config: item.description
+            ? { description: item.description, category: item.category }
+            : undefined,
+          installedAt: now,
+        });
+        created++;
+      }
+    }
+    return { created, total: args.items.length };
+  },
+});
+
 export const getSessionSnapshot = query({
   args: { sessionId: v.string() },
   handler: async (ctx, args) => {
