@@ -523,6 +523,9 @@ export const recordVersionBump = mutation({
 
 /**
  * Bulk-import MCP servers from Mandras_MCP_Servers manifest.
+ * Names are normalized to lowercase to avoid duplicates.
+ * If a server already exists (from runtime events), updates lastSeenAt
+ * without overwriting the "connected" status.
  */
 export const importMcpServers = mutation({
   args: {
@@ -540,15 +543,20 @@ export const importMcpServers = mutation({
     const now = Date.now() / 1000;
     let created = 0;
     for (const item of args.items) {
+      const name = item.name.toLowerCase();
       const existing = await ctx.db
         .query("mcpServers")
-        .withIndex("by_name", (q) => q.eq("name", item.name))
+        .withIndex("by_name", (q) => q.eq("name", name))
         .first();
       if (existing) {
-        await ctx.db.patch(existing._id, { lastSeenAt: now });
+        // Don't downgrade "connected" to "configured"
+        await ctx.db.patch(existing._id, {
+          lastSeenAt: now,
+          url: item.url ?? existing.url,
+        });
       } else {
         await ctx.db.insert("mcpServers", {
-          name: item.name,
+          name,
           url: item.url,
           status: "configured",
           toolCount: undefined,
