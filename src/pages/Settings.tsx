@@ -9,7 +9,8 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import type { AgentProfile } from "../types";
 
-const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
+const CONVEX_DEPLOYMENT = CONVEX_URL ? new URL(CONVEX_URL).hostname.split(".")[0] : "unknown";
 
 function Toggle({
   enabled,
@@ -44,7 +45,6 @@ function Toggle({
 }
 
 export default function Settings() {
-  const convexUrl = import.meta.env.VITE_CONVEX_URL ?? "Not configured";
   const profiles = useAgentProfiles();
   const avatars = useAvatars();
   const [editingProfile, setEditingProfile] = useState<AgentProfile | null>(null);
@@ -68,31 +68,44 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
 
-      {/* Authentication */}
-      <SectionErrorBoundary name="Authentication">
+      {/* Connection Status */}
+      <SectionErrorBoundary name="Connection Status">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Authentication</h2>
-        {CLERK_KEY ? (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Provider</span>
-              <span className="text-gray-300 text-xs">Clerk</span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-500">Status</span>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+          Connection Status<InfoTooltip text="Backend connection details and environment configuration" />
+        </h2>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">Backend</span>
+            <span className="text-gray-300 text-xs">Convex</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">Deployment</span>
+            <span className="text-gray-300 text-xs font-mono">{CONVEX_DEPLOYMENT}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">URL</span>
+            <span className="text-gray-300 text-xs font-mono truncate max-w-[280px]">{CONVEX_URL || "Not configured"}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">Status</span>
+            {CONVEX_URL ? (
               <span className="flex items-center gap-1.5 text-xs text-green-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 Connected
               </span>
-            </div>
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-red-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                Not configured
+              </span>
+            )}
           </div>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500">
-              Auth not configured. Set <code className="text-gray-400 bg-gray-900/50 px-1.5 py-0.5 rounded text-xs font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> in <code className="text-gray-400 bg-gray-900/50 px-1.5 py-0.5 rounded text-xs font-mono">.env.local</code> to enable.
-            </p>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-500">Environment</span>
+            <span className="text-gray-300 text-xs">{import.meta.env.MODE}</span>
           </div>
-        )}
+        </div>
       </div>
       </SectionErrorBoundary>
 
@@ -334,23 +347,6 @@ export default function Settings() {
         <p className="text-[10px] text-gray-600 mt-3">
           Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
-      </div>
-      </SectionErrorBoundary>
-
-      {/* Connection */}
-      <SectionErrorBoundary name="Connection">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Connection</h2>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Convex URL</span>
-            <span className="font-mono text-gray-300 text-xs">{convexUrl}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Deployment</span>
-            <span className="font-mono text-gray-300 text-xs">dev:ideal-sandpiper-297</span>
-          </div>
-        </div>
       </div>
       </SectionErrorBoundary>
 
