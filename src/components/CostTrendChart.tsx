@@ -9,6 +9,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useCostOverTime } from "../hooks/useAnalytics";
+import InfoTooltip from "./InfoTooltip";
 
 const PROVIDER_COLORS: Record<string, string> = {
   anthropic: "#a78bfa",
@@ -42,7 +43,7 @@ export default function CostTrendChart() {
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
         <p className="text-gray-500 text-sm">No LLM cost data yet.</p>
       </div>
     );
@@ -50,7 +51,7 @@ export default function CostTrendChart() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend (Cumulative)</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend (Cumulative)<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" />

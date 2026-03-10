@@ -7,6 +7,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import InfoTooltip from "./InfoTooltip";
 
 interface PulseChartProps {
   events: any[];
@@ -28,7 +29,7 @@ export default function PulseChart({ events }: PulseChartProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Activity Pulse</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">Activity Pulse<InfoTooltip text="Real-time event activity over the last hour, grouped into 1-minute buckets" /></h2>
       {data.length === 0 ? (
         <p className="text-sm text-gray-500 py-12 text-center">No activity data yet</p>
       ) : (

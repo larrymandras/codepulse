@@ -1,3 +1,5 @@
+import InfoTooltip from "./InfoTooltip";
+
 interface SystemResourcesProps {
   data?: {
     cpu?: number;
@@ -50,7 +52,7 @@ export default function SystemResources({ data }: SystemResourcesProps) {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <h2 className="text-sm font-semibold text-gray-300 mb-3">
-        System Resources
+        System Resources<InfoTooltip text="System resource utilization: CPU, RAM, and disk usage" />
       </h2>
       {!hasData ? (
         <p className="text-sm text-gray-500 py-6 text-center">

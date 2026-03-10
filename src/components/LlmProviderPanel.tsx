@@ -1,5 +1,6 @@
 import { useLlmMetrics } from "../hooks/useLlmMetrics";
 import { formatCost } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 export default function LlmProviderPanel() {
   const calls = useLlmMetrics();
@@ -28,7 +29,7 @@ export default function LlmProviderPanel() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">LLM Metrics</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">LLM Metrics<InfoTooltip text="LLM usage metrics: API calls, token consumption, cost, and latency by provider and model" /></h2>
       {totalCalls === 0 ? (
         <p className="text-sm text-gray-500 py-6 text-center">No LLM calls recorded</p>
       ) : (

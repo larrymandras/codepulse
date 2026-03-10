@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useHeroStats } from "../hooks/useHeroStats";
 import { formatCost } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 function Sparkline({ data, color, height = 24 }: { data: number[]; color: string; height?: number }) {
   if (data.length === 0) return null;
@@ -107,6 +108,7 @@ export default function HeroStatsBar() {
         </div>
         <div className="h-4 w-px bg-gray-700" />
         <span className="text-xs text-gray-500">System Status — Last Hour</span>
+        <InfoTooltip text="Key performance indicators: sessions, events, errors, cost, tokens, tools, and security alerts" />
       </div>
 
       {/* KPI grid */}

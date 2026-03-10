@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 export default function SupabasePanel() {
   const healthRecords = useQuery(api.supabase.currentHealth) ?? [];
@@ -58,7 +59,7 @@ export default function SupabasePanel() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <h2 className="text-sm font-semibold text-gray-300 mb-3">
-        Supabase Health
+        Supabase Health<InfoTooltip text="Supabase service health: database, auth, storage, realtime, and edge functions" />
       </h2>
       <div className="space-y-4">
         {renderSection("Local", localRecords)}

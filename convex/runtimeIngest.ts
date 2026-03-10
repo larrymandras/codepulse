@@ -110,17 +110,41 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "docker_status": {
           const d = data as any;
-          const cid = d.containerId ?? d.container_id;
-          if (cid) {
-            await ctx.runMutation(api.docker.recordStatus, {
-              containerId: cid,
-              name: d.name ?? cid,
-              image: d.image,
-              status: d.status ?? "unknown",
-              health: d.health,
-              cpuPercent: d.cpuPercent ?? d.cpu_percent,
-              memoryMb: d.memoryMb ?? d.memory_mb,
-            });
+
+          // Aggregated format: { containers: [ { name, image, state, healthy, ... }, ... ] }
+          if (Array.isArray(d.containers)) {
+            for (const c of d.containers) {
+              const cid = c.id ?? c.name ?? "unknown";
+              const healthStr = c.health ?? (
+                c.healthy === true ? "healthy"
+                : c.healthy === false ? "unhealthy"
+                : c.healthy === undefined ? undefined
+                : String(c.healthy)
+              );
+              await ctx.runMutation(api.docker.recordStatus, {
+                containerId: cid,
+                name: c.name ?? cid,
+                image: c.image,
+                status: c.state ?? c.status ?? "unknown",
+                health: healthStr,
+                cpuPercent: c.cpuPercent ?? c.cpu_percent,
+                memoryMb: c.memoryMb ?? c.memory_mb ?? c.memPercent ?? c.mem_percent,
+              });
+            }
+          } else {
+            // Single-container fallback
+            const cid = d.containerId ?? d.container_id;
+            if (cid) {
+              await ctx.runMutation(api.docker.recordStatus, {
+                containerId: cid,
+                name: d.name ?? cid,
+                image: d.image,
+                status: d.state ?? d.status ?? "unknown",
+                health: d.health,
+                cpuPercent: d.cpuPercent ?? d.cpu_percent,
+                memoryMb: d.memoryMb ?? d.memory_mb,
+              });
+            }
           }
           break;
         }

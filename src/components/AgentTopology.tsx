@@ -13,6 +13,7 @@ import AgentDetailPanel from "./AgentDetailPanel";
 import { useAllAgents, useCoordinationEvents } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
 import type { Agent } from "../types";
+import InfoTooltip from "./InfoTooltip";
 
 const nodeTypes = { agent: AgentNode };
 
@@ -187,7 +188,7 @@ export default function AgentTopology() {
   if (allAgents.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Agent Topology</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Agent Topology<InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" /></h2>
         <p className="text-sm text-gray-500 py-8 text-center">No agents running</p>
       </div>
     );
@@ -197,7 +198,7 @@ export default function AgentTopology() {
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h2 className="text-sm font-semibold text-gray-300">Agent Topology</h2>
+        <h2 className="text-sm font-semibold text-gray-300">Agent Topology<InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" /></h2>
 
         {/* Status filter */}
         <div className="flex items-center gap-1 bg-gray-900/50 border border-gray-700/30 rounded-lg p-0.5">

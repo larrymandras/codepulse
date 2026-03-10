@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom";
 import { useActiveSessions } from "../hooks/useActiveSessions";
 import { formatTimestamp } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 export default function ActiveSessions() {
   const sessions = useActiveSessions();
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Active Sessions</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">Active Sessions<InfoTooltip text="Currently active Claude Code sessions with event counts and last activity" /></h2>
       {sessions.length === 0 ? (
         <p className="text-sm text-gray-500 py-6 text-center">No active sessions</p>
       ) : (

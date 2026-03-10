@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useRecentEvents } from "../hooks/useRecentEvents";
 import { getEventIcon, getEventColor } from "../lib/eventIcons";
 import { formatTimestamp } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 const EVENT_FILTERS = ["All", "Tool", "LLM", "File", "Error", "Agent"] as const;
 type EventFilter = (typeof EVENT_FILTERS)[number];
@@ -26,7 +27,7 @@ export default function EventFeed() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Live Event Feed</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">Live Event Feed<InfoTooltip text="Live stream of all telemetry events with type filtering" /></h2>
 
       {/* Filter bar */}
       <div className="flex items-center gap-1.5 mb-3 flex-wrap">

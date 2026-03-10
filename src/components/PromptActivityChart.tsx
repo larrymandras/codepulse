@@ -9,6 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import InfoTooltip from "./InfoTooltip";
 
 export default function PromptActivityChart() {
   const volumeData = useQuery(api.promptActivity.promptVolume) ?? [];
@@ -29,7 +30,7 @@ export default function PromptActivityChart() {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
-          Prompt Activity
+          Prompt Activity<InfoTooltip text="User prompt volume and average length over the last 24 hours" />
         </h2>
         <p className="text-sm text-gray-500 py-4 text-center">No data yet</p>
       </div>

@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { useTokenWaterfall } from "../hooks/useAdvancedAnalytics";
+import InfoTooltip from "./InfoTooltip";
 
 const MODEL_COLORS: Record<string, string> = {
   "claude-opus": "#fbbf24",
@@ -70,7 +71,7 @@ export default function TokenWaterfall() {
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Waterfall (30 min)</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Waterfall (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );

@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import InfoTooltip from "./InfoTooltip";
 
 const COLORS = {
   accept: "#34d399",
@@ -44,7 +45,7 @@ export default function PermissionDecisionsChart() {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
-          Permission Decisions
+          Permission Decisions<InfoTooltip text="Tool permission decisions: accept vs reject ratio and breakdown by decision source" />
         </h2>
         <p className="text-sm text-gray-500 py-4 text-center">
           No permission decision data yet

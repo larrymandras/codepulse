@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import InfoTooltip from "./InfoTooltip";
 
 export default function ActiveTimeChart() {
   const rawData = useQuery(api.activeTime.recent) ?? [];
@@ -18,7 +19,7 @@ export default function ActiveTimeChart() {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
-          Active Time
+          Active Time<InfoTooltip text="Daily active time split between user interaction and CLI usage" />
         </h2>
         <p className="text-sm text-gray-500 py-4 text-center">No data yet</p>
       </div>

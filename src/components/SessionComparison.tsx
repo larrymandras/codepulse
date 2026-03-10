@@ -1,5 +1,6 @@
 import { useSessionList } from "../hooks/useAnalytics";
 import { formatDuration, formatTimestamp } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 export default function SessionComparison() {
   const sessions = useSessionList(50);
@@ -7,7 +8,7 @@ export default function SessionComparison() {
   if (sessions.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Session Comparison</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
         <p className="text-gray-500 text-sm">No sessions yet.</p>
       </div>
     );

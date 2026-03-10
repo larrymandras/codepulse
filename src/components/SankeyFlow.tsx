@@ -1,5 +1,6 @@
 import { Sankey, Tooltip, ResponsiveContainer, Layer, Rectangle } from "recharts";
 import { useToolFlowSankey } from "../hooks/useAdvancedAnalytics";
+import InfoTooltip from "./InfoTooltip";
 
 const NODE_COLORS: Record<string, string> = {
   "Tool Use": "#a78bfa",
@@ -62,7 +63,7 @@ export default function SankeyFlow() {
   if (nodes.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Tool Flow (Sankey)</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Tool Flow (Sankey)<InfoTooltip text="Tool execution flow from event sources through tools to outcomes (success, error, human-in-the-loop)" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );

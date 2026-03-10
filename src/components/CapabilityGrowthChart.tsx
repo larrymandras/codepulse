@@ -9,6 +9,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useCapabilityGrowth } from "../hooks/useAnalytics";
+import InfoTooltip from "./InfoTooltip";
 
 export default function CapabilityGrowthChart() {
   const data = useCapabilityGrowth();
@@ -16,7 +17,7 @@ export default function CapabilityGrowthChart() {
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Capability Growth</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Capability Growth<InfoTooltip text="Growth of registered tools, MCP servers, plugins, and skills over time" /></h2>
         <p className="text-gray-500 text-sm">No capability data yet.</p>
       </div>
     );

@@ -1,4 +1,5 @@
 import { useSecurityCounts } from "../hooks/useSecurityEvents";
+import InfoTooltip from "./InfoTooltip";
 
 const severityConfig = [
   { key: "critical", label: "Critical", color: "text-red-400", bg: "bg-red-400/10", dot: "bg-red-400" },
@@ -11,7 +12,10 @@ export default function SecurityStats() {
   const counts = useSecurityCounts();
 
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-4 gap-4 relative">
+      <div className="absolute -top-1 right-0">
+        <InfoTooltip text="Security event counts by severity level: critical, high, medium, and low" />
+      </div>
       {severityConfig.map((s) => (
         <div
           key={s.key}

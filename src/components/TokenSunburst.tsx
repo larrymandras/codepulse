@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { SunburstChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useTokenSunburst } from "../hooks/useAdvancedAnalytics";
+import InfoTooltip from "./InfoTooltip";
 
 const PROVIDER_COLORS: Record<string, string> = {
   anthropic: "#a78bfa",
@@ -37,7 +38,7 @@ export default function TokenSunburst() {
   if (!tree.children || tree.children.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Distribution (Sunburst)</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Distribution (Sunburst)<InfoTooltip text="Interactive sunburst chart of token distribution by provider and model — click to drill down" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );
@@ -52,7 +53,7 @@ export default function TokenSunburst() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Token Distribution (Sunburst)</h2>
+        <h2 className="text-sm font-semibold text-gray-300">Token Distribution (Sunburst)<InfoTooltip text="Interactive sunburst chart of token distribution by provider and model — click to drill down" /></h2>
         {drillNode && (
           <button
             onClick={() => setDrillNode(null)}

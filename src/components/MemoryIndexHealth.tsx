@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import InfoTooltip from "./InfoTooltip";
 
 function relativeTime(ts: number): string {
   const now = Date.now() / 1000;
@@ -52,7 +53,7 @@ export default function MemoryIndexHealth() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-gray-300">
-          Memory Index Health
+          Memory Index Health<InfoTooltip text="Episodic memory health: total events, recent activity, and breakdown by type and agent" />
         </h2>
         <span
           className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}

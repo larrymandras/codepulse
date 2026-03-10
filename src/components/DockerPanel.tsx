@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useDockerHealth } from "../hooks/useDockerHealth";
+import InfoTooltip from "./InfoTooltip";
 
 export default function DockerPanel() {
   const containers = useDockerHealth();
@@ -14,6 +15,8 @@ export default function DockerPanel() {
   const statusColor = (status: string) => {
     if (status === "running") return "bg-green-500";
     if (status === "paused" || status === "restarting") return "bg-yellow-500";
+    if (status === "exited") return "bg-gray-500";
+    if (status === "unknown") return "bg-yellow-500";
     return "bg-red-500";
   };
 
@@ -34,7 +37,7 @@ export default function DockerPanel() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Docker Containers</h2>
+        <h2 className="text-sm font-semibold text-gray-300">Docker Containers<InfoTooltip text="Docker container status including health, CPU, and memory usage" /></h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
@@ -48,7 +51,7 @@ export default function DockerPanel() {
         </button>
       </div>
       {containers.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">No containers detected</p>
+        <p className="text-sm text-gray-500 py-6 text-center">Docker monitoring active — waiting for container data</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {containers.map((c: any) => (

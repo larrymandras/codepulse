@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatCost } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 export default function LlmAnalyticsPanel() {
   const providerData = useQuery(api.llm.providerBreakdown) ?? [];
@@ -30,7 +31,7 @@ export default function LlmAnalyticsPanel() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Provider Comparison</h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Provider Comparison<InfoTooltip text="Detailed LLM analytics: provider comparison and per-model performance breakdown" /></h2>
         {barData.length === 0 ? (
           <p className="text-gray-500 text-sm">No provider data yet.</p>
         ) : (

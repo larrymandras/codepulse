@@ -1,6 +1,7 @@
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
+import InfoTooltip from "./InfoTooltip";
 
 const severityStyles: Record<string, { badge: string; icon: string }> = {
   critical: { badge: "text-red-400 bg-red-400/10", icon: "!!" },
@@ -18,7 +19,7 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Security Event Feed</h2>
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
       {events.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">No security events recorded</p>
       ) : (

@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import InfoTooltip from "./InfoTooltip";
 
 export default function ErrorRateTrend() {
   const data = useQuery(api.analytics.errorRateTrend) ?? [];
@@ -17,7 +18,7 @@ export default function ErrorRateTrend() {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-sm font-semibold text-gray-300 mb-3">
-          Error Rate Trend (24h)
+          Error Rate Trend (24h)<InfoTooltip text="Error count trend over the last 24 hours" />
         </h2>
         <p className="text-gray-500 text-sm">No errors in the last 24 hours.</p>
       </div>

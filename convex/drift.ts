@@ -8,6 +8,15 @@ export const acknowledgeChange = mutation({
   },
 });
 
+export const acknowledgeAll = mutation({
+  args: { ids: v.array(v.id("configChanges")) },
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      await ctx.db.delete(id);
+    }
+  },
+});
+
 export const recordChange = mutation({
   args: {
     configKey: v.string(),

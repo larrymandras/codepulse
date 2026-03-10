@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import InfoTooltip from "./InfoTooltip";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -25,7 +26,7 @@ export default function CompactionTimeline() {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
-          Context Compaction Timeline
+          Context Compaction Timeline<InfoTooltip text="Context compaction events showing when Claude Code compressed conversation history" />
         </h2>
         <p className="text-sm text-gray-500 py-4 text-center">
           No compaction events recorded
