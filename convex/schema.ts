@@ -550,4 +550,21 @@ export default defineSchema({
     durationSeconds: v.float64(),
     timestamp: v.float64(),
   }).index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // GITHUB ACTIONS WORKFLOW RUNS
+  // ============================================================
+
+  githubWorkflowRuns: defineTable({
+    workflowName: v.string(),
+    repo: v.string(),
+    status: v.string(), // "success" | "failure" | "in_progress" | "queued"
+    conclusion: v.optional(v.string()), // "success" | "failure" | "cancelled" | null
+    runUrl: v.optional(v.string()),
+    runId: v.optional(v.float64()),
+    triggeredAt: v.float64(),
+    completedAt: v.optional(v.float64()),
+  })
+    .index("by_triggeredAt", ["triggeredAt"])
+    .index("by_workflow", ["workflowName"]),
 });

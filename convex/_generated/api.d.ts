@@ -31,6 +31,7 @@ import type * as events from "../events.js";
 import type * as fileOps from "../fileOps.js";
 import type * as git from "../git.js";
 import type * as gitActivity from "../gitActivity.js";
+import type * as githubActions from "../githubActions.js";
 import type * as health from "../health.js";
 import type * as heroStats from "../heroStats.js";
 import type * as http from "../http.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   fileOps: typeof fileOps;
   git: typeof git;
   gitActivity: typeof gitActivity;
+  githubActions: typeof githubActions;
   health: typeof health;
   heroStats: typeof heroStats;
   http: typeof http;

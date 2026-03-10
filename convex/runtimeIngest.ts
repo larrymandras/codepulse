@@ -340,6 +340,20 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "github_workflow_run": {
+          const d = data as any;
+          await ctx.runMutation(api.githubActions.recordWorkflowRun, {
+            workflowName: d.workflowName ?? d.workflow_name ?? "unknown",
+            repo: d.repo ?? d.repository ?? "unknown",
+            status: d.status ?? "unknown",
+            conclusion: d.conclusion,
+            runUrl: d.runUrl ?? d.run_url ?? d.html_url,
+            runId: d.runId ?? d.run_id,
+            triggeredAt: d.triggeredAt ?? d.triggered_at ?? timestamp,
+            completedAt: d.completedAt ?? d.completed_at,
+          });
+          break;
+        }
       }
     }
 

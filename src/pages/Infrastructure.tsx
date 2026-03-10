@@ -3,6 +3,7 @@ import DockerPanel from "../components/DockerPanel";
 import SupabasePanel from "../components/SupabasePanel";
 import SystemResources from "../components/SystemResources";
 import IntegrationHealth from "../components/IntegrationHealth";
+import GithubActionsPanel from "../components/GithubActionsPanel";
 import CompactionTimeline from "../components/CompactionTimeline";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { useSystemResources } from "../hooks/useSystemResources";
@@ -20,6 +21,9 @@ export default function Infrastructure() {
       </div>
       <SystemResources data={resourceData} />
       <IntegrationHealth />
+      <SectionErrorBoundary name="GitHub Actions">
+        <GithubActionsPanel />
+      </SectionErrorBoundary>
       <SectionErrorBoundary name="Compaction Timeline">
         <CompactionTimeline />
       </SectionErrorBoundary>
