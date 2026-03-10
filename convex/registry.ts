@@ -233,8 +233,11 @@ export const detectAndRegisterTool = mutation({
 
 /**
  * Bulk-import tools from an external inventory (e.g., Astridr_Tools repo).
- * Upserts by name — existing tools get description/category updated,
- * new tools are inserted with usageCount 0.
+ * Routes each item to the correct registry table based on registryType:
+ *   - "mcp"    → mcpServers
+ *   - "skill"  → skills
+ *   - "plugin" → plugins
+ *   - "tool"   → discoveredTools (default)
  */
 export const importToolInventory = mutation({
   args: {
@@ -244,46 +247,109 @@ export const importToolInventory = mutation({
         description: v.optional(v.string()),
         category: v.optional(v.string()),
         source: v.optional(v.string()),
+        registryType: v.optional(v.string()),
       })
     ),
     importSource: v.string(),
   },
   handler: async (ctx, args) => {
     const now = Date.now() / 1000;
-    let created = 0;
-    let updated = 0;
+    const counts = { mcpServers: 0, skills: 0, plugins: 0, tools: 0 };
 
     for (const tool of args.tools) {
-      const existing = await ctx.db
-        .query("discoveredTools")
-        .withIndex("by_name", (q) => q.eq("name", tool.name))
-        .first();
+      const type = tool.registryType ?? "tool";
 
-      if (existing) {
-        // Update description/source if provided, don't reset usage
-        const patch: Record<string, any> = {};
-        if (tool.description) patch.description = tool.description;
-        if (tool.source) patch.source = tool.source;
-        if (tool.category) patch.serverName = tool.category; // reuse serverName for category
-        if (Object.keys(patch).length > 0) {
-          await ctx.db.patch(existing._id, patch);
-          updated++;
+      switch (type) {
+        case "mcp": {
+          const existing = await ctx.db
+            .query("mcpServers")
+            .withIndex("by_name", (q) => q.eq("name", tool.name))
+            .first();
+          if (existing) {
+            await ctx.db.patch(existing._id, {
+              status: existing.status,
+              lastSeenAt: now,
+              ...(tool.description ? {} : {}),
+            });
+          } else {
+            await ctx.db.insert("mcpServers", {
+              name: tool.name,
+              status: "discovered",
+              url: undefined,
+              toolCount: undefined,
+              lastSeenAt: now,
+            });
+          }
+          counts.mcpServers++;
+          break;
         }
-      } else {
-        await ctx.db.insert("discoveredTools", {
-          name: tool.name,
-          source: tool.source ?? args.importSource,
-          serverName: tool.category,
-          description: tool.description,
-          usageCount: 0,
-          lastUsedAt: now,
-          discoveredAt: now,
-        });
-        created++;
+        case "skill": {
+          const existing = await ctx.db
+            .query("skills")
+            .withIndex("by_name", (q) => q.eq("name", tool.name))
+            .first();
+          if (!existing) {
+            await ctx.db.insert("skills", {
+              name: tool.name,
+              description: tool.description,
+              source: tool.category ?? tool.source ?? args.importSource,
+              discoveredAt: now,
+            });
+          }
+          counts.skills++;
+          break;
+        }
+        case "plugin": {
+          const existing = await ctx.db
+            .query("plugins")
+            .withIndex("by_name", (q) => q.eq("name", tool.name))
+            .first();
+          if (!existing) {
+            await ctx.db.insert("plugins", {
+              name: tool.name,
+              version: undefined,
+              enabled: true,
+              config: tool.description
+                ? { description: tool.description, category: tool.category }
+                : undefined,
+              installedAt: now,
+            });
+          }
+          counts.plugins++;
+          break;
+        }
+        default: {
+          // "tool" — goes into discoveredTools
+          const existing = await ctx.db
+            .query("discoveredTools")
+            .withIndex("by_name", (q) => q.eq("name", tool.name))
+            .first();
+          if (existing) {
+            const patch: Record<string, any> = {};
+            if (tool.description) patch.description = tool.description;
+            if (tool.source) patch.source = tool.source;
+            if (tool.category) patch.serverName = tool.category;
+            if (Object.keys(patch).length > 0) {
+              await ctx.db.patch(existing._id, patch);
+            }
+          } else {
+            await ctx.db.insert("discoveredTools", {
+              name: tool.name,
+              source: tool.source ?? args.importSource,
+              serverName: tool.category,
+              description: tool.description,
+              usageCount: 0,
+              lastUsedAt: now,
+              discoveredAt: now,
+            });
+          }
+          counts.tools++;
+          break;
+        }
       }
     }
 
-    return { created, updated, total: args.tools.length };
+    return { ...counts, total: args.tools.length };
   },
 });
 
