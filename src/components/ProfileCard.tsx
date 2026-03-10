@@ -20,6 +20,27 @@ interface ProfileCardProps {
   runningAgentCount?: number;
 }
 
+const PROFILE_META: Record<string, { name: string; emoji: string; color: string; description: string }> = {
+  personal: {
+    name: "Personal",
+    emoji: "🍎",
+    color: "#4ADE80",
+    description: "Personal life — family, health, travel, learning",
+  },
+  business: {
+    name: "Business",
+    emoji: "⚡",
+    color: "#FBBF24",
+    description: "CTO operations — code, architecture, vendor management",
+  },
+  consulting: {
+    name: "Consulting",
+    emoji: "🛡️",
+    color: "#60A5FA",
+    description: "Client delivery — SOWs, milestones, BD pipeline",
+  },
+};
+
 export default function ProfileCard({
   profileId,
   metrics,
@@ -58,15 +79,35 @@ export default function ProfileCard({
   const budgetPct = budgetLimit > 0 ? Math.min((budgetSpent / budgetLimit) * 100, 100) : 0;
   const budgetPeriod = budget?.period ?? "daily";
 
+  const meta = PROFILE_META[profileId];
+
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className={`h-2 w-2 rounded-full ${hasRecentActivity ? "bg-green-400" : "bg-gray-600"}`}
-          aria-hidden="true"
-        />
-        <span className="sr-only">{hasRecentActivity ? "Recently active" : "Inactive"}</span>
-        <h3 className="text-sm font-mono text-gray-200 truncate">{profileId}</h3>
+      <div className="flex items-center gap-3 mb-1">
+        {meta ? (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0"
+            style={{ backgroundColor: meta.color + "20" }}
+          >
+            {meta.emoji}
+          </div>
+        ) : (
+          <span
+            className={`h-2 w-2 rounded-full flex-shrink-0 ${hasRecentActivity ? "bg-green-400" : "bg-gray-600"}`}
+            aria-hidden="true"
+          />
+        )}
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-gray-200 truncate">
+            {meta?.name ?? profileId}
+          </h3>
+          {meta?.description && (
+            <p className="text-[10px] text-gray-500 truncate">{meta.description}</p>
+          )}
+        </div>
+        {!meta && (
+          <span className="sr-only">{hasRecentActivity ? "Recently active" : "Inactive"}</span>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="bg-gray-900/50 rounded-lg p-2">

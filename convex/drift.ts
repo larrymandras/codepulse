@@ -1,4 +1,24 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+export const recordChange = mutation({
+  args: {
+    configKey: v.string(),
+    oldValue: v.optional(v.string()),
+    newValue: v.string(),
+    changedBy: v.optional(v.string()),
+    changedAt: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("configChanges", {
+      configKey: args.configKey,
+      oldValue: args.oldValue,
+      newValue: args.newValue,
+      changedBy: args.changedBy,
+      changedAt: args.changedAt,
+    });
+  },
+});
 
 export const recentChanges = query({
   args: {},

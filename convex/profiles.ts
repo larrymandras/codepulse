@@ -148,6 +148,70 @@ export const recentSwitches = query({
   },
 });
 
+// Seed the three operational profiles
+export const seedProfiles = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if already seeded
+    const existing = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_profileId", (q) => q.eq("profileId", "personal"))
+      .first();
+    if (existing) {
+      return { seeded: false, message: "Profiles already seeded" };
+    }
+
+    const now = Date.now() / 1000;
+    const profiles = [
+      {
+        profileId: "personal",
+        channels: [
+          { type: "telegram", status: "active" },
+          { type: "email", status: "active" },
+          { type: "calendar", status: "active" },
+        ],
+        budget: { spent: 12.50, limit: 50, period: "monthly" },
+        modelPreferences: { primary: "claude-sonnet-4-6", fallback: "claude-haiku-4-5" },
+      },
+      {
+        profileId: "business",
+        channels: [
+          { type: "slack", status: "active" },
+          { type: "github", status: "active" },
+          { type: "email", status: "active" },
+          { type: "notion", status: "active" },
+        ],
+        budget: { spent: 87.30, limit: 200, period: "monthly" },
+        modelPreferences: { primary: "claude-opus-4-6", fallback: "claude-sonnet-4-6" },
+      },
+      {
+        profileId: "consulting",
+        channels: [
+          { type: "slack", status: "active" },
+          { type: "github", status: "active" },
+          { type: "email", status: "active" },
+          { type: "notion", status: "inactive" },
+          { type: "linear", status: "active" },
+        ],
+        budget: { spent: 156.80, limit: 500, period: "monthly" },
+        modelPreferences: { primary: "claude-opus-4-6", fallback: "claude-sonnet-4-6" },
+      },
+    ];
+
+    for (const p of profiles) {
+      await ctx.db.insert("profileConfigs", {
+        profileId: p.profileId,
+        channels: p.channels,
+        budget: p.budget,
+        modelPreferences: p.modelPreferences,
+        updatedAt: now,
+      });
+    }
+
+    return { seeded: true, message: "Seeded 3 operational profiles" };
+  },
+});
+
 export const summarize = internalMutation({
   args: {},
   handler: async (ctx) => {

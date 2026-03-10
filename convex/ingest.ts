@@ -201,16 +201,17 @@ export const buildIngest = httpAction(async (ctx, request) => {
       }
     }
 
-    // ConfigChange — store in configChanges table
+    // ConfigChange — store in configChanges for drift tracking
     if (eventType === "ConfigChange") {
-      await ctx.runMutation(api.events.ingest, {
-        sessionId: sid,
-        eventType: "ConfigChange",
-        toolName,
-        filePath,
-        payload: data,
-        hookType: "ConfigChange",
-        timestamp,
+      const configKey = data.config_source ?? data.configSource ?? data.key ?? "unknown";
+      const oldVal = data.old_value ?? data.oldValue;
+      const newVal = data.new_value ?? data.newValue ?? data.value;
+      await ctx.runMutation(api.drift.recordChange, {
+        configKey: `config:${configKey}`,
+        oldValue: oldVal !== undefined ? String(oldVal) : undefined,
+        newValue: newVal !== undefined ? String(newVal) : "changed",
+        changedBy: data.changedBy ?? sid,
+        changedAt: timestamp,
       });
     }
 

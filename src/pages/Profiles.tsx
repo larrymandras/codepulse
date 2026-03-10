@@ -1,4 +1,5 @@
-import { useQuery } from "convex/react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
 import ProfileCard from "../components/ProfileCard";
@@ -11,23 +12,47 @@ import { useProfileSwitches } from "../hooks/useProfileSwitches";
 
 export default function Profiles() {
   const overview = useQuery(api.profiles.overview) ?? {};
-  const profiles = Object.entries(overview);
+  const metricsEntries = Object.entries(overview);
   const providerBreakdown = useQuery(api.llm.providerBreakdown) ?? [];
   const allAgents = useQuery(api.agents.listAll) ?? [];
   const runningAgents = useQuery(api.agents.listRunning) ?? [];
   const profileConfigs = useProfileConfigs();
   const profileSwitches = useProfileSwitches();
+  const seedProfiles = useMutation(api.profiles.seedProfiles);
+  const [seeding, setSeeding] = useState(false);
+  const seedAttempted = useRef(false);
 
-  // Summary calculations
-  const totalProfiles = profiles.length;
-  const totalLlmCalls = providerBreakdown.reduce((sum, p) => sum + p.calls, 0);
-  const totalCost = providerBreakdown.reduce((sum, p) => sum + p.cost, 0);
+  // Auto-seed profiles if none configured
+  useEffect(() => {
+    if (profileConfigs.length === 0 && !seedAttempted.current) {
+      seedAttempted.current = true;
+      setSeeding(true);
+      seedProfiles({}).finally(() => setSeeding(false));
+    }
+  }, [profileConfigs.length, seedProfiles]);
+
+  // Build metrics lookup by profileId
+  const metricsByProfile: Record<string, any[]> = {};
+  for (const [profileId, metrics] of metricsEntries) {
+    metricsByProfile[profileId] = metrics as any[];
+  }
+
+  // Derive profile list from configs (primary source) merged with any metric-only profiles
+  const configProfileIds = new Set(profileConfigs.map((c) => c.profileId));
+  const allProfileIds = new Set([
+    ...configProfileIds,
+    ...metricsEntries.map(([id]) => id).filter((id) => !id.startsWith("_")),
+  ]);
+
+  const providerTotalCalls = providerBreakdown.reduce((sum, p) => sum + p.calls, 0);
+  const providerTotalCost = providerBreakdown.reduce((sum, p) => sum + p.cost, 0);
 
   // Count "active" profiles — those with activity in the last 5 minutes
   const now = Date.now() / 1000;
-  const activeProfiles = profiles.filter(([, metrics]) =>
-    (metrics as any[]).some((m) => now - m.timestamp < 300)
-  ).length;
+  const activeProfiles = [...allProfileIds].filter((id) => {
+    const metrics = metricsByProfile[id];
+    return metrics?.some((m: any) => now - m.timestamp < 300);
+  }).length;
 
   // Build config lookup by profileId
   const configByProfile: Record<string, any> = {};
@@ -35,8 +60,7 @@ export default function Profiles() {
     configByProfile[cfg.profileId] = cfg;
   }
 
-  // Build agent counts per profile (agents may have a sessionId matching profileId pattern)
-  // Since agents don't have a direct profileId field, count all agents as shared
+  // Build agent counts per profile
   const totalAgentCount = allAgents.length;
   const totalRunningCount = runningAgents.length;
 
@@ -57,32 +81,42 @@ export default function Profiles() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Agent Profiles</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Agent Profiles</h1>
+        <p className="text-sm text-gray-500 mt-1">
+          Operational profiles for Personal, Business, and Consulting workstreams
+        </p>
+      </div>
 
       {/* Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Profiles" value={totalProfiles} />
-        <MetricCard label="Total LLM Calls" value={totalLlmCalls} />
-        <MetricCard label="Total Cost" value={formatCost(totalCost)} />
+        <MetricCard label="Total Profiles" value={allProfileIds.size} />
+        <MetricCard label="Total LLM Calls" value={providerTotalCalls} />
+        <MetricCard label="Total Cost" value={formatCost(providerTotalCost)} />
         <MetricCard label="Active" value={activeProfiles} />
       </div>
 
       {/* Profile Cards */}
-      {profiles.length === 0 ? (
+      {seeding ? (
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-          <p className="text-gray-500">No profile metrics recorded yet</p>
+          <p className="text-gray-400">Setting up profiles...</p>
+        </div>
+      ) : allProfileIds.size === 0 ? (
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+          <p className="text-gray-500">No profiles configured yet</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {profiles.map(([profileId, metrics]) => {
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...allProfileIds].map((profileId) => {
             const cfg = configByProfile[profileId];
+            const metrics = metricsByProfile[profileId] ?? [];
             const channels = cfg?.channels;
             const budget = cfg?.budget;
             return (
               <ProfileCard
                 key={profileId}
                 profileId={profileId}
-                metrics={metrics as any[]}
+                metrics={metrics}
                 channels={Array.isArray(channels) ? channels : undefined}
                 budget={budget}
                 agentCount={totalAgentCount}

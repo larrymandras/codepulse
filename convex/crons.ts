@@ -15,8 +15,8 @@ crons.interval("metric rollup", { minutes: 5 }, internal.metrics.rollup);
 // 4. Docker health poll — every 2 min
 crons.interval("docker poll", { minutes: 2 }, internal.docker.pollHealth);
 
-// 5. Supabase health poll — every 5 min
-crons.interval("supabase poll", { minutes: 5 }, internal.supabase.pollHealth);
+// 5. Supabase health poll — every hour
+crons.interval("supabase poll", { hours: 1 }, internal.supabase.pollHealth);
 
 // 6. LLM cost aggregation — every 10 min
 crons.interval("llm cost rollup", { minutes: 10 }, internal.llm.rollupCosts);

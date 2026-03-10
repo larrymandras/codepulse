@@ -68,8 +68,28 @@ export const currentStatus = query({
 
 export const pollHealth = internalMutation({
   args: {},
-  handler: async (_ctx) => {
-    // Stub: real polling comes from scanner or external triggers
-    return { status: "ok" };
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const staleThreshold = now - 300; // 5 minutes
+
+    // Mark containers as "exited" if they haven't been updated recently
+    const containers = await ctx.db
+      .query("dockerContainers")
+      .order("desc")
+      .take(50);
+
+    let staleCount = 0;
+    for (const c of containers) {
+      if (c.updatedAt < staleThreshold && c.status === "running") {
+        await ctx.db.patch(c._id, {
+          status: "unknown",
+          health: "stale",
+          updatedAt: now,
+        });
+        staleCount++;
+      }
+    }
+
+    return { status: "ok", checked: containers.length, markedStale: staleCount };
   },
 });
