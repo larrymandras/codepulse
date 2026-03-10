@@ -231,6 +231,62 @@ export const detectAndRegisterTool = mutation({
   },
 });
 
+/**
+ * Bulk-import tools from an external inventory (e.g., Astridr_Tools repo).
+ * Upserts by name — existing tools get description/category updated,
+ * new tools are inserted with usageCount 0.
+ */
+export const importToolInventory = mutation({
+  args: {
+    tools: v.array(
+      v.object({
+        name: v.string(),
+        description: v.optional(v.string()),
+        category: v.optional(v.string()),
+        source: v.optional(v.string()),
+      })
+    ),
+    importSource: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    let created = 0;
+    let updated = 0;
+
+    for (const tool of args.tools) {
+      const existing = await ctx.db
+        .query("discoveredTools")
+        .withIndex("by_name", (q) => q.eq("name", tool.name))
+        .first();
+
+      if (existing) {
+        // Update description/source if provided, don't reset usage
+        const patch: Record<string, any> = {};
+        if (tool.description) patch.description = tool.description;
+        if (tool.source) patch.source = tool.source;
+        if (tool.category) patch.serverName = tool.category; // reuse serverName for category
+        if (Object.keys(patch).length > 0) {
+          await ctx.db.patch(existing._id, patch);
+          updated++;
+        }
+      } else {
+        await ctx.db.insert("discoveredTools", {
+          name: tool.name,
+          source: tool.source ?? args.importSource,
+          serverName: tool.category,
+          description: tool.description,
+          usageCount: 0,
+          lastUsedAt: now,
+          discoveredAt: now,
+        });
+        created++;
+      }
+    }
+
+    return { created, updated, total: args.tools.length };
+  },
+});
+
 // --- New queries ---
 
 export const listMcpServers = query({

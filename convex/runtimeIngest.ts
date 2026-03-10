@@ -354,6 +354,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "tool_inventory_sync": {
+          const d = data as any;
+          if (Array.isArray(d.tools)) {
+            await ctx.runMutation(api.registry.importToolInventory, {
+              tools: d.tools,
+              importSource: d.importSource ?? "github:astridr-tools",
+            });
+          }
+          break;
+        }
       }
     }
 
