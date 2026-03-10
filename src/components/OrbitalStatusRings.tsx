@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useDockerHealth } from "../hooks/useDockerHealth";
+import { useIntegrationHealth } from "../hooks/useIntegrationHealth";
 
 type NodeStatus = "healthy" | "degraded" | "down" | "unknown";
 
@@ -69,15 +70,27 @@ function supabaseStatus(status: string): NodeStatus {
 export default function OrbitalStatusRings() {
   const containers = useDockerHealth();
   const healthRecords = useQuery(api.supabase.currentHealth) ?? [];
+  const recentEvents = useQuery(api.events.listRecent, { limit: 1 });
+  const integrationHealth = useIntegrationHealth();
+
+  // Derive Convex status from recent event activity
+  const convexStatus = useMemo<NodeStatus>(() => {
+    if (!recentEvents || recentEvents.length === 0) return "unknown";
+    const latest = recentEvents[0];
+    const ageMs = Date.now() - latest.timestamp * 1000;
+    if (ageMs <= 5 * 60 * 1000) return "healthy";
+    if (ageMs <= 15 * 60 * 1000) return "degraded";
+    return "down";
+  }, [recentEvents]);
 
   const rings = useMemo<Ring[]>(() => {
-    // Ring 1 — Convex (innermost, always present)
+    // Ring 1 — Convex (innermost, status based on recent event activity)
     const convexRing: Ring = {
       label: "Convex",
       radius: 52,
       duration: 30,
       direction: 1,
-      nodes: [{ label: "Convex", icon: "CX", status: "healthy" }],
+      nodes: [{ label: "Convex", icon: "CX", status: convexStatus }],
     };
 
     // Ring 2 — Docker containers
@@ -116,22 +129,29 @@ export default function OrbitalStatusRings() {
       nodes: supabaseNodes,
     };
 
-    // Ring 4 — Integrations (outermost)
+    // Ring 4 — Integrations (outermost, wired to real health data)
+    function integrationNodeStatus(status: string): NodeStatus {
+      if (status === "Connected") return "healthy";
+      if (status === "Degraded") return "degraded";
+      if (status === "Disconnected") return "down";
+      return "unknown";
+    }
+
     const integrationRing: Ring = {
       label: "Integrations",
       radius: 172,
       duration: 80,
       direction: -1,
       nodes: [
-        { label: "GitHub", icon: "GH", status: "unknown" },
-        { label: "Telegram", icon: "TG", status: "unknown" },
-        { label: "Slack", icon: "SL", status: "unknown" },
-        { label: "Email", icon: "EM", status: "unknown" },
+        { label: "GitHub", icon: "GH", status: integrationNodeStatus(integrationHealth.github) },
+        { label: "Telegram", icon: "TG", status: integrationNodeStatus(integrationHealth.telegram) },
+        { label: "Slack", icon: "SL", status: integrationNodeStatus(integrationHealth.slack) },
+        { label: "Email", icon: "EM", status: integrationNodeStatus(integrationHealth.email) },
       ],
     };
 
     return [convexRing, dockerRing, supabaseRing, integrationRing];
-  }, [containers, healthRecords]);
+  }, [containers, healthRecords, convexStatus, integrationHealth]);
 
   const health = overallHealth(rings);
   const healthColor = STATUS_COLORS[health];

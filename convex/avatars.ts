@@ -6,6 +6,8 @@ export const create = mutation({
     name: v.string(),
     emoji: v.optional(v.string()),
     color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    capabilities: v.optional(v.array(v.string())),
     imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
@@ -13,6 +15,8 @@ export const create = mutation({
       name: args.name,
       emoji: args.emoji,
       color: args.color,
+      description: args.description,
+      capabilities: args.capabilities,
       imageStorageId: args.imageStorageId,
       createdAt: Date.now() / 1000,
     });
@@ -25,15 +29,19 @@ export const update = mutation({
     name: v.optional(v.string()),
     emoji: v.optional(v.string()),
     color: v.optional(v.string()),
+    description: v.optional(v.string()),
+    capabilities: v.optional(v.array(v.string())),
     imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
-    const updates: Record<string, any> = {};
+    const updates: Record<string, string | string[] | undefined> = {};
     if (fields.name !== undefined) updates.name = fields.name;
     if (fields.emoji !== undefined) updates.emoji = fields.emoji;
     if (fields.color !== undefined) updates.color = fields.color;
-    if (fields.imageStorageId !== undefined) updates.imageStorageId = fields.imageStorageId;
+    if (fields.description !== undefined) updates.description = fields.description;
+    if (fields.capabilities !== undefined) updates.capabilities = fields.capabilities;
+    if (fields.imageStorageId !== undefined) updates.imageStorageId = fields.imageStorageId as unknown as string;
     await ctx.db.patch(id, updates);
   },
 });

@@ -464,4 +464,88 @@ export default defineSchema({
     cpuPercent: v.optional(v.float64()),
     updatedAt: v.float64(),
   }).index("by_distro", ["distro"]),
+
+  // ============================================================
+  // CLAUDE CODE HOOK & OTEL TABLES
+  // ============================================================
+
+  toolExecutions: defineTable({
+    sessionId: v.string(),
+    toolName: v.string(),
+    durationMs: v.optional(v.float64()),
+    success: v.boolean(),
+    decision: v.optional(v.string()),
+    decisionSource: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_tool", ["toolName", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  permissionRequests: defineTable({
+    sessionId: v.string(),
+    toolName: v.string(),
+    decision: v.string(),
+    decisionSource: v.string(),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_tool", ["toolName", "timestamp"]),
+
+  worktreeEvents: defineTable({
+    sessionId: v.string(),
+    type: v.string(),
+    worktreePath: v.optional(v.string()),
+    branch: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  compactionEvents: defineTable({
+    sessionId: v.string(),
+    trigger: v.string(),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  instructionsLoaded: defineTable({
+    sessionId: v.string(),
+    filePath: v.string(),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  promptSubmissions: defineTable({
+    sessionId: v.string(),
+    promptLength: v.float64(),
+    promptId: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  apiErrors: defineTable({
+    sessionId: v.string(),
+    model: v.optional(v.string()),
+    errorMessage: v.string(),
+    statusCode: v.optional(v.string()),
+    durationMs: v.optional(v.float64()),
+    attempt: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_model", ["model", "timestamp"]),
+
+  gitActivity: defineTable({
+    sessionId: v.string(),
+    type: v.string(),
+    linesAdded: v.optional(v.float64()),
+    linesRemoved: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_type", ["type", "timestamp"]),
+
+  activeTime: defineTable({
+    sessionId: v.string(),
+    type: v.string(),
+    durationSeconds: v.float64(),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
 });

@@ -126,6 +126,137 @@ export const buildIngest = httpAction(async (ctx, request) => {
       });
     }
 
+    // ============================================================
+    // 9. Claude Code hook events
+    // ============================================================
+
+    const sid = sessionId ?? "unknown";
+
+    // PostToolUse — successful tool execution
+    if (eventType === "PostToolUse" || eventType === "claude_code.tool_result") {
+      await ctx.runMutation(api.toolExecutions.insert, {
+        sessionId: sid,
+        toolName: toolName ?? data.tool_name ?? "unknown",
+        durationMs: data.duration_ms ?? data.durationMs,
+        success: true,
+        decision: data.decision,
+        decisionSource: data.decision_source ?? data.decisionSource,
+        timestamp,
+      });
+    }
+
+    // PostToolUseFailure — failed tool execution
+    if (eventType === "PostToolUseFailure") {
+      await ctx.runMutation(api.toolExecutions.insert, {
+        sessionId: sid,
+        toolName: toolName ?? data.tool_name ?? "unknown",
+        durationMs: data.duration_ms ?? data.durationMs,
+        success: false,
+        errorMessage: data.error ?? data.errorMessage ?? data.error_message,
+        timestamp,
+      });
+    }
+
+    // PermissionRequest / tool_decision
+    if (eventType === "PermissionRequest" || eventType === "claude_code.tool_decision") {
+      await ctx.runMutation(api.permissionRequests.insert, {
+        sessionId: sid,
+        toolName: toolName ?? data.tool_name ?? "unknown",
+        decision: data.decision ?? "unknown",
+        decisionSource: data.decision_source ?? data.decisionSource ?? "unknown",
+        timestamp,
+      });
+    }
+
+    // Stop — mark session completed
+    if (eventType === "Stop") {
+      await ctx.runMutation(api.sessions.markCompleted, {
+        sessionId: sid,
+        status: "completed",
+      });
+    }
+
+    // TaskCompleted — agent coordination
+    if (eventType === "TaskCompleted") {
+      await ctx.runMutation(api.events.ingest, {
+        sessionId: sid,
+        eventType: "TaskCompleted",
+        toolName,
+        filePath,
+        payload: data,
+        hookType: "TaskCompleted",
+        timestamp,
+      });
+    }
+
+    // InstructionsLoaded — CLAUDE.md files
+    if (eventType === "InstructionsLoaded") {
+      const files = data.files ?? (data.filePath ? [data.filePath] : []);
+      for (const fp of files) {
+        await ctx.runMutation(api.instructionsLoaded.insert, {
+          sessionId: sid,
+          filePath: typeof fp === "string" ? fp : String(fp),
+          timestamp,
+        });
+      }
+    }
+
+    // ConfigChange — store in configChanges table
+    if (eventType === "ConfigChange") {
+      await ctx.runMutation(api.events.ingest, {
+        sessionId: sid,
+        eventType: "ConfigChange",
+        toolName,
+        filePath,
+        payload: data,
+        hookType: "ConfigChange",
+        timestamp,
+      });
+    }
+
+    // WorktreeCreate / WorktreeRemove
+    if (eventType === "WorktreeCreate" || eventType === "WorktreeRemove") {
+      await ctx.runMutation(api.worktreeEvents.insert, {
+        sessionId: sid,
+        type: eventType === "WorktreeCreate" ? "create" : "remove",
+        worktreePath: data.worktree_path ?? data.worktreePath,
+        branch: data.branch,
+        timestamp,
+      });
+    }
+
+    // PreCompact — context compaction
+    if (eventType === "PreCompact") {
+      await ctx.runMutation(api.compactionEvents.insert, {
+        sessionId: sid,
+        trigger: data.trigger ?? "auto",
+        timestamp,
+      });
+    }
+
+    // UserPromptSubmit / claude_code.user_prompt
+    if (eventType === "UserPromptSubmit" || eventType === "claude_code.user_prompt") {
+      await ctx.runMutation(api.promptActivity.insert, {
+        sessionId: sid,
+        promptLength: data.prompt_length ?? data.promptLength ?? 0,
+        promptId: data.prompt_id ?? data.promptId,
+        timestamp,
+      });
+    }
+
+    // claude_code.api_error — API errors
+    if (eventType === "claude_code.api_error") {
+      await ctx.runMutation(api.apiErrors.insert, {
+        sessionId: sid,
+        model: data.model,
+        errorMessage: data.error ?? data.errorMessage ?? data.error_message ?? "unknown",
+        statusCode: data.status_code != null ? String(data.status_code) : data.statusCode,
+        durationMs: data.duration_ms ?? data.durationMs,
+        attempt: data.attempt,
+        timestamp,
+      });
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

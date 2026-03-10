@@ -3,8 +3,13 @@ import DockerPanel from "../components/DockerPanel";
 import SupabasePanel from "../components/SupabasePanel";
 import SystemResources from "../components/SystemResources";
 import IntegrationHealth from "../components/IntegrationHealth";
+import CompactionTimeline from "../components/CompactionTimeline";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { useSystemResources } from "../hooks/useSystemResources";
 
 export default function Infrastructure() {
+  const resourceData = useSystemResources();
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Infrastructure</h1>
@@ -13,8 +18,11 @@ export default function Infrastructure() {
         <DockerPanel />
         <SupabasePanel />
       </div>
-      <SystemResources />
+      <SystemResources data={resourceData} />
       <IntegrationHealth />
+      <SectionErrorBoundary name="Compaction Timeline">
+        <CompactionTimeline />
+      </SectionErrorBoundary>
     </div>
   );
 }

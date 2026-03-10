@@ -8,6 +8,8 @@ import DockerPanel from "../components/DockerPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
 import HeroStatsBar from "../components/HeroStatsBar";
 import DriftTimeline from "../components/DriftTimeline";
+import ToolExecutionPanel from "../components/ToolExecutionPanel";
+import GitActivityWidget from "../components/GitActivityWidget";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 export default function Dashboard() {
@@ -50,6 +52,9 @@ export default function Dashboard() {
           <SectionErrorBoundary name="Drift Timeline">
             <DriftTimeline />
           </SectionErrorBoundary>
+          <SectionErrorBoundary name="Tool Executions">
+            <ToolExecutionPanel />
+          </SectionErrorBoundary>
         </div>
 
         {/* Right 1/3 */}
@@ -59,6 +64,9 @@ export default function Dashboard() {
           </SectionErrorBoundary>
           <SectionErrorBoundary name="LLM Providers">
             <LlmProviderPanel />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="Git Activity">
+            <GitActivityWidget />
           </SectionErrorBoundary>
         </div>
       </div>

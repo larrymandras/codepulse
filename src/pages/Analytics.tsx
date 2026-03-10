@@ -14,6 +14,11 @@ import TokenSunburst from "../components/TokenSunburst";
 import TokenWaterfall from "../components/TokenWaterfall";
 import ErrorRateTrend from "../components/ErrorRateTrend";
 import SessionDurationHistogram from "../components/SessionDurationHistogram";
+import PromptActivityChart from "../components/PromptActivityChart";
+import PermissionDecisionsChart from "../components/PermissionDecisionsChart";
+import ActiveTimeChart from "../components/ActiveTimeChart";
+import ApiErrorPanel from "../components/ApiErrorPanel";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 export default function Analytics() {
   const events = useRecentEvents(100);
@@ -67,6 +72,29 @@ export default function Analytics() {
 
       {/* Token Waterfall — full width */}
       <TokenWaterfall />
+
+      {/* Claude Code Telemetry */}
+      <h2 className="text-lg font-semibold text-gray-200 pt-4">Claude Code Telemetry</h2>
+
+      {/* Prompt Activity — full width */}
+      <SectionErrorBoundary name="Prompt Activity">
+        <PromptActivityChart />
+      </SectionErrorBoundary>
+
+      {/* Permission Decisions + Active Time — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionErrorBoundary name="Permission Decisions">
+          <PermissionDecisionsChart />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="Active Time">
+          <ActiveTimeChart />
+        </SectionErrorBoundary>
+      </div>
+
+      {/* API Errors — full width */}
+      <SectionErrorBoundary name="API Errors">
+        <ApiErrorPanel />
+      </SectionErrorBoundary>
     </div>
   );
 }

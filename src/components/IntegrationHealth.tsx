@@ -1,15 +1,18 @@
+import { useIntegrationHealth } from "../hooks/useIntegrationHealth";
+
 const INTEGRATIONS = [
-  { name: "GitHub MCP", icon: "GH" },
-  { name: "Supabase", icon: "SB" },
-  { name: "Docker", icon: "DK" },
-  { name: "Telegram", icon: "TG" },
-  { name: "Slack", icon: "SL" },
-  { name: "Email", icon: "EM" },
+  { name: "GitHub MCP", icon: "GH", key: "github" as const },
+  { name: "Supabase", icon: "SB", key: "supabase" as const },
+  { name: "Docker", icon: "DK", key: "docker" as const },
+  { name: "Telegram", icon: "TG", key: "telegram" as const },
+  { name: "Slack", icon: "SL", key: "slack" as const },
+  { name: "Email", icon: "EM", key: "email" as const },
 ];
 
 function statusBadge(status: string) {
   const colors: Record<string, string> = {
     Connected: "text-green-400 bg-green-400/10",
+    Degraded: "text-yellow-400 bg-yellow-400/10",
     Disconnected: "text-red-400 bg-red-400/10",
     Unknown: "text-gray-400 bg-gray-400/10",
   };
@@ -23,6 +26,8 @@ function statusBadge(status: string) {
 }
 
 export default function IntegrationHealth() {
+  const health = useIntegrationHealth();
+
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <h2 className="text-sm font-semibold text-gray-300 mb-3">
@@ -40,7 +45,7 @@ export default function IntegrationHealth() {
               </span>
               <span className="text-sm text-gray-200">{integration.name}</span>
             </div>
-            {statusBadge("Unknown")}
+            {statusBadge(health[integration.key])}
           </div>
         ))}
       </div>
