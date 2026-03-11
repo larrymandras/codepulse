@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
+import { useProfileConfigs } from "../hooks/useProfileConfigs";
 import { usePrivacy } from "../contexts/PrivacyContext";
 import { useAmbient, type PresetName, type Category } from "../contexts/AmbientContext";
 import AgentAvatar from "../components/AgentAvatar";
@@ -51,6 +54,44 @@ export default function Settings() {
   const [creatingProfile, setCreatingProfile] = useState(false);
   const privacy = usePrivacy();
   const ambient = useAmbient();
+  const profileConfigs = useProfileConfigs();
+  const updateEmail = useMutation(api.profiles.updateEmail);
+
+  const PROFILE_DEFAULTS: Record<string, { label: string; email: string }> = {
+    personal: { label: "Personal", email: "mandrasle@gmail.com" },
+    business: { label: "Business", email: "lmandras@myprotectall.com" },
+    consulting: { label: "Consulting", email: "mandrasle@gmail.com" },
+  };
+
+  const [emailEdits, setEmailEdits] = useState<Record<string, string>>({});
+  const [emailSaving, setEmailSaving] = useState<string | null>(null);
+  const [emailSaved, setEmailSaved] = useState<string | null>(null);
+
+  const getProfileEmail = (profileId: string) => {
+    const config = profileConfigs.find((c) => c.profileId === profileId);
+    return (config as Record<string, unknown>)?.emailAddress as string | undefined
+      ?? PROFILE_DEFAULTS[profileId]?.email
+      ?? "";
+  };
+
+  const handleEmailSave = async (profileId: string) => {
+    const newEmail = emailEdits[profileId];
+    if (!newEmail || newEmail === getProfileEmail(profileId)) return;
+    setEmailSaving(profileId);
+    try {
+      await updateEmail({ profileId, emailAddress: newEmail });
+      setEmailSaved(profileId);
+      setEmailEdits((prev) => {
+        const next = { ...prev };
+        delete next[profileId];
+        return next;
+      });
+      setTimeout(() => setEmailSaved(null), 2000);
+    } finally {
+      setEmailSaving(null);
+    }
+  };
+
   const [crtEnabled, setCrtEnabled] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("codepulse-crt") ?? "false");
@@ -106,6 +147,62 @@ export default function Settings() {
             <span className="text-gray-300 text-xs">{import.meta.env.MODE}</span>
           </div>
         </div>
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Profile Email Addresses */}
+      <SectionErrorBoundary name="Profile Emails">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+          Profile Email Addresses
+          <InfoTooltip text="Email addresses used by each profile for briefings and notifications. Changes are synced to the framework on next restart." />
+        </h2>
+        <div className="space-y-3">
+          {Object.entries(PROFILE_DEFAULTS).map(([profileId, { label }]) => {
+            const currentEmail = getProfileEmail(profileId);
+            const editValue = emailEdits[profileId];
+            const isDirty = editValue !== undefined && editValue !== currentEmail;
+            const isSaving = emailSaving === profileId;
+            const justSaved = emailSaved === profileId;
+
+            return (
+              <div key={profileId} className="space-y-1">
+                <label className="text-xs text-gray-500 block">{label}</label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={editValue ?? currentEmail}
+                    onChange={(e) =>
+                      setEmailEdits((prev) => ({ ...prev, [profileId]: e.target.value }))
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && isDirty) handleEmailSave(profileId);
+                    }}
+                    className="flex-1 bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                    placeholder="email@example.com"
+                  />
+                  {isDirty && (
+                    <button
+                      onClick={() => handleEmailSave(profileId)}
+                      disabled={isSaving}
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white px-3 py-1.5 rounded-lg text-xs whitespace-nowrap"
+                    >
+                      {isSaving ? "Saving..." : "Save"}
+                    </button>
+                  )}
+                  {justSaved && (
+                    <span className="flex items-center text-xs text-green-400 whitespace-nowrap">
+                      Saved
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-[10px] text-gray-600 mt-3">
+          These addresses determine where briefings and email notifications are delivered per profile.
+        </p>
       </div>
       </SectionErrorBoundary>
 

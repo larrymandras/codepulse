@@ -424,6 +424,7 @@ export default defineSchema({
     channels: v.optional(v.any()), // array of channel configs
     budget: v.optional(v.any()), // spending limits
     modelPreferences: v.optional(v.any()),
+    emailAddress: v.optional(v.string()), // delivery email for this profile
     updatedAt: v.float64(),
   })
     .index("by_profileId", ["profileId"])

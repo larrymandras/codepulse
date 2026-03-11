@@ -14,6 +14,7 @@ import SelfHealing from "./pages/SelfHealing";
 import BuildProgress from "./pages/BuildProgress";
 import Settings from "./pages/Settings";
 import Memory from "./pages/Memory";
+import Briefings from "./pages/Briefings";
 
 // Lazy-load heavy pages
 const Agents = lazy(() => import("./pages/Agents"));
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/self-healing" element={<SelfHealing />} />
             <Route path="/build" element={<BuildProgress />} />
             <Route path="/memory" element={<Memory />} />
+            <Route path="/briefings" element={<Briefings />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>

@@ -20,6 +20,7 @@ const navItems = [
   { to: "/self-healing", label: "Self-Healing", icon: "refresh" },
   { to: "/build", label: "Build", icon: "hammer" },
   { to: "/memory", label: "Memory", icon: "brain" },
+  { to: "/briefings", label: "Briefings", icon: "scroll" },
   { to: "/settings", label: "Settings", icon: "gear" },
 ];
 
@@ -36,6 +37,7 @@ const iconMap: Record<string, string> = {
   hammer: "T",
   tree: "Y",
   brain: "(~)",
+  scroll: "[]",
   gear: "*",
 };
 

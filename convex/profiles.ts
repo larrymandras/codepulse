@@ -84,6 +84,7 @@ export const upsertConfig = mutation({
     channels: v.optional(v.any()),
     budget: v.optional(v.any()),
     modelPreferences: v.optional(v.any()),
+    emailAddress: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now() / 1000;
@@ -96,6 +97,7 @@ export const upsertConfig = mutation({
         channels: args.channels ?? existing.channels,
         budget: args.budget ?? existing.budget,
         modelPreferences: args.modelPreferences ?? existing.modelPreferences,
+        ...(args.emailAddress !== undefined && { emailAddress: args.emailAddress }),
         updatedAt: now,
       });
     } else {
@@ -104,9 +106,48 @@ export const upsertConfig = mutation({
         channels: args.channels,
         budget: args.budget,
         modelPreferences: args.modelPreferences,
+        emailAddress: args.emailAddress,
         updatedAt: now,
       });
     }
+  },
+});
+
+export const updateEmail = mutation({
+  args: {
+    profileId: v.string(),
+    emailAddress: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    const existing = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
+      .first();
+
+    const oldEmail = existing?.emailAddress;
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        emailAddress: args.emailAddress,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("profileConfigs", {
+        profileId: args.profileId,
+        emailAddress: args.emailAddress,
+        updatedAt: now,
+      });
+    }
+
+    // Audit trail
+    await ctx.db.insert("configChanges", {
+      configKey: `profile.${args.profileId}.emailAddress`,
+      oldValue: oldEmail,
+      newValue: args.emailAddress,
+      changedBy: "dashboard",
+      changedAt: now,
+    });
   },
 });
 
