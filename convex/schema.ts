@@ -497,12 +497,19 @@ export default defineSchema({
     .index("by_tool", ["toolName", "timestamp"]),
 
   worktreeEvents: defineTable({
-    sessionId: v.string(),
-    type: v.string(),
+    sessionId: v.optional(v.string()),
+    type: v.string(), // "created" | "merged" | "merge_failed" | "cleaned"
+    worktreeId: v.optional(v.string()),
+    agentId: v.optional(v.string()),
     worktreePath: v.optional(v.string()),
     branch: v.optional(v.string()),
+    baseBranch: v.optional(v.string()),
+    proofPassed: v.optional(v.boolean()),
     timestamp: v.float64(),
-  }).index("by_timestamp", ["timestamp"]),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_agent", ["agentId", "timestamp"])
+    .index("by_type", ["type", "timestamp"]),
 
   compactionEvents: defineTable({
     sessionId: v.string(),
@@ -551,6 +558,104 @@ export default defineSchema({
     durationSeconds: v.float64(),
     timestamp: v.float64(),
   }).index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // CREDENTIAL AUDIT (Feature #3: Vault Proxy)
+  // ============================================================
+
+  credentialAudit: defineTable({
+    toolName: v.string(),
+    credentialKey: v.string(), // masked, e.g. "GITH***"
+    agentId: v.optional(v.string()),
+    granted: v.boolean(),
+    timestamp: v.float64(),
+  })
+    .index("by_tool", ["toolName", "timestamp"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_granted", ["granted", "timestamp"]),
+
+  // ============================================================
+  // MEMORY TIER STATS (Feature #1: L0/L1/L2 Tiered Context)
+  // ============================================================
+
+  memoryTierStats: defineTable({
+    agentId: v.string(),
+    contentLength: v.float64(),
+    l0Length: v.float64(),
+    l1Length: v.float64(),
+    tokenSavingsPercent: v.float64(),
+    hadLlmSummarizer: v.boolean(),
+    timestamp: v.float64(),
+  })
+    .index("by_agent", ["agentId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // REFLECTION RESULTS (Feature #2: Memory Self-Evolution)
+  // ============================================================
+
+  reflectionResults: defineTable({
+    agentId: v.string(),
+    eventsAnalyzed: v.float64(),
+    memoriesExtracted: v.float64(),
+    categories: v.any(),
+    avgConfidence: v.float64(),
+    reflectionDurationMs: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_agent", ["agentId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // PIPELINE CHECKPOINTS (Feature #6: Durable Pipeline Execution)
+  // ============================================================
+
+  pipelineCheckpoints: defineTable({
+    executionId: v.string(),
+    pipelineName: v.string(),
+    stepIndex: v.float64(),
+    stepName: v.string(),
+    completedSteps: v.any(), // JSON array of step names
+    status: v.string(), // "saved" | "resumed" | "completed" | "deleted"
+    timestamp: v.float64(),
+  })
+    .index("by_execution", ["executionId", "timestamp"])
+    .index("by_pipeline", ["pipelineName", "timestamp"])
+    .index("by_status", ["status", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // INTEGRATION CALLS (Feature #7: Integrations-as-Data)
+  // ============================================================
+
+  integrationCalls: defineTable({
+    integrationName: v.string(),
+    endpointName: v.string(),
+    method: v.string(),
+    statusCode: v.float64(),
+    durationMs: v.float64(),
+    success: v.boolean(),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_integration", ["integrationName", "timestamp"])
+    .index("by_success", ["success", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // SANDBOX VIOLATIONS (Feature #8: Tool Capability Manifests)
+  // ============================================================
+
+  sandboxViolations: defineTable({
+    toolName: v.string(),
+    permission: v.string(),
+    detail: v.optional(v.string()),
+    strict: v.boolean(),
+    timestamp: v.float64(),
+  })
+    .index("by_tool", ["toolName", "timestamp"])
+    .index("by_permission", ["permission", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 
   // ============================================================
   // GITHUB ACTIONS WORKFLOW RUNS

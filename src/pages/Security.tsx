@@ -36,6 +36,8 @@ export default function Security() {
   const hitlStats = useQuery(api.security.hitlStats);
   const webhookStats = useQuery(api.security.webhookStats);
   const vaultStats = useQuery(api.security.vaultStats);
+  const sandboxOverview = useQuery(api.sandboxViolations.overview);
+  const recentViolations = useQuery(api.sandboxViolations.recent, { limit: 20 });
 
   return (
     <div className="space-y-6">
@@ -177,8 +179,61 @@ export default function Security() {
               </div>
             </div>
           </div>
+
+          {/* Sandbox Enforcement */}
+          <div className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-3">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              Sandbox Enforcement
+            </p>
+            <div className="space-y-1 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Total violations</span>
+                <span className={sandboxOverview ? statusColor(sandboxOverview.totalViolations, { warn: 5, danger: 20 }) : "text-gray-300"}>
+                  {sandboxOverview?.totalViolations ?? 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Strict blocked</span>
+                <span className={sandboxOverview ? statusColor(sandboxOverview.strictBlocked, { warn: 1, danger: 5 }) : "text-gray-300"}>
+                  {sandboxOverview?.strictBlocked ?? 0}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Last violation</span>
+                <span className="text-gray-300">
+                  {sandboxOverview ? formatRelativeTime(sandboxOverview.lastViolation) : "--"}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Sandbox Violations Feed */}
+      {(recentViolations ?? []).length > 0 && (
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-gray-300 mb-3">
+            Sandbox Violations
+            <InfoTooltip text="Tool capability manifest violations — tools accessing resources beyond their declared permissions" />
+          </h2>
+          <div className="max-h-64 overflow-y-auto space-y-1">
+            {(recentViolations ?? []).map((v: any, i: number) => (
+              <div key={v._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-gray-800/30" : ""}`}>
+                <span className={`w-2 h-2 rounded-full ${v.strict ? "bg-red-400" : "bg-yellow-400"}`} />
+                <span className="text-gray-400 font-mono w-16 shrink-0">{formatRelativeTime(v.timestamp)}</span>
+                <span className="text-gray-200 font-mono">{v.toolName}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
+                  {v.permission}
+                </span>
+                {v.detail && <span className="text-gray-500 truncate">{v.detail}</span>}
+                <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
+                  {v.strict ? "BLOCKED" : "warned"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -288,6 +288,94 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "credential_access": {
+          const d = data as any;
+          await ctx.runMutation(api.credentialAudit.recordAccess, {
+            toolName: d.toolName ?? d.tool_name ?? "unknown",
+            credentialKey: d.credentialKey ?? d.credential_key ?? "***",
+            agentId: d.agentId ?? d.agent_id,
+            granted: d.granted ?? true,
+            timestamp,
+          });
+          break;
+        }
+        case "memory_tier_stats": {
+          const d = data as any;
+          await ctx.runMutation(api.memoryTiers.recordStats, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            contentLength: d.contentLength ?? d.content_length ?? 0,
+            l0Length: d.l0Length ?? d.l0_length ?? 0,
+            l1Length: d.l1Length ?? d.l1_length ?? 0,
+            tokenSavingsPercent: d.tokenSavingsPercent ?? d.token_savings_percent ?? 0,
+            hadLlmSummarizer: d.hadLlmSummarizer ?? d.had_llm_summarizer ?? false,
+            timestamp,
+          });
+          break;
+        }
+        case "reflection_result": {
+          const d = data as any;
+          await ctx.runMutation(api.reflections.recordResult, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            eventsAnalyzed: d.eventsAnalyzed ?? d.events_analyzed ?? 0,
+            memoriesExtracted: d.memoriesExtracted ?? d.memories_extracted ?? 0,
+            categories: d.categories ?? {},
+            avgConfidence: d.avgConfidence ?? d.avg_confidence ?? 0,
+            reflectionDurationMs: d.reflectionDurationMs ?? d.reflection_duration_ms ?? 0,
+            timestamp,
+          });
+          break;
+        }
+        case "checkpoint_event": {
+          const d = data as any;
+          await ctx.runMutation(api.pipelineCheckpoints.recordEvent, {
+            executionId: d.executionId ?? d.execution_id ?? "unknown",
+            pipelineName: d.pipelineName ?? d.pipeline_name ?? "unknown",
+            stepIndex: d.stepIndex ?? d.step_index ?? 0,
+            stepName: d.stepName ?? d.step_name ?? "unknown",
+            completedSteps: d.completedSteps ?? d.completed_steps ?? [],
+            status: d.status ?? "saved",
+            timestamp,
+          });
+          break;
+        }
+        case "integration_call": {
+          const d = data as any;
+          await ctx.runMutation(api.integrationCalls.recordCall, {
+            integrationName: d.integrationName ?? d.integration_name ?? "unknown",
+            endpointName: d.endpointName ?? d.endpoint_name ?? "unknown",
+            method: d.method ?? "GET",
+            statusCode: d.statusCode ?? d.status_code ?? 0,
+            durationMs: d.durationMs ?? d.duration_ms ?? 0,
+            success: d.success ?? false,
+            error: d.error,
+            timestamp,
+          });
+          break;
+        }
+        case "sandbox_violation": {
+          const d = data as any;
+          await ctx.runMutation(api.sandboxViolations.recordViolation, {
+            toolName: d.toolName ?? d.tool_name ?? "unknown",
+            permission: d.permission ?? "unknown",
+            detail: d.detail,
+            strict: d.strict ?? false,
+            timestamp,
+          });
+          break;
+        }
+        case "worktree_event": {
+          const d = data as any;
+          await ctx.runMutation(api.worktrees.recordEvent, {
+            type: d.type ?? "unknown",
+            worktreeId: d.worktreeId ?? d.worktree_id,
+            agentId: d.agentId ?? d.agent_id,
+            branch: d.branch,
+            baseBranch: d.baseBranch ?? d.base_branch,
+            proofPassed: d.proofPassed ?? d.proof_passed,
+            timestamp,
+          });
+          break;
+        }
         case "episodic_event": {
           const d = data as any;
           await ctx.runMutation(api.episodic.recordEvent, {
