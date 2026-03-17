@@ -29,7 +29,7 @@ export default function Automation() {
         <MetricCard
           label="Failed (1h)"
           value={summary?.failed ?? 0}
-          trend={summary?.failed ? "negative" : undefined}
+          trend={summary?.failed ? "down" : undefined}
         />
         <MetricCard
           label="Avg Duration"
