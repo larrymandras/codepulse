@@ -130,6 +130,45 @@ export const recentSubagentExecutions = query({
   },
 });
 
+// ── Summary (for dashboard cards) ────────────────────────────────
+
+export const cronSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    const oneHourAgo = Date.now() / 1000 - 3600;
+    const recent = await ctx.db
+      .query("cronExecutions")
+      .withIndex("by_timestamp")
+      .filter((q) => q.gte(q.field("timestamp"), oneHourAgo))
+      .collect();
+    const failed = recent.filter((r) => !r.success);
+    const avgDurationMs =
+      recent.length > 0
+        ? recent.reduce((sum, r) => sum + r.durationMs, 0) / recent.length
+        : 0;
+    return {
+      totalJobs: 12,
+      totalRuns: recent.length,
+      succeeded: recent.length - failed.length,
+      failed: failed.length,
+      avgDurationMs,
+    };
+  },
+});
+
+// ── Per-job executions ───────────────────────────────────────────
+
+export const cronsByJob = query({
+  args: { jobName: v.string(), limit: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("cronExecutions")
+      .withIndex("by_jobName", (q) => q.eq("jobName", args.jobName))
+      .order("desc")
+      .take(args.limit ?? 10);
+  },
+});
+
 // ── Webhook Events ───────────────────────────────────────────────
 
 export const recordWebhook = mutation({

@@ -21,6 +21,7 @@ const navItems = [
   { to: "/build", label: "Build", icon: "hammer" },
   { to: "/memory", label: "Memory", icon: "brain" },
   { to: "/briefings", label: "Briefings", icon: "scroll" },
+  { to: "/automation", label: "Automation", icon: "clock" },
   { to: "/settings", label: "Settings", icon: "gear" },
 ];
 
@@ -38,6 +39,7 @@ const iconMap: Record<string, string> = {
   tree: "Y",
   brain: "(~)",
   scroll: "[]",
+  clock: "(o)",
   gear: "*",
 };
 

@@ -12,6 +12,19 @@ export function formatCost(dollars: number): string {
   return `$${dollars.toFixed(4)}`;
 }
 
+export function formatDurationMs(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return formatDuration(ms / 1000);
+}
+
+export function relativeTime(epochSeconds: number): string {
+  const diff = Date.now() / 1000 - epochSeconds;
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
 export function truncatePath(path: string, maxLen = 40): string {
   if (path.length <= maxLen) return path;
   return "..." + path.slice(path.length - maxLen + 3);

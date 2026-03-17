@@ -79,6 +79,9 @@ export const pollHealth = internalMutation({
       .take(50);
 
     let staleCount = 0;
+    let removedCount = 0;
+    const removeThreshold = now - 86400; // 24 hours
+
     for (const c of containers) {
       if (c.updatedAt < staleThreshold && c.status === "running") {
         await ctx.db.patch(c._id, {
@@ -87,9 +90,15 @@ export const pollHealth = internalMutation({
           updatedAt: now,
         });
         staleCount++;
+      } else if (
+        c.updatedAt < removeThreshold &&
+        (c.status === "unknown" || c.health === "stale")
+      ) {
+        await ctx.db.delete(c._id);
+        removedCount++;
       }
     }
 
-    return { status: "ok", checked: containers.length, markedStale: staleCount };
+    return { status: "ok", checked: containers.length, markedStale: staleCount, removed: removedCount };
   },
 });

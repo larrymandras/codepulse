@@ -197,7 +197,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         case "mcp_connection": {
           const d = data as any;
           await ctx.runMutation(api.registry.upsertMcpServer, {
-            name: d.name ?? d.serverName ?? d.server_name ?? "unknown",
+            name: d.name ?? d.server ?? d.serverName ?? d.server_name ?? "unknown",
             status: d.status ?? "connected",
             url: d.url,
             toolCount: d.toolCount ?? d.tool_count,
