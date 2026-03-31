@@ -5,6 +5,8 @@ import SystemResources from "../components/SystemResources";
 import IntegrationHealth from "../components/IntegrationHealth";
 import GithubActionsPanel from "../components/GithubActionsPanel";
 import CompactionTimeline from "../components/CompactionTimeline";
+import ChannelHealthPanel from "../components/ChannelHealthPanel";
+import ProviderHealthPanel from "../components/ProviderHealthPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { useSystemResources } from "../hooks/useSystemResources";
 
@@ -15,6 +17,12 @@ export default function Infrastructure() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Infrastructure</h1>
       <OrbitalStatusRings />
+      <SectionErrorBoundary name="Channel Health">
+        <ChannelHealthPanel />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="Provider Health">
+        <ProviderHealthPanel />
+      </SectionErrorBoundary>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <DockerPanel />
         <SupabasePanel />
