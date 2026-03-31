@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useRecentEvents } from "../hooks/useRecentEvents";
 import EventFeed from "../components/EventFeed";
 import ActiveSessions from "../components/ActiveSessions";
 import PulseChart from "../components/PulseChart";
+import ConversationTimeline from "../components/ConversationTimeline";
 import AgentTopology from "../components/AgentTopology";
 import ToolBreakdown from "../components/ToolBreakdown";
 import DockerPanel from "../components/DockerPanel";
@@ -12,21 +14,54 @@ import ToolExecutionPanel from "../components/ToolExecutionPanel";
 import GitActivityWidget from "../components/GitActivityWidget";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
+type ChartTab = "pulse" | "timeline";
+
 export default function Dashboard() {
   const events = useRecentEvents(100);
+  const [chartTab, setChartTab] = useState<ChartTab>("pulse");
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
-      {/* Hero Stats Bar — replaces 3 rows of MetricCards */}
+      {/* Hero Stats Bar */}
       <SectionErrorBoundary name="Hero Stats">
         <HeroStatsBar />
       </SectionErrorBoundary>
 
-      {/* Activity Pulse */}
-      <SectionErrorBoundary name="Activity Pulse">
-        <PulseChart events={events} />
+      {/* Activity Charts with Tab Toggle */}
+      <SectionErrorBoundary name="Activity Charts">
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl">
+          <div className="flex items-center gap-1 p-2 pb-0">
+            <button
+              onClick={() => setChartTab("pulse")}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                chartTab === "pulse"
+                  ? "bg-gray-700 text-gray-100"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Activity Pulse
+            </button>
+            <button
+              onClick={() => setChartTab("timeline")}
+              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+                chartTab === "timeline"
+                  ? "bg-gray-700 text-gray-100"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Conversation Timeline
+            </button>
+          </div>
+          <div className="p-0">
+            {chartTab === "pulse" ? (
+              <PulseChart events={events} />
+            ) : (
+              <ConversationTimeline />
+            )}
+          </div>
+        </div>
       </SectionErrorBoundary>
 
       {/* Agent Topology */}
