@@ -1,10 +1,12 @@
+import { memo } from "react";
+
 interface MetricCardProps {
   label: string;
   value: string | number;
   trend?: "up" | "down" | "neutral";
 }
 
-export default function MetricCard({ label, value, trend }: MetricCardProps) {
+function MetricCardInner({ label, value, trend }: MetricCardProps) {
   const trendArrow =
     trend === "up" ? "^" : trend === "down" ? "v" : null;
   const trendColor =
@@ -26,3 +28,6 @@ export default function MetricCard({ label, value, trend }: MetricCardProps) {
     </div>
   );
 }
+
+const MetricCard = memo(MetricCardInner);
+export default MetricCard;
