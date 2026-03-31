@@ -702,4 +702,21 @@ export default defineSchema({
   })
     .index("by_provider", ["providerName"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // NOTIFICATIONS (Pattern 8)
+  // ============================================================
+
+  notifications: defineTable({
+    type: v.string(),
+    category: v.string(),
+    title: v.string(),
+    message: v.string(),
+    severity: v.string(),
+    read: v.boolean(),
+    createdAt: v.float64(),
+    expiresAt: v.optional(v.float64()),
+  })
+    .index("by_type_read", ["type", "read"])
+    .index("by_created", ["createdAt"]),
 });
