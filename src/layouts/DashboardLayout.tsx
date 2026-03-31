@@ -7,6 +7,9 @@ import UserMenu from "../components/UserMenu";
 import PrivacyShield from "../components/PrivacyShield";
 import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
 import { useAudioEvents } from "../hooks/useAudioEvents";
+import { Toaster } from "sonner";
+import NotificationBell from "../components/NotificationBell";
+import { useNotificationToasts } from "../hooks/useNotificationToasts";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: "grid" },
@@ -131,6 +134,7 @@ function CrtToggle({
 
 export default function DashboardLayout() {
   useAudioEvents();
+  useNotificationToasts();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
@@ -255,6 +259,7 @@ export default function DashboardLayout() {
             Astridr Runtime Telemetry
           </span>
           <div className="flex items-center gap-2">
+            <NotificationBell />
             <PrivacyShield />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
@@ -277,6 +282,9 @@ export default function DashboardLayout() {
 
       {/* CRT Overlay */}
       {crtEnabled && <div className="crt-overlay" />}
+
+      {/* Toast Notifications */}
+      <Toaster position="bottom-right" richColors visibleToasts={3} />
     </div>
   );
 }
