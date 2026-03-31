@@ -1,12 +1,13 @@
 import { useQuery } from "convex/react";
 import { useState, useEffect, useRef } from "react";
+import type { FunctionReference } from "convex/server";
 
-export function useThrottledQuery<T>(
-  queryFn: any,
-  args: any,
+export function useThrottledQuery<Query extends FunctionReference<"query">>(
+  queryFn: Query,
+  args: Query["_args"],
   intervalMs: number = 500
-): T | undefined {
-  const raw = useQuery(queryFn, args);
+): Query["_returnType"] | undefined {
+  const raw = useQuery(queryFn, args as any);
   const [throttled, setThrottled] = useState(raw);
   const lastUpdate = useRef(0);
 
