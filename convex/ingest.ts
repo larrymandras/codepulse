@@ -1,5 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
+import { classifyNotification } from "./notifications";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -276,6 +277,24 @@ export const buildIngest = httpAction(async (ctx, request) => {
       });
     }
 
+    // Classify channel health changes as notifications
+    if (eventType === "channel_health" && (data.status === "degraded" || data.status === "down")) {
+      const notification = classifyNotification({
+        severity: data.status === "down" ? "error" : "warning",
+        category: "channel",
+        title: `${data.channelId} channel ${data.status}`,
+        message: `Channel ${data.channelId} is ${data.status}. Error count: ${data.errorCount ?? 0}`,
+      });
+      await ctx.runMutation(api.notifications.create, {
+        type: notification.type,
+        category: notification.category,
+        title: notification.title,
+        message: notification.message,
+        severity: notification.severity,
+        expiresAt: notification.expiresAt,
+      });
+    }
+
     // provider_health — upsert latest per provider
     if (eventType === "provider_health") {
       await ctx.runMutation(api.providerHealth.upsert, {
@@ -299,6 +318,25 @@ export const buildIngest = httpAction(async (ctx, request) => {
         consecutiveFailures: data.consecutiveFailures ?? 0,
         lastSuccessAt: data.lastSuccessAt ?? 0,
         timestamp,
+      });
+    }
+
+    // Classify provider state changes as notifications
+    if (eventType === "provider.state_change") {
+      const isRecovery = data.state === "closed";
+      const notification = classifyNotification({
+        severity: data.state === "open" ? "error" : isRecovery ? "info" : "warning",
+        category: "provider",
+        title: `Provider '${data.providerName}' ${isRecovery ? "recovered" : data.state}`,
+        message: `Circuit breaker ${data.state}. Success rate: ${Math.round(data.successRate ?? 0)}%`,
+      });
+      await ctx.runMutation(api.notifications.create, {
+        type: notification.type,
+        category: notification.category,
+        title: notification.title,
+        message: notification.message,
+        severity: notification.severity,
+        expiresAt: notification.expiresAt,
       });
     }
 
