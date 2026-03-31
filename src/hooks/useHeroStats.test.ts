@@ -1,22 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from "vitest";
 
-// Mock the Convex module before importing the hook
-vi.mock('convex/react', () => ({
+vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => undefined),
 }));
 
-vi.mock('../../convex/_generated/api', () => ({
-  api: { heroStats: { summary: 'heroStats:summary' } },
+vi.mock("../../convex/_generated/api", () => ({
+  api: { heroStats: { summary: "heroStats:summary" } },
 }));
 
-import { useQuery } from 'convex/react';
-import { useHeroStats } from './useHeroStats';
+// Mock useThrottledQuery to pass through to useQuery
+vi.mock("./useThrottledQuery", () => ({
+  useThrottledQuery: vi.fn(),
+}));
 
-const mockUseQuery = vi.mocked(useQuery);
+import { useThrottledQuery } from "./useThrottledQuery";
+import { useHeroStats } from "./useHeroStats";
 
-describe('useHeroStats', () => {
-  it('returns sensible defaults when query returns undefined', () => {
-    mockUseQuery.mockReturnValue(undefined);
+const mockUseThrottledQuery = vi.mocked(useThrottledQuery);
+
+describe("useHeroStats", () => {
+  it("returns sensible defaults when query returns undefined", () => {
+    mockUseThrottledQuery.mockReturnValue(undefined);
     const stats = useHeroStats();
 
     expect(stats.activeSessions).toBe(0);
@@ -33,10 +37,10 @@ describe('useHeroStats', () => {
     expect(stats.costSparkline).toEqual([]);
     expect(stats.knownTools).toBe(0);
     expect(stats.securityEvents).toBe(0);
-    expect(stats.health).toBe('green');
+    expect(stats.health).toBe("green");
   });
 
-  it('returns query data when available', () => {
+  it("returns query data when available", () => {
     const mockData = {
       activeSessions: 5,
       runningAgents: 3,
@@ -52,15 +56,15 @@ describe('useHeroStats', () => {
       costSparkline: [0.01, 0.02, 0.05],
       knownTools: 12,
       securityEvents: 0,
-      health: 'yellow' as const,
+      health: "yellow" as const,
     };
-    mockUseQuery.mockReturnValue(mockData);
+    mockUseThrottledQuery.mockReturnValue(mockData);
     const stats = useHeroStats();
 
     expect(stats.activeSessions).toBe(5);
     expect(stats.runningAgents).toBe(3);
     expect(stats.errorRate).toBe(12.5);
-    expect(stats.health).toBe('yellow');
+    expect(stats.health).toBe("yellow");
     expect(stats.eventSparkline).toEqual([10, 20, 30]);
   });
 });

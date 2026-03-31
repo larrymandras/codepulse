@@ -1,7 +1,7 @@
-import { useQuery } from "convex/react";
+import { useThrottledQuery } from "./useThrottledQuery";
 import { api } from "../../convex/_generated/api";
 
 export function useRecentEvents(limit = 50) {
-  const events = useQuery(api.events.listRecent, { limit });
+  const events = useThrottledQuery(api.events.listRecent, { limit }, 500);
   return events ?? [];
 }

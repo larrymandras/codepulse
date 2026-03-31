@@ -1,8 +1,8 @@
-import { useQuery } from "convex/react";
+import { useThrottledQuery } from "./useThrottledQuery";
 import { api } from "../../convex/_generated/api";
 
 export function useHeroStats() {
-  return useQuery(api.heroStats.summary) ?? {
+  return useThrottledQuery(api.heroStats.summary, {}, 1000) ?? {
     activeSessions: 0,
     runningAgents: 0,
     errorRate: 0,
