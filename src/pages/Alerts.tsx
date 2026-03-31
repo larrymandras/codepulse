@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
-import { useActiveAlerts, useAllAlerts, useAlertCounts } from "../hooks/useAlerts";
+import { useGroupedAlerts, useAllAlerts, useAlertCounts } from "../hooks/useAlerts";
 import AlertRulesEngine from "../components/AlertRulesEngine";
 
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
@@ -43,14 +43,14 @@ export default function Alerts() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [showAll, setShowAll] = useState(false);
 
-  const activeAlerts = useActiveAlerts();
+  const groupedAlerts = useGroupedAlerts();
   const allAlerts = useAllAlerts(200);
   const counts = useAlertCounts();
 
   const acknowledge = useMutation(api.alerts.acknowledge);
   const dismissAll = useMutation(api.alerts.dismissAll);
 
-  const baseAlerts = showAll ? allAlerts : activeAlerts;
+  const baseAlerts = showAll ? allAlerts : groupedAlerts;
   const filtered =
     severityFilter === "all"
       ? baseAlerts
@@ -69,7 +69,7 @@ export default function Alerts() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Alerts</h1>
-        {activeAlerts.length > 0 && (
+        {groupedAlerts.length > 0 && (
           <button
             onClick={() => dismissAll()}
             className="text-xs px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 transition-colors border border-gray-600/50"

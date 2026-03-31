@@ -5,6 +5,10 @@ export function useActiveAlerts() {
   return useQuery(api.alerts.listActive) ?? [];
 }
 
+export function useGroupedAlerts() {
+  return useQuery(api.alerts.listActiveGrouped) ?? [];
+}
+
 export function useAllAlerts(limit?: number) {
   return useQuery(api.alerts.listAll, { limit }) ?? [];
 }

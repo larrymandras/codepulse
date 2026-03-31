@@ -136,6 +136,31 @@ export const autoAcknowledgeStale = mutation({
   },
 });
 
+export const autoAcknowledgeStaleInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const twentyFourHoursAgo = now - 86400;
+    const active = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .collect();
+
+    let count = 0;
+    for (const a of active) {
+      if (a.severity !== "critical" && a.createdAt < twentyFourHoursAgo) {
+        await ctx.db.patch(a._id, {
+          acknowledged: true,
+          acknowledgedBy: "auto-acknowledge",
+          acknowledgedAt: now,
+        });
+        count++;
+      }
+    }
+    return { acknowledged: count };
+  },
+});
+
 export const listActiveGrouped = query({
   args: {},
   handler: async (ctx) => {

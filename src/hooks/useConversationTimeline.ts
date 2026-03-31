@@ -15,7 +15,7 @@ export function useConversationTimeline() {
   const [zoom, setZoom] = useState<ZoomLevel>("6h");
 
   const { hours, bucketMinutes } = zoomConfig[zoom];
-  const now = Date.now() / 1000;
+  const now = Math.floor(Date.now() / 60000) * 60; // round to nearest minute (in seconds)
   const startTime = now - hours * 3600;
 
   const data = useThrottledQuery(
