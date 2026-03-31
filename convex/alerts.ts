@@ -111,6 +111,58 @@ export const dismissAll = mutation({
   },
 });
 
+export const autoAcknowledgeStale = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    const twentyFourHoursAgo = now - 86400;
+    const active = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .collect();
+
+    let count = 0;
+    for (const a of active) {
+      if (a.severity !== "critical" && a.createdAt < twentyFourHoursAgo) {
+        await ctx.db.patch(a._id, {
+          acknowledged: true,
+          acknowledgedBy: "auto-acknowledge",
+          acknowledgedAt: now,
+        });
+        count++;
+      }
+    }
+    return { acknowledged: count };
+  },
+});
+
+export const listActiveGrouped = query({
+  args: {},
+  handler: async (ctx) => {
+    const active = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .order("desc")
+      .take(100);
+
+    const groups: Map<string, { alert: any; count: number }> = new Map();
+    for (const a of active) {
+      const windowKey = `${a.source}-${Math.floor(a.createdAt / 300)}`;
+      const existing = groups.get(windowKey);
+      if (existing) {
+        existing.count++;
+      } else {
+        groups.set(windowKey, { alert: a, count: 1 });
+      }
+    }
+
+    return Array.from(groups.values()).map(({ alert, count }) => ({
+      ...alert,
+      groupCount: count,
+    }));
+  },
+});
+
 // ---------- EVALUATE ENGINE ----------
 
 export const evaluate = mutation({

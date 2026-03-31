@@ -164,6 +164,11 @@ export default function Alerts() {
                     </div>
                     <p className={`text-sm text-gray-200 ${isAcked ? "line-through text-gray-500" : ""}`}>
                       {a.message}
+                      {a.groupCount > 1 && (
+                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                          x{a.groupCount}
+                        </span>
+                      )}
                     </p>
                     <p className="text-xs text-gray-500 mt-1">{relativeTime(a.createdAt)}</p>
                   </div>
@@ -176,7 +181,9 @@ export default function Alerts() {
                     </button>
                   )}
                   {isAcked && (
-                    <span className="text-xs text-gray-600 shrink-0">Acknowledged</span>
+                    <span className="text-xs text-gray-600 shrink-0">
+                      {a.acknowledgedBy === "auto-acknowledge" ? "Auto-acknowledged" : "Acknowledged"}
+                    </span>
                   )}
                 </div>
               </div>
