@@ -1,7 +1,7 @@
 # CodePulse Dashboard Enhancements — Design Spec
 
 **Date:** 2026-03-30
-**Status:** Draft
+**Status:** Complete (implemented 2026-03-31)
 **Scope:** Patterns 2, 5, 7, 8 from Screenpipe research
 **Target:** `codepulse`
 
