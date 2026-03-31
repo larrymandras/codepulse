@@ -673,4 +673,33 @@ export default defineSchema({
   })
     .index("by_triggeredAt", ["triggeredAt"])
     .index("by_workflow", ["workflowName"]),
+
+  // ============================================================
+  // CHANNEL & PROVIDER HEALTH (Pattern 2)
+  // ============================================================
+
+  channelHealth: defineTable({
+    channelId: v.string(),
+    status: v.string(),
+    messagesLastHour: v.float64(),
+    avgResponseMs: v.float64(),
+    errorCount: v.float64(),
+    lastMessageAt: v.float64(),
+    details: v.optional(v.any()),
+    timestamp: v.float64(),
+  })
+    .index("by_channel", ["channelId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  providerHealth: defineTable({
+    providerName: v.string(),
+    state: v.string(),
+    latencyEmaMs: v.float64(),
+    successRate: v.float64(),
+    consecutiveFailures: v.float64(),
+    lastSuccessAt: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_provider", ["providerName"])
+    .index("by_timestamp", ["timestamp"]),
 });
