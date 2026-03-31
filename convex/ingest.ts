@@ -258,6 +258,50 @@ export const buildIngest = httpAction(async (ctx, request) => {
       });
     }
 
+    // ============================================================
+    // 10. Ástríðr runtime health events
+    // ============================================================
+
+    // channel_health — upsert latest per channel
+    if (eventType === "channel_health") {
+      await ctx.runMutation(api.channelHealth.upsert, {
+        channelId: data.channelId ?? "unknown",
+        status: data.status ?? "unknown",
+        messagesLastHour: data.messagesLastHour ?? 0,
+        avgResponseMs: data.avgResponseMs ?? 0,
+        errorCount: data.errorCount ?? 0,
+        lastMessageAt: data.lastMessageAt ?? 0,
+        details: data.details,
+        timestamp,
+      });
+    }
+
+    // provider_health — upsert latest per provider
+    if (eventType === "provider_health") {
+      await ctx.runMutation(api.providerHealth.upsert, {
+        providerName: data.providerName ?? "unknown",
+        state: data.state ?? "unknown",
+        latencyEmaMs: data.latencyEmaMs ?? 0,
+        successRate: data.successRate ?? 0,
+        consecutiveFailures: data.consecutiveFailures ?? 0,
+        lastSuccessAt: data.lastSuccessAt ?? 0,
+        timestamp,
+      });
+    }
+
+    // provider.state_change — insert historical record for sparklines
+    if (eventType === "provider.state_change") {
+      await ctx.runMutation(api.providerHealth.recordStateChange, {
+        providerName: data.providerName ?? "unknown",
+        state: data.state ?? "unknown",
+        latencyEmaMs: data.latencyEmaMs ?? 0,
+        successRate: data.successRate ?? 0,
+        consecutiveFailures: data.consecutiveFailures ?? 0,
+        lastSuccessAt: data.lastSuccessAt ?? 0,
+        timestamp,
+      });
+    }
+
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
