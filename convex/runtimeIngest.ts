@@ -492,6 +492,25 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "command_execution": {
+          const d = data as any;
+          await ctx.runMutation(api.commandExecutions.upsertLifecycle, {
+            executionId: d.executionId ?? d.execution_id ?? "unknown",
+            toolName: d.toolName ?? d.tool_name,
+            origin: d.origin,
+            profileId: d.profileId ?? d.profile_id,
+            channelId: d.channelId ?? d.channel_id,
+            status: d.status ?? "queued",
+            queuedAt: d.queuedAt ?? d.queued_at ?? timestamp,
+            startedAt: d.startedAt ?? d.started_at,
+            completedAt: d.completedAt ?? d.completed_at,
+            durationMs: d.durationMs ?? d.duration_ms,
+            errorMessage: d.errorMessage ?? d.error_message ?? d.error,
+            contextSnapshot: d.contextSnapshot ?? d.context_snapshot,
+            parentExecutionId: d.parentExecutionId ?? d.parent_execution_id,
+          });
+          break;
+        }
       }
     }
 
