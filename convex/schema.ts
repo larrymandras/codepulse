@@ -719,4 +719,30 @@ export default defineSchema({
   })
     .index("by_type_read", ["type", "read"])
     .index("by_created", ["createdAt"]),
+
+  // ============================================================
+  // EXECUTION STATE MACHINE (Phase 25)
+  // ============================================================
+
+  commandExecutions: defineTable({
+    executionId: v.string(),
+    toolName: v.string(),
+    origin: v.string(),
+    profileId: v.string(),
+    channelId: v.optional(v.string()),
+    status: v.string(),
+    queuedAt: v.float64(),
+    startedAt: v.optional(v.float64()),
+    completedAt: v.optional(v.float64()),
+    durationMs: v.optional(v.float64()),
+    errorMessage: v.optional(v.string()),
+    contextSnapshot: v.optional(v.any()),
+    parentExecutionId: v.optional(v.string()),
+    cancelRequested: v.optional(v.boolean()),
+  })
+    .index("by_executionId", ["executionId"])
+    .index("by_status", ["status", "queuedAt"])
+    .index("by_profile", ["profileId", "queuedAt"])
+    .index("by_channel", ["channelId", "queuedAt"])
+    .index("by_queuedAt", ["queuedAt"]),
 });
