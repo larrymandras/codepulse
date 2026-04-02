@@ -16,6 +16,7 @@ import Settings from "./pages/Settings";
 import Memory from "./pages/Memory";
 import Briefings from "./pages/Briefings";
 import Automation from "./pages/Automation";
+import Executions from "./pages/Executions";
 
 // Lazy-load heavy pages
 const Agents = lazy(() => import("./pages/Agents"));
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/memory" element={<Memory />} />
             <Route path="/briefings" element={<Briefings />} />
             <Route path="/automation" element={<Automation />} />
+            <Route path="/executions" element={<Executions />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>
