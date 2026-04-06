@@ -30,10 +30,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar is 240px wide with uppercase section headers, labeled nav items, and live count badges
   4. All primary charts render as custom CSS flex bars — Recharts is absent from primary data displays
   5. Data lists use the EntityRow pattern with consistent hover states, dividers, and leading icons; activity feeds animate new entries with slide-in highlights
-**Plans**: 3 plans
+**Plans**: 4 plans
 Plans:
+- [ ] 01-00-PLAN.md — Wave 0 test stubs (all 7 test files for Nyquist-compliant verification)
 - [ ] 01-01-PLAN.md — Design token layer (oklch palette, shadcn/ui init, MetricCard redesign)
-- [ ] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge)
+- [ ] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge, R3F removal)
 - [ ] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
 **UI hint**: yes
 
@@ -94,7 +95,7 @@ Phase 1 → Phase 2 → Phase 3 (parallel with 2 after Phase 1) → Phase 4 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Redesign | 0/3 | Planned | - |
+| 1. UI Redesign | 0/4 | Planned | - |
 | 2. Real-Time Telemetry | 0/TBD | Not started | - |
 | 3. Data Pipeline | 0/TBD | Not started | - |
 | 4. Alert Routing | 0/TBD | Not started | - |
