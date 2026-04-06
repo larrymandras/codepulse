@@ -13,7 +13,7 @@ Five phases transform CodePulse from a functional monitoring dashboard into a po
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [ ] **Phase 1: UI Redesign** - Establish Paperclip-inspired design system across all dashboard surfaces
-- [ ] **Phase 2: Real-Time Telemetry** - WebSocket pipeline from Ástríðr to CodePulse with sub-second delivery
+- [ ] **Phase 2: Real-Time Telemetry** - WebSocket pipeline from Astridr to CodePulse with sub-second delivery
 - [ ] **Phase 3: Data Pipeline** - Aggregation tables, retention policies, and paginated queries
 - [ ] **Phase 4: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 5: Intelligence Layer** - Cost forecasting, LLM session briefings, and anomaly detection
@@ -30,20 +30,24 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The sidebar is 240px wide with uppercase section headers, labeled nav items, and live count badges
   4. All primary charts render as custom CSS flex bars — Recharts is absent from primary data displays
   5. Data lists use the EntityRow pattern with consistent hover states, dividers, and leading icons; activity feeds animate new entries with slide-in highlights
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Design token layer (oklch palette, shadcn/ui init, MetricCard redesign)
+- [ ] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge)
+- [ ] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
 **UI hint**: yes
 
 ### Phase 2: Real-Time Telemetry
-**Goal**: Dashboard widgets update within 1 second of Ástríðr events — live operational state, not polled snapshots
+**Goal**: Dashboard widgets update within 1 second of Astridr events — live operational state, not polled snapshots
 **Depends on**: Phase 1
 **Requirements**: RT-01, RT-02, RT-03, RT-04, RT-05
 
-**Cross-repo note:** RT-01 and RT-02 require implementation in the Ástríðr repo (`C:\Users\mandr\astridr-repo`). RT-03, RT-04, RT-05 are CodePulse consumer work.
+**Cross-repo note:** RT-01 and RT-02 require implementation in the Astridr repo (`C:\Users\mandr\astridr-repo`). RT-03, RT-04, RT-05 are CodePulse consumer work.
 
 **Success Criteria** (what must be TRUE):
-  1. Ástríðr exposes `/ws/telemetry` with topic-based subscriptions (health, security, executions, agents) — unauthenticated connections are rejected
-  2. Dashboard widgets visibly update within 1 second when a new event occurs in Ástríðr
-  3. Closing and reopening the CodePulse browser tab resumes the live feed without any action in Ástríðr
+  1. Astridr exposes `/ws/telemetry` with topic-based subscriptions (health, security, executions, agents) — unauthenticated connections are rejected
+  2. Dashboard widgets visibly update within 1 second when a new event occurs in Astridr
+  3. Closing and reopening the CodePulse browser tab resumes the live feed without any action in Astridr
   4. Security blocks, execution failures, and stall detections appear on the dashboard within 500ms of occurrence
 **Plans**: TBD
 
@@ -90,7 +94,7 @@ Phase 1 → Phase 2 → Phase 3 (parallel with 2 after Phase 1) → Phase 4 → 
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Redesign | 0/TBD | Not started | - |
+| 1. UI Redesign | 0/3 | Planned | - |
 | 2. Real-Time Telemetry | 0/TBD | Not started | - |
 | 3. Data Pipeline | 0/TBD | Not started | - |
 | 4. Alert Routing | 0/TBD | Not started | - |
