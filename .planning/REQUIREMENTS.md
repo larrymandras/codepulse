@@ -72,38 +72,38 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | TBD | Pending |
-| UI-02 | TBD | Pending |
-| UI-03 | TBD | Pending |
-| UI-04 | TBD | Pending |
-| UI-05 | TBD | Pending |
-| UI-06 | TBD | Pending |
-| UI-07 | TBD | Pending |
-| UI-08 | TBD | Pending |
-| RT-01 | TBD | Pending |
-| RT-02 | TBD | Pending |
-| RT-03 | TBD | Pending |
-| RT-04 | TBD | Pending |
-| RT-05 | TBD | Pending |
-| DP-01 | TBD | Pending |
-| DP-02 | TBD | Pending |
-| DP-03 | TBD | Pending |
-| DP-04 | TBD | Pending |
-| ALR-01 | TBD | Pending |
-| ALR-02 | TBD | Pending |
-| ALR-03 | TBD | Pending |
-| ALR-04 | TBD | Pending |
-| ALR-05 | TBD | Pending |
-| INT-01 | TBD | Pending |
-| INT-02 | TBD | Pending |
-| INT-03 | TBD | Pending |
-| INT-04 | TBD | Pending |
+| UI-01 | Phase 1 | Pending |
+| UI-02 | Phase 1 | Pending |
+| UI-03 | Phase 1 | Pending |
+| UI-04 | Phase 1 | Pending |
+| UI-05 | Phase 1 | Pending |
+| UI-06 | Phase 1 | Pending |
+| UI-07 | Phase 1 | Pending |
+| UI-08 | Phase 1 | Pending |
+| RT-01 | Phase 2 | Pending |
+| RT-02 | Phase 2 | Pending |
+| RT-03 | Phase 2 | Pending |
+| RT-04 | Phase 2 | Pending |
+| RT-05 | Phase 2 | Pending |
+| DP-01 | Phase 3 | Pending |
+| DP-02 | Phase 3 | Pending |
+| DP-03 | Phase 3 | Pending |
+| DP-04 | Phase 3 | Pending |
+| ALR-01 | Phase 4 | Pending |
+| ALR-02 | Phase 4 | Pending |
+| ALR-03 | Phase 4 | Pending |
+| ALR-04 | Phase 4 | Pending |
+| ALR-05 | Phase 4 | Pending |
+| INT-01 | Phase 5 | Pending |
+| INT-02 | Phase 5 | Pending |
+| INT-03 | Phase 5 | Pending |
+| INT-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1.0 requirements: 26 total
-- Mapped to phases: 0
-- Unmapped: 26
+- Mapped to phases: 26
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after initial definition*
+*Last updated: 2026-04-06 after roadmap creation — all requirements mapped*
