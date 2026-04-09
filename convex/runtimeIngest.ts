@@ -492,6 +492,19 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "ideation_finding": {
+          const d = data as any;
+          await ctx.runMutation(api.ideation.recordFinding, {
+            scanType: d.scanType ?? d.scan_type ?? "unknown",
+            severity: d.severity ?? "low",
+            category: d.category ?? "unknown",
+            location: d.location ?? "",
+            description: d.description ?? "",
+            suggestedFix: d.suggestedFix ?? d.suggested_fix,
+            contentHash: d.contentHash ?? d.content_hash ?? "",
+          });
+          break;
+        }
         case "command_execution": {
           const d = data as any;
           await ctx.runMutation(api.commandExecutions.upsertLifecycle, {

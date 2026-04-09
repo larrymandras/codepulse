@@ -724,6 +724,27 @@ export default defineSchema({
   // EXECUTION STATE MACHINE (Phase 25)
   // ============================================================
 
+  // ============================================================
+  // IDEATION FINDINGS (Phase 49)
+  // ============================================================
+
+  ideationFindings: defineTable({
+    scanType: v.string(),
+    severity: v.string(),
+    category: v.string(),
+    location: v.string(),
+    description: v.string(),
+    suggestedFix: v.optional(v.string()),
+    contentHash: v.string(),
+    dismissed: v.boolean(),
+    dismissedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_scan_type", ["scanType"])
+    .index("by_severity", ["severity"])
+    .index("by_dismissed", ["dismissed"])
+    .index("by_content_hash", ["contentHash"]),
+
   commandExecutions: defineTable({
     executionId: v.string(),
     toolName: v.string(),
