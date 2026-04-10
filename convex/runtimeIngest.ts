@@ -524,6 +524,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "run.blocks": {
+          const d = data as any;
+          await ctx.runMutation(api.runBlocks.record, {
+            sessionId: d.session_id ?? d.sessionId ?? "unknown",
+            blocks: d.blocks ?? [],
+            roundNum: d.round_num ?? d.roundNum,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

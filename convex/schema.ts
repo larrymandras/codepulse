@@ -416,6 +416,19 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"]),
 
   // ============================================================
+  // TYPED RESPONSE BLOCKS (Phase 55)
+  // ============================================================
+
+  run_blocks: defineTable({
+    sessionId: v.string(),
+    blocks: v.array(v.any()),
+    roundNum: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_session", ["sessionId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
   // PROFILE CONFIG TABLE — syncs Astridr ProfileConfig
   // ============================================================
 
