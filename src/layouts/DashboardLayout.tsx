@@ -10,6 +10,7 @@ import { useAudioEvents } from "../hooks/useAudioEvents";
 import { Toaster } from "sonner";
 import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
+import { EStopButton } from "../components/EStopButton";
 
 const commandNavItems = [
   { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
@@ -299,6 +300,8 @@ export default function DashboardLayout() {
             Astridr Runtime Telemetry
           </span>
           <div className="flex items-center gap-2">
+            <EStopButton />
+            <div className="w-px h-5 bg-gray-800 mx-1" />
             <NotificationBell />
             <PrivacyShield />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />

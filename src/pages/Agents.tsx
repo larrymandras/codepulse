@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
   DndContext,
@@ -27,10 +27,12 @@ import AgentProfileEditor from "../components/AgentProfileEditor";
 import MetricCard from "../components/MetricCard";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
+import { ScanResultsPanel, RiskLevelBadge, highestSeverity } from "../components/ScanResultsPanel";
+import type { ScanFinding } from "../components/ScanResultsPanel";
 import { formatDuration } from "../lib/formatters";
 import type { AgentProfile, Avatar } from "../types";
 
-type Tab = "registry" | "runtime" | "topology";
+type Tab = "registry" | "runtime" | "topology" | "security";
 type StatusFilter = "all" | "running" | "completed" | "failed";
 
 /* ── Sortable profile card wrapper ─────────────────────────────── */
@@ -173,6 +175,13 @@ export default function Agents() {
   const seedTeams = useMutation(api.seedTeams.seed);
   const updateSortOrder = useMutation(api.agentProfiles.updateSortOrder);
 
+  // Security scan findings grouped by tool/location name
+  const findingsByLocation = useQuery(api.ideationFindings.byLocation) ?? {};
+  const dismissFinding = useMutation(api.ideationFindings.dismiss);
+
+  // Track which registry cards have expanded scan panels
+  const [expandedScanFor, setExpandedScanFor] = useState<string | null>(null);
+
   const [tab, setTab] = useState<Tab>("registry");
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
@@ -245,10 +254,17 @@ export default function Agents() {
     [profiles, updateSortOrder],
   );
 
+  // Count active (non-dismissed) scan findings across all locations
+  const activeFindingsCount = Object.values(findingsByLocation).reduce(
+    (sum, arr) => sum + arr.length,
+    0,
+  );
+
   const tabs: { label: string; value: Tab; count?: number }[] = [
     { label: "Registry", value: "registry", count: profiles.length },
     { label: "Runtime Agents", value: "runtime", count: allAgents.length },
     { label: "Topology", value: "topology" },
+    { label: "Security Scan", value: "security", count: activeFindingsCount },
   ];
 
   const statusFilters: {
@@ -564,6 +580,76 @@ export default function Agents() {
       {tab === "topology" && (
         <SectionErrorBoundary name="Agent Topology">
           <AgentTopology />
+        </SectionErrorBoundary>
+      )}
+
+      {/* === SECURITY SCAN TAB === */}
+      {tab === "security" && (
+        <SectionErrorBoundary name="Security Scan">
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+            <h2 className="text-sm font-semibold text-gray-300 mb-3">
+              Security Scan Results
+              <InfoTooltip text="Active tool scan findings from Ástríðr's proactive ideation scanner. Dismiss findings to clear them (they will reappear if the tool is re-scanned)." />
+            </h2>
+
+            {Object.keys(findingsByLocation).length === 0 ? (
+              <div className="py-12 text-center">
+                <p className="text-gray-500 text-sm">No active scan findings</p>
+                <p className="text-gray-600 text-xs mt-1">
+                  Findings appear here when Ástríðr's tool scanner detects security patterns
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(findingsByLocation).map(([location, findings]) => {
+                  const topSeverity = highestSeverity(findings as ScanFinding[]);
+                  const isExpanded = expandedScanFor === location;
+                  return (
+                    <div
+                      key={location}
+                      className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-3"
+                    >
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-sm font-medium text-gray-200 font-mono flex-1 truncate">
+                          {location}
+                        </span>
+                        <RiskLevelBadge
+                          severity={topSeverity}
+                          onClick={() =>
+                            setExpandedScanFor((prev) =>
+                              prev === location ? null : location,
+                            )
+                          }
+                        />
+                        <button
+                          onClick={() =>
+                            setExpandedScanFor((prev) =>
+                              prev === location ? null : location,
+                            )
+                          }
+                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                        >
+                          {isExpanded ? "collapse" : `${findings.length} finding${findings.length !== 1 ? "s" : ""}`}
+                        </button>
+                      </div>
+
+                      {isExpanded && (
+                        <ScanResultsPanel
+                          toolName={location}
+                          findings={findings as ScanFinding[]}
+                          onDismiss={(id) =>
+                            dismissFinding({
+                              id: id as Parameters<typeof dismissFinding>[0]["id"],
+                            })
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </SectionErrorBoundary>
       )}
     </div>

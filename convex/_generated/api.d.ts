@@ -40,6 +40,7 @@ import type * as health from "../health.js";
 import type * as heroStats from "../heroStats.js";
 import type * as http from "../http.js";
 import type * as ideation from "../ideation.js";
+import type * as ideationFindings from "../ideationFindings.js";
 import type * as ingest from "../ingest.js";
 import type * as instructionsLoaded from "../instructionsLoaded.js";
 import type * as integrationCalls from "../integrationCalls.js";
@@ -113,6 +114,7 @@ declare const fullApi: ApiFromModules<{
   heroStats: typeof heroStats;
   http: typeof http;
   ideation: typeof ideation;
+  ideationFindings: typeof ideationFindings;
   ingest: typeof ingest;
   instructionsLoaded: typeof instructionsLoaded;
   integrationCalls: typeof integrationCalls;
