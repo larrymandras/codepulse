@@ -18,37 +18,53 @@ import Briefings from "./pages/Briefings";
 import Automation from "./pages/Automation";
 import Executions from "./pages/Executions";
 import Ideation from "./pages/Ideation";
+import { AstridrWSProvider } from "./contexts/AstridrWSContext";
 
 // Lazy-load heavy pages
 const Agents = lazy(() => import("./pages/Agents"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 
+// Lazy-load command center pages (Phase 56)
+const Chat = lazy(() => import("./pages/Chat"));
+const LiveRun = lazy(() => import("./pages/LiveRun"));
+const InboxPage = lazy(() => import("./pages/Inbox"));
+const TasksPage = lazy(() => import("./pages/Tasks"));
+const ConfigEditorPage = lazy(() => import("./pages/ConfigEditor"));
+
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthGuard>
-        <Routes>
-          <Route element={<DashboardLayout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/sessions/:id" element={<SessionDetail />} />
-            <Route path="/capabilities" element={<Capabilities />} />
-            <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/infrastructure" element={<Infrastructure />} />
-            <Route path="/profiles" element={<Profiles />} />
-            <Route path="/agents" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Agents...</div>}><Agents /></Suspense>} />
-            <Route path="/security" element={<Security />} />
-            <Route path="/ideation" element={<Ideation />} />
-            <Route path="/self-healing" element={<SelfHealing />} />
-            <Route path="/build" element={<BuildProgress />} />
-            <Route path="/memory" element={<Memory />} />
-            <Route path="/briefings" element={<Briefings />} />
-            <Route path="/automation" element={<Automation />} />
-            <Route path="/executions" element={<Executions />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
-        </Routes>
-      </AuthGuard>
+      <AstridrWSProvider>
+        <AuthGuard>
+          <Routes>
+            <Route element={<DashboardLayout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/sessions/:id" element={<SessionDetail />} />
+              <Route path="/capabilities" element={<Capabilities />} />
+              <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/infrastructure" element={<Infrastructure />} />
+              <Route path="/profiles" element={<Profiles />} />
+              <Route path="/agents" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Agents...</div>}><Agents /></Suspense>} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/ideation" element={<Ideation />} />
+              <Route path="/self-healing" element={<SelfHealing />} />
+              <Route path="/build" element={<BuildProgress />} />
+              <Route path="/memory" element={<Memory />} />
+              <Route path="/briefings" element={<Briefings />} />
+              <Route path="/automation" element={<Automation />} />
+              <Route path="/executions" element={<Executions />} />
+              <Route path="/settings" element={<Settings />} />
+              {/* Phase 56: Command Center pages */}
+              <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
+              <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
+              <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
+              <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />
+              <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
+            </Route>
+          </Routes>
+        </AuthGuard>
+      </AstridrWSProvider>
     </BrowserRouter>
   );
 }

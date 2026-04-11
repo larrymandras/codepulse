@@ -11,24 +11,35 @@ import { Toaster } from "sonner";
 import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 
-const navItems = [
-  { to: "/", label: "Dashboard", icon: "grid" },
-  { to: "/capabilities", label: "Capabilities", icon: "cpu" },
-  { to: "/analytics", label: "Analytics", icon: "chart" },
-  { to: "/alerts", label: "Alerts", icon: "bell" },
-  { to: "/infrastructure", label: "Infrastructure", icon: "server" },
-  { to: "/agents", label: "Agents", icon: "bot" },
-  { to: "/profiles", label: "Profiles", icon: "users" },
-  { to: "/security", label: "Security", icon: "shield" },
-  { to: "/ideation", label: "Ideation", icon: "idea" },
-  { to: "/self-healing", label: "Self-Healing", icon: "refresh" },
-  { to: "/build", label: "Build", icon: "hammer" },
-  { to: "/memory", label: "Memory", icon: "brain" },
-  { to: "/briefings", label: "Briefings", icon: "scroll" },
-  { to: "/automation", label: "Automation", icon: "clock" },
-  { to: "/executions", label: "Executions", icon: "list" },
-  { to: "/settings", label: "Settings", icon: "gear" },
+const commandNavItems = [
+  { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
+  { to: "/live-run", label: "Live Run", icon: "activity", group: "COMMAND" },
+  { to: "/inbox", label: "Inbox", icon: "inbox", group: "COMMAND" },
+  { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
+  { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
 ];
+
+const overviewNavItems = [
+  { to: "/", label: "Dashboard", icon: "grid", group: "OVERVIEW" },
+  { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "OVERVIEW" },
+  { to: "/analytics", label: "Analytics", icon: "chart", group: "OVERVIEW" },
+  { to: "/alerts", label: "Alerts", icon: "bell", group: "OVERVIEW" },
+  { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OVERVIEW" },
+  { to: "/agents", label: "Agents", icon: "bot", group: "OVERVIEW" },
+  { to: "/profiles", label: "Profiles", icon: "users", group: "OVERVIEW" },
+  { to: "/security", label: "Security", icon: "shield", group: "OVERVIEW" },
+  { to: "/ideation", label: "Ideation", icon: "idea", group: "OVERVIEW" },
+  { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OVERVIEW" },
+  { to: "/build", label: "Build", icon: "hammer", group: "OVERVIEW" },
+  { to: "/memory", label: "Memory", icon: "brain", group: "OVERVIEW" },
+  { to: "/briefings", label: "Briefings", icon: "scroll", group: "OVERVIEW" },
+  { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
+  { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
+  { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
+];
+
+// Keep navItems for any code that still references it
+const navItems = [...commandNavItems, ...overviewNavItems];
 
 const iconMap: Record<string, string> = {
   grid: "|||",
@@ -48,7 +59,50 @@ const iconMap: Record<string, string> = {
   clock: "(o)",
   list: ":-",
   gear: "*",
+  message: ">_",
+  activity: "~^",
+  inbox: "[>",
+  kanban: "=#",
+  sliders: "-|-",
 };
+
+function NavGroup({
+  label,
+  items,
+  onNavClick,
+}: {
+  label: string;
+  items: typeof commandNavItems;
+  onNavClick?: () => void;
+}) {
+  return (
+    <>
+      <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-gray-500 font-medium">
+        {label}
+      </p>
+      {items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/"}
+          onClick={onNavClick}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              isActive
+                ? "bg-gray-800/50 text-gray-100"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/30"
+            }`
+          }
+        >
+          <span className="w-5 text-center text-xs font-mono opacity-60">
+            {iconMap[item.icon]}
+          </span>
+          {item.label}
+        </NavLink>
+      ))}
+    </>
+  );
+}
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
   return (
@@ -68,26 +122,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            onClick={onNavClick}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? "bg-gray-800/50 text-gray-100"
-                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/30"
-              }`
-            }
-          >
-            <span className="w-5 text-center text-xs font-mono opacity-60">
-              {iconMap[item.icon]}
-            </span>
-            {item.label}
-          </NavLink>
-        ))}
+        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} />
+        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} />
       </nav>
 
       {/* Connection Status */}
