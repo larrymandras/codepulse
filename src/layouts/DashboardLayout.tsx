@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import OnboardingGuide from "../components/OnboardingGuide";
@@ -106,6 +107,11 @@ function NavGroup({
 }
 
 function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+  const convexState = useConvexConnectionState();
+  const isConnected = convexState.isWebSocketConnected;
+  const dotColor = isConnected ? "bg-green-500" : "bg-yellow-500";
+  const statusLabel = isConnected ? "Connected to Convex" : "Convex: reconnecting";
+
   return (
     <>
       {/* Logo */}
@@ -130,8 +136,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Connection Status */}
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-2 text-xs text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-green-500" aria-hidden="true" />
-          <span>Connected to Convex</span>
+          <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
+          <span>{statusLabel}</span>
         </div>
       </div>
     </>
