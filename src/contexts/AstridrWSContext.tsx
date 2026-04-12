@@ -112,6 +112,7 @@ const MAX_RETRIES = 5;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30000;
 const ACK_TIMEOUT_MS = 10000;
+const MAX_QUEUE_DEPTH = 50;
 
 interface QueuedCommand {
   cmd: Record<string, unknown>;
@@ -295,7 +296,11 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
       return new Promise<AckResponse>((resolve, reject) => {
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN) {
-          // Queue for when connection is restored
+          // Queue for when connection is restored, but cap depth to avoid unbounded growth
+          if (commandQueueRef.current.length >= MAX_QUEUE_DEPTH) {
+            reject(new Error("Command queue full — too many pending commands while disconnected"));
+            return;
+          }
           commandQueueRef.current.push({ cmd, resolve, reject });
           return;
         }
