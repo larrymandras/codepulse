@@ -152,11 +152,15 @@ export default function Inbox() {
     async (requestId: string) => {
       // CRITICAL: request_id_target is the HITL UUID — NOT the WS correlation id.
       // sendCommand auto-generates its own request_id for the WS ack tracking.
-      await sendCommand({
+      const ack = await sendCommand({
         type: "approval.respond",
         request_id_target: requestId,
         decision: "approve",
       });
+      if (ack.status !== "ok") {
+        toast.error(ack.error ?? "Approval failed");
+        return;
+      }
       toast.success("Approval sent.");
       setApprovalItems((prev) =>
         prev.map((item) =>
@@ -170,12 +174,16 @@ export default function Inbox() {
   // ─── Reject handler ───────────────────────────────────────────────────────
   const handleReject = useCallback(
     async (requestId: string, note?: string) => {
-      await sendCommand({
+      const ack = await sendCommand({
         type: "approval.respond",
         request_id_target: requestId,
         decision: "reject",
         ...(note ? { comment: note } : {}),
       });
+      if (ack.status !== "ok") {
+        toast.error(ack.error ?? "Rejection failed");
+        return;
+      }
       toast.success("Rejection sent.");
       setApprovalItems((prev) =>
         prev.map((item) =>
