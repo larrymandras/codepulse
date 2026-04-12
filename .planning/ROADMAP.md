@@ -1,8 +1,13 @@
-# Roadmap: CodePulse Operational Excellence
+# Roadmap: CodePulse Command Center
 
 ## Overview
 
-Five phases transform CodePulse from a functional monitoring dashboard into a polished operational command center. The design system comes first to establish the visual language all subsequent UI work inherits. Real-time telemetry and data pipeline follow in parallel (both depend on the design system, not each other). Alert routing builds on the live data stream and the alert management UI. The intelligence layer closes the milestone, consuming aggregated pipeline data to surface forecasts, briefings, and anomaly signals.
+Seven phases transform CodePulse from a monitoring dashboard into an all-in-one command center for Ástríðr. Phase 1 (UI Foundation) establishes the design system. Phase 2 (Bidirectional Telemetry) builds the real-time communication layer. Phase 3 (Interaction Layer) is the vision shift — adding chat, inbox, live runs, approvals, and command palette. Phase 4 (Task Management) adds Kanban, ideation, agent config, and cron UX. Phases 5-7 handle data pipeline, alert routing, and intelligence.
+
+**Research sources:**
+- Paperclip AI (agent orchestration platform) — chat interaction, live runs, inbox, Kanban, approvals
+- Aperant (autonomous coding IDE) — insights chat, ideation findings, changelog
+- Rubric Labs (generative UI framework) — block rendering, chains visualization, live state, memory evals
 
 ## Phases
 
@@ -12,17 +17,20 @@ Five phases transform CodePulse from a functional monitoring dashboard into a po
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: UI Redesign** - Establish Paperclip-inspired design system across all dashboard surfaces
-- [ ] **Phase 2: Real-Time Telemetry** - WebSocket pipeline from Astridr to CodePulse with sub-second delivery
-- [ ] **Phase 3: Data Pipeline** - Aggregation tables, retention policies, and paginated queries
-- [ ] **Phase 4: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
-- [ ] **Phase 5: Intelligence Layer** - Cost forecasting, LLM session briefings, and anomaly detection
+- [ ] **Phase 1: UI Foundation** - Establish design system across all dashboard surfaces (shadcn/ui, oklch, FlexBarChart, EntityRow, sidebar)
+- [ ] **Phase 2: Bidirectional Telemetry** - WebSocket consumer + command sender + live state layer
+- [ ] **Phase 3: Interaction Layer** - Unified Inbox, Command Palette, Agent Chat with Generative UI Blocks, Live Run Widget, Approval Gates, Insights Chat
+- [ ] **Phase 4: Task Management** - Kanban board, Ideation Findings panel, Agent Config editor, enhanced Cron management
+- [ ] **Phase 5: Data Pipeline** - Aggregation tables, retention policies, paginated queries
+- [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
+- [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
 
 ## Phase Details
 
-### Phase 1: UI Redesign
+### Phase 1: UI Foundation
 **Goal**: The dashboard adopts the Paperclip design language — operators see a consistent, information-dense interface with a unified design system powering every page
 **Depends on**: Nothing (first phase)
+**Ástríðr dependency**: None
 **Requirements**: UI-01, UI-02, UI-03, UI-04, UI-05, UI-06, UI-07, UI-08
 **Success Criteria** (what must be TRUE):
   1. Every page uses the monochromatic oklch palette with `--radius: 0` — no rounded corners anywhere in the UI
@@ -38,23 +46,72 @@ Plans:
 - [ ] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
 **UI hint**: yes
 
-### Phase 2: Real-Time Telemetry
-**Goal**: Dashboard widgets update within 1 second of Astridr events — live operational state, not polled snapshots
+### Phase 2: Bidirectional Telemetry
+**Goal**: Dashboard updates within 1 second of Ástríðr events; CodePulse can send commands back to Ástríðr via the same WebSocket
 **Depends on**: Phase 1
-**Requirements**: RT-01, RT-02, RT-03, RT-04, RT-05
-
-**Cross-repo note:** RT-01 and RT-02 require implementation in the Astridr repo (`C:\Users\mandr\astridr-repo`). RT-03, RT-04, RT-05 are CodePulse consumer work.
-
+**Ástríðr dependency**: v4.0 Phase 47 (Bidirectional WebSocket + Live Run Emitter)
+**Requirements**: RT-01, RT-02, RT-03, RT-04, RT-05, RT-06, RT-07, RT-08
 **Success Criteria** (what must be TRUE):
-  1. Astridr exposes `/ws/telemetry` with topic-based subscriptions (health, security, executions, agents) — unauthenticated connections are rejected
-  2. Dashboard widgets visibly update within 1 second when a new event occurs in Astridr
-  3. Closing and reopening the CodePulse browser tab resumes the live feed without any action in Astridr
-  4. Security blocks, execution failures, and stall detections appear on the dashboard within 500ms of occurrence
+  1. Dashboard widgets visibly update within 1 second when a new event occurs in Ástríðr
+  2. Connection status indicator in sidebar shows green (connected) or red (disconnected)
+  3. Auto-reconnect resumes live feed without any action in Ástríðr
+  4. Commands sent from CodePulse receive ack within 500ms
+  5. Live run transcript events stream in real-time (no batching delay)
+  6. Agent status (idle/running/paused) updates via useLiveState without polling
+
+**Deliverables:**
+- WebSocket client singleton with topic subscriptions and auto-reconnect
+- Command sender with optimistic UI and request/response correlation
+- useLiveState hook for transient real-time data (agent status, active runs)
+- Connection status indicator in sidebar footer
 **Plans**: TBD
 
-### Phase 3: Data Pipeline
+### Phase 3: Interaction Layer
+**Goal**: CodePulse becomes a command center — operators can send tasks, approve actions, search everything, and chat with operational data from the dashboard
+**Depends on**: Phase 2
+**Ástríðr dependency**: v4.0 Phase 48 (Interaction APIs — task queue, HITL dashboard, agent status)
+**Requirements**: IL-01, IL-02, IL-03, IL-04, IL-05, IL-06
+**Success Criteria** (what must be TRUE):
+  1. Cmd+K opens command palette with search across agents, sessions, alerts, cron jobs
+  2. Unified Inbox shows alerts, failed runs, and approval requests with keyboard navigation
+  3. Agent Chat panel sends tasks to Ástríðr and shows live run transcripts with Generative UI Blocks
+  4. HITL approval requests appear as action cards with approve/reject buttons
+  5. Live Run Widget shows streaming tool calls, reasoning, and text output with stop button
+  6. Insights Chat answers operational questions by querying Convex data
+
+**Deliverables:**
+- Command Palette (cmdk) with global search + quick actions
+- Unified Inbox page with tabs, keyboard nav, read/unread tracking
+- Agent Chat Panel with Generative UI Block renderer (metric, table, chart, code, diff, approval blocks)
+- Live Run Widget with Run > Rounds > Tool Calls hierarchy and Flow tab
+- Approval Gates UI (inline cards with approve/reject)
+- Insights Chat (LLM-powered Q&A over CodePulse data)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 4: Task Management
+**Goal**: Operators can create, track, and manage work items for Ástríðr agents; view proactive scan findings; edit agent config; manage cron jobs — all from the dashboard
+**Depends on**: Phase 3
+**Ástríðr dependency**: v4.0 Phase 49 (Config hot-reload, proactive ideation)
+**Requirements**: TM-01, TM-02, TM-03, TM-04
+**Success Criteria** (what must be TRUE):
+  1. Kanban board shows tasks across lifecycle columns with drag-and-drop
+  2. Ideation findings display with severity, category, and one-click task conversion
+  3. Agent config editable from dashboard with diff preview and hot-reload
+  4. Cron jobs manageable with visual builder, manual trigger, and enable/disable toggle
+
+**Deliverables:**
+- Task Kanban Board (@dnd-kit) with columns: backlog → queued → running → review → done → cancelled
+- Ideation Findings page with status workflow and task conversion
+- Agent Configuration Editor with diff preview and hot-reload
+- Enhanced Cron Management with expression builder and manual trigger
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5: Data Pipeline
 **Goal**: Analytics queries run fast against pre-computed aggregates, old data auto-archives, and list views never load the full raw event table
-**Depends on**: Phase 1
+**Depends on**: Phase 1 (can run in parallel with Phases 3-4)
+**Ástríðr dependency**: None
 **Requirements**: DP-01, DP-02, DP-03, DP-04
 **Success Criteria** (what must be TRUE):
   1. The Analytics page loads historical views by querying hourly/daily aggregate tables — not raw event tables
@@ -63,40 +120,70 @@ Plans:
   4. Dashboard list views page through large result sets using server-side cursor pagination — no client-side filtering of full tables
 **Plans**: TBD
 
-### Phase 4: Alert Routing
+### Phase 6: Alert Routing
 **Goal**: Operators receive notifications within 60 seconds of threshold breaches and can manage alerts without leaving the dashboard
-**Depends on**: Phase 2, Phase 1
-**Requirements**: ALR-01, ALR-02, ALR-03, ALR-04, ALR-05
+**Depends on**: Phase 2
+**Ástríðr dependency**: None (CodePulse-side delivery)
+**Requirements**: ALR-01, ALR-02, ALR-03, ALR-04, ALR-05, ALR-06, ALR-07
 **Success Criteria** (what must be TRUE):
-  1. Operator can create an alert rule with a threshold (cost spike, stall detected, security block, execution failure rate) and see it listed in the Alerts page
+  1. Operator can create an alert rule with a threshold and see it listed in the Alerts page
   2. A triggered alert delivers a notification to a configured Discord webhook within 60 seconds
   3. A triggered alert delivers a notification to a configured Slack webhook within 60 seconds
-  4. Operator can mute, acknowledge, and escalate any alert from the dashboard without external tools
-  5. Operator can set per-severity notification preferences — critical alerts always notify, warning-level alerts go to digest only
+  4. Operator can mute, acknowledge, and escalate any alert from the dashboard
+  5. Per-severity notification preferences work — critical always notify, warning to digest
+  6. One-click "Create Task from Alert" converts alert to Kanban task
+  7. All alerts surface in Unified Inbox
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 5: Intelligence Layer
-**Goal**: The dashboard surfaces cost forecasts, LLM-generated session narratives, and anomaly signals — operators understand not just what happened but what to expect
-**Depends on**: Phase 3, Phase 1
-**Requirements**: INT-01, INT-02, INT-03, INT-04
+### Phase 7: Intelligence Layer
+**Goal**: The dashboard surfaces cost forecasts, session narratives, anomaly signals, activity changelogs, and memory quality metrics — operators understand not just what happened but what to expect
+**Depends on**: Phase 5 (aggregated data)
+**Ástríðr dependency**: v4.0 Phase 50 (Agent Intelligence — for memory eval hooks)
+**Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07
 **Success Criteria** (what must be TRUE):
   1. The dashboard displays trend-based daily, weekly, and monthly spend predictions with a visual budget threshold indicator
   2. Any completed session has an LLM-generated briefing summarizing what happened, key decisions made, and anomalies detected
   3. A daily digest is auto-generated and stored in Convex — operator can browse past digests from the Briefings page
-  4. Unusual patterns (cost spikes, error clusters, latency degradation) appear as visual anomaly indicators directly on the relevant dashboard widgets
+  4. Unusual patterns (cost spikes, error clusters, latency degradation) appear as visual anomaly indicators
+  5. Activity changelog auto-generates "what did Ástríðr accomplish today?" from events
+  6. Ideation briefings weave proactive scan findings into daily digest
+  7. Memory page shows quality metrics: deduplication rate, contradiction resolution, staleness indicators
 **Plans**: TBD
 **UI hint**: yes
 
-## Progress
+## Execution Order
 
-**Execution Order:**
-Phase 1 → Phase 2 → Phase 3 (parallel with 2 after Phase 1) → Phase 4 → Phase 5
+```
+Phase 1 (UI Foundation)       ██████████  Execute now — no blockers
+                                  │
+Phase 5 (Data Pipeline)       ░░░░██████████  Parallel — backend only
+                                  │
+Phase 2 (Bidirectional WS)   ░░░░░░██████████  After Phase 1 + Ástríðr Phase 47
+                                       │
+Phase 3 (Interaction)         ░░░░░░░░░░██████████████  After Phase 2 + Ástríðr Phase 48
+                                              │
+Phase 4 (Tasks)               ░░░░░░░░░░░░░░░░██████████  After Phase 3 + Ástríðr Phase 49
+                                       │
+Phase 6 (Alerts)              ░░░░░░░░░░░░██████████  After Phase 2
+                                                    │
+Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░░░░░░░██████████  After Phase 5
+```
+
+**Critical path:** Phase 1 → Phase 2 → Phase 3 (vision shift) → Phase 4
+
+## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Redesign | 0/4 | Planned | - |
-| 2. Real-Time Telemetry | 0/TBD | Not started | - |
-| 3. Data Pipeline | 0/TBD | Not started | - |
-| 4. Alert Routing | 0/TBD | Not started | - |
-| 5. Intelligence Layer | 0/TBD | Not started | - |
+| 1. UI Foundation | 0/4 | Planned | - |
+| 2. Bidirectional Telemetry | 0/TBD | Not started | - |
+| 3. Interaction Layer | 0/TBD | Not started | - |
+| 4. Task Management | 0/TBD | Not started | - |
+| 5. Data Pipeline | 0/TBD | Not started | - |
+| 6. Alert Routing | 0/TBD | Not started | - |
+| 7. Intelligence Layer | 0/TBD | Not started | - |
+
+---
+
+*Last updated: 2026-04-08 — Roadmap expanded from 5 to 7 phases, incorporating Paperclip, Aperant, and Rubric research. Vision shift: monitoring dashboard → command center.*

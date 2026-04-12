@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
-status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-04-06T13:31:54.614Z"
-last_activity: 2026-04-06 — Roadmap created, 26 requirements mapped to 5 phases
+milestone_name: CodePulse Command Center
+status: executing
+stopped_at: Phase 1 UI-SPEC approved
+last_updated: "2026-04-08"
+last_activity: 2026-04-08 -- Roadmap expanded from 5 to 7 phases (Paperclip, Aperant, Rubric research integrated)
 progress:
-  total_phases: 5
+  total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 4
   completed_plans: 0
   percent: 0
 ---
@@ -20,15 +20,15 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-04-06)
 
-**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 1 — UI Redesign (ready to plan)
+**Core value:** Monitor, interact with, and direct Ástríðr from a single interface — the all-in-one command center for AI agent operations.
+**Current focus:** Phase 1 — UI Foundation (ready to execute). Ástríðr v4.0 infrastructure must complete before Phases 2-4.
 
 ## Current Position
 
-Phase: 1 of 5 (UI Redesign)
+Phase: 1 of 7 (UI Foundation)
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-04-06 — Roadmap created, 26 requirements mapped to 5 phases
+Status: Ready to execute — blocked only on execution, not planning
+Last activity: 2026-04-08 -- Roadmap expanded, research integrated
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -61,8 +61,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - Phase 1 first: Establishes design system (oklch palette, shadcn/ui New York, `--radius: 0`) that all subsequent phases inherit
-- Phase 2 cross-repo: RT-01 and RT-02 require work in Ástríðr repo (`C:\Users\mandr\astridr-repo`); RT-03–05 are CodePulse consumer work
-- Phase 2 and 3 parallel: After Phase 1 completes, Data Pipeline can proceed in parallel with Real-Time Telemetry
+- Vision shift: CodePulse evolves from monitoring dashboard to command center (monitor + interact + direct Ástríðr)
+- Ástríðr v4.0 prerequisite: Phases 2-4 blocked on Ástríðr infrastructure (bidirectional WS, task queue, HITL, config API)
+- Phase 5 parallel: Data Pipeline can run alongside Phases 3-4 (backend only, no Ástríðr dependency)
+- Rubric integration: Agent chat uses Generative UI Blocks (metric, table, chart, code, diff, approval blocks)
+- Paperclip patterns: Unified Inbox, Command Palette (Cmd+K), Live Run Widget, Kanban board
+- Research notes: C:\Users\mandr\Mandras\04-research\codepulse-ui-phase-plan.md (full specs)
 
 ### Pending Todos
 
@@ -74,6 +78,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-04-06T13:31:54.612Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-ui-redesign/01-CONTEXT.md
+Last session: 2026-04-06T13:55:37.209Z
+Stopped at: Phase 1 UI-SPEC approved
+Resume file: .planning/phases/01-ui-redesign/01-UI-SPEC.md
