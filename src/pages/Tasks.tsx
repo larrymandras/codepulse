@@ -73,6 +73,9 @@ export default function Tasks() {
       const allIds = new Set(updated.map((t) => t.id));
       const convexIds = new Set(convexTasks.map((t) => t.id));
 
+      // Track IDs that are purely local (never came from Convex)
+      const newLocalIds = new Set(prev.filter((t) => !convexIds.has(t.id)).map((t) => t.id));
+
       // Keep only local tasks that are in updated list
       const prevLocalById = new Map(prev.map((t) => [t.id, t]));
       const result: KanbanTask[] = [];
@@ -99,7 +102,15 @@ export default function Tasks() {
         if (!allIds.has(t.id)) result.push(t);
       }
 
-      return result;
+      // Prune stale overrides: if Convex has caught up to the local column,
+      // drop the local copy so it no longer shadows the Convex record (WR-06 fix).
+      return result.filter((t) => {
+        const convexTask = convexTasks.find((c) => c.id === t.id);
+        if (convexTask && convexTask.column === t.column && !newLocalIds.has(t.id)) {
+          return false; // Convex already reflects this override — safe to drop
+        }
+        return true;
+      });
     });
 
     // Emit task move via WS (fire-and-forget)
