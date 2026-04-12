@@ -9,6 +9,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
 import { githubDark } from "@uiw/codemirror-theme-github";
 import { toast } from "sonner";
+import * as jsYaml from "js-yaml";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 
@@ -116,14 +117,14 @@ export default function ConfigEditor() {
     setValidationResult(null);
     setShowConfirm(false);
 
-    // Parse YAML client-side to extract changes object
+    // Parse YAML client-side so the server receives a real dict, not a raw string.
     let changes: Record<string, unknown> = {};
     try {
-      // Use a simple approach: send the raw content as a "content" key
-      // The server-side validator handles the actual YAML parsing
-      changes = { _raw_yaml: yamlContent };
-    } catch {
-      changes = {};
+      changes = (jsYaml.load(yamlContent) as Record<string, unknown>) ?? {};
+    } catch (err) {
+      setValidationResult({ success: false, error: `YAML parse error: ${err}` });
+      setValidating(false);
+      return;
     }
 
     try {
@@ -161,9 +162,11 @@ export default function ConfigEditor() {
 
     let changes: Record<string, unknown> = {};
     try {
-      changes = { _raw_yaml: yamlContent };
-    } catch {
-      changes = {};
+      changes = (jsYaml.load(yamlContent) as Record<string, unknown>) ?? {};
+    } catch (err) {
+      toast.error(`YAML parse error: ${err}`);
+      setApplying(false);
+      return;
     }
 
     try {
