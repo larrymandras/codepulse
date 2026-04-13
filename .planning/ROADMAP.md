@@ -44,7 +44,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Data lists use the EntityRow pattern with consistent hover states, dividers, and leading icons; activity feeds animate new entries with slide-in highlights
 **Plans**: 4 plans
 Plans:
-- [ ] 01-00-PLAN.md — Wave 0 test stubs (all 7 test files for Nyquist-compliant verification)
+- [x] 01-00-PLAN.md — Wave 0 test stubs (all 7 test files for Nyquist-compliant verification)
 - [ ] 01-01-PLAN.md — Design token layer (oklch palette, shadcn/ui init, MetricCard redesign)
 - [ ] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge, R3F removal)
 - [ ] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
@@ -199,7 +199,7 @@ Phase 58 (Infrastructure)     ░░░░░░░░██████  Cross-
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Foundation | 0/4 | Planned | - |
+| 1. UI Foundation | 1/4 | In Progress|  |
 | 2. Bidirectional Telemetry | 0/TBD | Not started | - |
 | 3. Interaction Layer | 0/TBD | Not started | - |
 | 4. Task Management | 0/TBD | Not started | - |

@@ -7,13 +7,13 @@
 
 ### UI Redesign
 
-- [ ] **UI-01**: Dashboard adopts shadcn/ui New York style with monochromatic oklch palette and `--radius: 0` globally
-- [ ] **UI-02**: All metric displays use MetricCard pattern (large tabular-nums value, tiny label, no card borders)
-- [ ] **UI-03**: Section headers use uppercase tracking-wide muted-foreground pattern with separators
-- [ ] **UI-04**: Navigation uses compact 240px sidebar with labeled sections and live count badges
-- [ ] **UI-05**: Charts replaced with custom CSS flex bar charts (no Recharts dependency for primary displays)
-- [ ] **UI-06**: EntityRow universal list pattern used across all data lists (consistent hover, dividers, leading icon)
-- [ ] **UI-07**: Activity feeds show slide-in animations with highlight accent for new entries
+- [x] **UI-01**: Dashboard adopts shadcn/ui New York style with monochromatic oklch palette and `--radius: 0` globally
+- [x] **UI-02**: All metric displays use MetricCard pattern (large tabular-nums value, tiny label, no card borders)
+- [x] **UI-03**: Section headers use uppercase tracking-wide muted-foreground pattern with separators
+- [x] **UI-04**: Navigation uses compact 240px sidebar with labeled sections and live count badges
+- [x] **UI-05**: Charts replaced with custom CSS flex bar charts (no Recharts dependency for primary displays)
+- [x] **UI-06**: EntityRow universal list pattern used across all data lists (consistent hover, dividers, leading icon)
+- [x] **UI-07**: Activity feeds show slide-in animations with highlight accent for new entries
 - [ ] **UI-08**: Icons standardized to Lucide React with consistent 4x4 sizing
 
 ### Real-Time Telemetry
@@ -72,13 +72,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| UI-01 | Phase 1 | Pending |
-| UI-02 | Phase 1 | Pending |
-| UI-03 | Phase 1 | Pending |
-| UI-04 | Phase 1 | Pending |
-| UI-05 | Phase 1 | Pending |
-| UI-06 | Phase 1 | Pending |
-| UI-07 | Phase 1 | Pending |
+| UI-01 | Phase 1 | Complete |
+| UI-02 | Phase 1 | Complete |
+| UI-03 | Phase 1 | Complete |
+| UI-04 | Phase 1 | Complete |
+| UI-05 | Phase 1 | Complete |
+| UI-06 | Phase 1 | Complete |
+| UI-07 | Phase 1 | Complete |
 | UI-08 | Phase 1 | Pending |
 | RT-01 | Phase 2 | Pending |
 | RT-02 | Phase 2 | Pending |
