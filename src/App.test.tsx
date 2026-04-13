@@ -13,6 +13,7 @@ vi.mock('@clerk/clerk-react', () => ({
 vi.mock('convex/react', () => ({
   useQuery: vi.fn(() => undefined),
   useMutation: vi.fn(() => vi.fn()),
+  useConvexConnectionState: vi.fn(() => ({ isWebSocketConnected: true })),
   ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ConvexReactClient: vi.fn(),
 }));
