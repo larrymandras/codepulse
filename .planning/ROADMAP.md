@@ -68,7 +68,11 @@ Plans:
 - Command sender with optimistic UI and request/response correlation
 - useLiveState hook for transient real-time data (agent status, active runs)
 - Connection status indicator in sidebar footer
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0 test stubs, CSS live-update-pulse animation, shadcn Popover install
+- [ ] 02-02-PLAN.md — useLiveState hook, WSStatusIndicator token upgrade, ConnectionPopover, DashboardLayout integration
+- [ ] 02-03-PLAN.md — Wire all 11 event-driven pages to WebSocket with live-update-flash animation
 
 ### Phase 3: Interaction Layer
 **Goal**: CodePulse becomes a command center — operators can send tasks, approve actions, search everything, and chat with operational data from the dashboard
@@ -199,8 +203,8 @@ Phase 58 (Infrastructure)     ░░░░░░░░██████  Cross-
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Foundation | 1/4 | In Progress|  |
-| 2. Bidirectional Telemetry | 0/TBD | Not started | - |
+| 1. UI Foundation | 4/4 | Complete |  |
+| 2. Bidirectional Telemetry | 0/3 | Planned | - |
 | 3. Interaction Layer | 0/TBD | Not started | - |
 | 4. Task Management | 0/TBD | Not started | - |
 | 5. Data Pipeline | 0/TBD | Not started | - |
@@ -210,4 +214,4 @@ Phase 58 (Infrastructure)     ░░░░░░░░██████  Cross-
 
 ---
 
-*Last updated: 2026-04-13 — Phase 58 (Infrastructure Layer) added as cross-project phase from Ástríðr. 2 plans created for command catalog frontend surface.*
+*Last updated: 2026-04-13 — Phase 2 (Bidirectional Telemetry) planned with 3 plans across 3 waves.*
