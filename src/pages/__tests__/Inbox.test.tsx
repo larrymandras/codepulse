@@ -61,8 +61,8 @@ const makeApprovalItem = (id: string): InboxItem => ({
  * Capture the approval_request subscription callback so tests can inject items.
  */
 function getApprovalCallback(): ((event: Record<string, unknown>) => void) | null {
-  for (const call of mockSubscribeEvent.mock.calls) {
-    if (call[0] === "approval_request") return call[1] as (event: Record<string, unknown>) => void;
+  for (const call of mockSubscribeEvent.mock.calls as unknown as [string, (event: Record<string, unknown>) => void][]) {
+    if (call[0] === "approval_request") return call[1];
   }
   return null;
 }
