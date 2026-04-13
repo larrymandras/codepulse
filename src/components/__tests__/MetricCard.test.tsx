@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MetricCard from '../MetricCard';
 
@@ -15,17 +15,9 @@ describe('MetricCard', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('renders up trend indicator', () => {
-    render(<MetricCard label="Requests" value="1.2k" trend="up" />);
-    expect(screen.getByText('^')).toBeInTheDocument();
-    expect(screen.getByText('^').className).toContain('text-green-400');
-  });
-
-  it('renders down trend indicator', () => {
-    render(<MetricCard label="Errors" value="3" trend="down" />);
-    expect(screen.getByText('v')).toBeInTheDocument();
-    expect(screen.getByText('v').className).toContain('text-red-400');
-  });
+  // Old ASCII arrow tests removed — superseded by Lucide icon design (UI-02)
+  // it('renders up trend indicator', () => { ... });
+  // it('renders down trend indicator', () => { ... });
 
   it('does not render trend indicator when trend is not provided', () => {
     const { container } = render(<MetricCard label="Count" value="10" />);
@@ -38,4 +30,13 @@ describe('MetricCard', () => {
     expect(screen.queryByText('^')).toBeNull();
     expect(screen.queryByText('v')).toBeNull();
   });
+
+  // UI-02 borderless redesign stubs — implemented in Plan 01-01
+  test.todo("renders value with tabular-nums class");
+  test.todo("renders TrendingUp icon when trend is up");
+  test.todo("renders TrendingDown icon when trend is down");
+  test.todo("does not render border or rounded corners");
+  test.todo("does not render bg-gray background");
+  test.todo("uses --status-ok color for up trend");
+  test.todo("uses --status-error color for down trend");
 });
