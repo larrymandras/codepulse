@@ -118,11 +118,18 @@ Plans:
   4. Cron jobs manageable with visual builder, manual trigger, and enable/disable toggle
 
 **Deliverables:**
-- Task Kanban Board (@dnd-kit) with columns: backlog → queued → running → review → done → cancelled
+- Task Kanban Board (@dnd-kit) with columns: backlog -> queued -> running -> review -> done -> cancelled
 - Ideation Findings page with status workflow and task conversion
 - Agent Configuration Editor with diff preview and hot-reload
 - Enhanced Cron Management with expression builder and manual trigger
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 04-01-PLAN.md — Wave 0: install deps, expand types/schema, create utilities, test stubs
+- [ ] 04-02-PLAN.md — Kanban components: 6-column board, collapsible columns, rich cards
+- [ ] 04-03-PLAN.md — Ideation upgrade: finding rows, status workflow, task conversion
+- [ ] 04-04-PLAN.md — Config Editor: inline diff view, hot-reload status bar, revert
+- [ ] 04-05-PLAN.md — Cron Management: visual builder, slide-out panel, inline controls
+- [ ] 04-06-PLAN.md — Tasks page: Convex data wiring, drag confirmation, finding pre-fill
 **UI hint**: yes
 
 ### Phase 5: Data Pipeline
@@ -204,7 +211,7 @@ Phase 6 (Alerts)              ░░░░░░░░░░░░████�
 Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░░░░░░░██████████  After Phase 5
 ```
 
-**Critical path:** Phase 1 → Phase 2 → Phase 3 (vision shift) → Phase 4
+**Critical path:** Phase 1 -> Phase 2 -> Phase 3 (vision shift) -> Phase 4
 
 ## Progress
 
@@ -213,7 +220,7 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 1. UI Foundation | 4/4 | Complete |  |
 | 2. Bidirectional Telemetry | 0/4 | Planned | - |
 | 3. Interaction Layer | 0/6 | Planned | - |
-| 4. Task Management | 0/TBD | Not started | - |
+| 4. Task Management | 0/6 | Planned | - |
 | 5. Data Pipeline | 0/TBD | Not started | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
@@ -221,4 +228,4 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 
 ---
 
-*Last updated: 2026-04-13 — Phase 3 (Interaction Layer) planned: 6 plans across 4 waves (Wave 0 setup, Wave 1 blocks+palette parallel, Wave 2 chat+inbox+run parallel, Wave 3 insights).*
+*Last updated: 2026-04-13 — Phase 4 (Task Management) planned: 6 plans across 3 waves (Wave 1 setup, Wave 2 kanban+ideation+config+cron parallel, Wave 3 tasks page wiring).*
