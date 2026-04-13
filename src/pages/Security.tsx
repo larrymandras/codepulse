@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSecurityEvents } from "../hooks/useSecurityEvents";
+import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "../hooks/useLiveFlash";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import SecurityStats from "../components/SecurityStats";
 import SecurityEventFeed from "../components/SecurityEventFeed";
 import InfoTooltip from "../components/InfoTooltip";
@@ -25,13 +28,30 @@ function statusColor(value: number, thresholds: { warn: number; danger: number }
   return "text-green-400";
 }
 
+type WsSecurityEvent = {
+  id: string;
+  type: string;
+  description: string;
+  severity: string;
+  timestamp: number;
+};
+
 export default function Security() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
-  const events = useSecurityEvents();
+  const [wsEvents, setWsEvents] = useState<WsSecurityEvent[]>([]);
+  const { subscribeEvent } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
+
+  const convexEvents = useSecurityEvents();
+
+  // Merge WS events (prepended) with Convex events
+  const mergedEvents = [...wsEvents, ...convexEvents];
+
   const filteredEvents =
     severityFilter === "all"
-      ? events
-      : events.filter((e: any) => e.severity === severityFilter);
+      ? mergedEvents
+      : mergedEvents.filter((e: any) => e.severity === severityFilter);
+
   const rlsStats = useQuery(api.security.rlsStats);
   const hitlStats = useQuery(api.security.hitlStats);
   const webhookStats = useQuery(api.security.webhookStats);
@@ -39,11 +59,53 @@ export default function Security() {
   const sandboxOverview = useQuery(api.sandboxViolations.overview);
   const recentViolations = useQuery(api.sandboxViolations.recent, { limit: 20 });
 
+  // WS: prepend new security events
+  useEffect(() => {
+    const unsubSecurity = subscribeEvent("security_event", (event) => {
+      const data = event.data as Record<string, unknown> | undefined;
+      if (!data) return;
+      const wsEvent: WsSecurityEvent = {
+        id: (data.id as string | undefined) ?? crypto.randomUUID(),
+        type: (data.event_type as string | undefined) ?? "security_event",
+        description: (data.description as string | undefined) ?? "",
+        severity: (data.severity as string | undefined) ?? "low",
+        timestamp: typeof data.timestamp === "number" ? data.timestamp : Date.now() / 1000,
+      };
+      setWsEvents((prev) => {
+        if (prev.some((e) => e.id === wsEvent.id)) return prev;
+        return [wsEvent, ...prev];
+      });
+      triggerFlash();
+    });
+
+    const unsubSecretRef = subscribeEvent("secret_ref_event", (event) => {
+      const data = event.data as Record<string, unknown> | undefined;
+      if (!data) return;
+      const wsEvent: WsSecurityEvent = {
+        id: (data.id as string | undefined) ?? crypto.randomUUID(),
+        type: "secret_ref_event",
+        description: (data.description as string | undefined) ?? "",
+        severity: (data.severity as string | undefined) ?? "medium",
+        timestamp: typeof data.timestamp === "number" ? data.timestamp : Date.now() / 1000,
+      };
+      setWsEvents((prev) => {
+        if (prev.some((e) => e.id === wsEvent.id)) return prev;
+        return [wsEvent, ...prev];
+      });
+      triggerFlash();
+    });
+
+    return () => {
+      unsubSecurity();
+      unsubSecretRef();
+    };
+  }, [subscribeEvent, triggerFlash]);
+
   return (
-    <div className="space-y-6">
+    <div ref={flashRef} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Security Dashboard</h1>
-        <span className="text-xs text-gray-500">{events.length} events</span>
+        <span className="text-xs text-gray-500">{mergedEvents.length} events</span>
       </div>
 
       {/* Severity Stats */}
@@ -67,7 +129,9 @@ export default function Security() {
       </div>
 
       {/* Security Event Feed */}
-      <SecurityEventFeed events={filteredEvents} />
+      <SectionErrorBoundary name="Security Events">
+        <SecurityEventFeed events={filteredEvents} />
+      </SectionErrorBoundary>
 
       {/* Audit & Compliance */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
@@ -106,7 +170,7 @@ export default function Security() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Entry count</span>
-                <span className="text-gray-300">{events.length}</span>
+                <span className="text-gray-300">{mergedEvents.length}</span>
               </div>
             </div>
           </div>

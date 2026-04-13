@@ -1,5 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRecentEvents } from "../hooks/useRecentEvents";
+import { useLiveState } from "@/hooks/useLiveState";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import EventFeed from "../components/EventFeed";
 import ActiveSessions from "../components/ActiveSessions";
 import PulseChart from "../components/PulseChart";
@@ -20,13 +23,39 @@ export default function Dashboard() {
   const events = useRecentEvents(100);
   const [chartTab, setChartTab] = useState<ChartTab>("pulse");
 
+  // Live WS state for metric delta overlay on hero stats
+  const dashTopics = useMemo(() => ["health", "executions", "agents"], []);
+  const { isLive } = useLiveState({ topics: dashTopics });
+  const { flashRef: heroFlashRef, triggerFlash: triggerHeroFlash } = useLiveFlash();
+  const { subscribeEvent } = useAstridrWS();
+
+  // Flash hero stats on any relevant metric update
+  useEffect(() => {
+    const unsubMetric = subscribeEvent("metric_delta", () => {
+      triggerHeroFlash();
+    });
+    const unsubExecStart = subscribeEvent("execution_start", () => {
+      triggerHeroFlash();
+    });
+    const unsubAgentStatus = subscribeEvent("agent_status_change", () => {
+      triggerHeroFlash();
+    });
+    return () => {
+      unsubMetric();
+      unsubExecStart();
+      unsubAgentStatus();
+    };
+  }, [subscribeEvent, triggerHeroFlash]);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Hero Stats Bar */}
-      <SectionErrorBoundary name="Hero Stats">
-        <HeroStatsBar />
+      <SectionErrorBoundary name="Live Metrics">
+        <div ref={heroFlashRef}>
+          <HeroStatsBar />
+        </div>
       </SectionErrorBoundary>
 
       {/* Activity Charts with Tab Toggle */}

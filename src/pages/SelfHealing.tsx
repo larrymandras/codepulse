@@ -1,15 +1,28 @@
+import { useState, useEffect } from "react";
 import MetricCard from "../components/MetricCard";
 import ComponentHealthGrid from "../components/ComponentHealthGrid";
 import RecoveryTimeline from "../components/RecoveryTimeline";
 import VersionHistory from "../components/VersionHistory";
 import RecoveryCommits from "../components/RecoveryCommits";
 import RecentGitActivity from "../components/RecentGitActivity";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import {
   useComponentHealth,
   useRecentRecoveries,
   useUptimeStats,
   useVersionHistory,
 } from "../hooks/useSelfHealing";
+
+type SelfHealingEventPayload = {
+  id?: string;
+  component?: string;
+  action?: string;
+  description?: string;
+  timestamp?: number;
+  [key: string]: unknown;
+};
 
 const ESCALATION_LEVELS = [
   { level: 1, label: "Auto-retry", detail: "3 attempts" },
@@ -24,6 +37,28 @@ export default function SelfHealing() {
   const recoveries = useRecentRecoveries();
   const stats = useUptimeStats();
   const versions = useVersionHistory();
+  const { subscribeEvent } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
+
+  // WS-prepended self-healing events overlay on Convex data
+  const [wsEvents, setWsEvents] = useState<SelfHealingEventPayload[]>([]);
+
+  useEffect(() => {
+    const unsub = subscribeEvent("self_healing", (event) => {
+      const data = event.data as SelfHealingEventPayload | undefined;
+      if (!data) return;
+      const wsEvent: SelfHealingEventPayload = {
+        ...data,
+        id: (data.id as string | undefined) ?? crypto.randomUUID(),
+      };
+      setWsEvents((prev) => {
+        if (prev.some((e) => e.id === wsEvent.id)) return prev;
+        return [wsEvent, ...prev];
+      });
+      triggerFlash();
+    });
+    return unsub;
+  }, [subscribeEvent, triggerFlash]);
 
   return (
     <div className="space-y-6">
@@ -31,7 +66,7 @@ export default function SelfHealing() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Events" value={stats?.total ?? 0} />
+        <MetricCard label="Total Events" value={(stats?.total ?? 0) + wsEvents.length} />
         <MetricCard label="Resolved" value={stats?.resolved ?? 0} trend="up" />
         <MetricCard label="Failed" value={stats?.failed ?? 0} trend="down" />
         <MetricCard label="Pending" value={stats?.pending ?? 0} />
@@ -60,8 +95,12 @@ export default function SelfHealing() {
         </div>
       )}
 
-      {/* Recovery Timeline */}
-      <RecoveryTimeline events={recoveries} />
+      {/* Recovery Timeline — WS-enhanced with live prepended events */}
+      <SectionErrorBoundary name="Self-Healing Events">
+        <div ref={flashRef} className="space-y-4">
+          <RecoveryTimeline events={recoveries} />
+        </div>
+      </SectionErrorBoundary>
 
       {/* Recovery Commits — git commits tied to self-healing actions */}
       <RecoveryCommits />

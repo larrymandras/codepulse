@@ -1,6 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "../hooks/useLiveFlash";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import ExecutionTable from "../components/ExecutionTable";
 import ExecutionFilterBar from "../components/ExecutionFilterBar";
 
@@ -18,6 +21,14 @@ export default function Executions() {
     profile: null,
     origin: null,
   });
+
+  // WS live counters overlay on Convex data
+  const [wsRunningDelta, setWsRunningDelta] = useState(0);
+  const [wsFailedDelta, setWsFailedDelta] = useState(0);
+  const [wsTotalDelta, setWsTotalDelta] = useState(0);
+
+  const { subscribeEvent } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   const stats = useQuery(api.commandExecutions.summaryStats);
 
@@ -43,6 +54,35 @@ export default function Executions() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  // WS: subscribe to execution events for live counter overlays
+  useEffect(() => {
+    const unsubStart = subscribeEvent("execution_start", () => {
+      setWsRunningDelta((prev) => prev + 1);
+      setWsTotalDelta((prev) => prev + 1);
+      triggerFlash();
+    });
+
+    const unsubComplete = subscribeEvent("execution_complete", () => {
+      setWsRunningDelta((prev) => Math.max(0, prev - 1));
+      triggerFlash();
+    });
+
+    const unsubError = subscribeEvent("execution_error", () => {
+      setWsRunningDelta((prev) => Math.max(0, prev - 1));
+      setWsFailedDelta((prev) => prev + 1);
+      triggerFlash();
+    });
+
+    return () => {
+      unsubStart();
+      unsubComplete();
+      unsubError();
+    };
+  }, [subscribeEvent, triggerFlash]);
+
+  const totalDisplay = stats != null ? (stats.total ?? 0) + wsTotalDelta : "—";
+  const runningDisplay = stats != null ? (stats.running ?? 0) + wsRunningDelta : "—";
+  const failedDisplay = stats != null ? (stats.failed ?? 0) + wsFailedDelta : "—";
   const avgDurationDisplay = stats?.avgDuration != null
     ? `${stats.avgDuration.toFixed(0)}ms`
     : "—";
@@ -58,32 +98,34 @@ export default function Executions() {
       </h1>
 
       {/* Summary stat bar — PRIMARY VISUAL ANCHOR */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Total</p>
-          <p className="text-2xl font-semibold text-gray-100">
-            {stats?.total ?? "—"}
-          </p>
+      <SectionErrorBoundary name="Execution Metrics">
+        <div ref={flashRef} className="grid grid-cols-4 gap-4">
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Total</p>
+            <p className="text-2xl font-semibold text-gray-100">
+              {totalDisplay}
+            </p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Running</p>
+            <p className="text-2xl font-semibold text-gray-100">
+              {runningDisplay}
+            </p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Failed</p>
+            <p className="text-2xl font-semibold text-red-400">
+              {failedDisplay}
+            </p>
+          </div>
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Avg Duration</p>
+            <p className="text-2xl font-semibold text-indigo-400">
+              {avgDurationDisplay}
+            </p>
+          </div>
         </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Running</p>
-          <p className="text-2xl font-semibold text-gray-100">
-            {stats?.running ?? "—"}
-          </p>
-        </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Failed</p>
-          <p className="text-2xl font-semibold text-red-400">
-            {stats?.failed ?? "—"}
-          </p>
-        </div>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-          <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Avg Duration</p>
-          <p className="text-2xl font-semibold text-indigo-400">
-            {avgDurationDisplay}
-          </p>
-        </div>
-      </div>
+      </SectionErrorBoundary>
 
       {/* Filter bar */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">

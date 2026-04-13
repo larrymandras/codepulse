@@ -1,6 +1,9 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useLiveState } from "@/hooks/useLiveState";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import {
   DndContext,
   closestCenter,
@@ -175,6 +178,20 @@ export default function Agents() {
   const seedTeams = useMutation(api.seedTeams.seed);
   const updateSortOrder = useMutation(api.agentProfiles.updateSortOrder);
 
+  // Live WS state for agent status
+  const agentTopics = useMemo(() => ["agents"], []);
+  const { state: liveState, isLive } = useLiveState({ topics: agentTopics });
+  const { flashRef: agentFlashRef, triggerFlash: triggerAgentFlash } = useLiveFlash();
+  const { subscribeEvent } = useAstridrWS();
+
+  // Flash agent status section on live events
+  useEffect(() => {
+    const unsub = subscribeEvent("agent_status_change", () => {
+      triggerAgentFlash();
+    });
+    return unsub;
+  }, [subscribeEvent, triggerAgentFlash]);
+
   // Security scan findings grouped by tool/location name
   const findingsByLocation = useQuery(api.ideationFindings.byLocation) ?? {};
   const dismissFinding = useMutation(api.ideationFindings.dismiss);
@@ -314,11 +331,14 @@ export default function Agents() {
       </div>
 
       {/* Summary Metrics */}
-      <SectionErrorBoundary name="Agent Metrics">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <SectionErrorBoundary name="Agent Status">
+        <div ref={agentFlashRef} className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <MetricCard label="Registered Teams" value={profiles.length} />
           <MetricCard label="Runtime Agents" value={allAgents.length} />
-          <MetricCard label="Running" value={counts.running} />
+          <MetricCard
+            label="Running"
+            value={isLive && liveState.agentStatus === "running" ? counts.running : counts.running}
+          />
           <MetricCard label="Failed" value={counts.failed} />
         </div>
       </SectionErrorBoundary>
