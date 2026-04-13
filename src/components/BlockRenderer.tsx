@@ -10,7 +10,16 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { GenerativeBlock, ApprovalBlockData } from "@/types/generative-blocks";
+import type {
+  GenerativeBlock,
+  MetricBlockData,
+  TableBlockData,
+  ChartBlockData,
+  CodeBlockData,
+  DiffBlockData,
+  ApprovalBlockData,
+  MarkdownBlockData,
+} from "@/types/generative-blocks";
 import { MetricBlock } from "@/components/blocks/MetricBlock";
 import { TableBlock } from "@/components/blocks/TableBlock";
 import { ChartBlock } from "@/components/blocks/ChartBlock";
@@ -27,27 +36,31 @@ interface BlockRendererProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// FallbackBlockData uses `type: string` (not a literal), which prevents TypeScript
+// switch-narrowing from excluding it from specific cases. Cast via unknown to
+// each concrete type within each case — the switch guard ensures type safety at runtime.
 export function BlockRenderer({ block, onApprove, onReject }: BlockRendererProps) {
+  const b = block as unknown;
   switch (block.type) {
     case "metric":
-      return <MetricBlock block={block} />;
+      return <MetricBlock block={b as MetricBlockData} />;
 
     case "table":
-      return <TableBlock block={block} />;
+      return <TableBlock block={b as TableBlockData} />;
 
     case "chart":
-      return <ChartBlock block={block} />;
+      return <ChartBlock block={b as ChartBlockData} />;
 
     case "code":
-      return <CodeBlock block={block} />;
+      return <CodeBlock block={b as CodeBlockData} />;
 
     case "diff":
-      return <CodeBlock block={block} diff />;
+      return <CodeBlock block={b as DiffBlockData} diff />;
 
     case "approval":
       return (
         <ApprovalBlock
-          block={block as ApprovalBlockData}
+          block={b as ApprovalBlockData}
           onApprove={onApprove}
           onReject={onReject}
         />
@@ -56,7 +69,7 @@ export function BlockRenderer({ block, onApprove, onReject }: BlockRendererProps
     case "markdown":
       return (
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {block.content}
+          {(b as MarkdownBlockData).content}
         </ReactMarkdown>
       );
 
