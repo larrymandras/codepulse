@@ -16,15 +16,15 @@ const statusConfig: Record<
   { dotClass: string; label: string }
 > = {
   connected: {
-    dotClass: "bg-green-500",
+    dotClass: "bg-(--status-ok)",
     label: "Connected",
   },
   reconnecting: {
-    dotClass: "bg-yellow-500 animate-pulse",
+    dotClass: "bg-(--status-warn) animate-pulse",
     label: "Reconnecting...",
   },
   disconnected: {
-    dotClass: "bg-red-500",
+    dotClass: "bg-(--status-error)",
     label: "Disconnected",
   },
 };
@@ -37,7 +37,7 @@ export function WSStatusIndicator({ status }: { status: WSStatus }) {
         className={`w-2 h-2 rounded-full ${dotClass}`}
         aria-hidden="true"
       />
-      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   );
 }

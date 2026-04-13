@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { useConvexConnectionState } from "convex/react";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import { ConnectionPopover } from "@/components/ConnectionPopover";
 import {
   LayoutDashboard, BarChart2, Bot, List, Hammer, Clock,
   Server, Shield, RefreshCw, Brain, Cpu, ScrollText, Bell,
@@ -97,10 +98,7 @@ function SidebarContent({
   collapsed: boolean;
   onNavClick?: () => void;
 }) {
-  const convexState = useConvexConnectionState();
-  const isConnected = convexState.isWebSocketConnected;
-  const dotColor = isConnected ? "bg-(--status-ok)" : "bg-(--status-warn)";
-  const statusLabel = isConnected ? "Connected" : "Reconnecting";
+  const { status: wsStatus } = useAstridrWS();
   const counts = useNavCounts();
 
   return (
@@ -179,12 +177,37 @@ function SidebarContent({
         ))}
       </nav>
 
-      {/* Connection Status */}
+      {/* Connection Status — D-08, D-09 */}
       <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
-          {!collapsed && <span>{statusLabel}</span>}
-        </div>
+        {collapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                className="flex justify-center cursor-default"
+                aria-label={`WebSocket ${wsStatus}`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    wsStatus === "connected"
+                      ? "bg-(--status-ok)"
+                      : wsStatus === "reconnecting"
+                        ? "bg-(--status-warn) animate-pulse"
+                        : "bg-(--status-error)"
+                  }`}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {wsStatus === "connected"
+                ? "Connected"
+                : wsStatus === "reconnecting"
+                  ? "Reconnecting..."
+                  : "Disconnected"}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <ConnectionPopover />
+        )}
       </div>
     </>
   );
@@ -193,6 +216,7 @@ function SidebarContent({
 export default function DashboardLayout() {
   useAudioEvents();
   useNotificationToasts();
+  const { status: wsStatus } = useAstridrWS();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -277,6 +301,18 @@ export default function DashboardLayout() {
               Astridr Runtime Telemetry
             </span>
             <div className="flex items-center gap-2">
+              {/* WS status dot — D-08 (header placement) */}
+              <div aria-label={`Astridr connection: ${wsStatus}`}>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    wsStatus === "connected"
+                      ? "bg-(--status-ok)"
+                      : wsStatus === "reconnecting"
+                        ? "bg-(--status-warn) animate-pulse"
+                        : "bg-(--status-error)"
+                  }`}
+                />
+              </div>
               <EStopButton />
               <div className="w-px h-5 bg-border mx-1" />
               <NotificationBell />
