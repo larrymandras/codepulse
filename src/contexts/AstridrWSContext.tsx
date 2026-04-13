@@ -43,6 +43,7 @@ interface AstridrWSContextValue {
   sendCommand: (cmd: Record<string, unknown>) => Promise<AckResponse>;
   subscribe: (topic: string, callback: TopicCallback) => () => void;
   subscribeEvent: (eventType: string, callback: TopicCallback) => () => void;
+  reconnect: () => void;
 }
 
 // ─── Topic → event_type mapping (mirrors TOPIC_EVENT_MAP in ws_telemetry.py) ─
@@ -344,8 +345,27 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const reconnect = useCallback(() => {
+    // Close existing WebSocket if open
+    if (wsRef.current) {
+      wsRef.current.onclose = null; // prevent scheduleRetry from firing
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    // Clear any pending retry timer
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+    // Reset retry count so reconnect gets full backoff budget
+    retryCountRef.current = 0;
+    // Signal reconnecting state then open fresh connection
+    setStatusSync("reconnecting");
+    connect();
+  }, [connect, setStatusSync]);
+
   return (
-    <AstridrWSContext.Provider value={{ status, sendCommand, subscribe, subscribeEvent }}>
+    <AstridrWSContext.Provider value={{ status, sendCommand, subscribe, subscribeEvent, reconnect }}>
       {children}
     </AstridrWSContext.Provider>
   );
