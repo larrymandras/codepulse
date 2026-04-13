@@ -30,6 +30,12 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Privacy context with PII masking
 - Optional Clerk auth (gracefully skipped if not configured)
 - 45+ runtime event types routed from Ástríðr via ConvexHandler
+- Generative UI Block system — discriminated union type, BlockRenderer dispatcher, 6 block sub-components (Validated in Phase 3)
+- Command Palette (Cmd+K) with entity search and quick actions (Validated in Phase 3)
+- Agent Chat with generative block rendering and approval gates (Validated in Phase 3)
+- Unified Inbox with keyboard navigation (j/k/Enter/A/R/Escape) (Validated in Phase 3)
+- RunTimeline nested accordion with Flow DAG visualization (Validated in Phase 3)
+- Insights Chat with LLM-powered Convex backend action (Validated in Phase 3)
 
 ### Active
 
@@ -85,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after Phase 58 (infrastructure-layer) completion*
+*Last updated: 2026-04-13 after Phase 3 (interaction-layer) completion*
