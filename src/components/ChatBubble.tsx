@@ -5,7 +5,12 @@
  * Assistant messages: left-aligned, bg-[--card] with border
  * Streaming: blinking cursor appended after content
  *
+ * Supports two rendering modes (mutually exclusive):
+ *   blocks[] — Generative UI Blocks via BlockRenderer (D-04)
+ *   content   — plain markdown string (backward compatible)
+ *
  * Phase 56, Plan 02: CPCC-01 chat UI.
+ * Phase 03, Plan 04: IL-02 block rendering upgrade.
  */
 
 import ReactMarkdown from "react-markdown";
@@ -14,14 +19,19 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { Components } from "react-markdown";
 import type { CSSProperties } from "react";
+import { BlockRenderer } from "@/components/BlockRenderer";
+import type { GenerativeBlock } from "@/types/generative-blocks";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ChatBubbleProps {
   role: "user" | "assistant";
-  content: string;
+  content?: string;           // optional — plain markdown string path
+  blocks?: GenerativeBlock[]; // optional — Generative UI Block path (D-04)
   streaming?: boolean;
   timestamp?: number;
+  onApprove?: (requestId: string) => void;
+  onReject?: (requestId: string, reason?: string) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,7 +119,15 @@ const blinkStyle: CSSProperties = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ChatBubble({ role, content, streaming = false, timestamp }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  content,
+  blocks,
+  streaming = false,
+  timestamp,
+  onApprove,
+  onReject,
+}: ChatBubbleProps) {
   const isUser = role === "user";
 
   const bubbleClass = isUser
@@ -133,13 +151,35 @@ export function ChatBubble({ role, content, streaming = false, timestamp }: Chat
         <div className={bubbleClass}>
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+          ) : blocks && blocks.length > 0 ? (
+            // Generative UI Block path (D-04)
+            <div className="flex flex-col gap-2">
+              {blocks.map((block, idx) => (
+                <BlockRenderer
+                  key={idx}
+                  block={block}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                />
+              ))}
+              {streaming && (
+                <span
+                  className="inline-block text-sm"
+                  style={blinkStyle}
+                  aria-hidden="true"
+                >
+                  |
+                </span>
+              )}
+            </div>
           ) : (
+            // Existing markdown path — backward compatible
             <div className="prose prose-sm max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={markdownComponents}
               >
-                {content}
+                {content ?? ""}
               </ReactMarkdown>
               {streaming && (
                 <span
