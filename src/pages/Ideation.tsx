@@ -10,7 +10,7 @@ import { IdeationRow } from "../components/IdeationRow";
 import type { IdeationRowFinding } from "../components/IdeationRow";
 import { TaskCreateForm } from "../components/TaskCreateForm";
 import { findingToTaskDefaults } from "../lib/findingToTask";
-import type { NewTask, TaskColumn } from "../types/kanban";
+import type { NewTask } from "../types/kanban";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -87,7 +87,7 @@ export default function Ideation() {
     setShowCreateForm(true);
   }
 
-  async function handleFormSubmit(task: NewTask, column: TaskColumn) {
+  async function handleFormSubmit(task: NewTask) {
     const taskId = await createTask({
       title: task.title,
       priority: task.priority,
@@ -95,6 +95,7 @@ export default function Ideation() {
       agentId: task.agentId,
       agentName: task.agentName,
       labels: task.labels,
+      findingId: task.findingId as Parameters<typeof createTask>[0]["findingId"],
     });
     if (prefillData?.findingId) {
       await linkTask({ id: prefillData.findingId as Parameters<typeof linkTask>[0]["id"], taskId: taskId as string });
@@ -236,7 +237,7 @@ export default function Ideation() {
       <TaskCreateForm
         open={showCreateForm}
         defaultColumn="backlog"
-        onClose={() => {
+        onCancel={() => {
           setShowCreateForm(false);
           setPrefillData(null);
         }}
