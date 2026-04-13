@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 interface MetricCardProps {
   label: string;
@@ -7,23 +8,18 @@ interface MetricCardProps {
 }
 
 function MetricCardInner({ label, value, trend }: MetricCardProps) {
-  const trendArrow =
-    trend === "up" ? "^" : trend === "down" ? "v" : null;
   const trendColor =
-    trend === "up"
-      ? "text-green-400"
-      : trend === "down"
-        ? "text-red-400"
-        : "text-gray-500";
+    trend === "up" ? "text-(--status-ok)"
+    : trend === "down" ? "text-(--status-error)"
+    : "text-muted-foreground";
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+    <div className="p-4">
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className="text-2xl font-semibold text-gray-100">{value}</span>
-        {trendArrow && (
-          <span className={`text-sm font-mono ${trendColor}`}>{trendArrow}</span>
-        )}
+        <span className="text-2xl font-semibold tabular-nums">{value}</span>
+        {trend === "up" && <TrendingUp className={`w-3 h-3 ${trendColor}`} />}
+        {trend === "down" && <TrendingDown className={`w-3 h-3 ${trendColor}`} />}
       </div>
     </div>
   );
