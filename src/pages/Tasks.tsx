@@ -18,8 +18,9 @@ import type { KanbanTask, NewTask, TaskColumn } from "../types/kanban";
 
 // Map commandExecution status -> Kanban column
 function statusToColumn(status: string): TaskColumn {
-  if (status === "queued") return "backlog";
-  if (status === "running") return "in_progress";
+  if (status === "queued") return "queued";
+  if (status === "running") return "running";
+  if (status === "failed") return "cancelled";
   return "done";
 }
 
@@ -59,6 +60,7 @@ export default function Tasks() {
     column: statusToColumn(exec.status),
     agentId: exec.profileId,
     agentName: exec.origin !== "internal" ? exec.origin : undefined,
+    columnEnteredAt: exec.startedAt ?? exec.queuedAt,
     createdAt: exec.queuedAt,
   }));
 
@@ -122,6 +124,7 @@ export default function Tasks() {
 
   const handleCreateTask = useCallback(
     async (newTask: NewTask, column: TaskColumn) => {
+      const now = Date.now() / 1000;
       const task: KanbanTask = {
         id: crypto.randomUUID(),
         title: newTask.title,
@@ -130,7 +133,8 @@ export default function Tasks() {
         column,
         agentId: newTask.agentId,
         agentName: newTask.agentName,
-        createdAt: Date.now() / 1000,
+        columnEnteredAt: now,
+        createdAt: now,
       };
 
       setLocalTasks((prev) => [task, ...prev]);

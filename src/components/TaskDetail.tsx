@@ -15,8 +15,11 @@ interface TaskDetailProps {
 
 const COLUMN_LABELS: Record<TaskColumn, string> = {
   backlog: "Backlog",
-  in_progress: "In Progress",
+  queued: "Queued",
+  running: "Running",
+  review: "Review",
   done: "Done",
+  cancelled: "Cancelled",
 };
 
 const PRIORITY_COLORS: Record<KanbanTask["priority"], string> = {

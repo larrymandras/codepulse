@@ -1,0 +1,83 @@
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
+
+const VALID_COLUMNS = ["backlog", "queued", "running", "review", "done", "cancelled"] as const;
+
+export const listByColumn = query({
+  handler: async (ctx) => {
+    return await ctx.db.query("tasks").order("desc").collect();
+  },
+});
+
+export const create = mutation({
+  args: {
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.string(),
+    agentId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+    labels: v.optional(v.array(v.string())),
+    dueAt: v.optional(v.number()),
+    findingId: v.optional(v.id("ideationFindings")),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now() / 1000;
+    return await ctx.db.insert("tasks", {
+      taskId: crypto.randomUUID(),
+      title: args.title,
+      description: args.description,
+      priority: args.priority,
+      column: "backlog",
+      agentId: args.agentId,
+      agentName: args.agentName,
+      labels: args.labels,
+      dueAt: args.dueAt,
+      findingId: args.findingId,
+      columnEnteredAt: now,
+      createdAt: now,
+    });
+  },
+});
+
+export const moveColumn = mutation({
+  args: {
+    id: v.id("tasks"),
+    column: v.string(),
+  },
+  handler: async (ctx, { id, column }) => {
+    if (!(VALID_COLUMNS as readonly string[]).includes(column)) {
+      throw new Error(`Invalid column: ${column}. Must be one of: ${VALID_COLUMNS.join(", ")}`);
+    }
+    await ctx.db.patch(id, {
+      column,
+      columnEnteredAt: Date.now() / 1000,
+    });
+  },
+});
+
+export const update = mutation({
+  args: {
+    id: v.id("tasks"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    labels: v.optional(v.array(v.string())),
+    dueAt: v.optional(v.number()),
+    agentId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, ...fields }) => {
+    const patch: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      if (value !== undefined) patch[key] = value;
+    }
+    await ctx.db.patch(id, patch);
+  },
+});
+
+export const remove = mutation({
+  args: { id: v.id("tasks") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id);
+  },
+});

@@ -15,16 +15,16 @@ interface NavCounts {
 }
 
 export function useNavCounts(): NavCounts {
-  const sessions = useQuery(api.sessions.listActive);
-  const agents = useQuery(api.agents.listRunning);
-  const executions = useQuery(api.commandExecutions.listExecutions);
-  const buildActivity = useQuery(api.build.recentActivity);
-  const automation = useQuery(api.automation.recentCrons);
-  const security = useQuery(api.security.recentEvents);
-  const memory = useQuery(api.memory.overview);
-  const capabilities = useQuery(api.registry.listTools);
-  const briefings = useQuery(api.reflections.recent);
-  const alerts = useQuery(api.alerts.listActive);
+  const sessions = useQuery(api.sessions.listActive, {});
+  const agents = useQuery(api.agents.listRunning, {});
+  const executions = useQuery(api.commandExecutions.listExecutions, {});
+  const buildActivity = useQuery(api.build.recentActivity, {});
+  const automation = useQuery(api.automation.recentCrons, {});
+  const security = useQuery(api.security.recentEvents, {});
+  const memory = useQuery(api.memory.overview, {});
+  const capabilities = useQuery(api.registry.listTools, {});
+  const briefings = useQuery(api.reflections.recent, {});
+  const alerts = useQuery(api.alerts.listActive, {});
 
   return {
     activeSessions: Array.isArray(sessions) ? sessions.length : 0,

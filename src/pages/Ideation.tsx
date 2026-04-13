@@ -39,8 +39,8 @@ export default function Ideation() {
 
   const filteredFindings = (findings ?? []).filter((f) => {
     if (severityFilter === "dismissed") return f.dismissed;
+    if (f.dismissed) return false;
     if (severityFilter !== "all" && f.severity !== severityFilter) return false;
-    if (severityFilter !== "dismissed" && f.dismissed) return false;
     if (scanTypeFilter !== "all" && f.scanType !== scanTypeFilter) return false;
     return true;
   });

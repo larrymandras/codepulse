@@ -20,8 +20,11 @@ import type { KanbanTask, TaskColumn } from "../types/kanban";
 
 const COLUMNS: { id: TaskColumn; label: string }[] = [
   { id: "backlog", label: "Backlog" },
-  { id: "in_progress", label: "In Progress" },
+  { id: "queued", label: "Queued" },
+  { id: "running", label: "Running" },
+  { id: "review", label: "Review" },
   { id: "done", label: "Done" },
+  { id: "cancelled", label: "Cancelled" },
 ];
 
 interface KanbanBoardProps {

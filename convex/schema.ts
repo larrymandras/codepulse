@@ -752,6 +752,10 @@ export default defineSchema({
     dismissed: v.boolean(),
     dismissedAt: v.optional(v.number()),
     createdAt: v.number(),
+    status: v.optional(v.string()),
+    taskId: v.optional(v.string()),
+    acknowledgedAt: v.optional(v.number()),
+    convertedAt: v.optional(v.number()),
   })
     .index("by_scan_type", ["scanType"])
     .index("by_severity", ["severity"])
@@ -779,4 +783,26 @@ export default defineSchema({
     .index("by_profile", ["profileId", "queuedAt"])
     .index("by_channel", ["channelId", "queuedAt"])
     .index("by_queuedAt", ["queuedAt"]),
+
+  // ============================================================
+  // TASK MANAGEMENT (Phase 04)
+  // ============================================================
+
+  tasks: defineTable({
+    taskId: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.string(),
+    column: v.string(),
+    agentId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+    labels: v.optional(v.array(v.string())),
+    dueAt: v.optional(v.number()),
+    columnEnteredAt: v.number(),
+    findingId: v.optional(v.id("ideationFindings")),
+    createdAt: v.number(),
+  })
+    .index("by_column", ["column", "createdAt"])
+    .index("by_findingId", ["findingId"])
+    .index("by_taskId", ["taskId"]),
 });

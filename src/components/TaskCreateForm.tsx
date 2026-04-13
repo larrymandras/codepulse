@@ -5,19 +5,23 @@
  */
 
 import { useState } from "react";
-import type { KanbanTask, NewTask, TaskColumn, TaskPriority } from "../types/kanban";
+import type { NewTask, TaskColumn, TaskPriority } from "../types/kanban";
 
 interface TaskCreateFormProps {
   open: boolean;
   defaultColumn: TaskColumn;
   onClose: () => void;
   onSubmit: (task: NewTask, column: TaskColumn) => void;
+  prefillData?: Partial<NewTask> | null;
 }
 
 const COLUMN_LABELS: Record<TaskColumn, string> = {
   backlog: "Backlog",
-  in_progress: "In Progress",
+  queued: "Queued",
+  running: "Running",
+  review: "Review",
   done: "Done",
+  cancelled: "Cancelled",
 };
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
@@ -39,6 +43,7 @@ export function TaskCreateForm({
   defaultColumn,
   onClose,
   onSubmit,
+  prefillData,
 }: TaskCreateFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");

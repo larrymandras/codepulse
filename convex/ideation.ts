@@ -68,3 +68,43 @@ export const findingStats = query({
     return stats;
   },
 });
+
+const VALID_STATUSES = ["open", "acknowledged", "converted", "dismissed"] as const;
+
+export const updateFindingStatus = mutation({
+  args: {
+    id: v.id("ideationFindings"),
+    status: v.string(),
+  },
+  handler: async (ctx, { id, status }) => {
+    if (!(VALID_STATUSES as readonly string[]).includes(status)) {
+      throw new Error(`Invalid status: ${status}. Must be one of: ${VALID_STATUSES.join(", ")}`);
+    }
+    const now = Date.now() / 1000;
+    const patch: Record<string, unknown> = { status };
+    if (status === "acknowledged") {
+      patch.acknowledgedAt = now;
+    } else if (status === "converted") {
+      patch.convertedAt = now;
+    } else if (status === "dismissed") {
+      patch.dismissed = true;
+      patch.dismissedAt = now;
+    }
+    await ctx.db.patch(id, patch);
+  },
+});
+
+export const linkTask = mutation({
+  args: {
+    id: v.id("ideationFindings"),
+    taskId: v.string(),
+  },
+  handler: async (ctx, { id, taskId }) => {
+    const now = Date.now() / 1000;
+    await ctx.db.patch(id, {
+      taskId,
+      status: "converted",
+      convertedAt: now,
+    });
+  },
+});
