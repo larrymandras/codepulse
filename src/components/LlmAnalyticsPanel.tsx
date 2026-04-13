@@ -1,14 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-} from "recharts";
+import { FlexBarChart } from "./FlexBarChart";
 import { formatCost } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 
@@ -20,12 +12,9 @@ export default function LlmAnalyticsPanel() {
     .map(([model, data]) => ({ model, ...data }))
     .sort((a, b) => b.cost - a.cost);
 
-  // Compute avgLatency from providerData for bar chart
   const barData = providerData.map((p) => ({
-    provider: p.provider,
-    calls: p.calls,
-    avgLatency: p.avgLatency,
-    cost: p.cost,
+    label: p.provider,
+    value: p.calls,
   }));
 
   return (
@@ -35,33 +24,7 @@ export default function LlmAnalyticsPanel() {
         {barData.length === 0 ? (
           <p className="text-gray-500 text-sm">No provider data yet.</p>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={barData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis type="number" tick={{ fill: "#9ca3af", fontSize: 11 }} />
-              <YAxis
-                dataKey="provider"
-                type="category"
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
-                width={80}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1f2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-                formatter={(value: any, name: any) => {
-                  if (name === "cost") return [formatCost(Number(value)), "Cost"];
-                  if (name === "avgLatency") return [`${value}ms`, "Avg Latency"];
-                  return [value, name];
-                }}
-              />
-              <Bar dataKey="calls" fill="#60a5fa" name="calls" />
-              <Bar dataKey="avgLatency" fill="#a78bfa" name="avgLatency" />
-            </BarChart>
-          </ResponsiveContainer>
+          <FlexBarChart data={barData} height={220} />
         )}
       </div>
 

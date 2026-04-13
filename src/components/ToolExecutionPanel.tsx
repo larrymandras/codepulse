@@ -1,16 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import { FlexBarChart } from "./FlexBarChart";
 import InfoTooltip from "./InfoTooltip";
 
 function relativeTime(ts: number): string {
@@ -82,42 +73,33 @@ export default function ToolExecutionPanel() {
         (a, b) => (b.durationMs ?? 0) - (a.durationMs ?? 0)
       );
     }
-    // "time" is already sorted desc from the query
 
     return result;
   }, [executions, toolFilter, statusFilter, sortMode]);
 
-  // Filter chart data based on tool and status filters
+  // Build chart data: success counts per tool
   const chartData = useMemo(() => {
     if (toolFilter === "All" && statusFilter === "All") {
       return successRateData.slice(0, 10).map((d) => ({
-        tool:
+        label:
           d.toolName.length > 12
             ? d.toolName.slice(0, 12) + "..."
             : d.toolName,
-        Success: d.success,
-        Failure: d.failure,
+        value: d.success,
       }));
     }
 
-    // Recompute from filtered executions
-    const byTool: Record<string, { success: number; failure: number }> = {};
+    const byTool: Record<string, number> = {};
     for (const e of filteredExecutions) {
-      if (!byTool[e.toolName]) byTool[e.toolName] = { success: 0, failure: 0 };
-      if (e.success) byTool[e.toolName].success++;
-      else byTool[e.toolName].failure++;
+      byTool[e.toolName] = (byTool[e.toolName] ?? 0) + (e.success ? 1 : 0);
     }
 
     return Object.entries(byTool)
-      .sort(
-        (a, b) =>
-          b[1].success + b[1].failure - (a[1].success + a[1].failure)
-      )
+      .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
-      .map(([name, counts]) => ({
-        tool: name.length > 12 ? name.slice(0, 12) + "..." : name,
-        Success: counts.success,
-        Failure: counts.failure,
+      .map(([name, value]) => ({
+        label: name.length > 12 ? name.slice(0, 12) + "..." : name,
+        value,
       }));
   }, [successRateData, filteredExecutions, toolFilter, statusFilter]);
 
@@ -223,35 +205,10 @@ export default function ToolExecutionPanel() {
         </div>
       </div>
 
-      {/* Success vs Failure chart */}
+      {/* Success count chart */}
       {chartData.length > 0 && (
         <div className="mb-4">
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis
-                dataKey="tool"
-                tick={{ fill: "#9ca3af", fontSize: 10 }}
-                stroke="#4b5563"
-              />
-              <YAxis
-                tick={{ fill: "#9ca3af", fontSize: 10 }}
-                stroke="#4b5563"
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#1f2937",
-                  border: "1px solid #374151",
-                  borderRadius: "8px",
-                  fontSize: "12px",
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: "11px" }} />
-              <Bar dataKey="Success" fill="#34d399" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Failure" fill="#f87171" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <FlexBarChart data={chartData} height={200} />
         </div>
       )}
 

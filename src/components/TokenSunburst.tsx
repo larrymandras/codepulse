@@ -1,59 +1,26 @@
 import { useState } from "react";
-import { SunburstChart, ResponsiveContainer, Tooltip } from "recharts";
 import { useTokenSunburst } from "../hooks/useAdvancedAnalytics";
 import InfoTooltip from "./InfoTooltip";
-
-const PROVIDER_COLORS: Record<string, string> = {
-  anthropic: "#a78bfa",
-  openai: "#34d399",
-  google: "#60a5fa",
-  ollama: "#f97316",
-};
-
-function assignColors(node: any, depth = 0, parentColor?: string): any {
-  const color =
-    depth === 0
-      ? "#6366f1"
-      : depth === 1
-        ? PROVIDER_COLORS[node.name?.toLowerCase()] ?? "#8b5cf6"
-        : parentColor ?? "#94a3b8";
-
-  if (node.children) {
-    return {
-      ...node,
-      fill: color,
-      children: node.children.map((c: any) => assignColors(c, depth + 1, color)),
-    };
-  }
-  return { ...node, fill: color };
-}
 
 export default function TokenSunburst() {
   const { tree, totalCost, totalTokens } = useTokenSunburst();
   const [drillNode, setDrillNode] = useState<any>(null);
 
   const displayTree = drillNode ?? tree;
-  const coloredTree = assignColors(displayTree);
 
   if (!tree.children || tree.children.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Distribution (Sunburst)<InfoTooltip text="Interactive sunburst chart of token distribution by provider and model — click to drill down" /></h2>
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Distribution<InfoTooltip text="Token distribution by provider and model — click a provider to drill down" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );
   }
 
-  const handleClick = (node: any) => {
-    if (node?.children && node.children.length > 0) {
-      setDrillNode(node);
-    }
-  };
-
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Token Distribution (Sunburst)<InfoTooltip text="Interactive sunburst chart of token distribution by provider and model — click to drill down" /></h2>
+        <h2 className="text-sm font-semibold text-gray-300">Token Distribution<InfoTooltip text="Token distribution by provider and model — click a provider to drill down" /></h2>
         {drillNode && (
           <button
             onClick={() => setDrillNode(null)}
@@ -63,34 +30,61 @@ export default function TokenSunburst() {
           </button>
         )}
       </div>
-      <div className="relative">
-        <ResponsiveContainer width="100%" height={350}>
-          <SunburstChart data={coloredTree} onClick={handleClick}>
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-              formatter={(value: any, name: any) => [
-                typeof value === "number" ? value.toLocaleString() + " tokens" : value,
-                name,
-              ]}
-            />
-          </SunburstChart>
-        </ResponsiveContainer>
-        {/* Center label */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <div className="text-lg font-bold text-gray-100">
-              ${totalCost.toFixed(4)}
-            </div>
-            <div className="text-xs text-gray-400">
-              {totalTokens.toLocaleString()} tokens
-            </div>
-          </div>
+
+      <div className="mb-3 flex gap-4 text-sm">
+        <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
+          <p className="text-xs text-gray-400">Total Cost</p>
+          <p className="font-bold text-gray-100">${totalCost.toFixed(4)}</p>
         </div>
+        <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
+          <p className="text-xs text-gray-400">Total Tokens</p>
+          <p className="font-bold text-gray-100">{totalTokens.toLocaleString()}</p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-gray-400 border-b border-gray-700">
+              <th className="text-left py-2 pr-3 font-medium">Provider / Model</th>
+              <th className="text-right py-2 pl-3 font-medium">Tokens</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(displayTree.children ?? []).map((provider: any) => (
+              <>
+                <tr
+                  key={provider.name}
+                  className="border-b border-gray-700/50 hover:bg-gray-700/20 cursor-pointer"
+                  onClick={() =>
+                    provider.children?.length > 0
+                      ? setDrillNode(provider)
+                      : undefined
+                  }
+                >
+                  <td className="py-2 pr-3 text-gray-200 font-semibold">
+                    {provider.name}
+                    {provider.children?.length > 0 && (
+                      <span className="ml-1 text-[10px] text-indigo-400">&#9658;</span>
+                    )}
+                  </td>
+                  <td className="py-2 pl-3 text-right text-gray-300">
+                    {(provider.value ?? 0).toLocaleString()}
+                  </td>
+                </tr>
+                {!drillNode &&
+                  (provider.children ?? []).map((model: any) => (
+                    <tr key={`${provider.name}-${model.name}`} className="border-b border-gray-700/30">
+                      <td className="py-1.5 pr-3 pl-6 text-gray-400 text-xs font-mono">{model.name}</td>
+                      <td className="py-1.5 pl-3 text-right text-gray-500 text-xs">
+                        {(model.value ?? 0).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+              </>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -1,12 +1,4 @@
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { FlexBarChart } from "./FlexBarChart";
 import InfoTooltip from "./InfoTooltip";
 
 interface ToolBreakdownProps {
@@ -22,8 +14,8 @@ export default function ToolBreakdown({ events }: ToolBreakdownProps) {
   }
 
   const data = Array.from(counts.entries())
-    .map(([tool, count]) => ({ tool, count }))
-    .sort((a, b) => b.count - a.count)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
   return (
@@ -32,33 +24,7 @@ export default function ToolBreakdown({ events }: ToolBreakdownProps) {
       {data.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">No tool data yet</p>
       ) : (
-        <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={data} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis
-              type="number"
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-              stroke="#4b5563"
-              allowDecimals={false}
-            />
-            <YAxis
-              type="category"
-              dataKey="tool"
-              tick={{ fontSize: 10, fill: "#9ca3af" }}
-              stroke="#4b5563"
-              width={100}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#1f2937",
-                border: "1px solid #374151",
-                borderRadius: "8px",
-                fontSize: "12px",
-              }}
-            />
-            <Bar dataKey="count" fill="#818cf8" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <FlexBarChart data={data} height={200} />
       )}
     </div>
   );
