@@ -4,6 +4,8 @@
 
 Seven phases transform CodePulse from a monitoring dashboard into an all-in-one command center for Ástríðr. Phase 1 (UI Foundation) establishes the design system. Phase 2 (Bidirectional Telemetry) builds the real-time communication layer. Phase 3 (Interaction Layer) is the vision shift — adding chat, inbox, live runs, approvals, and command palette. Phase 4 (Task Management) adds Kanban, ideation, agent config, and cron UX. Phases 5-7 handle data pipeline, alert routing, and intelligence.
 
+Phase 58 (Infrastructure Layer) is a cross-project phase from Ástríðr that adds a command catalog frontend surface to the Capabilities page.
+
 **Research sources:**
 - Paperclip AI (agent orchestration platform) — chat interaction, live runs, inbox, Kanban, approvals
 - Aperant (autonomous coding IDE) — insights chat, ideation findings, changelog
@@ -14,6 +16,7 @@ Seven phases transform CodePulse from a monitoring dashboard into an all-in-one 
 **Phase Numbering:**
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- High-numbered phases (58+): Cross-project phases from Ástríðr infrastructure
 
 Decimal phases appear between their surrounding integers in numeric order.
 
@@ -24,6 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Data Pipeline** - Aggregation tables, retention policies, paginated queries
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
+- [ ] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven)
 
 ## Phase Details
 
@@ -152,6 +156,23 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
+### Phase 58: Infrastructure Layer
+**Goal**: Capabilities page displays a live command catalog received over WebSocket, showing all registered slash commands grouped by category with expand/collapse details
+**Depends on**: Existing WebSocket infrastructure (AstridrWSContext from Phase 56)
+**Ástríðr dependency**: v4.0 Phase 58 (manifest-driven lazy tool loading + command registry)
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-05, INFRA-06
+**Success Criteria** (what must be TRUE):
+  1. CommandCatalogPanel displays commands grouped by category with accordion expand/collapse
+  2. Commands MetricCard shows live count from WebSocket catalog (not Convex polling)
+  3. Category filter pills filter the command list
+  4. Search input on Capabilities page includes commands in its scope
+  5. Connection states handled: loading spinner, error message, empty state
+**Plans**: 2 plans
+Plans:
+- [ ] 58-01-PLAN.md — CommandEntry type, useCommandCatalog hook, CommandCatalogPanel component with tests
+- [ ] 58-02-PLAN.md — Capabilities page integration (MetricCard update, panel wiring, search scope)
+**UI hint**: yes
+
 ## Execution Order
 
 ```
@@ -168,6 +189,8 @@ Phase 4 (Tasks)               ░░░░░░░░░░░░░░░░�
 Phase 6 (Alerts)              ░░░░░░░░░░░░██████████  After Phase 2
                                                     │
 Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░░░░░░░██████████  After Phase 5
+
+Phase 58 (Infrastructure)     ░░░░░░░░██████  Cross-project — after WS infra exists
 ```
 
 **Critical path:** Phase 1 → Phase 2 → Phase 3 (vision shift) → Phase 4
@@ -183,7 +206,8 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 5. Data Pipeline | 0/TBD | Not started | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
+| 58. Infrastructure Layer | 0/2 | Planned | - |
 
 ---
 
-*Last updated: 2026-04-08 — Roadmap expanded from 5 to 7 phases, incorporating Paperclip, Aperant, and Rubric research. Vision shift: monitoring dashboard → command center.*
+*Last updated: 2026-04-13 — Phase 58 (Infrastructure Layer) added as cross-project phase from Ástríðr. 2 plans created for command catalog frontend surface.*
