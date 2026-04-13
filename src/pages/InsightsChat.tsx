@@ -35,7 +35,7 @@ export default function InsightsChat() {
 
   const handleSend = useCallback(
     async (text: string) => {
-      if (!text.trim()) return;
+      if (!text.trim() || loading) return;
 
       // Add user message
       const userMsg: ChatMessage = {
@@ -66,7 +66,7 @@ export default function InsightsChat() {
         setLoading(false);
       }
     },
-    [askInsights]
+    [askInsights, loading]
   );
 
   return (
