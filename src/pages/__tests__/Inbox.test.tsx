@@ -139,8 +139,8 @@ describe("Inbox — keyboard navigation", () => {
     // Enter again to collapse
     act(() => { fireEvent.keyDown(document, { key: "Enter" }); });
 
-    // No assertion on exact DOM — just verify no errors thrown
-    expect(screen.getByText("Action item-1")).toBeInTheDocument();
+    // No assertion on exact DOM — just verify no errors thrown and item is rendered
+    expect(screen.getByText("action_item-1")).toBeInTheDocument();
   });
 
   test("'A' key triggers approve on focused approval item", () => {

@@ -9,10 +9,18 @@
  * Approve/Reject sends approval.respond command via WS with request_id_target
  * (the HITL UUID, NOT the WS correlation request_id — T-56-08 mitigated).
  *
+ * Keyboard navigation (D-13):
+ *   ArrowDown/ArrowUp — move focus between cards
+ *   Enter             — expand/collapse focused card
+ *   A                 — approve focused approval item
+ *   R                 — start reject flow on focused approval item
+ *   Escape            — clear keyboard focus
+ *
  * Phase 56, Plan 03: CPCC-02.
+ * Phase 03, Plan 04: IL-03 keyboard navigation.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
@@ -101,6 +109,11 @@ export default function Inbox() {
   const [approvalItems, setApprovalItems] = useState<InboxItem[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
+  // ─── Keyboard navigation state ────────────────────────────────────────────
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
   // ─── Convex data ──────────────────────────────────────────────────────────
   const alertRecords = useQuery(api.alerts.listActive) ?? [];
   const notificationRecords = useQuery(api.notifications.bellAll) ?? [];
@@ -117,26 +130,37 @@ export default function Inbox() {
         id?: string;
         timestamp?: number;
       } | undefined;
-      if (!data?.id) return;
 
-      const action = data.action ?? "unknown";
+      // Support both envelope shape (event.data) and flat shape (event itself)
+      const flat = event as {
+        action?: string;
+        details?: Record<string, unknown>;
+        profile_id?: string;
+        id?: string;
+        timestamp?: number;
+      };
+      const payload = data ?? flat;
+
+      if (!payload?.id) return;
+
+      const action = payload.action ?? "unknown";
       const riskLevel = inferRiskLevel(action);
       const agentName =
-        (data.details?.agent_name as string | undefined) ??
-        (data.profile_id as string | undefined) ??
+        (payload.details?.agent_name as string | undefined) ??
+        (payload.profile_id as string | undefined) ??
         "Ástríðr";
 
       const item: InboxItem = {
-        id: data.id,
+        id: payload.id,
         type: "approval",
         title: action,
-        message: data.details ? JSON.stringify(data.details) : "",
-        timestamp: data.timestamp ? data.timestamp * 1000 : Date.now(),
+        message: payload.details ? JSON.stringify(payload.details) : "",
+        timestamp: payload.timestamp ? payload.timestamp * 1000 : Date.now(),
         read: false,
         agentName,
         action,
         riskLevel,
-        requestId: data.id,
+        requestId: payload.id,
       };
 
       setApprovalItems((prev) => {
@@ -219,17 +243,80 @@ export default function Inbox() {
     (item) => (readIds.has(item.id) ? { ...item, read: true } : item)
   );
 
-  const allItems = sortItems([...approvalItems, ...alertItems, ...notifItems]);
+  const allItems = useMemo(
+    () => sortItems([...approvalItems, ...alertItems, ...notifItems]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [approvalItems, alertRecords, notificationRecords, readIds]
+  );
 
-  const filteredItems =
-    filter === "all"
-      ? allItems
-      : allItems.filter((item) => {
-          if (filter === "approvals") return item.type === "approval";
-          if (filter === "alerts") return item.type === "alert";
-          if (filter === "notifications") return item.type === "notification";
-          return true;
-        });
+  const filteredItems = useMemo(
+    () =>
+      filter === "all"
+        ? allItems
+        : allItems.filter((item) => {
+            if (filter === "approvals") return item.type === "approval";
+            if (filter === "alerts") return item.type === "alert";
+            if (filter === "notifications") return item.type === "notification";
+            return true;
+          }),
+    [filter, allItems]
+  );
+
+  // ─── Keyboard navigation ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // Guard: skip if user is typing in an input or textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const items = filteredItems;
+      if (!items.length) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, items.length - 1)));
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setFocusedIndex((prev) => (prev === null ? 0 : Math.max(prev - 1, 0)));
+      }
+      if (e.key === "Enter" && focusedIndex !== null) {
+        e.preventDefault();
+        const item = items[focusedIndex];
+        setExpandedId((prev) => (prev === item.id ? null : item.id));
+      }
+      if (e.key === "Escape") {
+        setFocusedIndex(null);
+      }
+      if (e.key === "a" && focusedIndex !== null) {
+        const item = items[focusedIndex];
+        if (item.type === "approval" && item.requestId) {
+          e.preventDefault();
+          void handleApprove(item.requestId);
+        }
+      }
+      if (e.key === "r" && focusedIndex !== null) {
+        const item = items[focusedIndex];
+        if (item.type === "approval" && item.requestId) {
+          e.preventDefault();
+          void handleReject(item.requestId);
+        }
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [focusedIndex, filteredItems, handleApprove, handleReject]);
+
+  // Scroll focused card into view
+  useEffect(() => {
+    const el = focusedIndex !== null ? cardRefs.current[focusedIndex] : null;
+    if (!el) return;
+    if (typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "nearest" });
+    }
+    if (typeof el.focus === "function") {
+      el.focus();
+    }
+  }, [focusedIndex]);
 
   // ─── Unread counts for filter badges ─────────────────────────────────────
   const unreadApprovals = approvalItems.filter((i) => !i.read).length;
@@ -271,6 +358,11 @@ export default function Inbox() {
       {/* Filter tabs */}
       <InboxFilterBar filter={filter} counts={counts} onChange={setFilter} />
 
+      {/* Keyboard hints caption */}
+      <p className="text-xs text-(--muted-foreground) px-4 mt-1">
+        ↑↓ navigate · Enter expand · A approve · R reject
+      </p>
+
       {/* Card list */}
       <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
         {filteredItems.length === 0 ? (
@@ -281,14 +373,20 @@ export default function Inbox() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredItems.map((item) => (
-              <InboxCard
+            {filteredItems.map((item, idx) => (
+              <div
                 key={item.id}
-                item={item}
-                onApprove={item.type === "approval" ? handleApprove : undefined}
-                onReject={item.type === "approval" ? handleReject : undefined}
-                onMarkRead={handleMarkRead}
-              />
+                ref={(el) => { cardRefs.current[idx] = el; }}
+                tabIndex={0}
+                className={focusedIndex === idx ? "ring-2 ring-ring ring-offset-1" : ""}
+              >
+                <InboxCard
+                  item={item}
+                  onApprove={item.type === "approval" ? handleApprove : undefined}
+                  onReject={item.type === "approval" ? handleReject : undefined}
+                  onMarkRead={handleMarkRead}
+                />
+              </div>
             ))}
           </div>
         )}
