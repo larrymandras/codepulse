@@ -190,9 +190,15 @@ export default function Tasks() {
         <div ref={flashRef} className="flex-1 overflow-hidden">
           <KanbanBoard
             tasks={tasks}
+            onMoveTask={(taskId, newColumn) => {
+              const updated = tasks.map((t) =>
+                t.id === taskId ? { ...t, column: newColumn } : t
+              );
+              handleTasksChange(updated);
+            }}
             onTasksChange={handleTasksChange}
-            onCardClick={handleCardClick}
-            onCreateTask={handleCreateOpen}
+            onTaskClick={handleCardClick}
+            onAddTask={handleCreateOpen}
           />
         </div>
       )}

@@ -1,7 +1,8 @@
 /**
- * KanbanBoard — 3-column DnD board with DragOverlay ghost card.
- * Wraps everything in DndContext with closestCenter collision detection.
- * Phase 56 Plan 04: CPCC-04.
+ * KanbanBoard — 6-column DnD board with PointerSensor activation constraint.
+ * Uses TASK_COLUMNS for column definitions and validates drop targets against
+ * the known column list (T-04-03 threat mitigation).
+ * Phase 04 Plan 02.
  */
 
 import { useState } from "react";
@@ -9,6 +10,9 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
   type DragStartEvent,
   type DragEndEvent,
   type DragOverEvent,
@@ -16,34 +20,29 @@ import {
 import { arrayMove } from "@dnd-kit/sortable";
 import { KanbanColumn } from "./KanbanColumn";
 import { KanbanCard } from "./KanbanCard";
-import type { KanbanTask, TaskColumn } from "../types/kanban";
-
-const COLUMNS: { id: TaskColumn; label: string }[] = [
-  { id: "backlog", label: "Backlog" },
-  { id: "queued", label: "Queued" },
-  { id: "running", label: "Running" },
-  { id: "review", label: "Review" },
-  { id: "done", label: "Done" },
-  { id: "cancelled", label: "Cancelled" },
-];
+import { TASK_COLUMNS, type TaskColumn, type KanbanTask } from "../types/kanban";
 
 interface KanbanBoardProps {
   tasks: KanbanTask[];
-  onTasksChange: (tasks: KanbanTask[]) => void;
-  onCardClick: (task: KanbanTask) => void;
-  onCreateTask: (column: TaskColumn) => void;
+  onMoveTask: (taskId: string, newColumn: TaskColumn) => void;
+  onAddTask?: (column: TaskColumn) => void;
+  onTaskClick?: (task: KanbanTask) => void;
+  /** Legacy: called when tasks are reordered within a column */
+  onTasksChange?: (tasks: KanbanTask[]) => void;
 }
 
 export function KanbanBoard({
   tasks,
+  onMoveTask,
+  onAddTask,
+  onTaskClick,
   onTasksChange,
-  onCardClick,
-  onCreateTask,
 }: KanbanBoardProps) {
   const [activeTask, setActiveTask] = useState<KanbanTask | null>(null);
 
-  const getTasksByColumn = (col: TaskColumn) =>
-    tasks.filter((t) => t.column === col);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
 
   function handleDragStart(event: DragStartEvent) {
     const task = tasks.find((t) => t.id === event.active.id);
@@ -57,16 +56,12 @@ export function KanbanBoard({
     const activeId = active.id as string;
     const overId = over.id as string;
 
-    // Check if dropped over a column (not a card)
-    const overColumn = COLUMNS.find((c) => c.id === overId);
+    // Validate target column against TASK_COLUMNS (T-04-03)
+    const overColumn = TASK_COLUMNS.find((c) => c === overId);
     if (overColumn) {
-      const activeTask = tasks.find((t) => t.id === activeId);
-      if (activeTask && activeTask.column !== overColumn.id) {
-        onTasksChange(
-          tasks.map((t) =>
-            t.id === activeId ? { ...t, column: overColumn.id } : t
-          )
-        );
+      const draggedTask = tasks.find((t) => t.id === activeId);
+      if (draggedTask && draggedTask.column !== overColumn) {
+        onMoveTask(activeId, overColumn);
       }
       return;
     }
@@ -77,12 +72,10 @@ export function KanbanBoard({
     if (!overTask || !activeTaskItem) return;
 
     if (activeTaskItem.column !== overTask.column) {
-      // Cross-column move
-      onTasksChange(
-        tasks.map((t) =>
-          t.id === activeId ? { ...t, column: overTask.column } : t
-        )
-      );
+      // Validate the target column is a known TASK_COLUMN (T-04-03)
+      if (TASK_COLUMNS.includes(overTask.column)) {
+        onMoveTask(activeId, overTask.column);
+      }
     }
   }
 
@@ -97,58 +90,56 @@ export function KanbanBoard({
 
     if (activeId === overId) return;
 
-    const activeTask = tasks.find((t) => t.id === activeId);
+    const draggedTask = tasks.find((t) => t.id === activeId);
     const overTask = tasks.find((t) => t.id === overId);
 
-    if (!activeTask) return;
+    if (!draggedTask) return;
 
-    // If dropped on a column droppable, column change already handled in dragOver
-    const overColumn = COLUMNS.find((c) => c.id === overId);
-    if (overColumn) return;
+    // Validate column drop target against TASK_COLUMNS (T-04-03)
+    const overColumn = TASK_COLUMNS.find((c) => c === overId);
+    if (overColumn) {
+      // Column change already handled in dragOver
+      return;
+    }
 
     if (!overTask) return;
 
-    // Same column reorder
-    if (activeTask.column === overTask.column) {
-      const colTasks = getTasksByColumn(activeTask.column);
+    // Same-column reorder
+    if (draggedTask.column === overTask.column && onTasksChange) {
+      const colTasks = tasks.filter((t) => t.column === draggedTask.column);
       const oldIndex = colTasks.findIndex((t) => t.id === activeId);
       const newIndex = colTasks.findIndex((t) => t.id === overId);
       const reordered = arrayMove(colTasks, oldIndex, newIndex);
-
-      // Rebuild full tasks array with reordered column
-      const otherTasks = tasks.filter((t) => t.column !== activeTask.column);
+      const otherTasks = tasks.filter((t) => t.column !== draggedTask.column);
       onTasksChange([...otherTasks, ...reordered]);
     }
   }
 
   return (
     <DndContext
+      sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-8 overflow-x-auto h-full p-4">
-        {COLUMNS.map((col) => (
+      <div className="flex gap-4 overflow-x-auto pb-4 min-h-[calc(100vh-200px)]">
+        {TASK_COLUMNS.map((col) => (
           <KanbanColumn
-            key={col.id}
-            column={col.id}
-            label={col.label}
-            tasks={getTasksByColumn(col.id)}
-            onCardClick={onCardClick}
-            onCreateTask={onCreateTask}
+            key={col}
+            column={col}
+            tasks={tasks.filter((t) => t.column === col)}
+            onAddTask={() => onAddTask?.(col)}
+            onCardClick={onTaskClick}
           />
         ))}
       </div>
 
-      {/* Drag overlay — ghost card at 90% opacity, scale(1.02), shadow-lg */}
+      {/* DragOverlay — ghost card at 95% scale with shadow */}
       <DragOverlay>
         {activeTask ? (
-          <div
-            style={{ opacity: 0.9, transform: "scale(1.02)" }}
-            className="shadow-lg"
-          >
-            <KanbanCard task={activeTask} onClick={() => {}} isOverlay />
+          <div className="scale-95 shadow-lg opacity-90">
+            <KanbanCard task={activeTask} isDragging={false} />
           </div>
         ) : null}
       </DragOverlay>
