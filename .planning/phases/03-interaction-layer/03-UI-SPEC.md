@@ -56,12 +56,12 @@ All sizes from the established Phase 1 system. Geist Variable for all UI text; J
 
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
-| Body | 14px | 400 (regular) | 1.5 | Chat messages, inbox item body, run block text, insights responses |
+| Body | 14px | 400 (regular) | 1.5 | Chat messages, inbox item body, run block text, insights responses. Code and diff blocks use JetBrains Mono at this same 14px size, weight 400, line-height 1.6. |
 | Label | 12px | 400 (regular) | 1.4 | Metric labels (`uppercase tracking-wide`), section headers, timestamps, keyboard shortcut hints |
 | Heading | 16px | 600 (semibold) | 1.3 | Panel titles, command palette group headings, round accordion headers |
 | Display | 24px | 600 (semibold) | 1.2 | MetricBlock values (`tabular-nums`), large count displays |
 
-Mono exception: Code and diff blocks use JetBrains Mono at 13px, weight 400, line-height 1.6.
+Declared sizes: 12, 14, 16, 24. Maximum of 4 — no exceptions.
 
 ---
 
@@ -96,6 +96,20 @@ Mirrors InboxCard exactly:
 - `border-l-4 border-(--status-warn)` — approval pending
 - `border-l-4 border-(--status-error)` — alert, high-risk
 - `border-l-4 border-(--primary)` — notification / read items have no stripe
+
+---
+
+## Focal Points
+
+Primary visual anchor per screen. Executor must ensure each screen has exactly one dominant focal element.
+
+| Screen | Primary Focal Point |
+|--------|---------------------|
+| Command Palette (overlay) | The `CommandInput` search field — full-width, cursor auto-focused, visually isolated in the modal header |
+| Agent Chat | The assistant message bubble stream — left-aligned, fills the chat column; the most recent assistant turn is the natural eye anchor |
+| Inbox | The leftmost 4px status stripe on the top-most unread `InboxCard` — color signals urgency before any text is read |
+| Live Run | The active (expanded) round in the accordion — amber left stripe + streaming content draws the eye to the current execution state |
+| Insights Chat | The `ChatInput` at the bottom of the page — blank slate on first load, invites interaction as the single interactive element visible |
 
 ---
 
@@ -168,7 +182,7 @@ No other shadcn components needed. All other UI primitives already present.
 - **Block borders:** Each block within an assistant turn is separated by an 8px vertical gap only. No card borders, no shadow.
 - **Streaming state:** Active turn shows a blinking cursor `|` at 1Hz. Pulse animation via existing `live-update-pulse` keyframes.
 - **Approval blocks in chat:** Full `ApprovalBlock` renders inline. After approve/reject, the block collapses to a one-line confirmation ("Approved — sent to Ástríðr" or "Rejected") in muted-foreground.
-- **Unknown block fallback (D-06):** Renders as fenced JSON code block using `CodeBlock` with `language: "json"`
+- **Unknown block fallback (D-06):** Renders the block's `content` field as markdown using the standard markdown renderer — graceful degradation, always shows something.
 
 ### Live Run Widget (IL-05)
 
@@ -203,7 +217,7 @@ No other shadcn components needed. All other UI primitives already present.
 | Error state — Chat send failed | "Message not sent. Ástríðr may be offline." | Inline error below ChatInput |
 | Error state — Insights query failed | "Query failed. Try rephrasing your question." | Inline error in InsightsChat |
 | Destructive — Stop active run | "Stop Run" (button label) | LiveRun stop button — no confirmation dialog; stop is immediate |
-| Destructive — Reject approval | "Reject" (button label) + inline textarea: "Optional: explain rejection..." | ApprovalBlock / InboxCard rejection flow |
+| Destructive — Reject approval | "Reject Request" (button label) + inline textarea: "Optional: explain rejection..." | ApprovalBlock / InboxCard rejection flow |
 | Approval confirmation — approved | "Approved — sent to Ástríðr" | Inline collapse text after approve |
 | Approval confirmation — rejected | "Rejected" | Inline collapse text after reject |
 | Keyboard hint — Command Palette trigger | "⌘K" | Shown in sidebar footer or tooltip |
@@ -225,7 +239,7 @@ type GenerativeBlock =
   | { type: "diff"; before: string; after: string; language?: string }
   | { type: "approval"; requestId: string; action: string; details: Record<string, unknown>; riskLevel: "high" | "medium" | "low"; agentName?: string }
   | { type: "markdown"; content: string }
-  | { type: string; [key: string]: unknown }  // fallback → CodeBlock with language:"json"
+  | { type: string; [key: string]: unknown }  // fallback → render content field as markdown (D-06)
 
 // WebSocket event envelope — subscribe via subscribeEvent("run.block", cb)
 interface RunBlockEvent {
