@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Data Pipeline** - Aggregation tables, retention policies, paginated queries
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
-- [ ] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven)
+- [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven) (completed 2026-04-13)
 
 ## Phase Details
 
@@ -169,8 +169,8 @@ Plans:
   5. Connection states handled: loading spinner, error message, empty state
 **Plans**: 2 plans
 Plans:
-- [ ] 58-01-PLAN.md — CommandEntry type, useCommandCatalog hook, CommandCatalogPanel component with tests
-- [ ] 58-02-PLAN.md — Capabilities page integration (MetricCard update, panel wiring, search scope)
+- [x] 58-01-PLAN.md — CommandEntry type, useCommandCatalog hook, CommandCatalogPanel component with tests
+- [x] 58-02-PLAN.md — Capabilities page integration (MetricCard update, panel wiring, search scope)
 **UI hint**: yes
 
 ## Execution Order
@@ -206,7 +206,7 @@ Phase 58 (Infrastructure)     ░░░░░░░░██████  Cross-
 | 5. Data Pipeline | 0/TBD | Not started | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
-| 58. Infrastructure Layer | 0/2 | Planned | - |
+| 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
 
 ---
 
