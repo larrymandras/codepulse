@@ -262,6 +262,15 @@ export default function Inbox() {
     [filter, allItems]
   );
 
+  // ─── Clamp focus index and prune stale cardRefs when list shrinks ────────
+  useEffect(() => {
+    cardRefs.current = cardRefs.current.slice(0, filteredItems.length);
+    setFocusedIndex((prev) => {
+      if (prev === null) return null;
+      return prev >= filteredItems.length ? Math.max(0, filteredItems.length - 1) : prev;
+    });
+  }, [filteredItems.length]);
+
   // ─── Keyboard navigation ──────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
