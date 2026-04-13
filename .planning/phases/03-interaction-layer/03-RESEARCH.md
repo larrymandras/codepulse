@@ -603,22 +603,22 @@ export const ask = action({
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Ástríðr Phase 48 wire protocol for Generative UI blocks**
+1. **Ástríðr Phase 48 wire protocol for Generative UI blocks** (RESOLVED)
    - What we know: D-04 specifies 5 block types; existing `run.blocks` events carry RunBlock arrays
    - What's unclear: Does Phase 48 add a new `run.block` event type? Or does it extend existing `run.blocks`? What is the exact JSON schema per block type?
-   - Recommendation: Treat this as a hard dependency. Do not finalize ChatBubble block upgrade until Phase 48 wire format is documented. Plan Wave N+1 as "integrate with Phase 48" if needed.
+   - Resolution: Plan 03-01 defines the GenerativeBlock wire protocol in `src/types/generative-blocks.ts` as a discriminated union (Claude's Discretion per CONTEXT.md). Plan 03-04 subscribes to `run.block` events. If Ástríðr Phase 48 uses a different event name, the subscribeEvent call in Chat.tsx is the single change point. The block type shapes are stable regardless of wire transport.
 
-2. **Round boundary signal in streaming events**
+2. **Round boundary signal in streaming events** (RESOLVED)
    - What we know: Current `run.blocks` events carry flat block arrays; RunTimeline renders them sequentially
    - What's unclear: What block type (or event type) signals the start of a new "round" in the nested accordion?
-   - Recommendation: Define the round grouping heuristic in the PLAN and note it as an integration assumption. Fallback: group by `run.thinking` + all subsequent tool_use/tool_result/text until next `run.thinking`.
+   - Resolution: Plan 03-05 codifies the heuristic: a new round starts when a `thinking` or `reasoning` block type arrives. This is documented as Assumption A2 and implemented in the `groupIntoRounds` function. If Ástríðr emits a different delimiter, only the grouping condition needs updating.
 
-3. **Insights Chat LLM provider and environment variables**
+3. **Insights Chat LLM provider and environment variables** (RESOLVED)
    - What we know: Convex actions can call external APIs; the project uses LiteLLM in Ástríðr
    - What's unclear: What LLM API key is available in Convex environment? Is there an existing `CONVEX_OPENAI_KEY` or similar?
-   - Recommendation: Wave 0 or early wave should verify Convex env var availability before LLM call is implemented.
+   - Resolution: Plan 03-06 implements an actual LLM call via OpenAI-compatible HTTP API (per D-11). Uses `OPENAI_API_KEY` env var in Convex, with optional `OPENAI_BASE_URL` for LiteLLM proxy support. Model defaults to `gpt-4o-mini`. User setup documented in plan frontmatter.
 
 ---
 
