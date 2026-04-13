@@ -98,12 +98,12 @@ Plans:
 - Insights Chat (LLM-powered Q&A over CodePulse data)
 **Plans**: 6 plans
 Plans:
-- [ ] 03-01-PLAN.md — Wave 0: dependency install (shadcn Command, dagre), GenerativeBlock types, test stubs
-- [ ] 03-02-PLAN.md — BlockRenderer dispatcher + all 6 block sub-components (metric, table, chart, code, approval)
-- [ ] 03-03-PLAN.md — Command Palette (Cmd+K) with entity search + quick actions, DashboardLayout wiring
-- [ ] 03-04-PLAN.md — ChatBubble block upgrade + Chat.tsx run.block subscription + Inbox keyboard navigation
-- [ ] 03-05-PLAN.md — RunTimeline nested accordion (rounds) + Flow tab (React Flow + dagre) + stop button
-- [ ] 03-06-PLAN.md — Insights Chat page + Convex insightsChat action + sidebar/route wiring
+- [x] 03-01-PLAN.md — Wave 0: dependency install (shadcn Command, dagre), GenerativeBlock types, test stubs
+- [x] 03-02-PLAN.md — BlockRenderer dispatcher + all 6 block sub-components (metric, table, chart, code, approval)
+- [x] 03-03-PLAN.md — Command Palette (Cmd+K) with entity search + quick actions, DashboardLayout wiring
+- [x] 03-04-PLAN.md — ChatBubble block upgrade + Chat.tsx run.block subscription + Inbox keyboard navigation
+- [x] 03-05-PLAN.md — RunTimeline nested accordion (rounds) + Flow tab (React Flow + dagre) + stop button
+- [x] 03-06-PLAN.md — Insights Chat page + Convex insightsChat action + sidebar/route wiring
 **UI hint**: yes
 
 ### Phase 4: Task Management
