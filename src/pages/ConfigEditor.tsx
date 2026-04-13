@@ -13,6 +13,8 @@ import * as jsYaml from "js-yaml";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
+import DiffView from "../components/DiffView";
+import HotReloadBar, { type HotReloadStatus } from "../components/HotReloadBar";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -54,6 +56,16 @@ export default function ConfigEditor() {
   const [applying, setApplying] = useState(false);
   const [validating, setValidating] = useState(false);
 
+  // Diff panel (D-09)
+  const [showDiff, setShowDiff] = useState(false);
+
+  // Hot-reload status bar (D-10)
+  const [reloadStatus, setReloadStatus] = useState<HotReloadStatus>(null);
+  const [reloadError, setReloadError] = useState<string | undefined>(undefined);
+
+  // Revert to Saved (D-11)
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
+
   // ─── Load config on mount / section change ──────────────────────────────
 
   const loadConfig = useCallback(async () => {
@@ -65,6 +77,9 @@ export default function ConfigEditor() {
     setApplyEnabled(false);
     setValidationResult(null);
     setShowConfirm(false);
+    setShowDiff(false);
+    setReloadStatus(null);
+    setShowRevertConfirm(false);
 
     try {
       const ack = await sendCommand({
@@ -107,9 +122,23 @@ export default function ConfigEditor() {
       setApplyEnabled(false);
       setValidationResult(null);
       setShowConfirm(false);
+      setShowRevertConfirm(false);
     },
     [originalContent]
   );
+
+  // ─── Revert to Saved ─────────────────────────────────────────────────────
+
+  const handleRevert = useCallback(() => {
+    setYamlContent(originalContent);
+    setIsDirty(false);
+    setShowDiff(false);
+    setShowRevertConfirm(false);
+    setReloadStatus(null);
+    setApplyEnabled(false);
+    setValidationResult(null);
+    setShowConfirm(false);
+  }, [originalContent]);
 
   // ─── Validate (dry-run) ──────────────────────────────────────────────────
 
@@ -185,18 +214,25 @@ export default function ConfigEditor() {
         setIsDirty(false);
         setApplyEnabled(false);
         setValidationResult(null);
+        setReloadStatus("applied");
         triggerFlash();
+        setTimeout(() => setReloadStatus("confirmed"), 1500);
+        setTimeout(() => setReloadStatus(null), 4000);
       } else {
         setValidationResult({
           success: false,
           error: `Config apply failed: ${ack.error ?? "Unknown error"}`,
         });
+        setReloadStatus("error");
+        setReloadError(ack.error ?? "Unknown error");
       }
     } catch (err) {
       setValidationResult({
         success: false,
         error: `Config apply failed: ${err instanceof Error ? err.message : "Unknown error"}`,
       });
+      setReloadStatus("error");
+      setReloadError(err instanceof Error ? err.message : "Command failed");
     } finally {
       setApplying(false);
     }
@@ -247,10 +283,19 @@ export default function ConfigEditor() {
             {validating ? "Validating…" : "Validate"}
           </button>
 
+          {/* Review Changes button — toggles diff panel */}
+          <button
+            onClick={() => setShowDiff(!showDiff)}
+            disabled={!isDirty}
+            className="px-3 py-1.5 text-sm border border-(--border) text-(--foreground) hover:bg-(--accent) disabled:opacity-50"
+          >
+            {showDiff ? "Hide Diff" : "Review Changes"}
+          </button>
+
           {/* Apply button — only enabled after successful dry-run */}
           <button
             onClick={() => setShowConfirm(true)}
-            disabled={!applyEnabled || isDisconnected || applying}
+            disabled={!applyEnabled || isDisconnected || applying || reloadStatus === "pending" || reloadStatus === "validating"}
             className="text-sm px-3 py-1.5 border border-(--border) text-(--muted-foreground) hover:text-(--foreground) transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {applying ? "Applying…" : "Apply"}
@@ -309,6 +354,41 @@ export default function ConfigEditor() {
         </div>
       )}
 
+      {/* Hot-reload status bar (D-10) */}
+      <div className="px-4 pt-2">
+        <HotReloadBar status={reloadStatus} errorMessage={reloadError} />
+      </div>
+
+      {/* Revert to Saved (D-11) */}
+      {isDirty && (
+        <div className="px-4 pt-2">
+          {showRevertConfirm ? (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-(--muted-foreground)">Revert all unsaved changes?</span>
+              <button
+                onClick={handleRevert}
+                className="px-2 py-1 text-sm bg-(--destructive) text-white"
+              >
+                Revert
+              </button>
+              <button
+                onClick={() => setShowRevertConfirm(false)}
+                className="px-2 py-1 text-sm border border-(--border)"
+              >
+                Keep editing
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRevertConfirm(true)}
+              className="px-2 py-1 text-sm text-(--destructive) border border-(--border) hover:bg-(--destructive)/10"
+            >
+              Revert to Saved
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Editor area */}
       <div ref={flashRef} className="flex-1 overflow-hidden mt-3">
         {loading ? (
@@ -323,19 +403,26 @@ export default function ConfigEditor() {
             ))}
           </div>
         ) : loadError ? null : (
-          <CodeMirror
-            value={yamlContent}
-            height="calc(100vh - 120px)"
-            extensions={[yaml()]}
-            theme={githubDark}
-            onChange={handleEditorChange}
-            basicSetup={{
-              lineNumbers: true,
-              foldGutter: true,
-              highlightActiveLine: true,
-              highlightSelectionMatches: true,
-            }}
-          />
+          <>
+            <CodeMirror
+              value={yamlContent}
+              height="calc(100vh - 120px)"
+              extensions={[yaml()]}
+              theme={githubDark}
+              onChange={handleEditorChange}
+              basicSetup={{
+                lineNumbers: true,
+                foldGutter: true,
+                highlightActiveLine: true,
+                highlightSelectionMatches: true,
+              }}
+            />
+            {showDiff && (
+              <div className="mt-4 mx-0">
+                <DiffView original={originalContent} current={yamlContent} />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
