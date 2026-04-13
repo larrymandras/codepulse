@@ -141,7 +141,7 @@ function HooksPanel({
   const filtered = filter
     ? hooks.filter(
         (h) =>
-          h.hookType.toLowerCase().includes(filter) ||
+          (h.hookType ?? "").toLowerCase().includes(filter) ||
           (h.command ?? "").toLowerCase().includes(filter) ||
           (h.matcher ?? "").toLowerCase().includes(filter)
       )
