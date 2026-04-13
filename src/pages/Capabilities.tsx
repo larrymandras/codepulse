@@ -142,7 +142,7 @@ function HooksPanel({
     ? hooks.filter(
         (h) =>
           h.hookType.toLowerCase().includes(filter) ||
-          h.command.toLowerCase().includes(filter) ||
+          (h.command ?? "").toLowerCase().includes(filter) ||
           (h.matcher ?? "").toLowerCase().includes(filter)
       )
     : hooks;
