@@ -215,3 +215,12 @@ code, pre, .font-mono {
   animation: slide-in-entry 520ms ease-out forwards;
   box-shadow: inset 2px 0 0 var(--primary);
 }
+
+/* Live update flash animation (Phase 02 — bidirectional-telemetry, D-03) */
+@keyframes live-update-pulse {
+  0%   { background-color: oklch(0.205 0 0 / 0.08); }
+  100% { background-color: transparent; }
+}
+.live-update-flash {
+  animation: live-update-pulse 600ms ease-out forwards;
+}
