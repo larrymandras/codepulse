@@ -65,6 +65,7 @@ See REQUIREMENTS.md for v1.0 scoped requirements.
 | shadcn/ui New York over current custom components | Consistent design system, Radix primitives, community maintained | — Pending |
 | Custom CSS flex charts over Recharts | Compact, lightweight, matches Paperclip aesthetic | — Pending |
 | WebSocket for real-time over polling | Sub-second latency for critical events, reduces unnecessary HTTP traffic | — Pending |
+| WebSocket command catalog on Capabilities page | Live command registry via `commands.catalog` event, replacing static Convex count | Validated in Phase 58 |
 
 ## Evolution
 
@@ -84,4 +85,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-06 after milestone v1.0 initialization*
+*Last updated: 2026-04-13 after Phase 58 (infrastructure-layer) completion*
