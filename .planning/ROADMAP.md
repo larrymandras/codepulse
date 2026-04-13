@@ -45,9 +45,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 4 plans
 Plans:
 - [x] 01-00-PLAN.md — Wave 0 test stubs (all 7 test files for Nyquist-compliant verification)
-- [ ] 01-01-PLAN.md — Design token layer (oklch palette, shadcn/ui init, MetricCard redesign)
-- [ ] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge, R3F removal)
-- [ ] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
+- [x] 01-01-PLAN.md — Design token layer (oklch palette, shadcn/ui init, MetricCard redesign)
+- [x] 01-02-PLAN.md — Shared components and Recharts migration (FlexBarChart, EntityRow, SectionHeader, StatusBadge, R3F removal)
+- [x] 01-03-PLAN.md — Sidebar navigation rebuild (grouped sections, Lucide icons, live badges, collapse)
 **UI hint**: yes
 
 ### Phase 2: Bidirectional Telemetry
