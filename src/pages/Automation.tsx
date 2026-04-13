@@ -1,13 +1,19 @@
+import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Button } from "@/components/ui/button";
 import MetricCard from "../components/MetricCard";
-import CronJobList from "../components/CronJobList";
+import CronJobList, { type CronJob } from "../components/CronJobList";
+import CronSheet from "../components/CronSheet";
 import CronExecutionHistory from "../components/CronExecutionHistory";
 import HeartbeatAlertsPanel from "../components/HeartbeatAlertsPanel";
 import JobLifecyclePanel from "../components/JobLifecyclePanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import { formatDurationMs } from "../lib/formatters";
+import { CRON_SCHEDULES } from "../lib/cronSchedules";
+import { useCommandDispatch } from "../hooks/useCommandDispatch";
 import {
   useAutomationSummary,
   useRecentCronExecutions,
@@ -24,6 +30,15 @@ function relTime(epoch: number | null): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+// Convert static CRON_SCHEDULES to CronJob shape for the list
+function schedulesToCronJobs(): CronJob[] {
+  return CRON_SCHEDULES.map((s) => ({
+    name: s.jobName,
+    expression: s.interval,
+    enabled: true,
+  }));
+}
+
 export default function Automation() {
   const summary = useAutomationSummary();
   const executions = useRecentCronExecutions(200);
@@ -34,9 +49,40 @@ export default function Automation() {
   const integrationOverview = useQuery(api.integrationCalls.overview);
   const recentIntegrations = useQuery(api.integrationCalls.recent, { limit: 20 });
 
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editJob, setEditJob] = useState<{ name: string; expression: string } | null>(null);
+
+  const { dispatch } = useCommandDispatch();
+
+  async function handleTrigger(jobName: string) {
+    await dispatch({ type: "cron.trigger", job_name: jobName }, "Cron job triggered.");
+  }
+
+  async function handleToggle(jobName: string, enabled: boolean) {
+    await dispatch(
+      { type: "cron.toggle", job_name: jobName, enabled },
+      enabled ? "Cron job enabled." : "Cron job disabled."
+    );
+  }
+
+  function handleSave(name: string, expression: string) {
+    dispatch({ type: "cron.create", job_name: name, expression }, "Cron job saved.");
+  }
+
+  const cronJobs = schedulesToCronJobs();
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Automation</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Automation</h1>
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => { setEditJob(null); setSheetOpen(true); }}
+        >
+          <Plus className="w-4 h-4 mr-1" /> Add Cron Job
+        </Button>
+      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -55,8 +101,21 @@ export default function Automation() {
 
       {/* Cron job list */}
       <SectionErrorBoundary name="Cron Jobs">
-        <CronJobList executions={executions} />
+        <CronJobList
+          jobs={cronJobs}
+          onTrigger={handleTrigger}
+          onToggle={handleToggle}
+          onEdit={(job) => { setEditJob(job); setSheetOpen(true); }}
+        />
       </SectionErrorBoundary>
+
+      {/* CronSheet slide-out panel */}
+      <CronSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        editJob={editJob}
+        onSave={handleSave}
+      />
 
       {/* Execution history */}
       <SectionErrorBoundary name="Execution History">
