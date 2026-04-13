@@ -1,6 +1,6 @@
 ---
 phase: 58-infrastructure-layer
-reviewed: 2026-04-13T00:00:00Z
+reviewed: 2026-04-13T18:30:00Z
 depth: standard
 files_reviewed: 5
 files_reviewed_list:
@@ -11,9 +11,9 @@ files_reviewed_list:
   - src/types/commands.ts
 findings:
   critical: 0
-  warning: 3
+  warning: 1
   info: 4
-  total: 7
+  total: 5
 status: issues_found
 ---
 
@@ -26,119 +26,85 @@ status: issues_found
 
 ## Summary
 
-Five files reviewed covering the CommandCatalog feature: type definitions, WebSocket hook, display component, page integration, and unit tests. No critical security issues. Three warnings related to unsafe type casts on incoming WebSocket data (can cause runtime crashes on malformed payloads), a potential null-dereference in HooksPanel, and an unstable `subscribeEvent` dependency that could leak subscriptions. Four info-level items covering dead code in tests, a loose test assertion, missing keyboard accessibility on interactive divs, and `any[]` typed panel props.
+Five files reviewed covering the CommandCatalog feature: type definitions, WebSocket hook, UI component, page integration, and unit tests. The implementation is solid overall -- the WebSocket hook validates incoming payloads with a proper type guard, the component handles all three connection states cleanly, and tests cover the key interaction paths. No critical or security issues found. One warning for an unguarded property access that can throw at runtime. Four info items covering a layout mismatch, dead test code, a loose test assertion, and missing keyboard accessibility on interactive elements.
 
----
+Prior review findings (WR-01 unsafe cast, WR-02 null deref on `h.command`, WR-03 unstable `subscribeEvent`) have all been addressed in the current code.
 
 ## Warnings
 
-### WR-01: Unsafe cast of WebSocket payload arrays — runtime crash risk
+### WR-01: Unguarded `h.hookType.toLowerCase()` can crash on missing field
 
-**File:** `src/hooks/useCommandCatalog.ts:58-70`
+**File:** `src/pages/Capabilities.tsx:144`
 
-**Issue:** After validating that `data.tools` is an array, the code casts it directly to `CommandEntry[]` without per-element validation. If any element is missing required fields (`name`, `description`, `category`), downstream code that calls `.toLowerCase()` on those fields will throw a TypeError. The same applies to `pipes` and `cmds`. The existing guard on line 52 only checks that `data.tools` is an array — it does not check element shape.
+**Issue:** The `HooksPanel` filter guards `h.command` and `h.matcher` with `?? ""` fallbacks, but `h.hookType` on line 144 is accessed directly without a guard. Since `hooks` is typed `any[]`, if any hook record is missing the `hookType` field (partial ingest, schema migration, or test fixture), this line throws `TypeError: Cannot read properties of undefined (reading 'toLowerCase')`.
 
-```typescript
-// Current (unsafe):
-const tools = data.tools as CommandEntry[];
-
-// Safer — filter to well-formed entries only:
-const tools = (data.tools as unknown[]).filter(
-  (t): t is CommandEntry =>
-    typeof t === "object" &&
-    t !== null &&
-    typeof (t as any).name === "string" &&
-    typeof (t as any).description === "string" &&
-    typeof (t as any).category === "string"
-);
-```
-
-Apply the same guard to the `pipes` and `cmds` arrays on lines 61-70.
-
----
-
-### WR-02: Potential null-dereference on `h.command` in HooksPanel filter
-
-**File:** `src/pages/Capabilities.tsx:145`
-
-**Issue:** `HooksPanel` filters hooks via `h.command.toLowerCase()`. The `hooks` array is typed `any[]`, so if any hook record is missing the `command` field (e.g., a schema migration, partial ingest, or test fixture), this will throw `TypeError: Cannot read properties of undefined (reading 'toLowerCase')`.
-
+**Fix:**
 ```typescript
 // Current:
-h.command.toLowerCase().includes(filter)
+h.hookType.toLowerCase().includes(filter)
 
-// Fix — guard before calling toLowerCase:
-(h.command ?? "").toLowerCase().includes(filter)
+// Fix — add the same guard used for command and matcher:
+(h.hookType ?? "").toLowerCase().includes(filter)
 ```
-
----
-
-### WR-03: Potentially unstable `subscribeEvent` dependency may cause subscription leaks
-
-**File:** `src/hooks/useCommandCatalog.ts:78`
-
-**Issue:** The second `useEffect` lists `[subscribeEvent]` as its dependency. If `subscribeEvent` is not referentially stable (i.e., recreated on each render in `AstridrWSContext`), the effect will re-run on every render: calling `unsubscribe` on the previous subscription and creating a new one. Under rapid state updates this could cause missed events or excess subscriptions between teardown and re-subscription. This depends on the context implementation — verify that `subscribeEvent` is wrapped in `useCallback` in `AstridrWSContext`. If it is not, add `useCallback` there, or memoize a local reference.
-
----
 
 ## Info
 
-### IN-01: Dead code — `runRow` variable computed but never used in expand test
+### IN-01: Grid declares 7 columns but only has 6 children
+
+**File:** `src/pages/Capabilities.tsx:260`
+
+**Issue:** The summary cards grid uses `lg:grid-cols-7` but contains only 6 `MetricCard` children (MCP Servers, Plugins, Skills, Tools, Hooks, Commands). On large screens this leaves one empty column slot on the right, creating a visual gap.
+
+**Fix:** Change to `lg:grid-cols-6` to match the actual child count, or add a 7th metric card if one is planned.
+
+```tsx
+// Current:
+<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+
+// Fix:
+<div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+```
+
+### IN-02: Dead code -- `runRow` variable computed but never used in test
 
 **File:** `src/components/__tests__/CommandCatalogPanel.test.tsx:61-63`
 
-**Issue:** The variable `runRow` is assigned via a three-branch fallback selector but is never actually used — the `fireEvent.click` on line 69 targets `screen.getByText("/run")` directly. The fallback chain is dead code and may mislead future maintainers into thinking the click is scoped to the row element.
+**Issue:** The variable `runRow` is assigned via a three-branch fallback selector chain but is never referenced after assignment. The `fireEvent.click` on line 69 targets `screen.getByText("/run")` directly. This dead code may confuse future maintainers into thinking the click target is the row container.
 
-**Fix:** Remove lines 61-63 entirely. The direct `fireEvent.click(screen.getByText("/run"))` works correctly on its own because the click bubbles up to the row container.
+**Fix:** Remove lines 61-63 entirely.
 
----
-
-### IN-02: Loose accordion test assertion — passes even if no detail opened
+### IN-03: Loose accordion test assertion passes even when no detail panel opens
 
 **File:** `src/components/__tests__/CommandCatalogPanel.test.tsx:91-92`
 
-**Issue:** The assertion `expect(parameterSections.length).toBeLessThanOrEqual(1)` passes if 0 "Parameters" headings are found, which would indicate that `/pause`'s detail panel never opened. The assertion should verify exactly 1 panel is open, not just that fewer than 2 are.
+**Issue:** The assertion `expect(parameterSections.length).toBeLessThanOrEqual(1)` passes if zero "Parameters" headings are found, which would mean the `/pause` detail panel never opened at all. The test intends to verify accordion behavior (exactly one open), not that zero-or-one are open.
 
+**Fix:**
 ```typescript
 // Current (too loose):
 expect(parameterSections.length).toBeLessThanOrEqual(1);
 
-// Fix — assert exactly one is open:
-expect(parameterSections.length).toBe(1);
-// Or, since /pause has empty parameters, assert its specific empty state:
+// Fix — verify exactly one panel is open:
 expect(screen.getByText("No parameters")).toBeInTheDocument();
 ```
 
----
+### IN-04: Interactive `<div>` elements lack keyboard accessibility
 
-### IN-03: Interactive `<div>` elements lack keyboard accessibility
-
-**File:** `src/components/CommandCatalogPanel.tsx:180`
+**File:** `src/components/CommandCatalogPanel.tsx:179-181`
 **File:** `src/pages/Capabilities.tsx:70, 169`
 
-**Issue:** Several command/skill/hook row divs use `onClick` without `role="button"`, `tabIndex={0}`, or `onKeyDown` handlers. Keyboard-only users cannot activate these rows. This also suppresses accessibility linter warnings.
+**Issue:** Command, skill, and hook row divs use `onClick` handlers without `role="button"`, `tabIndex={0}`, or `onKeyDown`. Keyboard-only users cannot focus or activate these rows.
 
-**Fix:** Add `role="button"` and `tabIndex={0}` plus a `onKeyDown` handler, or replace the outer `<div>` with a `<button>` element and adjust styling accordingly. Example for the command row:
-
+**Fix:** Add accessibility attributes to each interactive div, or replace with `<button>` elements:
 ```tsx
 <div
   role="button"
   tabIndex={0}
   onClick={() => handleRowClick(cmd.name)}
-  onKeyDown={(e) => e.key === "Enter" && handleRowClick(cmd.name)}
+  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleRowClick(cmd.name); }}
   className="..."
 >
 ```
-
----
-
-### IN-04: `SkillsPanel` and `HooksPanel` use untyped `any[]` props
-
-**File:** `src/pages/Capabilities.tsx:39, 138`
-
-**Issue:** Both inline panel components accept `skills: any[]` and `hooks: any[]`. This bypasses TypeScript's type checking for all field accesses inside those components. Given that Convex query results have known shapes (from the schema), these should use typed interfaces or at minimum `Record<string, unknown>[]`.
-
-**Fix:** Define minimal interfaces for skill and hook records (or import them from Convex-generated types if available) and replace `any[]` with those types. This would have also caught WR-02 at compile time.
 
 ---
 
