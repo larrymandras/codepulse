@@ -8,6 +8,7 @@ import { useState, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { KanbanBoard } from "../components/KanbanBoard";
 import { TaskDetail } from "../components/TaskDetail";
@@ -35,6 +36,7 @@ function derivePriority(toolName: string): KanbanTask["priority"] {
 
 export default function Tasks() {
   const { status, sendCommand } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   // Convex-backed executions
   const executions = useQuery(api.commandExecutions.listExecutions, {});
@@ -142,6 +144,7 @@ export default function Tasks() {
             agent_id: newTask.agentId,
             task: newTask.title,
           });
+          triggerFlash();
         } catch {
           // Non-fatal — task already added locally
         }
@@ -180,7 +183,7 @@ export default function Tasks() {
           </p>
         </div>
       ) : (
-        <div className="flex-1 overflow-hidden">
+        <div ref={flashRef} className="flex-1 overflow-hidden">
           <KanbanBoard
             tasks={tasks}
             onTasksChange={handleTasksChange}

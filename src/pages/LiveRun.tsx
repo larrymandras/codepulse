@@ -18,6 +18,7 @@ import {
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { RunTimeline } from "../components/RunTimeline";
 import { RunHistorySelector } from "../components/RunHistorySelector";
@@ -41,6 +42,7 @@ function appendBlocks(prev: Block[], incoming: Block[]): Block[] {
 
 export default function LiveRun() {
   const { status, subscribeEvent } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   // Live streaming state
   const [liveBlocks, setLiveBlocks] = useState<Block[]>([]);
@@ -87,6 +89,7 @@ export default function LiveRun() {
         | undefined;
       if (!data?.blocks) return;
       setLiveBlocks((prev) => appendBlocks(prev, data.blocks!));
+      triggerFlash();
     });
 
     const unsubCompleted = subscribeEvent("run.completed", () => {
@@ -178,22 +181,24 @@ export default function LiveRun() {
       )}
 
       {/* Timeline scroll area */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4"
-        onScroll={handleScroll}
-      >
-        {displayBlocks.length === 0 && !displayStreaming ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-(--muted-foreground) text-center">
-              {isLive
-                ? "No runs recorded. Start a session with Ástríðr to see live blocks here."
-                : "No blocks found for this session."}
-            </p>
-          </div>
-        ) : (
-          <RunTimeline blocks={displayBlocks} streaming={displayStreaming} />
-        )}
+      <div ref={flashRef} className="flex-1 overflow-hidden">
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto p-4"
+          onScroll={handleScroll}
+        >
+          {displayBlocks.length === 0 && !displayStreaming ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-sm text-(--muted-foreground) text-center">
+                {isLive
+                  ? "No runs recorded. Start a session with Ástríðr to see live blocks here."
+                  : "No blocks found for this session."}
+              </p>
+            </div>
+          ) : (
+            <RunTimeline blocks={displayBlocks} streaming={displayStreaming} />
+          )}
+        </div>
       </div>
 
       {/* Scroll-to-bottom button when auto-scroll suppressed */}

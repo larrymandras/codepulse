@@ -11,6 +11,7 @@ import { githubDark } from "@uiw/codemirror-theme-github";
 import { toast } from "sonner";
 import * as jsYaml from "js-yaml";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ type MutableSection = (typeof MUTABLE_SECTIONS)[number];
 
 export default function ConfigEditor() {
   const { status, sendCommand } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   // Selected config section
   const [section, setSection] = useState<MutableSection>("agent-types");
@@ -183,6 +185,7 @@ export default function ConfigEditor() {
         setIsDirty(false);
         setApplyEnabled(false);
         setValidationResult(null);
+        triggerFlash();
       } else {
         setValidationResult({
           success: false,
@@ -307,7 +310,7 @@ export default function ConfigEditor() {
       )}
 
       {/* Editor area */}
-      <div className="flex-1 overflow-hidden mt-3">
+      <div ref={flashRef} className="flex-1 overflow-hidden mt-3">
         {loading ? (
           /* Loading skeleton */
           <div className="mx-4 flex flex-col gap-2">

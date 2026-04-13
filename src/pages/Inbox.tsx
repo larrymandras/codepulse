@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { InboxCard, type InboxItem, type InboxItemType } from "../components/InboxCard";
 import { InboxFilterBar, type InboxFilter } from "../components/InboxFilterBar";
@@ -94,6 +95,7 @@ function sortItems(items: InboxItem[]): InboxItem[] {
 
 export default function Inbox() {
   const { status, subscribeEvent, sendCommand } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [approvalItems, setApprovalItems] = useState<InboxItem[]>([]);
@@ -142,10 +144,11 @@ export default function Inbox() {
         if (prev.some((p) => p.id === item.id)) return prev;
         return [item, ...prev];
       });
+      triggerFlash();
     });
 
     return unsub;
-  }, [subscribeEvent]);
+  }, [subscribeEvent, triggerFlash]);
 
   // ─── Approve handler ──────────────────────────────────────────────────────
   const handleApprove = useCallback(
@@ -269,7 +272,7 @@ export default function Inbox() {
       <InboxFilterBar filter={filter} counts={counts} onChange={setFilter} />
 
       {/* Card list */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
         {filteredItems.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-(--muted-foreground) text-center">

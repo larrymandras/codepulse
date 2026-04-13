@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback, type UIEvent } from "react";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
@@ -32,6 +33,7 @@ function generateId(): string {
 
 export default function Chat() {
   const { status, sendCommand, subscribeEvent } = useAstridrWS();
+  const { flashRef, triggerFlash } = useLiveFlash();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -153,6 +155,8 @@ export default function Chat() {
       const { session_id, text, done } = data;
       if (session_id && session_id !== activeSessionRef.current) return;
 
+      triggerFlash();
+
       setMessages((prev) =>
         prev.map((msg) => {
           if (msg.role === "assistant" && msg.streaming) {
@@ -229,28 +233,30 @@ export default function Chat() {
       </header>
 
       {/* Message list */}
-      <div
-        ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3"
-        onScroll={handleScroll}
-      >
-        {messages.length === 0 ? (
-          <div className="h-full flex items-center justify-center">
-            <p className="text-sm text-muted-foreground text-center">
-              No messages yet. Send a message to start chatting with Ástríðr.
-            </p>
-          </div>
-        ) : (
-          messages.map((msg) => (
-            <ChatBubble
-              key={msg.id}
-              role={msg.role}
-              content={msg.content}
-              streaming={msg.streaming}
-              timestamp={msg.timestamp}
-            />
-          ))
-        )}
+      <div ref={flashRef} className="flex-1 overflow-hidden">
+        <div
+          ref={scrollContainerRef}
+          className="h-full overflow-y-auto p-4 space-y-3"
+          onScroll={handleScroll}
+        >
+          {messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-sm text-muted-foreground text-center">
+                No messages yet. Send a message to start chatting with Ástríðr.
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                role={msg.role}
+                content={msg.content}
+                streaming={msg.streaming}
+                timestamp={msg.timestamp}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {/* New message floating button (shown when auto-scroll suppressed) */}
