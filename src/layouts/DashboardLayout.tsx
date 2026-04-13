@@ -39,6 +39,7 @@ const overviewNavItems = [
   { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
   { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
+  { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },
 ];
 
 // Keep navItems for any code that still references it
@@ -67,6 +68,7 @@ const iconMap: Record<string, string> = {
   inbox: "[>",
   kanban: "=#",
   sliders: "-|-",
+  insights: "??",
 };
 
 function NavGroup({

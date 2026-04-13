@@ -31,6 +31,9 @@ const InboxPage = lazy(() => import("./pages/Inbox"));
 const TasksPage = lazy(() => import("./pages/Tasks"));
 const ConfigEditorPage = lazy(() => import("./pages/ConfigEditor"));
 
+// Lazy-load interaction layer pages (Phase 03)
+const InsightsChat = lazy(() => import("./pages/InsightsChat"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -61,6 +64,8 @@ export default function App() {
               <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
               <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />
               <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
+              {/* Phase 03: Interaction layer pages */}
+              <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>

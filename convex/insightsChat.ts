@@ -172,6 +172,13 @@ export function assembleBlocks(
   }
 }
 
+// ─── Environment helpers ─────────────────────────────────────────────────────
+
+// Convex actions run in a Node.js-compatible environment and have access to
+// process.env for server-side environment variables. The Convex tsconfig does
+// not include @types/node, so we access it via a typed cast to avoid TS errors.
+const env = (globalThis as any).process?.env ?? {};
+
 // ─── LLM Call ───────────────────────────────────────────────────────────────
 
 async function callLLM(
@@ -180,7 +187,7 @@ async function callLLM(
 ): Promise<any> {
   // Per D-11: actual LLM call with structured tool definitions.
   // Uses OpenAI-compatible API (works with OpenAI directly or LiteLLM proxy).
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = env.OPENAI_API_KEY as string | undefined;
   if (!apiKey) {
     throw new Error(
       "OPENAI_API_KEY not set in Convex environment. Set it in Convex Dashboard -> Settings -> Environment Variables."
@@ -188,7 +195,7 @@ async function callLLM(
   }
 
   const baseUrl =
-    process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
+    (env.OPENAI_BASE_URL as string | undefined) || "https://api.openai.com/v1";
 
   const messages: any[] = [
     {
@@ -213,7 +220,7 @@ async function callLLM(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      model: (env.OPENAI_MODEL as string | undefined) || "gpt-4o-mini",
       messages,
       tools: TOOLS,
       tool_choice: toolResults && toolResults.length > 0 ? "none" : "auto",
