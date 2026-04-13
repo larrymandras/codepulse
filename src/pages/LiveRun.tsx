@@ -165,7 +165,7 @@ export default function LiveRun() {
 
   // ─── Stop button ───────────────────────────────────────────────────────────
   const handleStop = useCallback(() => {
-    sendCommand({ action: "run.stop" });
+    void sendCommand({ type: "run.stop" });
   }, [sendCommand]);
 
   // ─── Determine displayed blocks ───────────────────────────────────────────
