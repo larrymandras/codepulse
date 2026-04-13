@@ -96,7 +96,14 @@ Plans:
 - Live Run Widget with Run > Rounds > Tool Calls hierarchy and Flow tab
 - Approval Gates UI (inline cards with approve/reject)
 - Insights Chat (LLM-powered Q&A over CodePulse data)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0: dependency install (shadcn Command, dagre), GenerativeBlock types, test stubs
+- [ ] 03-02-PLAN.md — BlockRenderer dispatcher + all 6 block sub-components (metric, table, chart, code, approval)
+- [ ] 03-03-PLAN.md — Command Palette (Cmd+K) with entity search + quick actions, DashboardLayout wiring
+- [ ] 03-04-PLAN.md — ChatBubble block upgrade + Chat.tsx run.block subscription + Inbox keyboard navigation
+- [ ] 03-05-PLAN.md — RunTimeline nested accordion (rounds) + Flow tab (React Flow + dagre) + stop button
+- [ ] 03-06-PLAN.md — Insights Chat page + Convex insightsChat action + sidebar/route wiring
 **UI hint**: yes
 
 ### Phase 4: Task Management
@@ -205,7 +212,7 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 |-------|----------------|--------|-----------|
 | 1. UI Foundation | 4/4 | Complete |  |
 | 2. Bidirectional Telemetry | 0/4 | Planned | - |
-| 3. Interaction Layer | 0/TBD | Not started | - |
+| 3. Interaction Layer | 0/6 | Planned | - |
 | 4. Task Management | 0/TBD | Not started | - |
 | 5. Data Pipeline | 0/TBD | Not started | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
@@ -214,4 +221,4 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 
 ---
 
-*Last updated: 2026-04-13 — Phase 2 (Bidirectional Telemetry) revised to 4 plans across 3 waves (added Astrid backend auth logging + ping handler).*
+*Last updated: 2026-04-13 — Phase 3 (Interaction Layer) planned: 6 plans across 4 waves (Wave 0 setup, Wave 1 blocks+palette parallel, Wave 2 chat+inbox+run parallel, Wave 3 insights).*
