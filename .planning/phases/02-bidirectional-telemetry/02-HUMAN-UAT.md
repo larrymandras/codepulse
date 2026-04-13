@@ -3,7 +3,7 @@ status: partial
 phase: 02-bidirectional-telemetry
 source: [02-VERIFICATION.md]
 started: 2026-04-13T00:00:00Z
-updated: 2026-04-13T00:00:00Z
+updated: 2026-04-13T15:31:00Z
 ---
 
 ## Current Test
@@ -26,7 +26,7 @@ result: [pending]
 
 ### 4. Sidebar footer status indicator
 expected: Colored status dot + "Connected"/"Disconnected" label visible in sidebar footer. Click opens ConnectionPopover with CONNECTION DETAILS (URL, Status, Uptime, Latency, Topics, Last event)
-result: [pending]
+result: passed (2026-04-13) — popover opens with all fields: URL, Status, Uptime, Latency, Topics, Last event. Reconnect button present.
 
 ### 5. Header status indicator
 expected: Small colored status dot visible near E-Stop button in header
@@ -38,7 +38,7 @@ result: [pending]
 
 ### 7. Disconnected state
 expected: When Astrid is NOT running — red/salmon dot, "Disconnected" label, "Reconnect" button appears in popover
-result: [pending]
+result: passed (2026-04-13) — red dot visible, "Reconnecting..." shown during attempt, falls back to "Disconnected" when Astrid not running. Reconnect button functional.
 
 ### 8. Flash animation on WS events
 expected: When Astrid IS running, navigate to Agents, Security, Dashboard — subtle pulse animation fires on incoming WS events
@@ -51,9 +51,9 @@ result: [pending]
 ## Summary
 
 total: 9
-passed: 0
+passed: 2
 issues: 0
-pending: 9
+pending: 7
 skipped: 0
 blocked: 0
 

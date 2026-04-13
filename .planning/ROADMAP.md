@@ -71,10 +71,10 @@ Plans:
 - Auth validation logging on both sides (CodePulse + Astrid backend)
 **Plans**: 4 plans
 Plans:
-- [ ] 02-01-PLAN.md — Wave 0 test stubs (useLiveState, useLiveFlash, ConnectionPopover), CSS live-update-pulse animation, shadcn Popover install
-- [ ] 02-02-PLAN.md — useLiveState hook, WSStatusIndicator token upgrade, ConnectionPopover with ping-based latency, DashboardLayout integration
-- [ ] 02-03-PLAN.md — Wire all 11 event-driven pages to WebSocket with live-update-flash animation, SectionErrorBoundary wrapping
-- [ ] 02-04-PLAN.md — Astrid backend auth validation logging and ping handler (cross-repo: astridr-repo)
+- [x] 02-01-PLAN.md — Wave 0 test stubs (useLiveState, useLiveFlash, ConnectionPopover), CSS live-update-pulse animation, shadcn Popover install
+- [x] 02-02-PLAN.md — useLiveState hook, WSStatusIndicator token upgrade, ConnectionPopover with ping-based latency, DashboardLayout integration
+- [x] 02-03-PLAN.md — Wire all 11 event-driven pages to WebSocket with live-update-flash animation, SectionErrorBoundary wrapping
+- [x] 02-04-PLAN.md — Astrid backend auth validation logging and ping handler (cross-repo: astridr-repo)
 
 ### Phase 3: Interaction Layer
 **Goal**: CodePulse becomes a command center — operators can send tasks, approve actions, search everything, and chat with operational data from the dashboard
