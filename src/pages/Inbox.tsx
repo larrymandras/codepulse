@@ -298,7 +298,9 @@ export default function Inbox() {
         const item = items[focusedIndex];
         if (item.type === "approval" && item.requestId) {
           e.preventDefault();
-          void handleReject(item.requestId);
+          // Expand the card so the user can fill in a reason and confirm,
+          // rather than submitting an immediate rejection with no reason.
+          setExpandedId(item.id);
         }
       }
     };
