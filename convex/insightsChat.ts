@@ -183,7 +183,8 @@ const env = (globalThis as any).process?.env ?? {};
 
 async function callLLM(
   question: string,
-  toolResults?: Array<{ role: string; tool_call_id: string; content: string }>
+  toolResults?: Array<{ role: string; tool_call_id: string; content: string }>,
+  assistantToolCallMessage?: Record<string, unknown>
 ): Promise<any> {
   // Per D-11: actual LLM call with structured tool definitions.
   // Uses OpenAI-compatible API (works with OpenAI directly or LiteLLM proxy).
@@ -208,8 +209,13 @@ async function callLLM(
     { role: "user", content: question },
   ];
 
-  // If we have tool results from a previous round, append them
+  // If we have tool results from a previous round, append them.
+  // Per OpenAI multi-turn tool call protocol, the assistant's tool_calls turn
+  // must appear in history before the tool result messages.
   if (toolResults && toolResults.length > 0) {
+    if (assistantToolCallMessage) {
+      messages.push(assistantToolCallMessage);
+    }
     messages.push(...toolResults);
   }
 
@@ -285,7 +291,7 @@ export const ask = action({
 
       // Step 3: Call LLM again with tool results for a natural language summary
       try {
-        const summaryResponse = await callLLM(question, toolResultMessages);
+        const summaryResponse = await callLLM(question, toolResultMessages, choice);
         const summaryChoice = summaryResponse.choices?.[0]?.message;
         if (summaryChoice?.content) {
           blocks.push({ type: "markdown", content: summaryChoice.content });
