@@ -30,7 +30,12 @@ export function TableBlock({ block }: TableBlockProps) {
         const av = a[sortCol];
         const bv = b[sortCol];
         if (av === bv) return 0;
-        const cmp = av < bv ? -1 : 1;
+        // Numeric sort when both values are numbers; lexicographic otherwise.
+        // This prevents unreliable type coercion when columns mix numbers and strings.
+        if (typeof av === "number" && typeof bv === "number") {
+          return sortAsc ? av - bv : bv - av;
+        }
+        const cmp = String(av) < String(bv) ? -1 : 1;
         return sortAsc ? cmp : -cmp;
       });
 
