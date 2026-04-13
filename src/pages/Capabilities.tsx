@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { Search } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import McpServerPanel from "../components/McpServerPanel";
 import PluginPanel from "../components/PluginPanel";
 import DiscoveredToolsTable from "../components/DiscoveredToolsTable";
+import CommandCatalogPanel from "../components/CommandCatalogPanel";
 import InfoTooltip from "../components/InfoTooltip";
 import { formatTimestamp } from "../lib/formatters";
 import {
@@ -14,6 +16,7 @@ import {
   useHooks,
   useDiscoveredTools,
 } from "../hooks/useCapabilities";
+import { useCommandCatalog } from "../hooks/useCommandCatalog";
 
 function changeTypeColor(_key: string, oldVal: any, newVal: any): string {
   if (oldVal === undefined || oldVal === null) return "text-green-400";
@@ -223,6 +226,7 @@ export default function Capabilities() {
   const skills = useSkills();
   const hooks = useHooks();
   const tools = useDiscoveredTools();
+  const { commands: catalogCommands, status: catalogStatus, error: catalogError } = useCommandCatalog();
 
   const [search, setSearch] = useState("");
   const filter = search.toLowerCase().trim() || undefined;
@@ -237,22 +241,10 @@ export default function Capabilities() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tools, skills, servers..."
+            placeholder="Search tools, skills, commands..."
             className="w-full bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 pl-8 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
           />
-          <svg
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
           {search && (
             <button
               onClick={() => setSearch("")}
@@ -265,13 +257,13 @@ export default function Capabilities() {
       </div>
 
       {/* 1. Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         <MetricCard label="MCP Servers" value={summary?.mcpServers ?? 0} />
         <MetricCard label="Plugins" value={summary?.plugins ?? 0} />
         <MetricCard label="Skills" value={summary?.skills ?? 0} />
         <MetricCard label="Tools" value={summary?.tools ?? 0} />
         <MetricCard label="Hooks" value={summary?.hooks ?? 0} />
-        <MetricCard label="Commands" value={summary?.slashCommands ?? 0} />
+        <MetricCard label="Commands" value={catalogStatus === "ready" ? catalogCommands.length : 0} />
       </div>
 
       {/* 2. Config Change Feed */}
@@ -334,6 +326,14 @@ export default function Capabilities() {
 
       {/* 6. Discovered Tools */}
       <DiscoveredToolsTable tools={tools} filter={filter} />
+
+      {/* 7. Commands (WebSocket catalog) */}
+      <CommandCatalogPanel
+        commands={catalogCommands}
+        filter={filter}
+        status={catalogStatus}
+        error={catalogError}
+      />
     </div>
   );
 }
