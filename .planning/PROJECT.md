@@ -53,6 +53,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Session briefings with LLM-powered generation, daily digest cron, dynamic Briefings page feed (Validated in Phase 7)
 - Anomaly detection with z-score computation, auto-alert creation, AnomalyBadge on MetricCards (Validated in Phase 7)
 - Memory quality metrics with deduplication rate, staleness detection, LLM contradiction detection, Quality tab (Validated in Phase 7)
+- Command catalog frontend surface on Capabilities page — WebSocket-driven CommandCatalogPanel with grouped/expandable commands, category filter pills, search integration, and connection state handling (Validated in Phase 58)
 
 ### Active
 
@@ -108,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 7 (intelligence-layer) completion*
+*Last updated: 2026-04-14 after Phase 58 (infrastructure-layer) completion*
