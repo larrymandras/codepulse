@@ -487,19 +487,19 @@ export default crons;
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Auto-resolve and acknowledged alerts**
+1. **Auto-resolve and acknowledged alerts** (RESOLVED)
    - What we know: D-12 says auto-resolve fires when condition clears. D-09 says Acknowledged is a state.
    - What's unclear: Does auto-resolve override Acknowledged state? (Claude's Discretion says "likely yes")
    - Recommendation: Auto-resolve fires regardless of Acknowledged state. An acknowledged alert that clears should move to Resolved. This is the simplest model and matches real-world alerting system behavior.
 
-2. **Configurable digest interval**
+2. **Configurable digest interval** (RESOLVED)
    - What we know: D-15 says digest interval is configurable (1h, 4h, daily). Convex crons are static — cron interval cannot be dynamically reconfigured without redeployment.
    - What's unclear: How does the operator change the digest interval?
    - Recommendation: Use a fixed 1-hour cron. Store a `digestInterval` preference in `agentConfigs`. The digest cron runs every hour but checks the preference — if current time doesn't align with preferred interval (e.g., 4h means only fire at 00:00, 04:00, 08:00...), it skips. This avoids redeployment for config changes.
 
-3. **InboxCard integration for alerts**
+3. **InboxCard integration for alerts** (RESOLVED)
    - What we know: `InboxCard` supports `type: "alert"` with title/message/timestamp. ALR-07 requires all alerts to surface in Unified Inbox.
    - What's unclear: Does InboxCard need acknowledge/mute inline actions added per UI-SPEC?
    - Recommendation: Yes — per UI-SPEC "Alert items gain acknowledge/mute inline actions." The `InboxCard` component needs a new `alertId` prop and conditional rendering of acknowledge/mute buttons when `type === "alert"`.
