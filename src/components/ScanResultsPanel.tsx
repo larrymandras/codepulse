@@ -104,15 +104,15 @@ export function ScanResultsPanel({
         aria-expanded={expanded}
         aria-label={`Security findings for ${toolName}`}
       >
-        <ShieldAlert className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+        <ShieldAlert className="h-4 w-4 text-gray-500 shrink-0" />
         <RiskLevelBadge severity={topSeverity} />
         <span className="text-[10px] text-(--muted-foreground)">
           {findings.length} finding{findings.length !== 1 ? "s" : ""}
         </span>
         {expanded ? (
-          <ChevronDown className="w-3 h-3 text-gray-500" />
+          <ChevronDown className="h-4 w-4 text-gray-500" />
         ) : (
-          <ChevronRight className="w-3 h-3 text-gray-500" />
+          <ChevronRight className="h-4 w-4 text-gray-500" />
         )}
       </button>
 
@@ -140,7 +140,7 @@ export function ScanResultsPanel({
                   aria-label="Dismiss finding"
                   title="Dismiss finding"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 

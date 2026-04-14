@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Check, ArrowLeftRight } from "lucide-react";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -47,30 +48,11 @@ export default function RecentGitActivity() {
                     : "bg-blue-600/20"
                 }`}
               >
-                <svg
-                  className={`w-3.5 h-3.5 ${
-                    isSelfHealing ? "text-emerald-400" : "text-blue-400"
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  {isSelfHealing ? (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  ) : (
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-                    />
-                  )}
-                </svg>
+                {isSelfHealing ? (
+                  <Check className="h-4 w-4 text-emerald-400" />
+                ) : (
+                  <ArrowLeftRight className="h-4 w-4 text-blue-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-gray-200 truncate">{c.message}</p>

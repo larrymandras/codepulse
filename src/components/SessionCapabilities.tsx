@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { ChevronDown } from "lucide-react";
 
 interface SessionCapabilitiesProps {
   sessionId: string;
@@ -52,14 +53,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
           <span className="text-sm font-semibold text-gray-300">Session Capabilities</span>
           <span className="text-xs text-gray-500">Scanned {scannedDate}</span>
         </div>
-        <svg
-          className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
       {expanded && (

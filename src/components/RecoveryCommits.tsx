@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Check } from "lucide-react";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -44,19 +45,7 @@ export default function RecoveryCommits() {
             className="flex items-start gap-3 bg-gray-900/30 rounded-lg px-3 py-2"
           >
             <div className="mt-1 w-6 h-6 rounded-full bg-emerald-600/20 flex items-center justify-center shrink-0">
-              <svg
-                className="w-3.5 h-3.5 text-emerald-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check className="h-4 w-4 text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-gray-200 truncate">{c.message}</p>

@@ -32,6 +32,7 @@ import MetricCard from "../components/MetricCard";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import { ScanResultsPanel, RiskLevelBadge, highestSeverity } from "../components/ScanResultsPanel";
+import { GripVertical, ChevronRight } from "lucide-react";
 import type { ScanFinding } from "../components/ScanResultsPanel";
 import { formatDuration } from "../lib/formatters";
 import type { AgentProfile, Avatar } from "../types";
@@ -84,14 +85,7 @@ function SortableProfileCard({
           className="mt-1 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 transition-colors touch-none"
           title="Drag to reorder"
         >
-          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
-            <circle cx="5" cy="3" r="1.2" />
-            <circle cx="11" cy="3" r="1.2" />
-            <circle cx="5" cy="8" r="1.2" />
-            <circle cx="11" cy="8" r="1.2" />
-            <circle cx="5" cy="13" r="1.2" />
-            <circle cx="11" cy="13" r="1.2" />
-          </svg>
+          <GripVertical className="h-4 w-4" />
         </button>
         <AgentAvatar
           avatar={avatar ?? { name: profile.name }}
@@ -565,19 +559,7 @@ export default function Agents() {
                           <span>{dur}</span>
                         </div>
                       </div>
-                      <svg
-                        className="w-4 h-4 text-gray-600 shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
+                      <ChevronRight className="h-4 w-4 text-gray-600 shrink-0" />
                     </button>
                   );
                 })}

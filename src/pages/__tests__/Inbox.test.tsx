@@ -155,17 +155,16 @@ describe("Inbox — keyboard navigation", () => {
     );
   });
 
-  test("'R' key opens reject flow on focused approval item", () => {
+  test("'R' key expands card for reject flow on focused approval item", () => {
     renderInbox();
     injectApprovalItem(makeApprovalItem("item-1"));
 
     act(() => { fireEvent.keyDown(document, { key: "ArrowDown" }); });
     act(() => { fireEvent.keyDown(document, { key: "r" }); });
 
-    // R key triggers handleReject — sendCommand should be called
-    expect(mockSendCommand).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "approval.respond" })
-    );
+    // R key expands the card so the user can fill in a reason —
+    // it does NOT immediately send a rejection command
+    expect(mockSendCommand).not.toHaveBeenCalled();
   });
 
   test("Escape clears keyboard focus", () => {

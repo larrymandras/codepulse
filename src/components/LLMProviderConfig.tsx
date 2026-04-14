@@ -113,7 +113,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
           disabled={saveState === "saving" || (!apiKey && !existingConfig)}
           className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2 shrink-0"
         >
-          {saveState === "saving" && <Loader2 className="h-3 w-3 animate-spin" />}
+          {saveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
           {saveState === "saved"
             ? "Saved"
             : saveState === "saving"

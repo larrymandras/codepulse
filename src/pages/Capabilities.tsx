@@ -244,7 +244,7 @@ export default function Capabilities() {
             placeholder="Search tools, skills, commands..."
             className="w-full bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 pl-8 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
           />
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           {search && (
             <button
               onClick={() => setSearch("")}

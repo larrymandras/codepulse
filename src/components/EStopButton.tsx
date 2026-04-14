@@ -48,7 +48,7 @@ export function EStopButton() {
         aria-label="Emergency Stop"
         className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <OctagonX className="w-3.5 h-3.5" />
+        <OctagonX className="h-4 w-4" />
         <span>E-Stop</span>
       </button>
 
@@ -68,7 +68,7 @@ export function EStopButton() {
           >
             {/* Header */}
             <div className="flex items-start gap-3">
-              <OctagonX className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <OctagonX className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
               <div>
                 <h2
                   id="estop-dialog-title"

@@ -93,7 +93,7 @@ export function IdeationRow({
             aria-label="Create Task"
             className="p-0.5 text-(--muted-foreground) hover:text-(--foreground) transition-colors"
           >
-            <Plus size={16} />
+            <Plus className="h-4 w-4" />
           </button>
         )}
 

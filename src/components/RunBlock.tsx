@@ -67,9 +67,9 @@ function ToolUseBlockView({
       <div className="flex items-center justify-between px-3 py-2 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {expanded ? (
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-(--muted-foreground)" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 shrink-0 text-(--muted-foreground)" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
           )}
           <span className="text-xs font-mono font-semibold text-(--foreground) shrink-0">
             {block.name ?? "tool_use"}
@@ -115,9 +115,9 @@ function ToolResultBlockView({
       <div className="flex items-center justify-between px-3 py-2 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {expanded ? (
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-(--muted-foreground)" />
+            <ChevronDown className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
           ) : (
-            <ChevronRight className="w-3.5 h-3.5 shrink-0 text-(--muted-foreground)" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
           )}
           <span className="text-xs font-mono font-semibold text-(--foreground) shrink-0">
             Result

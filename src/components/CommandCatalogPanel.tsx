@@ -191,9 +191,9 @@ export default function CommandCatalogPanel({
                         </div>
                         <span className="flex-shrink-0 ml-2 text-muted-foreground">
                           {isExpanded ? (
-                            <ChevronUp className="w-3 h-3" />
+                            <ChevronUp className="h-4 w-4" />
                           ) : (
-                            <ChevronDown className="w-3 h-3" />
+                            <ChevronDown className="h-4 w-4" />
                           )}
                         </span>
                       </div>
@@ -235,7 +235,7 @@ export default function CommandCatalogPanel({
                                       </td>
                                       <td className="py-1">
                                         {param.required ? (
-                                          <Check className="w-3 h-3 text-(--status-ok)" />
+                                          <Check className="h-4 w-4 text-(--status-ok)" />
                                         ) : (
                                           <span className="text-muted-foreground">--</span>
                                         )}

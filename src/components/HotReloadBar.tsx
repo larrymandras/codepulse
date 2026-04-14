@@ -31,13 +31,13 @@ export default function HotReloadBar({ status, errorMessage }: HotReloadBarProps
     <div className="flex items-center gap-2 h-6 text-xs transition-opacity duration-200">
       {status === "pending" && (
         <>
-          <Loader2 className="animate-spin w-3 h-3" />
+          <Loader2 className="animate-spin h-4 w-4" />
           <span className="text-(--muted-foreground)">Sending...</span>
         </>
       )}
       {status === "validating" && (
         <>
-          <Loader2 className="animate-spin w-3 h-3" />
+          <Loader2 className="animate-spin h-4 w-4" />
           <span className="text-(--status-warn)">Validating...</span>
         </>
       )}
@@ -46,13 +46,13 @@ export default function HotReloadBar({ status, errorMessage }: HotReloadBarProps
       )}
       {status === "confirmed" && (
         <>
-          <CheckCircle2 className="w-3 h-3 text-(--status-ok)" />
+          <CheckCircle2 className="h-4 w-4 text-(--status-ok)" />
           <span className="text-(--status-ok)">Confirmed by Astrid.</span>
         </>
       )}
       {status === "error" && (
         <>
-          <XCircle className="w-3 h-3 text-(--status-error)" />
+          <XCircle className="h-4 w-4 text-(--status-error)" />
           <span className="text-(--status-error)">Apply failed: {errorMessage}</span>
         </>
       )}

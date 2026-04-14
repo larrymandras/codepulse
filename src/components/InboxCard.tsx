@@ -225,7 +225,7 @@ export function InboxCard({
               disabled={approving || rejectPending || !wsConnected}
               onClick={handleApprove}
             >
-              {approving && <Loader2 className="w-3 h-3 animate-spin" />}
+              {approving && <Loader2 className="h-4 w-4 animate-spin" />}
               {approving ? "Approving…" : "Approve"}
             </button>
             <button
@@ -266,7 +266,7 @@ export function InboxCard({
                   onClick={() => void handleRejectSubmit()}
                 >
                   {rejectPending && (
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   )}
                   {rejectPending ? "Rejecting…" : "Reject"}
                 </button>
