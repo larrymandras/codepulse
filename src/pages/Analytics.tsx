@@ -19,6 +19,7 @@ import PermissionDecisionsChart from "../components/PermissionDecisionsChart";
 import ActiveTimeChart from "../components/ActiveTimeChart";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import CostForecastPanel from "../components/CostForecastPanel";
 
 export default function Analytics() {
   const { events } = useRecentEvents(100);
@@ -40,6 +41,11 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-100">Analytics</h1>
+
+      {/* Cost Forecast */}
+      <SectionErrorBoundary name="Cost Forecast">
+        <CostForecastPanel />
+      </SectionErrorBoundary>
 
       {/* Summary row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -118,6 +118,79 @@ function RetentionControl() {
   );
 }
 
+function IntelligenceSettings() {
+  const budgetConfig = useQuery(api.forecasts.getBudgetConfig);
+  const setBudgetCapMutation = useMutation(api.forecasts.setBudgetCap);
+  const [cap, setCap] = useState<number>(0);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  // Sync local state when server value loads
+  useEffect(() => {
+    if (budgetConfig?.budgetCap != null) {
+      setCap(budgetConfig.budgetCap);
+    }
+  }, [budgetConfig?.budgetCap]);
+
+  const isValid = cap > 0 && cap < 1_000_000;
+
+  const handleSave = async () => {
+    if (!isValid) return;
+    setSaveState("saving");
+    try {
+      await setBudgetCapMutation({ cap });
+      setSaveState("saved");
+      setTimeout(() => setSaveState("idle"), 2000);
+    } catch {
+      setSaveState("idle");
+    }
+  };
+
+  return (
+    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border pb-2">
+          <h3 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+            Intelligence
+          </h3>
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <label className="text-xs text-muted-foreground">Monthly Budget Cap ($)</label>
+            <input
+              type="number"
+              min={1}
+              max={999999}
+              value={cap === 0 && budgetConfig?.budgetCap == null ? "" : cap}
+              onChange={(e) => setCap(Number(e.target.value))}
+              disabled={saveState === "saving"}
+              placeholder="e.g. 100"
+              className={`w-28 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+                cap !== 0 && !isValid ? "border-destructive" : "border-input"
+              } focus:outline-none focus:ring-1 focus:ring-ring/50`}
+            />
+            <button
+              onClick={handleSave}
+              disabled={!isValid || saveState === "saving"}
+              className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+            >
+              {saveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : "Save Budget Settings"}
+            </button>
+          </div>
+          {cap !== 0 && !isValid && (
+            <p className="text-xs text-[hsl(var(--status-error))]">
+              Enter a value between 1 and 999,999.
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Monthly spending cap for cost forecasting. Set to 0 or leave blank to disable budget tracking.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const profiles = useAgentProfiles();
   const avatars = useAvatars();
@@ -629,6 +702,11 @@ export default function Settings() {
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
         <NotificationPreferences />
       </div>
+      </SectionErrorBoundary>
+
+      {/* Intelligence */}
+      <SectionErrorBoundary name="Intelligence">
+        <IntelligenceSettings />
       </SectionErrorBoundary>
     </div>
   );
