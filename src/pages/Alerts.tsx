@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
 import { useGroupedAlerts, useAllAlertsPaginated, useAlertCounts } from "../hooks/useAlerts";
 import AlertRulesEngine from "../components/AlertRulesEngine";
 import LoadMoreButton from "../components/LoadMoreButton";
+import { AlertLifecycleActions } from "../components/AlertLifecycleActions";
+import { WebhookStatusBadge } from "../components/WebhookStatusBadge";
+import { Clock } from "lucide-react";
 
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
 
@@ -40,6 +43,88 @@ const severityColors: Record<string, { dot: string; badge: string; text: string 
   },
 };
 
+// ─── Per-row component (isolates per-alert mute query) ────────────────────────
+
+function AlertRow({ a }: { a: any }) {
+  const muteState = useQuery(api.alertMutes.isTargetMutedPublic, {
+    targetType: "alert",
+    targetId: a._id,
+  });
+  const isMuted = muteState ?? false;
+
+  const colors = severityColors[a.severity] ?? severityColors.info;
+  const isAcked = a.status === "acknowledged" || a.acknowledged;
+  const isResolved = a.status === "resolved";
+
+  let rowOpacity = "";
+  if (isResolved) rowOpacity = "opacity-40";
+  else if (isAcked) rowOpacity = "opacity-60";
+  else if (isMuted) rowOpacity = "opacity-50";
+
+  return (
+    <div
+      className={`bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 transition-opacity duration-200 ease-out ${rowOpacity}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
+              <span className={`text-xs font-medium uppercase ${colors.text}`}>
+                {a.severity}
+              </span>
+            </span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30">
+              {a.source}
+            </span>
+            {isAcked && (
+              <span className="text-xs px-2 bg-muted rounded text-muted-foreground">
+                Acknowledged
+              </span>
+            )}
+            {isResolved && (
+              <span className="text-xs px-2 bg-muted rounded text-muted-foreground">
+                Auto-resolved
+              </span>
+            )}
+            {isMuted && !isAcked && !isResolved && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-4 h-4" />
+                Muted
+              </span>
+            )}
+          </div>
+          <p className={`text-sm text-gray-200 ${isAcked ? "line-through text-gray-500" : ""}`}>
+            {a.message}
+            {a.groupCount > 1 && (
+              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                x{a.groupCount}
+              </span>
+            )}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">{relativeTime(a.createdAt)}</p>
+          {a.webhookStatus && (
+            <div className="mt-1">
+              <WebhookStatusBadge
+                status={a.webhookStatus}
+                deliveredAt={a.webhookDeliveredAt}
+                attempts={a.webhookAttempts}
+              />
+            </div>
+          )}
+        </div>
+        <AlertLifecycleActions
+          alertId={a._id}
+          alertTitle={a.message}
+          alertSeverity={a.severity}
+          status={a.status}
+          isMuted={isMuted}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Alerts() {
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
   const [showAll, setShowAll] = useState(false);
@@ -47,9 +132,6 @@ export default function Alerts() {
   const groupedAlerts = useGroupedAlerts();
   const { alerts: allAlerts, status: alertStatus, loadMore: loadMoreAlerts } = useAllAlertsPaginated();
   const counts = useAlertCounts();
-
-  const acknowledge = useMutation(api.alerts.acknowledge);
-  const dismissAll = useMutation(api.alerts.dismissAll);
 
   const baseAlerts = showAll ? allAlerts : groupedAlerts;
   const filtered =
@@ -70,14 +152,6 @@ export default function Alerts() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Alerts</h1>
-        {groupedAlerts.length > 0 && (
-          <button
-            onClick={() => dismissAll()}
-            className="text-xs px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 transition-colors border border-gray-600/50"
-          >
-            Dismiss All
-          </button>
-        )}
       </div>
 
       {/* Severity Count Cards */}
@@ -132,64 +206,14 @@ export default function Alerts() {
       {filtered.length === 0 ? (
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
           <div className="text-3xl mb-2 text-green-400">&#10003;</div>
-          <p className="text-green-400 text-lg mb-1">All clear — no active alerts</p>
+          <p className="text-green-400 text-lg mb-1">No active alerts. All monitored thresholds are within normal range.</p>
           <p className="text-gray-500 text-sm">The system is operating normally</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((a: any) => {
-            const colors = severityColors[a.severity] ?? severityColors.info;
-            const isAcked = a.acknowledged;
-
-            return (
-              <div
-                key={a._id}
-                className={`bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 transition-opacity ${
-                  isAcked ? "opacity-50" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      {/* Severity badge */}
-                      <span className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-                        <span className={`text-xs font-medium uppercase ${colors.text}`}>
-                          {a.severity}
-                        </span>
-                      </span>
-                      {/* Source tag */}
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30">
-                        {a.source}
-                      </span>
-                    </div>
-                    <p className={`text-sm text-gray-200 ${isAcked ? "line-through text-gray-500" : ""}`}>
-                      {a.message}
-                      {a.groupCount > 1 && (
-                        <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
-                          x{a.groupCount}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">{relativeTime(a.createdAt)}</p>
-                  </div>
-                  {!isAcked && (
-                    <button
-                      onClick={() => acknowledge({ id: a._id, acknowledgedBy: "dashboard" })}
-                      className="text-xs px-3 py-1.5 rounded-lg bg-gray-700/50 text-gray-300 hover:bg-gray-600/50 transition-colors border border-gray-600/30 shrink-0"
-                    >
-                      Acknowledge
-                    </button>
-                  )}
-                  {isAcked && (
-                    <span className="text-xs text-gray-600 shrink-0">
-                      {a.acknowledgedBy === "auto-acknowledge" ? "Auto-acknowledged" : "Acknowledged"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {filtered.map((a: any) => (
+            <AlertRow key={a._id} a={a} />
+          ))}
         </div>
       )}
 
