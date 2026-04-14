@@ -164,7 +164,13 @@ Plans:
   5. Per-severity notification preferences work — critical always notify, warning to digest
   6. One-click "Create Task from Alert" converts alert to Kanban task
   7. All alerts surface in Unified Inbox
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 06-01-PLAN.md — Schema migration, Wave 0 test stubs, shadcn component installs
+- [ ] 06-02-PLAN.md — Alert lifecycle mutations, custom rule CRUD, threshold overrides, mute system
+- [ ] 06-03-PLAN.md — Webhook delivery engine, evaluation upgrades, cron registration, ingest hook
+- [ ] 06-04-PLAN.md — Settings page: Notification Channels + Notification Preferences UI
+- [ ] 06-05-PLAN.md — Alerts page lifecycle UI, AlertRuleForm, ConditionBuilder, InboxCard integration
 **UI hint**: yes
 
 ### Phase 7: Intelligence Layer
@@ -229,10 +235,10 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 3. Interaction Layer | 0/6 | Planned | - |
 | 4. Task Management | 0/6 | Planned | - |
 | 5. Data Pipeline | 0/5 | Planned | - |
-| 6. Alert Routing | 0/TBD | Not started | - |
+| 6. Alert Routing | 0/5 | Planned | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
 | 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 5 (Data Pipeline) revised: 5 plans across 3 waves (Wave 1 stubs+schema+crons, Wave 2 archived filters+analytics swap, Wave 3 pagination for all 7 list domains+retention UI).*
+*Last updated: 2026-04-14 — Phase 6 (Alert Routing) planned: 5 plans across 3 waves (Wave 1 schema+stubs, Wave 2 backend lifecycle+webhook engine, Wave 3 Settings UI+Alerts UI).*
