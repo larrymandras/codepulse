@@ -246,8 +246,8 @@ export const evaluate = mutation({
     const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);
     const errorEvents = hourEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error");
     if (hourEvents.length > 10 && errorEvents.length / hourEvents.length > 0.2) {
-      const rule = alertRules.find((r) => r.id === "std-high-error-rate")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "std-high-error-rate");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Long sessions
@@ -257,8 +257,8 @@ export const evaluate = mutation({
       .collect();
     for (const s of activeSessions) {
       if (now - s.startedAt > 7200) {
-        const rule = alertRules.find((r) => r.id === "std-long-session")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "std-long-session");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -266,8 +266,8 @@ export const evaluate = mutation({
     // Stale sessions
     for (const s of activeSessions) {
       if (now - s.lastEventAt > 1800) {
-        const rule = alertRules.find((r) => r.id === "std-stale-sessions")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "std-stale-sessions");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -275,8 +275,8 @@ export const evaluate = mutation({
     // High event count in session
     for (const s of activeSessions) {
       if (s.eventCount > 1000) {
-        const rule = alertRules.find((r) => r.id === "std-high-event-count")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "std-high-event-count");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -288,8 +288,8 @@ export const evaluate = mutation({
       .take(50);
     const recentFailed = failedAgents.filter((a) => a.endedAt && a.endedAt >= tenMinAgo);
     if (recentFailed.length >= 3) {
-      const rule = alertRules.find((r) => r.id === "std-agent-crash-loop")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "std-agent-crash-loop");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Context overflow
@@ -300,8 +300,8 @@ export const evaluate = mutation({
       .take(10);
     for (const snap of recentSnapshots) {
       if (snap.contextTokens && snap.contextTokens > 180000) {
-        const rule = alertRules.find((r) => r.id === "std-context-overflow")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "std-context-overflow");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -311,8 +311,8 @@ export const evaluate = mutation({
       (e) => e.eventType === "tool_error" && e.timestamp >= thirtyMinAgo
     );
     if (toolFailEvents.length > 10) {
-      const rule = alertRules.find((r) => r.id === "std-tool-failures")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "std-tool-failures");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Hook failures
@@ -320,8 +320,8 @@ export const evaluate = mutation({
       (e) => e.hookType && e.eventType === "error" && e.timestamp >= thirtyMinAgo
     );
     if (hookFailEvents.length > 3) {
-      const rule = alertRules.find((r) => r.id === "std-hook-failures")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "std-hook-failures");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // --- DISCOVERY checks ---
@@ -330,8 +330,8 @@ export const evaluate = mutation({
     const mcpServers = await ctx.db.query("mcpServers").collect();
     for (const srv of mcpServers) {
       if (srv.status === "disconnected" || srv.status === "error") {
-        const rule = alertRules.find((r) => r.id === "disc-mcp-disconnected")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "disc-mcp-disconnected");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -339,8 +339,8 @@ export const evaluate = mutation({
     // MCP server timeout
     for (const srv of mcpServers) {
       if (now - srv.lastSeenAt > 300) {
-        const rule = alertRules.find((r) => r.id === "disc-server-timeout")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "disc-server-timeout");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -348,23 +348,23 @@ export const evaluate = mutation({
     // Too many tools
     const toolCount = await ctx.db.query("discoveredTools").collect();
     if (toolCount.length > 100) {
-      const rule = alertRules.find((r) => r.id === "disc-too-many-tools")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "disc-too-many-tools");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Disabled plugins
     const plugins = await ctx.db.query("plugins").collect();
     const disabledPlugins = plugins.filter((p) => !p.enabled);
     if (disabledPlugins.length > 0) {
-      const rule = alertRules.find((r) => r.id === "disc-plugin-disabled")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "disc-plugin-disabled");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Missing hooks
     const hooks = await ctx.db.query("registeredHooks").collect();
     if (hooks.length === 0) {
-      const rule = alertRules.find((r) => r.id === "disc-missing-hooks")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "disc-missing-hooks");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Config drift
@@ -375,8 +375,8 @@ export const evaluate = mutation({
       .take(50);
     const hourConfigChanges = recentConfigChanges.filter((c) => c.changedAt >= oneHourAgo);
     if (hourConfigChanges.length > 10) {
-      const rule = alertRules.find((r) => r.id === "disc-config-drift")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "disc-config-drift");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // --- INFRASTRUCTURE checks ---
@@ -385,24 +385,24 @@ export const evaluate = mutation({
     const containers = await ctx.db.query("dockerContainers").collect();
     for (const c of containers) {
       if (c.status === "stopped" || c.status === "error") {
-        const rule = alertRules.find((r) => r.id === "infra-container-stopped")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-container-stopped");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
 
     for (const c of containers) {
       if (c.cpuPercent && c.cpuPercent > 80) {
-        const rule = alertRules.find((r) => r.id === "infra-high-cpu")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-high-cpu");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
 
     for (const c of containers) {
       if (c.memoryMb && c.memoryMb > 1024) {
-        const rule = alertRules.find((r) => r.id === "infra-high-memory")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-high-memory");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -411,24 +411,24 @@ export const evaluate = mutation({
     const healthChecks = await ctx.db.query("supabaseHealth").collect();
     for (const h of healthChecks) {
       if (h.status === "degraded") {
-        const rule = alertRules.find((r) => r.id === "infra-supabase-degraded")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-supabase-degraded");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
 
     for (const h of healthChecks) {
       if (h.status === "down") {
-        const rule = alertRules.find((r) => r.id === "infra-supabase-down")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-supabase-down");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
 
     for (const h of healthChecks) {
       if (h.responseTimeMs && h.responseTimeMs > 2000) {
-        const rule = alertRules.find((r) => r.id === "infra-high-response-time")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "infra-high-response-time");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -445,31 +445,31 @@ export const evaluate = mutation({
     const hourLlm = recentLlm.filter((m) => m.timestamp >= oneHourAgo);
     const totalCost = hourLlm.reduce((sum, m) => sum + (m.cost ?? 0), 0);
     if (totalCost > 5) {
-      const rule = alertRules.find((r) => r.id === "llm-high-cost")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "llm-high-cost");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Rate limit
     const fiveMinLlm = recentLlm.filter((m) => m.timestamp >= fiveMinAgo);
     if (fiveMinLlm.length > 50) {
-      const rule = alertRules.find((r) => r.id === "llm-rate-limit")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "llm-rate-limit");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // High latency
     if (hourLlm.length > 0) {
       const avgLatency = hourLlm.reduce((s, m) => s + m.latencyMs, 0) / hourLlm.length;
       if (avgLatency > 10000) {
-        const rule = alertRules.find((r) => r.id === "llm-high-latency")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "llm-high-latency");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
       }
     }
 
     // Cost anomaly
     for (const m of recentLlm) {
       if (m.cost && m.cost > 0.5) {
-        const rule = alertRules.find((r) => r.id === "llm-cost-anomaly")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "llm-cost-anomaly");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
@@ -477,16 +477,16 @@ export const evaluate = mutation({
     // Token budget
     for (const m of recentLlm) {
       if (m.totalTokens > 1000000) {
-        const rule = alertRules.find((r) => r.id === "llm-token-budget")!;
-        await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        const rule = alertRules.find((r) => r.id === "llm-token-budget");
+        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
         break;
       }
     }
 
     // No successful calls (all providers down)
     if (fiveMinLlm.length === 0 && recentLlm.length > 0) {
-      const rule = alertRules.find((r) => r.id === "llm-all-providers-down")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "llm-all-providers-down");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // --- SECURITY checks ---
@@ -502,8 +502,8 @@ export const evaluate = mutation({
       (e) => e.severity === "critical" && e.timestamp >= oneHourAgo
     );
     if (criticalSec.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-critical-event")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-critical-event");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Many high-severity
@@ -511,8 +511,8 @@ export const evaluate = mutation({
       (e) => e.severity === "high" && e.timestamp >= oneHourAgo
     );
     if (highSec.length > 5) {
-      const rule = alertRules.find((r) => r.id === "sec-many-high-severity")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-many-high-severity");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Unmitigated events
@@ -520,15 +520,15 @@ export const evaluate = mutation({
       (e) => !e.mitigated && e.timestamp <= thirtyMinAgo
     );
     if (unmitigated.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-unmitigated")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-unmitigated");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // High frequency
     const tenMinSec = recentSecurity.filter((e) => e.timestamp >= tenMinAgo);
     if (tenMinSec.length > 20) {
-      const rule = alertRules.find((r) => r.id === "sec-high-frequency")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-high-frequency");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Permission violations
@@ -536,8 +536,8 @@ export const evaluate = mutation({
       (e) => e.eventType === "permission_violation" && e.timestamp >= oneHourAgo
     );
     if (permViolations.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-permission-violation")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-permission-violation");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Injection attempts
@@ -545,8 +545,8 @@ export const evaluate = mutation({
       (e) => e.eventType === "injection_attempt" && e.timestamp >= oneHourAgo
     );
     if (injections.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-injection-attempt")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-injection-attempt");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Privilege escalation
@@ -554,8 +554,8 @@ export const evaluate = mutation({
       (e) => e.eventType === "privilege_escalation" && e.timestamp >= oneHourAgo
     );
     if (privEsc.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-privilege-escalation")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-privilege-escalation");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // RLS bypass
@@ -563,8 +563,8 @@ export const evaluate = mutation({
       (e) => e.eventType === "rls_bypass" && e.timestamp >= oneHourAgo
     );
     if (rlsBypass.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sec-rls-bypass")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sec-rls-bypass");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // --- SELF-HEALING checks ---
@@ -580,8 +580,8 @@ export const evaluate = mutation({
       (e) => e.outcome === "failed" && e.timestamp >= oneHourAgo
     );
     if (failedHealing.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sh-component-failure")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-component-failure");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Recovery failed
@@ -589,8 +589,8 @@ export const evaluate = mutation({
       (e) => e.outcome === "failed" && (e.action === "restart" || e.action === "retry") && e.timestamp >= oneHourAgo
     );
     if (recoveryFailed.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sh-recovery-failed")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-recovery-failed");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Escalation triggered
@@ -598,8 +598,8 @@ export const evaluate = mutation({
       (e) => e.action === "escalate" && e.timestamp >= oneHourAgo
     );
     if (escalations.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sh-escalation-triggered")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-escalation-triggered");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Too many retries
@@ -607,8 +607,8 @@ export const evaluate = mutation({
       (e) => e.action === "retry" && e.timestamp >= oneHourAgo
     );
     if (retries.length > 5) {
-      const rule = alertRules.find((r) => r.id === "sh-too-many-retries")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-too-many-retries");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Rollbacks
@@ -616,8 +616,8 @@ export const evaluate = mutation({
       (e) => e.action === "rollback" && e.timestamp >= oneHourAgo
     );
     if (rollbacks.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sh-version-rollback")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-version-rollback");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Pending too long
@@ -625,8 +625,8 @@ export const evaluate = mutation({
       (e) => e.outcome === "pending" && e.timestamp <= fifteenMinAgo
     );
     if (pendingHealing.length > 0) {
-      const rule = alertRules.find((r) => r.id === "sh-pending-too-long")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-pending-too-long");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Cascading failure (3+ different components failing in 5 min)
@@ -635,14 +635,14 @@ export const evaluate = mutation({
     );
     const failedComponents = new Set(fiveMinFailed.map((e) => e.component));
     if (failedComponents.size >= 3) {
-      const rule = alertRules.find((r) => r.id === "sh-cascading-failure")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-cascading-failure");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Multiple components down
     if (failedComponents.size >= 2) {
-      const rule = alertRules.find((r) => r.id === "sh-multiple-components-down")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-multiple-components-down");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     // Manual intervention needed (all auto recovery exhausted)
@@ -653,8 +653,8 @@ export const evaluate = mutation({
       (e) => e.action === "escalate" && e.outcome === "failed" && e.timestamp >= oneHourAgo
     );
     if (escalated.length > 0 && allFailed.length > 5) {
-      const rule = alertRules.find((r) => r.id === "sh-manual-intervention")!;
-      await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+      const rule = alertRules.find((r) => r.id === "sh-manual-intervention");
+      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
     }
 
     return { evaluated: alertRules.length, created: created.length, alerts: created };
