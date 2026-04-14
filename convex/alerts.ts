@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { alertRules } from "./alertRules";
@@ -710,5 +710,35 @@ export const evaluateInternal = internalMutation({
     }
 
     return { evaluated: alertRules.length, created: created.length, alerts: created };
+  },
+});
+
+// ============================================================
+// INTERNAL HELPERS (for webhookDelivery action)
+// ============================================================
+
+export const getById = internalQuery({
+  args: {
+    id: v.id("alerts"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
+
+export const updateWebhookStatus = internalMutation({
+  args: {
+    id: v.id("alerts"),
+    status: v.string(),
+    deliveredAt: v.optional(v.float64()),
+    attempts: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const { id, status, deliveredAt, attempts } = args;
+    await ctx.db.patch(id, {
+      webhookStatus: status,
+      ...(deliveredAt !== undefined ? { webhookDeliveredAt: deliveredAt } : {}),
+      ...(attempts !== undefined ? { webhookAttempts: attempts } : {}),
+    });
   },
 });
