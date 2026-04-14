@@ -1,7 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, test } from "vitest";
 import { classifyNotification } from "../notifications";
-
-import { describe, test } from "vitest";
 
 describe("classifyNotification", () => {
   it("routes critical severity to alert type", () => {
