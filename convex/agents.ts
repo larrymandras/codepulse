@@ -107,18 +107,18 @@ export const detail = query({
       .order("desc")
       .take(20);
 
-    // Get event count for this agent's session
-    const sessionEvents = await ctx.db
-      .query("events")
-      .withIndex("by_session", (q) => q.eq("sessionId", agent.sessionId))
-      .take(500);
+    // Get event count from the session record (avoids loading up to 500 events just to count)
+    const sessionData = await ctx.db
+      .query("sessions")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", agent.sessionId))
+      .first();
 
     return {
       ...agent,
       coordination: [...outgoing, ...incoming]
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 30),
-      eventCount: sessionEvents.length,
+      eventCount: sessionData?.eventCount ?? 0,
     };
   },
 });
