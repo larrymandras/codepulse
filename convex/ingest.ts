@@ -1,5 +1,5 @@
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { classifyNotification } from "./notifications";
 
 const corsHeaders = {
@@ -104,6 +104,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
         sessionId: sessionId ?? "unknown",
         status: eventType === "session_end" ? "completed" : "errored",
       });
+      await ctx.runMutation(internal.briefings.onSessionCompleted, { sessionId: sessionId ?? "unknown" });
     }
 
     // 8. Subagent tracking from hooks
@@ -175,6 +176,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
         sessionId: sid,
         status: "completed",
       });
+      await ctx.runMutation(internal.briefings.onSessionCompleted, { sessionId: sid });
     }
 
     // TaskCompleted — agent coordination
