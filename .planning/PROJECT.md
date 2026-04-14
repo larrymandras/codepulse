@@ -40,6 +40,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Ideation Findings panel with status workflow (open/acknowledged/converted/dismissed), batch task conversion, bidirectional linking (Validated in Phase 4)
 - Config Editor with inline diff preview, hot-reload status bar, revert-to-saved (Validated in Phase 4)
 - Cron management with visual builder, frequency presets, live human-readable previews, interactive job controls (Validated in Phase 4)
+- Time-series aggregation with hourly compute + daily rollup cron jobs (Validated in Phase 5)
+- Data retention with configurable archival (1-365 days), 500-row batch processing, archived-row filters on all high-volume queries (Validated in Phase 5)
+- Cursor-based pagination across all 7 list-view domains with shared LoadMoreButton component (Validated in Phase 5)
+- Analytics page consuming pre-computed aggregates instead of raw table scans (Validated in Phase 5)
 
 ### Active
 
@@ -95,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 4 (task-management) completion*
+*Last updated: 2026-04-14 after Phase 5 (data-pipeline) completion*
