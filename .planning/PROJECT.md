@@ -36,6 +36,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Unified Inbox with keyboard navigation (j/k/Enter/A/R/Escape) (Validated in Phase 3)
 - RunTimeline nested accordion with Flow DAG visualization (Validated in Phase 3)
 - Insights Chat with LLM-powered Convex backend action (Validated in Phase 3)
+- 6-column Kanban board with collapsible columns, rich task cards, drag-and-drop with action column confirmation (Validated in Phase 4)
+- Ideation Findings panel with status workflow (open/acknowledged/converted/dismissed), batch task conversion, bidirectional linking (Validated in Phase 4)
+- Config Editor with inline diff preview, hot-reload status bar, revert-to-saved (Validated in Phase 4)
+- Cron management with visual builder, frequency presets, live human-readable previews, interactive job controls (Validated in Phase 4)
 
 ### Active
 
@@ -91,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after Phase 3 (interaction-layer) completion*
+*Last updated: 2026-04-14 after Phase 4 (task-management) completion*
