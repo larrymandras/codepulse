@@ -186,7 +186,13 @@ Plans:
   5. Activity changelog auto-generates "what did Astridr accomplish today?" from events
   6. Ideation briefings weave proactive scan findings into daily digest
   7. Memory page shows quality metrics: deduplication rate, contradiction resolution, staleness indicators
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 07-01-PLAN.md — Schema tables (briefings, anomalyEvents, memoryQuality), cron registrations, Wave 0 test stubs
+- [ ] 07-02-PLAN.md — Cost forecasting: moving average query, budget config, CostForecastPanel on Analytics, Settings budget cap
+- [ ] 07-03-PLAN.md — Briefings: LLM actions with dual-provider failover, daily digest cron, Briefings page rewrite, LLMProviderConfig on Settings
+- [ ] 07-04-PLAN.md — Anomaly detection: z-score computation, alert auto-creation, AnomalyBadge on Analytics MetricCards
+- [ ] 07-05-PLAN.md — Memory quality: dedup rate, staleness, LLM contradiction detection, Quality tab on Memory page
 **UI hint**: yes
 
 ### Phase 58: Infrastructure Layer
@@ -236,9 +242,9 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 4. Task Management | 0/6 | Planned | - |
 | 5. Data Pipeline | 0/5 | Planned | - |
 | 6. Alert Routing | 0/5 | Planned | - |
-| 7. Intelligence Layer | 0/TBD | Not started | - |
+| 7. Intelligence Layer | 0/5 | Planned | - |
 | 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 6 (Alert Routing) planned: 5 plans across 3 waves (Wave 1 schema+stubs, Wave 2 backend lifecycle+webhook engine, Wave 3 Settings UI+Alerts UI).*
+*Last updated: 2026-04-14 — Phase 7 (Intelligence Layer) planned: 5 plans across 3 waves (Wave 1 schema+stubs, Wave 2 forecasting+briefings+anomalies parallel, Wave 3 memory quality).*
