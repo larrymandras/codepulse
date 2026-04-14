@@ -57,7 +57,7 @@ Inherited from Phase 1. All new Phase 5 UI elements use these exact values.
 | Role | Size | Weight | Line Height | Notes |
 |------|------|--------|-------------|-------|
 | Body | 14px | 400 (regular) | 1.5 | All form labels, table content, list rows |
-| Label | 12px | 500 (medium) | 1.4 | Input labels, muted metadata, section headers |
+| Label | 12px | 400 (regular) | 1.4 | Input labels, muted metadata, section headers |
 | Heading | 16px | 600 (semibold) | 1.3 | Settings section headings, panel titles |
 | Display | 20px | 600 (semibold) | 1.2 | Page-level titles only |
 
@@ -75,13 +75,13 @@ Phase 1 established a monochromatic oklch palette (dark theme primary). All Phas
 |------|-----------|-------------------|-------|
 | Dominant (60%) | `--background` | `oklch(0.145 0 0)` | Page background, primary surfaces |
 | Secondary (30%) | `--card` / `--sidebar` | `oklch(0.205 0 0)` | Settings card surface, sidebar, nav |
-| Accent (10%) | `--primary` | `oklch(0.922 0 0)` | "Load more" button, retention save button, active input ring |
+| Accent (10%) | `--primary` | `oklch(0.922 0 0)` | "Load more" button, "Update Retention" button, active input ring |
 | Destructive | `--destructive` | `oklch(0.704 0.191 22.216)` | No destructive actions in this phase |
 | Muted text | `--muted-foreground` | `oklch(0.708 0 0)` | Input helper text, empty state body, "no data yet" labels |
 | Status OK | `--status-ok` | `oklch(0.72 0.17 142)` | Aggregate cron last-run success indicator (if displayed) |
 | Status Error | `--status-error` | `oklch(0.72 0.20 27)` | Cron failure state indicator (if displayed) |
 
-Accent reserved for: "Load more" button (all paginated list views), "Save" button on retention threshold control. No other elements use the primary accent.
+Accent reserved for: "Load more" button (all paginated list views), "Update Retention" button on retention threshold control. No other elements use the primary accent.
 
 Source: `src/index.css` dark mode variables — Phase 1 established.
 
@@ -96,10 +96,10 @@ Source: `src/index.css` dark mode variables — Phase 1 established.
 A single numeric input with inline save, placed in a new "Data Retention" section on `src/pages/Settings.tsx`.
 
 - **Section header:** uppercase `tracking-wide text-xs text-muted-foreground` with a horizontal separator below — matches existing SectionHeader pattern
-- **Label:** "Retention period" at 12px / weight 500 / `text-muted-foreground`
+- **Label:** "Retention period" at 12px / weight 400 / `text-muted-foreground`
 - **Input:** Number input, right-aligned value, `w-20` width, displays integer days (1–365). Uses `--input` border color, `--background` fill, no rounded corners.
-- **Suffix:** "days" text label immediately right of input, 12px / muted
-- **Save button:** "Save" label, primary accent styling, width auto. Disabled when value is unchanged from stored value. Shows loading spinner (Lucide `Loader2` 16px) while mutation is pending.
+- **Suffix:** "days" text label immediately right of input, 12px / weight 400 / muted
+- **Save button:** "Update Retention" label, primary accent styling, width auto. Disabled when value is unchanged from stored value. Shows loading spinner (Lucide `Loader2` 16px) while mutation is pending.
 - **Helper text:** 14px / `text-muted-foreground` / line-height 1.5 — "Events older than this threshold are automatically archived. Minimum 1 day, maximum 365 days."
 - **Validation:** Input clamped to min=1 max=365. If user enters out-of-range value, input border switches to `--destructive` and save button is disabled. No toast — inline error only.
 - **Inline error:** 12px / `--status-error` color — "Enter a value between 1 and 365 days."
@@ -127,8 +127,8 @@ Pages affected: Events, Sessions, Agents, Executions, Alerts, LLM Calls, Securit
 | Default | `--input` border, `--background` fill |
 | Focus | `--ring` outline at 50% opacity |
 | Invalid | `--destructive` border + inline error text |
-| Saving | Save button shows `Loader2` spinner, input disabled |
-| Saved | Save button returns to default; no toast required |
+| Saving | "Update Retention" button shows `Loader2` spinner, input disabled |
+| Saved | "Update Retention" button returns to default; no toast required |
 
 ### "Load more" Button
 
@@ -144,7 +144,7 @@ Pages affected: Events, Sessions, Agents, Executions, Alerts, LLM Calls, Securit
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (retention) | "Save" |
+| Primary CTA (retention) | "Update Retention" |
 | Primary CTA (pagination) | "Load more" |
 | Empty state heading | "No data yet" |
 | Empty state body | "Events will appear here as Ástríðr runs." |
@@ -182,6 +182,7 @@ Source: RESEARCH.md — "No new dependencies required." Components.json shows `"
 | No "You've reached the end" exhausted state | Convex `usePaginatedQuery` `Exhausted` status — silently render nothing; clean list termination |
 | Retention section in Settings (not a separate page) | D-07 explicitly targets Settings page; single config value does not warrant a new route |
 | No visual aggregate status dashboard | Phase 5 is backend-only; cron job status visible in Convex dashboard, not CodePulse UI |
+| Label weight collapsed to 400 (from 500) | Typography contract allows only 2 weights. Label role uses muted styling via `text-muted-foreground` — color conveys hierarchy without a third weight |
 
 ---
 
