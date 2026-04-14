@@ -127,9 +127,9 @@ export default function Settings() {
   const updateEmail = useMutation(api.profiles.updateEmail);
 
   const PROFILE_DEFAULTS: Record<string, { label: string; email: string }> = {
-    personal: { label: "Personal", email: "mandrasle@gmail.com" },
-    business: { label: "Business", email: "lmandras@myprotectall.com" },
-    consulting: { label: "Consulting", email: "mandrasle@gmail.com" },
+    personal: { label: "Personal", email: import.meta.env.VITE_EMAIL_PERSONAL ?? "" },
+    business: { label: "Business", email: import.meta.env.VITE_EMAIL_BUSINESS ?? "" },
+    consulting: { label: "Consulting", email: import.meta.env.VITE_EMAIL_CONSULTING ?? "" },
   };
 
   const [emailEdits, setEmailEdits] = useState<Record<string, string>>({});
