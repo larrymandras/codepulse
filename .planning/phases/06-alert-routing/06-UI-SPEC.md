@@ -51,7 +51,7 @@ Declared values (multiples of 4, 8-point base):
 | 2xl | 48px | Major section breaks within Settings page |
 | 3xl | 64px | Page-level top padding |
 
-Exceptions: Touch targets for mute/acknowledge icon buttons minimum 44px (accessibility — WCAG 2.5.5). Condition builder AND/OR operator pills use 6px vertical padding (between xs and sm) to stay visually compact inside the rule form.
+Exceptions: Touch targets for mute/acknowledge icon buttons minimum 44px (accessibility — WCAG 2.5.5). Condition builder AND/OR operator pills use 4px vertical padding (xs token) with 8px horizontal padding (sm token) to stay visually compact inside the rule form.
 
 ---
 
@@ -212,6 +212,8 @@ Metric selector uses shadcn `Select` component populated from the existing rule 
 
 ### Alerts Page additions
 
+**Primary focal point:** The severity filter tab bar (All / Critical / Error / Warning / Info) is the primary visual anchor of the Alerts page. It sits at the top of the content area, and the active tab's accent treatment and the count badges on Critical and Error tabs draw the eye first on arrival. Active alert count badges on Critical and Error tabs are the first elements the user is expected to read.
+
 Existing tabs (All / Critical / Error / Warning / Info) are preserved. Each alert row gains a right-side action cluster:
 - `[Acknowledge]` button — ghost, text-sm
 - `[Mute ▾]` button — ghost, text-sm, opens MuteDurationPicker popover
@@ -237,7 +239,7 @@ Two new sections appended after the existing sections in `Settings.tsx`:
 
 Two new columns per rule row:
 - Threshold override input (numeric, shows current default as placeholder, appears on row hover)
-- Mute toggle (clock icon button)
+- Mute toggle: clock icon button with `aria-label="Mute rule"` and a shadcn `Tooltip` showing "Mute rule" on hover — no visible text label
 
 New header button: "+ New Custom Rule" — triggers AlertRuleForm Sheet
 
