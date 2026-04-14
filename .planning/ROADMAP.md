@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Data Pipeline** - Aggregation tables, retention policies, paginated queries
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
-- [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven) (completed 2026-04-13)
+- [ ] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search
 
 ## Phase Details
 
@@ -196,7 +196,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 58: Infrastructure Layer
-**Goal**: Capabilities page displays a live command catalog received over WebSocket, showing all registered slash commands grouped by category with expand/collapse details
+**Goal**: Capabilities page displays a live command catalog received over WebSocket, showing all registered slash commands grouped by category with expand/collapse details, collapsible page sections, and dynamic search placeholder
 **Depends on**: Existing WebSocket infrastructure (AstridrWSContext from Phase 56)
 **Ástríðr dependency**: v4.0 Phase 58 (manifest-driven lazy tool loading + command registry)
 **Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-05, INFRA-06
@@ -206,10 +206,11 @@ Plans:
   3. Category filter pills filter the command list
   4. Search input on Capabilities page includes commands in its scope
   5. Connection states handled: loading spinner, error message, empty state
-**Plans**: 2 plans
+  6. All Capabilities page sections are collapsible with expand/collapse toggle
+  7. Search placeholder dynamically generated from mounted panels
+**Plans**: 1 plan
 Plans:
-- [x] 58-01-PLAN.md — CommandEntry type, useCommandCatalog hook, CommandCatalogPanel component with tests
-- [x] 58-02-PLAN.md — Capabilities page integration (MetricCard update, panel wiring, search scope)
+- [ ] 58-01-PLAN.md — Status field on CommandEntry, collapsible sections, dynamic search placeholder, test update, visual verification
 **UI hint**: yes
 
 ## Execution Order
@@ -243,8 +244,8 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 5. Data Pipeline | 0/5 | Planned | - |
 | 6. Alert Routing | 0/5 | Planned | - |
 | 7. Intelligence Layer | 0/5 | Planned | - |
-| 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
+| 58. Infrastructure Layer | 0/1 | Replanned | - |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 7 (Intelligence Layer) planned: 5 plans across 3 waves (Wave 1 schema+stubs, Wave 2 forecasting+briefings+anomalies parallel, Wave 3 memory quality).*
+*Last updated: 2026-04-14 — Phase 58 (Infrastructure Layer) replanned: consolidated from 2 plans to 1 plan covering D-02 (status field), D-06/D-07 (collapsible sections), D-12 (dynamic placeholder).*
