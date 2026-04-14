@@ -13,6 +13,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { NotificationPreferences } from "../components/NotificationPreferences";
+import LLMProviderConfig from "../components/LLMProviderConfig";
 import type { AgentProfile } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -186,6 +187,14 @@ function IntelligenceSettings() {
             Monthly spending cap for cost forecasting. Set to 0 or leave blank to disable budget tracking.
           </p>
         </div>
+
+        {/* LLM Providers subsection */}
+        <h4 className="text-xs font-normal uppercase tracking-wide text-muted-foreground mt-6">
+          LLM Providers
+        </h4>
+        <SectionErrorBoundary name="LLM Provider Config">
+          <LLMProviderConfig />
+        </SectionErrorBoundary>
       </div>
     </div>
   );
