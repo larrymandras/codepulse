@@ -10,6 +10,7 @@
 
 import type * as activeTime from "../activeTime.js";
 import type * as aggregates from "../aggregates.js";
+import type * as anomalyDetection from "../anomalyDetection.js";
 import type * as briefings from "../briefings.js";
 import type * as agentProfiles from "../agentProfiles.js";
 import type * as agents from "../agents.js";
@@ -93,6 +94,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activeTime: typeof activeTime;
   aggregates: typeof aggregates;
+  anomalyDetection: typeof anomalyDetection;
   briefings: typeof briefings;
   agentProfiles: typeof agentProfiles;
   agents: typeof agents;

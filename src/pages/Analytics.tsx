@@ -20,6 +20,7 @@ import ActiveTimeChart from "../components/ActiveTimeChart";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
+import AnomalyBadge from "../components/AnomalyBadge";
 
 export default function Analytics() {
   const { events } = useRecentEvents(100);
@@ -31,6 +32,8 @@ export default function Analytics() {
   // Swap 3: event counts aggregate for Total Events MetricCard
   const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
   const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
+
+  const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies) ?? {};
 
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
@@ -49,10 +52,32 @@ export default function Analytics() {
 
       {/* Summary row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
+        <div className="flex items-start gap-2">
+          <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
+          {anomalies.errors && (
+            <AnomalyBadge
+              severity={anomalies.errors.severity as "warning" | "critical"}
+              metric="errors"
+              value={anomalies.errors.value}
+              mean={anomalies.errors.mean}
+              zScore={anomalies.errors.zScore}
+            />
+          )}
+        </div>
         <MetricCard label="LLM Calls" value={llmCalls.length} />
         <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
-        <MetricCard label="Total Cost" value={formatCost(totalCost)} />
+        <div className="flex items-start gap-2">
+          <MetricCard label="Total Cost" value={formatCost(totalCost)} />
+          {anomalies.cost && (
+            <AnomalyBadge
+              severity={anomalies.cost.severity as "warning" | "critical"}
+              metric="cost"
+              value={anomalies.cost.value}
+              mean={anomalies.cost.mean}
+              zScore={anomalies.cost.zScore}
+            />
+          )}
+        </div>
       </div>
 
       {/* Cost Trend — full width */}
