@@ -23,6 +23,18 @@ export const computeHourly = internalMutation({
       const key = `${r.provider}::${r.model}`;
       costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
     }
+    // Check if this hour has already been aggregated (idempotency guard)
+    const existingCost = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "cost").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .first();
+    if (existingCost) {
+      // Already computed for this hour — skip to avoid double-inserting
+      return;
+    }
+
     for (const [dim, value] of Object.entries(costByDim)) {
       const [provider, model] = dim.split("::");
       await ctx.db.insert("aggregates", {
