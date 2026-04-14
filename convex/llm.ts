@@ -35,6 +35,7 @@ export const recentCalls = query({
       .query("llmMetrics")
       .withIndex("by_timestamp")
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(50);
   },
 });
@@ -42,7 +43,9 @@ export const recentCalls = query({
 export const costByProvider = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("llmMetrics").collect();
+    const all = await ctx.db.query("llmMetrics")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
     const grouped: Record<string, number> = {};
     for (const record of all) {
       grouped[record.provider] =
@@ -55,7 +58,9 @@ export const costByProvider = query({
 export const costByModel = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("llmMetrics").collect();
+    const all = await ctx.db.query("llmMetrics")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
     const grouped: Record<string, { calls: number; tokens: number; cost: number }> = {};
     for (const r of all) {
       const key = r.model;
@@ -71,7 +76,9 @@ export const costByModel = query({
 export const providerBreakdown = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("llmMetrics").collect();
+    const all = await ctx.db.query("llmMetrics")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
     const grouped: Record<string, { calls: number; totalLatency: number; cost: number }> = {};
     for (const r of all) {
       if (!grouped[r.provider]) grouped[r.provider] = { calls: 0, totalLatency: 0, cost: 0 };
@@ -95,6 +102,7 @@ export const costOverTime = query({
       .query("llmMetrics")
       .withIndex("by_timestamp")
       .order("asc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     return all.map((r) => ({
       timestamp: r.timestamp,
@@ -112,6 +120,7 @@ export const latencyOverTime = query({
       .query("llmMetrics")
       .withIndex("by_timestamp")
       .order("asc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     return all.map((r) => ({
       timestamp: r.timestamp,
@@ -131,6 +140,7 @@ export const rollupCosts = internalMutation({
       .query("llmMetrics")
       .withIndex("by_timestamp")
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(1000);
 
     const dayMetrics = recent.filter((m) => m.timestamp >= oneDayAgo);
