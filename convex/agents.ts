@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 export const register = mutation({
   args: {
@@ -72,6 +73,16 @@ export const listAll = query({
       .query("agents")
       .order("desc")
       .take(200);
+  },
+});
+
+export const listAllPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("agents")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 

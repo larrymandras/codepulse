@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { alertRules } from "./alertRules";
 
 export const create = mutation({
@@ -58,6 +59,16 @@ export const listAll = query({
       .query("alerts")
       .order("desc")
       .take(limit);
+  },
+});
+
+export const listAllPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("alerts")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 

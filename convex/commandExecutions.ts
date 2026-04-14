@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 /**
  * Upsert a command execution lifecycle record.
@@ -88,6 +89,20 @@ export const listExecutions = query({
       if (args.origin !== undefined && r.origin !== args.origin) return false;
       return true;
     });
+  },
+});
+
+/**
+ * Paginated list of command executions ordered by queuedAt descending.
+ */
+export const listExecutionsPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("commandExecutions")
+      .withIndex("by_queuedAt")
+      .order("desc")
+      .paginate(args.paginationOpts);
   },
 });
 
