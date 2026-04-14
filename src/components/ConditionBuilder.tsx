@@ -50,14 +50,13 @@ interface ConditionBuilderProps {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+// Only metrics with backend evaluation support in alerts.ts evaluateCondition.
+// Pending backend implementation: cost_per_hour, stall_duration, security_blocks,
+// execution_failures, latency_p95, memory_usage
 const METRICS = [
-  "cost_per_hour",
   "error_rate",
-  "stall_duration",
-  "security_blocks",
-  "execution_failures",
-  "latency_p95",
-  "memory_usage",
+  "event_count",
+  "error_count",
 ];
 
 const OPERATORS = [
