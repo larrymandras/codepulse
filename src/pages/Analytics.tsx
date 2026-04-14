@@ -21,8 +21,8 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
 export default function Analytics() {
-  const events = useRecentEvents(100);
-  const llmCalls = useLlmMetrics();
+  const { events } = useRecentEvents(100);
+  const { calls: llmCalls } = useLlmMetrics();
   // Swap 1: costByProvider now reads from pre-computed aggregates (D-11, DP-02)
   const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
   // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)

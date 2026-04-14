@@ -3,7 +3,7 @@ import { formatCost } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 
 export default function LlmProviderPanel() {
-  const calls = useLlmMetrics();
+  const { calls } = useLlmMetrics();
 
   const totalCalls = calls.length;
   const totalTokens = calls.reduce(

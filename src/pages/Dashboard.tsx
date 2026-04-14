@@ -20,7 +20,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 type ChartTab = "pulse" | "timeline";
 
 export default function Dashboard() {
-  const events = useRecentEvents(100);
+  const { events } = useRecentEvents(100);
   const [chartTab, setChartTab] = useState<ChartTab>("pulse");
 
   // Live WS state for metric delta overlay on hero stats

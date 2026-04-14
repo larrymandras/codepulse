@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useMutation } from "convex/react";
+import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Loader2 } from "lucide-react";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { useProfileConfigs } from "../hooks/useProfileConfigs";
@@ -44,6 +45,74 @@ function Toggle({
         />
       </div>
     </button>
+  );
+}
+
+function RetentionControl() {
+  const currentDays = useQuery(api.archival.getRetentionDays);
+  const setRetention = useMutation(api.archival.setRetentionDays);
+  const [days, setDays] = useState<number>(currentDays ?? 30);
+  const [saving, setSaving] = useState(false);
+
+  // Sync local state when server value loads
+  useEffect(() => {
+    if (currentDays != null) setDays(currentDays);
+  }, [currentDays]);
+
+  const isValid = days >= 1 && days <= 365;
+  const isChanged = days !== (currentDays ?? 30);
+
+  const handleSave = async () => {
+    if (!isValid || !isChanged) return;
+    setSaving(true);
+    try {
+      await setRetention({ days });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 border-b border-border pb-2">
+        <h3 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+          Data Retention
+        </h3>
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <label className="text-xs text-muted-foreground">Retention period</label>
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
+            disabled={saving}
+            className={`w-20 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+              !isValid ? "border-destructive" : "border-input"
+            } focus:outline-none focus:ring-1 focus:ring-ring/50`}
+          />
+          <span className="text-xs text-muted-foreground">days</span>
+          <button
+            onClick={handleSave}
+            disabled={!isValid || !isChanged || saving}
+            className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Update Retention
+          </button>
+        </div>
+        {!isValid && (
+          <p className="text-xs text-[hsl(var(--status-error))]">
+            Enter a value between 1 and 365 days.
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          Events older than this threshold are automatically archived. Minimum 1 day, maximum 365 days.
+        </p>
+      </div>
+    </div>
   );
 }
 
@@ -444,6 +513,13 @@ export default function Settings() {
         <p className="text-[10px] text-gray-600 mt-3">
           Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Data Retention */}
+      <SectionErrorBoundary name="Data Retention">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <RetentionControl />
       </div>
       </SectionErrorBoundary>
 
