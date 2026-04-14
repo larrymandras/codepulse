@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: true
 preset: new-york / neutral / radius-0
 created: 2026-04-14
+revised: 2026-04-14
 ---
 
 # Phase 7 — UI Design Contract
@@ -33,8 +34,8 @@ Declared values (multiples of 4, standard 8-point scale):
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon gaps, inline badge padding, tight label spacing |
-| sm | 8px | Compact element spacing, badge gap from parent |
+| xs | 4px | Icon gaps, inline badge padding (`py-1`), tight label spacing |
+| sm | 8px | Compact element spacing, badge horizontal padding (`px-2`), badge gap from parent |
 | md | 16px | Default element spacing, card internal padding |
 | lg | 24px | Section padding, stat row gaps |
 | xl | 32px | Layout gaps between major panels |
@@ -43,7 +44,7 @@ Declared values (multiples of 4, standard 8-point scale):
 
 Exceptions:
 - Tab bar hit targets: 44px min-height (accessibility)
-- AnomalyBadge inline: 6px vertical padding (0.375rem), 10px horizontal (0.625rem) — falls between xs/sm, justified by badge density
+- AnomalyBadge inline: `py-1` (4px vertical) / `px-2` (8px horizontal) — compact badge using standard scale values
 
 ---
 
@@ -92,6 +93,18 @@ Source: `src/index.css` oklch palette, CONTEXT.md D-09/D-11, RESEARCH.md Anomaly
 
 ---
 
+## Screen Focal Points
+
+One primary focal point per modified page. The executor must ensure this element receives the highest visual weight on initial load.
+
+| Page | Primary Focal Point |
+|------|---------------------|
+| Analytics | CostForecastPanel stat boxes (three projected spend values in `text-2xl font-semibold`) at the top of the page — operators land here to understand budget posture before reading any other metric |
+| Briefings | Most recent daily digest entry at the top of the timeline feed — date header in `text-base font-semibold` and one-line summary give immediate at-a-glance value before expansion |
+| Memory | Quality tab stats row (Dedup Rate, Stale Memories, Contradictions as StatCards in `text-2xl font-semibold`) — these numbers answer the health question on first glance |
+
+---
+
 ## Component Inventory
 
 Existing shadcn components already installed (no new installs required for this phase):
@@ -133,6 +146,7 @@ New custom components to build:
 ### Anomaly Badges (inline on MetricCards — D-11)
 - Rendered as a small tag appended to the MetricCard value row (right-aligned)
 - "WARN" label for 2σ, "ANOMALY" label for 3σ
+- Padding: `py-1 px-2` (4px vertical, 8px horizontal — standard scale)
 - Hover/focus shows shadcn Tooltip with: metric name, current value, expected range, z-score
 - Clicking the badge navigates to the triggered alert in the Alerts page
 - At most one badge per MetricCard (highest severity wins if multiple anomalies)
@@ -155,9 +169,9 @@ New custom components to build:
 
 ### Settings — Intelligence Config (new section)
 - Section header: "INTELLIGENCE" in uppercase tracking-wide muted-foreground (established SectionHeader pattern)
-- Budget Cap: labeled Input + currency prefix "$" + save button inline
-- LLM Provider: two stacked config rows (Primary, Backup) — each row: provider Select + model Input + API key Input (masked)
-- Staleness threshold: Input (days) with default 30
+- Budget Cap: labeled Input + currency prefix "$" + "Save Budget Settings" button inline
+- LLM Provider: two stacked config rows (Primary, Backup) — each row: provider Select + model Input + API key Input (masked) + "Save Provider Config" button
+- General intelligence config (staleness threshold, digest cron time): "Save Intelligence Config" button
 - All saves use optimistic UI: button goes to "Saving…" state then "Saved" for 2 seconds
 
 ---
@@ -167,7 +181,8 @@ New custom components to build:
 | Element | Copy |
 |---------|------|
 | Primary CTA — Briefings | "Generate Digest" |
-| Primary CTA — Settings save | "Save Changes" |
+| Primary CTA — Settings budget save | "Save Budget Settings" |
+| Primary CTA — Settings intelligence config save | "Save Intelligence Config" |
 | Primary CTA — LLM config | "Save Provider Config" |
 | Empty state — Briefings feed heading | "No briefings yet" |
 | Empty state — Briefings feed body | "Daily digests generate automatically at 6:00 AM UTC. Session briefings appear here after each completed session." |
