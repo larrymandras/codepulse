@@ -35,7 +35,7 @@ export const getChannels = query({
  */
 export const setChannel = mutation({
   args: {
-    channel: v.string(),
+    channel: v.union(v.literal("discord"), v.literal("slack")),
     url: v.string(),
   },
   handler: async (ctx, args) => {
@@ -70,7 +70,7 @@ export const setChannel = mutation({
  */
 export const removeChannel = mutation({
   args: {
-    channel: v.string(),
+    channel: v.union(v.literal("discord"), v.literal("slack")),
   },
   handler: async (ctx, args) => {
     const configKey = `webhook-${args.channel}-url`;
