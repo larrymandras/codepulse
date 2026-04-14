@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { useSecurityEvents } from "../hooks/useSecurityEvents";
+import { useSecurityEventsPaginated } from "../hooks/useSecurityEvents";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { useLiveFlash } from "../hooks/useLiveFlash";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import SecurityStats from "../components/SecurityStats";
 import SecurityEventFeed from "../components/SecurityEventFeed";
 import InfoTooltip from "../components/InfoTooltip";
+import LoadMoreButton from "../components/LoadMoreButton";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -42,7 +43,7 @@ export default function Security() {
   const { subscribeEvent } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
 
-  const convexEvents = useSecurityEvents();
+  const { events: convexEvents, status: securityStatus, loadMore: loadMoreSecurity } = useSecurityEventsPaginated();
 
   // Merge WS events (prepended) with Convex events
   const mergedEvents = [...wsEvents, ...convexEvents];
@@ -131,6 +132,7 @@ export default function Security() {
       {/* Security Event Feed */}
       <SectionErrorBoundary name="Security Events">
         <SecurityEventFeed events={filteredEvents} />
+        <LoadMoreButton status={securityStatus} loadMore={loadMoreSecurity} />
       </SectionErrorBoundary>
 
       {/* Audit & Compliance */}

@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { useLiveFlash } from "../hooks/useLiveFlash";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import ExecutionTable from "../components/ExecutionTable";
 import ExecutionFilterBar from "../components/ExecutionFilterBar";
+import LoadMoreButton from "../components/LoadMoreButton";
 
 interface FilterState {
   status: string | null;
@@ -32,21 +33,30 @@ export default function Executions() {
 
   const stats = useQuery(api.commandExecutions.summaryStats);
 
-  const executions = useQuery(api.commandExecutions.listExecutions, {
-    ...(filters.status !== null ? { status: filters.status } : {}),
-    ...(filters.profile !== null ? { profileId: filters.profile } : {}),
-    ...(filters.channel !== null ? { channelId: filters.channel } : {}),
-    ...(filters.origin !== null ? { origin: filters.origin } : {}),
-  });
+  const { results: allExecutions, status: execStatus, loadMore: loadMoreExec } = usePaginatedQuery(
+    api.commandExecutions.listExecutionsPaginated,
+    {},
+    { initialNumItems: 25 }
+  );
+
+  // Apply client-side filters over paginated results
+  const executions = useMemo(() => {
+    return allExecutions.filter((e) => {
+      if (filters.status !== null && e.status !== filters.status) return false;
+      if (filters.profile !== null && e.profileId !== filters.profile) return false;
+      if (filters.channel !== null && e.channelId !== filters.channel) return false;
+      if (filters.origin !== null && e.origin !== filters.origin) return false;
+      return true;
+    });
+  }, [allExecutions, filters]);
 
   const profiles = useMemo(() => {
-    if (!executions) return [];
     const seen = new Set<string>();
-    for (const e of executions) {
+    for (const e of allExecutions) {
       if (e.profileId) seen.add(e.profileId);
     }
     return Array.from(seen).sort();
-  }, [executions]);
+  }, [allExecutions]);
 
   const hasActiveFilters = Object.values(filters).some((v) => v !== null);
 
@@ -142,6 +152,7 @@ export default function Executions() {
           Command Executions
         </h2>
         <ExecutionTable executions={executions} hasActiveFilters={hasActiveFilters} />
+        <LoadMoreButton status={execStatus} loadMore={loadMoreExec} />
       </div>
     </div>
   );

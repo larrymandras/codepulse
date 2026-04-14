@@ -20,7 +20,8 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useAllAgents } from "../hooks/useAgentTopology";
+import { useAllAgents, useAllAgentsPaginated } from "../hooks/useAgentTopology";
+import LoadMoreButton from "../components/LoadMoreButton";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import AgentAvatar from "../components/AgentAvatar";
@@ -172,7 +173,7 @@ const AVATAR_STATUS: Record<
 };
 
 export default function Agents() {
-  const allAgents = useAllAgents();
+  const { agents: allAgents, status: agentStatus, loadMore: loadMoreAgents } = useAllAgentsPaginated();
   const profiles = useAgentProfiles();
   const avatars = useAvatars();
   const seedTeams = useMutation(api.seedTeams.seed);
@@ -592,6 +593,7 @@ export default function Agents() {
               )}
             </div>
           )}
+          <LoadMoreButton status={agentStatus} loadMore={loadMoreAgents} />
         </div>
         </SectionErrorBoundary>
       )}

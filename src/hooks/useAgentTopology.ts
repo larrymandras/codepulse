@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export function useRunningAgents() {
@@ -19,4 +19,13 @@ export function useAgentDetail(agentId: string | null) {
 
 export function useCoordinationEvents() {
   return useQuery(api.coordination.recentAll) ?? [];
+}
+
+export function useAllAgentsPaginated(initialNumItems = 25) {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.agents.listAllPaginated,
+    {},
+    { initialNumItems }
+  );
+  return { agents: results ?? [], status, loadMore };
 }

@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export function useActiveAlerts() {
@@ -15,4 +15,13 @@ export function useAllAlerts(limit?: number) {
 
 export function useAlertCounts() {
   return useQuery(api.alerts.countBySeverity) ?? { info: 0, warning: 0, error: 0, critical: 0 };
+}
+
+export function useAllAlertsPaginated(initialNumItems = 25) {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.alerts.listAllPaginated,
+    {},
+    { initialNumItems }
+  );
+  return { alerts: results ?? [], status, loadMore };
 }

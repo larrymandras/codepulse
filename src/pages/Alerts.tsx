@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MetricCard from "../components/MetricCard";
-import { useGroupedAlerts, useAllAlerts, useAlertCounts } from "../hooks/useAlerts";
+import { useGroupedAlerts, useAllAlertsPaginated, useAlertCounts } from "../hooks/useAlerts";
 import AlertRulesEngine from "../components/AlertRulesEngine";
+import LoadMoreButton from "../components/LoadMoreButton";
 
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
 
@@ -44,7 +45,7 @@ export default function Alerts() {
   const [showAll, setShowAll] = useState(false);
 
   const groupedAlerts = useGroupedAlerts();
-  const allAlerts = useAllAlerts(200);
+  const { alerts: allAlerts, status: alertStatus, loadMore: loadMoreAlerts } = useAllAlertsPaginated();
   const counts = useAlertCounts();
 
   const acknowledge = useMutation(api.alerts.acknowledge);
@@ -191,6 +192,8 @@ export default function Alerts() {
           })}
         </div>
       )}
+
+      {showAll && <LoadMoreButton status={alertStatus} loadMore={loadMoreAlerts} />}
 
       {/* Alert Rules Engine */}
       <AlertRulesEngine />

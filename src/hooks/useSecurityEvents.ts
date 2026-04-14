@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
 export function useSecurityEvents() {
@@ -7,4 +7,13 @@ export function useSecurityEvents() {
 
 export function useSecurityCounts() {
   return useQuery(api.security.severityCounts);
+}
+
+export function useSecurityEventsPaginated(initialNumItems = 25) {
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.security.recentEventsPaginated,
+    {},
+    { initialNumItems }
+  );
+  return { events: results ?? [], status, loadMore };
 }
