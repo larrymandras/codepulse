@@ -149,7 +149,7 @@ Metric selector uses shadcn `Select` component populated from the existing rule 
 - Opens as a right-side `Sheet` (480px wide on desktop)
 - Header: rule name (editable input for custom rules, read-only for static), severity badge
 - Body: threshold override fields first, then condition builder (custom rules only)
-- Footer: "Save Rule" primary button + "Cancel" ghost button + "Delete Rule" destructive link (custom rules only)
+- Footer: "Save Rule" primary button + "Discard Changes" ghost button + "Delete Rule" destructive link (custom rules only)
 - Unsaved changes show a `•` indicator in the Sheet header
 
 ### Mute Duration Picker
