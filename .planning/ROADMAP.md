@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 5: Data Pipeline** - Aggregation tables, retention policies, paginated queries
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
-- [ ] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search
+- [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search (completed 2026-04-14)
 
 ## Phase Details
 
@@ -210,7 +210,7 @@ Plans:
   7. Search placeholder dynamically generated from mounted panels
 **Plans**: 1 plan
 Plans:
-- [ ] 58-01-PLAN.md — Status field on CommandEntry, collapsible sections, dynamic search placeholder, test update, visual verification
+- [x] 58-01-PLAN.md — Status field on CommandEntry, collapsible sections, dynamic search placeholder, test update, visual verification
 **UI hint**: yes
 
 ## Execution Order
@@ -244,7 +244,7 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 5. Data Pipeline | 0/5 | Planned | - |
 | 6. Alert Routing | 0/5 | Planned | - |
 | 7. Intelligence Layer | 0/5 | Planned | - |
-| 58. Infrastructure Layer | 0/1 | Replanned | - |
+| 58. Infrastructure Layer | 2/1 | Complete    | 2026-04-14 |
 
 ---
 
