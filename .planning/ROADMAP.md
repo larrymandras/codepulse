@@ -142,7 +142,13 @@ Plans:
   2. Convex cron jobs run on schedule and produce visible aggregate rows for cost, event counts, and error rates
   3. Events older than the configured threshold (default 30 days) are automatically archived without manual intervention
   4. Dashboard list views page through large result sets using server-side cursor pagination — no client-side filtering of full tables
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 05-00-PLAN.md — Wave 0 test stubs (aggregates, archival, pagination)
+- [ ] 05-01-PLAN.md — Schema (aggregates table, archived fields), cron registrations, aggregation + archival mutations, retention config
+- [ ] 05-02-PLAN.md — Archived-row filter audit on all existing queries (llm.ts, analytics.ts, events.ts)
+- [ ] 05-03-PLAN.md — Cursor pagination (backend + frontend hooks), LoadMoreButton component, Settings retention UI
+**UI hint**: yes
 
 ### Phase 6: Alert Routing
 **Goal**: Operators receive notifications within 60 seconds of threshold breaches and can manage alerts without leaving the dashboard
@@ -221,11 +227,11 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 2. Bidirectional Telemetry | 0/4 | Planned | - |
 | 3. Interaction Layer | 0/6 | Planned | - |
 | 4. Task Management | 0/6 | Planned | - |
-| 5. Data Pipeline | 0/TBD | Not started | - |
+| 5. Data Pipeline | 0/4 | Planned | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
 | 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
 
 ---
 
-*Last updated: 2026-04-13 — Phase 4 (Task Management) planned: 6 plans across 3 waves (Wave 1 setup, Wave 2 kanban+ideation+config+cron parallel, Wave 3 tasks page wiring).*
+*Last updated: 2026-04-14 — Phase 5 (Data Pipeline) planned: 4 plans across 3 waves (Wave 1 stubs+schema+crons, Wave 2 archived filters, Wave 3 pagination+retention UI).*
