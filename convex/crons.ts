@@ -52,4 +52,25 @@ crons.interval(
   internal.alertMutes.cleanupExpired
 );
 
+// Phase 7: Daily digest generation at 06:00 UTC
+crons.daily(
+  "generate-daily-digest",
+  { hourUTC: 6, minuteUTC: 0 },
+  internal.briefings.triggerDailyDigest
+);
+
+// Phase 7: Anomaly detection (every 6 hours)
+crons.interval(
+  "detect-anomalies",
+  { hours: 6 },
+  internal.anomalyDetection.evaluateInternal
+);
+
+// Phase 7: Memory quality evaluation (daily at 03:00 UTC)
+crons.daily(
+  "evaluate-memory-quality",
+  { hourUTC: 3, minuteUTC: 0 },
+  internal.memoryQuality.evaluateInternal
+);
+
 export default crons;
