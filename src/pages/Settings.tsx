@@ -11,6 +11,8 @@ import AgentAvatar from "../components/AgentAvatar";
 import AgentProfileEditor from "../components/AgentProfileEditor";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
+import { NotificationChannels } from "../components/NotificationChannels";
+import { NotificationPreferences } from "../components/NotificationPreferences";
 import type { AgentProfile } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -612,6 +614,20 @@ export default function Settings() {
           <p>CodePulse v0.1.0</p>
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>
         </div>
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Notification Channels */}
+      <SectionErrorBoundary name="Notification Channels">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+        <NotificationChannels />
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Notification Preferences */}
+      <SectionErrorBoundary name="Notification Preferences">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+        <NotificationPreferences />
       </div>
       </SectionErrorBoundary>
     </div>
