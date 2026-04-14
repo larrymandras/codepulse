@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 // ---- NEW events table functions ----
 
@@ -126,6 +127,18 @@ export const listPrompts = query({
   },
 });
 
+export const listRecentPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .paginate(args.paginationOpts);
+  },
+});
+
 // ---- LEGACY runtime_events functions (kept for backward compat) ----
 
 export const insertEvent = mutation({
@@ -175,6 +188,18 @@ export const listCritical = query({
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
+  },
+});
+
+export const listRecentRuntimePaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("runtime_events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .paginate(args.paginationOpts);
   },
 });
 

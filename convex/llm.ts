@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 export const recordCall = mutation({
   args: {
@@ -37,6 +38,18 @@ export const recentCalls = query({
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(50);
+  },
+});
+
+export const recentCallsPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .paginate(args.paginationOpts);
   },
 });
 
