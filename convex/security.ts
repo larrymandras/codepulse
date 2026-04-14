@@ -104,7 +104,8 @@ export const hitlStats = query({
       .take(100);
 
     const now = Date.now() / 1000;
-    const todayStart = now - (now % 86400);
+    const nowDate = new Date(now * 1000);
+    const todayStart = Date.UTC(nowDate.getUTCFullYear(), nowDate.getUTCMonth(), nowDate.getUTCDate()) / 1000;
 
     const pending = all.filter((e) => !e.mitigated).length;
     const resolvedToday = all.filter(
