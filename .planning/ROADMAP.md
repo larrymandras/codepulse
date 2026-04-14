@@ -124,12 +124,12 @@ Plans:
 - Enhanced Cron Management with expression builder and manual trigger
 **Plans**: 6 plans
 Plans:
-- [ ] 04-01-PLAN.md — Wave 0: install deps, expand types/schema, create utilities, test stubs
-- [ ] 04-02-PLAN.md — Kanban components: 6-column board, collapsible columns, rich cards
-- [ ] 04-03-PLAN.md — Ideation upgrade: finding rows, status workflow, task conversion
-- [ ] 04-04-PLAN.md — Config Editor: inline diff view, hot-reload status bar, revert
-- [ ] 04-05-PLAN.md — Cron Management: visual builder, slide-out panel, inline controls
-- [ ] 04-06-PLAN.md — Tasks page: Convex data wiring, drag confirmation, finding pre-fill
+- [x] 04-01-PLAN.md — Wave 0: install deps, expand types/schema, create utilities, test stubs
+- [x] 04-02-PLAN.md — Kanban components: 6-column board, collapsible columns, rich cards
+- [x] 04-03-PLAN.md — Ideation upgrade: finding rows, status workflow, task conversion
+- [x] 04-04-PLAN.md — Config Editor: inline diff view, hot-reload status bar, revert
+- [x] 04-05-PLAN.md — Cron Management: visual builder, slide-out panel, inline controls
+- [x] 04-06-PLAN.md — Tasks page: Convex data wiring, drag confirmation, finding pre-fill
 **UI hint**: yes
 
 ### Phase 5: Data Pipeline
