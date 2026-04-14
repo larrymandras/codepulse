@@ -9,6 +9,7 @@
  */
 
 import type * as activeTime from "../activeTime.js";
+import type * as aggregates from "../aggregates.js";
 import type * as agentProfiles from "../agentProfiles.js";
 import type * as agents from "../agents.js";
 import type * as alertRules from "../alertRules.js";
@@ -17,6 +18,7 @@ import type * as alerts from "../alerts.js";
 import type * as analytics from "../analytics.js";
 import type * as apiErrors from "../apiErrors.js";
 import type * as automation from "../automation.js";
+import type * as archival from "../archival.js";
 import type * as avatars from "../avatars.js";
 import type * as build from "../build.js";
 import type * as channelHealth from "../channelHealth.js";
@@ -84,6 +86,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activeTime: typeof activeTime;
+  aggregates: typeof aggregates;
   agentProfiles: typeof agentProfiles;
   agents: typeof agents;
   alertRules: typeof alertRules;
@@ -92,6 +95,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   apiErrors: typeof apiErrors;
   automation: typeof automation;
+  archival: typeof archival;
   avatars: typeof avatars;
   build: typeof build;
   channelHealth: typeof channelHealth;
