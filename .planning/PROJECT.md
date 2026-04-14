@@ -49,6 +49,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Alert lifecycle management: acknowledge, resolve, mute (timed expiry), escalate-to-task with bidirectional linkage (Validated in Phase 6)
 - Per-severity notification preferences (always/digest/dashboard-only/disabled) with Settings page UI (Validated in Phase 6)
 - Alerts surface in Unified Inbox with inline acknowledge/mute actions (Validated in Phase 6)
+- Cost forecasting with moving averages, budget threshold tracking, CostForecastPanel UI (Validated in Phase 7)
+- Session briefings with LLM-powered generation, daily digest cron, dynamic Briefings page feed (Validated in Phase 7)
+- Anomaly detection with z-score computation, auto-alert creation, AnomalyBadge on MetricCards (Validated in Phase 7)
+- Memory quality metrics with deduplication rate, staleness detection, LLM contradiction detection, Quality tab (Validated in Phase 7)
 
 ### Active
 
@@ -104,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 6 (alert-routing) completion*
+*Last updated: 2026-04-14 after Phase 7 (intelligence-layer) completion*
