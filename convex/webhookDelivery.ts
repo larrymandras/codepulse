@@ -1,6 +1,235 @@
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+
+// ============================================================
+// PUBLIC QUERIES + MUTATIONS — Settings page consumption
+// ============================================================
+
+/**
+ * getChannels — public query for Settings UI
+ * Returns stored webhook URLs for Discord and Slack.
+ */
+export const getChannels = query({
+  args: {},
+  handler: async (ctx) => {
+    const discordRow = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "webhook-discord-url"))
+      .first();
+    const slackRow = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "webhook-slack-url"))
+      .first();
+    return {
+      discordUrl: (discordRow?.value as string) ?? null,
+      slackUrl: (slackRow?.value as string) ?? null,
+    };
+  },
+});
+
+/**
+ * setChannel — public mutation for Settings UI
+ * Upserts a webhook URL for the given channel ("discord" or "slack").
+ * T-06-09 mitigation: validates URL starts with https://
+ */
+export const setChannel = mutation({
+  args: {
+    channel: v.string(),
+    url: v.string(),
+  },
+  handler: async (ctx, args) => {
+    if (!args.url.startsWith("https://")) {
+      throw new Error(
+        "Invalid webhook URL. Paste a full Discord or Slack webhook URL starting with https://."
+      );
+    }
+    const configKey = `webhook-${args.channel}-url`;
+    const existing = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", configKey))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        value: args.url,
+        updatedAt: Date.now() / 1000,
+      });
+    } else {
+      await ctx.db.insert("agentConfigs", {
+        configKey,
+        value: args.url,
+        updatedAt: Date.now() / 1000,
+      });
+    }
+  },
+});
+
+/**
+ * removeChannel — public mutation for Settings UI
+ * Deletes the agentConfigs record for the given webhook channel.
+ */
+export const removeChannel = mutation({
+  args: {
+    channel: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const configKey = `webhook-${args.channel}-url`;
+    const existing = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", configKey))
+      .first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+    }
+  },
+});
+
+/**
+ * testWebhook — public action for Settings UI
+ * Sends a test message to the stored webhook URL for the given channel.
+ * Returns { success: boolean, error?: string }
+ */
+export const testWebhook = action({
+  args: {
+    channel: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    const channels = await ctx.runQuery(
+      internal.webhookDelivery.getNotificationChannels,
+      {}
+    );
+    const url =
+      args.channel === "discord" ? channels.discordUrl : channels.slackUrl;
+
+    if (!url) {
+      return { success: false, error: "No webhook URL configured" };
+    }
+    if (!url.startsWith("https://")) {
+      return {
+        success: false,
+        error:
+          "Invalid webhook URL. Paste a full Discord or Slack webhook URL starting with https://.",
+      };
+    }
+
+    try {
+      let payload: object;
+      if (args.channel === "discord") {
+        payload = {
+          embeds: [
+            {
+              title: "CodePulse Test Alert",
+              description:
+                "This is a test message from CodePulse. Your Discord webhook is configured correctly.",
+              color: 5592575,
+              footer: { text: "CodePulse Alert Routing" },
+              timestamp: new Date().toISOString(),
+            },
+          ],
+        };
+      } else {
+        payload = {
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: "*CodePulse Test Alert*\nThis is a test message from CodePulse. Your Slack webhook is configured correctly.",
+              },
+            },
+          ],
+        };
+      }
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        return { success: true };
+      } else {
+        const text = await res.text().catch(() => String(res.status));
+        return {
+          success: false,
+          error: `Webhook responded with ${res.status}: ${text.slice(0, 200)}`,
+        };
+      }
+    } catch (e: unknown) {
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : String(e),
+      };
+    }
+  },
+});
+
+/**
+ * getPreferences — public query for Settings UI
+ * Returns stored notification preferences or defaults.
+ */
+export const getPreferences = query({
+  args: {},
+  handler: async (ctx) => {
+    const row = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "notification-preferences"))
+      .first();
+    return (
+      (row?.value as Record<string, string>) ?? {
+        critical: "always",
+        error: "always",
+        warning: "digest",
+        info: "dashboard_only",
+      }
+    );
+  },
+});
+
+const VALID_MODES = ["always", "digest", "dashboard_only", "disabled"] as const;
+
+/**
+ * setPreferences — public mutation for Settings UI
+ * Validates and upserts per-severity delivery mode preferences.
+ */
+export const setPreferences = mutation({
+  args: {
+    preferences: v.object({
+      critical: v.string(),
+      error: v.string(),
+      warning: v.string(),
+      info: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    for (const [key, val] of Object.entries(args.preferences)) {
+      if (!VALID_MODES.includes(val as (typeof VALID_MODES)[number])) {
+        throw new Error(
+          `Invalid delivery mode "${val}" for severity "${key}". Must be one of: always, digest, dashboard_only, disabled`
+        );
+      }
+    }
+    const configKey = "notification-preferences";
+    const existing = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", configKey))
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        value: args.preferences,
+        updatedAt: Date.now() / 1000,
+      });
+    } else {
+      await ctx.db.insert("agentConfigs", {
+        configKey,
+        value: args.preferences,
+        source: "dashboard",
+        updatedAt: Date.now() / 1000,
+      });
+    }
+  },
+});
 
 // ============================================================
 // SEVERITY MAPPINGS
