@@ -153,6 +153,7 @@ export function AlertRuleForm({
         const thresh = parseFloat(overrideThreshold);
         if (isNaN(thresh)) {
           toast.error("Enter a valid threshold number.");
+          setSaving(false);
           return;
         }
         await setThresholdOverride({
@@ -164,6 +165,7 @@ export function AlertRuleForm({
       } else if (mode === "custom") {
         if (!ruleName.trim()) {
           toast.error("Rule name is required.");
+          setSaving(false);
           return;
         }
         if (customRuleId) {
