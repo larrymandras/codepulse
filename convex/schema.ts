@@ -107,10 +107,18 @@ export default defineSchema({
     acknowledgedBy: v.optional(v.string()),
     acknowledgedAt: v.optional(v.float64()),
     createdAt: v.float64(),
+    status: v.optional(v.string()),           // "active" | "acknowledged" | "resolved"
+    resolvedAt: v.optional(v.float64()),
+    ruleId: v.optional(v.string()),           // static rule id or custom rule _id
+    linkedTaskId: v.optional(v.id("tasks")),  // for escalation (D-11)
+    webhookStatus: v.optional(v.string()),    // "pending" | "delivered" | "failed"
+    webhookDeliveredAt: v.optional(v.float64()),
+    webhookAttempts: v.optional(v.float64()),
   })
     .index("by_severity", ["severity", "createdAt"])
     .index("by_acknowledged", ["acknowledged", "createdAt"])
-    .index("by_source", ["source", "createdAt"]),
+    .index("by_source", ["source", "createdAt"])
+    .index("by_status", ["status", "createdAt"]),
 
   fileOps: defineTable({
     sessionId: v.string(),
@@ -805,11 +813,13 @@ export default defineSchema({
     dueAt: v.optional(v.number()),
     columnEnteredAt: v.number(),
     findingId: v.optional(v.id("ideationFindings")),
+    alertId: v.optional(v.id("alerts")),
     createdAt: v.number(),
   })
     .index("by_column", ["column", "createdAt"])
     .index("by_findingId", ["findingId"])
-    .index("by_taskId", ["taskId"]),
+    .index("by_taskId", ["taskId"])
+    .index("by_alertId", ["alertId"]),
 
   // ============================================================
   // DATA PIPELINE — Aggregation + Retention (Phase 5)
@@ -824,4 +834,52 @@ export default defineSchema({
   })
     .index("by_type_period_bucket", ["metric_type", "period", "bucket_start"])
     .index("by_period_bucket", ["period", "bucket_start"]),
+
+  // ============================================================
+  // ALERT ROUTING (Phase 6)
+  // ============================================================
+
+  alertRuleCustom: defineTable({
+    name: v.string(),
+    severity: v.string(),        // "critical" | "error" | "warning" | "info"
+    enabled: v.boolean(),
+    conditions: v.array(v.object({
+      metric: v.string(),         // e.g., "cost_per_hour", "error_rate", "stall_duration"
+      operator: v.string(),       // "gt" | "lt" | "gte" | "lte" | "eq"
+      threshold: v.float64(),
+      lookbackWindow: v.string(), // "5m" | "15m" | "30m" | "1h" | "24h"
+    })),
+    conditionLogic: v.string(),   // "AND" | "OR"
+    conditionGroups: v.optional(v.array(v.object({
+      conditions: v.array(v.object({
+        metric: v.string(),
+        operator: v.string(),
+        threshold: v.float64(),
+        lookbackWindow: v.string(),
+      })),
+      logic: v.string(),          // "AND" | "OR"
+    }))),
+    messageTemplate: v.optional(v.string()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  }).index("by_enabled", ["enabled"]).index("by_severity", ["severity"]),
+
+  alertMutes: defineTable({
+    targetType: v.string(),       // "alert" | "rule" | "customRule"
+    targetId: v.string(),         // alert _id, static rule id, or custom rule _id
+    duration: v.string(),         // "15m" | "1h" | "4h" | "24h" | "indefinite"
+    expiresAt: v.optional(v.float64()), // null for indefinite
+    mutedBy: v.optional(v.string()),
+    createdAt: v.float64(),
+  }).index("by_target", ["targetType", "targetId"]),
+
+  webhookDeliveryLog: defineTable({
+    alertId: v.id("alerts"),
+    channel: v.string(),          // "discord" | "slack"
+    attempt: v.float64(),
+    status: v.string(),           // "success" | "failed"
+    statusCode: v.optional(v.float64()),
+    errorMessage: v.optional(v.string()),
+    sentAt: v.float64(),
+  }).index("by_alert", ["alertId", "sentAt"]),
 });
