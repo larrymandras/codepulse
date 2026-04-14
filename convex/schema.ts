@@ -11,6 +11,7 @@ export default defineSchema({
     timestamp: v.float64(),
     critical: v.boolean(),
     receivedAt: v.float64(),
+    archived: v.optional(v.boolean()),
   })
     .index("by_type", ["eventType"])
     .index("by_timestamp", ["timestamp"])
@@ -28,6 +29,7 @@ export default defineSchema({
     payload: v.any(),
     hookType: v.optional(v.string()),
     timestamp: v.float64(),
+    archived: v.optional(v.boolean()),
   })
     .index("by_session", ["sessionId", "timestamp"])
     .index("by_type", ["eventType", "timestamp"])
@@ -250,6 +252,7 @@ export default defineSchema({
     cost: v.optional(v.float64()),
     sessionId: v.optional(v.string()),
     timestamp: v.float64(),
+    archived: v.optional(v.boolean()),
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])
@@ -494,6 +497,7 @@ export default defineSchema({
     decisionSource: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
     timestamp: v.float64(),
+    archived: v.optional(v.boolean()),
   })
     .index("by_session", ["sessionId"])
     .index("by_tool", ["toolName", "timestamp"])
@@ -805,4 +809,18 @@ export default defineSchema({
     .index("by_column", ["column", "createdAt"])
     .index("by_findingId", ["findingId"])
     .index("by_taskId", ["taskId"]),
+
+  // ============================================================
+  // DATA PIPELINE — Aggregation + Retention (Phase 5)
+  // ============================================================
+
+  aggregates: defineTable({
+    metric_type: v.string(),      // "cost" | "events" | "errors"
+    period: v.string(),           // "hourly" | "daily"
+    bucket_start: v.float64(),    // Unix epoch seconds, truncated to hour/day boundary
+    value: v.float64(),           // Numeric aggregate value
+    dimensions: v.optional(v.any()), // { provider?, model?, event_type?, error_category? }
+  })
+    .index("by_type_period_bucket", ["metric_type", "period", "bucket_start"])
+    .index("by_period_bucket", ["period", "bucket_start"]),
 });
