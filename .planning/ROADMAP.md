@@ -2,9 +2,9 @@
 
 ## Overview
 
-Seven phases transform CodePulse from a monitoring dashboard into an all-in-one command center for Ástríðr. Phase 1 (UI Foundation) establishes the design system. Phase 2 (Bidirectional Telemetry) builds the real-time communication layer. Phase 3 (Interaction Layer) is the vision shift — adding chat, inbox, live runs, approvals, and command palette. Phase 4 (Task Management) adds Kanban, ideation, agent config, and cron UX. Phases 5-7 handle data pipeline, alert routing, and intelligence.
+Seven phases transform CodePulse from a monitoring dashboard into an all-in-one command center for Astridr. Phase 1 (UI Foundation) establishes the design system. Phase 2 (Bidirectional Telemetry) builds the real-time communication layer. Phase 3 (Interaction Layer) is the vision shift — adding chat, inbox, live runs, approvals, and command palette. Phase 4 (Task Management) adds Kanban, ideation, agent config, and cron UX. Phases 5-7 handle data pipeline, alert routing, and intelligence.
 
-Phase 58 (Infrastructure Layer) is a cross-project phase from Ástríðr that adds a command catalog frontend surface to the Capabilities page.
+Phase 58 (Infrastructure Layer) is a cross-project phase from Astridr that adds a command catalog frontend surface to the Capabilities page.
 
 **Research sources:**
 - Paperclip AI (agent orchestration platform) — chat interaction, live runs, inbox, Kanban, approvals
@@ -16,7 +16,7 @@ Phase 58 (Infrastructure Layer) is a cross-project phase from Ástríðr that ad
 **Phase Numbering:**
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-- High-numbered phases (58+): Cross-project phases from Ástríðr infrastructure
+- High-numbered phases (58+): Cross-project phases from Astridr infrastructure
 
 Decimal phases appear between their surrounding integers in numeric order.
 
@@ -51,14 +51,14 @@ Plans:
 **UI hint**: yes
 
 ### Phase 2: Bidirectional Telemetry
-**Goal**: Dashboard updates within 1 second of Ástríðr events; CodePulse can send commands back to Ástríðr via the same WebSocket
+**Goal**: Dashboard updates within 1 second of Astridr events; CodePulse can send commands back to Astridr via the same WebSocket
 **Depends on**: Phase 1
 **Ástríðr dependency**: v4.0 Phase 47 (Bidirectional WebSocket + Live Run Emitter)
 **Requirements**: RT-01, RT-02, RT-03, RT-04, RT-05, RT-06, RT-07, RT-08
 **Success Criteria** (what must be TRUE):
-  1. Dashboard widgets visibly update within 1 second when a new event occurs in Ástríðr
+  1. Dashboard widgets visibly update within 1 second when a new event occurs in Astridr
   2. Connection status indicator in sidebar shows green (connected) or red (disconnected)
-  3. Auto-reconnect resumes live feed without any action in Ástríðr
+  3. Auto-reconnect resumes live feed without any action in Astridr
   4. Commands sent from CodePulse receive ack within 500ms
   5. Live run transcript events stream in real-time (no batching delay)
   6. Agent status (idle/running/paused) updates via useLiveState without polling
@@ -84,7 +84,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. Cmd+K opens command palette with search across agents, sessions, alerts, cron jobs
   2. Unified Inbox shows alerts, failed runs, and approval requests with keyboard navigation
-  3. Agent Chat panel sends tasks to Ástríðr and shows live run transcripts with Generative UI Blocks
+  3. Agent Chat panel sends tasks to Astridr and shows live run transcripts with Generative UI Blocks
   4. HITL approval requests appear as action cards with approve/reject buttons
   5. Live Run Widget shows streaming tool calls, reasoning, and text output with stop button
   6. Insights Chat answers operational questions by querying Convex data
@@ -107,7 +107,7 @@ Plans:
 **UI hint**: yes
 
 ### Phase 4: Task Management
-**Goal**: Operators can create, track, and manage work items for Ástríðr agents; view proactive scan findings; edit agent config; manage cron jobs — all from the dashboard
+**Goal**: Operators can create, track, and manage work items for Astridr agents; view proactive scan findings; edit agent config; manage cron jobs — all from the dashboard
 **Depends on**: Phase 3
 **Ástríðr dependency**: v4.0 Phase 49 (Config hot-reload, proactive ideation)
 **Requirements**: TM-01, TM-02, TM-03, TM-04
@@ -142,12 +142,13 @@ Plans:
   2. Convex cron jobs run on schedule and produce visible aggregate rows for cost, event counts, and error rates
   3. Events older than the configured threshold (default 30 days) are automatically archived without manual intervention
   4. Dashboard list views page through large result sets using server-side cursor pagination — no client-side filtering of full tables
-**Plans**: 4 plans
+**Plans**: 5 plans
 Plans:
 - [ ] 05-00-PLAN.md — Wave 0 test stubs (aggregates, archival, pagination)
-- [ ] 05-01-PLAN.md — Schema (aggregates table, archived fields), cron registrations, aggregation + archival mutations, retention config
-- [ ] 05-02-PLAN.md — Archived-row filter audit on all existing queries (llm.ts, analytics.ts, events.ts)
-- [ ] 05-03-PLAN.md — Cursor pagination (backend + frontend hooks), LoadMoreButton component, Settings retention UI
+- [ ] 05-01-PLAN.md — Schema (aggregates table, archived fields), cron registrations, aggregation + archival mutations, retention config, fill test stubs
+- [ ] 05-02-PLAN.md — Archived-row filter audit on all existing queries (llm.ts, analytics.ts, events.ts) + Analytics page aggregate query swap
+- [ ] 05-03-PLAN.md — Cursor pagination for events/llm/sessions (backend + frontend hooks), LoadMoreButton component, Settings retention UI
+- [ ] 05-04-PLAN.md — Cursor pagination for agents, alerts, executions, security events (remaining D-09 domains)
 **UI hint**: yes
 
 ### Phase 6: Alert Routing
@@ -176,7 +177,7 @@ Plans:
   2. Any completed session has an LLM-generated briefing summarizing what happened, key decisions made, and anomalies detected
   3. A daily digest is auto-generated and stored in Convex — operator can browse past digests from the Briefings page
   4. Unusual patterns (cost spikes, error clusters, latency degradation) appear as visual anomaly indicators
-  5. Activity changelog auto-generates "what did Ástríðr accomplish today?" from events
+  5. Activity changelog auto-generates "what did Astridr accomplish today?" from events
   6. Ideation briefings weave proactive scan findings into daily digest
   7. Memory page shows quality metrics: deduplication rate, contradiction resolution, staleness indicators
 **Plans**: TBD
@@ -206,11 +207,11 @@ Phase 1 (UI Foundation)       ██████████  Execute now — no
                                   │
 Phase 5 (Data Pipeline)       ░░░░██████████  Parallel — backend only
                                   │
-Phase 2 (Bidirectional WS)   ░░░░░░██████████  After Phase 1 + Ástríðr Phase 47
+Phase 2 (Bidirectional WS)   ░░░░░░██████████  After Phase 1 + Astridr Phase 47
                                        │
-Phase 3 (Interaction)         ░░░░░░░░░░██████████████  After Phase 2 + Ástríðr Phase 48
+Phase 3 (Interaction)         ░░░░░░░░░░██████████████  After Phase 2 + Astridr Phase 48
                                               │
-Phase 4 (Tasks)               ░░░░░░░░░░░░░░░░██████████  After Phase 3 + Ástríðr Phase 49
+Phase 4 (Tasks)               ░░░░░░░░░░░░░░░░██████████  After Phase 3 + Astridr Phase 49
                                        │
 Phase 6 (Alerts)              ░░░░░░░░░░░░██████████  After Phase 2
                                                     │
@@ -227,11 +228,11 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 2. Bidirectional Telemetry | 0/4 | Planned | - |
 | 3. Interaction Layer | 0/6 | Planned | - |
 | 4. Task Management | 0/6 | Planned | - |
-| 5. Data Pipeline | 0/4 | Planned | - |
+| 5. Data Pipeline | 0/5 | Planned | - |
 | 6. Alert Routing | 0/TBD | Not started | - |
 | 7. Intelligence Layer | 0/TBD | Not started | - |
 | 58. Infrastructure Layer | 2/2 | Complete    | 2026-04-13 |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 5 (Data Pipeline) planned: 4 plans across 3 waves (Wave 1 stubs+schema+crons, Wave 2 archived filters, Wave 3 pagination+retention UI).*
+*Last updated: 2026-04-14 — Phase 5 (Data Pipeline) revised: 5 plans across 3 waves (Wave 1 stubs+schema+crons, Wave 2 archived filters+analytics swap, Wave 3 pagination for all 7 list domains+retention UI).*

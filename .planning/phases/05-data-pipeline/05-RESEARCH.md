@@ -507,7 +507,7 @@ export const setRetentionDays = mutation({
 |--------------|------------------|--------------|--------|
 | `.collect()` on entire table | `.paginate()` with cursor | This phase | Eliminates full table scans; list views handle 10k+ rows safely |
 | Raw event queries for Analytics | Aggregate table reads | This phase (incremental) | Query time drops from O(all records) to O(aggregate rows) |
-| No retention policy | Soft-delete archival cron | This phase | Active query sets stay bounded as Ástríðr generates events indefinitely |
+| No retention policy | Soft-delete archival cron | This phase | Active query sets stay bounded as Astridr generates events indefinitely |
 
 **Currently problematic (to fix in this phase):**
 - `llm.ts:costByProvider` — `.collect()` on entire `llmMetrics`
@@ -532,7 +532,7 @@ export const setRetentionDays = mutation({
 | Quick run command | `npx vitest run src/hooks/ convex/` |
 | Full suite command | `npm test` |
 
-### Phase Requirements → Test Map
+### Phase Requirements -> Test Map
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|-------------|
@@ -566,9 +566,9 @@ Phase 5 is backend/frontend code changes with no new external service dependenci
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| Convex CLI | Schema deploy, cron registration | Yes | 1.32.0 (local) | — |
-| Node.js | Build, tests | Yes | (existing) | — |
-| Convex backend (deployed) | Cron execution, live testing | Yes | (existing deployment) | — |
+| Convex CLI | Schema deploy, cron registration | Yes | 1.32.0 (local) | -- |
+| Node.js | Build, tests | Yes | (existing) | -- |
+| Convex backend (deployed) | Cron execution, live testing | Yes | (existing deployment) | -- |
 
 No missing dependencies.
 
@@ -581,17 +581,17 @@ This phase has no authentication, secret handling, or user-facing input beyond t
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
 | V5 Input Validation | Yes (retention days input) | Validate with `v.float64()` in Convex args validator; add min/max bounds (1-365 days) in mutation handler |
-| V2 Authentication | No | — |
-| V3 Session Management | No | — |
+| V2 Authentication | No | -- |
+| V3 Session Management | No | -- |
 | V4 Access Control | No | Single-operator dashboard |
-| V6 Cryptography | No | — |
+| V6 Cryptography | No | -- |
 
 **Threat patterns:**
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| Retention set to 0 → archive everything | Tampering | Clamp retention_days to minimum 1 in mutation handler |
-| Retention set to 9999 → never archives | Tampering | Clamp retention_days to maximum 365 in mutation handler |
+| Retention set to 0 -> archive everything | Tampering | Clamp retention_days to minimum 1 in mutation handler |
+| Retention set to 9999 -> never archives | Tampering | Clamp retention_days to maximum 365 in mutation handler |
 
 ---
 
@@ -600,21 +600,23 @@ This phase has no authentication, secret handling, or user-facing input beyond t
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
 | A1 | Convex mutation batch cap of ~500 rows per run is safe for daily archival | Pattern 5 (archival mutation) | If budget is tighter, batch must be smaller; if larger, can process more rows faster |
-| A2 | Daily archival cron at 02:00 UTC is "off-peak" for this deployment | Crons pattern | If Ástríðr is active 24/7, there is no off-peak; schedule is cosmetic but harmless |
+| A2 | Daily archival cron at 02:00 UTC is "off-peak" for this deployment | Crons pattern | If Astridr is active 24/7, there is no off-peak; schedule is cosmetic but harmless |
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Convex mutation row budget for archival**
+1. **Convex mutation row budget for archival** (RESOLVED)
    - What we know: Convex has CPU and bandwidth budgets per mutation; 500 rows is conservative
    - What's unclear: Exact row patch budget per mutation in Convex 1.17-1.35
    - Recommendation: Start with 500, monitor `cronExecutions` table for errors/duration; tune up if safe
+   - Resolution: Accepted recommendation. Plan 01 implements `.take(500)` batch limit per table per cron run. If budget proves tighter or more generous, the batch constant can be tuned without structural changes.
 
-2. **Analytics page query priority order for D-11 incremental swap**
+2. **Analytics page query priority order for D-11 incremental swap** (RESOLVED)
    - What we know: Aggregates start empty; swaps are incremental
    - What's unclear: Which Analytics chart is most impactful to migrate first
    - Recommendation: Start with `costByProvider` (highest-frequency user query, hits entire `llmMetrics` table on every render); then `errorRateTrend`; then `activityHeatmap`
+   - Resolution: Accepted recommendation. Plan 02 Task 3 swaps costByProvider first (via api.aggregates.costByPeriod), then event counts (via api.aggregates.eventCountsByPeriod). Error trend and heatmap chart components fetch their own data internally and retain archived-filtered raw queries for now.
 
 ---
 
@@ -630,7 +632,7 @@ This phase has no authentication, secret handling, or user-facing input beyond t
 - [CITED: docs.convex.dev/database/indexes] — Index range queries, filter with optional fields behavior
 
 ### Secondary (MEDIUM confidence)
-- `npm view convex version` → 1.35.1 latest; project on ^1.17.0 — pagination API stable across this range
+- `npm view convex version` -> 1.35.1 latest; project on ^1.17.0 — pagination API stable across this range
 
 ### Tertiary (LOW confidence)
 - None
