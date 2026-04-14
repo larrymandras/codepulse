@@ -56,7 +56,9 @@ export const recentCallsPaginated = query({
 export const costByProvider = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db.query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     const grouped: Record<string, number> = {};
@@ -71,7 +73,9 @@ export const costByProvider = query({
 export const costByModel = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db.query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     const grouped: Record<string, { calls: number; tokens: number; cost: number }> = {};
@@ -89,7 +93,9 @@ export const costByModel = query({
 export const providerBreakdown = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db.query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     const grouped: Record<string, { calls: number; totalLatency: number; cost: number }> = {};
@@ -111,9 +117,10 @@ export const providerBreakdown = query({
 export const costOverTime = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db
       .query("llmMetrics")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .order("asc")
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
@@ -129,9 +136,10 @@ export const costOverTime = query({
 export const latencyOverTime = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db
       .query("llmMetrics")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .order("asc")
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();

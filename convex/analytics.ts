@@ -93,7 +93,9 @@ export const toolFlowSankey = query({
 export const tokenSunburst = query({
   args: {},
   handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
     const all = await ctx.db.query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
