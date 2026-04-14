@@ -230,7 +230,8 @@ export const evaluate = mutation({
     async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
       // Skip disabled rules
       if (disabledRules.has(ruleId)) return;
-      // Deduplicate: skip if an active alert with this source already exists
+      // Deduplicate: activeSourceSet is keyed on a.source, and all inserts below set source=ruleId,
+      // so this check is correct. If source ever differs from ruleId, dedup will break silently.
       if (activeSourceSet.has(ruleId)) return;
       await ctx.db.insert("alerts", {
         severity,
