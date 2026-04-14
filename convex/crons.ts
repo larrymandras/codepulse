@@ -45,4 +45,11 @@ crons.interval(
   internal.webhookDelivery.sendDigest
 );
 
+// Phase 6: Cleanup expired mute records (every 6 hours)
+crons.interval(
+  "cleanup-expired-mutes",
+  { hours: 6 },
+  internal.alertMutes.cleanupExpired
+);
+
 export default crons;

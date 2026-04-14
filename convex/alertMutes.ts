@@ -1,4 +1,4 @@
-import { mutation, query, internalQuery } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // ============================================================
@@ -137,5 +137,22 @@ export const listActiveMutes = query({
     return all.filter(
       (m) => m.expiresAt === undefined || m.expiresAt === null || m.expiresAt >= now
     );
+  },
+});
+
+// Periodic cleanup of expired mute records to prevent unbounded table growth
+export const cleanupExpired = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("alertMutes").collect();
+    const now = Date.now() / 1000;
+    let deleted = 0;
+    for (const m of all) {
+      if (m.expiresAt !== undefined && m.expiresAt !== null && m.expiresAt < now) {
+        await ctx.db.delete(m._id);
+        deleted = deleted + 1;
+      }
+    }
+    return { deleted };
   },
 });
