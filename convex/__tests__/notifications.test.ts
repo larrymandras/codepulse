@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { classifyNotification } from "../notifications";
 
+import { describe, test } from "vitest";
+
 describe("classifyNotification", () => {
   it("routes critical severity to alert type", () => {
     const result = classifyNotification({
@@ -45,4 +47,12 @@ describe("classifyNotification", () => {
     expect(result.expiresAt!).toBeGreaterThan(now + 3500);
     expect(result.expiresAt!).toBeLessThan(now + 3700);
   });
+});
+
+describe("Inbox Integration (ALR-07)", () => {
+  test.todo("active alerts appear as inbox items with type alert");
+  test.todo("resolved alerts are excluded from inbox feed");
+  test.todo("alert inbox items include acknowledge action");
+  test.todo("alert inbox items include mute action");
+  test.todo("inbox feed query returns alerts sorted by createdAt descending");
 });
