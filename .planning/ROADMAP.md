@@ -144,11 +144,11 @@ Plans:
   4. Dashboard list views page through large result sets using server-side cursor pagination — no client-side filtering of full tables
 **Plans**: 5 plans
 Plans:
-- [ ] 05-00-PLAN.md — Wave 0 test stubs (aggregates, archival, pagination)
-- [ ] 05-01-PLAN.md — Schema (aggregates table, archived fields), cron registrations, aggregation + archival mutations, retention config, fill test stubs
-- [ ] 05-02-PLAN.md — Archived-row filter audit on all existing queries (llm.ts, analytics.ts, events.ts) + Analytics page aggregate query swap
-- [ ] 05-03-PLAN.md — Cursor pagination for events/llm/sessions (backend + frontend hooks), LoadMoreButton component, Settings retention UI
-- [ ] 05-04-PLAN.md — Cursor pagination for agents, alerts, executions, security events (remaining D-09 domains)
+- [x] 05-00-PLAN.md — Wave 0 test stubs (aggregates, archival, pagination)
+- [x] 05-01-PLAN.md — Schema (aggregates table, archived fields), cron registrations, aggregation + archival mutations, retention config, fill test stubs
+- [x] 05-02-PLAN.md — Archived-row filter audit on all existing queries (llm.ts, analytics.ts, events.ts) + Analytics page aggregate query swap
+- [x] 05-03-PLAN.md — Cursor pagination for events/llm/sessions (backend + frontend hooks), LoadMoreButton component, Settings retention UI
+- [x] 05-04-PLAN.md — Cursor pagination for agents, alerts, executions, security events (remaining D-09 domains)
 **UI hint**: yes
 
 ### Phase 6: Alert Routing
