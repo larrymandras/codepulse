@@ -109,7 +109,8 @@ export default defineSchema({
     createdAt: v.float64(),
   })
     .index("by_severity", ["severity", "createdAt"])
-    .index("by_acknowledged", ["acknowledged", "createdAt"]),
+    .index("by_acknowledged", ["acknowledged", "createdAt"])
+    .index("by_source", ["source", "createdAt"]),
 
   fileOps: defineTable({
     sessionId: v.string(),

@@ -79,11 +79,11 @@ export const listBySource = query({
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
-    const all = await ctx.db
+    return await ctx.db
       .query("alerts")
+      .withIndex("by_source", (q) => q.eq("source", args.source))
       .order("desc")
-      .take(500);
-    return all.filter((a) => a.source === args.source).slice(0, limit);
+      .take(limit);
   },
 });
 
