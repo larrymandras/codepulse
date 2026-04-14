@@ -882,4 +882,49 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
     sentAt: v.float64(),
   }).index("by_alert", ["alertId", "sentAt"]),
+
+  // ============================================================
+  // INTELLIGENCE LAYER (Phase 7)
+  // ============================================================
+
+  briefings: defineTable({
+    type: v.string(),                    // "session" | "daily_digest"
+    sessionId: v.optional(v.string()),   // for session briefings only
+    date: v.optional(v.string()),        // "YYYY-MM-DD" for daily digests
+    narrative: v.string(),               // full LLM-generated text
+    summary: v.optional(v.string()),     // one-line summary for collapsed list view
+    anomaliesDetected: v.optional(v.float64()),
+    totalCost: v.optional(v.float64()),
+    generatedAt: v.float64(),            // epoch seconds
+  })
+    .index("by_type_generated", ["type", "generatedAt"])
+    .index("by_session", ["sessionId"])
+    .index("by_date", ["date"]),
+
+  anomalyEvents: defineTable({
+    metric: v.string(),                  // "cost" | "errors" | "latency"
+    value: v.float64(),                  // actual observed value
+    mean: v.float64(),                   // rolling mean at detection time
+    stdDev: v.float64(),                 // rolling stddev at detection time
+    zScore: v.float64(),                 // computed z-score
+    severity: v.string(),               // "warning" (2sigma) | "critical" (3sigma)
+    alertId: v.optional(v.id("alerts")), // linked alert if auto-created
+    detectedAt: v.float64(),            // epoch seconds
+  })
+    .index("by_metric_detected", ["metric", "detectedAt"])
+    .index("by_severity", ["severity", "detectedAt"]),
+
+  memoryQuality: defineTable({
+    evaluatedAt: v.float64(),           // epoch seconds
+    deduplicationRate: v.float64(),     // 0.0 to 1.0 (percentage as fraction)
+    staleCount: v.float64(),            // count of memories beyond staleness threshold
+    contradictionCount: v.float64(),    // count of contradicting memory pairs found
+    staleMemoryIds: v.optional(v.array(v.string())),       // IDs of stale memories
+    contradictionPairs: v.optional(v.array(v.object({      // detected contradiction pairs
+      memoryA: v.string(),
+      memoryB: v.string(),
+      reason: v.optional(v.string()),
+    }))),
+  })
+    .index("by_evaluated", ["evaluatedAt"]),
 });
