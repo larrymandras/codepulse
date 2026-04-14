@@ -36,6 +36,7 @@ export const listRecent = query({
       .query("events")
       .withIndex("by_timestamp")
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
   },
 });
@@ -51,6 +52,7 @@ export const listBySession = query({
       .query("events")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
   },
 });
@@ -66,6 +68,7 @@ export const listByTool = query({
       .query("events")
       .withIndex("by_tool", (q) => q.eq("toolName", args.toolName))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
   },
 });
@@ -81,7 +84,10 @@ export const listBashCommands = query({
       .query("events")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
-      .filter((q) => q.eq(q.field("toolName"), "Bash"))
+      .filter((q) => q.and(
+        q.eq(q.field("toolName"), "Bash"),
+        q.neq(q.field("archived"), true)
+      ))
       .take(limit);
   },
 });
@@ -97,6 +103,7 @@ export const listErrors = query({
       .query("events")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     return events.filter((e) => e.eventType === "Error" || e.eventType === "ToolError").slice(0, limit);
   },
@@ -113,6 +120,7 @@ export const listPrompts = query({
       .query("events")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .collect();
     return events.filter((e) => e.eventType.includes("Prompt") || e.eventType === "UserPrompt").slice(0, limit);
   },
@@ -150,6 +158,7 @@ export const listByType = query({
       .query("runtime_events")
       .withIndex("by_type", (q) => q.eq("eventType", args.eventType))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
   },
 });
@@ -164,6 +173,7 @@ export const listCritical = query({
       .query("runtime_events")
       .withIndex("by_critical", (q) => q.eq("critical", true))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
   },
 });
@@ -171,7 +181,9 @@ export const listCritical = query({
 export const countByType = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("runtime_events").collect();
+    const all = await ctx.db.query("runtime_events")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
     const counts: Record<string, number> = {};
     for (const event of all) {
       counts[event.eventType] = (counts[event.eventType] ?? 0) + 1;

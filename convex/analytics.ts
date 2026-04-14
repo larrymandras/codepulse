@@ -7,6 +7,7 @@ export const activityHeatmap = query({
       .query("events")
       .withIndex("by_timestamp")
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(5000);
 
     const cells: Record<string, number> = {};
@@ -38,6 +39,7 @@ export const toolFlowSankey = query({
       .query("events")
       .withIndex("by_timestamp")
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(2000);
 
     const nodeSet = new Set<string>();
@@ -91,7 +93,9 @@ export const toolFlowSankey = query({
 export const tokenSunburst = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("llmMetrics").collect();
+    const all = await ctx.db.query("llmMetrics")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
 
     let totalCost = 0;
     let totalTokens = 0;
@@ -142,12 +146,14 @@ export const errorRateTrend = query({
       .query("events")
       .withIndex("by_type", (q) => q.eq("eventType", "Error"))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(500);
 
     const toolErrors = await ctx.db
       .query("events")
       .withIndex("by_type", (q) => q.eq("eventType", "ToolError"))
       .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .take(500);
 
     const allErrors = [...errors, ...toolErrors];
@@ -212,6 +218,7 @@ export const tokenWaterfall = query({
       .query("llmMetrics")
       .withIndex("by_timestamp")
       .order("asc")
+      .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
     return all
