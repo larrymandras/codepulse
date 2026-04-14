@@ -23,10 +23,19 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 export default function Analytics() {
   const events = useRecentEvents(100);
   const llmCalls = useLlmMetrics();
-  const costByProvider = useQuery(api.llm.costByProvider) ?? {};
+  // Swap 1: costByProvider now reads from pre-computed aggregates (D-11, DP-02)
+  const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
+  // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
+  const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" }) ?? [];
+  // Swap 3: event counts aggregate for Total Events MetricCard
+  const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
+  const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
 
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
+
+  // Suppress unused variable warning — errorTrend is available for future ErrorRateTrend prop swap
+  void errorTrend;
 
   return (
     <div className="space-y-6">
@@ -34,7 +43,7 @@ export default function Analytics() {
 
       {/* Summary row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Events" value={events.length} />
+        <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
         <MetricCard label="LLM Calls" value={llmCalls.length} />
         <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
         <MetricCard label="Total Cost" value={formatCost(totalCost)} />
