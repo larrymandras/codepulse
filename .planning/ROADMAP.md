@@ -188,11 +188,11 @@ Plans:
   7. Memory page shows quality metrics: deduplication rate, contradiction resolution, staleness indicators
 **Plans**: 5 plans
 Plans:
-- [ ] 07-01-PLAN.md — Schema tables (briefings, anomalyEvents, memoryQuality), cron registrations, Wave 0 test stubs
-- [ ] 07-02-PLAN.md — Cost forecasting: moving average query, budget config, CostForecastPanel on Analytics, Settings budget cap
-- [ ] 07-03-PLAN.md — Briefings: LLM actions with dual-provider failover, daily digest cron, Briefings page rewrite, LLMProviderConfig on Settings
-- [ ] 07-04-PLAN.md — Anomaly detection: z-score computation, alert auto-creation, AnomalyBadge on Analytics MetricCards
-- [ ] 07-05-PLAN.md — Memory quality: dedup rate, staleness, LLM contradiction detection, Quality tab on Memory page
+- [x] 07-01-PLAN.md — Schema tables (briefings, anomalyEvents, memoryQuality), cron registrations, Wave 0 test stubs
+- [x] 07-02-PLAN.md — Cost forecasting: moving average query, budget config, CostForecastPanel on Analytics, Settings budget cap
+- [x] 07-03-PLAN.md — Briefings: LLM actions with dual-provider failover, daily digest cron, Briefings page rewrite, LLMProviderConfig on Settings
+- [x] 07-04-PLAN.md — Anomaly detection: z-score computation, alert auto-creation, AnomalyBadge on Analytics MetricCards
+- [x] 07-05-PLAN.md — Memory quality: dedup rate, staleness, LLM contradiction detection, Quality tab on Memory page
 **UI hint**: yes
 
 ### Phase 58: Infrastructure Layer
