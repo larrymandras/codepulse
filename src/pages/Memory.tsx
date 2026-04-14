@@ -3,8 +3,10 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import MemoryIndexHealth from "../components/MemoryIndexHealth";
 import InfoTooltip from "../components/InfoTooltip";
+import MemoryQualityTab from "../components/MemoryQualityTab";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
-type TabId = "timeline" | "tiers" | "reflections";
+type TabId = "timeline" | "tiers" | "reflections" | "quality";
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
@@ -39,6 +41,7 @@ export default function Memory() {
   const tierRecent = useQuery(api.memoryTiers.recent, { limit: 30 });
   const reflectionOverview = useQuery(api.reflections.overview);
   const reflectionRecent = useQuery(api.reflections.recent, { limit: 20 });
+  const quality = useQuery(api.memoryQuality.getLatestQuality);
 
   const displayEvents = searchText.length >= 2 ? searchResults : timeline;
   const agents = overview ? Object.keys(overview.byAgent) : [];
@@ -76,9 +79,16 @@ export default function Memory() {
         </div>
       )}
 
+      {/* Quality Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <StatCard label="Dedup Rate" value={`${((quality?.deduplicationRate ?? 0) * 100).toFixed(1)}%`} />
+        <StatCard label="Stale Memories" value={quality?.staleCount ?? 0} />
+        <StatCard label="Contradictions" value={quality?.contradictionCount ?? 0} />
+      </div>
+
       {/* Tab Navigation */}
       <div className="flex gap-1 border-b border-gray-700/50">
-        {(["timeline", "tiers", "reflections"] as TabId[]).map((tab) => (
+        {(["timeline", "tiers", "reflections", "quality"] as TabId[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -88,7 +98,7 @@ export default function Memory() {
                 : "border-transparent text-gray-500 hover:text-gray-300"
             }`}
           >
-            {tab === "timeline" ? "Timeline" : tab === "tiers" ? "Tier Stats" : "Reflections"}
+            {tab === "timeline" ? "Timeline" : tab === "tiers" ? "Tier Stats" : tab === "reflections" ? "Reflections" : "Quality"}
             {tab === "reflections" && reflectionOverview?.totalReflections ? (
               <span className="ml-1.5 text-xs bg-indigo-600/20 text-indigo-400 px-1.5 py-0.5 rounded-full">
                 {reflectionOverview.totalReflections}
@@ -248,6 +258,13 @@ export default function Memory() {
             )}
           </div>
         </div>
+      )}
+
+      {/* === QUALITY TAB === */}
+      {activeTab === "quality" && (
+        <SectionErrorBoundary name="Memory Quality">
+          <MemoryQualityTab />
+        </SectionErrorBoundary>
       )}
 
       {/* === REFLECTIONS TAB === */}
