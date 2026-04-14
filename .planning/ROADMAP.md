@@ -166,11 +166,11 @@ Plans:
   7. All alerts surface in Unified Inbox
 **Plans**: 5 plans
 Plans:
-- [ ] 06-01-PLAN.md — Schema migration, Wave 0 test stubs, shadcn component installs
-- [ ] 06-02-PLAN.md — Alert lifecycle mutations, custom rule CRUD, threshold overrides, mute system
-- [ ] 06-03-PLAN.md — Webhook delivery engine, evaluation upgrades, cron registration, ingest hook
-- [ ] 06-04-PLAN.md — Settings page: Notification Channels + Notification Preferences UI
-- [ ] 06-05-PLAN.md — Alerts page lifecycle UI, AlertRuleForm, ConditionBuilder, InboxCard integration
+- [x] 06-01-PLAN.md — Schema migration, Wave 0 test stubs, shadcn component installs
+- [x] 06-02-PLAN.md — Alert lifecycle mutations, custom rule CRUD, threshold overrides, mute system
+- [x] 06-03-PLAN.md — Webhook delivery engine, evaluation upgrades, cron registration, ingest hook
+- [x] 06-04-PLAN.md — Settings page: Notification Channels + Notification Preferences UI
+- [x] 06-05-PLAN.md — Alerts page lifecycle UI, AlertRuleForm, ConditionBuilder, InboxCard integration
 **UI hint**: yes
 
 ### Phase 7: Intelligence Layer
