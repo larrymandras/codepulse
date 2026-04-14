@@ -56,6 +56,7 @@ import type * as integrationCalls from "../integrationCalls.js";
 import type * as integrations from "../integrations.js";
 import type * as llm from "../llm.js";
 import type * as memory from "../memory.js";
+import type * as memoryQuality from "../memoryQuality.js";
 import type * as memoryTiers from "../memoryTiers.js";
 import type * as metrics from "../metrics.js";
 import type * as notifications from "../notifications.js";
@@ -140,6 +141,7 @@ declare const fullApi: ApiFromModules<{
   integrations: typeof integrations;
   llm: typeof llm;
   memory: typeof memory;
+  memoryQuality: typeof memoryQuality;
   memoryTiers: typeof memoryTiers;
   metrics: typeof metrics;
   notifications: typeof notifications;
