@@ -44,6 +44,11 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Data retention with configurable archival (1-365 days), 500-row batch processing, archived-row filters on all high-volume queries (Validated in Phase 5)
 - Cursor-based pagination across all 7 list-view domains with shared LoadMoreButton component (Validated in Phase 5)
 - Analytics page consuming pre-computed aggregates instead of raw table scans (Validated in Phase 5)
+- Alert routing with configurable rules (static + custom compound AND/OR), threshold overrides, lookback windows (Validated in Phase 6)
+- Webhook delivery engine with Discord embeds and Slack Block Kit, 3-attempt retry with backoff, mute-aware gating (Validated in Phase 6)
+- Alert lifecycle management: acknowledge, resolve, mute (timed expiry), escalate-to-task with bidirectional linkage (Validated in Phase 6)
+- Per-severity notification preferences (always/digest/dashboard-only/disabled) with Settings page UI (Validated in Phase 6)
+- Alerts surface in Unified Inbox with inline acknowledge/mute actions (Validated in Phase 6)
 
 ### Active
 
@@ -99,4 +104,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after Phase 5 (data-pipeline) completion*
+*Last updated: 2026-04-14 after Phase 6 (alert-routing) completion*
