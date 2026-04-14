@@ -173,13 +173,16 @@ export const getDailyDigestDataInternal = internalQuery({
       .collect();
     const totalCost = costRows.reduce((sum, r) => sum + r.value, 0);
 
-    // (c) Anomaly events count for today
+    // (c) Anomaly events count for today (use by_severity index, filter by detectedAt)
     const anomalyRows = await ctx.db
       .query("anomalyEvents")
-      .withIndex("by_metric_detected", (q) =>
-        q.gte("detectedAt", dayStart)
+      .withIndex("by_severity")
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("detectedAt"), dayStart),
+          q.lt(q.field("detectedAt"), dayEnd)
+        )
       )
-      .filter((q) => q.lt(q.field("detectedAt"), dayEnd))
       .collect();
     const anomalyCount = anomalyRows.length;
 

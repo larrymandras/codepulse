@@ -137,10 +137,12 @@ export const getActiveAnomalies = query({
   handler: async (ctx) => {
     const cutoff = Date.now() / 1000 - 86400;
 
-    const recent = await ctx.db
+    // Query recent anomalies across all metrics using severity index,
+    // then filter by detectedAt in JS (no composite index supports cross-metric range)
+    const all = await ctx.db
       .query("anomalyEvents")
-      .withIndex("by_metric_detected", (q) => q.gte("detectedAt", cutoff))
       .collect();
+    const recent = all.filter((e) => e.detectedAt >= cutoff);
 
     // Group by metric; keep highest severity (critical > warning)
     const result: Record<
