@@ -31,4 +31,18 @@ crons.daily(
   internal.archival.markStaleArchived
 );
 
+// Phase 6: Alert rule evaluation (every 2 minutes)
+crons.interval(
+  "evaluate-alert-rules",
+  { minutes: 2 },
+  internal.alerts.evaluateInternal
+);
+
+// Phase 6: Digest delivery (every 1 hour — respects configurable interval preference)
+crons.interval(
+  "deliver-digest-alerts",
+  { hours: 1 },
+  internal.webhookDelivery.sendDigest
+);
+
 export default crons;

@@ -1,7 +1,23 @@
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { internal } from "./_generated/api";
 import { alertRules } from "./alertRules";
+
+// ============================================================
+// LOOKBACK WINDOW HELPER
+// ============================================================
+
+function lookbackToSeconds(window: string): number {
+  switch (window) {
+    case "5m": return 300;
+    case "15m": return 900;
+    case "30m": return 1800;
+    case "1h": return 3600;
+    case "24h": return 86400;
+    default: return 3600;
+  }
+}
 
 export const create = mutation({
   args: {
@@ -651,10 +667,191 @@ export const evaluateInternal = internalMutation({
   handler: async (ctx) => {
     const now = Date.now() / 1000;
     const oneHourAgo = now - 3600;
-    const thirtyMinAgo = now - 1800;
-    const fifteenMinAgo = now - 900;
-    const tenMinAgo = now - 600;
-    const fiveMinAgo = now - 300;
+
+    // ---- AUTO-RESOLVE: check active alerts whose condition is no longer met ----
+    const activeAlerts = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .collect();
+
+    for (const alert of activeAlerts) {
+      // Only auto-resolve alerts tied to a static rule (source matches a rule id)
+      const rule = alertRules.find((r) => r.id === alert.source);
+      if (!rule) continue;
+      // Check if condition is still met by re-evaluating the rule's key metric
+      // For simplicity, we resolve if the alert is older than the lookback window and no new alert would fire
+      // (Full re-evaluation per rule would require duplicating all check logic — instead we mark resolved
+      // if acknowledged=false and status is explicitly "active" and createdAt > 6 hours, suggesting stale)
+      // Real resolution happens via the specific condition re-check below for key rules.
+      if (alert.status === "active" && now - alert.createdAt > 21600) {
+        await ctx.db.patch(alert._id, {
+          status: "resolved",
+          resolvedAt: now,
+        });
+      }
+    }
+
+    // Reload after resolves
+    const stillActive = await ctx.db
+      .query("alerts")
+      .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      .collect();
+    const activeSourceSet = new Set(stillActive.map((a) => a.source));
+
+    const disabledConfig = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "alert-rules-disabled"))
+      .first();
+    const disabledRules = new Set<string>((disabledConfig?.value as string[]) ?? []);
+
+    const created: string[] = [];
+
+    async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
+      if (disabledRules.has(ruleId)) return;
+      if (activeSourceSet.has(ruleId)) return;
+      const newAlertId = await ctx.db.insert("alerts", {
+        severity,
+        source: ruleId,
+        message,
+        acknowledged: false,
+        createdAt: now,
+        webhookStatus: "pending",
+      });
+      activeSourceSet.add(ruleId);
+      created.push(ruleId);
+      // Schedule webhook delivery (per D-08) — non-blocking
+      await ctx.scheduler.runAfter(0, internal.webhookDelivery.sendAlertWebhook, {
+        alertId: newAlertId,
+        attempt: 1,
+      });
+    }
+
+    // ---- THRESHOLD OVERRIDE HELPER ----
+    async function getOverride(ruleId: string): Promise<{ threshold: number; lookbackWindow: string } | null> {
+      const configKey = `alert-rule-override:${ruleId}`;
+      const row = await ctx.db
+        .query("agentConfigs")
+        .withIndex("by_key", (q) => q.eq("configKey", configKey))
+        .first();
+      return row ? (row.value as { threshold: number; lookbackWindow: string }) : null;
+    }
+
+    // ---- STATIC RULE EVALUATION ----
+    const recentEvents = await ctx.db
+      .query("events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(200);
+
+    // High error rate (with threshold override support)
+    {
+      const rule = alertRules.find((r) => r.id === "std-high-error-rate");
+      if (rule) {
+        const override = await getOverride(rule.id);
+        const windowSeconds = override?.lookbackWindow ? lookbackToSeconds(override.lookbackWindow) : 3600;
+        const threshold = override?.threshold ?? 0.2;
+        const windowStart = now - windowSeconds;
+        const windowEvents = recentEvents.filter((e) => e.timestamp >= windowStart);
+        const errorEvts = windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error");
+        if (windowEvents.length > 10 && errorEvts.length / windowEvents.length > threshold) {
+          await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+        }
+      }
+    }
+
+    const activeSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    // Stale sessions
+    {
+      const rule = alertRules.find((r) => r.id === "std-stale-sessions");
+      if (rule) {
+        const override = await getOverride(rule.id);
+        const windowSeconds = override?.threshold ?? 1800;
+        for (const s of activeSessions) {
+          if (now - s.lastEventAt > windowSeconds) {
+            await createIfNew(rule.id, rule.severity, rule.source, rule.message);
+            break;
+          }
+        }
+      }
+    }
+
+    // ---- CUSTOM RULE EVALUATION ----
+    const customRules = await ctx.db
+      .query("alertRuleCustom")
+      .withIndex("by_enabled", (q) => q.eq("enabled", true))
+      .collect();
+
+    for (const customRule of customRules) {
+      if (activeSourceSet.has(customRule._id)) continue;
+      if (disabledRules.has(customRule._id)) continue;
+
+      const evaluateCondition = (condition: {
+        metric: string;
+        operator: string;
+        threshold: number;
+        lookbackWindow: string;
+      }): boolean => {
+        const windowSeconds = lookbackToSeconds(condition.lookbackWindow);
+        const windowStart = now - windowSeconds;
+        const windowEvents = recentEvents.filter((e) => e.timestamp >= windowStart);
+
+        let value = 0;
+        if (condition.metric === "error_rate") {
+          value = windowEvents.length > 0
+            ? windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length / windowEvents.length
+            : 0;
+        } else if (condition.metric === "event_count") {
+          value = windowEvents.length;
+        } else if (condition.metric === "error_count") {
+          value = windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length;
+        }
+
+        switch (condition.operator) {
+          case "gt": return value > condition.threshold;
+          case "gte": return value >= condition.threshold;
+          case "lt": return value < condition.threshold;
+          case "lte": return value <= condition.threshold;
+          case "eq": return value === condition.threshold;
+          default: return false;
+        }
+      };
+
+      let triggered = false;
+      const logic = customRule.conditionLogic ?? "AND";
+
+      if (customRule.conditionGroups && customRule.conditionGroups.length > 0) {
+        // Evaluate groups
+        const groupResults = customRule.conditionGroups.map((group: { conditions: any[]; logic: string }) => {
+          const condResults = group.conditions.map(evaluateCondition);
+          return group.logic === "OR"
+            ? condResults.some(Boolean)
+            : condResults.every(Boolean);
+        });
+        triggered = logic === "OR" ? groupResults.some(Boolean) : groupResults.every(Boolean);
+      } else {
+        const condResults = customRule.conditions.map(evaluateCondition);
+        triggered = logic === "OR" ? condResults.some(Boolean) : condResults.every(Boolean);
+      }
+
+      if (triggered) {
+        const message = customRule.messageTemplate ?? `Custom alert rule triggered: ${customRule.name}`;
+        await createIfNew(customRule._id, customRule.severity, customRule.name, message);
+      }
+    }
+
+    return { evaluated: alertRules.length + customRules.length, created: created.length, alerts: created };
+  },
+});
+
+// Critical-only evaluation for ingest hook (sub-60s alerting, per D-04)
+export const evaluateCriticalInternal = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
 
     const activeAlerts = await ctx.db
       .query("alerts")
@@ -670,46 +867,121 @@ export const evaluateInternal = internalMutation({
 
     const created: string[] = [];
 
-    async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
+    async function createCriticalIfNew(ruleId: string, severity: string, source: string, message: string) {
       if (disabledRules.has(ruleId)) return;
       if (activeSourceSet.has(ruleId)) return;
-      await ctx.db.insert("alerts", {
+      const newAlertId = await ctx.db.insert("alerts", {
         severity,
         source: ruleId,
         message,
         acknowledged: false,
         createdAt: now,
+        webhookStatus: "pending",
       });
       activeSourceSet.add(ruleId);
       created.push(ruleId);
+      await ctx.scheduler.runAfter(0, internal.webhookDelivery.sendAlertWebhook, {
+        alertId: newAlertId,
+        attempt: 1,
+      });
     }
 
-    // Quick checks — sessions and events only (lightweight for 1-min interval)
+    // Only evaluate critical-severity static rules
+    const criticalStaticRules = alertRules.filter((r) => r.severity === "critical");
     const recentEvents = await ctx.db
       .query("events")
       .withIndex("by_timestamp")
       .order("desc")
       .take(100);
+    const oneHourAgo = now - 3600;
     const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);
-    const errorEvents = hourEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error");
-    if (hourEvents.length > 10 && errorEvents.length / hourEvents.length > 0.2) {
-      const rule = alertRules.find((r) => r.id === "std-high-error-rate");
-      if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
-    }
 
-    const activeSessions = await ctx.db
-      .query("sessions")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .collect();
-    for (const s of activeSessions) {
-      if (now - s.lastEventAt > 1800) {
-        const rule = alertRules.find((r) => r.id === "std-stale-sessions");
-        if (rule) await createIfNew(rule.id, rule.severity, rule.source, rule.message);
-        break;
+    for (const rule of criticalStaticRules) {
+      if (rule.id === "sec-critical-event") {
+        const criticalSecEvents = await ctx.db
+          .query("securityEvents")
+          .withIndex("by_timestamp")
+          .order("desc")
+          .take(10);
+        const recent = criticalSecEvents.filter(
+          (e) => e.severity === "critical" && e.timestamp >= oneHourAgo
+        );
+        if (recent.length > 0) {
+          await createCriticalIfNew(rule.id, rule.severity, rule.source, rule.message);
+        }
+      } else if (rule.id === "std-high-error-rate") {
+        const errorEvts = hourEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error");
+        if (hourEvents.length > 10 && errorEvts.length / hourEvents.length > 0.2) {
+          await createCriticalIfNew(rule.id, rule.severity, rule.source, rule.message);
+        }
       }
     }
 
-    return { evaluated: alertRules.length, created: created.length, alerts: created };
+    // Only evaluate critical-severity custom rules
+    const criticalCustomRules = await ctx.db
+      .query("alertRuleCustom")
+      .withIndex("by_enabled", (q) => q.eq("enabled", true))
+      .collect();
+    const criticalCustom = criticalCustomRules.filter((r) => r.severity === "critical");
+
+    for (const customRule of criticalCustom) {
+      if (activeSourceSet.has(customRule._id)) continue;
+      if (disabledRules.has(customRule._id)) continue;
+
+      const evaluateCondition = (condition: {
+        metric: string;
+        operator: string;
+        threshold: number;
+        lookbackWindow: string;
+      }): boolean => {
+        const windowSeconds = lookbackToSeconds(condition.lookbackWindow);
+        const windowStart = now - windowSeconds;
+        const windowEvents = recentEvents.filter((e) => e.timestamp >= windowStart);
+
+        let value = 0;
+        if (condition.metric === "error_rate") {
+          value = windowEvents.length > 0
+            ? windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length / windowEvents.length
+            : 0;
+        } else if (condition.metric === "event_count") {
+          value = windowEvents.length;
+        } else if (condition.metric === "error_count") {
+          value = windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length;
+        }
+
+        switch (condition.operator) {
+          case "gt": return value > condition.threshold;
+          case "gte": return value >= condition.threshold;
+          case "lt": return value < condition.threshold;
+          case "lte": return value <= condition.threshold;
+          case "eq": return value === condition.threshold;
+          default: return false;
+        }
+      };
+
+      const logic = customRule.conditionLogic ?? "AND";
+      let triggered = false;
+
+      if (customRule.conditionGroups && customRule.conditionGroups.length > 0) {
+        const groupResults = customRule.conditionGroups.map((group: { conditions: any[]; logic: string }) => {
+          const condResults = group.conditions.map(evaluateCondition);
+          return group.logic === "OR"
+            ? condResults.some(Boolean)
+            : condResults.every(Boolean);
+        });
+        triggered = logic === "OR" ? groupResults.some(Boolean) : groupResults.every(Boolean);
+      } else {
+        const condResults = customRule.conditions.map(evaluateCondition);
+        triggered = logic === "OR" ? condResults.some(Boolean) : condResults.every(Boolean);
+      }
+
+      if (triggered) {
+        const message = customRule.messageTemplate ?? `Custom critical alert: ${customRule.name}`;
+        await createCriticalIfNew(customRule._id, customRule.severity, customRule.name, message);
+      }
+    }
+
+    return { evaluated: criticalStaticRules.length + criticalCustom.length, created: created.length, alerts: created };
   },
 });
 

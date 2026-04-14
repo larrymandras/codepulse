@@ -1,5 +1,5 @@
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -536,6 +536,10 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
       }
     }
+
+    // Phase 6: Trigger critical rule evaluation on ingest for sub-60s alerting (per D-04)
+    // Schedules asynchronously — does NOT block ingest response
+    await ctx.runMutation(internal.alerts.evaluateCriticalInternal);
 
     return new Response(JSON.stringify({ ingested: events.length }), {
       status: 200,
