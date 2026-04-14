@@ -51,15 +51,22 @@ function alertToInboxItem(alert: {
   source: string;
   message: string;
   acknowledged: boolean;
+  status?: string;
   createdAt: number;
 }): InboxItem {
+  const isRead =
+    alert.acknowledged ||
+    alert.status === "acknowledged" ||
+    alert.status === "resolved";
   return {
     id: alert._id,
     type: "alert" as InboxItemType,
     title: `[${alert.severity.toUpperCase()}] ${alert.source}`,
     message: alert.message,
     timestamp: alert.createdAt * 1000,
-    read: alert.acknowledged,
+    read: isRead,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    alertId: alert._id as any,
   };
 }
 

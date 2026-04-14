@@ -17,7 +17,11 @@
 
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { type Id } from "../../convex/_generated/dataModel";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { MuteDurationPicker } from "./MuteDurationPicker";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +39,8 @@ export interface InboxItem {
   action?: string;
   riskLevel?: "high" | "medium" | "low";
   requestId?: string; // HITL UUID sent in approval.respond
+  // Alert-specific
+  alertId?: Id<"alerts">;
 }
 
 interface InboxCardProps {
@@ -87,6 +93,40 @@ function stripeClass(item: InboxItem): string {
   if (item.type === "approval") return "border-l-2 border-l-(--status-warn)";
   if (item.type === "alert") return "border-l-2 border-l-(--status-error)";
   return "border-l-2 border-l-(--primary)";
+}
+
+// ─── Alert inline actions ─────────────────────────────────────────────────────
+
+function AlertInlineActions({ alertId }: { alertId: Id<"alerts"> }) {
+  const acknowledgeAlert = useMutation(api.alertLifecycle.acknowledgeAlert);
+  const muteTarget = useMutation(api.alertMutes.muteTarget);
+
+  function handleAcknowledge() {
+    void acknowledgeAlert({ alertId, acknowledgedBy: "operator" });
+  }
+
+  function handleMuteSelect(duration: string) {
+    void muteTarget({ targetType: "alert", targetId: alertId, duration, mutedBy: "operator" });
+  }
+
+  return (
+    <div className="flex items-center gap-1 mt-2">
+      <button
+        className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        onClick={handleAcknowledge}
+      >
+        Acknowledge
+      </button>
+      <MuteDurationPicker
+        onSelect={handleMuteSelect}
+        trigger={
+          <button className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors">
+            Mute
+          </button>
+        }
+      />
+    </div>
+  );
 }
 
 // ─── InboxCard ────────────────────────────────────────────────────────────────
@@ -170,6 +210,11 @@ export function InboxCard({
       <p className="text-sm text-(--muted-foreground) mb-3 line-clamp-2">
         {item.message}
       </p>
+
+      {/* Alert inline actions */}
+      {item.type === "alert" && item.alertId && (
+        <AlertInlineActions alertId={item.alertId} />
+      )}
 
       {/* Approval action buttons */}
       {item.type === "approval" && !isActioned && (
