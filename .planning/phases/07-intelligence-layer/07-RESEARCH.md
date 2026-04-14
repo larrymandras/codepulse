@@ -437,26 +437,23 @@ function AnomalyBadge({
 | A1 | 7-day vs 14-day window switch at 30 days of data | Architecture Patterns / Pattern 3 | Forecast accuracy off at low data density — tune at implementation |
 | A2 | 14-day rolling window for z-score baseline | Architecture Patterns / Pattern 4 | Too short = noisy anomalies; too long = slow to detect new patterns |
 | A3 | Anthropic REST API not fully OpenAI-compatible at HTTP level | Pitfall 4 | If compatible, simpler code; if not, need dedicated Anthropic code path |
-| A4 | Session end trigger location (which mutation patches session status) | Pattern 5 | Need to verify which mutation sets status="completed" before implementing trigger |
+| A4 | Session end trigger location (which mutation patches session status) | Pattern 5 | RESOLVED: `sessions.markCompleted` mutation called from `ingest.ts` line 103 |
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Where does session status flip to "completed"?**
-   - What we know: `sessions` table has `status` field; `insightsChat.ts` queries `api.sessions.listAll`
-   - What's unclear: Which mutation/hook sets status to "completed" — could be the WebSocket ingest pipeline or a manual close action
-   - Recommendation: Grep for `status.*completed` in convex/ during Wave 0 to find the exact mutation; add the briefing trigger there
+1. **Where does session status flip to "completed"?** -- RESOLVED
+   - **Answer:** `convex/sessions.ts` exports `markCompleted` mutation (line 40). Called from `convex/ingest.ts` line 103 when `eventType === "session_end" || eventType === "session_stop"`. Also called from `ingest.ts` line 174 for Claude Code hook session-end events. Additionally, `convex/health.ts` `detectStaleSessions` (internalMutation) patches stale active sessions to "completed" via direct `ctx.db.patch`.
+   - **Plan 03 action:** Add `ctx.scheduler.runAfter(0, internal.briefings.onSessionCompleted, { sessionId })` in `convex/ingest.ts` after the `markCompleted` call at line 103 (and line 174), when status === "completed". This avoids modifying the sessions module.
 
-2. **Does `episodicEvents` track deduplication flags?**
-   - What we know: `episodicEvents` table has `eventType: "memory_stored" | "memory_recalled" | "memory_pruned"` — no `isDuplicate` field visible in schema
-   - What's unclear: Whether deduplication events come through as `eventType: "memory_pruned"` or a separate flag
-   - Recommendation: Query live `episodicEvents` data during Wave 0 to understand event type distribution before building dedup rate logic
+2. **Does `episodicEvents` track deduplication flags?** -- RESOLVED
+   - **Answer:** No. `episodicEvents` has only `eventType: "memory_stored" | "memory_recalled" | "memory_pruned"` with no `isDuplicate` boolean field. The schema (line 420) confirms no dedup-specific flag.
+   - **Dedup rate computation:** Use ratio of `memory_pruned` events to `memory_stored` events as the deduplication rate proxy. This is the approach Plan 05 already uses (`computeDeduplicationRate(totalStored, prunedCount)`).
 
-3. **Activity changelog event source**
-   - What we know: `events` table has `eventType`, `toolName`, `filePath` per session
-   - What's unclear: Whether INT-05 activity changelog is LLM-generated narrative or a rule-based template grouping tool calls by type
-   - Recommendation: Use rule-based grouping (no LLM cost) for the activity changelog — LLM-generated is reserved for session briefings and daily digest
+3. **Activity changelog event source** -- RESOLVED
+   - **Answer:** Rule-based template grouping (no LLM cost). The `events` table has `eventType`, `toolName`, `filePath` per session. Plan 03 implements `groupActivityEvents()` which groups by `toolName`/`eventType` and returns sorted counts. This is used in session briefings and daily digests as structured input to the LLM prompt, not as a standalone LLM call.
+
 
 ---
 
