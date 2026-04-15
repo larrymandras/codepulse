@@ -927,4 +927,105 @@ export default defineSchema({
     }))),
   })
     .index("by_evaluated", ["evaluatedAt"]),
+
+  // ============================================================
+  // V6.0 TELEMETRY TABLES (9) — OpenClaw Intelligence + Security
+  // ============================================================
+
+  memoryPreflight: defineTable({
+    sessionId: v.optional(v.string()),
+    profileId: v.string(),
+    hitCount: v.float64(),
+    missCount: v.float64(),
+    latencyMs: v.float64(),
+    topMemoryIds: v.optional(v.array(v.string())),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_profile", ["profileId", "timestamp"]),
+
+  dreamingCycles: defineTable({
+    runDate: v.string(),
+    status: v.string(),
+    rawCount: v.float64(),
+    candidateCount: v.float64(),
+    extractedCount: v.float64(),
+    dedupedCount: v.float64(),
+    storedCount: v.float64(),
+    durationMs: v.optional(v.float64()),
+    costUsd: v.optional(v.float64()),
+    isBackfill: v.optional(v.boolean()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_runDate", ["runDate"]),
+
+  dreamingFacts: defineTable({
+    cycleId: v.optional(v.string()),
+    factText: v.string(),
+    category: v.string(),
+    confidence: v.float64(),
+    sourceMemoryIds: v.optional(v.array(v.string())),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_category", ["category", "timestamp"]),
+
+  executionModes: defineTable({
+    executionId: v.string(),
+    mode: v.string(),
+    roundsDepth: v.float64(),
+    fillerCount: v.optional(v.float64()),
+    stalledAt: v.optional(v.float64()),
+    timestamp: v.float64(),
+  }).index("by_executionId", ["executionId"])
+    .index("by_timestamp", ["timestamp"]),
+
+  conversationImports: defineTable({
+    importId: v.string(),
+    source: v.string(),
+    status: v.string(),
+    conversationCount: v.float64(),
+    memoriesCreated: v.optional(v.float64()),
+    errorMessage: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_importId", ["importId"]),
+
+  runtimeCommands: defineTable({
+    name: v.string(),
+    description: v.string(),
+    category: v.string(),
+    jsonSchema: v.optional(v.any()),
+    lastSeenAt: v.float64(),
+  }).index("by_name", ["name"])
+    .index("by_category", ["category"]),
+
+  advisorEvents: defineTable({
+    sessionId: v.optional(v.string()),
+    provider: v.string(),
+    model: v.optional(v.string()),
+    used: v.boolean(),
+    inputTokens: v.float64(),
+    outputTokens: v.float64(),
+    costUsd: v.float64(),
+    standardCostUsd: v.float64(),
+    latencyMs: v.optional(v.float64()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_provider", ["provider", "timestamp"]),
+
+  startupEvents: defineTable({
+    phase: v.string(),
+    duration: v.float64(),
+    totalMs: v.float64(),
+    subsystem: v.optional(v.string()),
+    order: v.optional(v.float64()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  authAliases: defineTable({
+    alias: v.string(),
+    provider: v.string(),
+    userId: v.string(),
+    createdAt: v.float64(),
+  }).index("by_alias", ["alias"])
+    .index("by_provider", ["provider"]),
 });
