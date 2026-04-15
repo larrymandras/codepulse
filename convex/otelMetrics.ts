@@ -59,6 +59,9 @@ export const otelMetricsIngest = httpAction(async (ctx, request) => {
     const body = await request.json();
     const resourceMetrics: any[] = body.resourceMetrics ?? [];
     let processed = 0;
+    let failed = 0;
+    const failures: Array<{ index: number; error: string }> = [];
+    let recordIndex = 0;
 
     for (const rm of resourceMetrics) {
       // Extract session.id from resource attributes
@@ -81,23 +84,30 @@ export const otelMetricsIngest = httpAction(async (ctx, request) => {
             const ts = nanoToSec(dp.timeUnixNano ?? dp.startTimeUnixNano);
             const dpAttrs: any[] = dp.attributes ?? [];
             const value = getPointValue(dp);
+            const i = recordIndex++;
 
             try {
               await routeMetric(ctx, name, sessionId, value, ts, dpAttrs);
               processed++;
             } catch (e: any) {
-              // Log but don't fail the whole request for one bad metric
               console.error(`Failed to route metric ${name}: ${e.message}`);
+              failed++;
+              if (failures.length < 10) {
+                failures.push({ index: i, error: e.message });
+              }
             }
           }
         }
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, processed }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return new Response(
+      JSON.stringify({ ok: failed === 0, processed, failed, failures }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,

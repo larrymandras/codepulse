@@ -31,8 +31,13 @@ export const upsertLifecycle = mutation({
       .first();
 
     if (existing) {
-      // Patch with provided fields — always update status
+      // Patch with all provided non-undefined fields — always update status
       const patch: Record<string, any> = { status: args.status };
+      if (args.toolName !== undefined) patch.toolName = args.toolName;
+      if (args.origin !== undefined) patch.origin = args.origin;
+      if (args.profileId !== undefined) patch.profileId = args.profileId;
+      if (args.channelId !== undefined) patch.channelId = args.channelId;
+      if (args.parentExecutionId !== undefined) patch.parentExecutionId = args.parentExecutionId;
       if (args.startedAt !== undefined) patch.startedAt = args.startedAt;
       if (args.completedAt !== undefined) patch.completedAt = args.completedAt;
       if (args.durationMs !== undefined) patch.durationMs = args.durationMs;

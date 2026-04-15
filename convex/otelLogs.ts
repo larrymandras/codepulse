@@ -82,6 +82,9 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
     const body = await request.json();
     const resourceLogs: any[] = body.resourceLogs ?? [];
     let processed = 0;
+    let failed = 0;
+    const failures: Array<{ index: number; error: string }> = [];
+    let recordIndex = 0;
 
     for (const rl of resourceLogs) {
       // Extract session.id from resource attributes
@@ -102,20 +105,28 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
             lr.body?.stringValue ??
             "";
 
+          const i = recordIndex++;
           try {
             await routeLogRecord(ctx, eventName, sessionId, ts, lrAttrs, lr);
             processed++;
           } catch (e: any) {
             console.error(`Failed to route log ${eventName}: ${e.message}`);
+            failed++;
+            if (failures.length < 10) {
+              failures.push({ index: i, error: e.message });
+            }
           }
         }
       }
     }
 
-    return new Response(JSON.stringify({ ok: true, processed }), {
-      status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return new Response(
+      JSON.stringify({ ok: failed === 0, processed, failed, failures }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      }
+    );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
