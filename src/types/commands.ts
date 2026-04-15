@@ -14,4 +14,5 @@ export interface CommandEntry {
     description?: string;
   }[];
   source?: string;        // which manifest file it came from
+  inputSchema?: Record<string, unknown>; // JSON Schema object for Try It form
 }

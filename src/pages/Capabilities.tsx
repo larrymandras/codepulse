@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import McpServerPanel from "../components/McpServerPanel";
@@ -6,6 +7,8 @@ import PluginPanel from "../components/PluginPanel";
 import DiscoveredToolsTable from "../components/DiscoveredToolsTable";
 import CommandCatalogPanel from "../components/CommandCatalogPanel";
 import InfoTooltip from "../components/InfoTooltip";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { CommandTryItForm } from "../components/CommandTryItForm";
 import { formatTimestamp } from "../lib/formatters";
 import {
   useCapabilitySummary,
@@ -17,6 +20,7 @@ import {
   useDiscoveredTools,
 } from "../hooks/useCapabilities";
 import { useCommandCatalog } from "../hooks/useCommandCatalog";
+import { useAstridrWS } from "../contexts/AstridrWSContext";
 
 function changeTypeColor(_key: string, oldVal: any, newVal: any): string {
   if (oldVal === undefined || oldVal === null) return "text-green-400";
@@ -227,9 +231,18 @@ export default function Capabilities() {
   const hooks = useHooks();
   const tools = useDiscoveredTools();
   const { commands: catalogCommands, status: catalogStatus, error: catalogError } = useCommandCatalog();
+  const { status: wsStatus } = useAstridrWS();
 
   const [search, setSearch] = useState("");
+  const [tryCommand, setTryCommand] = useState<string | null>(null);
   const filter = search.toLowerCase().trim() || undefined;
+
+  // Deep linking: ?try=<commandName> from CommandPalette
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const tryName = searchParams.get("try");
+    if (tryName) setTryCommand(tryName);
+  }, [searchParams]);
 
   return (
     <div className="space-y-6">
@@ -328,11 +341,34 @@ export default function Capabilities() {
       <DiscoveredToolsTable tools={tools} filter={filter} />
 
       {/* 7. Commands (WebSocket catalog) */}
+      {wsStatus === "disconnected" && (
+        <div className="bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3 text-sm text-amber-400">
+          WebSocket disconnected. Command execution unavailable. Reconnecting...
+        </div>
+      )}
+
+      {catalogStatus === "ready" && catalogCommands.length === 0 && (
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-6 text-center text-sm text-gray-500">
+          No commands registered. Connect to Astridr WebSocket to load the command registry.
+        </div>
+      )}
+
       <CommandCatalogPanel
         commands={catalogCommands}
         filter={filter}
         status={catalogStatus}
         error={catalogError}
+        tryCommand={tryCommand}
+        onTryCommand={setTryCommand}
+        renderTryItForm={(cmd) => (
+          <SectionErrorBoundary name="Try It">
+            <CommandTryItForm
+              commandName={cmd.name}
+              schema={cmd.inputSchema as Record<string, unknown> | undefined}
+              onClose={() => setTryCommand(null)}
+            />
+          </SectionErrorBoundary>
+        )}
       />
     </div>
   );

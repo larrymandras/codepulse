@@ -7,6 +7,7 @@
  */
 
 import { useState, useMemo } from "react";
+import type React from "react";
 import { Loader2, ChevronDown, ChevronUp, Check } from "lucide-react";
 import type { CommandEntry } from "@/types/commands";
 
@@ -15,6 +16,9 @@ interface CommandCatalogPanelProps {
   filter?: string;
   status: "loading" | "ready" | "error";
   error?: string;
+  tryCommand?: string | null;
+  onTryCommand?: (name: string | null) => void;
+  renderTryItForm?: (cmd: CommandEntry) => React.ReactNode;
 }
 
 export default function CommandCatalogPanel({
@@ -22,6 +26,9 @@ export default function CommandCatalogPanel({
   filter,
   status,
   error,
+  tryCommand,
+  onTryCommand,
+  renderTryItForm,
 }: CommandCatalogPanelProps) {
   const [expandedName, setExpandedName] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -249,13 +256,29 @@ export default function CommandCatalogPanel({
 
                           {/* Source */}
                           {cmd.source && (
-                            <div>
+                            <div className="mb-3">
                               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                                 Source
                               </p>
                               <p className="font-mono text-xs text-muted-foreground">
                                 {cmd.source}
                               </p>
+                            </div>
+                          )}
+
+                          {/* Try It button + form */}
+                          {renderTryItForm && (
+                            <div className="mt-2">
+                              {tryCommand === cmd.name ? (
+                                renderTryItForm(cmd)
+                              ) : (
+                                <button
+                                  onClick={() => onTryCommand?.(cmd.name)}
+                                  className="px-2.5 py-1 rounded-sm text-xs bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
+                                >
+                                  Try It
+                                </button>
+                              )}
                             </div>
                           )}
                         </div>
