@@ -6,6 +6,7 @@ import {
   internalAction,
 } from "./_generated/server";
 import { v } from "convex/values";
+import { ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 
@@ -229,6 +230,10 @@ export const setLLMConfig = mutation({
     apiKey: v.string(),
   },
   handler: async (ctx, { slot, provider, model, apiKey }) => {
+    // CPHLTH-01: Require authenticated Clerk identity — this mutation stores API keys.
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError("Unauthenticated");
+
     // T-07-08: Validate slot and provider values
     if (slot !== "primary" && slot !== "backup") {
       throw new Error(`Invalid slot "${slot}". Must be "primary" or "backup".`);

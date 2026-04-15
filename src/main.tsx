@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
-import { ClerkProvider } from "@clerk/clerk-react";
+import { ClerkProvider, useAuth } from "@clerk/clerk-react";
+import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { AmbientProvider } from "./contexts/AmbientContext";
 import App from "./App";
@@ -20,12 +21,24 @@ function Providers({ children }: { children: React.ReactNode }) {
   );
 }
 
+// CPHLTH-01: When Clerk is configured, bridge Clerk JWT to Convex identity so
+// server-side ctx.auth.getUserIdentity() checks work on sensitive mutations.
+function ClerkConvexProviders({ children }: { children: React.ReactNode }) {
+  return (
+    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+      <PrivacyProvider>
+        <AmbientProvider>{children}</AmbientProvider>
+      </PrivacyProvider>
+    </ConvexProviderWithClerk>
+  );
+}
+
 const tree = CLERK_KEY ? (
   <StrictMode>
     <ClerkProvider publishableKey={CLERK_KEY}>
-      <Providers>
+      <ClerkConvexProviders>
         <App />
-      </Providers>
+      </ClerkConvexProviders>
     </ClerkProvider>
   </StrictMode>
 ) : (
