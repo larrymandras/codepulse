@@ -25,6 +25,13 @@ vi.mock("@/hooks/useCommandPaletteSearch", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useCommandCatalog", () => ({
+  useCommandCatalog: () => ({
+    commands: [],
+    status: "loading",
+  }),
+}));
+
 vi.mock("@/contexts/AstridrWSContext", () => ({
   useAstridrWS: () => ({
     sendCommand: vi.fn().mockResolvedValue({ ack: "ok" }),
@@ -38,6 +45,7 @@ vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
+    warning: vi.fn(),
   },
 }));
 
@@ -64,25 +72,29 @@ describe("CommandPalette", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("shows CommandInput with placeholder 'Search agents, sessions, alerts, cron jobs...'", () => {
+  it("shows CommandInput with placeholder 'Search pages, agents, sessions, commands...'", () => {
     renderPalette({ open: true });
-    const input = screen.getByPlaceholderText("Search agents, sessions, alerts, cron jobs...");
+    const input = screen.getByPlaceholderText("Search pages, agents, sessions, commands...");
     expect(input).toBeInTheDocument();
   });
 
-  it("renders five CommandGroup sections: Agents, Sessions, Alerts, Cron Jobs, Quick Actions per D-01/D-03", () => {
+  it("renders CommandGroup sections: Pages, Agents, Sessions, Alerts, Cron Jobs, Quick Actions, Actions, Commands per D-01/D-03", () => {
     renderPalette({ open: true });
-    expect(screen.getByText("Agents")).toBeInTheDocument();
-    expect(screen.getByText("Sessions")).toBeInTheDocument();
-    expect(screen.getByText("Alerts")).toBeInTheDocument();
+    // Use getAllByText since group headings and nav items may share the same text
+    expect(screen.getAllByText("Pages").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Agents").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sessions").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Alerts").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Cron Jobs")).toBeInTheDocument();
     expect(screen.getByText("Quick Actions")).toBeInTheDocument();
+    expect(screen.getByText("Actions")).toBeInTheDocument();
+    expect(screen.getByText("Commands")).toBeInTheDocument();
   });
 
   it("renders CommandEmpty with 'No results found.' when search has no matches", () => {
     renderPalette({ open: true });
     // Type a query that won't match any mock data — cmdk will show CommandEmpty
-    const input = screen.getByPlaceholderText("Search agents, sessions, alerts, cron jobs...");
+    const input = screen.getByPlaceholderText("Search pages, agents, sessions, commands...");
     fireEvent.change(input, { target: { value: "xyzzy-no-match-abc123" } });
     expect(screen.getByText("No results found.")).toBeInTheDocument();
   });
