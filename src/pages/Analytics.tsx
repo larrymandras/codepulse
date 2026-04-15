@@ -21,6 +21,17 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
+import { FlexBarChart } from "../components/FlexBarChart";
+import { SectionHeader } from "../components/SectionHeader";
+import { GlassPanel } from "../components/GlassPanel";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "../components/ui/table";
 
 export default function Analytics() {
   const { events } = useRecentEvents(100);
@@ -34,6 +45,11 @@ export default function Analytics() {
   const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
 
   const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies) ?? {};
+
+  // Execution depth histogram + Advisor Strategy (CPUX-09)
+  const depthHistogram = useQuery(api.advisorEvents.executionDepthHistogram);
+  const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
+  const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
 
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
@@ -134,6 +150,67 @@ export default function Analytics() {
       {/* API Errors — full width */}
       <SectionErrorBoundary name="API Errors">
         <ApiErrorPanel />
+      </SectionErrorBoundary>
+
+      {/* Execution Depth Distribution (CPUX-09) */}
+      <SectionErrorBoundary name="Execution Depth">
+        <SectionHeader title="Execution Depth Distribution" />
+        <GlassPanel className="p-4">
+          {depthHistogram && depthHistogram.length > 0 ? (
+            <FlexBarChart
+              data={depthHistogram.map(d => ({ label: d.label, value: d.count }))}
+              height={120}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">No execution depth data yet.</p>
+          )}
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Advisor Strategy (CPUX-09) */}
+      <SectionErrorBoundary name="Advisor Strategy">
+        <SectionHeader title="Advisor Strategy" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <GlassPanel className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Savings</p>
+            <p className="text-2xl font-semibold tabular-nums mt-1">
+              ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
+            </p>
+          </GlassPanel>
+          <GlassPanel className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
+            <p className="text-2xl font-semibold tabular-nums mt-1">
+              {advisorRecent && advisorRecent.length > 0
+                ? `${Math.round((advisorRecent.filter(e => e.used).length / advisorRecent.length) * 100)}%`
+                : "—"}
+            </p>
+          </GlassPanel>
+        </div>
+        {/* Cost comparison table: advisor cost vs standard cost per recent event */}
+        <GlassPanel className="p-4 mt-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Provider</TableHead>
+                <TableHead>Advisor Cost</TableHead>
+                <TableHead>Standard Cost</TableHead>
+                <TableHead>Saved</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(advisorRecent ?? []).slice(0, 10).map((evt, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-mono text-xs">{evt.provider}</TableCell>
+                  <TableCell className="tabular-nums">${evt.costUsd.toFixed(4)}</TableCell>
+                  <TableCell className="tabular-nums">${evt.standardCostUsd.toFixed(4)}</TableCell>
+                  <TableCell className="tabular-nums" style={{ color: "var(--status-ok)" }}>
+                    ${(evt.standardCostUsd - evt.costUsd).toFixed(4)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </GlassPanel>
       </SectionErrorBoundary>
     </div>
   );
