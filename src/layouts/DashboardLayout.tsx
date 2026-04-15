@@ -13,7 +13,61 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
-import { X, Menu } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import {
+  LayoutDashboard,
+  Cpu,
+  BarChart2,
+  Bell,
+  Server,
+  Users,
+  Shield,
+  Lightbulb,
+  RefreshCw,
+  Bot,
+  Hammer,
+  Brain,
+  Moon,
+  ScrollText,
+  Clock,
+  List,
+  Settings,
+  TrendingUp,
+  MessageSquare,
+  Activity,
+  Inbox,
+  KanbanSquare,
+  SlidersHorizontal,
+  Sun,
+  X,
+  Menu,
+} from "lucide-react";
+
+const iconComponents: Record<string, React.ElementType> = {
+  grid: LayoutDashboard,
+  cpu: Cpu,
+  chart: BarChart2,
+  bell: Bell,
+  server: Server,
+  users: Users,
+  shield: Shield,
+  idea: Lightbulb,
+  refresh: RefreshCw,
+  bot: Bot,
+  hammer: Hammer,
+  brain: Brain,
+  moon: Moon,
+  scroll: ScrollText,
+  clock: Clock,
+  list: List,
+  gear: Settings,
+  message: MessageSquare,
+  activity: Activity,
+  inbox: Inbox,
+  kanban: KanbanSquare,
+  sliders: SlidersHorizontal,
+  insights: TrendingUp,
+};
 
 const commandNavItems = [
   { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
@@ -36,6 +90,7 @@ const overviewNavItems = [
   { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OVERVIEW" },
   { to: "/build", label: "Build", icon: "hammer", group: "OVERVIEW" },
   { to: "/memory", label: "Memory", icon: "brain", group: "OVERVIEW" },
+  { to: "/dreaming", label: "Dreaming", icon: "moon", group: "OVERVIEW" },
   { to: "/briefings", label: "Briefings", icon: "scroll", group: "OVERVIEW" },
   { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
@@ -46,31 +101,26 @@ const overviewNavItems = [
 // Keep navItems for any code that still references it
 const navItems = [...commandNavItems, ...overviewNavItems];
 
-const iconMap: Record<string, string> = {
-  grid: "|||",
-  cpu: "[#]",
-  chart: "/\\",
-  bell: "(i)",
-  server: "[=]",
-  users: "(:)",
-  shield: "{!}",
-  idea: "(+)",
-  refresh: "<>",
-  bot: "@",
-  hammer: "T",
-  tree: "Y",
-  brain: "(~)",
-  scroll: "[]",
-  clock: "(o)",
-  list: ":-",
-  gear: "*",
-  message: ">_",
-  activity: "~^",
-  inbox: "[>",
-  kanban: "=#",
-  sliders: "-|-",
-  insights: "??",
-};
+function DarkModeToggle() {
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains("dark")
+  );
+  const toggle = () => {
+    const next = !dark;
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    setDark(next);
+  };
+  return (
+    <button
+      onClick={toggle}
+      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+      className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+    >
+      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
 
 function NavGroup({
   label,
@@ -83,29 +133,30 @@ function NavGroup({
 }) {
   return (
     <>
-      <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-gray-500 font-medium">
+      <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-muted-foreground font-medium">
         {label}
       </p>
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.to === "/"}
-          onClick={onNavClick}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-              isActive
-                ? "bg-gray-800/50 text-gray-100"
-                : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/30"
-            }`
-          }
-        >
-          <span className="w-5 text-center text-xs font-mono opacity-60">
-            {iconMap[item.icon]}
-          </span>
-          {item.label}
-        </NavLink>
-      ))}
+      {items.map((item) => {
+        const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
+        return (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === "/"}
+            onClick={onNavClick}
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2 text-sm transition-colors border-l-2 ${
+                isActive
+                  ? "bg-accent border-[var(--sidebar-active-bar)] text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              }`
+            }
+          >
+            <IconComponent className="h-4 w-4 shrink-0" />
+            {item.label}
+          </NavLink>
+        );
+      })}
     </>
   );
 }
@@ -118,28 +169,32 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
   return (
     <>
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-sm font-bold">
-            CP
+      {/* Logo / Header */}
+      <div className="p-4 border-b border-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+              CP
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-foreground">CodePulse</h1>
+              <p className="text-[10px] text-muted-foreground">Telemetry Dashboard</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-semibold text-gray-100">CodePulse</h1>
-            <p className="text-[10px] text-gray-500">Telemetry Dashboard</p>
-          </div>
+          <DarkModeToggle />
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
         <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} />
+        <Separator className="my-2 mx-3" />
         <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} />
       </nav>
 
       {/* Connection Status */}
-      <div className="p-4 border-t border-gray-800">
-        <div className="flex items-center gap-2 text-xs text-gray-500">
+      <div className="p-4 border-t border-border">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
           <span>{statusLabel}</span>
         </div>
@@ -172,10 +227,10 @@ function CrtToggle({
       onClick={toggle}
       aria-label={crtEnabled ? "Disable CRT effect" : "Enable CRT effect"}
       title={crtEnabled ? "CRT effect ON — click to disable" : "CRT effect OFF — click to enable"}
-      className={`p-1.5 rounded-lg transition-colors text-[10px] font-mono font-medium ${
+      className={`p-1.5 transition-colors text-[10px] font-mono font-medium ${
         crtEnabled
           ? "bg-green-600/20 text-green-400 hover:bg-green-600/30"
-          : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent"
       }`}
     >
       CRT
@@ -196,6 +251,16 @@ export default function DashboardLayout() {
       return false;
     }
   });
+
+  // Initialize dark mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light") {
+      document.documentElement.classList.remove("dark");
+    } else {
+      document.documentElement.classList.add("dark");
+    }
+  }, []);
 
   useEffect(() => {
     const handler = () => {
@@ -247,7 +312,7 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 flex-shrink-0 bg-gray-950 border-r border-gray-800 flex-col">
+      <aside className="hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col">
         <SidebarContent />
       </aside>
 
@@ -261,7 +326,7 @@ export default function DashboardLayout() {
 
       {/* Mobile Sidebar Panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-60 bg-gray-950 border-r border-gray-800 flex flex-col transform transition-transform duration-200 md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex flex-col transform transition-transform duration-200 md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -270,7 +335,7 @@ export default function DashboardLayout() {
           <button
             onClick={() => setSidebarOpen(false)}
             aria-label="Close sidebar"
-            className="p-1 text-gray-400 hover:text-gray-200 transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -281,32 +346,32 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-12 flex-shrink-0 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-6">
+        <header className="h-12 flex-shrink-0 bg-background border-b border-border flex items-center justify-between px-6">
           {/* Hamburger button - mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
             aria-label="Open sidebar menu"
-            className="p-1 -ml-1 mr-3 text-gray-400 hover:text-gray-200 transition-colors md:hidden"
+            className="p-1 -ml-1 mr-3 text-muted-foreground hover:text-foreground transition-colors md:hidden"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-muted-foreground">
             Astridr Runtime Telemetry
           </span>
           <div className="flex items-center gap-2">
             <EStopButton />
-            <div className="w-px h-5 bg-gray-800 mx-1" />
+            <div className="w-px h-5 bg-border mx-1" />
             <NotificationBell />
             <PrivacyShield />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
-            <div className="w-px h-5 bg-gray-800 mx-1" />
+            <div className="w-px h-5 bg-border mx-1" />
             <UserMenu />
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-900 p-6">
+        <main className="flex-1 overflow-y-auto bg-background p-6">
           <AlertBanner />
           <ErrorBoundary>
             <Outlet />
@@ -328,3 +393,6 @@ export default function DashboardLayout() {
     </div>
   );
 }
+
+// Export navItems for external use (CommandPalette, etc.)
+export { navItems };

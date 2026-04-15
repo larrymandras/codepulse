@@ -34,6 +34,9 @@ const ConfigEditorPage = lazy(() => import("./pages/ConfigEditor"));
 // Lazy-load interaction layer pages (Phase 03)
 const InsightsChat = lazy(() => import("./pages/InsightsChat"));
 
+// Lazy-load Phase 63 pages
+const Dreaming = lazy(() => import("./pages/Dreaming"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -66,6 +69,8 @@ export default function App() {
               <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
               {/* Phase 03: Interaction layer pages */}
               <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
+              {/* Phase 63: Dashboard overhaul pages */}
+              <Route path="/dreaming" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Dreaming...</div>}><Dreaming /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>
