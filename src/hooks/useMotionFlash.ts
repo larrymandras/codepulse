@@ -28,6 +28,8 @@ export function useMotionFlash() {
     // Respect prefers-reduced-motion (D-08)
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    if (!scope.current) return;
+
     animate(
       scope.current,
       {

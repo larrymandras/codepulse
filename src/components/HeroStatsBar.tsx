@@ -27,7 +27,7 @@ interface KpiDef {
 export default function HeroStatsBar() {
   const stats = useHeroStats();
   const navigate = useNavigate();
-  const hc = healthConfig[stats.health];
+  const hc = healthConfig[stats.health] ?? healthConfig.yellow;
 
   // v6.0 new metrics
   const preflightStats = useQuery(api.memoryPreflight.stats);
