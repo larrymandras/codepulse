@@ -59,97 +59,129 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-100">Analytics</h1>
+      <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
 
       {/* Cost Forecast */}
       <SectionErrorBoundary name="Cost Forecast">
-        <CostForecastPanel />
+        <GlassPanel className="p-4">
+          <CostForecastPanel />
+        </GlassPanel>
       </SectionErrorBoundary>
 
       {/* Summary row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="flex items-start gap-2">
-          <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
-          {anomalies.errors && (
-            <AnomalyBadge
-              severity={anomalies.errors.severity as "warning" | "critical"}
-              metric="errors"
-              value={anomalies.errors.value}
-              mean={anomalies.errors.mean}
-              zScore={anomalies.errors.zScore}
-            />
-          )}
+      <GlassPanel className="p-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="flex items-start gap-2">
+            <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
+            {anomalies.errors && (
+              <AnomalyBadge
+                severity={anomalies.errors.severity as "warning" | "critical"}
+                metric="errors"
+                value={anomalies.errors.value}
+                mean={anomalies.errors.mean}
+                zScore={anomalies.errors.zScore}
+              />
+            )}
+          </div>
+          <MetricCard label="LLM Calls" value={llmCalls.length} />
+          <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+          <div className="flex items-start gap-2">
+            <MetricCard label="Total Cost" value={formatCost(totalCost)} />
+            {anomalies.cost && (
+              <AnomalyBadge
+                severity={anomalies.cost.severity as "warning" | "critical"}
+                metric="cost"
+                value={anomalies.cost.value}
+                mean={anomalies.cost.mean}
+                zScore={anomalies.cost.zScore}
+              />
+            )}
+          </div>
         </div>
-        <MetricCard label="LLM Calls" value={llmCalls.length} />
-        <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
-        <div className="flex items-start gap-2">
-          <MetricCard label="Total Cost" value={formatCost(totalCost)} />
-          {anomalies.cost && (
-            <AnomalyBadge
-              severity={anomalies.cost.severity as "warning" | "critical"}
-              metric="cost"
-              value={anomalies.cost.value}
-              mean={anomalies.cost.mean}
-              zScore={anomalies.cost.zScore}
-            />
-          )}
-        </div>
-      </div>
+      </GlassPanel>
 
       {/* Cost Trend — full width */}
-      <CostTrendChart />
+      <GlassPanel className="p-4">
+        <CostTrendChart />
+      </GlassPanel>
 
       {/* Two-column: LLM Analytics + Capability Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <LlmAnalyticsPanel />
-        <CapabilityGrowthChart />
+        <GlassPanel className="p-4">
+          <LlmAnalyticsPanel />
+        </GlassPanel>
+        <GlassPanel className="p-4">
+          <CapabilityGrowthChart />
+        </GlassPanel>
       </div>
 
       {/* Session Comparison — full width */}
-      <SessionComparison />
+      <GlassPanel className="p-4">
+        <SessionComparison />
+      </GlassPanel>
 
       {/* Advanced Visualizations */}
-      <h2 className="text-lg font-semibold text-gray-200 pt-4">Advanced Visualizations</h2>
+      <SectionHeader title="Advanced Visualizations" />
 
       {/* Activity Heatmap — full width */}
-      <ActivityHeatmap />
+      <GlassPanel className="p-4">
+        <ActivityHeatmap />
+      </GlassPanel>
 
       {/* Sankey + Sunburst — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SankeyFlow />
-        <TokenSunburst />
+        <GlassPanel className="p-4">
+          <SankeyFlow />
+        </GlassPanel>
+        <GlassPanel className="p-4">
+          <TokenSunburst />
+        </GlassPanel>
       </div>
 
       {/* Error Rate + Session Duration — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ErrorRateTrend />
-        <SessionDurationHistogram />
+        <GlassPanel className="p-4">
+          <ErrorRateTrend />
+        </GlassPanel>
+        <GlassPanel className="p-4">
+          <SessionDurationHistogram />
+        </GlassPanel>
       </div>
 
       {/* Token Waterfall — full width */}
-      <TokenWaterfall />
+      <GlassPanel className="p-4">
+        <TokenWaterfall />
+      </GlassPanel>
 
       {/* Claude Code Telemetry */}
-      <h2 className="text-lg font-semibold text-gray-200 pt-4">Claude Code Telemetry</h2>
+      <SectionHeader title="Claude Code Telemetry" />
 
       {/* Prompt Activity — full width */}
       <SectionErrorBoundary name="Prompt Activity">
-        <PromptActivityChart />
+        <GlassPanel className="p-4">
+          <PromptActivityChart />
+        </GlassPanel>
       </SectionErrorBoundary>
 
       {/* Permission Decisions + Active Time — side by side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <SectionErrorBoundary name="Permission Decisions">
-          <PermissionDecisionsChart />
+          <GlassPanel className="p-4">
+            <PermissionDecisionsChart />
+          </GlassPanel>
         </SectionErrorBoundary>
         <SectionErrorBoundary name="Active Time">
-          <ActiveTimeChart />
+          <GlassPanel className="p-4">
+            <ActiveTimeChart />
+          </GlassPanel>
         </SectionErrorBoundary>
       </div>
 
       {/* API Errors — full width */}
       <SectionErrorBoundary name="API Errors">
-        <ApiErrorPanel />
+        <GlassPanel className="p-4">
+          <ApiErrorPanel />
+        </GlassPanel>
       </SectionErrorBoundary>
 
       {/* Execution Depth Distribution (CPUX-09) */}
@@ -186,7 +218,7 @@ export default function Analytics() {
             </p>
           </GlassPanel>
         </div>
-        {/* Cost comparison table: advisor cost vs standard cost per recent event */}
+        {/* Cost comparison table */}
         <GlassPanel className="p-4 mt-4">
           <Table>
             <TableHeader>
