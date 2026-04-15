@@ -541,8 +541,8 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
     // Schedules asynchronously — does NOT block ingest response
     // Rate-limit: skip if evaluated within last 15 seconds to avoid DB read amplification
     const lastEvalConfig = await ctx.runQuery(internal.alerts.getLastCriticalEvalTimestamp);
-    const now = Date.now() / 1000;
-    if (!lastEvalConfig || now - lastEvalConfig > 15) {
+    const nowForEval = Date.now() / 1000;
+    if (!lastEvalConfig || nowForEval - lastEvalConfig > 15) {
       await ctx.runMutation(internal.alerts.evaluateCriticalInternal);
     }
 
