@@ -1,11 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
  * POST /preflight-ingest
@@ -15,6 +10,12 @@ export const preflightIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 
@@ -56,6 +57,12 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 
@@ -128,6 +135,12 @@ export const advisorIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 
@@ -171,6 +184,12 @@ export const importIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 
@@ -211,6 +230,12 @@ export const startupIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 
@@ -250,6 +275,12 @@ export const authAliasIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
   try {
     const body = await request.json() as Record<string, unknown>;
 

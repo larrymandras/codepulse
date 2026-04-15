@@ -1,11 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /** Helper: extract a string attribute value from an OTel attributes array */
 function getAttr(
@@ -76,6 +71,11 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       }),
       { status: 415, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
+  }
+
+  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
   }
 
   try {
