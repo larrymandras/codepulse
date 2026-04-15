@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import StatusBadge from "./StatusBadge";
 import ReplayButton from "./ReplayButton";
 import CancelButton from "./CancelButton";
@@ -64,6 +66,21 @@ function SkeletonRow() {
 export default function ExecutionTable({ executions, hasActiveFilters }: ExecutionTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Execution mode data: map executionId -> mode record
+  const executionModeData = useQuery(api.executionModes.recent, { limit: 100 });
+  const modeMap = useMemo(() => {
+    const map = new Map<string, { mode: string; roundsDepth: number; fillerCount?: number; stalledAt?: number }>();
+    executionModeData?.forEach((em) =>
+      map.set(em.executionId, {
+        mode: em.mode,
+        roundsDepth: em.roundsDepth,
+        fillerCount: em.fillerCount,
+        stalledAt: em.stalledAt,
+      })
+    );
+    return map;
+  }, [executionModeData]);
+
   const handleRowClick = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
@@ -91,7 +108,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
   return (
     <div className="max-h-[360px] overflow-y-auto">
       {/* Sticky header */}
-      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_140px] items-center gap-2 px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80 sticky top-0 z-10">
+      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80 sticky top-0 z-10">
         <span>Time</span>
         <span>Command</span>
         <span>Origin</span>
@@ -99,6 +116,8 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
         <span>Profile</span>
         <span>Duration</span>
         <span>Status</span>
+        <span>Mode</span>
+        <span>Depth</span>
         <span>Actions</span>
       </div>
 
@@ -107,11 +126,12 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
         const isExpanded = expandedId === row._id;
         const isReplayable = ["failed", "cancelled", "timed_out"].includes(row.status);
         const isCancellable = row.status === "running";
+        const modeData = modeMap.get(row.executionId);
 
         return (
           <div key={row._id}>
             <div
-              className={`grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_140px] items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-800/50 ${
+              className={`grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-800/50 ${
                 i % 2 === 0 ? "bg-gray-800/30" : ""
               }`}
               onClick={() => handleRowClick(row._id)}
@@ -149,6 +169,28 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
               {/* Status */}
               <span onClick={(e) => e.stopPropagation()}>
                 <StatusBadge status={row.status} />
+              </span>
+
+              {/* Mode badge + filler/stall indicators */}
+              <span className="flex flex-col gap-0.5" onClick={(e) => e.stopPropagation()}>
+                {modeData?.mode ? (
+                  <StatusBadge status={modeData.mode} />
+                ) : (
+                  <span className="text-xs text-gray-600">—</span>
+                )}
+                {(modeData?.fillerCount ?? 0) > 0 && (
+                  <span className="text-[10px]" style={{ color: "var(--status-warn)" }}>
+                    {modeData!.fillerCount} fillers
+                  </span>
+                )}
+                {modeData?.stalledAt != null && (
+                  <span className="text-[10px]" style={{ color: "var(--status-error)" }}>stalled</span>
+                )}
+              </span>
+
+              {/* Rounds depth */}
+              <span className="tabular-nums text-xs text-muted-foreground">
+                {modeData?.roundsDepth != null ? `${modeData.roundsDepth}r` : "—"}
               </span>
 
               {/* Actions */}
@@ -215,6 +257,31 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                     <span className="text-gray-300">{formatTs(row.completedAt)}</span>
                   </div>
                 </div>
+
+                {modeData && (
+                  <div className="grid grid-cols-3 gap-2 text-xs border-t border-gray-700/30 pt-2">
+                    <div>
+                      <span className="text-gray-500">Mode: </span>
+                      <span className="text-gray-300 capitalize">{modeData.mode}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Rounds: </span>
+                      <span className="tabular-nums text-gray-300">{modeData.roundsDepth}</span>
+                    </div>
+                    {(modeData.fillerCount ?? 0) > 0 && (
+                      <div>
+                        <span className="text-gray-500">Fillers: </span>
+                        <span className="tabular-nums" style={{ color: "var(--status-warn)" }}>{modeData.fillerCount}</span>
+                      </div>
+                    )}
+                    {modeData.stalledAt != null && (
+                      <div>
+                        <span className="text-gray-500">Stalled at: </span>
+                        <span style={{ color: "var(--status-error)" }}>{formatTs(modeData.stalledAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {row.errorMessage && (
                   <div>

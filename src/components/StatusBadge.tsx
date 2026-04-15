@@ -20,6 +20,12 @@ const legacyMap: Record<string, { semantic: string; label: string }> = {
   failed: { semantic: "error", label: "FAILED" },
   cancelled: { semantic: "warn", label: "CANCELLED" },
   timed_out: { semantic: "warn", label: "TIMEOUT" },
+  // Execution modes (v6.0)
+  strict: { semantic: "error", label: "STRICT" },
+  adaptive: { semantic: "warn", label: "ADAPTIVE" },
+  standard: { semantic: "ok", label: "STANDARD" },
+  filler: { semantic: "warn", label: "FILLER" },
+  stalled: { semantic: "error", label: "STALLED" },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
