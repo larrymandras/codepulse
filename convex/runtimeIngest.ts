@@ -534,6 +534,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "hive_mind_entry": {
+          const d = data as any;
+          await ctx.runMutation(api.hiveMind.recordEntry, {
+            agentType: d.agent_type ?? d.agentType ?? "unknown",
+            instanceId: d.instance_id ?? d.instanceId ?? "unknown",
+            profileId: d.profile_id ?? d.profileId ?? "unknown",
+            actionType: d.action_type ?? d.actionType ?? "tool_call",
+            toolName: d.tool_name ?? d.toolName,
+            target: d.target,
+            resultSummary: d.result_summary ?? d.resultSummary,
+            success: d.success ?? true,
+            durationMs: d.duration_ms ?? d.durationMs,
+            correlationId: d.correlation_id ?? d.correlationId,
+            sourceAgent: d.source_agent ?? d.sourceAgent,
+            targetAgent: d.target_agent ?? d.targetAgent,
+            taskDescription: d.task_description ?? d.taskDescription,
+            sessionKey: d.session_key ?? d.sessionKey,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

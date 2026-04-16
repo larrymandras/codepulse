@@ -1028,4 +1028,29 @@ export default defineSchema({
     createdAt: v.float64(),
   }).index("by_alias", ["alias"])
     .index("by_provider", ["provider"]),
+
+  // ============================================================
+  // HIVE MIND — cross-agent activity log (Phase 67)
+  // ============================================================
+
+  hiveMindEntries: defineTable({
+    agentType: v.string(),
+    instanceId: v.string(),
+    profileId: v.string(),
+    actionType: v.string(),
+    toolName: v.optional(v.string()),
+    target: v.optional(v.string()),
+    resultSummary: v.optional(v.string()),
+    success: v.boolean(),
+    durationMs: v.optional(v.float64()),
+    correlationId: v.optional(v.string()),
+    sourceAgent: v.optional(v.string()),
+    targetAgent: v.optional(v.string()),
+    taskDescription: v.optional(v.string()),
+    sessionKey: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"])
+    .index("by_agentType", ["agentType", "timestamp"])
+    .index("by_correlationId", ["correlationId"])
+    .index("by_profileId", ["profileId", "timestamp"]),
 });
