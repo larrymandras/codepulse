@@ -34,6 +34,7 @@ import {
   Settings,
   TrendingUp,
   MessageSquare,
+  MessageCircle,
   Activity,
   Inbox,
   KanbanSquare,
@@ -67,6 +68,7 @@ const iconComponents: Record<string, React.ElementType> = {
   kanban: KanbanSquare,
   sliders: SlidersHorizontal,
   insights: TrendingUp,
+  whatsapp: MessageCircle,
 };
 
 const commandNavItems = [
@@ -96,6 +98,7 @@ const overviewNavItems = [
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
   { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
   { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },
+  { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "OVERVIEW" },
 ];
 
 // Keep navItems for any code that still references it

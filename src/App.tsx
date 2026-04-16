@@ -37,6 +37,9 @@ const InsightsChat = lazy(() => import("./pages/InsightsChat"));
 // Lazy-load Phase 63 pages
 const Dreaming = lazy(() => import("./pages/Dreaming"));
 
+// Lazy-load Phase 68 pages
+const WhatsApp = lazy(() => import("./pages/WhatsApp"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -71,6 +74,8 @@ export default function App() {
               <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
               {/* Phase 63: Dashboard overhaul pages */}
               <Route path="/dreaming" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Dreaming...</div>}><Dreaming /></Suspense>} />
+              {/* Phase 68: WhatsApp channel page */}
+              <Route path="/channels/whatsapp" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading WhatsApp...</div>}><WhatsApp /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>
