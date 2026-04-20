@@ -21,6 +21,8 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
+import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
+import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
@@ -59,7 +61,13 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+        <div className="flex items-center gap-3">
+          <TokenSavingsIndicator savedTokens={0} totalTokens={0} />
+          <LangfuseTraceLink />
+        </div>
+      </div>
 
       {/* Cost Forecast */}
       <SectionErrorBoundary name="Cost Forecast">

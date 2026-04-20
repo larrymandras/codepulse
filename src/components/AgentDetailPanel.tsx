@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { useAgentDetail } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
+import { MemorySourceBadge } from "../components/MemorySourceBadge";
 
 const eventTypeColors: Record<string, string> = {
   handoff: "text-purple-400 bg-purple-400/10",
@@ -98,6 +99,10 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
             <p className="text-[10px] text-gray-400 font-mono truncate">{redact(detail.parentAgentId, `A-${detail.parentAgentId.slice(-4)}`)}</p>
           </div>
         )}
+        <div className="col-span-2">
+          <p className="text-[9px] text-gray-500 uppercase">Memory Source</p>
+          <MemorySourceBadge source="episodic" className="mt-0.5" />
+        </div>
       </div>
 
       {/* Coordination events */}
