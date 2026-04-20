@@ -26,6 +26,10 @@ const legacyMap: Record<string, { semantic: string; label: string }> = {
   standard: { semantic: "ok", label: "STANDARD" },
   filler: { semantic: "warn", label: "FILLER" },
   stalled: { semantic: "error", label: "STALLED" },
+  // Voice call statuses (Phase 72)
+  live: { semantic: "ok", label: "LIVE" },
+  ended: { semantic: "idle", label: "ENDED" },
+  joining: { semantic: "warn", label: "JOINING" },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
