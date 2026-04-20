@@ -120,3 +120,159 @@ export const upsertAuthAlias = mutation({
     }
   },
 });
+
+// ============================================================
+// WAR ROOM + MEETING BOT (Phase 72)
+// ============================================================
+
+export const upsertWarRoom = mutation({
+  args: {
+    roomId: v.string(),
+    name: v.string(),
+    status: v.string(),
+    participantIds: v.optional(v.array(v.string())),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("warRooms")
+      .withIndex("by_roomId", (q) => q.eq("roomId", args.roomId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { ...args, updatedAt: Date.now() });
+    } else {
+      await ctx.db.insert("warRooms", args);
+    }
+  },
+});
+
+export const insertWarRoomEvent = mutation({
+  args: {
+    roomId: v.string(),
+    eventType: v.string(),
+    speakerId: v.optional(v.string()),
+    speakerName: v.optional(v.string()),
+    text: v.optional(v.string()),
+    payload: v.optional(v.any()),
+    timestamp: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("warRoomEvents", args);
+  },
+});
+
+export const upsertVoiceCall = mutation({
+  args: {
+    callId: v.string(),
+    botSessionId: v.optional(v.string()),
+    status: v.string(),
+    platform: v.optional(v.string()),
+    agentProfileId: v.optional(v.string()),
+    durationMs: v.optional(v.float64()),
+    participantCount: v.optional(v.float64()),
+    costUsd: v.optional(v.float64()),
+    startedAt: v.float64(),
+    endedAt: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("voiceCalls")
+      .withIndex("by_callId", (q) => q.eq("callId", args.callId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { ...args });
+    } else {
+      await ctx.db.insert("voiceCalls", args);
+    }
+  },
+});
+
+export const insertCallTranscript = mutation({
+  args: {
+    callId: v.string(),
+    speakerId: v.optional(v.string()),
+    speakerName: v.optional(v.string()),
+    text: v.string(),
+    timestamp: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("callTranscripts", args);
+  },
+});
+
+export const upsertMeetingBotSession = mutation({
+  args: {
+    sessionId: v.string(),
+    callId: v.optional(v.string()),
+    recallBotId: v.optional(v.string()),
+    agentProfileId: v.optional(v.string()),
+    meetingUrl: v.optional(v.string()),
+    status: v.string(),
+    wordCount: v.optional(v.float64()),
+    summaryText: v.optional(v.string()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("meetingBotSessions")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, { ...args, updatedAt: Date.now() });
+    } else {
+      await ctx.db.insert("meetingBotSessions", args);
+    }
+  },
+});
+
+export const insertMissionControlTask = mutation({
+  args: {
+    taskId: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    priority: v.string(),
+    column: v.string(),
+    agentId: v.string(),
+    agentName: v.string(),
+    source: v.optional(v.string()),
+    progress: v.optional(v.float64()),
+    dueAt: v.optional(v.number()),
+    createdAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("tasks", { ...args, columnEnteredAt: Date.now() / 1000 });
+  },
+});
+
+export const updateMissionControlTask = mutation({
+  args: {
+    taskId: v.string(),
+    agentId: v.optional(v.string()),
+    agentName: v.optional(v.string()),
+    column: v.optional(v.string()),
+    priority: v.optional(v.string()),
+    progress: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("tasks")
+      .withIndex("by_taskId", (q) => q.eq("taskId", args.taskId))
+      .first();
+
+    if (existing) {
+      const patch: Record<string, unknown> = {};
+      if (args.agentId !== undefined) patch.agentId = args.agentId;
+      if (args.agentName !== undefined) patch.agentName = args.agentName;
+      if (args.column !== undefined) patch.column = args.column;
+      if (args.priority !== undefined) patch.priority = args.priority;
+      if (args.progress !== undefined) patch.progress = args.progress;
+      patch.columnEnteredAt = Date.now() / 1000;
+      await ctx.db.patch(existing._id, patch);
+    }
+  },
+});

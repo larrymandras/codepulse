@@ -810,6 +810,8 @@ export default defineSchema({
     agentId: v.optional(v.string()),
     agentName: v.optional(v.string()),
     labels: v.optional(v.array(v.string())),
+    source: v.optional(v.string()),
+    progress: v.optional(v.float64()),
     dueAt: v.optional(v.number()),
     columnEnteredAt: v.number(),
     findingId: v.optional(v.id("ideationFindings")),
@@ -1053,4 +1055,71 @@ export default defineSchema({
     .index("by_agentType", ["agentType", "timestamp"])
     .index("by_correlationId", ["correlationId"])
     .index("by_profileId", ["profileId", "timestamp"]),
+
+  // ============================================================
+  // WAR ROOM + MEETING BOT (Phase 72)
+  // ============================================================
+
+  warRooms: defineTable({
+    roomId: v.string(),
+    name: v.string(),
+    status: v.string(),          // "active" | "idle" | "closed"
+    participantIds: v.optional(v.array(v.string())),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_roomId", ["roomId"])
+    .index("by_status", ["status", "createdAt"]),
+
+  warRoomEvents: defineTable({
+    roomId: v.string(),
+    eventType: v.string(),       // "transcript.chunk" | "participant.joined" | "participant.left"
+    speakerId: v.optional(v.string()),
+    speakerName: v.optional(v.string()),
+    text: v.optional(v.string()),
+    payload: v.optional(v.any()),
+    timestamp: v.float64(),
+  })
+    .index("by_room", ["roomId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  voiceCalls: defineTable({
+    callId: v.string(),
+    botSessionId: v.optional(v.string()),
+    status: v.string(),          // "joining" | "live" | "ended" | "failed"
+    platform: v.optional(v.string()),
+    agentProfileId: v.optional(v.string()),
+    durationMs: v.optional(v.float64()),
+    participantCount: v.optional(v.float64()),
+    costUsd: v.optional(v.float64()),
+    startedAt: v.float64(),
+    endedAt: v.optional(v.float64()),
+  })
+    .index("by_callId", ["callId"])
+    .index("by_status", ["status", "startedAt"]),
+
+  callTranscripts: defineTable({
+    callId: v.string(),
+    speakerId: v.optional(v.string()),
+    speakerName: v.optional(v.string()),
+    text: v.string(),
+    timestamp: v.float64(),
+  })
+    .index("by_call", ["callId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  meetingBotSessions: defineTable({
+    sessionId: v.string(),
+    callId: v.optional(v.string()),
+    recallBotId: v.optional(v.string()),
+    agentProfileId: v.optional(v.string()),
+    meetingUrl: v.optional(v.string()),
+    status: v.string(),          // "scheduled" | "joining" | "live" | "ended" | "failed"
+    wordCount: v.optional(v.float64()),
+    summaryText: v.optional(v.string()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_status", ["status", "createdAt"]),
 });

@@ -13,6 +13,12 @@ import {
   startupIngest,
   authAliasIngest,
 } from "./v6Ingest";
+import {
+  warRoomIngest,
+  meetingBotIngest,
+  transcriptIngest,
+  missionControlIngest,
+} from "./warRoomIngest";
 
 const http = httpRouter();
 
@@ -40,5 +46,15 @@ http.route({ path: "/startup-ingest", method: "POST", handler: startupIngest });
 http.route({ path: "/startup-ingest", method: "OPTIONS", handler: startupIngest });
 http.route({ path: "/auth-alias-ingest", method: "POST", handler: authAliasIngest });
 http.route({ path: "/auth-alias-ingest", method: "OPTIONS", handler: authAliasIngest });
+
+// Phase 72: War Room + Meeting Bot ingest endpoints
+http.route({ path: "/war-room-ingest", method: "POST", handler: warRoomIngest });
+http.route({ path: "/war-room-ingest", method: "OPTIONS", handler: warRoomIngest });
+http.route({ path: "/meeting-bot-ingest", method: "POST", handler: meetingBotIngest });
+http.route({ path: "/meeting-bot-ingest", method: "OPTIONS", handler: meetingBotIngest });
+http.route({ path: "/transcript-ingest", method: "POST", handler: transcriptIngest });
+http.route({ path: "/transcript-ingest", method: "OPTIONS", handler: transcriptIngest });
+http.route({ path: "/mission-control-ingest", method: "POST", handler: missionControlIngest });
+http.route({ path: "/mission-control-ingest", method: "OPTIONS", handler: missionControlIngest });
 
 export default http;
