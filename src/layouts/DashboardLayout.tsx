@@ -39,6 +39,9 @@ import {
   Inbox,
   KanbanSquare,
   SlidersHorizontal,
+  Radio,
+  Video,
+  LayoutGrid,
   Sun,
   X,
   Menu,
@@ -69,6 +72,9 @@ const iconComponents: Record<string, React.ElementType> = {
   sliders: SlidersHorizontal,
   insights: TrendingUp,
   whatsapp: MessageCircle,
+  radio: Radio,
+  video: Video,
+  layout: LayoutGrid,
 };
 
 const commandNavItems = [
@@ -99,6 +105,9 @@ const overviewNavItems = [
   { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
   { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },
   { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "OVERVIEW" },
+  { to: "/war-room", label: "War Room", icon: "radio", group: "OVERVIEW" },
+  { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "OVERVIEW" },
+  { to: "/mission-control", label: "Mission Control", icon: "layout", group: "OVERVIEW" },
 ];
 
 // Keep navItems for any code that still references it

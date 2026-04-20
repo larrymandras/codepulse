@@ -42,6 +42,9 @@ import {
   Activity,
   KanbanSquare,
   SlidersHorizontal,
+  Radio,
+  Video,
+  LayoutGrid,
 } from "lucide-react";
 
 // Nav items shared with DashboardLayout — kept in sync manually
@@ -69,6 +72,9 @@ const NAV_PAGES = [
   { to: "/inbox", label: "Inbox", Icon: Inbox },
   { to: "/tasks", label: "Tasks", Icon: KanbanSquare },
   { to: "/config", label: "Config", Icon: SlidersHorizontal },
+  { to: "/war-room", label: "War Room", Icon: Radio },
+  { to: "/meeting-bot", label: "Meeting Bot", Icon: Video },
+  { to: "/mission-control", label: "Mission Control", Icon: LayoutGrid },
 ];
 
 interface CommandPaletteProps {

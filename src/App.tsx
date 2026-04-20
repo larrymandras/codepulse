@@ -40,6 +40,11 @@ const Dreaming = lazy(() => import("./pages/Dreaming"));
 // Lazy-load Phase 68 pages
 const WhatsApp = lazy(() => import("./pages/WhatsApp"));
 
+// Lazy-load Phase 72 pages
+const WarRoom = lazy(() => import("./pages/WarRoom"));
+const MeetingBot = lazy(() => import("./pages/MeetingBot"));
+const MissionControl = lazy(() => import("./pages/MissionControl"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -76,6 +81,10 @@ export default function App() {
               <Route path="/dreaming" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Dreaming...</div>}><Dreaming /></Suspense>} />
               {/* Phase 68: WhatsApp channel page */}
               <Route path="/channels/whatsapp" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading WhatsApp...</div>}><WhatsApp /></Suspense>} />
+              {/* Phase 72: War Room & Meeting Suite pages */}
+              <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
+              <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
+              <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>
