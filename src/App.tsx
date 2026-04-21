@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AuthGuard from "./components/AuthGuard";
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
@@ -45,6 +45,12 @@ const WarRoom = lazy(() => import("./pages/WarRoom"));
 const MeetingBot = lazy(() => import("./pages/MeetingBot"));
 const MissionControl = lazy(() => import("./pages/MissionControl"));
 
+// Phase 74: HR Section stub pages
+const HrRoster = lazy(() => import("./pages/hr/Roster"));
+const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
+const HrOnboarding = lazy(() => import("./pages/hr/Onboarding"));
+const HrTeams = lazy(() => import("./pages/hr/Teams"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -58,8 +64,8 @@ export default function App() {
               <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
               <Route path="/alerts" element={<Alerts />} />
               <Route path="/infrastructure" element={<Infrastructure />} />
-              <Route path="/profiles" element={<Profiles />} />
-              <Route path="/agents" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Agents...</div>}><Agents /></Suspense>} />
+              <Route path="/profiles" element={<Navigate to="/hr/roster" replace />} />
+              <Route path="/agents" element={<Navigate to="/hr/roster" replace />} />
               <Route path="/security" element={<Security />} />
               <Route path="/ideation" element={<Ideation />} />
               <Route path="/self-healing" element={<SelfHealing />} />
@@ -85,6 +91,13 @@ export default function App() {
               <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
               <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
+              {/* Phase 74: HR Section pages */}
+              <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
+              <Route path="/hr/catalog" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Catalog...</div>}><HrCatalog /></Suspense>} />
+              <Route path="/hr/onboarding" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
+              <Route path="/hr/onboarding/:catalogId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
+              <Route path="/hr/teams" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
+              <Route path="/hr/teams/:teamId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>

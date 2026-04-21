@@ -19,6 +19,7 @@ import {
   transcriptIngest,
   missionControlIngest,
 } from "./warRoomIngest";
+import { hrIngest } from "./hrIngest";
 
 const http = httpRouter();
 
@@ -56,5 +57,9 @@ http.route({ path: "/transcript-ingest", method: "POST", handler: transcriptInge
 http.route({ path: "/transcript-ingest", method: "OPTIONS", handler: transcriptIngest });
 http.route({ path: "/mission-control-ingest", method: "POST", handler: missionControlIngest });
 http.route({ path: "/mission-control-ingest", method: "OPTIONS", handler: missionControlIngest });
+
+// Phase 74: HR Section ingest endpoint
+http.route({ path: "/hr-ingest", method: "POST", handler: hrIngest });
+http.route({ path: "/hr-ingest", method: "OPTIONS", handler: hrIngest });
 
 export default http;

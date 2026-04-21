@@ -1122,4 +1122,55 @@ export default defineSchema({
   })
     .index("by_sessionId", ["sessionId"])
     .index("by_status", ["status", "createdAt"]),
+
+  // ============================================================
+  // HR SECTION TABLES (Phase 74)
+  // ============================================================
+
+  wizardDrafts: defineTable({
+    catalogEntryId: v.optional(v.string()),
+    currentStep: v.number(),
+    formData: v.object({
+      identity: v.optional(v.any()),
+      personality: v.optional(v.any()),
+      tools: v.optional(v.any()),
+      deployment: v.optional(v.any()),
+    }),
+    status: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_status", ["status"]),
+
+  teamPresets: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    agentIds: v.array(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    createdBy: v.optional(v.string()),
+    lastUsedAt: v.optional(v.number()),
+    warRoomCount: v.optional(v.number()),
+  }).index("by_name", ["name"]),
+
+  approvalQueue: defineTable({
+    requestId: v.string(),
+    agentName: v.string(),
+    agentId: v.string(),
+    catalogEntryId: v.optional(v.string()),
+    tier: v.string(),
+    budgetFraction: v.optional(v.number()),
+    status: v.string(),
+    configSnapshot: v.optional(v.any()),
+    requestedAt: v.number(),
+    decidedAt: v.optional(v.number()),
+    decidedBy: v.optional(v.string()),
+  }).index("by_requestId", ["requestId"])
+    .index("by_status", ["status"]),
+
+  rosterViewPrefs: defineTable({
+    userId: v.optional(v.string()),
+    viewMode: v.string(),
+    sortBy: v.optional(v.string()),
+    filters: v.optional(v.any()),
+  }),
 });

@@ -45,6 +45,9 @@ import {
   Sun,
   X,
   Menu,
+  BookOpen,
+  Wand2,
+  UsersRound,
 } from "lucide-react";
 
 const iconComponents: Record<string, React.ElementType> = {
@@ -75,6 +78,9 @@ const iconComponents: Record<string, React.ElementType> = {
   radio: Radio,
   video: Video,
   layout: LayoutGrid,
+  "book-open": BookOpen,
+  "wand-2": Wand2,
+  "users-round": UsersRound,
 };
 
 const commandNavItems = [
@@ -85,14 +91,19 @@ const commandNavItems = [
   { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
 ];
 
+const agentsNavItems = [
+  { to: "/hr/roster", label: "Roster", icon: "users", group: "AGENTS" },
+  { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "AGENTS" },
+  { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "AGENTS" },
+  { to: "/hr/teams", label: "Teams", icon: "users-round", group: "AGENTS" },
+];
+
 const overviewNavItems = [
   { to: "/", label: "Dashboard", icon: "grid", group: "OVERVIEW" },
   { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "OVERVIEW" },
   { to: "/analytics", label: "Analytics", icon: "chart", group: "OVERVIEW" },
   { to: "/alerts", label: "Alerts", icon: "bell", group: "OVERVIEW" },
   { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OVERVIEW" },
-  { to: "/agents", label: "Agents", icon: "bot", group: "OVERVIEW" },
-  { to: "/profiles", label: "Profiles", icon: "users", group: "OVERVIEW" },
   { to: "/security", label: "Security", icon: "shield", group: "OVERVIEW" },
   { to: "/ideation", label: "Ideation", icon: "idea", group: "OVERVIEW" },
   { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OVERVIEW" },
@@ -111,7 +122,7 @@ const overviewNavItems = [
 ];
 
 // Keep navItems for any code that still references it
-const navItems = [...commandNavItems, ...overviewNavItems];
+const navItems = [...commandNavItems, ...agentsNavItems, ...overviewNavItems];
 
 function DarkModeToggle() {
   const [dark, setDark] = useState(() =>
@@ -200,6 +211,8 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
         <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} />
+        <Separator className="my-2 mx-3" />
+        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} />
         <Separator className="my-2 mx-3" />
         <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} />
       </nav>
