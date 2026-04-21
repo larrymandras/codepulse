@@ -93,6 +93,7 @@ export default function App() {
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
               {/* Phase 74: HR Section pages */}
               <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
+              <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
               <Route path="/hr/catalog" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Catalog...</div>}><HrCatalog /></Suspense>} />
               <Route path="/hr/onboarding" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
               <Route path="/hr/onboarding/:catalogId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
