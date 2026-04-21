@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { GlassPanel } from "@/components/GlassPanel";
 import { TeamCard } from "@/components/hr/TeamCard";
 import { TeamEditor } from "@/components/hr/TeamEditor";
+import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
 import { useTeamPresets, type TeamPreset } from "@/hooks/useTeamPresets";
 import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { Button } from "@/components/ui/button";
@@ -102,8 +103,15 @@ export default function Teams() {
         </div>
       </GlassPanel>
 
-      {/* War Room Launch Dialog — wired in plan 78-03 */}
-      {/* Placeholder: launchTeam state is ready for WarRoomLaunchDialog integration */}
+      {/* War Room Launch Dialog */}
+      <WarRoomLaunchDialog
+        open={launchTeam !== null}
+        onOpenChange={(open) => {
+          if (!open) setLaunchTeam(null);
+        }}
+        initialParticipantIds={launchTeam?.agentIds ?? []}
+        teamPresetId={launchTeam?._id}
+      />
     </div>
   );
 }

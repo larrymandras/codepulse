@@ -8,6 +8,8 @@ import { RosterCardGrid } from "@/components/hr/RosterCardGrid";
 import { RosterTable } from "@/components/hr/RosterTable";
 import { ApprovalBanner } from "@/components/hr/ApprovalBanner";
 import { AgentDetailSheet } from "@/components/hr/AgentDetailSheet";
+import { BulkActionBar } from "@/components/hr/BulkActionBar";
+import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
 import {
   useRosterAgents,
   filterAgents,
@@ -37,6 +39,7 @@ export default function Roster() {
     agentId ?? null,
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showLaunchDialog, setShowLaunchDialog] = useState(false);
 
   // Compute filtered & sorted agents
   const filteredAgents = useMemo(
@@ -208,11 +211,29 @@ export default function Roster() {
         </div>
       </GlassPanel>
 
+      {/* Bulk action bar for multi-select */}
+      <BulkActionBar
+        selectedCount={selectedIds.length}
+        onLaunchWarRoom={() => setShowLaunchDialog(true)}
+        onClearSelection={() => setSelectedIds([])}
+      />
+
       {/* Agent detail slide-out panel */}
       <AgentDetailSheet
         agentId={selectedAgentId}
         onClose={handleDetailClose}
         onDeregister={handleDeregister}
+      />
+
+      {/* War Room Launch Dialog (ad-hoc from roster) */}
+      <WarRoomLaunchDialog
+        open={showLaunchDialog}
+        onOpenChange={(open) => {
+          setShowLaunchDialog(open);
+          if (!open) setSelectedIds([]);
+        }}
+        initialParticipantIds={selectedIds}
+        showSaveAsTeam={true}
       />
     </div>
   );
