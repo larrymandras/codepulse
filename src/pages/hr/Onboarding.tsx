@@ -1,21 +1,48 @@
-import { GlassPanel } from "@/components/GlassPanel";
-import { Wand2 } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { FormProvider } from "react-hook-form";
+import { useWizard } from "@/hooks/useWizard";
+import WizardShell from "@/components/hr/WizardShell";
+import TemplateStep from "@/components/hr/steps/TemplateStep";
+import IdentityStep from "@/components/hr/steps/IdentityStep";
+
+// Placeholder components for steps 3-5 until Plan 3
+function PersonalityStepPlaceholder() {
+  return (
+    <div className="p-4 text-muted-foreground">
+      Personality step -- coming next
+    </div>
+  );
+}
+function ToolsStepPlaceholder() {
+  return (
+    <div className="p-4 text-muted-foreground">Tools step -- coming next</div>
+  );
+}
+function ReviewStepPlaceholder() {
+  return (
+    <div className="p-4 text-muted-foreground">
+      Review step -- coming next
+    </div>
+  );
+}
 
 export default function Onboarding() {
+  const { catalogId } = useParams<{ catalogId?: string }>();
+  const wizard = useWizard(catalogId);
+
+  const steps = [
+    <TemplateStep key="template" />,
+    <IdentityStep key="identity" />,
+    <PersonalityStepPlaceholder key="personality" />,
+    <ToolsStepPlaceholder key="tools" />,
+    <ReviewStepPlaceholder key="review" />,
+  ];
+
   return (
     <div className="flex-1 overflow-auto">
-      <GlassPanel className="m-6 p-8">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-xl font-semibold text-foreground">Onboard Agent</h1>
-          <p className="text-sm text-muted-foreground">
-            Create a new agent using a guided step-by-step wizard.
-          </p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Wand2 className="h-4 w-4" />
-            <span>The full onboarding wizard with template selection and auto-save is coming in a later phase.</span>
-          </div>
-        </div>
-      </GlassPanel>
+      <FormProvider {...wizard.form}>
+        <WizardShell wizard={wizard}>{steps[wizard.currentStep]}</WizardShell>
+      </FormProvider>
     </div>
   );
 }
