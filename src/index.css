@@ -93,6 +93,9 @@
   --status-warn: oklch(0.75 0.12 85);
   --chart-bar: oklch(0.45 0 0);
   --chart-bar-accent: oklch(0.65 0.08 220);
+  --chart-p50: oklch(0.65 0.08 220);
+  --chart-p95: oklch(0.75 0.12 85);
+  --chart-p99: oklch(0.65 0.18 27);
 
   --radius: 0rem;
 
@@ -148,6 +151,9 @@
   --status-warn: oklch(0.80 0.14 85);
   --chart-bar: oklch(0.55 0 0);
   --chart-bar-accent: oklch(0.70 0.10 220);
+  --chart-p50: oklch(0.70 0.10 220);
+  --chart-p95: oklch(0.80 0.14 85);
+  --chart-p99: oklch(0.72 0.20 27);
 
   /* Phase 72: War Room speaking ring tokens */
   --speaking-ring: oklch(0.72 0.17 142);
