@@ -110,7 +110,7 @@ export function useAstridrWS(): AstridrWSContextValue {
 
 const ALL_TOPICS = ["live-runs", "agents", "executions", "health", "security"];
 const MAX_RETRIES = 5;
-const BASE_BACKOFF_MS = 1000;
+const BASE_BACKOFF_MS = 2000;
 const MAX_BACKOFF_MS = 30000;
 const ACK_TIMEOUT_MS = 10000;
 const MAX_QUEUE_DEPTH = 50;
@@ -259,8 +259,10 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
       scheduleRetry();
     };
 
-    ws.onerror = () => {
-      // onclose fires after onerror — let onclose handle retry
+    ws.onerror = (e: Event) => {
+      // Suppress noisy console errors during reconnection attempts.
+      // onclose fires after onerror — let onclose handle retry.
+      e.preventDefault();
     };
   }, [flushCommandQueue, rejectAllPending, setStatusSync]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -270,6 +272,9 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
 
     retryCountRef.current += 1;
     if (retryCountRef.current > MAX_RETRIES) {
+      console.warn(
+        "Ástríðr backend unavailable — live telemetry disabled. Restart to reconnect."
+      );
       setStatusSync("disconnected");
       return;
     }
