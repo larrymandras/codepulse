@@ -534,6 +534,19 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "agent_metric": {
+          const d = data as any;
+          await ctx.runMutation(api.agentMetrics.insertMetric, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            responseTimeMs: d.responseTimeMs ?? d.response_time_ms,
+            taskOutcome: d.taskOutcome ?? d.task_outcome ?? "success",
+            inputTokens: d.inputTokens ?? d.input_tokens ?? 0,
+            outputTokens: d.outputTokens ?? d.output_tokens ?? 0,
+            modelUsed: d.modelUsed ?? d.model_used ?? d.model,
+            timestamp,
+          });
+          break;
+        }
         case "hive_mind_entry": {
           const d = data as any;
           await ctx.runMutation(api.hiveMind.recordEntry, {
