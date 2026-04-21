@@ -7,6 +7,7 @@ import { RosterOrgChart } from "@/components/hr/RosterOrgChart";
 import { RosterCardGrid } from "@/components/hr/RosterCardGrid";
 import { RosterTable } from "@/components/hr/RosterTable";
 import { ApprovalBanner } from "@/components/hr/ApprovalBanner";
+import { AgentDetailSheet } from "@/components/hr/AgentDetailSheet";
 import {
   useRosterAgents,
   filterAgents,
@@ -206,6 +207,13 @@ export default function Roster() {
           )}
         </div>
       </GlassPanel>
+
+      {/* Agent detail slide-out panel */}
+      <AgentDetailSheet
+        agentId={selectedAgentId}
+        onClose={handleDetailClose}
+        onDeregister={handleDeregister}
+      />
     </div>
   );
 }
