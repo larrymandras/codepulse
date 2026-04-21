@@ -83,7 +83,16 @@ function savePrefs(prefs: StoredPrefs) {
 const AmbientCtx = createContext<AmbientContextValue | null>(null);
 
 export function AmbientProvider({ children }: { children: ReactNode }) {
-  const engineRef = useRef<SoundEngine>(new SoundEngine());
+  // Lazy-init: don't create SoundEngine (which imports Tone.js and may
+  // instantiate an AudioContext) until a user gesture actually needs it.
+  const engineRef = useRef<SoundEngine | null>(null);
+
+  const getEngine = useCallback(() => {
+    if (!engineRef.current) {
+      engineRef.current = new SoundEngine();
+    }
+    return engineRef.current;
+  }, []);
   const [enabled, setEnabled] = useState(() => loadPrefs().enabled);
   const [volume, setVolumeState] = useState(() => loadPrefs().volume);
   const [preset, setPresetState] = useState<PresetName>(
@@ -107,27 +116,29 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
 
   // Sync engine state on mount / enabled change
   useEffect(() => {
-    const engine = engineRef.current;
-    if (enabled && !engine.running) {
-      // start() is async (Tone.start requires user gesture context)
-      engine.setAmbientPreset(presetRef.current);
-      engine
-        .start()
-        .then(() => {
-          engine.setMasterVolume(volumeRef.current);
-          // Apply stored category volumes
-          for (const [cat, vol] of Object.entries(categoryVolumesRef.current)) {
-            engine.setCategoryVolume(cat as Category, vol);
-          }
-        })
-        .catch(() => {
-          // AudioContext may fail if no user gesture yet
-        });
-    } else if (!enabled && engine.running) {
-      engine.stop();
+    if (enabled) {
+      const engine = getEngine();
+      if (!engine.running) {
+        // start() is async (Tone.start requires user gesture context)
+        engine.setAmbientPreset(presetRef.current);
+        engine
+          .start()
+          .then(() => {
+            engine.setMasterVolume(volumeRef.current);
+            // Apply stored category volumes
+            for (const [cat, vol] of Object.entries(categoryVolumesRef.current)) {
+              engine.setCategoryVolume(cat as Category, vol);
+            }
+          })
+          .catch(() => {
+            // AudioContext may fail if no user gesture yet
+          });
+      }
+    } else if (engineRef.current?.running) {
+      engineRef.current.stop();
     }
     return () => {
-      if (engine.running) engine.stop();
+      if (engineRef.current?.running) engineRef.current.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
@@ -147,7 +158,7 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
 
   const setVolume = useCallback((v: number) => {
     setVolumeState(v);
-    engineRef.current.setMasterVolume(v);
+    getEngine().setMasterVolume(v);
     savePrefs({
       enabled: enabledRef.current,
       volume: v,
@@ -158,7 +169,7 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
 
   const setPreset = useCallback((name: PresetName) => {
     setPresetState(name);
-    engineRef.current.setAmbientPreset(name);
+    getEngine().setAmbientPreset(name);
     savePrefs({
       enabled: enabledRef.current,
       volume: volumeRef.current,
@@ -170,7 +181,7 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
   const setCategoryVolume = useCallback((cat: Category, v: number) => {
     setCategoryVolumesState((prev) => {
       const next = { ...prev, [cat]: v };
-      engineRef.current.setCategoryVolume(cat, v);
+      getEngine().setCategoryVolume(cat, v);
       savePrefs({
         enabled: enabledRef.current,
         volume: volumeRef.current,
@@ -182,20 +193,20 @@ export function AmbientProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setHealth = useCallback((h: SystemHealth) => {
-    engineRef.current.setHealth(h);
-  }, []);
+    getEngine().setHealth(h);
+  }, [getEngine]);
 
   const playAlert = useCallback((type: AlertType) => {
-    engineRef.current.playAlert(type);
-  }, []);
+    getEngine().playAlert(type);
+  }, [getEngine]);
 
   const playEvent = useCallback((type: EventType) => {
-    engineRef.current.playEvent(type);
-  }, []);
+    getEngine().playEvent(type);
+  }, [getEngine]);
 
   const playTransition = useCallback((type: TransitionType) => {
-    engineRef.current.playTransition(type);
-  }, []);
+    getEngine().playTransition(type);
+  }, [getEngine]);
 
   return (
     <AmbientCtx.Provider
