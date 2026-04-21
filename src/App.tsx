@@ -50,6 +50,7 @@ const HrRoster = lazy(() => import("./pages/hr/Roster"));
 const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
 const HrOnboarding = lazy(() => import("./pages/hr/Onboarding"));
 const HrTeams = lazy(() => import("./pages/hr/Teams"));
+const HrAgentAnalytics = lazy(() => import("./pages/hr/AgentAnalytics"));
 
 export default function App() {
   return (
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/hr/onboarding/:catalogId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
               <Route path="/hr/teams" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
               <Route path="/hr/teams/:teamId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
+              <Route path="/hr/analytics" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Analytics...</div>}><HrAgentAnalytics /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>

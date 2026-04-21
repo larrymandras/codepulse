@@ -96,6 +96,7 @@ const agentsNavItems = [
   { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "AGENTS" },
   { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "AGENTS" },
   { to: "/hr/teams", label: "Teams", icon: "users-round", group: "AGENTS" },
+  { to: "/hr/analytics", label: "Analytics", icon: "chart", group: "AGENTS" },
 ];
 
 const overviewNavItems = [
