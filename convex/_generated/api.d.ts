@@ -10,6 +10,7 @@
 
 import type * as activeTime from "../activeTime.js";
 import type * as advisorEvents from "../advisorEvents.js";
+import type * as agentConfigVersions from "../agentConfigVersions.js";
 import type * as agentProfiles from "../agentProfiles.js";
 import type * as agents from "../agents.js";
 import type * as aggregates from "../aggregates.js";
@@ -32,6 +33,7 @@ import type * as build from "../build.js";
 import type * as channelHealth from "../channelHealth.js";
 import type * as commandExecutions from "../commandExecutions.js";
 import type * as compactionEvents from "../compactionEvents.js";
+import type * as configVersionIngest from "../configVersionIngest.js";
 import type * as contextSnapshots from "../contextSnapshots.js";
 import type * as conversationImports from "../conversationImports.js";
 import type * as conversationTimeline from "../conversationTimeline.js";
@@ -118,6 +120,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activeTime: typeof activeTime;
   advisorEvents: typeof advisorEvents;
+  agentConfigVersions: typeof agentConfigVersions;
   agentProfiles: typeof agentProfiles;
   agents: typeof agents;
   aggregates: typeof aggregates;
@@ -140,6 +143,7 @@ declare const fullApi: ApiFromModules<{
   channelHealth: typeof channelHealth;
   commandExecutions: typeof commandExecutions;
   compactionEvents: typeof compactionEvents;
+  configVersionIngest: typeof configVersionIngest;
   contextSnapshots: typeof contextSnapshots;
   conversationImports: typeof conversationImports;
   conversationTimeline: typeof conversationTimeline;

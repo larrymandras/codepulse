@@ -1191,4 +1191,21 @@ export default defineSchema({
     .index("by_agent", ["agentId", "version"])
     .index("by_agent_created", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"]),
+
+  // ============================================================
+  // AGENT PERFORMANCE METRICS (Phase 81)
+  // ============================================================
+
+  agentMetrics: defineTable({
+    agentId: v.string(),
+    timestamp: v.float64(),
+    responseTimeMs: v.optional(v.float64()),
+    taskOutcome: v.string(),
+    inputTokens: v.float64(),
+    outputTokens: v.float64(),
+    modelUsed: v.optional(v.string()),
+    archived: v.optional(v.boolean()),
+  })
+    .index("by_agent_timestamp", ["agentId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 });
