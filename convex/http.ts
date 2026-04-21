@@ -20,6 +20,7 @@ import {
   missionControlIngest,
 } from "./warRoomIngest";
 import { hrIngest } from "./hrIngest";
+import { configVersionIngest } from "./configVersionIngest";
 
 const http = httpRouter();
 
@@ -61,5 +62,9 @@ http.route({ path: "/mission-control-ingest", method: "OPTIONS", handler: missio
 // Phase 74: HR Section ingest endpoint
 http.route({ path: "/hr-ingest", method: "POST", handler: hrIngest });
 http.route({ path: "/hr-ingest", method: "OPTIONS", handler: hrIngest });
+
+// Phase 80: Config Versioning ingest endpoint
+http.route({ path: "/api/ingest/agent-config-version", method: "POST", handler: configVersionIngest });
+http.route({ path: "/api/ingest/agent-config-version", method: "OPTIONS", handler: configVersionIngest });
 
 export default http;

@@ -26,13 +26,14 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import AgentAvatar from "@/components/AgentAvatar";
 import { StatusBadge } from "@/components/StatusBadge";
-import { fetchAgentDetail, deleteAgent, type AgentDetail } from "@/lib/astridrApi";
+import { fetchAgentDetail, deleteAgent, cloneAgent, type AgentDetail } from "@/lib/astridrApi";
 import { DetailConfigTab } from "@/components/hr/detail/DetailConfigTab";
 import { DetailRuntimeTab } from "@/components/hr/detail/DetailRuntimeTab";
 import { DetailTopologyTab } from "@/components/hr/detail/DetailTopologyTab";
 import { DetailSecurityTab } from "@/components/hr/detail/DetailSecurityTab";
 import { DetailActivityTab } from "@/components/hr/detail/DetailActivityTab";
-import { Maximize2, Trash2, Loader2, RefreshCw } from "lucide-react";
+import { DetailVersionsTab } from "@/components/hr/detail/DetailVersionsTab";
+import { Maximize2, Trash2, Loader2, RefreshCw, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 interface AgentDetailSheetProps {
@@ -58,6 +59,7 @@ export function AgentDetailSheet({
   const [error, setError] = useState<string | null>(null);
   const [showDeregister, setShowDeregister] = useState(false);
   const [deregistering, setDeregistering] = useState(false);
+  const [cloning, setCloning] = useState(false);
 
   useEffect(() => {
     if (!agentId) {
@@ -77,6 +79,20 @@ export function AgentDetailSheet({
   const handleExpand = () => {
     if (agentId) {
       navigate(`/hr/roster/${agentId}`);
+    }
+  };
+
+  const handleClone = async () => {
+    if (!agentId) return;
+    setCloning(true);
+    try {
+      const result = await cloneAgent(agentId);
+      toast.success("Agent cloned");
+      navigate(`/hr/onboarding?clone=${result.id}`);
+    } catch {
+      toast.error("Failed to clone agent");
+    } finally {
+      setCloning(false);
     }
   };
 
@@ -187,6 +203,16 @@ export function AgentDetailSheet({
                     Expand
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={handleClone}
+                    disabled={cloning}
+                  >
+                    <Copy className="h-3.5 w-3.5 mr-1" />
+                    {cloning ? "Cloning..." : "Clone"}
+                  </Button>
+                  <Button
                     variant="destructive"
                     size="sm"
                     className="text-xs"
@@ -216,6 +242,9 @@ export function AgentDetailSheet({
                   <TabsTrigger value="activity" className="text-xs flex-1">
                     Activity
                   </TabsTrigger>
+                  <TabsTrigger value="versions" className="text-xs flex-1">
+                    Versions
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="config" className="mt-4">
@@ -241,6 +270,9 @@ export function AgentDetailSheet({
                 </TabsContent>
                 <TabsContent value="activity" className="mt-4">
                   <DetailActivityTab agentId={agentDetail.id} />
+                </TabsContent>
+                <TabsContent value="versions" className="mt-4">
+                  <DetailVersionsTab agentId={agentDetail.id} />
                 </TabsContent>
               </Tabs>
             </>

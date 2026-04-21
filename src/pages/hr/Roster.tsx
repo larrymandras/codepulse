@@ -10,6 +10,7 @@ import { ApprovalBanner } from "@/components/hr/ApprovalBanner";
 import { AgentDetailSheet } from "@/components/hr/AgentDetailSheet";
 import { BulkActionBar } from "@/components/hr/BulkActionBar";
 import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
+import { YamlImportDialog } from "@/components/hr/YamlImportDialog";
 import {
   useRosterAgents,
   filterAgents,
@@ -17,7 +18,7 @@ import {
 } from "@/hooks/useRosterAgents";
 import { useRosterPrefs } from "@/hooks/useRosterPrefs";
 import { Button } from "@/components/ui/button";
-import { Users, Plus, RefreshCw } from "lucide-react";
+import { Users, Plus, RefreshCw, Upload } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Roster() {
@@ -40,6 +41,7 @@ export default function Roster() {
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Compute filtered & sorted agents
   const filteredAgents = useMemo(
@@ -126,12 +128,22 @@ export default function Roster() {
                 )}
               </div>
             </div>
-            <Button asChild size="sm">
-              <Link to="/hr/onboarding">
-                <Plus className="h-4 w-4 mr-1" />
-                Onboard Agent
-              </Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowImportDialog(true)}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Import YAML
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/hr/onboarding">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Onboard Agent
+                </Link>
+              </Button>
+            </div>
           </div>
 
           {/* Filter row + view switcher */}
@@ -223,6 +235,13 @@ export default function Roster() {
         agentId={selectedAgentId}
         onClose={handleDetailClose}
         onDeregister={handleDeregister}
+      />
+
+      {/* YAML Import Dialog */}
+      <YamlImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onSuccess={refetch}
       />
 
       {/* War Room Launch Dialog (ad-hoc from roster) */}

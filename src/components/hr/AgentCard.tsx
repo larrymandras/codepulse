@@ -1,6 +1,11 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AgentAvatar from "@/components/AgentAvatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
+import { Copy } from "lucide-react";
+import { cloneAgent } from "@/lib/astridrApi";
+import { toast } from "sonner";
 import type { RosterAgent } from "@/hooks/useRosterAgents";
 
 interface AgentCardProps {
@@ -21,6 +26,23 @@ const TIER_BADGE_COLOR: Record<string, string> = {
 };
 
 export function AgentCard({ agent, onClick }: AgentCardProps) {
+  const navigate = useNavigate();
+  const [cloning, setCloning] = useState(false);
+
+  const handleClone = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCloning(true);
+    try {
+      const result = await cloneAgent(agent.id);
+      toast.success("Agent cloned");
+      navigate(`/hr/onboarding?clone=${result.id}`);
+    } catch {
+      toast.error("Failed to clone agent");
+    } finally {
+      setCloning(false);
+    }
+  };
+
   const isPending = agent.status === "pending";
   const avatarStatus =
     agent.status === "active"
@@ -40,8 +62,17 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
     >
       {/* Gradient header strip */}
       <div
-        className={`h-6 ${TIER_GRADIENT[agent.tier] ?? TIER_GRADIENT.shared}`}
-      />
+        className={`h-6 relative ${TIER_GRADIENT[agent.tier] ?? TIER_GRADIENT.shared}`}
+      >
+        <button
+          className="absolute right-1 top-1 p-0.5 rounded hover:bg-white/20 transition-colors"
+          title="Clone agent"
+          disabled={cloning}
+          onClick={handleClone}
+        >
+          <Copy className="h-3.5 w-3.5 text-white/80" />
+        </button>
+      </div>
 
       {/* Content */}
       <div className="flex flex-col items-center px-4 pb-4">

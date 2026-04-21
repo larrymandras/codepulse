@@ -1173,4 +1173,22 @@ export default defineSchema({
     sortBy: v.optional(v.string()),
     filters: v.optional(v.any()),
   }),
+
+  // ============================================================
+  // CONFIG VERSIONING & ROLLBACK (Phase 80)
+  // ============================================================
+
+  agentConfigVersions: defineTable({
+    agentId: v.string(),
+    version: v.float64(),           // monotonically increasing per agent
+    config: v.any(),                // full AgentTypeConfig snapshot
+    changeSummary: v.string(),      // human-readable description of what changed
+    changeType: v.string(),         // "create" | "update" | "clone" | "import" | "rollback"
+    author: v.optional(v.string()), // who made the change
+    parentVersion: v.optional(v.float64()), // version this was derived from (for rollbacks)
+    createdAt: v.float64(),
+  })
+    .index("by_agent", ["agentId", "version"])
+    .index("by_agent_created", ["agentId", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
 });

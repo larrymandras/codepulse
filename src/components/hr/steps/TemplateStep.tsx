@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useFormContext } from "react-hook-form";
 import CatalogBrowser from "@/components/hr/CatalogBrowser";
+import { YamlImportDialog } from "@/components/hr/YamlImportDialog";
 import type { CatalogEntry } from "@/lib/astridrApi";
 import { getCatalogEntry } from "@/lib/astridrApi";
 import type { WizardFormData } from "@/lib/wizardSchemas";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Upload } from "lucide-react";
 
 export default function TemplateStep() {
   const form = useFormContext<WizardFormData>();
   const selectedId = form.watch("template.catalogEntryId");
   const selectedName = form.watch("template.catalogEntryName");
   const [loading, setLoading] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const handleSelect = async (entry: CatalogEntry) => {
     if (entry.id === "__blank__") {
@@ -103,6 +105,30 @@ export default function TemplateStep() {
         </p>
       </div>
       <CatalogBrowser embedded onSelectEntry={handleSelect} />
+
+      {/* Import YAML option */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/40" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-background px-2 text-muted-foreground">or</span>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowImport(true)}
+        className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-card/40 p-4 text-sm text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+      >
+        <Upload className="h-4 w-4" />
+        Import from YAML file
+      </button>
+
+      <YamlImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+      />
     </div>
   );
 }

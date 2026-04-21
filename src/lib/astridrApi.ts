@@ -163,6 +163,57 @@ export async function rejectAgent(id: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Phase 79: Clone & Import
+// ---------------------------------------------------------------------------
+
+export interface CloneAgentResponse {
+  id: string;
+  source_id: string;
+  status: string;
+}
+
+export async function cloneAgent(
+  agentId: string,
+): Promise<CloneAgentResponse> {
+  return apiRequest<CloneAgentResponse>(`/api/agents/${agentId}/clone`, {
+    method: "POST",
+  });
+}
+
+export interface ImportAgentResponse {
+  id: string;
+  status: string;
+}
+
+export async function importAgentYaml(
+  file: File,
+): Promise<ImportAgentResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // Use raw fetch -- FormData needs multipart/form-data, not application/json
+  const res = await fetch(`${ASTRIDR_API_BASE}/api/agents/import`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    // Structured validation errors from Pydantic
+    if (res.status === 422 && body.detail?.errors) {
+      const err = new AstridrApiError(422, "YAML validation failed");
+      (err as any).validationErrors = body.detail.errors as string[];
+      throw err;
+    }
+    throw new AstridrApiError(
+      res.status,
+      typeof body.detail === "string" ? body.detail : res.statusText,
+    );
+  }
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
 // Phase 78: War Room Launch
 // ---------------------------------------------------------------------------
 
@@ -185,4 +236,27 @@ export async function createWarRoom(
     method: "POST",
     body: JSON.stringify(req),
   });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 80: Config Versioning & Rollback
+// ---------------------------------------------------------------------------
+
+export interface RollbackRequest {
+  config: Record<string, unknown>;
+  target_version: number;
+  author?: string;
+}
+
+export async function rollbackAgent(
+  id: string,
+  req: RollbackRequest,
+): Promise<{ id: string; status: string; target_version: number }> {
+  return apiRequest<{ id: string; status: string; target_version: number }>(
+    `/api/agents/${id}/rollback`,
+    {
+      method: "POST",
+      body: JSON.stringify(req),
+    },
+  );
 }
