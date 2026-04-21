@@ -161,3 +161,28 @@ export async function rejectAgent(id: string): Promise<void> {
     body: JSON.stringify({ decided_by: "codepulse" }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 78: War Room Launch
+// ---------------------------------------------------------------------------
+
+export interface CreateWarRoomRequest {
+  participants: string[];
+  topic?: string;
+  teamPresetId?: string;
+}
+
+export interface CreateWarRoomResponse {
+  room_name: string;
+  participants: string[];
+  topic?: string;
+}
+
+export async function createWarRoom(
+  req: CreateWarRoomRequest,
+): Promise<CreateWarRoomResponse> {
+  return apiRequest<CreateWarRoomResponse>("/api/war-room", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+}
