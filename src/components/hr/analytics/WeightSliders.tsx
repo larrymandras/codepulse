@@ -26,7 +26,7 @@ export function WeightSliders({ weights, onWeightsChange }: WeightSlidersProps) 
             max={100}
             step={1}
             value={[weights[i]]}
-            onValueCommit={(val) => {
+            onValueChange={(val) => {
               onWeightsChange(redistributeWeights(weights, i, val[0]));
             }}
             className="flex-1"
