@@ -3,6 +3,10 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { GlassPanel } from "@/components/GlassPanel";
 import { RosterFilterBar } from "@/components/hr/RosterFilterBar";
 import { ViewSwitcher } from "@/components/hr/ViewSwitcher";
+import { RosterOrgChart } from "@/components/hr/RosterOrgChart";
+import { RosterCardGrid } from "@/components/hr/RosterCardGrid";
+import { RosterTable } from "@/components/hr/RosterTable";
+import { ApprovalBanner } from "@/components/hr/ApprovalBanner";
 import {
   useRosterAgents,
   filterAgents,
@@ -138,7 +142,8 @@ export default function Roster() {
             <ViewSwitcher value={viewMode} onChange={setViewMode} />
           </div>
 
-          {/* Approval banner slot — component wired in Plan 02 */}
+          {/* Approval banner */}
+          <ApprovalBanner onDetailsClick={handleAgentClick} />
 
           {/* Loading state */}
           {isLoading && (
@@ -149,7 +154,7 @@ export default function Roster() {
             </div>
           )}
 
-          {/* View area — placeholder divs until Plan 02 wires actual views */}
+          {/* View area */}
           {!isLoading && (
             <>
               {sortedAgents.length === 0 && agents.length > 0 && (
@@ -174,19 +179,26 @@ export default function Roster() {
               {sortedAgents.length > 0 && (
                 <div className="min-h-[400px]">
                   {viewMode === "chart" && (
-                    <div className="text-sm text-muted-foreground text-center py-12">
-                      Org Chart — wired in Plan 02
-                    </div>
+                    <RosterOrgChart
+                      agents={sortedAgents}
+                      onAgentClick={handleAgentClick}
+                    />
                   )}
                   {viewMode === "grid" && (
-                    <div className="text-sm text-muted-foreground text-center py-12">
-                      Card Grid — wired in Plan 02
-                    </div>
+                    <RosterCardGrid
+                      agents={sortedAgents}
+                      onAgentClick={handleAgentClick}
+                    />
                   )}
                   {viewMode === "table" && (
-                    <div className="text-sm text-muted-foreground text-center py-12">
-                      Table — wired in Plan 02
-                    </div>
+                    <RosterTable
+                      agents={sortedAgents}
+                      onAgentClick={handleAgentClick}
+                      sortBy={sortBy}
+                      onSortChange={setSortBy}
+                      selectedIds={selectedIds}
+                      onSelectionChange={setSelectedIds}
+                    />
                   )}
                 </div>
               )}

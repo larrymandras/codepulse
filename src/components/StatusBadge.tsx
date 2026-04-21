@@ -30,6 +30,11 @@ const legacyMap: Record<string, { semantic: string; label: string }> = {
   live: { semantic: "ok", label: "LIVE" },
   ended: { semantic: "idle", label: "ENDED" },
   joining: { semantic: "warn", label: "JOINING" },
+  // Agent roster statuses (Phase 76)
+  active: { semantic: "ok", label: "ACTIVE" },
+  pending: { semantic: "warn", label: "PENDING" },
+  idle: { semantic: "idle", label: "IDLE" },
+  deregistered: { semantic: "error", label: "REMOVED" },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
