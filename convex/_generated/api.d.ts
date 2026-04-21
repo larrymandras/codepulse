@@ -11,6 +11,7 @@
 import type * as activeTime from "../activeTime.js";
 import type * as advisorEvents from "../advisorEvents.js";
 import type * as agentConfigVersions from "../agentConfigVersions.js";
+import type * as agentMetrics from "../agentMetrics.js";
 import type * as agentProfiles from "../agentProfiles.js";
 import type * as agents from "../agents.js";
 import type * as aggregates from "../aggregates.js";
@@ -121,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   activeTime: typeof activeTime;
   advisorEvents: typeof advisorEvents;
   agentConfigVersions: typeof agentConfigVersions;
+  agentMetrics: typeof agentMetrics;
   agentProfiles: typeof agentProfiles;
   agents: typeof agents;
   aggregates: typeof aggregates;
