@@ -4,27 +4,9 @@ import { useWizard } from "@/hooks/useWizard";
 import WizardShell from "@/components/hr/WizardShell";
 import TemplateStep from "@/components/hr/steps/TemplateStep";
 import IdentityStep from "@/components/hr/steps/IdentityStep";
-
-// Placeholder components for steps 3-5 until Plan 3
-function PersonalityStepPlaceholder() {
-  return (
-    <div className="p-4 text-muted-foreground">
-      Personality step -- coming next
-    </div>
-  );
-}
-function ToolsStepPlaceholder() {
-  return (
-    <div className="p-4 text-muted-foreground">Tools step -- coming next</div>
-  );
-}
-function ReviewStepPlaceholder() {
-  return (
-    <div className="p-4 text-muted-foreground">
-      Review step -- coming next
-    </div>
-  );
-}
+import PersonalityStep from "@/components/hr/steps/PersonalityStep";
+import ToolsStep from "@/components/hr/steps/ToolsStep";
+import ReviewStep from "@/components/hr/steps/ReviewStep";
 
 export default function Onboarding() {
   const { catalogId } = useParams<{ catalogId?: string }>();
@@ -33,9 +15,9 @@ export default function Onboarding() {
   const steps = [
     <TemplateStep key="template" />,
     <IdentityStep key="identity" />,
-    <PersonalityStepPlaceholder key="personality" />,
-    <ToolsStepPlaceholder key="tools" />,
-    <ReviewStepPlaceholder key="review" />,
+    <PersonalityStep key="personality" />,
+    <ToolsStep key="tools" />,
+    <ReviewStep key="review" wizard={wizard} />,
   ];
 
   return (
