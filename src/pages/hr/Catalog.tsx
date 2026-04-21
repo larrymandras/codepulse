@@ -1,20 +1,31 @@
+import { useNavigate } from "react-router-dom";
 import { GlassPanel } from "@/components/GlassPanel";
-import { BookOpen } from "lucide-react";
+import CatalogBrowser from "@/components/hr/CatalogBrowser";
+import type { CatalogEntry } from "@/lib/astridrApi";
 
 export default function Catalog() {
+  const navigate = useNavigate();
+
+  const handleSelect = (entry: CatalogEntry) => {
+    if (entry.id === "__blank__") {
+      navigate("/hr/onboarding");
+    } else {
+      navigate(`/hr/onboarding/${encodeURIComponent(entry.id)}`);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-auto">
-      <GlassPanel className="m-6 p-8">
-        <div className="flex flex-col gap-4">
-          <h1 className="text-xl font-semibold text-foreground">Agent Catalog</h1>
-          <p className="text-sm text-muted-foreground">
+      <GlassPanel className="m-6 p-6">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-foreground">
+            Agent Catalog
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Browse archetypes from the Astridhr catalog and start onboarding.
           </p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <BookOpen className="h-4 w-4" />
-            <span>Searchable archetype catalog with tier, domain, and capability filters coming in a later phase.</span>
-          </div>
         </div>
+        <CatalogBrowser onSelectEntry={handleSelect} />
       </GlassPanel>
     </div>
   );
