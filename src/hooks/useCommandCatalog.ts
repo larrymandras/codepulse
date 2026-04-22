@@ -56,29 +56,26 @@ export function useCommandCatalog(): UseCommandCatalogResult {
 
       // Extract tools array (primary source) — filter to well-formed entries only
       // to prevent TypeError when downstream code calls .toLowerCase() on fields.
-      const isCommandEntry = (t: unknown): t is CommandEntry =>
+      const hasRequiredFields = (t: unknown): t is { name: string; description: string; category?: string } =>
         typeof t === "object" &&
         t !== null &&
         typeof (t as Record<string, unknown>).name === "string" &&
-        typeof (t as Record<string, unknown>).description === "string" &&
-        typeof (t as Record<string, unknown>).category === "string";
+        typeof (t as Record<string, unknown>).description === "string";
 
-      const tools = (data.tools as unknown[]).filter(isCommandEntry);
+      const tools = (data.tools as unknown[])
+        .filter(hasRequiredFields)
+        .map((t) => ({ ...t, category: t.category ?? "tools" }) as CommandEntry);
 
-      // Optionally include pipes and commands arrays with category markers
       const pipes: CommandEntry[] = Array.isArray(data.pipes)
         ? (data.pipes as unknown[])
-            .filter(isCommandEntry)
-            .map((p) => ({ ...p, category: p.category ?? "pipes" }))
+            .filter(hasRequiredFields)
+            .map((p) => ({ ...p, category: p.category ?? "pipes" }) as CommandEntry)
         : [];
 
       const cmds: CommandEntry[] = Array.isArray(data.commands)
         ? (data.commands as unknown[])
-            .filter(isCommandEntry)
-            .map((c) => ({
-              ...c,
-              category: c.category ?? "commands",
-            }))
+            .filter(hasRequiredFields)
+            .map((c) => ({ ...c, category: c.category ?? "commands" }) as CommandEntry)
         : [];
 
       setCommands([...tools, ...pipes, ...cmds]);

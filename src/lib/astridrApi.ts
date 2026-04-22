@@ -1,4 +1,5 @@
 const ASTRIDR_API_BASE = import.meta.env.VITE_ASTRIDR_API_URL ?? "";
+const ASTRIDR_API_KEY = import.meta.env.VITE_ASTRIDR_API_KEY ?? "";
 
 export interface CatalogEntry {
   id: string;
@@ -36,7 +37,9 @@ export async function searchCatalog(params: {
   if (params.q) url.searchParams.set("q", params.q);
   if (params.tier) url.searchParams.set("tier", params.tier);
   if (params.limit) url.searchParams.set("limit", String(params.limit));
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), {
+    headers: ASTRIDR_API_KEY ? { Authorization: `Bearer ${ASTRIDR_API_KEY}` } : {},
+  });
   if (!res.ok) throw new Error(`Catalog search failed: ${res.status}`);
   return res.json();
 }
@@ -46,6 +49,7 @@ export async function getCatalogEntry(
 ): Promise<CatalogEntryDetail> {
   const res = await fetch(
     `${ASTRIDR_API_BASE}/api/catalog/${encodeURIComponent(id)}`,
+    { headers: ASTRIDR_API_KEY ? { Authorization: `Bearer ${ASTRIDR_API_KEY}` } : {} },
   );
   if (!res.ok) throw new Error(`Catalog entry not found: ${res.status}`);
   return res.json();
@@ -56,7 +60,7 @@ export async function createAgent(
 ): Promise<CreateAgentResponse> {
   const res = await fetch(`${ASTRIDR_API_BASE}/api/agents`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify(req),
   });
   if (!res.ok) {
@@ -71,7 +75,7 @@ export async function validateAgent(
 ): Promise<{ valid: boolean; errors?: string[] }> {
   const res = await fetch(`${ASTRIDR_API_BASE}/api/agents/validate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ config }),
   });
   return res.json();
@@ -110,9 +114,15 @@ export class AstridrApiError extends Error {
   }
 }
 
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (ASTRIDR_API_KEY) h["Authorization"] = `Bearer ${ASTRIDR_API_KEY}`;
+  return h;
+}
+
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${ASTRIDR_API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     ...init,
   });
   if (!res.ok) {
@@ -192,8 +202,12 @@ export async function importAgentYaml(
   formData.append("file", file);
 
   // Use raw fetch -- FormData needs multipart/form-data, not application/json
+  const headers: Record<string, string> = {};
+  if (ASTRIDR_API_KEY) headers["Authorization"] = `Bearer ${ASTRIDR_API_KEY}`;
+
   const res = await fetch(`${ASTRIDR_API_BASE}/api/agents/import`, {
     method: "POST",
+    headers,
     body: formData,
   });
 

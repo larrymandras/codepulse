@@ -71,10 +71,20 @@ React 19, Vite 7, TypeScript 5.9, Convex (database + backend), Tailwind CSS 4 (v
 
 Tailwind CSS 4 only — no component library. Dark theme throughout: `bg-gray-800/50` cards, `border-gray-700/50` borders, `text-gray-300` body text, `indigo-600` accents, green/amber/red for status indicators. Fonts: Cinzel (headings), Geist (body), JetBrains Mono (code).
 
+## Ástríðr API Integration
+
+All `fetch()` calls to the Ástríðr backend (`ASTRIDR_API_BASE`) MUST include the `Authorization: Bearer` header using `VITE_ASTRIDR_API_KEY`. The Ástríðr web channel rejects unauthenticated `/api/*` requests with 401.
+
+- For JSON requests: use `authHeaders()` from `src/lib/astridrApi.ts`
+- For FormData/multipart: add `Authorization` header manually (do NOT set Content-Type — browser handles it)
+- Applies to any new file making Ástríðr API calls, not just `astridrApi.ts`
+
 ## Environment Variables
 
 - `VITE_CONVEX_URL` — Required. Convex deployment URL.
 - `VITE_CLERK_PUBLISHABLE_KEY` — Optional. Clerk auth key.
+- `VITE_ASTRIDR_API_URL` — Ástríðr backend URL (default: `http://localhost:8181`).
+- `VITE_ASTRIDR_API_KEY` — Ástríðr API bearer token. Required for all `/api/*` calls.
 - `CONVEX_DEPLOY_KEY` — Optional. For CI/CD Convex deploys.
 
 ## Testing
