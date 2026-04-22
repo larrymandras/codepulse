@@ -48,7 +48,15 @@ import {
   BookOpen,
   Wand2,
   UsersRound,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const iconComponents: Record<string, React.ElementType> = {
   grid: LayoutDashboard,
@@ -150,26 +158,32 @@ function NavGroup({
   label,
   items,
   onNavClick,
+  collapsed,
 }: {
   label: string;
   items: typeof commandNavItems;
   onNavClick?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <>
-      <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-muted-foreground font-medium">
-        {label}
-      </p>
+      {!collapsed && (
+        <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-muted-foreground font-medium">
+          {label}
+        </p>
+      )}
+      {collapsed && <div className="pt-3" />}
       {items.map((item) => {
         const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
-        return (
+        const link = (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === "/"}
             onClick={onNavClick}
+            aria-label={collapsed ? item.label : undefined}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 text-sm transition-colors border-l-2 ${
+              `flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm transition-colors border-l-2 ${
                 isActive
                   ? "bg-accent border-[var(--sidebar-active-bar)] text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
@@ -177,55 +191,100 @@ function NavGroup({
             }
           >
             <IconComponent className="h-4 w-4 shrink-0" />
-            {item.label}
+            {!collapsed && item.label}
           </NavLink>
         );
+        if (collapsed) {
+          return (
+            <Tooltip key={item.to}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                {item.label}
+              </TooltipContent>
+            </Tooltip>
+          );
+        }
+        return link;
       })}
     </>
   );
 }
 
-function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
+function SidebarContent({
+  onNavClick,
+  collapsed,
+  onToggleCollapse,
+}: {
+  onNavClick?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}) {
   const convexState = useConvexConnectionState();
   const isConnected = convexState.isWebSocketConnected;
   const dotColor = isConnected ? "bg-green-500" : "bg-yellow-500";
   const statusLabel = isConnected ? "Connected to Convex" : "Convex: reconnecting";
 
   return (
-    <>
+    <TooltipProvider delayDuration={200}>
       {/* Logo / Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
+          {collapsed ? (
             <div className="w-8 h-8 bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
               CP
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-foreground">CodePulse</h1>
-              <p className="text-[10px] text-muted-foreground">Telemetry Dashboard</p>
-            </div>
-          </div>
-          <DarkModeToggle />
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+                  CP
+                </div>
+                <div>
+                  <h1 className="text-sm font-semibold text-foreground">CodePulse</h1>
+                  <p className="text-[10px] text-muted-foreground">Telemetry Dashboard</p>
+                </div>
+              </div>
+              <DarkModeToggle />
+            </>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
-        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} />
+        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} collapsed={collapsed} />
         <Separator className="my-2 mx-3" />
-        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} />
+        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} collapsed={collapsed} />
         <Separator className="my-2 mx-3" />
-        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} />
+        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} collapsed={collapsed} />
       </nav>
 
-      {/* Connection Status */}
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className={`w-2 h-2 rounded-full ${dotColor}`} aria-hidden="true" />
-          <span>{statusLabel}</span>
+      {/* Collapse Toggle + Connection Status */}
+      <div className="border-t border-border">
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="w-full flex items-center justify-center py-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+          >
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+          </button>
+        )}
+        <div className={`p-4 pt-2 flex items-center ${collapsed ? "justify-center" : "gap-2"}`}>
+          <span className={`w-2 h-2 shrink-0 rounded-full ${dotColor}`} aria-hidden="true" />
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="sr-only">{statusLabel}</span>
+              </TooltipTrigger>
+              <TooltipContent side="right">{statusLabel}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <span className="text-xs text-muted-foreground">{statusLabel}</span>
+          )}
         </div>
       </div>
-    </>
+    </TooltipProvider>
   );
 }
 
@@ -268,6 +327,13 @@ export default function DashboardLayout() {
   useAudioEvents();
   useNotificationToasts();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codepulse-sidebar-collapsed") ?? "false");
+    } catch {
+      return false;
+    }
+  });
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
@@ -338,8 +404,15 @@ export default function DashboardLayout() {
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col">
-        <SidebarContent />
+      <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-200`}>
+        <SidebarContent
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => {
+            const next = !sidebarCollapsed;
+            setSidebarCollapsed(next);
+            localStorage.setItem("codepulse-sidebar-collapsed", JSON.stringify(next));
+          }}
+        />
       </aside>
 
       {/* Mobile Sidebar Overlay */}
