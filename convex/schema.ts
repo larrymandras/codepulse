@@ -157,6 +157,7 @@ export default defineSchema({
     status: v.string(), // "connected" | "disconnected" | "error"
     toolCount: v.optional(v.float64()),
     lastSeenAt: v.float64(),
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
   })
     .index("by_name", ["name"])
     .index("by_status", ["status"]),
@@ -169,6 +170,7 @@ export default defineSchema({
     usageCount: v.float64(),
     lastUsedAt: v.optional(v.float64()),
     discoveredAt: v.float64(),
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
   })
     .index("by_name", ["name"])
     .index("by_source", ["source"])
@@ -180,6 +182,7 @@ export default defineSchema({
     enabled: v.boolean(),
     config: v.optional(v.any()),
     installedAt: v.float64(),
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
   }).index("by_name", ["name"]),
 
   skills: defineTable({
@@ -188,6 +191,7 @@ export default defineSchema({
     source: v.optional(v.string()),
     lastUsedAt: v.optional(v.float64()),
     discoveredAt: v.float64(),
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
   }).index("by_name", ["name"]),
 
   registeredHooks: defineTable({
@@ -195,9 +199,11 @@ export default defineSchema({
     command: v.string(),
     matcher: v.optional(v.string()),
     registeredAt: v.float64(),
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
   })
     .index("by_hookType", ["hookType"])
-    .index("by_registeredAt", ["registeredAt"]),
+    .index("by_registeredAt", ["registeredAt"])
+    .index("by_hookType_command", ["hookType", "command"]),
 
   slashCommands: defineTable({
     name: v.string(),
