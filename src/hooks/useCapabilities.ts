@@ -29,6 +29,10 @@ export function useConfigChanges(limit = 30) {
   return useQuery(api.registry.listConfigChanges, { limit }) ?? [];
 }
 
+export function useCliTools() {
+  return useQuery(api.registry.listCliTools) ?? [];
+}
+
 export function useDiscoveredTools() {
   return useQuery(api.registry.listTools) ?? [];
 }

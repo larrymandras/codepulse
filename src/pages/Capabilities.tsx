@@ -18,6 +18,7 @@ import {
   usePlugins,
   useSkills,
   useHooks,
+  useCliTools,
   useDiscoveredTools,
 } from "../hooks/useCapabilities";
 import { useCommandCatalog } from "../hooks/useCommandCatalog";
@@ -244,6 +245,7 @@ export default function Capabilities() {
   const plugins = usePlugins();
   const skills = useSkills();
   const hooks = useHooks();
+  const cliTools = useCliTools();
   const tools = useDiscoveredTools();
   const { commands: catalogCommands, status: catalogStatus, error: catalogError } = useCommandCatalog();
   const { status: wsStatus } = useAstridrWS();
@@ -291,6 +293,7 @@ export default function Capabilities() {
         <MetricCard label="Skills" value={summary?.skills ?? 0} />
         <MetricCard label="Tools" value={summary?.tools ?? 0} />
         <MetricCard label="Hooks" value={summary?.hooks ?? 0} />
+        <MetricCard label="CLI Tools" value={cliTools.length} />
         <MetricCard label="Commands" value={catalogStatus === "ready" ? catalogCommands.length : 0} />
       </div>
 
@@ -346,7 +349,47 @@ export default function Capabilities() {
       {/* 4. Plugins */}
       <PluginPanel plugins={plugins} filter={filter} />
 
-      {/* 5. Skills & Hooks */}
+      {/* 5. CLI Tools */}
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+          CLI Tools
+          <span className="ml-2 text-xs text-gray-500 font-normal">{cliTools.length}</span>
+          <InfoTooltip text="Host CLI tools available for delegation to Claude Code." />
+        </h2>
+        {cliTools.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6 text-center">
+            No CLI tools registered
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {cliTools
+              .filter((c: any) =>
+                !filter ||
+                c.name.toLowerCase().includes(filter) ||
+                (c.category ?? "").toLowerCase().includes(filter) ||
+                (c.description ?? "").toLowerCase().includes(filter)
+              )
+              .map((c: any) => (
+                <div
+                  key={c._id}
+                  className="flex items-center gap-2 bg-gray-900/50 rounded-lg px-3 py-2"
+                >
+                  <span className="text-sm font-mono text-gray-200">{c.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 flex-shrink-0">
+                    {c.category}
+                  </span>
+                  {c.description && (
+                    <span className="text-xs text-gray-500 truncate hidden lg:inline">
+                      {c.description}
+                    </span>
+                  )}
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* 6. Skills & Hooks */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SkillsPanel skills={skills} filter={filter} />
         <HooksPanel hooks={hooks} filter={filter} />

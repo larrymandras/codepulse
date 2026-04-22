@@ -268,10 +268,10 @@ export const syncFullInventory = mutation({
         } else {
           await ctx.db.insert("skills", {
             name: skill.name,
-            description: skill.description,
-            source: skill.source,
+            description: skill.description ?? undefined,
+            source: skill.source ?? undefined,
             discoveredAt: now,
-            origin: skill.origin,
+            origin: skill.origin ?? undefined,
           });
           await ctx.db.insert("configChanges", {
             configKey: `skill:${skill.name}`,
@@ -314,9 +314,9 @@ export const syncFullInventory = mutation({
           await ctx.db.insert("registeredHooks", {
             hookType: hook.hookType,
             command: hook.command,
-            matcher: hook.matcher,
+            matcher: hook.matcher ?? undefined,
             registeredAt: now,
-            origin: hook.origin,
+            origin: hook.origin ?? undefined,
           });
         }
       }
@@ -342,11 +342,11 @@ export const syncFullInventory = mutation({
         } else {
           await ctx.db.insert("plugins", {
             name: plugin.name,
-            version: plugin.version,
+            version: plugin.version ?? undefined,
             enabled: plugin.enabled ?? true,
-            config: plugin.config,
+            config: plugin.config ?? undefined,
             installedAt: now,
-            origin: plugin.origin,
+            origin: plugin.origin ?? undefined,
           });
           await ctx.db.insert("configChanges", {
             configKey: `plugin:${plugin.name}`,
@@ -368,6 +368,32 @@ export const syncFullInventory = mutation({
           changedBy: "capability_sync",
           changedAt: now,
         });
+      }
+    }
+
+    // --- CLI Tools: upsert from bridge config ---
+    if (Array.isArray(snap.cliTools)) {
+      for (const cli of snap.cliTools) {
+        const existing = await ctx.db
+          .query("cliTools")
+          .withIndex("by_name", (q) => q.eq("name", cli.name))
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            category: cli.category ?? existing.category,
+            description: cli.description ?? existing.description,
+            lastSeenAt: now,
+            origin: cli.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("cliTools", {
+            name: cli.name,
+            category: cli.category,
+            description: cli.description,
+            lastSeenAt: now,
+            origin: cli.origin ?? "host",
+          });
+        }
       }
     }
 
@@ -568,6 +594,13 @@ export const listHooks = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("registeredHooks").order("desc").collect();
+  },
+});
+
+export const listCliTools = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("cliTools").order("desc").collect();
   },
 });
 
@@ -916,6 +949,7 @@ export const summary = query({
     const tools = await ctx.db.query("discoveredTools").collect();
     const hooks = await ctx.db.query("registeredHooks").collect();
     const commands = await ctx.db.query("slashCommands").collect();
+    const cliTools = await ctx.db.query("cliTools").collect();
     return {
       mcpServers: mcpServers.length,
       plugins: plugins.length,
@@ -923,6 +957,7 @@ export const summary = query({
       tools: tools.length,
       hooks: hooks.length,
       slashCommands: commands.length,
+      cliTools: cliTools.length,
     };
   },
 });

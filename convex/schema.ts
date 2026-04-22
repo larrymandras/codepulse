@@ -205,6 +205,14 @@ export default defineSchema({
     .index("by_registeredAt", ["registeredAt"])
     .index("by_hookType_command", ["hookType", "command"]),
 
+  cliTools: defineTable({
+    name: v.string(),
+    category: v.optional(v.string()),
+    description: v.optional(v.string()),
+    lastSeenAt: v.float64(),
+    origin: v.optional(v.string()),
+  }).index("by_name", ["name"]),
+
   slashCommands: defineTable({
     name: v.string(),
     description: v.optional(v.string()),

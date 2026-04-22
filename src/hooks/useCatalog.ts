@@ -12,7 +12,7 @@ export function useCatalogSearch(debounceMs = 300) {
   const [results, setResults] = useState<CatalogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const doSearch = useCallback(async (q: string, t?: string) => {
     setLoading(true);

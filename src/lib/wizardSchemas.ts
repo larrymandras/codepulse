@@ -15,7 +15,7 @@ export const identitySchema = z.object({
     .max(50, "Agent ID must be 50 characters or less"),
   displayName: z.string().min(1, "Display name is required").max(100),
   tier: z.enum(["command", "domain", "shared"], {
-    required_error: "Tier is required",
+    message: "Tier is required",
   }),
   description: z.string().max(500).optional(),
   profiles: z.array(z.string()).optional(),
