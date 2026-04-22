@@ -189,6 +189,217 @@ export const syncInventory = mutation({
   },
 });
 
+export const syncFullInventory = mutation({
+  args: {
+    snapshot: v.any(),
+  },
+  handler: async (ctx, args) => {
+    const snap = args.snapshot;
+    const now = Date.now() / 1000;
+
+    // --- MCP Servers: upsert with origin ---
+    const existingServers = await ctx.db.query("mcpServers").collect();
+    const incomingServerNames = new Set<string>();
+
+    if (Array.isArray(snap.mcpServers)) {
+      for (const server of snap.mcpServers) {
+        incomingServerNames.add(server.name);
+        const existing = await ctx.db
+          .query("mcpServers")
+          .withIndex("by_name", (q) => q.eq("name", server.name))
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            status: server.status ?? existing.status,
+            toolCount: server.toolCount ?? existing.toolCount,
+            lastSeenAt: now,
+            origin: server.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("mcpServers", {
+            name: server.name,
+            url: server.url,
+            status: server.status ?? "discovered",
+            toolCount: server.toolCount,
+            lastSeenAt: now,
+            origin: server.origin,
+          });
+          await ctx.db.insert("configChanges", {
+            configKey: `mcpServer:${server.name}`,
+            oldValue: undefined,
+            newValue: server,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
+      }
+    }
+
+    // Detect removed MCP servers
+    for (const existing of existingServers) {
+      if (!incomingServerNames.has(existing.name)) {
+        await ctx.db.insert("configChanges", {
+          configKey: `mcpServer:${existing.name}`,
+          oldValue: existing,
+          newValue: null,
+          changedBy: "capability_sync",
+          changedAt: now,
+        });
+      }
+    }
+
+    // --- Skills: upsert with origin ---
+    const existingSkills = await ctx.db.query("skills").collect();
+    const incomingSkillNames = new Set<string>();
+
+    if (Array.isArray(snap.skills)) {
+      for (const skill of snap.skills) {
+        incomingSkillNames.add(skill.name);
+        const existing = await ctx.db
+          .query("skills")
+          .withIndex("by_name", (q) => q.eq("name", skill.name))
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            description: skill.description ?? existing.description,
+            source: skill.source ?? existing.source,
+            origin: skill.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("skills", {
+            name: skill.name,
+            description: skill.description,
+            source: skill.source,
+            discoveredAt: now,
+            origin: skill.origin,
+          });
+          await ctx.db.insert("configChanges", {
+            configKey: `skill:${skill.name}`,
+            oldValue: undefined,
+            newValue: skill,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
+      }
+    }
+
+    for (const existing of existingSkills) {
+      if (!incomingSkillNames.has(existing.name)) {
+        await ctx.db.insert("configChanges", {
+          configKey: `skill:${existing.name}`,
+          oldValue: existing,
+          newValue: null,
+          changedBy: "capability_sync",
+          changedAt: now,
+        });
+      }
+    }
+
+    // --- Hooks: upsert with dedup by hookType + command ---
+    if (Array.isArray(snap.hooks)) {
+      for (const hook of snap.hooks) {
+        const existing = await ctx.db
+          .query("registeredHooks")
+          .withIndex("by_hookType_command", (q) =>
+            q.eq("hookType", hook.hookType).eq("command", hook.command)
+          )
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            matcher: hook.matcher ?? existing.matcher,
+            origin: hook.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("registeredHooks", {
+            hookType: hook.hookType,
+            command: hook.command,
+            matcher: hook.matcher,
+            registeredAt: now,
+            origin: hook.origin,
+          });
+        }
+      }
+    }
+
+    // --- Plugins: upsert with origin ---
+    const existingPlugins = await ctx.db.query("plugins").collect();
+    const incomingPluginNames = new Set<string>();
+
+    if (Array.isArray(snap.plugins)) {
+      for (const plugin of snap.plugins) {
+        incomingPluginNames.add(plugin.name);
+        const existing = await ctx.db
+          .query("plugins")
+          .withIndex("by_name", (q) => q.eq("name", plugin.name))
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            version: plugin.version ?? existing.version,
+            enabled: plugin.enabled ?? existing.enabled,
+            origin: plugin.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("plugins", {
+            name: plugin.name,
+            version: plugin.version,
+            enabled: plugin.enabled ?? true,
+            config: plugin.config,
+            installedAt: now,
+            origin: plugin.origin,
+          });
+          await ctx.db.insert("configChanges", {
+            configKey: `plugin:${plugin.name}`,
+            oldValue: undefined,
+            newValue: plugin,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
+      }
+    }
+
+    for (const existing of existingPlugins) {
+      if (!incomingPluginNames.has(existing.name)) {
+        await ctx.db.insert("configChanges", {
+          configKey: `plugin:${existing.name}`,
+          oldValue: existing,
+          newValue: null,
+          changedBy: "capability_sync",
+          changedAt: now,
+        });
+      }
+    }
+
+    // --- Tools: upsert with origin ---
+    if (Array.isArray(snap.tools)) {
+      for (const tool of snap.tools) {
+        const existing = await ctx.db
+          .query("discoveredTools")
+          .withIndex("by_name", (q) => q.eq("name", tool.name))
+          .first();
+        if (existing) {
+          await ctx.db.patch(existing._id, {
+            source: tool.source ?? existing.source,
+            description: tool.description ?? existing.description,
+            origin: tool.origin ?? existing.origin,
+          });
+        } else {
+          await ctx.db.insert("discoveredTools", {
+            name: tool.name,
+            source: tool.source ?? "builtin",
+            serverName: tool.serverName,
+            description: tool.description,
+            usageCount: 0,
+            discoveredAt: now,
+            origin: tool.origin,
+          });
+        }
+      }
+    }
+  },
+});
+
 export const listTools = query({
   args: {},
   handler: async (ctx) => {
