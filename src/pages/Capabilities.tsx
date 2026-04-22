@@ -20,6 +20,7 @@ import {
   useHooks,
   useCliTools,
   useDiscoveredTools,
+  useSlashCommands,
 } from "../hooks/useCapabilities";
 import { useCommandCatalog } from "../hooks/useCommandCatalog";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
@@ -238,6 +239,98 @@ function HooksPanel({
   );
 }
 
+/* ---- Expandable Slash Commands Section ---- */
+function SlashCommandsPanel({
+  commands,
+  filter,
+}: {
+  commands: any[];
+  filter?: string;
+}) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const filtered = filter
+    ? commands.filter(
+        (c) =>
+          c.name.toLowerCase().includes(filter) ||
+          (c.description ?? "").toLowerCase().includes(filter) ||
+          (c.source ?? "").toLowerCase().includes(filter)
+      )
+    : commands;
+
+  return (
+    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+        Slash Commands
+        <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+        <InfoTooltip text="Claude Code slash commands discovered from environment snapshots. These are invoked via /command in Claude Code." />
+      </h2>
+      {filtered.length === 0 ? (
+        <p className="text-sm text-gray-500 py-6 text-center">
+          {filter ? "No slash commands match your search" : "No slash commands discovered"}
+        </p>
+      ) : (
+        <div className="space-y-1 max-h-[420px] overflow-y-auto">
+          {filtered.map((c: any) => {
+            const isExpanded = expandedId === c._id;
+            return (
+              <div key={c._id}>
+                <div
+                  onClick={() => setExpandedId(isExpanded ? null : c._id)}
+                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-sm font-mono text-emerald-400">
+                      /{c.name}
+                    </span>
+                    {c.source && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 flex-shrink-0">
+                        {c.source}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                    {c.description && (
+                      <span className="text-xs text-gray-500 truncate max-w-[200px] hidden md:inline">
+                        {c.description}
+                      </span>
+                    )}
+                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-xs">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                      <div>
+                        <span className="text-gray-500">Command</span>
+                        <p className="text-emerald-400 font-mono">/{c.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Source</span>
+                        <p className="text-gray-300">{c.source ?? "N/A"}</p>
+                      </div>
+                      {c.description && (
+                        <div className="col-span-2">
+                          <span className="text-gray-500">Description</span>
+                          <p className="text-gray-300">{c.description}</p>
+                        </div>
+                      )}
+                      <div>
+                        <span className="text-gray-500">Discovered</span>
+                        <p className="text-gray-300 font-mono">{formatTimestamp(c.discoveredAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Capabilities() {
   const summary = useCapabilitySummary();
   const configChanges = useConfigChanges(30);
@@ -247,6 +340,7 @@ export default function Capabilities() {
   const hooks = useHooks();
   const cliTools = useCliTools();
   const tools = useDiscoveredTools();
+  const slashCommands = useSlashCommands();
   const { commands: catalogCommands, status: catalogStatus, error: catalogError } = useCommandCatalog();
   const { status: wsStatus } = useAstridrWS();
 
@@ -287,13 +381,14 @@ export default function Capabilities() {
       </div>
 
       {/* 1. Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <MetricCard label="MCP Servers" value={summary?.mcpServers ?? 0} />
         <MetricCard label="Plugins" value={summary?.plugins ?? 0} />
         <MetricCard label="Skills" value={summary?.skills ?? 0} />
         <MetricCard label="Tools" value={summary?.tools ?? 0} />
         <MetricCard label="Hooks" value={summary?.hooks ?? 0} />
         <MetricCard label="CLI Tools" value={cliTools.length} />
+        <MetricCard label="Slash Cmds" value={slashCommands.length} />
         <MetricCard label="Commands" value={catalogStatus === "ready" ? catalogCommands.length : 0} />
       </div>
 
@@ -389,11 +484,13 @@ export default function Capabilities() {
         )}
       </div>
 
-      {/* 6. Skills & Hooks */}
+      {/* 6. Skills, Hooks & Slash Commands */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SkillsPanel skills={skills} filter={filter} />
         <HooksPanel hooks={hooks} filter={filter} />
       </div>
+
+      <SlashCommandsPanel commands={slashCommands} filter={filter} />
 
       {/* 6. Discovered Tools */}
       <DiscoveredToolsTable tools={tools} filter={filter} />
