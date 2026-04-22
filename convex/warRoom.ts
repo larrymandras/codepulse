@@ -5,7 +5,6 @@ export const listRooms = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("warRooms")
-      .withIndex("by_status")
       .order("desc")
       .collect();
   },

@@ -18,6 +18,8 @@ import { TranscriptPanel, type TranscriptChunk } from "@/components/TranscriptPa
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
+import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
+import { Plus } from "lucide-react";
 
 export default function WarRoom() {
   // ─── State & queries ─────────────────────────────────────────────────────────
@@ -30,6 +32,7 @@ export default function WarRoom() {
       selectedRoomId ? { roomId: selectedRoomId } : "skip"
     ) ?? [];
 
+  const [launchOpen, setLaunchOpen] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [liveChunks, setLiveChunks] = useState<TranscriptChunk[]>([]);
@@ -112,7 +115,22 @@ export default function WarRoom() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">War Room</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">War Room</h1>
+        <button
+          onClick={() => setLaunchOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          New Room
+        </button>
+      </div>
+      <WarRoomLaunchDialog
+        open={launchOpen}
+        onOpenChange={setLaunchOpen}
+        initialParticipantIds={[]}
+        showSaveAsTeam
+      />
       <SectionErrorBoundary name="War Room">
         <div className="flex gap-4 h-[calc(100vh-140px)]">
           {/* Left panel — room list */}

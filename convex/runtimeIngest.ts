@@ -573,6 +573,103 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "channel_health": {
+          const d = data as any;
+          await ctx.runMutation(api.channelHealth.upsert, {
+            channelId: d.channelId ?? d.channel_id ?? "unknown",
+            status: d.status ?? "unknown",
+            messagesLastHour: d.messagesLastHour ?? d.messages_last_hour ?? 0,
+            avgResponseMs: d.avgResponseMs ?? d.avg_response_ms ?? 0,
+            errorCount: d.errorCount ?? d.error_count ?? 0,
+            lastMessageAt: d.lastMessageAt ?? d.last_message_at ?? 0,
+            details: d.details,
+            timestamp,
+          });
+          break;
+        }
+        case "provider_health": {
+          const d = data as any;
+          await ctx.runMutation(api.providerHealth.upsert, {
+            providerName: d.providerName ?? d.provider_name ?? d.name ?? "unknown",
+            state: d.state ?? "unknown",
+            latencyEmaMs: d.latencyEmaMs ?? d.latency_ema_ms ?? 0,
+            successRate: d.successRate ?? d.success_rate ?? 0,
+            consecutiveFailures: d.consecutiveFailures ?? d.consecutive_failures ?? 0,
+            lastSuccessAt: d.lastSuccessAt ?? d.last_success_at ?? 0,
+            timestamp,
+          });
+          break;
+        }
+        case "provider.state_change": {
+          const d = data as any;
+          await ctx.runMutation(api.providerHealth.recordStateChange, {
+            providerName: d.providerName ?? d.provider_name ?? d.name ?? "unknown",
+            state: d.state ?? "unknown",
+            latencyEmaMs: d.latencyEmaMs ?? d.latency_ema_ms ?? 0,
+            successRate: d.successRate ?? d.success_rate ?? 0,
+            consecutiveFailures: d.consecutiveFailures ?? d.consecutive_failures ?? 0,
+            lastSuccessAt: d.lastSuccessAt ?? d.last_success_at ?? 0,
+            timestamp,
+          });
+          break;
+        }
+        case "startup_event": {
+          const d = data as any;
+          await ctx.runMutation(api.v6Mutations.insertStartupEvent, {
+            phase: d.phase ?? "unknown",
+            duration: d.duration ?? 0,
+            totalMs: d.totalMs ?? d.total_ms ?? 0,
+            subsystem: d.subsystem,
+            order: d.order,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "auth_alias": {
+          const d = data as any;
+          await ctx.runMutation(api.v6Mutations.upsertAuthAlias, {
+            alias: d.alias ?? "unknown",
+            provider: d.provider ?? "unknown",
+            userId: d.userId ?? d.user_id ?? "unknown",
+            createdAt: d.createdAt ?? d.created_at ?? Date.now(),
+          });
+          break;
+        }
+        case "advisor_event": {
+          const d = data as any;
+          await ctx.runMutation(api.v6Mutations.insertAdvisorEvent, {
+            sessionId: d.sessionId ?? d.session_id,
+            provider: d.provider ?? "unknown",
+            model: d.model,
+            used: d.used ?? false,
+            inputTokens: d.inputTokens ?? d.input_tokens ?? 0,
+            outputTokens: d.outputTokens ?? d.output_tokens ?? 0,
+            costUsd: d.costUsd ?? d.cost_usd ?? 0,
+            standardCostUsd: d.standardCostUsd ?? d.standard_cost_usd ?? 0,
+            latencyMs: d.latencyMs ?? d.latency_ms,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "compaction": {
+          const d = data as any;
+          await ctx.runMutation(api.compactionEvents.insert, {
+            sessionId: d.sessionId ?? d.session_id ?? "unknown",
+            trigger: d.trigger ?? "auto",
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "metric_snapshot": {
+          const d = data as any;
+          await ctx.runMutation(api.metrics.insertSnapshot, {
+            metricName: d.metricName ?? d.metric_name ?? "unknown",
+            value: d.value ?? 0,
+            tags: d.tags,
+            timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
       }
     }
 
