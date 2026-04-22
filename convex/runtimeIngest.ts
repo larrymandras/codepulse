@@ -492,6 +492,11 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "capability_sync":
+          await ctx.runMutation(api.registry.syncFullInventory, {
+            snapshot: data,
+          });
+          break;
         case "ideation_finding": {
           const d = data as any;
           await ctx.runMutation(api.ideation.recordFinding, {
