@@ -33,6 +33,7 @@ export function useRosterAgents() {
   const [error, setError] = useState<string | null>(null);
 
   const pendingApprovals = useQuery(api.approvalQueue.list, { status: "pending" }) ?? [];
+  const convexAgents = useQuery(api.agentConfigVersions.listAgents) ?? [];
 
   const load = useCallback(async () => {
     try {
@@ -52,11 +53,14 @@ export function useRosterAgents() {
     return () => clearInterval(id);
   }, [load]);
 
-  // Merge API agents with pending approvals
+  // Merge API agents (or Convex fallback) with pending approvals
   const agents: RosterAgent[] = (() => {
-    const apiIds = new Set(apiAgents.map((a) => a.id));
+    const baseAgents: AgentListItem[] = apiAgents.length > 0
+      ? apiAgents
+      : convexAgents as AgentListItem[];
+    const apiIds = new Set(baseAgents.map((a) => a.id));
 
-    const merged: RosterAgent[] = apiAgents.map((a) => ({
+    const merged: RosterAgent[] = baseAgents.map((a) => ({
       ...a,
       status: a.active ? ("active" as const) : ("idle" as const),
     }));

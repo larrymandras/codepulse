@@ -43,6 +43,39 @@ export const latestVersion = query({
   },
 });
 
+/** List all known agents (latest config snapshot per agent). */
+export const listAgents = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db
+      .query("agentConfigVersions")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(500);
+
+    const seen = new Map<string, typeof all[0]>();
+    for (const row of all) {
+      if (!seen.has(row.agentId)) {
+        seen.set(row.agentId, row);
+      }
+    }
+
+    return Array.from(seen.values()).map((row) => {
+      const cfg = row.config as Record<string, unknown> | undefined;
+      return {
+        id: row.agentId,
+        name: (cfg?.name as string) ?? row.agentId,
+        description: (cfg?.description as string) ?? "",
+        tier: (cfg?.tier as string) ?? "shared",
+        active: true,
+        budget_fraction: (cfg?.budget_fraction as number) ?? 0,
+        profiles: (cfg?.profiles as string[]) ?? [],
+        model: (cfg?.model_override as string) ?? undefined,
+      };
+    });
+  },
+});
+
 /** Compare two versions — returns both config snapshots for client-side diff. */
 export const compareVersions = query({
   args: {
