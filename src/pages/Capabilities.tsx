@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import OriginBadge from "../components/OriginBadge";
 import { Search } from "lucide-react";
 import MetricCard from "../components/MetricCard";
 import McpServerPanel from "../components/McpServerPanel";
@@ -78,6 +79,7 @@ function SkillsPanel({
                     <span className="text-sm font-mono text-gray-200 truncate">
                       {s.name}
                     </span>
+                    <OriginBadge origin={s.origin} />
                     {s.source && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 flex-shrink-0">
                         {s.source}
@@ -118,6 +120,12 @@ function SkillsPanel({
                         <div>
                           <span className="text-gray-500">Last Used</span>
                           <p className="text-gray-300 font-mono">{formatTimestamp(s.lastUsedAt)}</p>
+                        </div>
+                      )}
+                      {s.origin && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground w-24">Origin</span>
+                          <OriginBadge origin={s.origin} />
                         </div>
                       )}
                     </div>
@@ -176,6 +184,7 @@ function HooksPanel({
                     <span className="text-xs font-mono text-purple-400 flex-shrink-0">
                       {h.hookType}
                     </span>
+                    <OriginBadge origin={h.origin} />
                     <span className="text-xs font-mono text-gray-300 truncate">
                       {h.command}
                     </span>
@@ -210,6 +219,12 @@ function HooksPanel({
                         <span className="text-gray-500">Registered</span>
                         <p className="text-gray-300 font-mono">{formatTimestamp(h.registeredAt)}</p>
                       </div>
+                      {h.origin && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground w-24">Origin</span>
+                          <OriginBadge origin={h.origin} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { formatTimestamp } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
+import OriginBadge from "./OriginBadge";
 
 interface DiscoveredToolsTableProps {
   tools: any[];
@@ -110,6 +111,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
           <div className="flex items-center gap-3 min-w-0">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cs.dot}`} />
             <span className="text-sm font-mono text-gray-200 truncate">{t.name}</span>
+            <OriginBadge origin={t.origin} />
             {t.description && (
               <span className="text-[11px] text-gray-500 truncate max-w-[280px] hidden lg:inline">
                 {t.description}
@@ -158,6 +160,12 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                   {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "Never"}
                 </p>
               </div>
+              {t.origin && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-muted-foreground w-24">Origin</span>
+                  <OriginBadge origin={t.origin} />
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -294,6 +302,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-mono text-gray-200">{t.name}</span>
+                          <OriginBadge origin={t.origin} />
                           {t.description && (
                             <span className="text-[11px] text-gray-500 truncate max-w-[200px] hidden xl:inline">
                               {t.description}
@@ -351,6 +360,12 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                                   {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "Never"}
                                 </p>
                               </div>
+                              {t.origin && (
+                                <div className="flex items-center gap-2 text-xs">
+                                  <span className="text-muted-foreground w-24">Origin</span>
+                                  <OriginBadge origin={t.origin} />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
