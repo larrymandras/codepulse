@@ -32,8 +32,8 @@ function getAstridrBase(): string {
     | string
     | undefined;
   if (envBase) return envBase.replace(/\/$/, "");
-  // Fallback: same host, port 8000 (Astridr default)
-  return `${window.location.protocol}//${window.location.hostname}:8000`;
+  // Fallback: same host, port 8181 (Astridr web channel)
+  return `${window.location.protocol}//${window.location.hostname}:8181`;
 }
 
 // Mask phone number: keep first digit and last 4

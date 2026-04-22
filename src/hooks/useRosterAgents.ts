@@ -53,11 +53,13 @@ export function useRosterAgents() {
     return () => clearInterval(id);
   }, [load]);
 
-  // Merge API agents (or Convex fallback) with pending approvals
+  // Merge API agents (or Convex fallback) with pending approvals.
+  // Only fall back to Convex after the API call has resolved to avoid
+  // flashing partial data while the fetch is still in-flight.
   const agents: RosterAgent[] = (() => {
     const baseAgents: AgentListItem[] = apiAgents.length > 0
       ? apiAgents
-      : convexAgents as AgentListItem[];
+      : isLoading ? [] : convexAgents as AgentListItem[];
     const apiIds = new Set(baseAgents.map((a) => a.id));
 
     const merged: RosterAgent[] = baseAgents.map((a) => ({
