@@ -43,6 +43,15 @@ export function useCommandCatalog(): UseCommandCatalogResult {
     }
   }, [wsStatus]);
 
+  // Timeout: if WS connected but no catalog arrives within 5s, stop spinner
+  useEffect(() => {
+    if (wsStatus !== "connected" || catalogStatus !== "loading") return;
+    const timer = setTimeout(() => {
+      setCatalogStatus((prev) => (prev === "loading" ? "ready" : prev));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [wsStatus, catalogStatus]);
+
   // Subscribe to commands.catalog events
   useEffect(() => {
     const unsubscribe = subscribeEvent("commands.catalog", (msg) => {
