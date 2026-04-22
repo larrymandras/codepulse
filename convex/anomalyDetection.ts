@@ -16,9 +16,14 @@ export function computeZScore(value: number, historicalValues: number[]): number
   return (value - mean) / stdDev;
 }
 
-export function classifySeverity(absZScore: number): "warning" | "critical" | null {
-  if (absZScore >= 3) return "critical";
-  if (absZScore >= 2) return "warning";
+export function classifySeverity(
+  absZScore: number,
+  absDelta?: number,
+  minDelta = 5.0,
+): "warning" | "critical" | null {
+  if (absDelta !== undefined && absDelta < minDelta) return null;
+  if (absZScore >= 5) return "critical";
+  if (absZScore >= 3) return "warning";
   return null;
 }
 
@@ -86,7 +91,8 @@ export const evaluateInternal = internalMutation({
       const stdDev = Math.sqrt(variance);
 
       const zScore = computeZScore(todayValue, historicalValues);
-      const severity = classifySeverity(Math.abs(zScore));
+      const absDelta = Math.abs(todayValue - mean);
+      const severity = classifySeverity(Math.abs(zScore), absDelta);
 
       if (!severity) continue;
 

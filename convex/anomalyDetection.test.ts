@@ -32,26 +32,34 @@ describe("anomalyDetection", () => {
     });
   });
 
-  // classifySeverity tests
+  // classifySeverity tests (thresholds: 3σ warning, 5σ critical, $5 min delta)
   describe("classifySeverity", () => {
-    test("returns null when absZScore is below 2sigma threshold", () => {
-      expect(classifySeverity(1.5)).toBeNull();
+    test("returns null when absZScore is below 3sigma threshold", () => {
+      expect(classifySeverity(2.5, 10)).toBeNull();
     });
 
-    test("returns 'warning' when absZScore is in 2-3sigma range", () => {
-      expect(classifySeverity(2.5)).toBe("warning");
+    test("returns 'warning' when absZScore is in 3-5sigma range", () => {
+      expect(classifySeverity(4.0, 10)).toBe("warning");
     });
 
-    test("returns 'critical' when absZScore is at or above 3sigma", () => {
-      expect(classifySeverity(3.5)).toBe("critical");
+    test("returns 'critical' when absZScore is at or above 5sigma", () => {
+      expect(classifySeverity(5.5, 10)).toBe("critical");
     });
 
-    test("returns 'warning' at exactly 2sigma boundary", () => {
-      expect(classifySeverity(2.0)).toBe("warning");
+    test("returns 'warning' at exactly 3sigma boundary", () => {
+      expect(classifySeverity(3.0, 10)).toBe("warning");
     });
 
-    test("returns 'critical' at exactly 3sigma boundary", () => {
-      expect(classifySeverity(3.0)).toBe("critical");
+    test("returns 'critical' at exactly 5sigma boundary", () => {
+      expect(classifySeverity(5.0, 10)).toBe("critical");
+    });
+
+    test("returns null when delta is below minDelta even with high sigma", () => {
+      expect(classifySeverity(6.0, 2.0)).toBeNull();
+    });
+
+    test("returns null when delta is undefined (backwards compat, high sigma)", () => {
+      expect(classifySeverity(4.0)).toBe("warning");
     });
   });
 
