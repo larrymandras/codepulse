@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { formatTimestamp } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
+import OriginBadge from "./OriginBadge";
 
 interface McpServerPanelProps {
   servers: any[];
@@ -73,6 +74,7 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
                     <span className="text-sm font-mono text-gray-200 truncate">
                       {s.name}
                     </span>
+                    <OriginBadge origin={s.origin} />
                     <span
                       className={`text-xs capitalize flex-shrink-0 ${statusColor(s.status)}`}
                     >
@@ -114,6 +116,12 @@ export default function McpServerPanel({ servers, filter }: McpServerPanelProps)
                         <span className="text-gray-500">Last Seen</span>
                         <p className="text-gray-300 font-mono">{formatTimestamp(s.lastSeenAt)}</p>
                       </div>
+                      {s.origin && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground w-24">Origin</span>
+                          <OriginBadge origin={s.origin} />
+                        </div>
+                      )}
                       <div>
                         <span className="text-gray-500">Record ID</span>
                         <p className="text-gray-500 font-mono truncate">{s._id}</p>

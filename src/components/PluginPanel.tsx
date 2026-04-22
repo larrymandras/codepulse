@@ -1,5 +1,6 @@
 import { useState } from "react";
 import InfoTooltip from "./InfoTooltip";
+import OriginBadge from "./OriginBadge";
 
 interface PluginPanelProps {
   plugins: any[];
@@ -56,6 +57,7 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                     <span className="text-sm font-mono text-gray-200 truncate">
                       {p.name}
                     </span>
+                    <OriginBadge origin={p.origin} />
                     {p.version && (
                       <span className="text-xs text-gray-500 flex-shrink-0">v{p.version}</span>
                     )}
@@ -110,6 +112,12 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                           {new Date(p.installedAt * 1000).toLocaleString()}
                         </p>
                       </div>
+                      {p.origin && (
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-muted-foreground w-24">Origin</span>
+                          <OriginBadge origin={p.origin} />
+                        </div>
+                      )}
                       <div>
                         <span className="text-gray-500">Record ID</span>
                         <p className="text-gray-500 font-mono truncate">{p._id}</p>
