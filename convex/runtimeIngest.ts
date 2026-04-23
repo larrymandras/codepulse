@@ -216,6 +216,18 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "pipe_execution": {
+          const d = data as any;
+          await ctx.runMutation(api.automation.recordCron, {
+            jobName: `pipe:${d.pipe_name ?? d.pipeName ?? "unknown"}`,
+            startedAt: d.startedAt ?? d.started_at ?? timestamp,
+            durationMs: d.durationMs ?? d.duration_ms ?? 0,
+            success: d.success ?? true,
+            error: d.error,
+            timestamp,
+          });
+          break;
+        }
         case "heartbeat_alerts": {
           const d = data as any;
           const alerts = d.alerts ?? [];

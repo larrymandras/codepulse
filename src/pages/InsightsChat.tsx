@@ -70,7 +70,7 @@ export default function InsightsChat() {
   );
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col -m-6 h-[calc(100vh-3rem)]">
       {/* Header */}
       <div className="p-4 border-b border-gray-800">
         <h1 className="text-base font-semibold text-gray-100">Insights</h1>
