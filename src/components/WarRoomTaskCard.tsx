@@ -41,10 +41,23 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
-      className={`p-4 rounded-lg border-l-2 ${PRIORITY_BORDER[task.priority] ?? ""} bg-(--card) border border-(--border) cursor-grab active:cursor-grabbing ${isDragging ? "opacity-50" : ""}`}
+      className={`group relative p-4 rounded-lg border-l-2 ${PRIORITY_BORDER[task.priority] ?? ""} bg-(--card) border border-(--border) hover:border-(--ring) transition-colors ${isDragging ? "opacity-50" : ""}`}
       onClick={() => onClick?.(task)}
     >
+      {/* Drag handle */}
+      <div
+        {...listeners}
+        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-60 transition-opacity"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <svg width="6" height="14" viewBox="0 0 6 14" fill="currentColor" className="text-muted-foreground">
+          <circle cx="1" cy="1" r="1" /><circle cx="5" cy="1" r="1" />
+          <circle cx="1" cy="5" r="1" /><circle cx="5" cy="5" r="1" />
+          <circle cx="1" cy="9" r="1" /><circle cx="5" cy="9" r="1" />
+          <circle cx="1" cy="13" r="1" /><circle cx="5" cy="13" r="1" />
+        </svg>
+      </div>
+
       {/* Row 1: title + priority badge */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium line-clamp-2">{task.title}</span>

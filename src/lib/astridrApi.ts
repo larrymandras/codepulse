@@ -253,6 +253,36 @@ export async function createWarRoom(
 }
 
 // ---------------------------------------------------------------------------
+// Meeting Bot: Send / Leave / Status
+// ---------------------------------------------------------------------------
+
+export interface SendBotRequest {
+  meeting_url: string;
+  agent_id: string;
+}
+
+export interface SendBotResponse {
+  status: string;
+  data: { bot_id: string; bot_name: string; meeting_url: string };
+}
+
+export async function sendMeetingBot(
+  req: SendBotRequest,
+): Promise<SendBotResponse> {
+  return apiRequest<SendBotResponse>("/api/meeting-bot/send", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+}
+
+export async function leaveMeetingBot(botId: string): Promise<void> {
+  await apiRequest<unknown>("/api/meeting-bot/leave", {
+    method: "POST",
+    body: JSON.stringify({ bot_id: botId }),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Phase 80: Config Versioning & Rollback
 // ---------------------------------------------------------------------------
 

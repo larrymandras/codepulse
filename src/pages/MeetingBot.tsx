@@ -14,6 +14,16 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { CallStatsBar } from "@/components/CallStatsBar";
 import { TranscriptPanel, TranscriptChunk } from "@/components/TranscriptPanel";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -22,6 +32,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { sendMeetingBot } from "@/lib/astridrApi";
 
 type SortField = "startedAt" | "durationMs" | "participantCount" | "costUsd";
 
@@ -70,6 +81,29 @@ export default function MeetingBot() {
     });
   }, [recentCalls, sortField, sortDir]);
 
+  const [meetingUrl, setMeetingUrl] = useState("");
+  const [agentId, setAgentId] = useState("freya");
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  async function handleSendBot() {
+    if (!meetingUrl.startsWith("https://")) {
+      setSendResult({ ok: false, message: "Meeting URL must start with https://" });
+      return;
+    }
+    setSending(true);
+    setSendResult(null);
+    try {
+      const res = await sendMeetingBot({ meeting_url: meetingUrl, agent_id: agentId });
+      setSendResult({ ok: true, message: `Bot ${res.data.bot_id} joining as ${res.data.bot_name}` });
+      setMeetingUrl("");
+    } catch (err: any) {
+      setSendResult({ ok: false, message: err.message || "Failed to send bot" });
+    } finally {
+      setSending(false);
+    }
+  }
+
   const transcriptChunks: TranscriptChunk[] = transcripts.map((t) => ({
     id: t._id,
     speaker: t.speakerName ?? "Unknown",
@@ -96,6 +130,50 @@ export default function MeetingBot() {
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">Meeting Bot</h1>
+
+      {/* Send Bot Form */}
+      <SectionErrorBoundary name="Send Bot">
+        <SectionHeader title="Send Bot to Meeting" />
+        <Separator className="my-2" />
+        <GlassPanel className="rounded-xl p-4">
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="flex-1 space-y-1.5">
+              <Label htmlFor="meeting-url">Meeting URL</Label>
+              <Input
+                id="meeting-url"
+                placeholder="https://meet.google.com/abc-defg-hij"
+                value={meetingUrl}
+                onChange={(e) => setMeetingUrl(e.target.value)}
+                disabled={sending}
+              />
+            </div>
+            <div className="w-40 space-y-1.5">
+              <Label htmlFor="agent-select">Agent</Label>
+              <Select value={agentId} onValueChange={setAgentId} disabled={sending}>
+                <SelectTrigger id="agent-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="freya">Freya</SelectItem>
+                  <SelectItem value="astrid">Ástríðr</SelectItem>
+                  <SelectItem value="hervor">Hervor</SelectItem>
+                  <SelectItem value="hildr">Hildr</SelectItem>
+                  <SelectItem value="gondul">Gondul</SelectItem>
+                  <SelectItem value="ragnhildr">Ragnhildr</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleSendBot} disabled={sending || !meetingUrl}>
+              {sending ? "Sending…" : "Send Bot"}
+            </Button>
+          </div>
+          {sendResult && (
+            <p className={`text-sm mt-2 ${sendResult.ok ? "text-green-400" : "text-red-400"}`}>
+              {sendResult.message}
+            </p>
+          )}
+        </GlassPanel>
+      </SectionErrorBoundary>
 
       {/* Active Calls Section */}
       <SectionErrorBoundary name="Active Calls">

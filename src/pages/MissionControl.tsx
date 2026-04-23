@@ -12,10 +12,13 @@ import {
   DragOverlay,
   DragStartEvent,
   PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   closestCorners,
 } from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { WarRoomKanbanColumn, TaskItem } from "@/components/WarRoomKanbanColumn";
 import { WarRoomTaskCard } from "@/components/WarRoomTaskCard";
@@ -52,7 +55,9 @@ export default function MissionControl() {
 
   // Sensor configuration (12px activation constraint per UI-SPEC)
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 12 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   // Determine column source
