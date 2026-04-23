@@ -33,22 +33,29 @@ export default function Executions() {
 
   const stats = useQuery(api.commandExecutions.summaryStats);
 
+  const hasActiveFilters = Object.values(filters).some((v) => v !== null);
+
+  // When filters are active, use the server-side filtered query so results
+  // aren't limited to the paginated window. Otherwise use pagination.
+  const filteredResults = useQuery(
+    api.commandExecutions.listExecutions,
+    hasActiveFilters
+      ? {
+          status: filters.status ?? undefined,
+          profileId: filters.profile ?? undefined,
+          channelId: filters.channel ?? undefined,
+          origin: filters.origin ?? undefined,
+        }
+      : "skip"
+  );
+
   const { results: allExecutions, status: execStatus, loadMore: loadMoreExec } = usePaginatedQuery(
     api.commandExecutions.listExecutionsPaginated,
     {},
     { initialNumItems: 25 }
   );
 
-  // Apply client-side filters over paginated results
-  const executions = useMemo(() => {
-    return allExecutions.filter((e) => {
-      if (filters.status !== null && e.status !== filters.status) return false;
-      if (filters.profile !== null && e.profileId !== filters.profile) return false;
-      if (filters.channel !== null && e.channelId !== filters.channel) return false;
-      if (filters.origin !== null && e.origin !== filters.origin) return false;
-      return true;
-    });
-  }, [allExecutions, filters]);
+  const executions = hasActiveFilters ? (filteredResults ?? []) : allExecutions;
 
   const profiles = useMemo(() => {
     const seen = new Set<string>();
@@ -57,8 +64,6 @@ export default function Executions() {
     }
     return Array.from(seen).sort();
   }, [allExecutions]);
-
-  const hasActiveFilters = Object.values(filters).some((v) => v !== null);
 
   const handleFilterChange = (key: string, value: string | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
