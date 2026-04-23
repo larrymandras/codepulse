@@ -148,8 +148,8 @@ export default function MissionControl() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="overflow-x-auto">
-            <div className="flex gap-4 pb-4 min-w-min">
+          <div className="overflow-y-auto">
+            <div className="grid grid-cols-6 gap-4 pb-4">
               {agents.map((agent) => (
                 <WarRoomKanbanColumn
                   key={agent.profileId}
