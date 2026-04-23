@@ -166,9 +166,7 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
 
-    const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8765";
-    // CPHLTH-03: Key is sent as first-message auth, not URL query param.
-    // URL query params appear in browser history, proxy logs, and server access logs.
+    const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8181";
     const url = `${wsUrl}/ws/telemetry`;
 
     let ws: WebSocket;
@@ -259,10 +257,8 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
       scheduleRetry();
     };
 
-    ws.onerror = (e: Event) => {
-      // Suppress noisy console errors during reconnection attempts.
+    ws.onerror = () => {
       // onclose fires after onerror — let onclose handle retry.
-      e.preventDefault();
     };
   }, [flushCommandQueue, rejectAllPending, setStatusSync]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -289,16 +285,20 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     }, delay);
   }, [connect, setStatusSync]);
 
-  // Initial connection
+  // Initial connection — delayed to survive React StrictMode double-mount.
+  // StrictMode runs mount→cleanup→remount synchronously; without the delay
+  // the first mount creates a WebSocket that gets closed mid-handshake,
+  // causing the browser to throttle subsequent connections to the same URL.
   useEffect(() => {
     mountedRef.current = true;
-    connect();
+    const connectTimer = setTimeout(() => connect(), 50);
     return () => {
       mountedRef.current = false;
+      clearTimeout(connectTimer);
       if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
       rejectAllPending("component unmounted");
       if (wsRef.current) {
-        wsRef.current.onclose = null; // prevent retry on intentional close
+        wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
       }
