@@ -169,3 +169,53 @@ describe("FailoverBlock", () => {
     expect(screen.getByText(/Connection timeout after 90s/)).toBeInTheDocument();
   });
 });
+
+import { RunBlock } from "../RunBlock";
+
+describe("RunBlock dispatcher", () => {
+  it("dispatches text block to TextBlock", () => {
+    render(<RunBlock block={{ type: "text", text: "Hello from dispatcher" }} />);
+    expect(screen.getByText("Hello from dispatcher")).toBeInTheDocument();
+  });
+
+  it("dispatches error block to ErrorBlock", () => {
+    render(
+      <RunBlock block={{ type: "error", error_type: "TestError", message: "test" }} />
+    );
+    expect(screen.getByText("TestError")).toBeInTheDocument();
+  });
+
+  it("dispatches thinking block to ThinkingBlock", () => {
+    render(
+      <RunBlock block={{ type: "thinking", round_num: 2, thinking_text: "hmm" }} />
+    );
+    expect(screen.getByText("Round 2")).toBeInTheDocument();
+  });
+
+  it("dispatches tool_call block to ToolCallBlock", () => {
+    render(
+      <RunBlock
+        block={{ type: "tool_call", tool_name: "search", arguments: {}, status: "success" }}
+      />
+    );
+    expect(screen.getByText("search")).toBeInTheDocument();
+  });
+
+  it("dispatches failover block to FailoverBlock", () => {
+    render(
+      <RunBlock
+        block={{
+          type: "failover",
+          failedProvider: "anthropic",
+          newProvider: "ollama",
+        }}
+      />
+    );
+    expect(screen.getByText(/anthropic/)).toBeInTheDocument();
+  });
+
+  it("renders unknown block types as raw JSON", () => {
+    render(<RunBlock block={{ type: "mystery", data: "test" }} />);
+    expect(screen.getByText(/"mystery"/)).toBeInTheDocument();
+  });
+});
