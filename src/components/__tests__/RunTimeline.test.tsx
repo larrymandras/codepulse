@@ -72,4 +72,14 @@ describe('RunTimeline', () => {
     render(<RunTimeline blocks={[]} streaming={true} />);
     expect(screen.getByText(/Thinking/i)).toBeInTheDocument();
   });
+
+  it("counts tool_call blocks (not just tool_use) in round header", () => {
+    const blocks = [
+      { type: "thinking", round_num: 1, thinking_text: "thinking" },
+      { type: "tool_call", tool_name: "search", arguments: {}, status: "success" },
+      { type: "tool_call", tool_name: "write", arguments: {}, status: "success" },
+    ];
+    render(<RunTimeline blocks={blocks} streaming={false} />);
+    expect(screen.getByText(/2 tool calls/)).toBeInTheDocument();
+  });
 });

@@ -84,7 +84,7 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
     <div className="flex flex-col gap-2">
       {rounds.map((round) => {
         const toolCallCount = round.blocks.filter(
-          (b) => b.type === "tool_use"
+          (b) => b.type === "tool_use" || b.type === "tool_call"
         ).length;
         const isActive = !round.done;
 
@@ -110,7 +110,7 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
             </summary>
             <div className="pl-4 flex flex-col gap-1">
               {round.blocks.map((block, idx) => (
-                <RunBlock key={idx} block={block} />
+                <RunBlock key={idx} block={block} streaming={isActive && streaming} />
               ))}
             </div>
           </details>
