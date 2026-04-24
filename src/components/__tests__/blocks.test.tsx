@@ -5,6 +5,7 @@ import { TextBlock } from "../blocks/TextBlock";
 import { ErrorBlock } from "../blocks/ErrorBlock";
 import { ThinkingBlock } from "../blocks/ThinkingBlock";
 import { ToolCallBlock } from "../blocks/ToolCallBlock";
+import { FailoverBlock } from "../blocks/FailoverBlock";
 
 describe("TextBlock", () => {
   it("renders text content", () => {
@@ -138,5 +139,33 @@ describe("ToolCallBlock", () => {
   it("shows args summary when collapsed", () => {
     render(<ToolCallBlock block={block} />);
     expect(screen.getByText(/query.*test query/)).toBeInTheDocument();
+  });
+});
+
+describe("FailoverBlock", () => {
+  const block = {
+    type: "failover",
+    failedProvider: "anthropic_direct",
+    newProvider: "ollama",
+    errorMessage: "Connection timeout after 90s",
+  };
+
+  it("renders provider transition message", () => {
+    render(<FailoverBlock block={block} />);
+    expect(screen.getByText(/anthropic_direct/)).toBeInTheDocument();
+    expect(screen.getByText(/ollama/)).toBeInTheDocument();
+  });
+
+  it("has warning left stripe", () => {
+    const { container } = render(<FailoverBlock block={block} />);
+    const wrapper = container.firstElementChild;
+    expect(wrapper?.className).toContain("border-l-(--status-warn)");
+  });
+
+  it("shows error detail when expanded", () => {
+    render(<FailoverBlock block={block} />);
+    const toggle = screen.getByRole("button");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Connection timeout after 90s/)).toBeInTheDocument();
   });
 });
