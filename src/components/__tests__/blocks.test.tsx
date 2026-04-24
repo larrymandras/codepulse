@@ -1,8 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import { TextBlock } from "../blocks/TextBlock";
 import { ErrorBlock } from "../blocks/ErrorBlock";
 import { ThinkingBlock } from "../blocks/ThinkingBlock";
+import { ToolCallBlock } from "../blocks/ToolCallBlock";
 
 describe("TextBlock", () => {
   it("renders text content", () => {
@@ -84,5 +86,57 @@ describe("ThinkingBlock", () => {
       />
     );
     expect(container.querySelector(".animate-pulse")).toBeNull();
+  });
+});
+
+describe("ToolCallBlock", () => {
+  const block = {
+    type: "tool_call",
+    tool_name: "web_search",
+    arguments: { query: "test query", limit: 10 },
+    result: "Found 3 results for test query",
+    status: "success",
+  };
+
+  it("renders tool name as header", () => {
+    render(<ToolCallBlock block={block} />);
+    expect(screen.getByText("web_search")).toBeInTheDocument();
+  });
+
+  it("has blue left stripe", () => {
+    const { container } = render(<ToolCallBlock block={block} />);
+    const wrapper = container.firstElementChild;
+    expect(wrapper?.className).toContain("border-l-(--primary)");
+  });
+
+  it("shows green indicator for success status", () => {
+    const { container } = render(<ToolCallBlock block={block} />);
+    expect(container.querySelector(".bg-green-500")).not.toBeNull();
+  });
+
+  it("shows red indicator for error status", () => {
+    const { container } = render(
+      <ToolCallBlock block={{ ...block, status: "error" }} />
+    );
+    expect(container.querySelector(".bg-red-500")).not.toBeNull();
+  });
+
+  it("shows arguments when expanded", () => {
+    render(<ToolCallBlock block={block} />);
+    const toggle = screen.getByRole("button");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/"query": "test query"/)).toBeInTheDocument();
+  });
+
+  it("shows result when expanded", () => {
+    render(<ToolCallBlock block={block} />);
+    const toggle = screen.getByRole("button");
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Found 3 results/)).toBeInTheDocument();
+  });
+
+  it("shows args summary when collapsed", () => {
+    render(<ToolCallBlock block={block} />);
+    expect(screen.getByText(/query.*test query/)).toBeInTheDocument();
   });
 });
