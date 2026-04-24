@@ -39,7 +39,7 @@ function formatTimestamp(epochSecs: number): string {
 }
 
 /** Compute structured diff between two config objects. */
-function computeDiff(
+export function computeDiff(
   a: Record<string, unknown>,
   b: Record<string, unknown>,
 ): Array<{ field: string; oldVal: unknown; newVal: unknown; type: "added" | "removed" | "changed" }> {
@@ -285,7 +285,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                   size="sm"
                   className="h-7 text-[10px] px-2"
                   onClick={() => handleDiffSelect(v.version)}
-                  title="Select for comparison"
+                  aria-label={`Compare version ${v.version}`}
                 >
                   <GitCompareArrows className="h-3 w-3" />
                 </Button>
@@ -302,7 +302,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                         config: v.config as Record<string, unknown>,
                       })
                     }
-                    title="Rollback to this version"
+                    aria-label={`Rollback to version ${v.version}`}
                   >
                     <RotateCcw className="h-3 w-3" />
                   </Button>
@@ -316,6 +316,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                   onClick={() =>
                     setExpandedVersion(isExpanded ? null : v.version)
                   }
+                  aria-label={isExpanded ? `Collapse version ${v.version}` : `Expand version ${v.version}`}
                 >
                   {isExpanded ? (
                     <ChevronUp className="h-3 w-3" />
