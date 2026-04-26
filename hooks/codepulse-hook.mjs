@@ -6,6 +6,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
+import { execSync } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,36 +66,15 @@ async function main() {
   const filePath = event.filePath || undefined;
   const hookType = event.hookType || undefined;
 
-  // Map hookType to richer eventType
-  let mappedEventType = eventType;
+  // Use hookType as the canonical eventType — the /ingest handler routes on
+  // the original Claude Code hook names (PostToolUse, UserPromptSubmit, etc.)
   const hType = hookType || event.hookType || "";
-
-  if (hType === "SessionEnd" || eventType === "SessionEnd") {
-    mappedEventType = "session_end";
-  } else if (hType === "SubagentStart" || eventType === "SubagentStart") {
-    mappedEventType = "subagent_start";
-  } else if (hType === "SubagentStop" || eventType === "SubagentStop") {
-    mappedEventType = "subagent_stop";
-  } else if (hType === "UserPromptSubmit" || eventType === "UserPromptSubmit") {
-    mappedEventType = "user_prompt";
-  } else if (hType === "Stop" || eventType === "Stop") {
-    mappedEventType = "session_stop";
-  } else if (hType === "PostToolUseFailure" || eventType === "PostToolUseFailure") {
-    mappedEventType = "tool_error";
-  } else if (hType === "PermissionRequest" || eventType === "PermissionRequest") {
-    mappedEventType = "permission_request";
-  } else if (hType === "PreCompact" || eventType === "PreCompact") {
-    mappedEventType = "pre_compact";
-  } else if (hType === "Notification" || eventType === "Notification") {
-    mappedEventType = "notification";
-  } else if (hType === "Setup" || eventType === "Setup") {
-    mappedEventType = "setup";
-  }
+  const resolvedEventType = hType || eventType;
 
   // POST to /ingest
   const ingestBody = {
     sessionId,
-    eventType: mappedEventType,
+    eventType: resolvedEventType,
     toolName,
     filePath,
     hookType,
@@ -118,8 +98,39 @@ async function main() {
     clearTimeout(timeout);
   }
 
+  // Detect git commits from Bash PostToolUse and emit to /runtime-ingest
+  if (resolvedEventType === "PostToolUse" && toolName === "Bash") {
+    const cmd = event.input?.command || event.command || "";
+    if (/\bgit\s+commit\b/.test(cmd) && event.output && !/nothing to commit/.test(event.output)) {
+      try {
+        const cwd = event.input?.cwd || event.cwd || process.cwd();
+        const log = execSync("git log -1 --format=%H%n%s%n%an%n%D", { cwd, timeout: 3000, encoding: "utf-8" }).trim();
+        const [sha, message, author, refs] = log.split("\n");
+        const branch = (refs || "").replace(/.*HEAD -> /, "").split(",")[0].trim() || "unknown";
+        const numstat = execSync("git diff --numstat HEAD~1..HEAD", { cwd, timeout: 3000, encoding: "utf-8" }).trim();
+        const filesChanged = numstat ? numstat.split("\n").length : 0;
+
+        const ctrl2 = new AbortController();
+        const t2 = setTimeout(() => ctrl2.abort(), 3000);
+        await fetch(`${codepulseUrl}/runtime-ingest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            eventType: "git_commit",
+            data: { sha, message, author, branch, filesChanged },
+            timestamp: Math.floor(Date.now() / 1000),
+          }),
+          signal: ctrl2.signal,
+        }).catch(() => {});
+        clearTimeout(t2);
+      } catch {
+        // git log failed — initial commit or not a repo
+      }
+    }
+  }
+
   // On SessionStart or Setup, also run the environment scanner
-  if (eventType === "SessionStart" || mappedEventType === "setup") {
+  if (eventType === "SessionStart" || resolvedEventType === "Setup") {
     try {
       const scannerPath = pathToFileURL(join(__dirname, "scanner.mjs")).href;
       const { runScan } = await import(scannerPath);

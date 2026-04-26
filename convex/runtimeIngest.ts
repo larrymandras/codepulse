@@ -67,22 +67,38 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "security_event": {
           const d = data as any;
+          const eventType = d.eventType ?? d.event_type ?? d.layer ?? "unknown";
+          const rawSeverity = d.severity ?? "medium";
+          const severity = rawSeverity === "warning" ? "medium" : rawSeverity;
+          const description =
+            d.description ||
+            (d.layer && d.action ? `${d.layer}: ${d.action}` : "");
           await ctx.runMutation(api.security.recordEvent, {
-            eventType: d.eventType ?? d.event_type ?? "unknown",
-            severity: d.severity ?? "medium",
-            source: d.source ?? "runtime",
-            description: d.description ?? "",
+            eventType,
+            severity,
+            source: d.source ?? d.layer ?? "runtime",
+            description,
             details: d.details,
           });
           break;
         }
         case "self_healing": {
           const d = data as any;
+          // Compaction events have their own table — skip self-healing recording
+          if (d.healEventType === "compaction") break;
+          const action = d.action ?? d.method ?? "retry";
+          const outcome =
+            d.outcome ??
+            (d.success === true
+              ? "resolved"
+              : d.success === false
+                ? "failed"
+                : "pending");
           await ctx.runMutation(api.selfHealing.recordEvent, {
             component: d.component ?? "unknown",
-            issue: d.issue ?? "",
-            action: d.action ?? "retry",
-            outcome: d.outcome ?? "pending",
+            issue: d.issue ?? d.healEventType ?? "",
+            action,
+            outcome,
             details: d.details,
           });
           break;

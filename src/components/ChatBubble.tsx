@@ -9,14 +9,18 @@
  *   blocks[] — Generative UI Blocks via BlockRenderer (D-04)
  *   content   — plain markdown string (backward compatible)
  *
+ * Optional audioUrl prop for TTS playback on assistant messages.
+ *
  * Phase 56, Plan 02: CPCC-01 chat UI.
  * Phase 03, Plan 04: IL-02 block rendering upgrade.
  */
 
+import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { Play, Square } from "lucide-react";
 import type { Components } from "react-markdown";
 import type { CSSProperties } from "react";
 import { BlockRenderer } from "@/components/BlockRenderer";
@@ -30,6 +34,8 @@ export interface ChatBubbleProps {
   blocks?: GenerativeBlock[]; // optional — Generative UI Block path (D-04)
   streaming?: boolean;
   timestamp?: number;
+  audioUrl?: string;
+  onPlayAudio?: (url: string) => void;
   onApprove?: (requestId: string) => void;
   onReject?: (requestId: string, reason?: string) => void;
 }
@@ -125,10 +131,51 @@ export function ChatBubble({
   blocks,
   streaming = false,
   timestamp,
+  audioUrl,
+  onPlayAudio,
   onApprove,
   onReject,
 }: ChatBubbleProps) {
   const isUser = role === "user";
+  const [isPlaying, setIsPlaying] = useState(false);
+  const localAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Cleanup local audio on unmount
+  useEffect(() => {
+    return () => {
+      if (localAudioRef.current) {
+        localAudioRef.current.pause();
+        localAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const handlePlayToggle = () => {
+    if (!audioUrl) return;
+
+    if (onPlayAudio) {
+      // Delegate to parent (Chat.tsx manages shared audio)
+      onPlayAudio(audioUrl);
+      return;
+    }
+
+    // Local playback fallback
+    if (isPlaying && localAudioRef.current) {
+      localAudioRef.current.pause();
+      localAudioRef.current = null;
+      setIsPlaying(false);
+      return;
+    }
+
+    const audio = new Audio(audioUrl);
+    localAudioRef.current = audio;
+    setIsPlaying(true);
+    audio.play().catch(() => setIsPlaying(false));
+    audio.onended = () => {
+      setIsPlaying(false);
+      localAudioRef.current = null;
+    };
+  };
 
   const bubbleClass = isUser
     ? "bg-(--muted) text-(--foreground) ml-auto max-w-[72%] p-3"
@@ -191,6 +238,24 @@ export function ChatBubble({
                 </span>
               )}
             </div>
+          )}
+
+          {/* TTS play button — assistant messages with audio only */}
+          {!isUser && audioUrl && !streaming && (
+            <button
+              type="button"
+              onClick={handlePlayToggle}
+              className="mt-2 flex items-center gap-1 text-xs transition-colors"
+              style={{ color: isPlaying ? "var(--primary)" : "var(--muted-foreground)" }}
+              aria-label={isPlaying ? "Stop audio" : "Play audio"}
+            >
+              {isPlaying ? (
+                <Square className="w-3 h-3" />
+              ) : (
+                <Play className="w-3 h-3" />
+              )}
+              <span>{isPlaying ? "Stop" : "Play"}</span>
+            </button>
           )}
         </div>
 

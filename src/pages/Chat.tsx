@@ -1,6 +1,6 @@
 /**
  * Chat — full chat panel with send/receive via WebSocket, streaming responses,
- * markdown rendering, and auto-scroll with manual override.
+ * markdown rendering, auto-scroll with manual override, and TTS playback.
  *
  * Phase 56, Plan 02: CPCC-01 and CPCC-02.
  */
@@ -11,8 +11,13 @@ import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
+import { Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const ASTRIDR_API_URL = import.meta.env.VITE_ASTRIDR_API_URL ?? "http://localhost:8181";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -30,11 +35,42 @@ export default function Chat() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
 
+  // TTS state
+  const [ttsEnabled, setTtsEnabled] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   // Track active session for routing streaming events
   const activeSessionRef = useRef<string | null>(null);
 
   // Scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // ─── Audio helpers ───────────────────────────────────────────────────────
+
+  const playAudio = useCallback((url: string) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.play().catch((err) => {
+      console.warn("TTS playback failed:", err);
+    });
+    audio.onended = () => {
+      audioRef.current = null;
+    };
+  }, []);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // ─── Scroll helpers ──────────────────────────────────────────────────────
 
@@ -96,8 +132,10 @@ export default function Chat() {
           return;
         }
 
-        // 3. Capture session_id from ack
-        const sessionId = (ack.data?.session_id as string | undefined) ?? generateId();
+        // 3. Capture session_id from ack (top-level field, or fallback to data.session_id)
+        const sessionId = (ack.session_id as string | undefined)
+          ?? (ack.data?.session_id as string | undefined)
+          ?? generateId();
         activeSessionRef.current = sessionId;
 
         // 4. Add empty streaming assistant message
@@ -138,12 +176,14 @@ export default function Chat() {
       const data = event.data as {
         session_id?: string;
         text?: string;
+        text_chunk?: string;
         done?: boolean;
       } | undefined;
 
       if (!data) return;
 
-      const { session_id, text, done } = data;
+      const { session_id, done } = data;
+      const text = data.text_chunk ?? data.text;
       if (session_id && session_id !== activeSessionRef.current) return;
 
       triggerFlash();
@@ -196,6 +236,45 @@ export default function Chat() {
       });
     });
 
+    // run.tts — attach audio URL to the matching assistant message
+    const unsubTts = subscribeEvent("run.tts", (event) => {
+      const data = event.data as {
+        session_id?: string;
+        audio_url?: string;
+      } | undefined;
+
+      if (!data?.audio_url) return;
+
+      // Build full URL — audio_url may be relative like /api/audio/file.mp3
+      const fullUrl = data.audio_url.startsWith("http")
+        ? data.audio_url
+        : `${ASTRIDR_API_URL}${data.audio_url}`;
+
+      // Attach audioUrl to the matching message by sessionId
+      setMessages((prev) =>
+        prev.map((msg) => {
+          if (
+            msg.role === "assistant" &&
+            msg.sessionId &&
+            msg.sessionId === data.session_id
+          ) {
+            return { ...msg, audioUrl: fullUrl };
+          }
+          return msg;
+        })
+      );
+
+      // Auto-play if TTS is enabled
+      // Read ttsEnabled via ref-like pattern: we close over nothing,
+      // the setter callback gives us current state
+      setTtsEnabled((current) => {
+        if (current) {
+          playAudio(fullUrl);
+        }
+        return current;
+      });
+    });
+
     // run.completed — safety net to stop streaming
     const unsubCompleted = subscribeEvent("run.completed", (event) => {
       const data = event.data as { session_id?: string } | undefined;
@@ -235,10 +314,11 @@ export default function Chat() {
     return () => {
       unsubText();
       unsubBlock();
+      unsubTts();
       unsubCompleted();
       unsubError();
     };
-  }, [subscribeEvent]);
+  }, [subscribeEvent, playAudio]);
 
   // ─── Approve/Reject handlers for approval blocks ─────────────────────────
 
@@ -252,6 +332,15 @@ export default function Chat() {
     toast("Rejected");
   }, [sendCommand]);
 
+  // ─── Voice send handler (auto-send after speech recognition) ─────────────
+
+  const handleVoiceSend = useCallback(
+    (text: string) => {
+      void handleSend(text);
+    },
+    [handleSend]
+  );
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   const isDisconnected = status !== "connected";
@@ -261,7 +350,39 @@ export default function Chat() {
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
         <h1 className="text-base font-semibold text-(--foreground)">Chat</h1>
-        <WSStatusIndicator status={status} />
+        <div className="flex items-center gap-3">
+          {/* TTS toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              setTtsEnabled((prev) => {
+                const next = !prev;
+                if (!next && audioRef.current) {
+                  audioRef.current.pause();
+                  audioRef.current = null;
+                }
+                return next;
+              });
+            }}
+            className="flex items-center justify-center w-8 h-8 rounded-none transition-colors"
+            style={{
+              color: ttsEnabled ? "var(--primary)" : "var(--muted-foreground)",
+              border: "1px solid var(--border)",
+              backgroundColor: ttsEnabled
+                ? "color-mix(in oklch, var(--primary) 10%, transparent)"
+                : undefined,
+            }}
+            aria-label={ttsEnabled ? "Disable auto-TTS" : "Enable auto-TTS"}
+            title={ttsEnabled ? "Auto-TTS enabled" : "Auto-TTS disabled"}
+          >
+            {ttsEnabled ? (
+              <Volume2 className="w-4 h-4" />
+            ) : (
+              <VolumeX className="w-4 h-4" />
+            )}
+          </button>
+          <WSStatusIndicator status={status} />
+        </div>
       </header>
 
       {/* Message list */}
@@ -286,6 +407,8 @@ export default function Chat() {
                 blocks={msg.blocks}
                 streaming={msg.streaming}
                 timestamp={msg.timestamp}
+                audioUrl={msg.audioUrl}
+                onPlayAudio={playAudio}
                 onApprove={handleApprove}
                 onReject={handleReject}
               />
@@ -313,6 +436,7 @@ export default function Chat() {
       {/* Input */}
       <ChatInput
         onSend={handleSend}
+        onVoiceSend={handleVoiceSend}
         disabled={isStreaming || isDisconnected}
         disconnected={isDisconnected}
       />

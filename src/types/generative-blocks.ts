@@ -88,4 +88,5 @@ export type ChatMessage = {
   streaming: boolean;
   timestamp: number;
   sessionId?: string;
+  audioUrl?: string;
 };

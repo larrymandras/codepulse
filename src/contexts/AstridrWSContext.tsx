@@ -109,9 +109,9 @@ export function useAstridrWS(): AstridrWSContextValue {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
 const ALL_TOPICS = ["live-runs", "agents", "executions", "health", "security"];
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 10;
 const BASE_BACKOFF_MS = 2000;
-const MAX_BACKOFF_MS = 30000;
+const MAX_BACKOFF_MS = 15000;
 const ACK_TIMEOUT_MS = 10000;
 const MAX_QUEUE_DEPTH = 50;
 
