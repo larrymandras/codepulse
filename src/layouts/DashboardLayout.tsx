@@ -50,6 +50,7 @@ import {
   UsersRound,
   ChevronsLeft,
   ChevronsRight,
+  Grid3X3,
 } from "lucide-react";
 import {
   Tooltip,
@@ -89,6 +90,7 @@ const iconComponents: Record<string, React.ElementType> = {
   "book-open": BookOpen,
   "wand-2": Wand2,
   "users-round": UsersRound,
+  "grid-3x3": Grid3X3,
 };
 
 const commandNavItems = [
@@ -128,6 +130,7 @@ const overviewNavItems = [
   { to: "/war-room", label: "War Room", icon: "radio", group: "OVERVIEW" },
   { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "OVERVIEW" },
   { to: "/mission-control", label: "Mission Control", icon: "layout", group: "OVERVIEW" },
+  { to: "/tool-matrix", label: "Tool Matrix", icon: "grid-3x3", group: "OVERVIEW" },
 ];
 
 // Keep navItems for any code that still references it

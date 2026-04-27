@@ -19,7 +19,7 @@ export function useAgentToolbelt(agentId: string | null) {
     }
   }
 
-  const overrides = assignments.filter((a) => a.assignmentSource === "override");
+  const overrides = assignments.filter((a: { assignmentSource: string }) => a.assignmentSource === "override");
 
   return {
     kits,

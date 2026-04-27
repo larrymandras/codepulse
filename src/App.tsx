@@ -45,6 +45,9 @@ const WarRoom = lazy(() => import("./pages/WarRoom"));
 const MeetingBot = lazy(() => import("./pages/MeetingBot"));
 const MissionControl = lazy(() => import("./pages/MissionControl"));
 
+// Tool Matrix page
+const ToolMatrixPage = lazy(() => import("./pages/ToolMatrix"));
+
 // Phase 74: HR Section stub pages
 const HrRoster = lazy(() => import("./pages/hr/Roster"));
 const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
@@ -92,6 +95,8 @@ export default function App() {
               <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
               <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
+              {/* Tool Matrix page */}
+              <Route path="/tool-matrix" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tool Matrix...</div>}><ToolMatrixPage /></Suspense>} />
               {/* Phase 74: HR Section pages */}
               <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
               <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
