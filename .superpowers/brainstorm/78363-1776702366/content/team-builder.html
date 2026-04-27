@@ -1,0 +1,314 @@
+<h2>Section 4: Team Builder & War Room Integration</h2>
+<p class="subtitle">Compose named team presets and launch war rooms with dynamic participants</p>
+
+<div class="section">
+  <h3>Teams Page — Overview</h3>
+  <div class="mockup">
+    <div class="mockup-header">/hr/teams — Team presets manager</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <h3 style="margin: 0;">Teams</h3>
+          <div style="color: #94a3b8; font-size: 13px;">Compose agent teams for war rooms and collaborative tasks</div>
+        </div>
+        <button class="mock-button" style="background: #22c55e; border-color: #22c55e; color: #000; font-weight: 600;">+ New Team</button>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <!-- Team Card 1 -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <div>
+              <div style="font-weight: 600; font-size: 15px;">Full Council</div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">All hands strategic sessions</div>
+            </div>
+            <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 10px; padding: 2px 8px; border-radius: 4px;">10 agents</span>
+          </div>
+          <div style="display: flex; margin-bottom: 16px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 5;">⚡</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 4;">🛡️</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 3;">🕊️</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 2;">📊</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 11px; border: 2px solid #1a1a2e; z-index: 1; color: #94a3b8;">+6</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="mock-button" style="flex: 1; font-size: 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">🎙️ Launch War Room</button>
+            <button class="mock-button" style="font-size: 12px; padding: 6px 10px;">✏️</button>
+          </div>
+        </div>
+
+        <!-- Team Card 2 -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <div>
+              <div style="font-weight: 600; font-size: 15px;">Technical Review</div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Architecture and code decisions</div>
+            </div>
+            <span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; padding: 2px 8px; border-radius: 4px;">4 agents</span>
+          </div>
+          <div style="display: flex; margin-bottom: 16px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 4;">⚡</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 3;">🛡️</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 2;">⚔️</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; z-index: 1;">🔍</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="mock-button" style="flex: 1; font-size: 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">🎙️ Launch War Room</button>
+            <button class="mock-button" style="font-size: 12px; padding: 6px 10px;">✏️</button>
+          </div>
+        </div>
+
+        <!-- Team Card 3 -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 16px; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+            <div>
+              <div style="font-weight: 600; font-size: 15px;">Consulting Squad</div>
+              <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Client strategy and BD</div>
+            </div>
+            <span style="background: rgba(168,85,247,0.2); color: #c084fc; font-size: 10px; padding: 2px 8px; border-radius: 4px;">3 agents</span>
+          </div>
+          <div style="display: flex; margin-bottom: 16px;">
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 3;">⚡</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; margin-right: -8px; z-index: 2;">💼</div>
+            <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; border: 2px solid #1a1a2e; z-index: 1;">📈</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="mock-button" style="flex: 1; font-size: 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">🎙️ Launch War Room</button>
+            <button class="mock-button" style="font-size: 12px; padding: 6px 10px;">✏️</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Team Editor — Create / Edit a Team</h3>
+  <div class="mockup">
+    <div class="mockup-header">/hr/teams/:teamId — Drag agents from roster into team</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <div class="label">Team Name *</div>
+          <input class="mock-input" value="Technical Review" style="width: 100%;">
+        </div>
+        <div>
+          <div class="label">Purpose</div>
+          <input class="mock-input" value="Architecture and code decisions" style="width: 100%;">
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 40px 1fr; gap: 0; align-items: start;">
+        <!-- Available Agents -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;">
+          <div class="label">Available Agents</div>
+          <input class="mock-input" placeholder="Filter agents..." style="width: 100%; margin-bottom: 12px; font-size: 12px;">
+          <div style="display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">🕊️</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Freya</div>
+                <div style="font-size: 11px; color: #64748b;">CTO Executive</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">📊</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Göndul</div>
+                <div style="font-size: 11px; color: #64748b;">Content Strategy</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">🔮</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Skuld</div>
+                <div style="font-size: 11px; color: #64748b;">Creative Production</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">shared</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(96,165,250,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">📖</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Urðr</div>
+                <div style="font-size: 11px; color: #64748b;">Research & Memory</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">shared</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(251,191,36,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">🌿</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Iðunn</div>
+                <div style="font-size: 11px; color: #64748b;">Personal Life</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 6px; cursor: grab; border: 1px solid rgba(255,255,255,0.08);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(244,114,182,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">📢</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Hildr</div>
+                <div style="font-size: 11px; color: #64748b;">Marketing & Growth</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">shared</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display: flex; align-items: center; justify-content: center; padding-top: 80px;">
+          <div style="font-size: 24px; color: #64748b;">⇄</div>
+        </div>
+
+        <!-- Team Members -->
+        <div style="background: rgba(34,197,94,0.05); border: 2px dashed rgba(34,197,94,0.3); border-radius: 8px; padding: 12px;">
+          <div class="label" style="color: #22c55e;">Team Members (4)</div>
+          <div style="font-size: 11px; color: #64748b; margin-bottom: 12px;">Drag agents here or click to add</div>
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(34,197,94,0.1); border-radius: 6px; border: 1px solid rgba(34,197,94,0.2);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">⚡</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Ástríðr</div>
+                <div style="font-size: 11px; color: #64748b;">Commander</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #f59e0b; background: rgba(245,158,11,0.15); padding: 2px 6px; border-radius: 3px;">command</span>
+              <span style="cursor: pointer; color: #64748b; font-size: 14px;">×</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(34,197,94,0.1); border-radius: 6px; border: 1px solid rgba(34,197,94,0.2);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">🛡️</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Hervor</div>
+                <div style="font-size: 11px; color: #64748b;">CTO Technical</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+              <span style="cursor: pointer; color: #64748b; font-size: 14px;">×</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(34,197,94,0.1); border-radius: 6px; border: 1px solid rgba(34,197,94,0.2);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">⚔️</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Ragnhildr</div>
+                <div style="font-size: 11px; color: #64748b;">Consulting BD</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+              <span style="cursor: pointer; color: #64748b; font-size: 14px;">×</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: rgba(34,197,94,0.1); border-radius: 6px; border: 1px solid rgba(34,197,94,0.2);">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px;">⚔️</div>
+              <div>
+                <div style="font-size: 13px; font-weight: 500;">Sigrún</div>
+                <div style="font-size: 11px; color: #64748b;">Security Specialist</div>
+              </div>
+              <span style="margin-left: auto; font-size: 10px; color: #64748b; background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px;">domain</span>
+              <span style="cursor: pointer; color: #64748b; font-size: 14px;">×</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; justify-content: space-between;">
+        <button class="mock-button" style="border-color: rgba(239,68,68,0.4); color: #f87171;">Delete Team</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="mock-button" style="border-color: rgba(255,255,255,0.2); color: #94a3b8;">Cancel</button>
+          <button class="mock-button" style="background: #22c55e; border-color: #22c55e; color: #000; font-weight: 600;">Save Team</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>War Room Launch Flow</h3>
+  <div class="mockup">
+    <div class="mockup-header">Two paths to launch — from Teams page or ad-hoc</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div style="background: rgba(239,68,68,0.05); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; padding: 16px;">
+          <h4 style="color: #f87171; margin: 0 0 12px 0;">Path 1: From Team Preset</h4>
+          <div style="font-size: 12px; line-height: 2; color: #94a3b8;">
+            <div>1. Click "Launch War Room" on any team card</div>
+            <div>2. Optional: add/remove agents for this session</div>
+            <div>3. Set topic/agenda (optional)</div>
+            <div>4. Launch → POST /api/war-room</div>
+            <div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; font-family: monospace; font-size: 11px;">
+              { participants: ["astridr", "hervor", "ragnhildr", "sigrun"],<br/>
+              &nbsp;&nbsp;topic: "Security audit review",<br/>
+              &nbsp;&nbsp;teamPresetId: "technical-review" }
+            </div>
+          </div>
+        </div>
+        <div style="background: rgba(59,130,246,0.05); border: 1px solid rgba(59,130,246,0.2); border-radius: 8px; padding: 16px;">
+          <h4 style="color: #60a5fa; margin: 0 0 12px 0;">Path 2: Ad-hoc from Roster</h4>
+          <div style="font-size: 12px; line-height: 2; color: #94a3b8;">
+            <div>1. Select agents from Roster (checkbox multi-select)</div>
+            <div>2. Bulk action bar appears: "Launch War Room with 3 agents"</div>
+            <div>3. Set topic/agenda (optional)</div>
+            <div>4. Optional: "Save as Team" before launching</div>
+            <div>5. Launch → POST /api/war-room</div>
+            <div style="margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; font-family: monospace; font-size: 11px;">
+              { participants: ["astridr", "gondul", "skuld"],<br/>
+              &nbsp;&nbsp;topic: "Content sprint planning" }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>War Room Dispatcher Changes (Ástríðr)</h3>
+  <div class="mockup">
+    <div class="mockup-header">Dynamic participant dispatch — replacing hard-coded NORSE_AGENT_NAMES</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.8; padding: 16px;">
+      <div style="color: #ef4444; margin-bottom: 8px;"># BEFORE (dispatcher.py)</div>
+      <div style="color: #64748b; text-decoration: line-through;">
+        NORSE_AGENT_NAMES = ["astridr", "hervor", "freya", "gondul", "ragnhildr"]<br/>
+        for agent_name in NORSE_AGENT_NAMES:<br/>
+        &nbsp;&nbsp;await lk.agent_dispatch.create_dispatch(...)
+      </div>
+      <div style="color: #22c55e; margin: 16px 0 8px 0;"># AFTER (dispatcher.py)</div>
+      <div style="color: #e2e8f0;">
+        <span style="color: #7ee787;">DEFAULT_PARTICIPANTS</span> = ["astridr", "hervor", "freya", "gondul", "ragnhildr"]<br/><br/>
+        <span style="color: #7ee787;">async def</span> create_war_room(participants: list[str] | None = None, ...):<br/>
+        &nbsp;&nbsp;agent_ids = participants or DEFAULT_PARTICIPANTS<br/>
+        &nbsp;&nbsp;<span style="color: #7ee787;">for</span> agent_id <span style="color: #7ee787;">in</span> agent_ids:<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;config = registry.get(agent_id)<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7ee787;">if</span> config <span style="color: #7ee787;">is None</span>:<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #7ee787;">raise</span> ValueError(f"Agent {agent_id} not in registry")<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;await dispatch_agent(room_name, agent_id, config)
+      </div>
+      <div style="color: #60a5fa; margin: 16px 0 8px 0;"># NEW: DynamicWarRoomAgent</div>
+      <div style="color: #e2e8f0;">
+        <span style="color: #7ee787;">class</span> DynamicWarRoomAgent(NorseAgent):<br/>
+        &nbsp;&nbsp;<span style="color: #64748b;">"""Loads personality from AgentTypeConfig at dispatch time.</span><br/>
+        &nbsp;&nbsp;<span style="color: #64748b;">&nbsp;Works for any agent in the registry, not just original 5."""</span><br/><br/>
+        &nbsp;&nbsp;<span style="color: #7ee787;">def</span> __init__(self, config: AgentTypeConfig):<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;self.persona_id = config.id<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;self.system_prompt = load_soul_variant(config)<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;self.display_name = config.name<br/>
+      </div>
+      <div style="margin-top: 12px; padding: 8px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); border-radius: 4px; font-family: sans-serif; font-size: 12px; color: #f59e0b;">
+        ⚠️ Original 5 Norse agents keep their dedicated subclasses. DynamicWarRoomAgent is used for any newly onboarded agent. Existing war room behavior unchanged when no participants specified.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Data Model: teamPresets (Convex)</h3>
+  <div class="mockup">
+    <div class="mockup-header">Convex table for team presets</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.9; padding: 16px;">
+      <span style="color: #7ee787;">teamPresets</span>: defineTable({<br/>
+      &nbsp;&nbsp;name: v.string(),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #64748b;">// "Technical Review"</span><br/>
+      &nbsp;&nbsp;description: v.optional(v.string()),<span style="color: #64748b;">// "Architecture and code decisions"</span><br/>
+      &nbsp;&nbsp;agentIds: v.array(v.string()),&nbsp;&nbsp;&nbsp;&nbsp;<span style="color: #64748b;">// ["astridr", "hervor", "ragnhildr"]</span><br/>
+      &nbsp;&nbsp;createdAt: v.number(),<br/>
+      &nbsp;&nbsp;updatedAt: v.number(),<br/>
+      &nbsp;&nbsp;createdBy: v.optional(v.string()),<br/>
+      &nbsp;&nbsp;lastUsedAt: v.optional(v.number()),<span style="color: #64748b;">// track which teams are active</span><br/>
+      &nbsp;&nbsp;warRoomCount: v.optional(v.number()),<span style="color: #64748b;">// how many times launched</span><br/>
+      })
+    </div>
+  </div>
+</div>

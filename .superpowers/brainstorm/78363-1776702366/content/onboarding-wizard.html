@@ -1,0 +1,363 @@
+<h2>Section 3: Onboarding Wizard</h2>
+<p class="subtitle">Template-first creation flow with advanced options at every step</p>
+
+<div class="section">
+  <h3>Wizard Step Flow</h3>
+  <div class="mockup">
+    <div class="mockup-header">5-Step Onboarding Wizard</div>
+    <div class="mockup-body">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 0; margin: 24px 0;">
+        <div style="text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-weight: bold; font-size: 18px;">1</div>
+          <div style="font-size: 11px; margin-top: 6px; color: #e2e8f0;">Template</div>
+        </div>
+        <div style="width: 60px; height: 2px; background: rgba(255,255,255,0.2); margin: 0 -4px; margin-bottom: 18px;"></div>
+        <div style="text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-weight: bold; font-size: 18px;">2</div>
+          <div style="font-size: 11px; margin-top: 6px; color: #e2e8f0;">Identity</div>
+        </div>
+        <div style="width: 60px; height: 2px; background: rgba(255,255,255,0.2); margin: 0 -4px; margin-bottom: 18px;"></div>
+        <div style="text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-weight: bold; font-size: 18px;">3</div>
+          <div style="font-size: 11px; margin-top: 6px; color: #e2e8f0;">Personality</div>
+        </div>
+        <div style="width: 60px; height: 2px; background: rgba(255,255,255,0.2); margin: 0 -4px; margin-bottom: 18px;"></div>
+        <div style="text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-weight: bold; font-size: 18px;">4</div>
+          <div style="font-size: 11px; margin-top: 6px; color: #e2e8f0;">Tools</div>
+        </div>
+        <div style="width: 60px; height: 2px; background: rgba(255,255,255,0.2); margin: 0 -4px; margin-bottom: 18px;"></div>
+        <div style="text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; margin: 0 auto; font-weight: bold; font-size: 18px;">5</div>
+          <div style="font-size: 11px; margin-top: 6px; color: #e2e8f0;">Review</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Step 1: Template Selection</h3>
+  <div class="mockup">
+    <div class="mockup-header">Embedded catalog browser — same as standalone Catalog page</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+        <input class="mock-input" placeholder="Search archetypes... (e.g. 'security engineer', 'content writer')" style="flex: 1;">
+        <div style="display: flex; gap: 8px;">
+          <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;">Tier ▾</div>
+          <div style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;">Domain ▾</div>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+        <div style="background: rgba(34,197,94,0.1); border: 2px solid #22c55e; border-radius: 8px; padding: 16px; cursor: pointer;">
+          <div style="font-size: 24px; margin-bottom: 8px;">⚔️</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">Domain Specialist</div>
+          <div style="font-size: 12px; color: #94a3b8;">Deep expertise in a specific area. Includes system prompt template, focused tool set, and domain memory structure.</div>
+          <div style="margin-top: 8px;"><span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; padding: 2px 8px; border-radius: 4px;">domain tier</span></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;">
+          <div style="font-size: 24px; margin-bottom: 8px;">🔧</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">Shared Utility</div>
+          <div style="font-size: 12px; color: #94a3b8;">Cross-cutting capabilities available to all profiles. Research, creative production, analysis.</div>
+          <div style="margin-top: 8px;"><span style="background: rgba(168,85,247,0.2); color: #c084fc; font-size: 10px; padding: 2px 8px; border-radius: 4px;">shared tier</span></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px; cursor: pointer;">
+          <div style="font-size: 24px; margin-bottom: 8px;">📋</div>
+          <div style="font-weight: 600; margin-bottom: 4px;">Blank Agent</div>
+          <div style="font-size: 12px; color: #94a3b8;">Start from scratch. All fields empty, full manual configuration.</div>
+          <div style="margin-top: 8px;"><span style="background: rgba(255,255,255,0.1); color: #94a3b8; font-size: 10px; padding: 2px 8px; border-radius: 4px;">any tier</span></div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; text-align: right;">
+        <button class="mock-button" style="opacity: 0.5;">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Step 2: Identity</h3>
+  <div class="mockup">
+    <div class="mockup-header">Core identity fields — pre-filled from template</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div>
+          <div class="label">Agent ID *</div>
+          <input class="mock-input" value="sigrun" style="width: 100%;">
+          <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Lowercase, no spaces. Used in config and API.</div>
+        </div>
+        <div>
+          <div class="label">Display Name *</div>
+          <input class="mock-input" value="Sigrún" style="width: 100%;">
+        </div>
+        <div>
+          <div class="label">Tier *</div>
+          <div style="display: flex; gap: 8px;">
+            <div style="background: rgba(245,158,11,0.2); border: 2px solid #f59e0b; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">⚡ Command</div>
+            <div style="background: rgba(59,130,246,0.2); border: 2px solid #3b82f6; border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">🎯 Domain</div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 8px 16px; font-size: 13px; cursor: pointer;">🔧 Shared</div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Avatar</div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 24px; border: 2px solid #ec4899;">⚔️</div>
+            <button class="mock-button" style="font-size: 12px;">Choose Avatar</button>
+          </div>
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <div class="label">Description *</div>
+          <input class="mock-input" value="Security and compliance specialist for infrastructure hardening" style="width: 100%;">
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <div class="label">Profiles (which work contexts can use this agent)</div>
+          <div style="display: flex; gap: 8px;">
+            <div style="background: rgba(34,197,94,0.2); border: 1px solid #22c55e; border-radius: 6px; padding: 4px 12px; font-size: 12px;">✓ protectall</div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 4px 12px; font-size: 12px;">consulting</div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 4px 12px; font-size: 12px;">personal</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #94a3b8;">
+          <span style="font-size: 12px;">▶</span>
+          <span style="font-size: 13px; font-weight: 500;">Advanced Identity Options</span>
+        </div>
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+          <div style="font-size: 12px; color: #64748b; line-height: 1.8;">
+            <strong>reports_to</strong> — which agent this one reports to (default: astridr)<br/>
+            <strong>channels</strong> — primary communication channels<br/>
+            <strong>budget_fraction</strong> — share of total LLM budget (default: from template)<br/>
+            <strong>timeout_seconds</strong> — max execution time per round<br/>
+            <strong>max_rounds</strong> — max tool-use rounds per invocation
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; justify-content: space-between;">
+        <button class="mock-button" style="opacity: 0.7;">← Back</button>
+        <button class="mock-button">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Step 3: Personality</h3>
+  <div class="mockup">
+    <div class="mockup-header">Soul variant editor — markdown personality definition</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <div style="background: rgba(34,197,94,0.2); border: 1px solid #22c55e; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">From Template</div>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Write Custom</div>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Import File</div>
+      </div>
+      <div style="background: #0d1117; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 16px; font-family: monospace; font-size: 12px; line-height: 1.8; min-height: 180px; color: #e2e8f0;">
+        <span style="color: #7ee787;"># Sigrún — Security Specialist</span><br/><br/>
+        <span style="color: #7ee787;">## Core Identity</span><br/>
+        You are Sigrún, a security and compliance specialist within the Ástríðr framework.<br/>
+        Your domain is infrastructure hardening, vulnerability assessment, and compliance auditing.<br/><br/>
+        <span style="color: #7ee787;">## Communication Style</span><br/>
+        Direct and precise. You flag risks clearly with severity levels. You don't sugarcoat<br/>
+        security concerns but you also don't catastrophize. Evidence-based recommendations.<br/><br/>
+        <span style="color: #7ee787;">## Expertise</span><br/>
+        - Docker container security and image scanning<br/>
+        - Network policy and firewall configuration<br/>
+        - Secrets management and credential rotation<br/>
+        <span style="color: #64748b;">│</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+        <span style="font-size: 11px; color: #64748b;">CodeMirror editor with markdown syntax highlighting</span>
+        <span style="font-size: 11px; color: #64748b;">324 words</span>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #94a3b8;">
+          <span style="font-size: 12px;">▶</span>
+          <span style="font-size: 13px; font-weight: 500;">Advanced Personality Options</span>
+        </div>
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+          <div style="font-size: 12px; color: #64748b; line-height: 1.8;">
+            <strong>system_prompt</strong> — raw system prompt override (bypasses soul variant)<br/>
+            <strong>soul_variant_path</strong> — custom file path for personality markdown<br/>
+            <strong>memory.l1_index</strong> — L1 memory index file path<br/>
+            <strong>memory.l2_topics_dir</strong> — L2 topic memory directory<br/>
+            <strong>memory.l3_logs_dir</strong> — L3 conversation log directory
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; justify-content: space-between;">
+        <button class="mock-button" style="opacity: 0.7;">← Back</button>
+        <button class="mock-button">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Step 4: Tools & Capabilities</h3>
+  <div class="mockup">
+    <div class="mockup-header">Select tools via glob patterns or individual picks</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div class="label">Tool Selection Mode</div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <div style="background: rgba(34,197,94,0.2); border: 1px solid #22c55e; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Glob Patterns</div>
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">Individual Pick</div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div class="label">Enabled Tool Patterns</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); border-radius: 16px; padding: 4px 12px; font-size: 12px; font-family: monospace;">security_* <span style="cursor: pointer; margin-left: 4px;">×</span></div>
+          <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); border-radius: 16px; padding: 4px 12px; font-size: 12px; font-family: monospace;">docker_* <span style="cursor: pointer; margin-left: 4px;">×</span></div>
+          <div style="background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); border-radius: 16px; padding: 4px 12px; font-size: 12px; font-family: monospace;">read_file <span style="cursor: pointer; margin-left: 4px;">×</span></div>
+          <input class="mock-input" placeholder="Add pattern..." style="width: 160px; font-size: 12px;">
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div class="label">Matched Tools Preview <span style="color: #64748b; font-weight: normal;">(12 tools matched)</span></div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; max-height: 120px; overflow-y: auto;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 12px; color: #94a3b8;">
+            <div>✓ security_scan</div>
+            <div>✓ security_audit</div>
+            <div>✓ security_report</div>
+            <div>✓ docker_inspect</div>
+            <div>✓ docker_logs</div>
+            <div>✓ docker_stats</div>
+            <div>✓ docker_exec</div>
+            <div>✓ docker_restart</div>
+            <div>✓ read_file</div>
+            <div style="color: #64748b;">... 3 more</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px;">
+        <div style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #94a3b8;">
+          <span style="font-size: 12px;">▶</span>
+          <span style="font-size: 13px; font-weight: 500;">Advanced Capabilities Options</span>
+        </div>
+        <div style="margin-top: 12px; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+          <div style="font-size: 12px; color: #64748b; line-height: 1.8;">
+            <strong>autonomy_rules</strong> — per-action autonomy levels (silent/draft_approval/always_ask/blocked)<br/>
+            <strong>peer_comm_allowed</strong> — which agents this one can DM directly<br/>
+            <strong>daily_rhythm</strong> — scheduled tasks (time, action, channel, days, profile)
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; justify-content: space-between;">
+        <button class="mock-button" style="opacity: 0.7;">← Back</button>
+        <button class="mock-button">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Step 5: Review & Deploy</h3>
+  <div class="mockup">
+    <div class="mockup-header">Full config review with deployment options</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; gap: 16px; align-items: flex-start;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 32px; border: 2px solid #ec4899; flex-shrink: 0;">⚔️</div>
+        <div>
+          <h3 style="margin: 0;">Sigrún</h3>
+          <div style="color: #94a3b8; font-size: 13px;">Security and compliance specialist</div>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; padding: 2px 8px; border-radius: 4px;">domain tier</span>
+            <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 10px; padding: 2px 8px; border-radius: 4px;">12 tools</span>
+            <span style="background: rgba(245,158,11,0.2); color: #f59e0b; font-size: 10px; padding: 2px 8px; border-radius: 4px;">protectall profile</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;">
+          <div class="label">Identity</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+            ID: sigrun<br/>Reports to: astridr<br/>Budget: 8%<br/>Timeout: 120s
+          </div>
+          <div style="text-align: right;"><a href="#" style="font-size: 11px; color: #60a5fa;">Edit →</a></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;">
+          <div class="label">Personality</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+            Soul variant: 324 words<br/>Style: Direct, evidence-based<br/>Domain: Security & compliance
+          </div>
+          <div style="text-align: right;"><a href="#" style="font-size: 11px; color: #60a5fa;">Edit →</a></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;">
+          <div class="label">Tools</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+            Patterns: security_*, docker_*, read_file<br/>Matched: 12 tools
+          </div>
+          <div style="text-align: right;"><a href="#" style="font-size: 11px; color: #60a5fa;">Edit →</a></div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px;">
+          <div class="label">Advanced</div>
+          <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+            Autonomy: 0 custom rules<br/>Peers: all (default)<br/>Schedule: none
+          </div>
+          <div style="text-align: right;"><a href="#" style="font-size: 11px; color: #60a5fa;">Edit →</a></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+        <div class="label">Deployment Type</div>
+        <div style="display: flex; gap: 12px; margin-top: 8px;">
+          <div style="flex: 1; background: rgba(34,197,94,0.1); border: 2px solid #22c55e; border-radius: 8px; padding: 12px; cursor: pointer;">
+            <div style="font-weight: 600; margin-bottom: 4px;">🏛️ Permanent</div>
+            <div style="font-size: 12px; color: #94a3b8;">Added to agent-types.yaml. Requires approval. Persists across restarts.</div>
+          </div>
+          <div style="flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 12px; cursor: pointer;">
+            <div style="font-weight: 600; margin-bottom: 4px;">⚡ Ephemeral</div>
+            <div style="font-size: 12px; color: #94a3b8;">Runtime only. No approval needed. Auto-deregisters on TTL or task completion.</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 16px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 16px;">⚠️</span>
+          <span style="font-size: 13px; color: #f59e0b;">Permanent agents require approval before activation. You'll be notified in the Roster approval queue.</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px; display: flex; justify-content: space-between;">
+        <button class="mock-button" style="opacity: 0.7;">← Back</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="mock-button" style="border-color: rgba(255,255,255,0.2); color: #94a3b8;">Save Draft</button>
+          <button class="mock-button" style="background: #22c55e; border-color: #22c55e; color: #000; font-weight: 600;">Deploy Agent →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Config → YAML Preview (hidden behind "View Raw Config")</h3>
+  <div class="mockup">
+    <div class="mockup-header">Generated AgentTypeConfig — what gets sent to Ástríðr</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 11px; line-height: 1.7; color: #94a3b8;">
+      <span style="color: #7ee787;">id:</span> sigrun<br/>
+      <span style="color: #7ee787;">name:</span> Sigrún<br/>
+      <span style="color: #7ee787;">description:</span> Security and compliance specialist<br/>
+      <span style="color: #7ee787;">tier:</span> domain<br/>
+      <span style="color: #7ee787;">profiles:</span> [protectall]<br/>
+      <span style="color: #7ee787;">soul_variant_path:</span> config/identity/agents/sigrun.md<br/>
+      <span style="color: #7ee787;">tools_enabled:</span><br/>
+      &nbsp;&nbsp;- security_*<br/>
+      &nbsp;&nbsp;- docker_*<br/>
+      &nbsp;&nbsp;- read_file<br/>
+      <span style="color: #7ee787;">reports_to:</span> astridr<br/>
+      <span style="color: #7ee787;">budget_fraction:</span> 0.08<br/>
+      <span style="color: #7ee787;">timeout_seconds:</span> 120<br/>
+      <span style="color: #7ee787;">peer_comm_allowed:</span> [all]<br/>
+      <span style="color: #7ee787;">channels:</span> [telegram, web]<br/>
+    </div>
+  </div>
+</div>

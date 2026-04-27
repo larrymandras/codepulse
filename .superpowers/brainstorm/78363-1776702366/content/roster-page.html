@@ -1,0 +1,331 @@
+<h2>Section 5: Roster Page — Switchable Views & Approval Queue</h2>
+<p class="subtitle">The central agent directory absorbing the current Agents page with three view modes</p>
+
+<div class="section">
+  <h3>Roster Header — Shared Across All Views</h3>
+  <div class="mockup">
+    <div class="mockup-header">/hr/roster — Top bar with view switcher, filters, and actions</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <h3 style="margin: 0;">Roster</h3>
+          <div style="color: #94a3b8; font-size: 13px;">12 agents &middot; 8 active &middot; 1 pending approval &middot; 3 idle</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="mock-button" style="background: #22c55e; border-color: #22c55e; color: #000; font-weight: 600; font-size: 13px;">+ Onboard Agent</button>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; gap: 8px;">
+          <!-- View Switcher -->
+          <div style="display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; overflow: hidden;">
+            <div style="padding: 6px 12px; font-size: 12px; background: rgba(34,197,94,0.2); border-right: 1px solid rgba(255,255,255,0.1); cursor: pointer; color: #22c55e;">🏗️ Org Chart</div>
+            <div style="padding: 6px 12px; font-size: 12px; cursor: pointer; color: #94a3b8; border-right: 1px solid rgba(255,255,255,0.1);">🃏 Cards</div>
+            <div style="padding: 6px 12px; font-size: 12px; cursor: pointer; color: #94a3b8;">📊 Table</div>
+          </div>
+          <!-- Filters -->
+          <div style="display: flex; gap: 6px;">
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #94a3b8;">Tier ▾</div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #94a3b8;">Status ▾</div>
+            <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer; color: #94a3b8;">Profile ▾</div>
+          </div>
+        </div>
+        <input class="mock-input" placeholder="Search agents..." style="width: 220px; font-size: 12px;">
+      </div>
+
+      <!-- Approval Banner -->
+      <div style="margin-top: 16px; padding: 12px 16px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 18px;">⏳</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 500; color: #f59e0b;">1 agent pending approval</div>
+            <div style="font-size: 12px; color: #94a3b8;">Sigrún — Security Specialist — requested 2 hours ago</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="mock-button" style="font-size: 12px; background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.4); color: #22c55e; padding: 6px 16px;">✓ Approve</button>
+          <button class="mock-button" style="font-size: 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171; padding: 6px 16px;">✗ Reject</button>
+          <button class="mock-button" style="font-size: 12px; padding: 6px 10px;">Details →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>View 1: Org Chart</h3>
+  <div class="mockup">
+    <div class="mockup-header">Hierarchical tree — command → domain → shared tiers with reports_to lines</div>
+    <div class="mockup-body" style="padding: 24px; min-height: 320px;">
+      <!-- Commander Level -->
+      <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+        <div style="background: rgba(245,158,11,0.15); border: 2px solid #f59e0b; border-radius: 12px; padding: 12px 20px; text-align: center; cursor: pointer; min-width: 140px;">
+          <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(245,158,11,0.3); display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 6px;">⚡</div>
+          <div style="font-weight: 600; font-size: 13px;">Ástríðr</div>
+          <div style="font-size: 11px; color: #f59e0b;">Commander</div>
+          <div style="margin-top: 4px;"><span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block;"></span> <span style="font-size: 10px; color: #94a3b8;">active</span></div>
+        </div>
+      </div>
+
+      <!-- Connector lines -->
+      <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+        <div style="width: 2px; height: 20px; background: rgba(255,255,255,0.15);"></div>
+      </div>
+      <div style="display: flex; justify-content: center; margin-bottom: 8px;">
+        <div style="width: 70%; height: 2px; background: rgba(255,255,255,0.15);"></div>
+      </div>
+
+      <!-- Domain Level -->
+      <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">🛡️</div>
+          <div style="font-weight: 500; font-size: 12px;">Hervor</div>
+          <div style="font-size: 10px; color: #60a5fa;">CTO Technical</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">🕊️</div>
+          <div style="font-weight: 500; font-size: 12px;">Freya</div>
+          <div style="font-size: 10px; color: #60a5fa;">CTO Executive</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">📊</div>
+          <div style="font-weight: 500; font-size: 12px;">Göndul</div>
+          <div style="font-size: 10px; color: #60a5fa;">Content Strategy</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">⚔️</div>
+          <div style="font-weight: 500; font-size: 12px;">Ragnhildr</div>
+          <div style="font-size: 10px; color: #60a5fa;">Consulting BD</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(245,158,11,0.08); border: 2px dashed rgba(245,158,11,0.3); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">⚔️</div>
+          <div style="font-weight: 500; font-size: 12px; color: #f59e0b;">Sigrún</div>
+          <div style="font-size: 10px; color: #f59e0b;">⏳ Pending</div>
+        </div>
+      </div>
+
+      <!-- Connector lines -->
+      <div style="display: flex; justify-content: center; margin: 8px 0;">
+        <div style="width: 50%; height: 2px; background: rgba(255,255,255,0.08);"></div>
+      </div>
+
+      <!-- Shared Level -->
+      <div style="display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+        <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(34,197,94,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">🔮</div>
+          <div style="font-weight: 500; font-size: 12px;">Skuld</div>
+          <div style="font-size: 10px; color: #c084fc;">Creative</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(244,114,182,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">📢</div>
+          <div style="font-weight: 500; font-size: 12px;">Hildr</div>
+          <div style="font-size: 10px; color: #c084fc;">Marketing</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+        <div style="background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-radius: 10px; padding: 10px 16px; text-align: center; cursor: pointer; min-width: 110px;">
+          <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(96,165,250,0.3); display: flex; align-items: center; justify-content: center; font-size: 16px; margin: 0 auto 4px;">📖</div>
+          <div style="font-weight: 500; font-size: 12px;">Urðr</div>
+          <div style="font-size: 10px; color: #c084fc;">Research</div>
+          <div style="margin-top: 3px;"><span style="width: 6px; height: 6px; background: #22c55e; border-radius: 50%; display: inline-block;"></span></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; font-size: 11px; color: #64748b; text-align: center;">
+        Built with React Flow (already in CodePulse) &middot; Click any node to open agent detail &middot; Pending agents shown with dashed border
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>View 2: Card Grid</h3>
+  <div class="mockup">
+    <div class="mockup-header">Agent directory cards — profile image, identity, status, quick actions</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 14px;">
+        <!-- Agent Card -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; cursor: pointer;">
+          <div style="height: 80px; background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(245,158,11,0.1)); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(245,158,11,0.4); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid #1a1a2e;">⚡</div>
+            <div style="position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #1a1a2e;"></div>
+          </div>
+          <div style="padding: 12px; text-align: center;">
+            <div style="font-weight: 600; font-size: 14px;">Ástríðr</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Commander</div>
+            <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+              <span style="background: rgba(245,158,11,0.2); color: #f59e0b; font-size: 9px; padding: 2px 6px; border-radius: 3px;">command</span>
+              <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 9px; padding: 2px 6px; border-radius: 3px;">active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Card with profile image -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; cursor: pointer;">
+          <div style="height: 80px; background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(59,130,246,0.1)); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(59,130,246,0.2); display: flex; align-items: center; justify-content: center; border: 3px solid #1a1a2e; overflow: hidden;">
+              <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #4a6fa5, #2d4a7a); display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; font-weight: bold;">H</div>
+            </div>
+            <div style="position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #1a1a2e;"></div>
+            <div style="position: absolute; top: 8px; left: 8px; font-size: 14px;">🛡️</div>
+          </div>
+          <div style="padding: 12px; text-align: center;">
+            <div style="font-weight: 600; font-size: 14px;">Hervor</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">CTO Technical</div>
+            <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+              <span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 9px; padding: 2px 6px; border-radius: 3px;">domain</span>
+              <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 9px; padding: 2px 6px; border-radius: 3px;">active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Card -->
+        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; cursor: pointer;">
+          <div style="height: 80px; background: linear-gradient(135deg, rgba(236,72,153,0.3), rgba(236,72,153,0.1)); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(236,72,153,0.4); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid #1a1a2e;">🕊️</div>
+            <div style="position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; background: #22c55e; border-radius: 50%; border: 2px solid #1a1a2e;"></div>
+          </div>
+          <div style="padding: 12px; text-align: center;">
+            <div style="font-weight: 600; font-size: 14px;">Freya</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">CTO Executive</div>
+            <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+              <span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 9px; padding: 2px 6px; border-radius: 3px;">domain</span>
+              <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 9px; padding: 2px 6px; border-radius: 3px;">active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Agent Card -->
+        <div style="background: rgba(245,158,11,0.05); border: 2px dashed rgba(245,158,11,0.3); border-radius: 12px; overflow: hidden; cursor: pointer;">
+          <div style="height: 80px; background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05)); display: flex; align-items: center; justify-content: center; position: relative;">
+            <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(236,72,153,0.3); display: flex; align-items: center; justify-content: center; font-size: 28px; border: 3px solid #1a1a2e; opacity: 0.7;">⚔️</div>
+            <div style="position: absolute; top: 8px; right: 8px; font-size: 14px;">⏳</div>
+          </div>
+          <div style="padding: 12px; text-align: center;">
+            <div style="font-weight: 600; font-size: 14px; color: #f59e0b;">Sigrún</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Security Specialist</div>
+            <div style="display: flex; justify-content: center; gap: 4px; margin-top: 8px;">
+              <span style="background: rgba(245,158,11,0.2); color: #f59e0b; font-size: 9px; padding: 2px 6px; border-radius: 3px;">pending approval</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top: 12px; font-size: 11px; color: #64748b; text-align: center;">
+        Profile image shown when uploaded &middot; Emoji avatar as fallback &middot; When both exist, image is primary with emoji overlay in corner
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>View 3: Table</h3>
+  <div class="mockup">
+    <div class="mockup-header">Dense data view — sortable columns, multi-select for bulk actions</div>
+    <div class="mockup-body" style="padding: 0;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500; width: 30px;"><input type="checkbox" style="accent-color: #22c55e;"></th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Agent</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Tier</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Status</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Model</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Budget</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Tools</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Teams</th>
+            <th style="padding: 10px 12px; text-align: left; color: #64748b; font-weight: 500;">Profiles</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+            <td style="padding: 10px 12px;"><input type="checkbox" style="accent-color: #22c55e;"></td>
+            <td style="padding: 10px 12px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">⚡</span><div><div style="font-weight: 500;">Ástríðr</div><div style="color: #64748b; font-size: 11px;">Commander</div></div></div></td>
+            <td style="padding: 10px 12px;"><span style="background: rgba(245,158,11,0.2); color: #f59e0b; font-size: 10px; padding: 2px 6px; border-radius: 3px;">command</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #22c55e;">● active</span></td>
+            <td style="padding: 10px 12px; color: #94a3b8;">claude-sonnet</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">25%</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">42</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">3</td>
+            <td style="padding: 10px 12px;"><span style="font-size: 10px; color: #94a3b8;">all</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer;">
+            <td style="padding: 10px 12px;"><input type="checkbox" style="accent-color: #22c55e;"></td>
+            <td style="padding: 10px 12px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">🛡️</span><div><div style="font-weight: 500;">Hervor</div><div style="color: #64748b; font-size: 11px;">CTO Technical</div></div></div></td>
+            <td style="padding: 10px 12px;"><span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; padding: 2px 6px; border-radius: 3px;">domain</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #22c55e;">● active</span></td>
+            <td style="padding: 10px 12px; color: #94a3b8;">claude-sonnet</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">12%</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">28</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">2</td>
+            <td style="padding: 10px 12px;"><span style="font-size: 10px; color: #94a3b8;">protectall</span></td>
+          </tr>
+          <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(245,158,11,0.03); cursor: pointer;">
+            <td style="padding: 10px 12px;"><input type="checkbox" style="accent-color: #22c55e;"></td>
+            <td style="padding: 10px 12px;"><div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 16px;">⚔️</span><div><div style="font-weight: 500; color: #f59e0b;">Sigrún</div><div style="color: #64748b; font-size: 11px;">Security Specialist</div></div></div></td>
+            <td style="padding: 10px 12px;"><span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 10px; padding: 2px 6px; border-radius: 3px;">domain</span></td>
+            <td style="padding: 10px 12px;"><span style="color: #f59e0b;">⏳ pending</span></td>
+            <td style="padding: 10px 12px; color: #94a3b8;">claude-sonnet</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">8%</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">12</td>
+            <td style="padding: 10px 12px; color: #94a3b8;">—</td>
+            <td style="padding: 10px 12px;"><span style="font-size: 10px; color: #94a3b8;">protectall</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Bulk Action Bar -->
+      <div style="padding: 10px 16px; background: rgba(59,130,246,0.1); border-top: 1px solid rgba(59,130,246,0.2); display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 12px; color: #60a5fa;">2 agents selected</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="mock-button" style="font-size: 11px; padding: 4px 12px;">Add to Team</button>
+          <button class="mock-button" style="font-size: 11px; padding: 4px 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">🎙️ Launch War Room</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Agent Detail Panel (click-through from any view)</h3>
+  <div class="mockup">
+    <div class="mockup-header">/hr/roster/:agentId — Slide-out or full page with tabs</div>
+    <div class="mockup-body" style="padding: 16px;">
+      <div style="display: flex; gap: 16px; align-items: start; margin-bottom: 20px;">
+        <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; font-size: 36px; border: 3px solid rgba(59,130,246,0.5); flex-shrink: 0;">🛡���</div>
+        <div>
+          <h3 style="margin: 0;">Hervor</h3>
+          <div style="color: #94a3b8; font-size: 13px;">CTO Technical &middot; Domain Tier &middot; Reports to Ástríðr</div>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <span style="background: rgba(34,197,94,0.2); color: #22c55e; font-size: 11px; padding: 3px 10px; border-radius: 4px;">● Active</span>
+            <span style="background: rgba(59,130,246,0.2); color: #60a5fa; font-size: 11px; padding: 3px 10px; border-radius: 4px;">protectall</span>
+            <span style="background: rgba(255,255,255,0.05); color: #94a3b8; font-size: 11px; padding: 3px 10px; border-radius: 4px;">28 tools</span>
+          </div>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 8px;">
+          <button class="mock-button" style="font-size: 12px;">Edit Config</button>
+          <button class="mock-button" style="font-size: 12px; background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">Deregister</button>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 16px;">
+        <div style="padding: 8px 16px; font-size: 13px; border-bottom: 2px solid #22c55e; color: #22c55e; cursor: pointer;">Config</div>
+        <div style="padding: 8px 16px; font-size: 13px; color: #64748b; cursor: pointer;">Runtime</div>
+        <div style="padding: 8px 16px; font-size: 13px; color: #64748b; cursor: pointer;">Topology</div>
+        <div style="padding: 8px 16px; font-size: 13px; color: #64748b; cursor: pointer;">Security</div>
+        <div style="padding: 8px 16px; font-size: 13px; color: #64748b; cursor: pointer;">Activity</div>
+      </div>
+
+      <div style="font-size: 12px; color: #94a3b8; line-height: 1.8;">
+        <strong>Config tab:</strong> Full AgentTypeConfig view/edit (identity, personality, tools, autonomy, memory, scheduling)<br/>
+        <strong>Runtime tab:</strong> Active sessions, current status, resource usage (from old Agents page runtime tab)<br/>
+        <strong>Topology tab:</strong> This agent's position in coordination graph (from old Agents page topology tab)<br/>
+        <strong>Security tab:</strong> Security scan results for this agent (from old Agents page security tab)<br/>
+        <strong>Activity tab:</strong> Recent coordination events, tool executions, war room participation history
+      </div>
+    </div>
+  </div>
+</div>

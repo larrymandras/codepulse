@@ -1,0 +1,86 @@
+<h2>Architecture Approaches</h2>
+<p class="subtitle">How should CodePulse's HR section communicate with Ástríðr's agent factory?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Direct API — CodePulse → Ástríðr REST</h3>
+      <p>CodePulse calls Ástríðr's existing HTTP endpoints directly. New endpoints added to Ástríðr for catalog browse, agent create, approval actions, and team management. Convex stores UI state (wizard drafts, view preferences). Ástríðr owns agent lifecycle.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Leverages existing Ástríðr agent factory pipeline</li>
+            <li>Single source of truth for agent config (agent-types.yaml)</li>
+            <li>Real-time agent status via existing WebSocket</li>
+            <li>Approval gate already built — just add HTTP trigger</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Requires new Ástríðr API endpoints (catalog, teams, approvals)</li>
+            <li>CodePulse depends on Ástríðr being online for HR features</li>
+            <li>Two data stores to coordinate (Convex + Supabase)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Convex-First — Full CRUD in Convex, Ástríðr Syncs</h3>
+      <p>All HR data (catalog, teams, agent configs, approvals) lives in Convex. CodePulse does full CRUD. Ástríðr polls or subscribes to Convex for changes and reconciles with its registry. Agent creation triggers a Convex mutation → Ástríðr webhook picks it up.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>HR section works even if Ástríðr is offline</li>
+            <li>Convex real-time means instant UI updates</li>
+            <li>All CodePulse data in one store</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Dual source of truth — agent-types.yaml vs Convex</li>
+            <li>Sync complexity: reconciling two registries</li>
+            <li>Duplicates existing Ástríðr factory logic in Convex</li>
+            <li>Risk of config drift between systems</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid — Convex for UI State, Ástríðr for Lifecycle <span style="color: #22c55e; font-size: 0.8em;">★ Recommended</span></h3>
+      <p>Convex owns UI-specific state: wizard drafts, team presets, view preferences, approval queue display. Ástríðr owns agent lifecycle: catalog, config validation, registry, activation. CodePulse sends create/approve commands to Ástríðr API, which emits telemetry events back to Convex for real-time display.</p>
+      <div class="pros-cons">
+        <div class="pros">
+          <h4>Pros</h4>
+          <ul>
+            <li>Each system owns what it's good at</li>
+            <li>No dual source of truth — Ástríðr is canonical for agents</li>
+            <li>Convex real-time for UI responsiveness</li>
+            <li>Existing telemetry pipeline carries lifecycle events to CodePulse</li>
+            <li>Team presets are purely a UI concept — Convex is natural home</li>
+            <li>Wizard drafts save locally, only submit to Ástríðr on "Deploy"</li>
+          </ul>
+        </div>
+        <div class="cons">
+          <h4>Cons</h4>
+          <ul>
+            <li>Still needs new Ástríðr API endpoints</li>
+            <li>Agent creation requires Ástríðr online</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

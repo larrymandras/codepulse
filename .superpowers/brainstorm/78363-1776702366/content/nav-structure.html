@@ -1,0 +1,113 @@
+<h2>Section 1: HR Navigation & Page Structure</h2>
+<p class="subtitle">How the HR section fits into CodePulse's sidebar navigation</p>
+
+<div class="section">
+  <h3>Sidebar Navigation Change</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Current Sidebar (relevant items)</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 2.2;">
+        <div style="color: #94a3b8; font-size: 11px; letter-spacing: 1px; margin-bottom: 8px;">OVERVIEW</div>
+        <div>📊 Dashboard</div>
+        <div>⚡ Capabilities</div>
+        <div>📈 Analytics</div>
+        <div>🔔 Alerts</div>
+        <div>🏗️ Infrastructure</div>
+        <div style="background: rgba(239,68,68,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #ef4444;">🤖 Agents <span style="color: #ef4444; font-size: 11px;">← removed</span></div>
+        <div style="background: rgba(239,68,68,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #ef4444;">👤 Profiles <span style="color: #ef4444; font-size: 11px;">← removed</span></div>
+        <div>🔒 Security</div>
+        <div>💡 Ideation</div>
+        <div style="color: #64748b;">... more items ...</div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">New Sidebar</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 2.2;">
+        <div style="color: #94a3b8; font-size: 11px; letter-spacing: 1px; margin-bottom: 8px;">COMMAND</div>
+        <div>💬 Chat</div>
+        <div>▶️ Live Run</div>
+        <div style="color: #64748b;">...</div>
+        <div style="color: #22c55e; font-size: 11px; letter-spacing: 1px; margin: 12px 0 8px 0;">AGENTS ← new group</div>
+        <div style="background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #22c55e;">📋 Roster</div>
+        <div style="background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #22c55e;">📚 Catalog</div>
+        <div style="background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #22c55e;">🚀 Onboarding</div>
+        <div style="background: rgba(34,197,94,0.15); padding: 2px 8px; border-radius: 4px; border-left: 3px solid #22c55e;">👥 Teams</div>
+        <div style="color: #94a3b8; font-size: 11px; letter-spacing: 1px; margin: 12px 0 8px 0;">OVERVIEW</div>
+        <div>📊 Dashboard</div>
+        <div>⚡ Capabilities</div>
+        <div style="color: #64748b;">... rest unchanged ...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Route Structure</h3>
+  <div class="mockup">
+    <div class="mockup-header">New Routes</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 2;">
+      <div><span style="color: #22c55e;">/hr/roster</span> — Agent directory (org chart / cards / table views)</div>
+      <div><span style="color: #22c55e;">/hr/roster/:agentId</span> — Agent detail panel (config, runtime, security)</div>
+      <div><span style="color: #22c55e;">/hr/catalog</span> — Browse agent archetypes/templates</div>
+      <div><span style="color: #22c55e;">/hr/onboarding</span> — Creation wizard (or redirects to catalog)</div>
+      <div><span style="color: #22c55e;">/hr/onboarding/:catalogId</span> — Wizard pre-filled from template</div>
+      <div><span style="color: #22c55e;">/hr/teams</span> — Team presets manager</div>
+      <div><span style="color: #22c55e;">/hr/teams/:teamId</span> — Team detail/edit</div>
+      <div style="margin-top: 12px; color: #ef4444; font-size: 12px;">
+        Removed: /agents, /profiles (redirects to /hr/roster for backwards compat)
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Page Responsibilities</h3>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+      <h4 style="color: #22c55e; margin: 0 0 8px 0;">📋 Roster</h4>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <li>Switchable views: org chart, card grid, table</li>
+        <li>Agent status (active/idle/pending approval)</li>
+        <li>Runtime monitoring (from old Agents page)</li>
+        <li>Topology visualization (from old Agents page)</li>
+        <li>Security scan results (from old Agents page)</li>
+        <li>Click-through to agent detail</li>
+        <li>Approval queue badge/indicator</li>
+      </ul>
+    </div>
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+      <h4 style="color: #22c55e; margin: 0 0 8px 0;">📚 Catalog</h4>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <li>Browse archetypes (FTS5 search)</li>
+        <li>Preview template details</li>
+        <li>Filter by tier, capability, domain</li>
+        <li>"Onboard This Agent" → wizard pre-filled</li>
+        <li>Sourced from Ástríðr catalog.db</li>
+      </ul>
+    </div>
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+      <h4 style="color: #22c55e; margin: 0 0 8px 0;">🚀 Onboarding</h4>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <li>Step 1: Template selection (catalog embed)</li>
+        <li>Step 2: Identity (name, tier, description)</li>
+        <li>Step 3: Personality (soul variant editor)</li>
+        <li>Step 4: Tools & Capabilities</li>
+        <li>Step 5: Review & Deploy</li>
+        <li>Each step: "Advanced Options" toggle</li>
+        <li>Wizard drafts auto-save to Convex</li>
+        <li>Deploy → Ástríðr API → approval if permanent</li>
+      </ul>
+    </div>
+    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 16px;">
+      <h4 style="color: #22c55e; margin: 0 0 8px 0;">👥 Teams</h4>
+      <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">
+        <li>Create named team presets</li>
+        <li>Drag agents from roster into teams</li>
+        <li>Team description and purpose</li>
+        <li>"Launch War Room" → opens room with team</li>
+        <li>Ad-hoc team creation from war room too</li>
+        <li>Stored in Convex (UI concept only)</li>
+      </ul>
+    </div>
+  </div>
+</div>

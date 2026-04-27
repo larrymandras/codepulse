@@ -1,0 +1,147 @@
+<h2>Section 2: Data Model & API Design</h2>
+<p class="subtitle">What lives in Convex (UI state) vs Ástríðr (agent lifecycle) — the hybrid boundary</p>
+
+<div class="section">
+  <h3>Data Ownership Map</h3>
+  <div class="split">
+    <div class="mockup">
+      <div class="mockup-header">Convex (CodePulse) — UI State</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.8;">
+        <div style="color: #22c55e; margin-bottom: 4px;">// NEW TABLES</div>
+        <div><strong>wizardDrafts</strong></div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          draftId, catalogEntryId?, step, formData,<br/>
+          createdAt, updatedAt, status (draft/submitted)
+        </div>
+        <div style="margin-top: 8px;"><strong>teamPresets</strong></div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          teamId, name, description, purpose,<br/>
+          agentIds[], createdAt, updatedAt
+        </div>
+        <div style="margin-top: 8px;"><strong>approvalQueue</strong></div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          requestId, agentName, catalogEntryId,<br/>
+          agentType, budgetFraction, status,<br/>
+          requestedAt, decidedAt, decidedBy,<br/>
+          configSnapshot (full AgentTypeConfig JSON)
+        </div>
+        <div style="margin-top: 8px;"><strong>rosterViewPrefs</strong></div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          userId, viewMode (chart/grid/table),<br/>
+          sortBy, filters
+        </div>
+        <div style="margin-top: 12px; color: #60a5fa;">// EXISTING (unchanged)</div>
+        <div style="color: #64748b;">
+          agentProfiles, agents, avatars,<br/>
+          agentCoordination, hiveMindEntries
+        </div>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="mockup-header">Ástríðr (Supabase) — Source of Truth</div>
+      <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.8;">
+        <div style="color: #f59e0b; margin-bottom: 4px;">// CANONICAL AGENT DATA</div>
+        <div><strong>agent-types.yaml</strong> (config file)</div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          Full AgentTypeConfig: id, name, tier,<br/>
+          system_prompt, soul_variant_path,<br/>
+          tools_enabled, autonomy_rules,<br/>
+          memory, daily_rhythm, peer_comm,<br/>
+          reports_to, channels, budget_fraction
+        </div>
+        <div style="margin-top: 8px;"><strong>AgentTypeRegistry</strong> (runtime)</div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          In-memory registry loaded from YAML.<br/>
+          Hot-reloads on config change.<br/>
+          Factory for creating agent loops.
+        </div>
+        <div style="margin-top: 8px;"><strong>catalog.db</strong> (SQLite FTS5)</div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          Agent archetypes for search/browse.<br/>
+          Templates with default configs.
+        </div>
+        <div style="margin-top: 8px;"><strong>agent_approvals</strong> (Supabase)</div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          request_id, agent_name, status,<br/>
+          decided_at, expires_at
+        </div>
+        <div style="margin-top: 8px;"><strong>war_rooms / war_room_transcripts</strong></div>
+        <div style="padding-left: 16px; color: #94a3b8;">
+          Room lifecycle + conversation history
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>New Ástríðr API Endpoints</h3>
+  <div class="mockup">
+    <div class="mockup-header">REST API additions to Ástríðr (FastAPI)</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 2;">
+      <div style="color: #60a5fa;">── Catalog ──</div>
+      <div><span style="color: #22c55e;">GET</span>  /api/catalog — List/search archetypes (query, tier, capability filters)</div>
+      <div><span style="color: #22c55e;">GET</span>  /api/catalog/:id — Archetype detail with default config</div>
+      <div style="margin-top: 8px; color: #60a5fa;">── Agent Lifecycle ──</div>
+      <div><span style="color: #f59e0b;">POST</span> /api/agents — Create agent (AgentTypeConfig JSON body)</div>
+      <div><span style="color: #22c55e;">GET</span>  /api/agents — List all registered agents (registry snapshot)</div>
+      <div><span style="color: #22c55e;">GET</span>  /api/agents/:id — Agent detail (config + runtime status)</div>
+      <div><span style="color: #f59e0b;">PUT</span>  /api/agents/:id — Update agent config</div>
+      <div><span style="color: #ef4444;">DEL</span>  /api/agents/:id — Deregister agent</div>
+      <div><span style="color: #f59e0b;">POST</span> /api/agents/:id/validate — Validate config without creating</div>
+      <div style="margin-top: 8px; color: #60a5fa;">── Approvals ──</div>
+      <div><span style="color: #22c55e;">GET</span>  /api/approvals — List pending approvals</div>
+      <div><span style="color: #f59e0b;">POST</span> /api/approvals/:id/approve — Approve agent creation</div>
+      <div><span style="color: #f59e0b;">POST</span> /api/approvals/:id/reject — Reject agent creation</div>
+      <div style="margin-top: 8px; color: #60a5fa;">── War Room ──</div>
+      <div><span style="color: #f59e0b;">POST</span> /api/war-room — Create room with dynamic participant list</div>
+      <div><span style="color: #ef4444;">DEL</span>  /api/war-room/:roomName — Close room</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Data Flow: Agent Onboarding</h3>
+  <div class="mockup">
+    <div class="mockup-header">End-to-end flow from wizard to active agent</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.9;">
+      <div style="color: #94a3b8;">1. User fills wizard steps in CodePulse</div>
+      <div style="padding-left: 24px;">↓ Auto-saves each step to Convex <strong>wizardDrafts</strong></div>
+      <div style="color: #94a3b8;">2. User clicks "Deploy" on review step</div>
+      <div style="padding-left: 24px;">↓ CodePulse validates client-side, then POST /api/agents</div>
+      <div style="color: #94a3b8;">3. Ástríðr receives AgentTypeConfig</div>
+      <div style="padding-left: 24px;">↓ Server-side validation (config schema, tool availability)</div>
+      <div style="padding-left: 24px;">↓ If ephemeral → activate immediately via EphemeralLifecycleManager</div>
+      <div style="padding-left: 24px;">↓ If permanent → create approval request</div>
+      <div style="color: #94a3b8;">4. Approval request</div>
+      <div style="padding-left: 24px;">↓ Ástríðr emits <strong>agent_approval_requested</strong> telemetry → Convex <strong>approvalQueue</strong></div>
+      <div style="padding-left: 24px;">↓ CodePulse shows pending approval in Roster + notification bell</div>
+      <div style="color: #94a3b8;">5. User approves in CodePulse UI</div>
+      <div style="padding-left: 24px;">↓ POST /api/approvals/:id/approve</div>
+      <div style="padding-left: 24px;">↓ Ástríðr activates via AgentOrchestrator</div>
+      <div style="padding-left: 24px;">↓ Updates agent-types.yaml (permanent persistence)</div>
+      <div style="padding-left: 24px;">↓ Registers in AgentTypeRegistry (runtime)</div>
+      <div style="color: #94a3b8;">6. Agent active</div>
+      <div style="padding-left: 24px;">↓ Ástríðr emits <strong>agent_created</strong> telemetry → Convex updates</div>
+      <div style="padding-left: 24px;">↓ Agent appears in Roster as active, eligible for Teams/War Room</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Data Flow: War Room with Dynamic Teams</h3>
+  <div class="mockup">
+    <div class="mockup-header">Team preset → War room launch</div>
+    <div class="mockup-body" style="font-family: monospace; font-size: 12px; line-height: 1.9;">
+      <div style="color: #94a3b8;">1. User selects team preset (or picks agents ad-hoc) in Teams page</div>
+      <div style="padding-left: 24px;">↓ Reads agentIds[] from Convex <strong>teamPresets</strong></div>
+      <div style="color: #94a3b8;">2. User clicks "Launch War Room"</div>
+      <div style="padding-left: 24px;">↓ POST /api/war-room { participants: ["astridr", "hervor", "new-agent-x"] }</div>
+      <div style="color: #94a3b8;">3. Ástríðr dispatcher</div>
+      <div style="padding-left: 24px;">↓ Creates LiveKit room</div>
+      <div style="padding-left: 24px;">↓ For each participant: dispatch LiveKit agent (dynamic, not hard-coded)</div>
+      <div style="padding-left: 24px;">↓ New agents need NorseAgent subclass OR generic war room agent class</div>
+      <div style="color: #94a3b8;">4. War room active with custom team composition</div>
+    </div>
+  </div>
+</div>
