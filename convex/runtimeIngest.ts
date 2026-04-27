@@ -37,7 +37,12 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
 
     for (const evt of events) {
       const timestamp = evt.timestamp ?? now;
-      const data = evt.data ?? evt;
+      const rawData = evt.data ?? evt;
+      // Convex v.optional() rejects null — coerce to undefined for all top-level fields
+      const data: Record<string, any> = {};
+      for (const [k, v] of Object.entries(rawData)) {
+        data[k] = v === null ? undefined : v;
+      }
 
       // Always insert into legacy runtime_events
       await ctx.runMutation(api.events.insertEvent, {

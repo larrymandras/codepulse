@@ -142,7 +142,12 @@ export const advisorIngest = httpAction(async (ctx, request) => {
   }
 
   try {
-    const body = await request.json() as Record<string, unknown>;
+    const rawBody = await request.json() as Record<string, unknown>;
+    // Convex v.optional() rejects null — coerce to undefined
+    const body: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawBody)) {
+      body[k] = v === null ? undefined : v;
+    }
 
     if (!body.provider) {
       return new Response(
