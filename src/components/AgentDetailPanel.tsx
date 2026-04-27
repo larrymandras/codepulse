@@ -5,6 +5,7 @@ import { useAgentDetail } from "../hooks/useAgentTopology";
 import { formatDuration } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
 import { MemorySourceBadge } from "../components/MemorySourceBadge";
+import { AgentToolbelt } from "./AgentToolbelt";
 
 const eventTypeColors: Record<string, string> = {
   handoff: "text-purple-400 bg-purple-400/10",
@@ -142,6 +143,11 @@ export default function AgentDetailPanel({ agentId, onClose }: Props) {
       {detail.coordination.length === 0 && (
         <p className="text-[10px] text-gray-600">No coordination events</p>
       )}
+
+      {/* Toolbelt */}
+      <div className="mt-3">
+        <AgentToolbelt agentId={agentId} />
+      </div>
 
       {/* Action buttons */}
       <div className="flex gap-2 mt-3 pt-3 border-t border-gray-700/50">
