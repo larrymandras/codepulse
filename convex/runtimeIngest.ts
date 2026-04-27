@@ -698,6 +698,21 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "tool_assignment_sync":
+          await ctx.runMutation(api.toolAssignments.syncAssignments, {
+            agents: data.agents ?? [],
+            unassigned: data.unassigned ?? [],
+            totals: data.totals ?? { totalTools: 0, assignedTools: 0, pendingClassification: 0, agents: 0 },
+          });
+          break;
+
+        case "tool_assignment_change":
+          await ctx.runMutation(api.toolAssignments.recordChange, {
+            action: data.action ?? "unknown",
+            tool: data.tool ?? { toolId: "unknown", tags: [] },
+            assignedTo: data.assignedTo ?? [],
+          });
+          break;
       }
     }
 

@@ -1222,4 +1222,59 @@ export default defineSchema({
   })
     .index("by_agent_timestamp", ["agentId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // TOOL ASSIGNMENT TABLES
+  // ============================================================
+
+  toolClassifications: defineTable({
+    toolId: v.string(),
+    toolName: v.string(),
+    description: v.optional(v.string()),
+    origin: v.string(),
+    serverName: v.optional(v.string()),
+    tags: v.array(v.string()),
+    classificationSource: v.string(),
+    confidence: v.optional(v.float64()),
+    reasoning: v.optional(v.string()),
+    status: v.string(),
+    classifiedAt: v.float64(),
+  })
+    .index("by_toolId", ["toolId"])
+    .index("by_status", ["status"])
+    .searchIndex("search_tools", {
+      searchField: "toolName",
+      filterFields: ["status"],
+    }),
+
+  agentToolAssignments: defineTable({
+    agentId: v.string(),
+    agentName: v.string(),
+    kits: v.array(v.string()),
+    toolId: v.string(),
+    tags: v.array(v.string()),
+    kitId: v.optional(v.string()),
+    assignmentSource: v.string(),
+    origin: v.optional(v.string()),
+    syncedAt: v.float64(),
+  })
+    .index("by_agent", ["agentId"])
+    .index("by_tool", ["toolId"])
+    .index("by_agent_tool", ["agentId", "toolId"]),
+
+  toolAssignmentChanges: defineTable({
+    action: v.string(),
+    toolId: v.string(),
+    tags: v.array(v.string()),
+    confidence: v.optional(v.float64()),
+    classificationSource: v.optional(v.string()),
+    assignedTo: v.array(v.object({
+      agentId: v.string(),
+      kitId: v.optional(v.string()),
+      matchedTag: v.optional(v.string()),
+    })),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_tool", ["toolId"]),
 });
