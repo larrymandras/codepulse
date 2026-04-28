@@ -7,6 +7,7 @@ import {
   checkBodySize,
   payloadTooLargeResponse,
   rateLimitResponse,
+  validationErrorResponse,
 } from "./ingestAuth";
 import { ingestRateLimiter } from "./ingestRateLimit";
 
@@ -43,6 +44,15 @@ export const scanEndpoint = httpAction(async (ctx, request) => {
 
   try {
     const body = await request.json();
+
+    // D-09: Validate scan payload is a JSON object.
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return validationErrorResponse(
+        [{ field: "_body", message: "expected JSON object" }],
+        headers,
+      );
+    }
+
     await ctx.runMutation(api.registry.syncInventory, { snapshot: body });
 
     return new Response(JSON.stringify({ ok: true }), {

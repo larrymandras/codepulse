@@ -1,29 +1,127 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import {
+  getCorsHeaders,
+  validateIngestAuth,
+  unauthorizedResponse,
+  checkBodySize,
+  payloadTooLargeResponse,
+  rateLimitResponse,
+  validationErrorResponse,
+} from "./ingestAuth";
+import { ingestRateLimiter } from "./ingestRateLimit";
+import { validatePayload, type FieldSchema } from "./lib/validation";
+
+// ── Schema definitions per endpoint ──────────────────────────────────────
+
+const warRoomSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  roomId: { type: "string", required: false },
+  name: { type: "string", required: false },
+  status: { type: "string", required: false },
+  participantIds: { type: "array", required: false },
+  createdAt: { type: "number", required: false },
+  updatedAt: { type: "number", required: false },
+  speakerId: { type: "string", required: false },
+  speakerName: { type: "string", required: false },
+  text: { type: "string", required: false },
+  payload: { type: "object", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const meetingBotSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  callId: { type: "string", required: false },
+  botSessionId: { type: "string", required: false },
+  sessionId: { type: "string", required: false },
+  recallBotId: { type: "string", required: false },
+  agentProfileId: { type: "string", required: false },
+  meetingUrl: { type: "string", required: false },
+  status: { type: "string", required: false },
+  platform: { type: "string", required: false },
+  durationMs: { type: "number", required: false },
+  participantCount: { type: "number", required: false },
+  costUsd: { type: "number", required: false },
+  startedAt: { type: "number", required: false },
+  endedAt: { type: "number", required: false },
+  wordCount: { type: "number", required: false },
+  summaryText: { type: "string", required: false },
+  createdAt: { type: "number", required: false },
+  updatedAt: { type: "number", required: false },
+};
+
+const transcriptSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  text: { type: "string", required: true },
+  roomId: { type: "string", required: false },
+  callId: { type: "string", required: false },
+  speakerId: { type: "string", required: false },
+  speakerName: { type: "string", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const missionControlSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  taskId: { type: "string", required: true },
+  title: { type: "string", required: false },
+  description: { type: "string", required: false },
+  priority: { type: "string", required: false },
+  column: { type: "string", required: false },
+  agentId: { type: "string", required: false },
+  agentName: { type: "string", required: false },
+  source: { type: "string", required: false },
+  progress: { type: "number", required: false },
+  dueAt: { type: "number", required: false },
+  createdAt: { type: "number", required: false },
+};
+
+// ── Shared pipeline preamble ─────────────────────────────────────────────
+
+async function pipeline(
+  ctx: any,
+  request: Request,
+): Promise<{ headers: Record<string, string>; apiKey: string } | Response> {
+  const origin = request.headers.get("Origin");
+  const headers = getCorsHeaders(origin);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers });
+  }
+
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse(headers);
+  }
+
+  if (!checkBodySize(request)) {
+    return payloadTooLargeResponse(headers);
+  }
+
+  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "anonymous";
+  const rateCheck = await ingestRateLimiter.limit(ctx, "general", { key: apiKey });
+  if (!rateCheck.ok) {
+    return rateLimitResponse(headers, rateCheck.retryAfter);
+  }
+
+  return { headers, apiKey };
+}
+
+// ── Endpoint handlers ────────────────────────────────────────────────────
 
 /**
  * POST /war-room-ingest
  * Dispatches by `type`: "room.created", "room.updated", "participant.joined", "participant.left"
  */
 export const warRoomIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, warRoomSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     const eventType = body.type as string;
 
@@ -50,12 +148,12 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -65,23 +163,16 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
  * Dispatches by `type`: "call.started", "call.ended", "bot.status"
  */
 export const meetingBotIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, meetingBotSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     const eventType = body.type as string;
 
@@ -115,12 +206,12 @@ export const meetingBotIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -131,30 +222,16 @@ export const meetingBotIngest = httpAction(async (ctx, request) => {
  * Inserts into warRoomEvents (if roomId present) AND callTranscripts (if callId present).
  */
 export const transcriptIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    if (!body.text) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: text" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, transcriptSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     const timestamp = (body.timestamp as number) ?? Date.now();
 
@@ -183,12 +260,12 @@ export const transcriptIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -198,30 +275,16 @@ export const transcriptIngest = httpAction(async (ctx, request) => {
  * Dispatches by `type`: "task.created", "task.updated"
  */
 export const missionControlIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    if (!body.taskId) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: taskId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, missionControlSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     const eventType = body.type as string;
 
@@ -252,12 +315,12 @@ export const missionControlIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });

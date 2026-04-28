@@ -8,6 +8,7 @@ import {
   checkBodySize,
   payloadTooLargeResponse,
   rateLimitResponse,
+  validationErrorResponse,
 } from "./ingestAuth";
 import { ingestRateLimiter } from "./ingestRateLimit";
 
@@ -44,6 +45,24 @@ export const buildIngest = httpAction(async (ctx, request) => {
 
   try {
     const body = await request.json();
+
+    // D-09: Validate discriminator field for the generic routing endpoint.
+    // This endpoint routes by eventType — strict extra-field rejection is not
+    // applied here because payloads are variable per event type. The downstream
+    // mutations handle field-level validation via their v.object() args.
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return validationErrorResponse(
+        [{ field: "_body", message: "expected JSON object" }],
+        headers,
+      );
+    }
+    if (body.eventType !== undefined && typeof body.eventType !== "string") {
+      return validationErrorResponse(
+        [{ field: "eventType", message: `expected string, got ${typeof body.eventType}` }],
+        headers,
+      );
+    }
+
     const {
       sessionId,
       eventType,

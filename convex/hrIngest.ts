@@ -1,25 +1,60 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import {
+  getCorsHeaders,
+  validateIngestAuth,
+  unauthorizedResponse,
+  checkBodySize,
+  payloadTooLargeResponse,
+  rateLimitResponse,
+  validationErrorResponse,
+} from "./ingestAuth";
+import { ingestRateLimiter } from "./ingestRateLimit";
+import { validatePayload, type FieldSchema } from "./lib/validation";
+
+const hrSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  requestId: { type: "string", required: false },
+  agentName: { type: "string", required: false },
+  agentId: { type: "string", required: false },
+  catalogEntryId: { type: "string", required: false },
+  tier: { type: "string", required: false },
+  budgetFraction: { type: "number", required: false },
+  status: { type: "string", required: false },
+  configSnapshot: { type: "object", required: false },
+  requestedAt: { type: "number", required: false },
+  decidedAt: { type: "number", required: false },
+  decidedBy: { type: "string", required: false },
+};
 
 export const hrIngest = httpAction(async (ctx, request) => {
+  const origin = request.headers.get("Origin");
+  const headers = getCorsHeaders(origin);
+
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers });
   }
 
   if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
+    return unauthorizedResponse(headers);
+  }
+
+  if (!checkBodySize(request)) {
+    return payloadTooLargeResponse(headers);
+  }
+
+  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "anonymous";
+  const rateCheck = await ingestRateLimiter.limit(ctx, "general", { key: apiKey });
+  if (!rateCheck.ok) {
+    return rateLimitResponse(headers, rateCheck.retryAfter);
   }
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, hrSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     const eventType = body.type as string;
 
@@ -41,12 +76,12 @@ export const hrIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });

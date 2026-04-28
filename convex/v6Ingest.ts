@@ -1,31 +1,138 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import {
+  getCorsHeaders,
+  validateIngestAuth,
+  unauthorizedResponse,
+  checkBodySize,
+  payloadTooLargeResponse,
+  rateLimitResponse,
+  validationErrorResponse,
+} from "./ingestAuth";
+import { ingestRateLimiter } from "./ingestRateLimit";
+import { validatePayload, type FieldSchema } from "./lib/validation";
+
+// ── Schema definitions per endpoint ──────────────────────────────────────
+
+const preflightSchema: Record<string, FieldSchema> = {
+  profileId: { type: "string", required: true },
+  sessionId: { type: "string", required: false },
+  hitCount: { type: "number", required: false },
+  missCount: { type: "number", required: false },
+  latencyMs: { type: "number", required: false },
+  topMemoryIds: { type: "array", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const dreamingSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: true },
+  // cycle fields
+  runDate: { type: "string", required: false },
+  status: { type: "string", required: false },
+  rawCount: { type: "number", required: false },
+  candidateCount: { type: "number", required: false },
+  extractedCount: { type: "number", required: false },
+  dedupedCount: { type: "number", required: false },
+  storedCount: { type: "number", required: false },
+  durationMs: { type: "number", required: false },
+  costUsd: { type: "number", required: false },
+  isBackfill: { type: "boolean", required: false },
+  // fact fields
+  cycleId: { type: "string", required: false },
+  factText: { type: "string", required: false },
+  category: { type: "string", required: false },
+  confidence: { type: "number", required: false },
+  sourceMemoryIds: { type: "array", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const advisorSchema: Record<string, FieldSchema> = {
+  provider: { type: "string", required: true },
+  sessionId: { type: "string", required: false },
+  model: { type: "string", required: false },
+  used: { type: "boolean", required: false },
+  inputTokens: { type: "number", required: false },
+  outputTokens: { type: "number", required: false },
+  costUsd: { type: "number", required: false },
+  standardCostUsd: { type: "number", required: false },
+  latencyMs: { type: "number", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const importSchema: Record<string, FieldSchema> = {
+  importId: { type: "string", required: true },
+  source: { type: "string", required: true },
+  status: { type: "string", required: true },
+  conversationCount: { type: "number", required: false },
+  memoriesCreated: { type: "number", required: false },
+  errorMessage: { type: "string", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const startupSchema: Record<string, FieldSchema> = {
+  phase: { type: "string", required: true },
+  duration: { type: "number", required: false },
+  totalMs: { type: "number", required: false },
+  subsystem: { type: "string", required: false },
+  order: { type: "number", required: false },
+  timestamp: { type: "number", required: false },
+};
+
+const authAliasSchema: Record<string, FieldSchema> = {
+  alias: { type: "string", required: true },
+  provider: { type: "string", required: true },
+  userId: { type: "string", required: true },
+  createdAt: { type: "number", required: false },
+};
+
+// ── Shared pipeline preamble ─────────────────────────────────────────────
+
+/** Run the shared auth/size/rate-limit pipeline. Returns headers + null on success, or a Response to short-circuit. */
+async function pipeline(
+  ctx: any,
+  request: Request,
+): Promise<{ headers: Record<string, string>; apiKey: string } | Response> {
+  const origin = request.headers.get("Origin");
+  const headers = getCorsHeaders(origin);
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers });
+  }
+
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse(headers);
+  }
+
+  if (!checkBodySize(request)) {
+    return payloadTooLargeResponse(headers);
+  }
+
+  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "anonymous";
+  const rateCheck = await ingestRateLimiter.limit(ctx, "general", { key: apiKey });
+  if (!rateCheck.ok) {
+    return rateLimitResponse(headers, rateCheck.retryAfter);
+  }
+
+  return { headers, apiKey };
+}
+
+// ── Endpoint handlers ────────────────────────────────────────────────────
 
 /**
  * POST /preflight-ingest
  * Ingest a memoryPreflight record.
  */
 export const preflightIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    // Validate required fields (T-63-04: reject if missing)
-    if (!body.profileId) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: profileId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, preflightSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     await ctx.runMutation(api.v6Mutations.insertMemoryPreflight, {
       sessionId: body.sessionId as string | undefined,
@@ -39,12 +146,12 @@ export const preflightIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -54,30 +161,25 @@ export const preflightIngest = httpAction(async (ctx, request) => {
  * Dispatches by `type` field: "cycle" or "fact".
  */
 export const dreamingIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.type) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, dreamingSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     if (body.type === "cycle") {
       if (!body.runDate || !body.status) {
-        return new Response(
-          JSON.stringify({ error: "Missing required fields for cycle: runDate, status" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        return validationErrorResponse(
+          [
+            ...(!body.runDate ? [{ field: "runDate", message: "required for cycle type" }] : []),
+            ...(!body.status ? [{ field: "status", message: "required for cycle type" }] : []),
+          ],
+          headers,
         );
       }
       await ctx.runMutation(api.v6Mutations.insertDreamingCycle, {
@@ -95,9 +197,12 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
       });
     } else if (body.type === "fact") {
       if (!body.factText || !body.category) {
-        return new Response(
-          JSON.stringify({ error: "Missing required fields for fact: factText, category" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        return validationErrorResponse(
+          [
+            ...(!body.factText ? [{ field: "factText", message: "required for fact type" }] : []),
+            ...(!body.category ? [{ field: "category", message: "required for fact type" }] : []),
+          ],
+          headers,
         );
       }
       await ctx.runMutation(api.v6Mutations.insertDreamingFact, {
@@ -109,20 +214,20 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
         timestamp: (body.timestamp as number) ?? Date.now(),
       });
     } else {
-      return new Response(
-        JSON.stringify({ error: `Unknown type: ${body.type}. Expected "cycle" or "fact".` }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      return validationErrorResponse(
+        [{ field: "type", message: `expected "cycle" or "fact", got "${body.type}"` }],
+        headers,
       );
     }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -132,14 +237,9 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
  * Ingest an advisorEvents record.
  */
 export const advisorIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const rawBody = await request.json() as Record<string, unknown>;
@@ -149,12 +249,9 @@ export const advisorIngest = httpAction(async (ctx, request) => {
       body[k] = v === null ? undefined : v;
     }
 
-    if (!body.provider) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: provider" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, advisorSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     await ctx.runMutation(api.v6Mutations.insertAdvisorEvent, {
       sessionId: body.sessionId as string | undefined,
@@ -171,12 +268,12 @@ export const advisorIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -186,24 +283,16 @@ export const advisorIngest = httpAction(async (ctx, request) => {
  * Ingest a conversationImports record.
  */
 export const importIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.importId || !body.source || !body.status) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: importId, source, status" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, importSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     await ctx.runMutation(api.v6Mutations.insertConversationImport, {
       importId: body.importId as string,
@@ -217,12 +306,12 @@ export const importIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -232,24 +321,16 @@ export const importIngest = httpAction(async (ctx, request) => {
  * Ingest a startupEvents record.
  */
 export const startupIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.phase) {
-      return new Response(
-        JSON.stringify({ error: "Missing required field: phase" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, startupSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     await ctx.runMutation(api.v6Mutations.insertStartupEvent, {
       phase: body.phase as string,
@@ -262,12 +343,12 @@ export const startupIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
@@ -277,24 +358,16 @@ export const startupIngest = httpAction(async (ctx, request) => {
  * Ingest an authAliases record.
  */
 export const authAliasIngest = httpAction(async (ctx, request) => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
-  }
-
-  // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
-  if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
-  }
+  const result = await pipeline(ctx, request);
+  if (result instanceof Response) return result;
+  const { headers } = result;
 
   try {
     const body = await request.json() as Record<string, unknown>;
 
-    if (!body.alias || !body.provider || !body.userId) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields: alias, provider, userId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
+    // D-09/D-11: Strict schema validation
+    const errors = validatePayload(body, authAliasSchema);
+    if (errors.length > 0) return validationErrorResponse(errors, headers);
 
     await ctx.runMutation(api.v6Mutations.upsertAuthAlias, {
       alias: body.alias as string,
@@ -305,12 +378,12 @@ export const authAliasIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });

@@ -7,6 +7,7 @@ import {
   checkBodySize,
   payloadTooLargeResponse,
   rateLimitResponse,
+  validationErrorResponse,
 } from "./ingestAuth";
 import { ingestRateLimiter } from "./ingestRateLimit";
 
@@ -80,6 +81,21 @@ export const otelMetricsIngest = httpAction(async (ctx, request) => {
 
   try {
     const body = await request.json();
+
+    // D-09: Validate OTLP structure — must be object with optional resourceMetrics array.
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return validationErrorResponse(
+        [{ field: "_body", message: "expected JSON object" }],
+        headers,
+      );
+    }
+    if (body.resourceMetrics !== undefined && !Array.isArray(body.resourceMetrics)) {
+      return validationErrorResponse(
+        [{ field: "resourceMetrics", message: `expected array, got ${typeof body.resourceMetrics}` }],
+        headers,
+      );
+    }
+
     const resourceMetrics: any[] = body.resourceMetrics ?? [];
     let processed = 0;
     let failed = 0;

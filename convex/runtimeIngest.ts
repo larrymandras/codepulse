@@ -7,6 +7,7 @@ import {
   checkBodySize,
   payloadTooLargeResponse,
   rateLimitResponse,
+  validationErrorResponse,
 } from "./ingestAuth";
 import { ingestRateLimiter } from "./ingestRateLimit";
 
@@ -46,6 +47,28 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
 
   try {
     const body = await request.json();
+
+    // D-09: Validate body structure for the generic routing endpoint.
+    // Accepts { events: [...] } (batch) or { eventType: "...", ... } (single).
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      return validationErrorResponse(
+        [{ field: "_body", message: "expected JSON object" }],
+        headers,
+      );
+    }
+    if (body.events !== undefined && !Array.isArray(body.events)) {
+      return validationErrorResponse(
+        [{ field: "events", message: `expected array, got ${typeof body.events}` }],
+        headers,
+      );
+    }
+    if (!body.events && body.eventType !== undefined && typeof body.eventType !== "string") {
+      return validationErrorResponse(
+        [{ field: "eventType", message: `expected string, got ${typeof body.eventType}` }],
+        headers,
+      );
+    }
+
     const now = Date.now() / 1000;
 
     // Normalize to array
