@@ -10,6 +10,7 @@
 import { action } from "./_generated/server";
 import { api } from "./_generated/api";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 // ─── Tool Definitions (OpenAI function-calling format) ──────────────────────
 
@@ -248,6 +249,7 @@ export const ask = action({
     question: v.string(),
   },
   handler: async (ctx, { question }): Promise<Record<string, unknown>[]> => {
+    await requireAuth(ctx);
     // Step 1: Call LLM with question and tool definitions
     const llmResponse = await callLLM(question);
     const choice = llmResponse.choices?.[0]?.message;

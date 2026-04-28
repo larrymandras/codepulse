@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const recordFinding = mutation({
   args: {
@@ -12,6 +13,7 @@ export const recordFinding = mutation({
     contentHash: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const existing = await ctx.db
       .query("ideationFindings")
       .withIndex("by_content_hash", (q) => q.eq("contentHash", args.contentHash))
@@ -30,6 +32,7 @@ export const recordFinding = mutation({
 export const dismissFinding = mutation({
   args: { id: v.id("ideationFindings") },
   handler: async (ctx, { id }) => {
+    await requireAuth(ctx);
     await ctx.db.patch(id, {
       dismissed: true,
       dismissedAt: Date.now() / 1000,
@@ -77,6 +80,7 @@ export const updateFindingStatus = mutation({
     status: v.string(),
   },
   handler: async (ctx, { id, status }) => {
+    await requireAuth(ctx);
     if (!(VALID_STATUSES as readonly string[]).includes(status)) {
       throw new Error(`Invalid status: ${status}. Must be one of: ${VALID_STATUSES.join(", ")}`);
     }
@@ -100,6 +104,7 @@ export const linkTask = mutation({
     taskId: v.string(),
   },
   handler: async (ctx, { id, taskId }) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     await ctx.db.patch(id, {
       taskId,

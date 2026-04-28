@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const recordMetrics = mutation({
   args: {
@@ -87,6 +88,7 @@ export const upsertConfig = mutation({
     emailAddress: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     const existing = await ctx.db
       .query("profileConfigs")
@@ -119,6 +121,7 @@ export const updateEmail = mutation({
     emailAddress: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     const existing = await ctx.db
       .query("profileConfigs")
@@ -169,6 +172,7 @@ export const recordSwitch = mutation({
     reason: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.insert("profileSwitches", {
       fromProfile: args.fromProfile,
       toProfile: args.toProfile,
@@ -193,6 +197,7 @@ export const recentSwitches = query({
 export const seedProfiles = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     // Check if already seeded
     const existing = await ctx.db
       .query("profileConfigs")

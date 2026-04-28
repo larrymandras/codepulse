@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
 import { alertRules } from "./alertRules";
+import { requireAuth } from "./lib/auth";
 
 // ============================================================
 // LOOKBACK WINDOW HELPER
@@ -44,6 +45,7 @@ export const acknowledge = mutation({
     acknowledgedBy: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.id, {
       acknowledged: true,
       acknowledgedBy: args.acknowledgedBy,
@@ -122,6 +124,7 @@ export const countBySeverity = query({
 export const dismissAll = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const active = await ctx.db
       .query("alerts")
       .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
@@ -195,6 +198,7 @@ export const listActiveGrouped = query({
 export const evaluate = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     const oneHourAgo = now - 3600;
     const thirtyMinAgo = now - 1800;

@@ -1,6 +1,7 @@
 import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { requireAuth } from "./lib/auth";
 
 // ============================================================
 // PUBLIC QUERIES + MUTATIONS — Settings page consumption
@@ -39,6 +40,7 @@ export const setChannel = mutation({
     url: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     if (!args.url.startsWith("https://")) {
       throw new Error(
         "Invalid webhook URL. Paste a full Discord or Slack webhook URL starting with https://."
@@ -73,6 +75,7 @@ export const removeChannel = mutation({
     channel: v.union(v.literal("discord"), v.literal("slack")),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const configKey = `webhook-${args.channel}-url`;
     const existing = await ctx.db
       .query("agentConfigs")
@@ -94,6 +97,7 @@ export const testWebhook = action({
     channel: v.string(),
   },
   handler: async (ctx, args): Promise<{ success: boolean; error?: string }> => {
+    await requireAuth(ctx);
     const channels = await ctx.runQuery(
       internal.webhookDelivery.getNotificationChannels,
       {}
@@ -203,6 +207,7 @@ export const setPreferences = mutation({
     }),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     for (const [key, val] of Object.entries(args.preferences)) {
       if (!VALID_MODES.includes(val as (typeof VALID_MODES)[number])) {
         throw new Error(

@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -115,6 +116,7 @@ export const createVersion = mutation({
     parentVersion: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     // Get the next version number
     const latest = await ctx.db
       .query("agentConfigVersions")

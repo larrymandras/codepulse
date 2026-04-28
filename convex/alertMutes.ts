@@ -1,5 +1,6 @@
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 // ============================================================
 // DURATION PARSER — converts string like "15m", "1h", "4h", "24h" to seconds
@@ -44,6 +45,7 @@ export const muteTarget = mutation({
     mutedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
 
     // Upsert: delete any existing mute for the same target
@@ -77,6 +79,7 @@ export const unmuteTarget = mutation({
     targetId: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const record = await ctx.db
       .query("alertMutes")
       .withIndex("by_target", (q) =>

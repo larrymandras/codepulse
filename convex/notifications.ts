@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 interface NotificationInput {
   severity: string;
@@ -61,6 +62,7 @@ export const create = mutation({
     expiresAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.insert("notifications", {
       type: args.type,
       category: args.category,
@@ -122,6 +124,7 @@ export const unreadCount = query({
 export const markRead = mutation({
   args: { id: v.id("notifications") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.id, { read: true });
   },
 });
@@ -129,6 +132,7 @@ export const markRead = mutation({
 export const markAllRead = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const unread = await ctx.db
       .query("notifications")
       .withIndex("by_type_read", (q) => q.eq("type", "bell").eq("read", false))
@@ -143,6 +147,7 @@ export const markAllRead = mutation({
 export const clearAll = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAuth(ctx);
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_created")

@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const upsert = mutation({
   args: {
@@ -16,6 +17,7 @@ export const upsert = mutation({
     decidedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const existing = await ctx.db
       .query("approvalQueue")
       .withIndex("by_requestId", (q) => q.eq("requestId", args.requestId))
@@ -79,6 +81,7 @@ export const updateStatus = mutation({
     decidedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.id, {
       status: args.status,
       decidedAt: args.decidedAt,

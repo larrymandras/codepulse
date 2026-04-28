@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const create = mutation({
   args: {
@@ -10,6 +11,7 @@ export const create = mutation({
     displayName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     return await ctx.db.insert("agentProfiles", {
       profileId: args.profileId,
@@ -32,6 +34,7 @@ export const update = mutation({
     displayName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const { id, ...fields } = args;
     const updates: Record<string, any> = { updatedAt: Date.now() / 1000 };
     if (fields.name !== undefined) updates.name = fields.name;
@@ -61,6 +64,7 @@ export const updateSortOrder = mutation({
     orderedIds: v.array(v.id("agentProfiles")),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     for (let i = 0; i < args.orderedIds.length; i++) {
       await ctx.db.patch(args.orderedIds[i], { sortOrder: i });
     }
@@ -80,6 +84,7 @@ export const getByProfileId = query({
 export const remove = mutation({
   args: { id: v.id("agentProfiles") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.id);
   },
 });

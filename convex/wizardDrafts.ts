@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const save = mutation({
   args: {
@@ -15,6 +16,7 @@ export const save = mutation({
     status: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     if (args.id) {
       await ctx.db.patch(args.id, {
@@ -60,6 +62,7 @@ export const list = query({
 export const remove = mutation({
   args: { id: v.id("wizardDrafts") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.id);
   },
 });

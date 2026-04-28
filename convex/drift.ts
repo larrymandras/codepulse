@@ -1,9 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 export const acknowledgeChange = mutation({
   args: { id: v.id("configChanges") },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.delete(args.id);
   },
 });
@@ -11,6 +13,7 @@ export const acknowledgeChange = mutation({
 export const acknowledgeAll = mutation({
   args: { ids: v.array(v.id("configChanges")) },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     for (const id of args.ids) {
       await ctx.db.delete(id);
     }
