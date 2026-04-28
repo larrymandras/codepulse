@@ -1,6 +1,14 @@
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import {
+  getCorsHeaders,
+  validateIngestAuth,
+  unauthorizedResponse,
+  checkBodySize,
+  payloadTooLargeResponse,
+  rateLimitResponse,
+} from "./ingestAuth";
+import { ingestRateLimiter } from "./ingestRateLimit";
 
 /**
  * HTTP action: POST /runtime-ingest
@@ -12,13 +20,28 @@ import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestA
  * Inserts into legacy runtime_events AND routes to domain tables.
  */
 export const runtimeIngest = httpAction(async (ctx, request) => {
+  const origin = request.headers.get("Origin");
+  const headers = getCorsHeaders(origin);
+
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
   if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
+    return unauthorizedResponse(headers);
+  }
+
+  // D-08: Reject oversized payloads before parsing.
+  if (!checkBodySize(request)) {
+    return payloadTooLargeResponse(headers);
+  }
+
+  // D-06/D-07: Rate limit per API key.
+  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "anonymous";
+  const rateCheck = await ingestRateLimiter.limit(ctx, "runtime", { key: apiKey });
+  if (!rateCheck.ok) {
+    return rateLimitResponse(headers, rateCheck.retryAfter);
   }
 
   try {
@@ -732,12 +755,12 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ingested: events.length }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });

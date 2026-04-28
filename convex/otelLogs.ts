@@ -1,6 +1,14 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import {
+  getCorsHeaders,
+  validateIngestAuth,
+  unauthorizedResponse,
+  checkBodySize,
+  payloadTooLargeResponse,
+  rateLimitResponse,
+} from "./ingestAuth";
+import { ingestRateLimiter } from "./ingestRateLimit";
 
 /** Helper: extract a string attribute value from an OTel attributes array */
 function getAttr(
@@ -57,9 +65,12 @@ function attrsToObj(attrs: any[] | undefined): Record<string, string | number> {
  * to the appropriate Convex domain tables based on event.name.
  */
 export const otelLogsIngest = httpAction(async (ctx, request) => {
+  const origin = request.headers.get("Origin");
+  const headers = getCorsHeaders(origin);
+
   // CORS preflight
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers });
   }
 
   // Reject non-JSON content types (gRPC / protobuf)
@@ -69,13 +80,25 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       JSON.stringify({
         error: "Unsupported content type. This endpoint only accepts application/json. Send OTel data with OTEL_EXPORTER_OTLP_PROTOCOL=http/json.",
       }),
-      { status: 415, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 415, headers: { "Content-Type": "application/json", ...headers } }
     );
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
   if (!validateIngestAuth(request)) {
-    return unauthorizedResponse();
+    return unauthorizedResponse(headers);
+  }
+
+  // D-08: Reject oversized payloads before parsing.
+  if (!checkBodySize(request)) {
+    return payloadTooLargeResponse(headers);
+  }
+
+  // D-06/D-07: Rate limit per API key.
+  const apiKey = request.headers.get("Authorization")?.replace("Bearer ", "") ?? "anonymous";
+  const rateCheck = await ingestRateLimiter.limit(ctx, "otel", { key: apiKey });
+  if (!rateCheck.ok) {
+    return rateLimitResponse(headers, rateCheck.retryAfter);
   }
 
   try {
@@ -124,13 +147,13 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       JSON.stringify({ ok: failed === 0, processed, failed, failures }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...headers },
       }
     );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   }
 });
