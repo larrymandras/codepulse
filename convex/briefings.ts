@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internal } from "./_generated/api";
+import { callAnthropic } from "./lib/anthropic";
 
 // ─── Pure helper (exported for testing) ─────────────────────────────────────
 
@@ -46,43 +47,24 @@ async function callLLMWithFallback(
   ): Promise<string> {
     if (!config || !config.apiKey) throw new Error("LLM provider not configured");
 
-    let baseUrl: string;
-    let headers: Record<string, string>;
-    let body: any;
-
     if (config.provider === "anthropic") {
-      baseUrl = "https://api.anthropic.com/v1/messages";
-      headers = {
-        "Content-Type": "application/json",
-        "x-api-key": config.apiKey,
-        "anthropic-version": "2023-06-01",
-      };
-      body = {
-        model: config.model || "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      };
-    } else {
-      // OpenAI-compatible (default)
-      baseUrl = "https://api.openai.com/v1/chat/completions";
-      headers = {
+      return callAnthropic(config.apiKey, config.model, systemPrompt, userPrompt);
+    }
+
+    // OpenAI-compatible (default)
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
-      };
-      body = {
+      },
+      body: JSON.stringify({
         model: config.model || "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-      };
-    }
-
-    const resp = await fetch(baseUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
+      }),
     });
     if (!resp.ok) {
       throw new Error(
@@ -90,10 +72,6 @@ async function callLLMWithFallback(
       );
     }
     const json = await resp.json();
-
-    if (config.provider === "anthropic") {
-      return json.content?.[0]?.text ?? "";
-    }
     return json.choices?.[0]?.message?.content ?? "";
   }
 

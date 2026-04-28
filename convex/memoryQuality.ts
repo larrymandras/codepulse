@@ -6,6 +6,7 @@ import {
 } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+import { callAnthropic } from "./lib/anthropic";
 
 // ─── Pure helper functions (exported for testing) ────────────────────────────
 
@@ -212,24 +213,14 @@ export const detectContradictionsAction = internalAction({
     try {
       let responseText: string;
 
-      // Call LLM (OpenAI-compatible or Anthropic)
       if (primaryConfig.provider === "anthropic") {
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": primaryConfig.apiKey,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: primaryConfig.model || "claude-haiku-4-5-20251001",
-            max_tokens: 1024,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
-          }),
-        });
-        const json = await resp.json();
-        responseText = json.content?.[0]?.text ?? "{}";
+        responseText = await callAnthropic(
+          primaryConfig.apiKey,
+          primaryConfig.model,
+          systemPrompt,
+          userPrompt,
+        );
+        if (!responseText) responseText = "{}";
       } else {
         const resp = await fetch(
           "https://api.openai.com/v1/chat/completions",
