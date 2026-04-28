@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ConvexError } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 const CONFIG_KEY = "alert-rules-disabled";
 
@@ -21,9 +21,7 @@ export const toggleRule = mutation({
     enabled: v.boolean(),
   },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity — this mutation enables/disables alert rules.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     const config = await ctx.db
       .query("agentConfigs")

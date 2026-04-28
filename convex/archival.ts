@@ -1,6 +1,6 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ConvexError } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 // ---- Archival cron (called daily at 02:00 UTC) ----
 export const markStaleArchived = internalMutation({
@@ -32,9 +32,7 @@ export const markStaleArchived = internalMutation({
 export const setRetentionDays = mutation({
   args: { days: v.float64() },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity — this mutation changes data retention policy.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     // Clamp to 1-365 range per T-05-01 / T-05-02
     const clamped = Math.max(1, Math.min(365, Math.round(args.days)));

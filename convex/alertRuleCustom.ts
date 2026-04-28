@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { ConvexError } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 const conditionValidator = v.object({
   metric: v.string(),
@@ -28,9 +28,7 @@ export const create = mutation({
     messageTemplate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     const now = Date.now() / 1000;
     return await ctx.db.insert("alertRuleCustom", {
@@ -59,9 +57,7 @@ export const update = mutation({
     enabled: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     const { id, ...rest } = args;
     await ctx.db.patch(id, {
@@ -76,9 +72,7 @@ export const remove = mutation({
     id: v.id("alertRuleCustom"),
   },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     await ctx.db.delete(args.id);
   },
@@ -128,9 +122,7 @@ export const setThresholdOverride = mutation({
     lookbackWindow: v.string(),
   },
   handler: async (ctx, args) => {
-    // CPHLTH-01: Require authenticated Clerk identity.
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new ConvexError("Unauthenticated");
+    await requireAuth(ctx);
 
     const configKey = `alert-rule-override:${args.ruleId}`;
     const existing = await ctx.db
