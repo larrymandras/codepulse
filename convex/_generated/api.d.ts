@@ -100,6 +100,7 @@ import type * as supabase from "../supabase.js";
 import type * as systemResources from "../systemResources.js";
 import type * as tasks from "../tasks.js";
 import type * as teamPresets from "../teamPresets.js";
+import type * as toolAssignments from "../toolAssignments.js";
 import type * as toolExecutions from "../toolExecutions.js";
 import type * as v6Ingest from "../v6Ingest.js";
 import type * as v6Mutations from "../v6Mutations.js";
@@ -211,6 +212,7 @@ declare const fullApi: ApiFromModules<{
   systemResources: typeof systemResources;
   tasks: typeof tasks;
   teamPresets: typeof teamPresets;
+  toolAssignments: typeof toolAssignments;
   toolExecutions: typeof toolExecutions;
   v6Ingest: typeof v6Ingest;
   v6Mutations: typeof v6Mutations;
