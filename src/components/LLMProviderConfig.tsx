@@ -33,7 +33,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
       await setLLMConfig({
         slot,
         provider: effectiveProvider,
-        model: effectiveModel || (effectiveProvider === "anthropic" ? "claude-3-5-haiku-20241022" : "gpt-4o-mini"),
+        model: effectiveModel || (effectiveProvider === "anthropic" ? "claude-haiku-4-5-20251001" : "gpt-4o-mini"),
         apiKey,
       });
       setSaveState("saved");
@@ -92,7 +92,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
           type="text"
           value={model || existingConfig?.model || ""}
           onChange={(e) => setModel(e.target.value)}
-          placeholder="gpt-4o-mini or claude-3-5-haiku-20241022"
+          placeholder="gpt-4o-mini or claude-haiku-4-5-20251001"
           disabled={saveState === "saving"}
           className="flex-1 min-w-40 bg-background border border-input px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring/50"
         />
