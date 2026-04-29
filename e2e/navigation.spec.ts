@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Sidebar navigation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('codepulse_onboarding_complete', 'true');
+    });
+  });
+
   test('loads the dashboard page', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL('/');
