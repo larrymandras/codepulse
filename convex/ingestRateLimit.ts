@@ -15,7 +15,8 @@
 import { components } from "./_generated/api";
 import { RateLimiter, MINUTE } from "@convex-dev/rate-limiter";
 
-export const ingestRateLimiter = new RateLimiter(components.rateLimiter, {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- codegen doesn't emit component types; runtime binding works via componentsGeneric()
+export const ingestRateLimiter = new RateLimiter((components as any).rateLimiter, {
   // High-volume hook event ingest (per D-06: scoped per API key)
   ingest: { kind: "token bucket", rate: 120, period: MINUTE, capacity: 240 },
   // Runtime health/status events
