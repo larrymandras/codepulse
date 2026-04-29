@@ -20,6 +20,7 @@ import ActiveTimeChart from "../components/ActiveTimeChart";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
+import PromptBudgetPanel from "../components/PromptBudgetPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
 import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
 import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
@@ -250,6 +251,13 @@ export default function Analytics() {
               ))}
             </TableBody>
           </Table>
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      <SectionErrorBoundary name="Prompt Budget">
+        <GlassPanel className="p-4">
+          <SectionHeader title="Prompt Budget" />
+          <PromptBudgetPanel />
         </GlassPanel>
       </SectionErrorBoundary>
     </div>

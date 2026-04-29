@@ -87,6 +87,7 @@ import type * as pipelineCheckpoints from "../pipelineCheckpoints.js";
 import type * as pipelines from "../pipelines.js";
 import type * as profiles from "../profiles.js";
 import type * as promptActivity from "../promptActivity.js";
+import type * as promptAssembly from "../promptAssembly.js";
 import type * as providerHealth from "../providerHealth.js";
 import type * as reflections from "../reflections.js";
 import type * as registry from "../registry.js";
@@ -203,6 +204,7 @@ declare const fullApi: ApiFromModules<{
   pipelines: typeof pipelines;
   profiles: typeof profiles;
   promptActivity: typeof promptActivity;
+  promptAssembly: typeof promptAssembly;
   providerHealth: typeof providerHealth;
   reflections: typeof reflections;
   registry: typeof registry;

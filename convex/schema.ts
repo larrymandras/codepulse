@@ -1277,4 +1277,28 @@ export default defineSchema({
   })
     .index("by_timestamp", ["timestamp"])
     .index("by_tool", ["toolId"]),
+
+  // ============================================================
+  // PROMPT ASSEMBLY TELEMETRY
+  // ============================================================
+
+  promptAssembly: defineTable({
+    sessionId: v.optional(v.string()),
+    profileId: v.optional(v.string()),
+    totalTokens: v.float64(),
+    tiersIncluded: v.array(v.string()),
+    soul: v.float64(),
+    behavior: v.float64(),
+    userProfile: v.float64(),
+    briefingPrefs: v.float64(),
+    memoryContext: v.float64(),
+    profileContext: v.float64(),
+    googleWorkspace: v.float64(),
+    toolNames: v.float64(),
+    agentRoster: v.float64(),
+    skillInstructions: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_profileId", ["profileId", "timestamp"]),
 });

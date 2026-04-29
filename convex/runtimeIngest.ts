@@ -764,6 +764,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             assignedTo: data.assignedTo ?? [],
           });
           break;
+        case "prompt_assembly": {
+          const d = data as any;
+          await ctx.runMutation(api.promptAssembly.record, {
+            sessionId: d.sessionId ?? d.session_id,
+            profileId: d.profileId ?? d.profile_id,
+            totalTokens: d.totalTokens ?? d.total_tokens ?? 0,
+            tiersIncluded: d.tiersIncluded ?? d.tiers_included ?? [],
+            soul: d.soul ?? 0,
+            behavior: d.behavior ?? 0,
+            userProfile: d.userProfile ?? d.user_profile ?? 0,
+            briefingPrefs: d.briefingPrefs ?? d.briefing_prefs ?? 0,
+            memoryContext: d.memoryContext ?? d.memory_context ?? 0,
+            profileContext: d.profileContext ?? d.profile_context ?? 0,
+            googleWorkspace: d.googleWorkspace ?? d.google_workspace ?? 0,
+            toolNames: d.toolNames ?? d.tool_names ?? 0,
+            agentRoster: d.agentRoster ?? d.agent_roster ?? 0,
+            skillInstructions: d.skillInstructions ?? d.skill_instructions ?? 0,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 
