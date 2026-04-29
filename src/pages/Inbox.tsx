@@ -2,22 +2,27 @@
  * Inbox — unified feed of HITL approvals, alerts, and system notifications.
  *
  * Data sources:
- *   approvals     — WS approval_request events (accumulated in state)
+ *   hitlApprovals — REST polling via useHitlApprovals (GET /api/hitl/pending, 10s interval)
+ *   approvals     — WS approval_request events (accumulated in state) for non-HITL agent approvals
  *   alerts        — Convex alerts.listActive query
  *   notifications — Convex notifications.bellAll query
  *
- * Approve/Reject sends approval.respond command via WS with request_id_target
- * (the HITL UUID, NOT the WS correlation request_id — T-56-08 mitigated).
+ * HITL items use REST POST /api/hitl/{id}/approve|reject.
+ * Non-HITL items use WS approval.respond command via sendCommand.
+ *
+ * Items are merged and deduplicated by id. HITL items take precedence for
+ * status display (server state via REST poll overrides local state).
  *
  * Keyboard navigation (D-13):
  *   ArrowDown/ArrowUp — move focus between cards
  *   Enter             — expand/collapse focused card
- *   A                 — approve focused approval item
+ *   A                 — approve focused approval item (REST for HITL, WS for others)
  *   R                 — start reject flow on focused approval item
  *   Escape            — clear keyboard focus
  *
  * Phase 56, Plan 03: CPCC-02.
  * Phase 03, Plan 04: IL-03 keyboard navigation.
+ * Phase 86, Plan 03: DATA-03/DATA-04 HITL REST approval integration.
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -28,6 +33,7 @@ import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { InboxCard, type InboxItem, type InboxItemType } from "../components/InboxCard";
 import { InboxFilterBar, type InboxFilter } from "../components/InboxFilterBar";
+import { useHitlApprovals } from "../hooks/useHitlApprovals";
 import { toast } from "sonner";
 
 // ─── Risk inference ────────────────────────────────────────────────────────────
@@ -87,6 +93,36 @@ function notificationToInboxItem(n: {
   };
 }
 
+function hitlApprovalToInboxItem(hitl: {
+  id: string;
+  action: string;
+  details: Record<string, unknown>;
+  profile_id: string;
+  channel_id: string;
+  timestamp: number;
+  status: "pending" | "approved" | "rejected";
+  decided_by?: string;
+  decided_at?: number;
+}): InboxItem {
+  const agentName =
+    (hitl.details.agent_name as string | undefined) ?? hitl.profile_id ?? "Ástríðr";
+  return {
+    id: hitl.id,
+    type: "approval" as InboxItemType,
+    title: hitl.action,
+    message: hitl.details ? JSON.stringify(hitl.details) : "",
+    timestamp: hitl.timestamp * 1000,
+    read: hitl.status !== "pending",
+    agentName,
+    action: hitl.action,
+    riskLevel: inferRiskLevel(hitl.action),
+    requestId: hitl.id,
+    // HITL-specific fields (Phase 86)
+    hitlStatus: hitl.status,
+    decidedBy: hitl.decided_by,
+  };
+}
+
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
 const RISK_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -113,8 +149,15 @@ export default function Inbox() {
   const { flashRef, triggerFlash } = useLiveFlash();
 
   const [filter, setFilter] = useState<InboxFilter>("all");
-  const [approvalItems, setApprovalItems] = useState<InboxItem[]>([]);
+  const [wsApprovalItems, setWsApprovalItems] = useState<InboxItem[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  // ─── HITL REST approvals ──────────────────────────────────────────────────
+  const {
+    approvals: hitlApprovals,
+    approve: hitlApprove,
+    reject: hitlReject,
+  } = useHitlApprovals();
 
   // ─── Keyboard navigation state ────────────────────────────────────────────
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -126,7 +169,9 @@ export default function Inbox() {
   const notificationRecords = useQuery(api.notifications.bellAll) ?? [];
   const markNotificationRead = useMutation(api.notifications.markRead);
 
-  // ─── WS: accumulate approval_request events ───────────────────────────────
+  // ─── WS: accumulate approval_request events (non-HITL agent approvals) ───
+  // HITL items are fetched via REST in useHitlApprovals. WS events that match
+  // an existing HITL id are ignored here — REST is the source of truth for HITL.
   useEffect(() => {
     const unsub = subscribeEvent("approval_request", (event) => {
       const data = event.data as {
@@ -150,6 +195,9 @@ export default function Inbox() {
 
       if (!payload?.id) return;
 
+      // Skip if this id is already tracked via HITL REST polling
+      if (hitlApprovals.some((h) => h.id === payload.id)) return;
+
       const action = payload.action ?? "unknown";
       const riskLevel = inferRiskLevel(action);
       const agentName =
@@ -168,9 +216,10 @@ export default function Inbox() {
         action,
         riskLevel,
         requestId: payload.id,
+        // No hitlStatus — WS-based approvals use the legacy WS flow
       };
 
-      setApprovalItems((prev) => {
+      setWsApprovalItems((prev) => {
         // Deduplicate by id
         if (prev.some((p) => p.id === item.id)) return prev;
         return [item, ...prev];
@@ -179,11 +228,28 @@ export default function Inbox() {
     });
 
     return unsub;
-  }, [subscribeEvent, triggerFlash]);
+  }, [subscribeEvent, triggerFlash, hitlApprovals]);
 
   // ─── Approve handler ──────────────────────────────────────────────────────
+  // Routes to HITL REST if the item is a HITL approval, otherwise WS command.
   const handleApprove = useCallback(
     async (requestId: string) => {
+      // Check if this is a HITL item (tracked via REST polling)
+      const isHitl = hitlApprovals.some((h) => h.id === requestId);
+
+      if (isHitl) {
+        try {
+          await hitlApprove(requestId);
+          toast.success("Approval sent.");
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Approval failed"
+          );
+        }
+        return;
+      }
+
+      // Non-HITL: WS approval.respond command
       // CRITICAL: request_id_target is the HITL UUID — NOT the WS correlation id.
       // sendCommand auto-generates its own request_id for the WS ack tracking.
       const ack = await sendCommand({
@@ -196,18 +262,34 @@ export default function Inbox() {
         return;
       }
       toast.success("Approval sent.");
-      setApprovalItems((prev) =>
+      setWsApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
     },
-    [sendCommand]
+    [sendCommand, hitlApprove, hitlApprovals]
   );
 
   // ─── Reject handler ───────────────────────────────────────────────────────
+  // Routes to HITL REST if the item is a HITL approval, otherwise WS command.
   const handleReject = useCallback(
     async (requestId: string, note?: string) => {
+      const isHitl = hitlApprovals.some((h) => h.id === requestId);
+
+      if (isHitl) {
+        try {
+          await hitlReject(requestId, note);
+          toast.success("Rejection sent.");
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Rejection failed"
+          );
+        }
+        return;
+      }
+
+      // Non-HITL: WS approval.respond command
       const ack = await sendCommand({
         type: "approval.respond",
         request_id_target: requestId,
@@ -219,13 +301,13 @@ export default function Inbox() {
         return;
       }
       toast.success("Rejection sent.");
-      setApprovalItems((prev) =>
+      setWsApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
     },
-    [sendCommand]
+    [sendCommand, hitlReject, hitlApprovals]
   );
 
   // ─── Mark-read handler ────────────────────────────────────────────────────
@@ -249,6 +331,14 @@ export default function Inbox() {
   const notifItems = notificationRecords.map(notificationToInboxItem).map(
     (item) => (readIds.has(item.id) ? { ...item, read: true } : item)
   );
+
+  // Merge HITL REST items with WS-based approval items.
+  // HITL items from REST take precedence. WS items that share an id with a
+  // HITL item are excluded (REST is the source of truth for HITL status).
+  const hitlItems = hitlApprovals.map(hitlApprovalToInboxItem);
+  const hitlIds = new Set(hitlItems.map((i) => i.id));
+  const wsItems = wsApprovalItems.filter((i) => !hitlIds.has(i.id));
+  const approvalItems = [...hitlItems, ...wsItems];
 
   const allItems = useMemo(
     () => sortItems([...approvalItems, ...alertItems, ...notifItems]),
@@ -337,6 +427,7 @@ export default function Inbox() {
   }, [focusedIndex]);
 
   // ─── Unread counts for filter badges ─────────────────────────────────────
+  // Only pending HITL items count as unread approvals
   const unreadApprovals = approvalItems.filter((i) => !i.read).length;
   const unreadAlerts = alertItems.filter((i) => !i.read).length;
   const unreadNotifs = notifItems.filter((i) => !i.read).length;

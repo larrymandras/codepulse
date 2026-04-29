@@ -13,10 +13,14 @@
  *   read items        → no left stripe
  *
  * Phase 56, Plan 03: CPCC-02 Inbox panel.
+ * Phase 86, Plan 03: DATA-03/DATA-04 HITL REST approval integration.
+ *   - hitlStatus: "pending" | "approved" | "rejected" — drives card state machine
+ *   - decidedBy: channel that resolved the request (for cross-channel badge)
+ *   - ResolutionBadge: shown when hitlStatus !== "pending"
  */
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, ExternalLink, Loader2, MessageCircle, Monitor, X } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
@@ -41,6 +45,9 @@ export interface InboxItem {
   requestId?: string; // HITL UUID sent in approval.respond
   // Alert-specific
   alertId?: Id<"alerts">;
+  // HITL REST approval fields (Phase 86)
+  hitlStatus?: "pending" | "approved" | "rejected";
+  decidedBy?: string; // "telegram" | "dashboard" | "codepulse" | etc.
 }
 
 interface InboxCardProps {
@@ -95,6 +102,64 @@ function stripeClass(item: InboxItem): string {
   return "border-l-2 border-l-(--primary)";
 }
 
+// ─── ResolutionBadge ─────────────────────────────────────────────────────────
+
+/**
+ * ResolutionBadge — shows how a HITL request was resolved.
+ *
+ * For self-resolved (decidedBy === "dashboard" or "codepulse"):
+ *   Shows "Approved" or "Rejected" with Check/X icon, --status-ok/--status-error tint.
+ *
+ * For cross-channel (decidedBy === "telegram" or other):
+ *   Shows "Resolved via {Channel} — {Decision}" with channel icon, --muted tint.
+ *
+ * Per UI-SPEC: inline-flex, items-center, gap-1, px-2 py-1, text-xs font-semibold.
+ */
+function ResolutionBadge({
+  status,
+  decidedBy,
+}: {
+  status: "approved" | "rejected";
+  decidedBy?: string;
+}) {
+  const by = decidedBy?.toLowerCase() ?? "dashboard";
+  const isSelf = by === "dashboard" || by === "codepulse";
+
+  if (isSelf) {
+    // Self-resolved: simple approved/rejected badge
+    const approved = status === "approved";
+    const Icon = approved ? Check : X;
+    const colorClass = approved
+      ? "bg-(--status-ok)/10 text-(--status-ok)"
+      : "bg-(--status-error)/10 text-(--status-error)";
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded ${colorClass}`}
+      >
+        <Icon size={12} />
+        {approved ? "Approved" : "Rejected"}
+      </span>
+    );
+  }
+
+  // Cross-channel resolution
+  const channelLabel =
+    by.charAt(0).toUpperCase() + by.slice(1); // e.g. "Telegram"
+  const decisionLabel = status === "approved" ? "Approved" : "Rejected";
+
+  let Icon: typeof MessageCircle;
+  if (by === "telegram") Icon = MessageCircle;
+  else if (by === "dashboard" || by === "codepulse") Icon = Monitor;
+  else Icon = ExternalLink;
+
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded bg-(--muted) text-(--muted-foreground)">
+      <Icon size={12} />
+      {`Resolved via ${channelLabel} — ${decisionLabel}`}
+    </span>
+  );
+}
+
 // ─── Alert inline actions ─────────────────────────────────────────────────────
 
 function AlertInlineActions({ alertId }: { alertId: Id<"alerts"> }) {
@@ -147,6 +212,17 @@ export function InboxCard({
   const [rejectNote, setRejectNote] = useState("");
   const [rejectPending, setRejectPending] = useState(false);
 
+  // HITL items use REST and don't need WS connectivity for actions
+  const isHitlItem = item.hitlStatus !== undefined;
+
+  // HITL card state machine: server status overrides local state
+  // pending      -> show buttons
+  // approved     -> show ResolutionBadge (hide buttons)
+  // rejected     -> show ResolutionBadge (hide buttons)
+  const hitlResolved =
+    isHitlItem &&
+    (item.hitlStatus === "approved" || item.hitlStatus === "rejected");
+
   const handleApprove = async () => {
     if (!item.requestId || !onApprove) return;
     setApproving(true);
@@ -176,7 +252,8 @@ export function InboxCard({
     }
   };
 
-  const isActioned = approved || rejected;
+  // isActioned: local state for WS-based approvals; hitlResolved: server state for HITL
+  const isActioned = approved || rejected || hitlResolved;
   const cardOpacity = isActioned ? "opacity-60" : "opacity-100";
 
   return (
@@ -216,13 +293,13 @@ export function InboxCard({
         <AlertInlineActions alertId={item.alertId} />
       )}
 
-      {/* Approval action buttons */}
+      {/* Approval action buttons — only for pending items */}
       {item.type === "approval" && !isActioned && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <button
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-(--primary) text-(--primary-foreground) rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={approving || rejectPending || !wsConnected}
+              disabled={approving || rejectPending || (!isHitlItem && !wsConnected)}
               onClick={handleApprove}
             >
               {approving && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -230,12 +307,13 @@ export function InboxCard({
             </button>
             <button
               className="text-xs px-3 py-1.5 border border-(--destructive) text-(--destructive) rounded disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={approving || rejectPending || !wsConnected}
+              disabled={approving || rejectPending || (!isHitlItem && !wsConnected)}
               onClick={() => setShowRejectInput((v) => !v)}
             >
               Reject
             </button>
-            {!wsConnected && (
+            {/* WS offline warning only for non-HITL items */}
+            {!isHitlItem && !wsConnected && (
               <span className="text-xs text-(--muted-foreground)">
                 Offline — unavailable
               </span>
@@ -285,8 +363,16 @@ export function InboxCard({
         </div>
       )}
 
-      {/* Post-action indicator */}
-      {isActioned && (
+      {/* HITL resolution badge — shown when resolved via any channel */}
+      {hitlResolved && item.hitlStatus && (
+        <ResolutionBadge
+          status={item.hitlStatus as "approved" | "rejected"}
+          decidedBy={item.decidedBy}
+        />
+      )}
+
+      {/* Post-action indicator — for WS-based (non-HITL) approvals */}
+      {!hitlResolved && isActioned && (
         <p className="text-xs text-(--muted-foreground) italic">
           {approved ? "Approved" : "Rejected"}
         </p>
