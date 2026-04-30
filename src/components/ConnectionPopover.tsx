@@ -21,7 +21,7 @@ const PING_INTERVAL_MS = 30_000;
 
 // T-02-02: display base URL only, never the full URL with api_key query param
 const WS_BASE_URL =
-  (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8765";
+  (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "(not configured)";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

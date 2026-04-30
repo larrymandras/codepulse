@@ -166,7 +166,11 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
 
-    const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8181";
+    const wsUrl = import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined;
+    if (!wsUrl) {
+      setStatusSync("disconnected");
+      return;
+    }
     const url = `${wsUrl}/ws/telemetry`;
 
     // CRED-04: Pass API key as Sec-WebSocket-Protocol subprotocol.
