@@ -1,26 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("convex/react", () => ({
-  useQuery: vi.fn(() => undefined),
-}));
-
 vi.mock("../../convex/_generated/api", () => ({
   api: { heroStats: { summary: "heroStats:summary" } },
 }));
 
-// Mock useThrottledQuery to pass through to useQuery
-vi.mock("./useThrottledQuery", () => ({
-  useThrottledQuery: vi.fn(),
+vi.mock("./usePollQuery", () => ({
+  usePollQuery: vi.fn(),
 }));
 
-import { useThrottledQuery } from "./useThrottledQuery";
+import { usePollQuery } from "./usePollQuery";
 import { useHeroStats } from "./useHeroStats";
 
-const mockUseThrottledQuery = vi.mocked(useThrottledQuery);
+const mockUsePollQuery = vi.mocked(usePollQuery);
 
 describe("useHeroStats", () => {
   it("returns sensible defaults when query returns undefined", () => {
-    mockUseThrottledQuery.mockReturnValue(undefined);
+    mockUsePollQuery.mockReturnValue({ data: undefined, isStale: false, refetch: vi.fn() });
     const stats = useHeroStats();
 
     expect(stats.activeSessions).toBe(0);
@@ -58,7 +53,7 @@ describe("useHeroStats", () => {
       securityEvents: 0,
       health: "yellow" as const,
     };
-    mockUseThrottledQuery.mockReturnValue(mockData);
+    mockUsePollQuery.mockReturnValue({ data: mockData, isStale: false, refetch: vi.fn() });
     const stats = useHeroStats();
 
     expect(stats.activeSessions).toBe(5);

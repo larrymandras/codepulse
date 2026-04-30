@@ -1,8 +1,9 @@
-import { useThrottledQuery } from "./useThrottledQuery";
+import { usePollQuery } from "./usePollQuery";
 import { api } from "../../convex/_generated/api";
 
 export function useHeroStats() {
-  return useThrottledQuery(api.heroStats.summary, {}, 1000) ?? {
+  const { data } = usePollQuery(api.heroStats.summary, {}, 5000);
+  return data ?? {
     activeSessions: 0,
     runningAgents: 0,
     errorRate: 0,

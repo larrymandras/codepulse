@@ -1,6 +1,7 @@
-import { useThrottledQuery } from "./useThrottledQuery";
+import { usePollQuery } from "./usePollQuery";
 import { api } from "../../convex/_generated/api";
 
 export function useChannelHealth() {
-  return useThrottledQuery(api.channelHealth.latest, {}, 5000) ?? {};
+  const { data } = usePollQuery(api.channelHealth.latest, {}, 10000);
+  return data ?? {};
 }

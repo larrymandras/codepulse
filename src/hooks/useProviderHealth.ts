@@ -1,6 +1,7 @@
-import { useThrottledQuery } from "./useThrottledQuery";
+import { usePollQuery } from "./usePollQuery";
 import { api } from "../../convex/_generated/api";
 
 export function useProviderHealth() {
-  return useThrottledQuery(api.providerHealth.latest, {}, 5000) ?? {};
+  const { data } = usePollQuery(api.providerHealth.latest, {}, 10000);
+  return data ?? {};
 }

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useThrottledQuery } from "./useThrottledQuery";
+import { usePollQuery } from "./usePollQuery";
 import { api } from "../../convex/_generated/api";
 
 type ZoomLevel = "1h" | "6h" | "24h" | "7d";
@@ -15,13 +15,13 @@ export function useConversationTimeline() {
   const [zoom, setZoom] = useState<ZoomLevel>("6h");
 
   const { hours, bucketMinutes } = zoomConfig[zoom];
-  const now = Math.floor(Date.now() / 60000) * 60; // round to nearest minute (in seconds)
+  const now = Math.floor(Date.now() / 60000) * 60;
   const startTime = now - hours * 3600;
 
-  const data = useThrottledQuery(
+  const { data } = usePollQuery(
     api.conversationTimeline.buckets,
     { startTime, endTime: now, bucketMinutes },
-    2000
+    5000
   );
 
   const buckets = useMemo(() => data ?? [], [data]);
