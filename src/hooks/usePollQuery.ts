@@ -19,6 +19,7 @@ export function usePollQuery<Query extends FunctionReference<"query">>(
   const argsKey = JSON.stringify(args);
 
   const fetchData = useCallback(async () => {
+    if (typeof navigator !== "undefined" && !navigator.onLine) return;
     try {
       const result = await clientRef.current!.query(queryFn, args);
       if (mountedRef.current) {

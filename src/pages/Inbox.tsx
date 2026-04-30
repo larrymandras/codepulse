@@ -312,15 +312,11 @@ export default function Inbox() {
 
   // ─── Mark-read handler ────────────────────────────────────────────────────
   const handleMarkRead = useCallback(
-    (id: string) => {
+    (id: string, type?: InboxItemType) => {
       setReadIds((prev) => new Set([...prev, id]));
-      // Try to mark notification in Convex if the id looks like a Convex id
-      // (Convex ids are opaque strings — attempt and ignore errors)
-      try {
+      if (type === "notification") {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         void markNotificationRead({ id: id as any });
-      } catch {
-        // Not a notifications Convex id — ignore
       }
     },
     [markNotificationRead]

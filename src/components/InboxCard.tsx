@@ -54,7 +54,7 @@ interface InboxCardProps {
   item: InboxItem;
   onApprove?: (requestId: string) => Promise<void>;
   onReject?: (requestId: string, note?: string) => Promise<void>;
-  onMarkRead?: (id: string) => void;
+  onMarkRead?: (id: string, type?: InboxItemType) => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -248,7 +248,7 @@ export function InboxCard({
 
   const handleCardClick = () => {
     if (item.type !== "approval" && !item.read && onMarkRead) {
-      onMarkRead(item.id);
+      onMarkRead(item.id, item.type);
     }
   };
 
