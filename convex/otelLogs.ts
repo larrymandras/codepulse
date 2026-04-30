@@ -159,10 +159,11 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       }
     }
 
+    const status = failed === 0 ? 200 : processed > 0 ? 207 : 500;
     return new Response(
       JSON.stringify({ ok: failed === 0, processed, failed, failures }),
       {
-        status: 200,
+        status,
         headers: { "Content-Type": "application/json", ...headers },
       }
     );
