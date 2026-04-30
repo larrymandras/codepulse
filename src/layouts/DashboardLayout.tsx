@@ -13,6 +13,8 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
+import { NavBadge, NavBadgeDot } from "../components/NavBadge";
+import { useNavCounts } from "../hooks/useNavCounts";
 import { Separator } from "@/components/ui/separator";
 import {
   LayoutDashboard,
@@ -162,11 +164,13 @@ function NavGroup({
   items,
   onNavClick,
   collapsed,
+  badgeCounts,
 }: {
   label: string;
   items: typeof commandNavItems;
   onNavClick?: () => void;
   collapsed?: boolean;
+  badgeCounts?: Record<string, number>;
 }) {
   return (
     <>
@@ -193,8 +197,16 @@ function NavGroup({
               }`
             }
           >
-            <IconComponent className="h-4 w-4 shrink-0" />
+            {collapsed ? (
+              <span className="relative">
+                <IconComponent className="h-4 w-4 shrink-0" />
+                {badgeCounts?.[item.to] ? <NavBadgeDot count={badgeCounts[item.to]} /> : null}
+              </span>
+            ) : (
+              <IconComponent className="h-4 w-4 shrink-0" />
+            )}
             {!collapsed && item.label}
+            {!collapsed && badgeCounts?.[item.to] ? <NavBadge count={badgeCounts[item.to]} /> : null}
           </NavLink>
         );
         if (collapsed) {
@@ -226,6 +238,12 @@ function SidebarContent({
   const isConnected = convexState.isWebSocketConnected;
   const dotColor = isConnected ? "bg-green-500" : "bg-yellow-500";
   const statusLabel = isConnected ? "Connected to Convex" : "Convex: reconnecting";
+  const counts = useNavCounts();
+  const badgeCounts: Record<string, number> = {
+    "/alerts": counts.alerts,
+    "/inbox": counts.inbox,
+    "/tasks": counts.tasks,
+  };
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -255,11 +273,11 @@ function SidebarContent({
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
-        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} collapsed={collapsed} />
+        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} collapsed={collapsed} badgeCounts={badgeCounts} />
         <Separator className="my-2 mx-3" />
-        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} collapsed={collapsed} />
+        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} collapsed={collapsed} badgeCounts={badgeCounts} />
         <Separator className="my-2 mx-3" />
-        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} collapsed={collapsed} />
+        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} collapsed={collapsed} badgeCounts={badgeCounts} />
       </nav>
 
       {/* Collapse Toggle + Connection Status */}
