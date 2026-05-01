@@ -47,6 +47,7 @@ const dreamingSchema: Record<string, FieldSchema> = {
 };
 
 const advisorSchema: Record<string, FieldSchema> = {
+  type: { type: "string", required: false },
   provider: { type: "string", required: true },
   sessionId: { type: "string", required: false },
   model: { type: "string", required: false },
