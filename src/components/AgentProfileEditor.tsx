@@ -66,7 +66,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
     } else {
       // Create a new avatar with the image
       const id = await createAvatar({
-        name: name || "agent",
+        name: name || "New Agent",
         emoji: emoji || undefined,
         color: color || undefined,
         imageStorageId: storageId as Id<"_storage">,
@@ -147,7 +147,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
       .map((c) => c.trim())
       .filter(Boolean);
     const id = await createAvatar({
-      name: name || "agent",
+      name: name || "New Agent",
       emoji: selectedEmoji,
       color: color || undefined,
       description: description || undefined,

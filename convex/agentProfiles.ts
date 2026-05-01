@@ -18,7 +18,7 @@ export const create = mutation({
       name: args.name,
       model: args.model,
       avatarId: args.avatarId,
-      displayName: args.displayName,
+      displayName: args.displayName ?? args.name,
       createdAt: now,
       updatedAt: now,
     });
