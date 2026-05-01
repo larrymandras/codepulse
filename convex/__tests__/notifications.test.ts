@@ -113,4 +113,30 @@ describe("notifications lifecycle (CPHLTH-09)", () => {
     // Verifies the exact index usage pattern: eq("type", ...).eq("read", false)
     expect(src).toMatch(/\.eq\("type",\s*args\.type\)\s*\.eq\("read",\s*false\)/s);
   });
+
+  it("useNotificationToasts hook calls markRead after displaying each toast (DQAL-03)", () => {
+    const hookSrc = readFileSync(
+      resolve(__dirname, "../../src/hooks/useNotificationToasts.ts"),
+      "utf-8"
+    );
+    // Hook must call markRead (the authoritative persistence write)
+    expect(hookSrc).toContain("void markRead");
+    // Hook must reference the correct API path
+    expect(hookSrc).toContain("api.notifications.markRead");
+    // Hook must subscribe to latestUnread for toast type
+    expect(hookSrc).toContain("api.notifications.latestUnread");
+    // latestUnread filters by read:false (already asserted above, but close the loop)
+    expect(src).toMatch(/\.eq\("read",\s*false\)/);
+  });
+});
+
+describe("package.json dependency hygiene (DQAL-04)", () => {
+  it("@types/dagre is not in prod dependencies", () => {
+    const pkgJson = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf-8")
+    );
+    const prodDeps = Object.keys(pkgJson.dependencies ?? {});
+    const typesInProd = prodDeps.filter((d) => d.startsWith("@types/"));
+    expect(typesInProd).toEqual([]);
+  });
 });
