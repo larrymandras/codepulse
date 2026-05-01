@@ -23,6 +23,7 @@ export const upsertLifecycle = mutation({
     errorMessage: v.optional(v.string()),
     contextSnapshot: v.optional(v.any()),
     parentExecutionId: v.optional(v.string()),
+    cancelRequested: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -38,6 +39,8 @@ export const upsertLifecycle = mutation({
       if (args.profileId !== undefined) patch.profileId = args.profileId;
       if (args.channelId !== undefined) patch.channelId = args.channelId;
       if (args.parentExecutionId !== undefined) patch.parentExecutionId = args.parentExecutionId;
+      if (args.queuedAt !== undefined) patch.queuedAt = args.queuedAt;
+      if (args.cancelRequested !== undefined) patch.cancelRequested = args.cancelRequested;
       if (args.startedAt !== undefined) patch.startedAt = args.startedAt;
       if (args.completedAt !== undefined) patch.completedAt = args.completedAt;
       if (args.durationMs !== undefined) patch.durationMs = args.durationMs;
@@ -60,6 +63,7 @@ export const upsertLifecycle = mutation({
         errorMessage: args.errorMessage,
         contextSnapshot: args.contextSnapshot,
         parentExecutionId: args.parentExecutionId,
+        cancelRequested: args.cancelRequested,
       });
     }
   },

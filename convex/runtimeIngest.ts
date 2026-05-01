@@ -590,7 +590,22 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           break;
         }
         case "command_execution": {
-          const d = data as any;
+          const d = data as {
+            executionId?: string; execution_id?: string;
+            toolName?: string; tool_name?: string;
+            origin?: string;
+            profileId?: string; profile_id?: string;
+            channelId?: string; channel_id?: string;
+            status?: string;
+            queuedAt?: number; queued_at?: number;
+            startedAt?: number; started_at?: number;
+            completedAt?: number; completed_at?: number;
+            durationMs?: number; duration_ms?: number;
+            errorMessage?: string; error_message?: string; error?: string;
+            contextSnapshot?: unknown; context_snapshot?: unknown;
+            parentExecutionId?: string; parent_execution_id?: string;
+            cancelRequested?: boolean;
+          };
           await ctx.runMutation(api.commandExecutions.upsertLifecycle, {
             executionId: d.executionId ?? d.execution_id ?? "unknown",
             toolName: d.toolName ?? d.tool_name,
@@ -605,6 +620,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             errorMessage: d.errorMessage ?? d.error_message ?? d.error,
             contextSnapshot: d.contextSnapshot ?? d.context_snapshot,
             parentExecutionId: d.parentExecutionId ?? d.parent_execution_id,
+            cancelRequested: d.cancelRequested,
           });
           break;
         }

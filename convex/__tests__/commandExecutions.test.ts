@@ -21,8 +21,8 @@ describe("commandExecutions upsertLifecycle (CPHLTH-07)", () => {
     expect(commandExecutions.upsertLifecycle).toBeDefined();
   });
 
-  it("upsertLifecycle args schema includes all 5 previously-missing fields", () => {
-    // These 5 fields were missing from the original upsertLifecycle args schema
+  it("upsertLifecycle args schema includes all previously-missing fields", () => {
+    // These fields were missing from the original upsertLifecycle args schema
     const requiredFields = [
       "toolName",
       "origin",
@@ -63,6 +63,18 @@ describe("commandExecutions upsertLifecycle (CPHLTH-07)", () => {
     expect(src).toContain("profileId:");
     expect(src).toContain("channelId:");
     expect(src).toContain("parentExecutionId:");
+  });
+
+  it("upsertLifecycle args schema includes cancelRequested", () => {
+    expect(src).toContain("cancelRequested: v.optional(v.boolean())");
+  });
+
+  it("upsertLifecycle patch block includes queuedAt conditional update", () => {
+    expect(src).toMatch(/args\.queuedAt\s*!==\s*undefined/);
+  });
+
+  it("upsertLifecycle patch block includes cancelRequested conditional update", () => {
+    expect(src).toMatch(/args\.cancelRequested\s*!==\s*undefined/);
   });
 
   it("listExecutions query is exported", () => {
