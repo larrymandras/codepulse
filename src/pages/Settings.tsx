@@ -14,6 +14,7 @@ import InfoTooltip from "../components/InfoTooltip";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { NotificationPreferences } from "../components/NotificationPreferences";
 import LLMProviderConfig from "../components/LLMProviderConfig";
+import FilesystemAccess from "../components/FilesystemAccess";
 import type { AgentProfile } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -300,6 +301,13 @@ export default function Settings() {
             <span className="text-gray-300 text-xs">{import.meta.env.MODE}</span>
           </div>
         </div>
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Filesystem Access */}
+      <SectionErrorBoundary name="Filesystem Access">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <FilesystemAccess />
       </div>
       </SectionErrorBoundary>
 
