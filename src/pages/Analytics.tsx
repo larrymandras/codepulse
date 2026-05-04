@@ -27,6 +27,7 @@ import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
+import { EffortDistributionSection } from "../components/EffortDistributionSection";
 import {
   Table,
   TableHeader,
@@ -251,6 +252,14 @@ export default function Analytics() {
               ))}
             </TableBody>
           </Table>
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Effort & Routing (EFF-03, D-12) */}
+      <SectionErrorBoundary name="Effort & Routing">
+        <SectionHeader title="Effort & Routing" />
+        <GlassPanel className="p-4">
+          <EffortDistributionSection />
         </GlassPanel>
       </SectionErrorBoundary>
 
