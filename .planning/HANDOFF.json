@@ -1,0 +1,29 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-04T22:13:27.279Z",
+  "phase": "59",
+  "phase_name": "rubric-inspired-observability",
+  "phase_dir": ".planning/phases/59-rubric-inspired-observability-status-heartbeat-grid-cron-cal",
+  "plan": 0,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "completed_tasks": [],
+  "remaining_tasks": [
+    {"id": 1, "name": "Plan 59-01: Data foundation (Wave 1)", "status": "not_started"},
+    {"id": 2, "name": "Plan 59-02: Status Heartbeat Grid (Wave 2)", "status": "not_started"},
+    {"id": 3, "name": "Plan 59-03: Cron Calendar View (Wave 2)", "status": "not_started"},
+    {"id": 4, "name": "Plan 59-04: Pipeline Flow Diagram (Wave 2)", "status": "not_started"},
+    {"id": 5, "name": "Plan 59-05: Operations page wiring (Wave 3)", "status": "not_started"}
+  ],
+  "blockers": [],
+  "human_actions_pending": [],
+  "decisions": [
+    {"decision": "5 plans in 3 waves — Wave 1 (data foundation) must complete before Wave 2 (3 parallel UI components)", "rationale": "Wave 2 plans depend on Convex tables, hooks, and utilities created in Wave 1", "phase": "59"},
+    {"decision": "Static agent roster in agentRoster.ts rather than live sync from Astridr", "rationale": "Avoids cross-repo bootstrap dependency; 10 agents hard-coded mirroring agent-types.yaml", "phase": "59"},
+    {"decision": "Category keyword heuristic in rhythmCategories.ts", "rationale": "No Astridr config changes needed — categories derived from action text", "phase": "59"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Run /gsd-execute-phase 59 to begin implementation",
+  "context_notes": "Planning fully complete. 5 plans verified by plan-checker (0 blockers, 2 minor warnings accepted). All 13 CONTEXT.md decisions (D-01 through D-13) covered. VALIDATION.md, PATTERNS.md, UI-SPEC.md all in place. Ready for execution."
+}
