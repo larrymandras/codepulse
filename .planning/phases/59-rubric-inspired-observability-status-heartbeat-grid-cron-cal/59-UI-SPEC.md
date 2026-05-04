@@ -58,12 +58,12 @@ Exceptions:
 |------|------|--------|-------------|------|-------|
 | Body | 14px | 400 | 1.5 | Geist Variable | Tile counters, panel descriptions, calendar entry labels |
 | Label | 12px | 400 | 1.4 | Geist Variable | Muted captions, badge text, section sub-labels, MetricCard labels |
-| Heading | 16px | 600 | 1.25 | Geist Variable | Panel section headers (SectionHeader pattern), tile agent names |
+| Heading | 16px | 700 | 1.25 | Geist Variable | Panel section headers (SectionHeader pattern), tile agent names |
 | Display | 24px | 700 | 1.2 | Cinzel | Page title "Operations" only |
 
 Notes:
-- MetricCard values: 28–32px tabular-nums, weight 700 (existing MetricCard pattern — pre-populated from REQUIREMENTS.md UI-02)
-- Code/durations: 13px JetBrains Mono, weight 400 (inline duration values in expanded detail panels)
+- MetricCard value size (28–32px) is defined in the existing MetricCard component — not re-declared in this phase
+- Inline durations in expanded detail panels use the Label size (12px) with JetBrains Mono font applied
 - Section headers: uppercase + tracking-wide + muted-foreground (existing SectionHeader pattern — REQUIREMENTS.md UI-03)
 
 ---
