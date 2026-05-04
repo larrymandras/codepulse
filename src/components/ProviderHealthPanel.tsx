@@ -36,7 +36,7 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
         <div className="space-y-1.5">
           <div className="text-xs text-gray-400">{state?.label}</div>
           <div className="text-xs text-gray-400">
-            {Math.round(data.successRate)}% success
+            {Math.round(data.successRate * 100)}% success
           </div>
           <div className="text-xs text-gray-400">
             {(data.latencyEmaMs / 1000).toFixed(1)}s latency
