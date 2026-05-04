@@ -713,8 +713,8 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         case "provider.state_change": {
           const d = data as any;
           await ctx.runMutation(api.providerHealth.recordStateChange, {
-            providerName: d.providerName ?? d.provider_name ?? d.name ?? "unknown",
-            state: d.state ?? "unknown",
+            providerName: d.provider ?? d.providerName ?? d.provider_name ?? d.name ?? "unknown",
+            state: d.new_state ?? d.state ?? "unknown",
             latencyEmaMs: d.latencyEmaMs ?? d.latency_ema_ms ?? 0,
             successRate: d.successRate ?? d.success_rate ?? 0,
             consecutiveFailures: d.consecutiveFailures ?? d.consecutive_failures ?? 0,
