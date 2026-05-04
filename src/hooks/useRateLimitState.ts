@@ -17,19 +17,21 @@ export function useRateLimitState(providerName: string): BadgeState {
     const unsubHit = subscribeEvent("rate_limit_hit", (event) => {
       const d = event.data as any;
       if (d?.provider === providerName || d?.provider_name === providerName) {
-        setWsEvents((prev) => [
-          ...prev,
-          { eventType: "rate_limit_hit", timestamp: Date.now() / 1000 },
-        ]);
+        setWsEvents((prev) => {
+          const cutoff = Date.now() / 1000 - 300;
+          const pruned = prev.filter((e) => e.timestamp > cutoff);
+          return [...pruned, { eventType: "rate_limit_hit", timestamp: Date.now() / 1000 }];
+        });
       }
     });
     const unsubWarn = subscribeEvent("rate_limit_warning", (event) => {
       const d = event.data as any;
       if (d?.provider === providerName || d?.provider_name === providerName) {
-        setWsEvents((prev) => [
-          ...prev,
-          { eventType: "rate_limit_warning", timestamp: Date.now() / 1000 },
-        ]);
+        setWsEvents((prev) => {
+          const cutoff = Date.now() / 1000 - 300;
+          const pruned = prev.filter((e) => e.timestamp > cutoff);
+          return [...pruned, { eventType: "rate_limit_warning", timestamp: Date.now() / 1000 }];
+        });
       }
     });
     return () => {
