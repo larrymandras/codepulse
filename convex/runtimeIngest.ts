@@ -816,6 +816,46 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "context_pressure": {
+          const d = data as any;
+          await ctx.runMutation(api.contextPressure.insert, {
+            sessionId: d.session_id ?? d.sessionId ?? "unknown",
+            fillPercent: d.fill_percent ?? d.fillPercent ?? 0,
+            tokensUsed: d.tokens_used ?? d.tokensUsed ?? 0,
+            tokensMax: d.tokens_max ?? d.tokensMax ?? 0,
+            turnDelta: d.turn_delta ?? d.turnDelta ?? 0,
+            avgPerTurn: d.avg_per_turn ?? d.avgPerTurn ?? 0,
+            thresholdCrossed: d.threshold_crossed ?? d.thresholdCrossed ?? false,
+            systemPromptOverhead: d.system_prompt_overhead ?? d.systemPromptOverhead,
+            turnNumber: d.turn_number ?? d.turnNumber,
+            timestamp,
+          });
+          break;
+        }
+        case "rate_limit_hit": {
+          const d = data as any;
+          await ctx.runMutation(api.rateLimitEvents.insert, {
+            provider: d.provider ?? d.provider_name ?? "unknown",
+            eventType: "rate_limit_hit",
+            httpStatus: d.http_status ?? d.httpStatus ?? 429,
+            retryAfter: d.retry_after ?? d.retryAfter,
+            remainingQuota: d.remaining_quota ?? d.remainingQuota,
+            timestamp,
+          });
+          break;
+        }
+        case "rate_limit_warning": {
+          const d = data as any;
+          await ctx.runMutation(api.rateLimitEvents.insert, {
+            provider: d.provider ?? "unknown",
+            eventType: "rate_limit_warning",
+            currentRpm: d.current_rpm ?? d.currentRpm,
+            limitRpm: d.limit_rpm ?? d.limitRpm,
+            percentUsed: d.percent_used ?? d.percentUsed,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

@@ -57,6 +57,9 @@ const TOPIC_EVENT_MAP: Record<string, Set<string>> = {
     "heartbeat_alerts",
     "mcp_connection",
     "context_cache",
+    "context_pressure",      // Phase 094
+    "rate_limit_hit",        // Phase 094
+    "rate_limit_warning",    // Phase 094
   ]),
   security: new Set(["security_event", "secret_ref_event"]),
   executions: new Set([
