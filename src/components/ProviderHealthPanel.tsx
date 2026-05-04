@@ -3,6 +3,7 @@ import { useProviderHealth } from "../hooks/useProviderHealth";
 import Sparkline from "./Sparkline";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import RateLimitBadge from "./RateLimitBadge";
 
 const stateConfig: Record<string, { dot: string; label: string }> = {
   closed: { dot: "bg-green-500", label: "closed (ok)" },
@@ -28,7 +29,8 @@ function ProviderCard({ name, data }: { name: string; data: any }) {
         <span
           className={`w-2 h-2 rounded-full ${state?.dot ?? "bg-gray-600"}`}
         />
-        <span className="text-sm font-medium text-gray-200">{name}</span>
+        <span className="text-sm font-medium text-gray-200 flex-1">{name}</span>
+        <RateLimitBadge provider={name} />
       </div>
       {data ? (
         <div className="space-y-1.5">

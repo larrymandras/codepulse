@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import OrbitalStatusRings from "../components/OrbitalStatusRings";
+import ContextGauge from "../components/ContextGauge";
 import DockerPanel from "../components/DockerPanel";
 import SupabasePanel from "../components/SupabasePanel";
 import SystemResources from "../components/SystemResources";
@@ -74,6 +75,10 @@ export default function Infrastructure() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Infrastructure</h1>
       <OrbitalStatusRings />
+      {/* Phase 094: Context Gauge */}
+      <SectionErrorBoundary name="Context Gauge">
+        <ContextGauge />
+      </SectionErrorBoundary>
       <SectionErrorBoundary name="Infrastructure Health">
         <div ref={flashRef} className="space-y-6">
           <SectionErrorBoundary name="Channel Health">

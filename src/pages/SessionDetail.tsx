@@ -84,7 +84,7 @@ export default function SessionDetail() {
 
           {/* Context Gauge + Gantt side by side on large screens */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <ContextGauge sessionId={id} />
+            <ContextGauge />
             <div className="lg:col-span-2">
               <GanttTimeline
                 events={events}
