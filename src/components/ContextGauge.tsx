@@ -66,10 +66,11 @@ export default function ContextGauge() {
     return wsOverlay.timestamp > (convexData.timestamp ?? 0) ? wsOverlay : convexData;
   }, [convexData, wsOverlay]);
 
-  // Stale: server marked it stale, or last event older than 30s
+  // Stale: server marked it stale, or last event older than 120s
+  // (events only fire per LLM turn — user may be reading/thinking between turns)
   const isStale =
     latest?.stale === true ||
-    (latest != null && Date.now() / 1000 - latest.timestamp > 30);
+    (latest != null && Date.now() / 1000 - latest.timestamp > 120);
 
   // Sparkline from history (fillPercent 0-100)
   const sparkline = useMemo(() => {
