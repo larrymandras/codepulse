@@ -10,6 +10,8 @@ export const insertMetric = mutation({
     inputTokens: v.float64(),
     outputTokens: v.float64(),
     modelUsed: v.optional(v.string()),
+    complexityTier: v.optional(v.string()),
+    fromOverride: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("agentMetrics", {
@@ -20,6 +22,8 @@ export const insertMetric = mutation({
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
       modelUsed: args.modelUsed,
+      complexityTier: args.complexityTier,
+      fromOverride: args.fromOverride,
     });
   },
 });

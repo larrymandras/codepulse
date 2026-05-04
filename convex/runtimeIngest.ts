@@ -643,6 +643,21 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             inputTokens: d.inputTokens ?? d.input_tokens ?? 0,
             outputTokens: d.outputTokens ?? d.output_tokens ?? 0,
             modelUsed: d.modelUsed ?? d.model_used ?? d.model,
+            complexityTier: d.complexityTier ?? d.complexity_tier,
+            fromOverride: d.fromOverride ?? d.from_override,
+            timestamp,
+          });
+          break;
+        }
+        case "complexity_assessed": {
+          const d = data as any;
+          await ctx.runMutation(api.complexityAssessments.insert, {
+            sessionId: d.session_id ?? d.sessionId ?? "unknown",
+            tier: d.tier ?? "unknown",
+            score: d.score ?? 0,
+            signals: d.signals,
+            model: d.model ?? "unknown",
+            fromOverride: d.from_override ?? d.fromOverride ?? false,
             timestamp,
           });
           break;

@@ -1219,9 +1219,28 @@ export default defineSchema({
     outputTokens: v.float64(),
     modelUsed: v.optional(v.string()),
     archived: v.optional(v.boolean()),
+    complexityTier: v.optional(v.string()),
+    fromOverride: v.optional(v.boolean()),
   })
     .index("by_agent_timestamp", ["agentId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // COMPLEXITY ASSESSMENTS (Phase 093)
+  // ============================================================
+
+  complexityAssessments: defineTable({
+    sessionId: v.string(),
+    tier: v.string(),
+    score: v.float64(),
+    signals: v.optional(v.any()),
+    model: v.string(),
+    fromOverride: v.boolean(),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_tier", ["tier", "timestamp"])
+    .index("by_session", ["sessionId", "timestamp"]),
 
   // ============================================================
   // TOOL ASSIGNMENT TABLES
