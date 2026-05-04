@@ -213,6 +213,29 @@ Plans:
 - [x] 58-01-PLAN.md — Status field on CommandEntry, collapsible sections, dynamic search placeholder, test update, visual verification
 **UI hint**: yes
 
+### Phase 59: Rubric-Inspired Observability
+
+**Goal:** Operators see Astridr's live operational state through three new dashboard surfaces — a real-time agent status grid (active/waiting/recent/idle), a 7-day cron calendar showing daily_rhythm tasks color-coded by category, and an animated pipeline flow diagram tracing messages through receive->route->process->respond->TTS stages.
+**Requirements**: D-01 through D-13 (cross-project: Astridr emits heartbeat/step events, CodePulse consumes and visualizes)
+**Depends on:** Phase 58
+**Inspiration:** [Rubric](https://github.com/robonuggets/rubric) command center patterns (status grid, cron calendar, flow visualization)
+**Success Criteria** (what must be TRUE):
+  1. Operations page accessible at /operations with sidebar nav entry
+  2. Status grid shows all 10 configured agent types as tiles with 4 states (active/waiting/recent/idle), pulse animations, 5-min idle timeout
+  3. Cron calendar shows 7-day hour grid combining Astridr daily_rhythm entries and Convex crons, with category color coding and system cron toggle
+  4. Pipeline flow renders 5 stages as animated React Flow diagram with live/replay modes
+  5. Click-to-expand detail panels on tiles, calendar slots, and pipeline nodes
+  6. WebSocket instant updates for agent_status and step_started/step_completed events
+  7. SectionErrorBoundary wrapping prevents panel crashes from propagating
+**Plans:** 5 plans
+Plans:
+- [ ] 59-01-PLAN.md — Data foundation: Convex schema (3 tables), domain modules, ingest routing, WS topic map, static utilities, hooks, test stubs
+- [ ] 59-02-PLAN.md — Status Heartbeat Grid: AgentStatusTile + StatusHeartbeatGrid with WS subscription, idle timeout, inline detail
+- [ ] 59-03-PLAN.md — Cron Calendar View: 7-day hour grid, category colors, system cron toggle, slot popover, time indicator
+- [ ] 59-04-PLAN.md — Pipeline Flow Diagram: PipelineStageNode + PipelineFlowDiagram with live/replay modes, WS subscription
+- [ ] 59-05-PLAN.md — Operations page wiring: page composition, route registration, nav entry, visual verification
+**UI hint**: yes
+
 ## Execution Order
 
 ```
@@ -245,23 +268,8 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 6. Alert Routing | 0/5 | Planned | - |
 | 7. Intelligence Layer | 0/5 | Planned | - |
 | 58. Infrastructure Layer | 2/1 | Complete    | 2026-04-14 |
-
-### Phase 59: Rubric-Inspired Observability
-
-**Goal:** Operators see Ástríðr's live operational state through three new dashboard surfaces — a real-time agent status grid (active/waiting/recent/idle), a 7-day cron calendar showing daily_rhythm tasks color-coded by category, and an animated pipeline flow diagram tracing messages through receive→route→process→respond→TTS stages.
-**Requirements**: Cross-project (Ástríðr emits heartbeat/step events, CodePulse consumes and visualizes)
-**Depends on:** Phase 58
-**Inspiration:** [Rubric](https://github.com/robonuggets/rubric) command center patterns (status grid, cron calendar, flow visualization)
-**Plans:** 0 plans
-
-Tasks:
-1. **Status Heartbeat Grid** — Ástríðr POSTs status events on inbound messages and task completions → Convex ingest endpoint → React grid component with 4 states (active/waiting/recent/idle), auto-timeout to idle after 5min, pulsing amber "recent" indicator
-2. **Cron Calendar View** — New CodePulse page rendering Ástríðr's `daily_rhythm` entries as an hour-by-hour 7-day calendar grid with category color coding (health=teal, morning=orange, research=blue, content=purple, review=red), current-time indicator, and next-up countdown
-3. **Pipeline Flow Visualization** — Ástríðr emits step events from message handling pipeline (receive→route→process→respond→TTS followup) → CodePulse renders as an animated React Flow diagram with live progress indicators per step
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 59 to break down)
+| 59. Rubric-Inspired Observability | 0/5 | Planned | - |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 58 (Infrastructure Layer) replanned: consolidated from 2 plans to 1 plan covering D-02 (status field), D-06/D-07 (collapsible sections), D-12 (dynamic placeholder).*
+*Last updated: 2026-05-04 — Phase 59 (Rubric-Inspired Observability) planned: 5 plans in 3 waves covering Operations page with status grid, cron calendar, pipeline flow.*
