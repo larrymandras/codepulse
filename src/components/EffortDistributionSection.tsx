@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import {
@@ -25,7 +26,7 @@ const TIER_COLORS: Record<string, string> = {
 };
 
 export function EffortDistributionSection() {
-  const windowStart = Date.now() / 1000 - 30 * 86400; // 30 days
+  const windowStart = useMemo(() => Date.now() / 1000 - 30 * 86400, []);
   const distribution = useQuery(api.complexityAssessments.distribution, { windowStart });
   const costSaved = useQuery(api.complexityAssessments.costSaved30d);
 
