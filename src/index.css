@@ -111,6 +111,13 @@
   /* Phase 72: War Room speaking ring tokens */
   --speaking-ring: oklch(0.65 0.15 142);
   --speaking-ring-glow: oklch(0.65 0.15 142 / 0.35);
+
+  /* Phase 093: Effort tier segment colors */
+  --tier-trivial: oklch(0.72 0.12 142);
+  --tier-simple: oklch(0.72 0.10 200);
+  --tier-moderate: oklch(0.72 0.10 85);
+  --tier-complex: oklch(0.60 0.16 270);
+  --tier-critical: oklch(0.60 0.18 320);
 }
 
 .dark {
@@ -163,6 +170,13 @@
   --glass-bg: oklch(0.205 0 0 / 0.60);
   --glass-border: oklch(0.269 0 0 / 0.5);
   --glass-blur: 12px;
+
+  /* Phase 093: Effort tier segment colors (dark) */
+  --tier-trivial: oklch(0.72 0.17 142);
+  --tier-simple: oklch(0.72 0.12 200);
+  --tier-moderate: oklch(0.78 0.12 85);
+  --tier-complex: oklch(0.68 0.18 270);
+  --tier-critical: oklch(0.68 0.20 320);
 }
 
 @layer base {
