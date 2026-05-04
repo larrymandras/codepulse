@@ -1243,6 +1243,40 @@ export default defineSchema({
     .index("by_session", ["sessionId", "timestamp"]),
 
   // ============================================================
+  // CONTEXT & RATE LIMIT TABLES (Phase 094)
+  // ============================================================
+
+  contextPressure: defineTable({
+    sessionId: v.string(),
+    fillPercent: v.float64(),
+    tokensUsed: v.float64(),
+    tokensMax: v.float64(),
+    turnDelta: v.float64(),
+    avgPerTurn: v.float64(),
+    thresholdCrossed: v.boolean(),
+    systemPromptOverhead: v.optional(v.float64()),
+    turnNumber: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_session", ["sessionId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  rateLimitEvents: defineTable({
+    provider: v.string(),
+    eventType: v.string(),
+    httpStatus: v.optional(v.float64()),
+    retryAfter: v.optional(v.float64()),
+    remainingQuota: v.optional(v.float64()),
+    currentRpm: v.optional(v.float64()),
+    limitRpm: v.optional(v.float64()),
+    percentUsed: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_provider", ["provider", "timestamp"])
+    .index("by_type", ["eventType", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
   // TOOL ASSIGNMENT TABLES
   // ============================================================
 
