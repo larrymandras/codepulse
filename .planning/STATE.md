@@ -55,6 +55,10 @@ Progress: [██████████] 100%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 59 added: Rubric-Inspired Observability — Status heartbeat grid, cron calendar view, pipeline flow visualization
+
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.

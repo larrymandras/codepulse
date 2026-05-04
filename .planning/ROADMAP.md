@@ -246,6 +246,22 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 7. Intelligence Layer | 0/5 | Planned | - |
 | 58. Infrastructure Layer | 2/1 | Complete    | 2026-04-14 |
 
+### Phase 59: Rubric-Inspired Observability
+
+**Goal:** Operators see Ástríðr's live operational state through three new dashboard surfaces — a real-time agent status grid (active/waiting/recent/idle), a 7-day cron calendar showing daily_rhythm tasks color-coded by category, and an animated pipeline flow diagram tracing messages through receive→route→process→respond→TTS stages.
+**Requirements**: Cross-project (Ástríðr emits heartbeat/step events, CodePulse consumes and visualizes)
+**Depends on:** Phase 58
+**Inspiration:** [Rubric](https://github.com/robonuggets/rubric) command center patterns (status grid, cron calendar, flow visualization)
+**Plans:** 0 plans
+
+Tasks:
+1. **Status Heartbeat Grid** — Ástríðr POSTs status events on inbound messages and task completions → Convex ingest endpoint → React grid component with 4 states (active/waiting/recent/idle), auto-timeout to idle after 5min, pulsing amber "recent" indicator
+2. **Cron Calendar View** — New CodePulse page rendering Ástríðr's `daily_rhythm` entries as an hour-by-hour 7-day calendar grid with category color coding (health=teal, morning=orange, research=blue, content=purple, review=red), current-time indicator, and next-up countdown
+3. **Pipeline Flow Visualization** — Ástríðr emits step events from message handling pipeline (receive→route→process→respond→TTS followup) → CodePulse renders as an animated React Flow diagram with live progress indicators per step
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 59 to break down)
+
 ---
 
 *Last updated: 2026-04-14 — Phase 58 (Infrastructure Layer) replanned: consolidated from 2 plans to 1 plan covering D-02 (status field), D-06/D-07 (collapsible sections), D-12 (dynamic placeholder).*
