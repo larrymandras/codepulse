@@ -1381,4 +1381,51 @@ export default defineSchema({
   })
     .index("by_timestamp", ["timestamp"])
     .index("by_profileId", ["profileId", "timestamp"]),
+
+  // ============================================================
+  // OPERATIONS PAGE — Agent Status, Daily Rhythm, Pipeline Steps (Phase 59)
+  // ============================================================
+
+  agentStatusEvents: defineTable({
+    agentId: v.string(),
+    state: v.string(),
+    currentTask: v.optional(v.string()),
+    errorCount: v.optional(v.float64()),
+    profileId: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_agentId", ["agentId", "timestamp"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_state", ["state", "timestamp"]),
+
+  dailyRhythmEntries: defineTable({
+    agentTypeId: v.string(),
+    action: v.string(),
+    channel: v.string(),
+    days: v.string(),
+    time: v.string(),
+    profileId: v.optional(v.string()),
+    category: v.optional(v.string()),
+    cronExpression: v.optional(v.string()),
+    syncedAt: v.float64(),
+  })
+    .index("by_agentType", ["agentTypeId"])
+    .index("by_syncedAt", ["syncedAt"]),
+
+  pipelineStepEvents: defineTable({
+    executionId: v.string(),
+    pipelineName: v.string(),
+    stepName: v.string(),
+    stepIndex: v.float64(),
+    status: v.string(),
+    durationMs: v.optional(v.float64()),
+    inputSize: v.optional(v.float64()),
+    outputSize: v.optional(v.float64()),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_execution", ["executionId", "timestamp"])
+    .index("by_pipeline", ["pipelineName", "timestamp"])
+    .index("by_status", ["status", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 });

@@ -898,6 +898,46 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "agent_status": {
+          const d = data as any;
+          await ctx.runMutation(api.agentStatus.recordEvent, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            state: d.state ?? "idle",
+            currentTask: d.currentTask ?? d.current_task ?? undefined,
+            errorCount: d.errorCount ?? d.error_count ?? undefined,
+            profileId: d.profileId ?? d.profile_id ?? undefined,
+            timestamp,
+          });
+          break;
+        }
+        case "daily_rhythm_sync": {
+          const d = data as any;
+          if (Array.isArray(d.entries)) {
+            await ctx.runMutation(api.dailyRhythm.upsertEntries, {
+              agentTypeId: d.agentTypeId ?? d.agent_type_id ?? "unknown",
+              entries: d.entries,
+              syncedAt: timestamp,
+            });
+          }
+          break;
+        }
+        case "step_started":
+        case "step_completed": {
+          const d = data as any;
+          await ctx.runMutation(api.pipelineStepEvents.recordEvent, {
+            executionId: d.executionId ?? d.execution_id ?? "unknown",
+            pipelineName: d.pipelineName ?? d.pipeline_name ?? "message_pipeline",
+            stepName: d.stepName ?? d.step_name ?? "unknown",
+            stepIndex: d.stepIndex ?? d.step_index ?? 0,
+            status: evt.eventType,
+            durationMs: d.durationMs ?? d.duration_ms ?? undefined,
+            inputSize: d.inputSize ?? d.input_size ?? undefined,
+            outputSize: d.outputSize ?? d.output_size ?? undefined,
+            error: d.error ?? undefined,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 
