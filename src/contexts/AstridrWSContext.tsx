@@ -60,6 +60,8 @@ const TOPIC_EVENT_MAP: Record<string, Set<string>> = {
     "context_pressure",      // Phase 094
     "rate_limit_hit",        // Phase 094
     "rate_limit_warning",    // Phase 094
+    "agent_status",          // Phase 59
+    "daily_rhythm_sync",     // Phase 59
   ]),
   security: new Set(["security_event", "secret_ref_event"]),
   executions: new Set([
@@ -68,6 +70,8 @@ const TOPIC_EVENT_MAP: Record<string, Set<string>> = {
     "job_lifecycle",
     "worktree_event",
     "pipe_execution",
+    "step_started",          // Phase 59
+    "step_completed",        // Phase 59
   ]),
   agents: new Set([
     "agent_coordination",
