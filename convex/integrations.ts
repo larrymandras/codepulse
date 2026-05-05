@@ -116,7 +116,8 @@ export const healthStatus = query({
     for (const msg of messages) {
       const ts = msg.timestamp * 1000;
       if (msg.chatId && telegramTs == null) telegramTs = ts;
-      if (msg.channelId && slackTs == null) slackTs = ts;
+      if (msg.channelId && msg.channelId !== "telegram" && slackTs == null)
+        slackTs = ts;
     }
 
     return {

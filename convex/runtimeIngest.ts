@@ -856,6 +856,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "system_resources": {
+          const d = data as any;
+          await ctx.runMutation(api.wsl2.upsertStatus, {
+            distro: "astridr-docker",
+            status: "running",
+            memoryMb: d.ram_used_mb ?? d.ramUsedMb,
+            cpuPercent: d.cpu ?? d.cpuPercent,
+          });
+          break;
+        }
       }
     }
 
