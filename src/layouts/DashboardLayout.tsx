@@ -125,6 +125,7 @@ const overviewNavItems = [
   { to: "/dreaming", label: "Dreaming", icon: "moon", group: "OVERVIEW" },
   { to: "/briefings", label: "Briefings", icon: "scroll", group: "OVERVIEW" },
   { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
+  { to: "/operations", label: "Operations", icon: "radio", group: "OVERVIEW" },
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
   { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
   { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },
