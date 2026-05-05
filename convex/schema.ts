@@ -1348,6 +1348,17 @@ export default defineSchema({
     .index("by_tool", ["toolId"]),
 
   // ============================================================
+  // LLM GATE EVENTS (Phase 099)
+  // ============================================================
+
+  llmGateEvents: defineTable({
+    enabled: v.boolean(),
+    reason: v.string(),
+    queuedCount: v.optional(v.number()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
   // PROMPT ASSEMBLY TELEMETRY
   // ============================================================
 

@@ -133,6 +133,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "llm_gate_changed": {
+          const d = data as any;
+          await ctx.runMutation(api.llmGateEvents.record, {
+            enabled: d.enabled ?? true,
+            reason: d.reason ?? "",
+            queuedCount: d.queued_replayed ?? d.queuedCount,
+            timestamp,
+          });
+          break;
+        }
         case "self_healing": {
           const d = data as any;
           // Compaction events have their own table — skip self-healing recording
