@@ -7,12 +7,61 @@ import AgentAvatar from "./AgentAvatar";
 import type { Id } from "../../convex/_generated/dataModel";
 import type { AgentProfile } from "../types";
 
-const MODELS = [
-  "claude-opus-4-6",
-  "claude-sonnet-4-6",
-  "claude-haiku-4-5",
-  "gpt-4o",
-  "other",
+const MODEL_GROUPS = [
+  {
+    label: "Anthropic",
+    models: [
+      "claude-opus-4-6",
+      "claude-sonnet-4-6",
+      "claude-haiku-4-5",
+    ],
+  },
+  {
+    label: "OpenAI",
+    models: [
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "gpt-4.1-nano",
+      "gpt-4o",
+      "gpt-4o-mini",
+      "o3",
+      "o3-mini",
+      "o4-mini",
+    ],
+  },
+  {
+    label: "Google Gemini",
+    models: [
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash-lite",
+    ],
+  },
+  {
+    label: "xAI Grok",
+    models: [
+      "grok-3",
+      "grok-3-mini",
+      "grok-3-fast",
+    ],
+  },
+  {
+    label: "Ollama (Local)",
+    models: [
+      "llama3.1",
+      "llama3.1:70b",
+      "llama3.1:405b",
+      "mistral",
+      "mistral-nemo",
+      "mixtral",
+      "codellama",
+      "deepseek-coder-v2",
+      "phi3",
+      "qwen2",
+      "gemma2",
+    ],
+  },
 ];
 
 interface AgentProfileEditorProps {
@@ -41,7 +90,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
   const [showUploader, setShowUploader] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const { create, update, remove } = useAgentProfileMutations();
+  const { create, update, remove, syncModel } = useAgentProfileMutations();
   const { create: createAvatar, update: updateAvatar, saveImage } = useAvatarMutations();
 
   const isNew = !profile;
@@ -128,6 +177,14 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
           avatarId: finalAvatarId,
           displayName: displayName || undefined,
         });
+      }
+      const effectiveProfileId = isNew
+        ? profileId || name.toLowerCase().replace(/\s+/g, "-")
+        : profile.profileId;
+      try {
+        await syncModel({ agentId: effectiveProfileId, modelDefault: model });
+      } catch (err) {
+        console.error("Failed to sync model to Ástríðr:", err);
       }
       onSave();
     } finally {
@@ -298,8 +355,12 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
           onChange={(e) => setModel(e.target.value)}
           className="w-full bg-gray-900/50 border border-gray-600/50 rounded-lg px-3 py-2 text-sm text-gray-200"
         >
-          {MODELS.map((m) => (
-            <option key={m} value={m}>{m}</option>
+          {MODEL_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.models.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
       </div>
