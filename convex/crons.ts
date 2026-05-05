@@ -73,4 +73,11 @@ crons.daily(
   internal.memoryQuality.evaluateInternal
 );
 
+// Infrastructure: Supabase health poll (every 30 minutes)
+crons.interval(
+  "poll-supabase-health",
+  { minutes: 30 },
+  internal.supabase.pollHealth
+);
+
 export default crons;
