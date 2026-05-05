@@ -227,9 +227,9 @@ Plans:
   5. Click-to-expand detail panels on tiles, calendar slots, and pipeline nodes
   6. WebSocket instant updates for agent_status and step_started/step_completed events
   7. SectionErrorBoundary wrapping prevents panel crashes from propagating
-**Plans:** 5 plans
+**Plans:** 1/5 plans executed
 Plans:
-- [ ] 59-01-PLAN.md — Data foundation: Convex schema (3 tables), domain modules, ingest routing, WS topic map, static utilities, hooks, test stubs
+- [x] 59-01-PLAN.md — Data foundation: Convex schema (3 tables), domain modules, ingest routing, WS topic map, static utilities, hooks, test stubs
 - [ ] 59-02-PLAN.md — Status Heartbeat Grid: AgentStatusTile + StatusHeartbeatGrid with WS subscription, idle timeout, inline detail
 - [ ] 59-03-PLAN.md — Cron Calendar View: 7-day hour grid, category colors, system cron toggle, slot popover, time indicator
 - [ ] 59-04-PLAN.md — Pipeline Flow Diagram: PipelineStageNode + PipelineFlowDiagram with live/replay modes, WS subscription
@@ -268,7 +268,7 @@ Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░�
 | 6. Alert Routing | 0/5 | Planned | - |
 | 7. Intelligence Layer | 0/5 | Planned | - |
 | 58. Infrastructure Layer | 2/1 | Complete    | 2026-04-14 |
-| 59. Rubric-Inspired Observability | 0/5 | Planned | - |
+| 59. Rubric-Inspired Observability | 1/5 | In Progress|  |
 
 ---
 
