@@ -8,7 +8,6 @@ import SupabasePanel from "../components/SupabasePanel";
 import SystemResources from "../components/SystemResources";
 import IntegrationHealth from "../components/IntegrationHealth";
 import GithubActionsPanel from "../components/GithubActionsPanel";
-import CompactionTimeline from "../components/CompactionTimeline";
 import ChannelHealthPanel from "../components/ChannelHealthPanel";
 import ProviderHealthPanel from "../components/ProviderHealthPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -97,9 +96,6 @@ export default function Infrastructure() {
       <IntegrationHealth />
       <SectionErrorBoundary name="GitHub Actions">
         <GithubActionsPanel />
-      </SectionErrorBoundary>
-      <SectionErrorBoundary name="Compaction Timeline">
-        <CompactionTimeline />
       </SectionErrorBoundary>
 
       {/* Startup Waterfall (CPUX-12) — wired to startupEvents Convex query */}

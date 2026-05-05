@@ -3,6 +3,14 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 
+function relativeTime(ts: number): string {
+  const diff = Math.max(0, Date.now() / 1000 - ts);
+  if (diff < 60) return `${Math.round(diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+}
+
 // ─── Threshold helpers ────────────────────────────────────────────────────────
 // Thresholds per D-12: green <60%, amber 60-85%, red >85%
 
@@ -36,6 +44,7 @@ interface ContextPressureOverlay {
 export default function ContextGauge() {
   const convexData = useQuery(api.contextPressure.latestForActiveSession);
   const history = useQuery(api.contextPressure.historyForActiveSession, { limit: 20 });
+  const compactionEvents = useQuery(api.compactionEvents.recent) ?? [];
   const { subscribeEvent } = useAstridrWS();
   const [wsOverlay, setWsOverlay] = useState<ContextPressureOverlay | null>(null);
 
@@ -233,6 +242,20 @@ export default function ContextGauge() {
               />
             );
           })}
+        </div>
+      )}
+
+      {/* Last compaction (replaces standalone CompactionTimeline) */}
+      {compactionEvents.length > 0 && (
+        <div className="mt-2 flex items-center gap-2 text-[10px] text-gray-500">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500/80 shrink-0" />
+          <span>Last compaction {relativeTime(compactionEvents[0].timestamp)}</span>
+          {compactionEvents[0].trigger && (
+            <span className="text-amber-400/70">({compactionEvents[0].trigger})</span>
+          )}
+          {compactionEvents.length > 1 && (
+            <span className="ml-auto text-gray-600">{compactionEvents.length} total</span>
+          )}
         </div>
       )}
     </div>
