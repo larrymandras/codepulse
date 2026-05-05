@@ -83,7 +83,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
 
     for (const evt of events) {
       const timestamp = evt.timestamp ?? now;
-      const rawData = evt.data ?? evt;
+      const rawData = evt.data ?? (evt as any).payload ?? evt;
       // Convex v.optional() rejects null — coerce to undefined for all top-level fields
       const data: Record<string, any> = {};
       for (const [k, v] of Object.entries(rawData)) {

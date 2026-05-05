@@ -59,3 +59,26 @@ export const internalPollRuns = internalMutation({
     }
   },
 });
+
+/**
+ * Remove all workflow run records with status "unknown" (data cleanup).
+ */
+export const purgeUnknownRuns = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const runs = await ctx.db
+      .query("githubWorkflowRuns")
+      .withIndex("by_triggeredAt")
+      .order("desc")
+      .take(100);
+
+    let deleted = 0;
+    for (const run of runs) {
+      if (run.status === "unknown" || run.workflowName === "unknown") {
+        await ctx.db.delete(run._id);
+        deleted++;
+      }
+    }
+    return { deleted };
+  },
+});
