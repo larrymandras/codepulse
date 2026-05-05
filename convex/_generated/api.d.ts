@@ -81,6 +81,7 @@ import type * as memoryTiers from "../memoryTiers.js";
 import type * as metrics from "../metrics.js";
 import type * as missionControl from "../missionControl.js";
 import type * as navCounts from "../navCounts.js";
+import type * as networkPolicy from "../networkPolicy.js";
 import type * as notifications from "../notifications.js";
 import type * as otelLogs from "../otelLogs.js";
 import type * as otelMetrics from "../otelMetrics.js";
@@ -201,6 +202,7 @@ declare const fullApi: ApiFromModules<{
   metrics: typeof metrics;
   missionControl: typeof missionControl;
   navCounts: typeof navCounts;
+  networkPolicy: typeof networkPolicy;
   notifications: typeof notifications;
   otelLogs: typeof otelLogs;
   otelMetrics: typeof otelMetrics;

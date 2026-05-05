@@ -65,6 +65,7 @@ export default function Security() {
   const vaultStats = useQuery(api.security.vaultStats);
   const sandboxOverview = useQuery(api.sandboxViolations.overview);
   const recentViolations = useQuery(api.sandboxViolations.recent, { limit: 20 });
+  const egressSummaries = useQuery(api.networkPolicy.recentSummaries);
 
   // All security events for Browser Guard and Network Policy tabs
   const allSecEvents = useQuery(api.security.recentEvents);
@@ -414,25 +415,52 @@ export default function Security() {
         {/* ── Network Policy Tab ── */}
         <TabsContent value="network-policy" className="space-y-6 mt-4">
           <SectionErrorBoundary name="Network Policy">
-            {/* Allowlist placeholder */}
+            {/* Active Hosts — most recent egress summary */}
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
               <h2 className="text-sm font-semibold text-gray-300 mb-3">
-                Provider Allowlist
-                <InfoTooltip text="Per-provider network allowlist entries from config.yaml network_policy section" />
+                Active Hosts
+                <InfoTooltip text="Hosts contacted in the most recent 60s egress summary cycle" />
               </h2>
-              <p className="text-xs text-gray-500 mb-4">
-                Allowlist entries are configured in <span className="font-mono text-gray-400">config.yaml</span> under <span className="font-mono text-gray-400">network_policy</span>.
-              </p>
-              <div className="grid grid-cols-[1fr_1fr_60px_80px] items-center gap-2 px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80">
-                <span>Provider</span>
-                <span>Host</span>
-                <span>Port</span>
-                <span>Type</span>
-              </div>
-              {/* Empty state — real data comes from config ingest (future plan) */}
-              <p className="text-sm text-gray-500 py-6 text-center">
-                No network policy rules configured. Add allowlist entries in config.yaml under network_policy.
-              </p>
+              {(() => {
+                const latest = egressSummaries?.[0];
+                if (!latest || !latest.hosts || Object.keys(latest.hosts).length === 0) {
+                  return (
+                    <p className="text-sm text-gray-500 py-6 text-center">
+                      No egress activity recorded yet. Host activity will appear after the first health cycle.
+                    </p>
+                  );
+                }
+                const hosts = Object.entries(latest.hosts as Record<string, number>).sort(
+                  ([, a], [, b]) => b - a
+                );
+                return (
+                  <>
+                    <div className="grid grid-cols-[1fr_80px] items-center gap-2 px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80">
+                      <span>Host</span>
+                      <span className="text-right">Requests</span>
+                    </div>
+                    <div className="max-h-[200px] overflow-y-auto">
+                      {hosts.map(([host, count], i) => (
+                        <div
+                          key={host}
+                          className={`grid grid-cols-[1fr_80px] items-center gap-2 px-3 py-1.5 text-xs ${i % 2 === 0 ? "bg-gray-800/30" : ""}`}
+                        >
+                          <span className="font-mono text-gray-300 truncate">{host}</span>
+                          <span className="text-right tabular-nums text-gray-400">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {latest.blockedCount > 0 && (
+                      <p className="text-xs text-red-400 mt-2 px-3">
+                        {latest.blockedCount} request{latest.blockedCount > 1 ? "s" : ""} blocked this cycle
+                      </p>
+                    )}
+                    <p className="text-[10px] text-gray-600 mt-2 px-3">
+                      Last updated: {formatRelativeTime(latest.timestamp)}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Network access log */}

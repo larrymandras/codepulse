@@ -24,6 +24,7 @@ import {
 import { useSystemResources } from "../hooks/useSystemResources";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
+import { formatRelativeTime } from "../lib/time";
 
 type DockerStatusPayload = {
   container?: string;
@@ -45,6 +46,7 @@ export default function Infrastructure() {
   // Live Convex queries for v6.0 infrastructure sections (CPUX-12)
   const startupEvents = useQuery(api.startupEvents.recent, {});
   const authAliases = useQuery(api.authAliases.list);
+  const networkPolicyRules = useQuery(api.networkPolicy.listRules);
   const providerMetrics = useQuery(api.advisorEvents.providerMetrics);
 
   // Track latest WS-driven health status (transient overlay)
@@ -157,6 +159,7 @@ export default function Infrastructure() {
                 <TableHead>Provider</TableHead>
                 <TableHead>User ID</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead>Last Used</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -169,11 +172,14 @@ export default function Infrastructure() {
                     <TableCell className="tabular-nums text-xs text-muted-foreground">
                       {new Date(alias.createdAt).toLocaleDateString()}
                     </TableCell>
+                    <TableCell className="tabular-nums text-xs text-muted-foreground">
+                      {alias.lastUsedAt ? formatRelativeTime(alias.lastUsedAt) : "Never"}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-sm text-muted-foreground text-center py-8">
+                  <TableCell colSpan={5} className="text-sm text-muted-foreground text-center py-8">
                     No auth aliases configured. Aliases are ingested via /auth-alias-ingest.
                   </TableCell>
                 </TableRow>
@@ -207,9 +213,38 @@ export default function Infrastructure() {
       <SectionErrorBoundary name="Network Policy">
         <SectionHeader title="Network Policy" />
         <GlassPanel className="p-4">
-          <p className="text-sm text-muted-foreground">
-            Per-provider network policy rules will appear here once policy configuration is ingested.
-          </p>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Host / CIDR</TableHead>
+                <TableHead>Port</TableHead>
+                <TableHead>Provider</TableHead>
+                <TableHead>Source</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {networkPolicyRules && networkPolicyRules.length > 0 ? (
+                networkPolicyRules.map((rule, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="font-mono text-xs">{rule.host || rule.cidr || "—"}</TableCell>
+                    <TableCell className="tabular-nums text-xs">{rule.port ?? "any"}</TableCell>
+                    <TableCell className="text-xs">{rule.provider || "—"}</TableCell>
+                    <TableCell className="text-xs">
+                      <span className={rule.source === "default" ? "text-muted-foreground" : "text-blue-400"}>
+                        {rule.source}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-sm text-muted-foreground text-center py-8">
+                    No network policy rules configured yet.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </GlassPanel>
       </SectionErrorBoundary>
     </div>

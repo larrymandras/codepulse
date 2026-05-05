@@ -1042,8 +1042,24 @@ export default defineSchema({
     provider: v.string(),
     userId: v.string(),
     createdAt: v.float64(),
+    lastUsedAt: v.optional(v.float64()),
   }).index("by_alias", ["alias"])
     .index("by_provider", ["provider"]),
+
+  networkPolicyRules: defineTable({
+    host: v.optional(v.string()),
+    cidr: v.optional(v.string()),
+    port: v.optional(v.float64()),
+    provider: v.optional(v.string()),
+    source: v.string(),
+    timestamp: v.float64(),
+  }).index("by_host", ["host"]),
+
+  networkEgressSummary: defineTable({
+    hosts: v.any(),
+    blockedCount: v.float64(),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
 
   // ============================================================
   // HIVE MIND — cross-agent activity log (Phase 67)

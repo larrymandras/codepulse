@@ -741,7 +741,29 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             alias: d.alias ?? "unknown",
             provider: d.provider ?? "unknown",
             userId: d.userId ?? d.user_id ?? "unknown",
-            createdAt: d.createdAt ?? d.created_at ?? Date.now(),
+            createdAt: d.createdAt ?? d.created_at ?? timestamp,
+            lastUsedAt: d.lastUsedAt ?? d.last_used_at,
+          });
+          break;
+        }
+        case "network_policy_config": {
+          const d = data as any;
+          await ctx.runMutation(api.networkPolicy.upsertRule, {
+            host: d.host,
+            cidr: d.cidr,
+            port: d.port,
+            provider: d.provider,
+            source: d.source ?? "config",
+            timestamp,
+          });
+          break;
+        }
+        case "network_egress_summary": {
+          const d = data as any;
+          await ctx.runMutation(api.networkPolicy.recordEgressSummary, {
+            hosts: d.hosts ?? {},
+            blockedCount: d.blockedCount ?? d.blocked_count ?? 0,
+            timestamp,
           });
           break;
         }

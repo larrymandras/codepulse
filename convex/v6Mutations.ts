@@ -102,9 +102,9 @@ export const upsertAuthAlias = mutation({
     provider: v.string(),
     userId: v.string(),
     createdAt: v.float64(),
+    lastUsedAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
-    // Upsert: if alias already exists, update provider/userId
     const existing = await ctx.db
       .query("authAliases")
       .withIndex("by_alias", (q) => q.eq("alias", args.alias))
@@ -114,9 +114,16 @@ export const upsertAuthAlias = mutation({
       await ctx.db.patch(existing._id, {
         provider: args.provider,
         userId: args.userId,
+        ...(args.lastUsedAt ? { lastUsedAt: args.lastUsedAt } : {}),
       });
     } else {
-      await ctx.db.insert("authAliases", args);
+      await ctx.db.insert("authAliases", {
+        alias: args.alias,
+        provider: args.provider,
+        userId: args.userId,
+        createdAt: args.createdAt,
+        ...(args.lastUsedAt ? { lastUsedAt: args.lastUsedAt } : {}),
+      });
     }
   },
 });
