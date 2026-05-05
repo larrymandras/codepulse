@@ -5,6 +5,9 @@ on:
   pull_request:
     branches: [master]
 
+env:
+  CODEPULSE_INGEST_URL: https://tidy-whale-981.convex.site
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -18,3 +21,33 @@ jobs:
       - run: npx tsc --noEmit
       - run: npx vite build
       - run: npx vitest run
+
+      - name: Notify CodePulse Dashboard
+        if: always()
+        run: |
+          CONCLUSION="${{ job.status }}"
+          curl -sf -X POST "${CODEPULSE_INGEST_URL}/runtime-ingest" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg wf "CI" \
+              --arg repo "codepulse" \
+              --arg status "completed" \
+              --arg conclusion "$CONCLUSION" \
+              --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --argjson run_id "${{ github.run_id }}" \
+              --argjson ts "$(date +%s)" \
+              '{
+                eventType: "github_workflow_run",
+                sessionId: "github-actions",
+                data: {
+                  workflowName: $wf,
+                  repo: $repo,
+                  status: $status,
+                  conclusion: $conclusion,
+                  runUrl: $url,
+                  runId: $run_id,
+                  triggeredAt: $ts,
+                  completedAt: $ts
+                }
+              }'
+            )" || echo "CodePulse notification failed (non-fatal)"
