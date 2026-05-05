@@ -10,6 +10,7 @@ import IntegrationHealth from "../components/IntegrationHealth";
 import GithubActionsPanel from "../components/GithubActionsPanel";
 import ChannelHealthPanel from "../components/ChannelHealthPanel";
 import ProviderHealthPanel from "../components/ProviderHealthPanel";
+import LlmGateCard from "../components/LlmGateCard";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
@@ -87,6 +88,9 @@ export default function Infrastructure() {
           </SectionErrorBoundary>
           <SectionErrorBoundary name="Provider Health">
             <ProviderHealthPanel />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="LLM Gate">
+            <LlmGateCard />
           </SectionErrorBoundary>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <DockerPanel />
