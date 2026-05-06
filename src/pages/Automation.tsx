@@ -7,6 +7,7 @@ import MetricCard from "../components/MetricCard";
 import CronJobList, { type CronJob } from "../components/CronJobList";
 import CronSheet from "../components/CronSheet";
 import CronExecutionHistory from "../components/CronExecutionHistory";
+import WakeupQueue from "../components/WakeupQueue";
 import HeartbeatAlertsPanel from "../components/HeartbeatAlertsPanel";
 import JobLifecyclePanel from "../components/JobLifecyclePanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -20,6 +21,7 @@ import {
   useRecentHeartbeats,
   useRecentJobs,
 } from "../hooks/useAutomation";
+import { usePendingWakeups, useRecentWakeups } from "../hooks/useWakeups";
 
 function relTime(epoch: number | null): string {
   if (!epoch) return "--";
@@ -44,6 +46,8 @@ export default function Automation() {
   const executions = useRecentCronExecutions(200);
   const heartbeats = useRecentHeartbeats(30);
   const jobs = useRecentJobs(100);
+  const pendingWakeups = usePendingWakeups(50);
+  const recentWakeups = useRecentWakeups(50);
   const checkpointOverview = useQuery(api.pipelineCheckpoints.overview);
   const recentCheckpoints = useQuery(api.pipelineCheckpoints.recent, { limit: 20 });
   const integrationOverview = useQuery(api.integrationCalls.overview);
@@ -120,6 +124,11 @@ export default function Automation() {
       {/* Execution history */}
       <SectionErrorBoundary name="Execution History">
         <CronExecutionHistory executions={executions} />
+      </SectionErrorBoundary>
+
+      {/* Wakeup Queue */}
+      <SectionErrorBoundary name="Wakeup Queue">
+        <WakeupQueue pending={pendingWakeups} recent={recentWakeups} />
       </SectionErrorBoundary>
 
       {/* Heartbeats and Jobs side by side */}
