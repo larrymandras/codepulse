@@ -80,4 +80,11 @@ crons.interval(
   internal.supabase.pollHealth
 );
 
+// Phase 095: Transcript retention cleanup (daily at 04:00 UTC, D-11)
+crons.daily(
+  "cleanup transcript records older than 90 days",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.transcripts.cleanupOldRecords,
+);
+
 export default crons;
