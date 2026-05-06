@@ -455,6 +455,38 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"]),
 
   // ============================================================
+  // TRANSCRIPT STORAGE (Phase 095)
+  // ============================================================
+
+  canonicalEvents: defineTable({
+    sessionKey: v.string(),
+    eventType: v.string(),        // "message.received" | "message.sent" | "tool.called" | "tool.result"
+    role: v.optional(v.string()), // "user" | "assistant" | "tool"
+    content: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    rawMessageId: v.optional(v.string()), // FK to rawMessages (Supabase UUID)
+    schemaVersion: v.float64(),   // D-06: always 1
+    timestamp: v.float64(),
+  })
+    .index("by_session", ["sessionKey", "timestamp"])
+    .index("by_session_type", ["sessionKey", "eventType", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  rawMessages: defineTable({
+    sessionKey: v.string(),
+    channel: v.string(),
+    direction: v.string(),        // "inbound" | "outbound"
+    senderId: v.optional(v.string()),
+    rawPayload: v.any(),          // Full channel payload
+    attachments: v.optional(v.any()),
+    supabaseId: v.optional(v.string()), // Supabase raw_messages.id for cross-ref
+    schemaVersion: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_session", ["sessionKey", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
   // PROFILE CONFIG TABLE — syncs Astridr ProfileConfig
   // ============================================================
 
