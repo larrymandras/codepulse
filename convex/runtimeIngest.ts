@@ -938,6 +938,35 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "canonical_event": {
+          const d = data as any;
+          await ctx.runMutation(api.transcripts.insertCanonicalEvent, {
+            sessionKey: d.session_key ?? d.sessionKey ?? "",
+            eventType: d.event_type ?? d.eventType ?? "unknown",
+            role: d.role,
+            content: d.content,
+            metadata: d.metadata,
+            rawMessageId: d.raw_message_id ?? d.rawMessageId,
+            schemaVersion: d.schema_version ?? d.schemaVersion ?? 1,
+            timestamp,
+          });
+          break;
+        }
+        case "raw_message": {
+          const d = data as any;
+          await ctx.runMutation(api.transcripts.insertRawMessage, {
+            sessionKey: d.session_key ?? d.sessionKey ?? "",
+            channel: d.channel ?? "unknown",
+            direction: d.direction ?? "unknown",
+            senderId: d.sender_id ?? d.senderId,
+            rawPayload: d.raw_payload ?? d.rawPayload ?? {},
+            attachments: d.attachments,
+            supabaseId: d.supabase_id ?? d.supabaseId,
+            schemaVersion: d.schema_version ?? d.schemaVersion ?? 1,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 
