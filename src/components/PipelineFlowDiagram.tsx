@@ -9,6 +9,7 @@ import { formatDurationMs } from "../lib/formatters";
 
 // MUST be outside component to prevent re-registration
 const nodeTypes = { pipelineStage: PipelineStageNode };
+const MAX_LIVE_EVENTS = 200;
 
 const STAGE_NAMES = ["receive", "route", "process", "respond", "tts_followup"] as const;
 const NODE_W = 160;
@@ -61,22 +62,28 @@ export default function PipelineFlowDiagram() {
   useEffect(() => {
     if (selectedExecutionId !== "live") return;
     const unsub1 = subscribeEvent("step_started", (e) => {
-      setLiveEvents(prev => [...prev, {
-        stepName: (e.stepName ?? e.step_name) as string,
-        status: "step_started",
-        timestamp: (e.timestamp as number) ?? Date.now() / 1000,
-      }]);
+      setLiveEvents(prev => {
+        const next = [...prev, {
+          stepName: (e.stepName ?? e.step_name) as string,
+          status: "step_started",
+          timestamp: (e.timestamp as number) ?? Date.now() / 1000,
+        }];
+        return next.length > MAX_LIVE_EVENTS ? next.slice(-MAX_LIVE_EVENTS) : next;
+      });
     });
     const unsub2 = subscribeEvent("step_completed", (e) => {
-      setLiveEvents(prev => [...prev, {
-        stepName: (e.stepName ?? e.step_name) as string,
-        status: "step_completed",
-        durationMs: (e.durationMs ?? e.duration_ms) as number | undefined,
-        inputSize: (e.inputSize ?? e.input_size) as number | undefined,
-        outputSize: (e.outputSize ?? e.output_size) as number | undefined,
-        error: e.error as string | undefined,
-        timestamp: (e.timestamp as number) ?? Date.now() / 1000,
-      }]);
+      setLiveEvents(prev => {
+        const next = [...prev, {
+          stepName: (e.stepName ?? e.step_name) as string,
+          status: "step_completed",
+          durationMs: (e.durationMs ?? e.duration_ms) as number | undefined,
+          inputSize: (e.inputSize ?? e.input_size) as number | undefined,
+          outputSize: (e.outputSize ?? e.output_size) as number | undefined,
+          error: e.error as string | undefined,
+          timestamp: (e.timestamp as number) ?? Date.now() / 1000,
+        }];
+        return next.length > MAX_LIVE_EVENTS ? next.slice(-MAX_LIVE_EVENTS) : next;
+      });
     });
     return () => { unsub1(); unsub2(); };
   }, [subscribeEvent, selectedExecutionId]);
