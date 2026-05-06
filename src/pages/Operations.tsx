@@ -8,8 +8,7 @@ import { useRecentAgentStatus } from "../hooks/useAgentStatus";
 import { useDailyRhythm } from "../hooks/useDailyRhythm";
 import { useRecentPipelineExecutionIds } from "../hooks/usePipelineStepEvents";
 import { AGENT_ROSTER } from "../lib/agentRoster";
-
-const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+import { parseDays, todayDayIndex } from "../lib/dayUtils";
 
 export default function Operations() {
   const statusEvents = useRecentAgentStatus();
@@ -39,10 +38,9 @@ export default function Operations() {
   }, [activeCount]);
 
   const scheduledTodayCount = useMemo(() => {
-    const todayName = DAY_NAMES[new Date().getDay()];
+    const today = todayDayIndex();
     return rhythmEntries.filter((entry) => {
-      const days = entry.days.toLowerCase();
-      return days.includes(todayName) || days === "daily" || days === "*";
+      return parseDays(entry.days).includes(today);
     }).length;
   }, [rhythmEntries]);
 
