@@ -967,6 +967,28 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "wakeup_scheduled":
+        case "wakeup_fired":
+        case "wakeup_failed":
+        case "wakeup_cancelled": {
+          const d = data as any;
+          await ctx.runMutation(api.wakeups.upsert, {
+            wakeupId: d.wakeupId ?? d.wakeup_id ?? "unknown",
+            profileId: d.profileId ?? d.profile_id ?? "unknown",
+            channelId: d.channelId ?? d.channel_id ?? "unknown",
+            reason: d.reason ?? "",
+            status: evt.eventType === "wakeup_scheduled" ? "pending"
+                  : evt.eventType === "wakeup_fired"     ? "fired"
+                  : evt.eventType === "wakeup_failed"    ? "failed"
+                  : "cancelled",
+            fireAt: d.fireAt ?? d.fire_at ?? timestamp,
+            firedAt: d.firedAt ?? d.fired_at,
+            error: d.error,
+            chainDepth: d.chainDepth ?? d.chain_depth ?? 0,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

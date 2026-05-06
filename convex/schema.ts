@@ -381,6 +381,23 @@ export default defineSchema({
     .index("by_jobName", ["jobName", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
 
+  scheduledWakeups: defineTable({
+    wakeupId: v.string(),
+    profileId: v.string(),
+    channelId: v.string(),
+    reason: v.string(),
+    status: v.string(),
+    fireAt: v.float64(),
+    firedAt: v.optional(v.float64()),
+    error: v.optional(v.string()),
+    chainDepth: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_wakeupId", ["wakeupId"])
+    .index("by_profileId", ["profileId", "fireAt"])
+    .index("by_status", ["status", "fireAt"])
+    .index("by_timestamp", ["timestamp"]),
+
   heartbeatAlerts: defineTable({
     alerts: v.any(), // array of check results
     alertCount: v.float64(),

@@ -119,6 +119,7 @@ import type * as transcripts from "../transcripts.js";
 import type * as v6Ingest from "../v6Ingest.js";
 import type * as v6Mutations from "../v6Mutations.js";
 import type * as voiceCalls from "../voiceCalls.js";
+import type * as wakeups from "../wakeups.js";
 import type * as warRoom from "../warRoom.js";
 import type * as warRoomIngest from "../warRoomIngest.js";
 import type * as webhookDelivery from "../webhookDelivery.js";
@@ -245,6 +246,7 @@ declare const fullApi: ApiFromModules<{
   v6Ingest: typeof v6Ingest;
   v6Mutations: typeof v6Mutations;
   voiceCalls: typeof voiceCalls;
+  wakeups: typeof wakeups;
   warRoom: typeof warRoom;
   warRoomIngest: typeof warRoomIngest;
   webhookDelivery: typeof webhookDelivery;
