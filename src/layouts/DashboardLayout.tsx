@@ -101,6 +101,7 @@ const commandNavItems = [
   { to: "/inbox", label: "Inbox", icon: "inbox", group: "COMMAND" },
   { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
   { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
+  { to: "/transcripts", label: "Transcripts", icon: "scroll", group: "COMMAND" },
 ];
 
 const agentsNavItems = [
