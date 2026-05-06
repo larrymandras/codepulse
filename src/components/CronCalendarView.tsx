@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, Fragment } from "react";
+import { useState, useMemo, useEffect, useRef, Fragment } from "react";
 import { startOfWeek, addDays, format, isToday } from "date-fns";
 import { CRON_SCHEDULES, estimateNextRun, type CronSchedule } from "../lib/cronSchedules";
 import { useDailyRhythm } from "../hooks/useDailyRhythm";
@@ -15,6 +15,11 @@ interface CalendarEntry {
   source: "rhythm" | "system";
   agentTypeId?: string;
   channel?: string;
+  interval?: string;
+  time?: string;
+  days?: string;
+  cronExpression?: string;
+  profileId?: string;
 }
 
 function parseDays(days: string): number[] {
@@ -46,6 +51,8 @@ function formatCountdown(ms: number): string {
 export default function CronCalendarView() {
   const [showSystemCrons, setShowSystemCrons] = useState(true);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -54,6 +61,10 @@ export default function CronCalendarView() {
   }, []);
 
   const rhythmEntries = useDailyRhythm();
+
+  const intervalCrons = useMemo(() =>
+    CRON_SCHEDULES.filter(c => !c.dailyUTC),
+  []);
 
   const { entries, slotMap, weekDays } = useMemo(() => {
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -81,63 +92,31 @@ export default function CronCalendarView() {
           source: "rhythm",
           agentTypeId: entry.agentTypeId,
           channel: entry.channel,
+          time: entry.time,
+          days: entry.days,
+          cronExpression: entry.cronExpression,
+          profileId: entry.profileId,
         });
       }
     }
 
-    // Process CRON_SCHEDULES - system crons
+    // Process CRON_SCHEDULES - only daily-scheduled crons go on the grid
+    // Interval-based crons are shown in a separate summary
     for (const cron of CRON_SCHEDULES) {
-      if (cron.dailyUTC) {
-        const hour = cron.dailyUTC.hour;
-        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-          allEntries.push({
-            id: `system-${cron.jobName}-${dayIndex}`,
-            label: truncate(cron.jobName, 8),
-            fullAction: cron.label,
-            hour,
-            dayIndex,
-            category: "system",
-            source: "system",
-          });
-        }
-      } else if (cron.intervalSeconds >= 86400) {
-        const nextRunEpoch = estimateNextRun(cron);
-        const nextRunDate = new Date(nextRunEpoch * 1000);
-        const hour = nextRunDate.getUTCHours();
-        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-          allEntries.push({
-            id: `system-${cron.jobName}-${dayIndex}`,
-            label: truncate(cron.jobName, 8),
-            fullAction: cron.label,
-            hour,
-            dayIndex,
-            category: "system",
-            source: "system",
-          });
-        }
-      } else {
-        // Interval-based crons
-        const runsPerDay = Math.floor(86400 / cron.intervalSeconds);
-        const maxSlots = Math.min(runsPerDay, 24);
-        const hoursPerRun = 24 / maxSlots;
-
-        for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-          const hoursSet = new Set<number>();
-          for (let slot = 0; slot < maxSlots; slot++) {
-            hoursSet.add(Math.floor(slot * hoursPerRun));
-          }
-          for (const hour of hoursSet) {
-            allEntries.push({
-              id: `system-${cron.jobName}-${dayIndex}-${hour}`,
-              label: truncate(cron.jobName, 8),
-              fullAction: cron.label,
-              hour,
-              dayIndex,
-              category: "system",
-              source: "system",
-            });
-          }
-        }
+      if (!cron.dailyUTC) continue;
+      const hour = cron.dailyUTC.hour;
+      for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+        allEntries.push({
+          id: `system-${cron.jobName}-${dayIndex}`,
+          label: truncate(cron.jobName, 8),
+          fullAction: cron.label,
+          hour,
+          dayIndex,
+          category: "system",
+          source: "system",
+          interval: cron.interval,
+          time: `${String(cron.dailyUTC!.hour).padStart(2, "0")}:${String(cron.dailyUTC!.minute).padStart(2, "0")} UTC`,
+        });
       }
     }
 
@@ -240,6 +219,17 @@ export default function CronCalendarView() {
         </label>
       </div>
 
+      {/* Interval crons summary */}
+      {showSystemCrons && intervalCrons.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {intervalCrons.map(c => (
+            <span key={c.jobName} className="text-[10px] px-2 py-0.5 rounded-full bg-slate-500/20 border border-slate-400/30 text-slate-400">
+              {c.label} · {c.interval}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Empty state or Grid */}
       {isEmpty ? (
         <div className="py-8 text-center">
@@ -249,7 +239,7 @@ export default function CronCalendarView() {
       ) : (
         <>
           {/* Grid */}
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto relative" ref={gridRef}>
             <div className="grid grid-cols-[60px_repeat(7,1fr)] gap-px min-w-[700px]">
               {/* Day headers */}
               <div /> {/* Empty corner cell */}
@@ -285,7 +275,22 @@ export default function CronCalendarView() {
                         className={`relative h-[48px] border border-gray-800/50 px-0.5 py-0.5 hover:bg-gray-700/30 cursor-pointer transition-colors overflow-hidden ${
                           isSelected ? "bg-gray-700/40 ring-1 ring-indigo-500/50" : ""
                         }`}
-                        onClick={() => setSelectedSlot(key === selectedSlot ? null : key)}
+                        onClick={(e) => {
+                          if (key === selectedSlot) {
+                            setSelectedSlot(null);
+                            setPopoverPos(null);
+                          } else {
+                            setSelectedSlot(key);
+                            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                            const gridRect = gridRef.current?.getBoundingClientRect();
+                            if (gridRect) {
+                              setPopoverPos({
+                                top: rect.bottom - gridRect.top + 4,
+                                left: Math.min(rect.left - gridRect.left, gridRect.width - 280),
+                              });
+                            }
+                          }
+                        }}
                       >
                         {/* Current time indicator */}
                         {showIndicator && (
@@ -319,19 +324,48 @@ export default function CronCalendarView() {
           </div>
 
           {/* Slot detail popover */}
-          {selectedSlot && entriesForSlot.length > 0 && (
+          {selectedSlot && entriesForSlot.length > 0 && popoverPos && (
             <div
-              className="mt-2 bg-gray-900/50 border border-gray-700/40 rounded-lg px-4 py-3 text-xs animate-in slide-in-from-top-2 duration-200"
+              className="absolute z-20 w-[280px] bg-gray-900 border border-gray-600 rounded-lg px-4 py-3 text-xs shadow-xl shadow-black/40 animate-in fade-in zoom-in-95 duration-150"
+              style={{ top: popoverPos.top, left: Math.max(0, popoverPos.left) }}
               data-testid="slot-detail"
             >
-              <h3 className="text-sm font-medium text-gray-200 mb-2">Slot Detail</h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-gray-200">Slot Detail</h3>
+                <button
+                  onClick={() => { setSelectedSlot(null); setPopoverPos(null); }}
+                  className="text-gray-500 hover:text-gray-300 text-xs px-1"
+                >
+                  ✕
+                </button>
+              </div>
               {entriesForSlot.map(entry => (
-                <div key={entry.id} className="py-1 border-b border-gray-800 last:border-0">
-                  <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border mr-2 ${CATEGORY_COLORS[entry.category]}`}>
-                    {entry.category}
-                  </span>
-                  <span className="text-gray-300">{entry.fullAction}</span>
-                  {entry.source === "system" && <span className="text-gray-600 ml-1">(Convex)</span>}
+                <div key={entry.id} className="py-2 border-b border-gray-800 last:border-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border ${CATEGORY_COLORS[entry.category]}`}>
+                      {entry.category}
+                    </span>
+                    <span className="text-gray-200 font-medium">{entry.fullAction}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] text-gray-500 pl-1">
+                    {entry.source === "system" && (
+                      <>
+                        <div><span className="text-gray-600">Source:</span> Convex cron</div>
+                        {entry.interval && <div><span className="text-gray-600">Schedule:</span> {entry.interval}</div>}
+                        {entry.time && <div><span className="text-gray-600">Time:</span> {entry.time}</div>}
+                      </>
+                    )}
+                    {entry.source === "rhythm" && (
+                      <>
+                        {entry.agentTypeId && <div><span className="text-gray-600">Agent:</span> {entry.agentTypeId}</div>}
+                        {entry.channel && <div><span className="text-gray-600">Channel:</span> {entry.channel}</div>}
+                        {entry.time && <div><span className="text-gray-600">Time:</span> {entry.time}</div>}
+                        {entry.days && <div><span className="text-gray-600">Days:</span> {entry.days}</div>}
+                        {entry.profileId && <div><span className="text-gray-600">Profile:</span> {entry.profileId}</div>}
+                        {entry.cronExpression && <div><span className="text-gray-600">Cron:</span> <span className="font-mono">{entry.cronExpression}</span></div>}
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

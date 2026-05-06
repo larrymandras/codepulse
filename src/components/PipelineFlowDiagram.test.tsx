@@ -46,11 +46,10 @@ describe("PipelineFlowDiagram", () => {
     expect(heightDiv).not.toBeNull();
   });
 
-  it("shows empty state text when no events exist in live mode", () => {
+  it("shows waiting indicator and ReactFlow when no events in live mode", () => {
     render(<PipelineFlowDiagram />);
-    expect(
-      screen.getByText(/No pipeline runs/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for pipeline events/)).toBeInTheDocument();
+    expect(screen.getByTestId("react-flow")).toBeInTheDocument();
   });
 
   it("subscribes to step_started and step_completed WebSocket events", () => {

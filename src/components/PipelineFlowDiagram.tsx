@@ -141,27 +141,26 @@ export default function PipelineFlowDiagram() {
       </div>
 
       {/* CRITICAL: explicit pixel height -- flex-1 alone renders invisible */}
-      <div style={{ height: 400 }} className="rounded-lg overflow-hidden w-full">
-        {stepEvents.length === 0 && selectedExecutionId === "live" ? (
-          <div className="flex items-center justify-center h-full text-sm text-gray-500">
-            No pipeline runs — Waiting for Astridr to send pipeline events
+      <div style={{ height: 180 }} className="rounded-lg overflow-hidden w-full relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          fitView
+          proOptions={{ hideAttribution: true }}
+          minZoom={0.3}
+          maxZoom={2}
+        >
+          <Background color="#374151" gap={20} />
+          <Controls
+            showInteractive={false}
+            className="!bg-gray-800 !border-gray-700 !shadow-none [&>button]:!bg-gray-700 [&>button]:!border-gray-600 [&>button]:!text-gray-300 [&>button:hover]:!bg-gray-600"
+          />
+        </ReactFlow>
+        {stepEvents.length === 0 && selectedExecutionId === "live" && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-xs text-gray-500 bg-gray-900/80 px-3 py-1 rounded-full">
+            Waiting for pipeline events
           </div>
-        ) : (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            nodeTypes={nodeTypes}
-            fitView
-            proOptions={{ hideAttribution: true }}
-            minZoom={0.3}
-            maxZoom={2}
-          >
-            <Background color="#374151" gap={20} />
-            <Controls
-              showInteractive={false}
-              className="!bg-gray-800 !border-gray-700 !shadow-none [&>button]:!bg-gray-700 [&>button]:!border-gray-600 [&>button]:!text-gray-300 [&>button:hover]:!bg-gray-600"
-            />
-          </ReactFlow>
         )}
       </div>
 

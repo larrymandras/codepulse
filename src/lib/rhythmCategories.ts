@@ -6,7 +6,7 @@ export const CATEGORY_COLORS: Record<RhythmCategory, string> = {
   research: "bg-blue-500/20 border-blue-500/40 text-blue-300",
   content:  "bg-purple-500/20 border-purple-500/40 text-purple-300",
   review:   "bg-red-500/20 border-red-500/40 text-red-300",
-  system:   "bg-gray-500/20 border-gray-500/40 text-gray-400",
+  system:   "bg-slate-500/30 border-slate-400/50 text-slate-300",
 };
 
 export function categorizeRhythm(action: string): RhythmCategory {
