@@ -115,6 +115,7 @@ import type * as tasks from "../tasks.js";
 import type * as teamPresets from "../teamPresets.js";
 import type * as toolAssignments from "../toolAssignments.js";
 import type * as toolExecutions from "../toolExecutions.js";
+import type * as transcripts from "../transcripts.js";
 import type * as v6Ingest from "../v6Ingest.js";
 import type * as v6Mutations from "../v6Mutations.js";
 import type * as voiceCalls from "../voiceCalls.js";
@@ -240,6 +241,7 @@ declare const fullApi: ApiFromModules<{
   teamPresets: typeof teamPresets;
   toolAssignments: typeof toolAssignments;
   toolExecutions: typeof toolExecutions;
+  transcripts: typeof transcripts;
   v6Ingest: typeof v6Ingest;
   v6Mutations: typeof v6Mutations;
   voiceCalls: typeof voiceCalls;

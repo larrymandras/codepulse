@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env.local
 .worktrees/
+graphify-out/
+playwright-report/
+test-results/
+.last-update-check
