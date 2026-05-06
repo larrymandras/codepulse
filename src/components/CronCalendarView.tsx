@@ -182,7 +182,7 @@ export default function CronCalendarView() {
   const currentHour = now.getHours();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="relative bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>
