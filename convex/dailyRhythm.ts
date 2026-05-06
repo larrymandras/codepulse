@@ -21,7 +21,7 @@ export const upsertEntries = mutation({
     const existing = await ctx.db
       .query("dailyRhythmEntries")
       .withIndex("by_agentType", (q) => q.eq("agentTypeId", args.agentTypeId))
-      .collect();
+      .take(1000);
     for (const row of existing) {
       await ctx.db.delete(row._id);
     }
