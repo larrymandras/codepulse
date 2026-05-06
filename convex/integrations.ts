@@ -84,41 +84,22 @@ export const healthStatus = query({
       .first();
     const dockerTs = dockerEntry ? dockerEntry.updatedAt * 1000 : null;
 
-    // Telegram, Slack, Email: check webhookEvents or events for matching source
-    const webhooks = await ctx.db
-      .query("webhookEvents")
-      .withIndex("by_timestamp")
+    // Telegram, Slack, Email: use channelHealth table (emitted every 60s by Ástríðr)
+    const telegramHealth = await ctx.db
+      .query("channelHealth")
+      .withIndex("by_channel", (q) => q.eq("channelId", "telegram"))
       .order("desc")
-      .take(50);
-
-    let telegramTs: number | null = null;
-    let slackTs: number | null = null;
-    let emailTs: number | null = null;
-
-    for (const wh of webhooks) {
-      const src = (wh.source ?? "").toLowerCase();
-      const ts = wh.timestamp * 1000;
-      if (src.includes("telegram") && (telegramTs == null || ts > telegramTs))
-        telegramTs = ts;
-      if (src.includes("slack") && (slackTs == null || ts > slackTs))
-        slackTs = ts;
-      if (src.includes("email") && (emailTs == null || ts > emailTs))
-        emailTs = ts;
-    }
-
-    // Also check proactiveMessages for telegram/slack activity
-    const messages = await ctx.db
-      .query("proactiveMessages")
-      .withIndex("by_timestamp")
+      .first();
+    const slackHealth = await ctx.db
+      .query("channelHealth")
+      .withIndex("by_channel", (q) => q.eq("channelId", "slack"))
       .order("desc")
-      .take(20);
-
-    for (const msg of messages) {
-      const ts = msg.timestamp * 1000;
-      if (msg.chatId && telegramTs == null) telegramTs = ts;
-      if (msg.channelId && msg.channelId !== "telegram" && slackTs == null)
-        slackTs = ts;
-    }
+      .first();
+    const emailHealth = await ctx.db
+      .query("channelHealth")
+      .withIndex("by_channel", (q) => q.eq("channelId", "email"))
+      .order("desc")
+      .first();
 
     return {
       // Event-driven: GitHub only produces data when user commits/pushes
@@ -127,10 +108,10 @@ export const healthStatus = query({
       supabase: statusForPolled(supabaseTs, now, 3_600_000),
       // Polled every 2 minutes (120_000 ms)
       docker: statusForPolled(dockerTs, now, 120_000),
-      // Event-driven: only when messages are sent/received
-      telegram: statusForEventDriven(telegramTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("telegram")), now),
-      slack: statusForEventDriven(slackTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("slack")), now),
-      email: statusForEventDriven(emailTs, webhooks.some(w => (w.source ?? "").toLowerCase().includes("email")), now),
+      // Polled every 60s by health emitter
+      telegram: statusForPolled(telegramHealth?.timestamp ? telegramHealth.timestamp * 1000 : null, now, 60_000),
+      slack: statusForPolled(slackHealth?.timestamp ? slackHealth.timestamp * 1000 : null, now, 60_000),
+      email: statusForPolled(emailHealth?.timestamp ? emailHealth.timestamp * 1000 : null, now, 60_000),
     };
   },
 });

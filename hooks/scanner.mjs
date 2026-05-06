@@ -252,7 +252,7 @@ if (isDirectRun) {
       } catch {}
     }
   }
-  if (!url) url = "https://ideal-sandpiper-297.convex.site";
+  if (!url) url = "https://tidy-whale-981.convex.site";
 
   runScan(sessionId, url).then(() => {
     console.log("[codepulse-scanner] Scan complete.");

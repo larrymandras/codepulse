@@ -38,7 +38,7 @@ function resolveUrl() {
     }
   }
 
-  return "https://ideal-sandpiper-297.convex.site";
+  return "https://tidy-whale-981.convex.site";
 }
 
 async function testEndpoint(name, url, body) {

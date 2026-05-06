@@ -118,7 +118,7 @@ function main() {
     console.log("\nNote: CODEPULSE_URL environment variable is not set.");
     console.log("The hook will fall back to reading .env.local or using the default URL.");
     console.log("To set it explicitly, add to your shell profile:");
-    console.log(`  export CODEPULSE_URL="https://ideal-sandpiper-297.convex.site"`);
+    console.log(`  export CODEPULSE_URL="https://tidy-whale-981.convex.site"`);
   }
 
   console.log("\nVerify with: node hooks/test-connection.mjs");

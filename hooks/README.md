@@ -55,7 +55,7 @@ This sends test payloads to `/ingest`, `/runtime-ingest`, and `/scan` and report
 
 | Variable | Description | Default |
 |---|---|---|
-| `CODEPULSE_URL` | CodePulse Convex site URL (HTTP actions) | Auto-detected from `.env.local` or falls back to `https://ideal-sandpiper-297.convex.site` |
+| `CODEPULSE_URL` | CodePulse Convex site URL (HTTP actions) | Auto-detected from `.env.local` or falls back to `https://tidy-whale-981.convex.site` |
 
 The URL resolution order is:
 
