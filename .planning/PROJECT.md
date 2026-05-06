@@ -10,10 +10,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14)
+**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-06 with Phase 59)
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
 
-8 phases complete across the v4.0 milestone:
+9 phases complete across the v4.0 milestone:
 1. UI Foundation — Paperclip design language across all pages
 2. Bidirectional Telemetry — WebSocket consumer + command sender
 3. Interaction Layer — Inbox, Command Palette, Agent Chat, Live Run, Insights Chat
@@ -22,6 +22,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 6. Alert Routing — Rules, webhooks, lifecycle management, notification preferences
 7. Intelligence Layer — Cost forecasting, briefings, anomaly detection, memory quality
 8. Infrastructure Layer (Phase 58) — Command catalog on Capabilities page
+9. Operations page (Phase 59) — Agent status grid, cron calendar, pipeline flow diagram
 
 ## Requirements
 
@@ -55,6 +56,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - ✓ Anomaly detection with z-score auto-alerts — v4.0 Phase 7
 - ✓ Memory quality metrics (dedup, staleness, contradictions) — v4.0 Phase 7
 - ✓ WebSocket command catalog on Capabilities page — v4.0 Phase 58
+- ✓ Operations page with agent status grid, cron calendar, pipeline flow — v4.0 Phase 59
 
 ### Active
 
@@ -74,7 +76,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - **CodePulse repo:** C:\Users\mandr\codepulse
 - **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow
-- **Tests:** 268+ passing (Vitest), 1 pre-existing failure in Inbox keyboard nav
+- **Tests:** 268+ passing (Vitest), 31 Phase 59 tests across 5 files, 1 pre-existing failure in Inbox keyboard nav
 
 ## Constraints
 
@@ -94,6 +96,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 | Compound AND/OR alert rules | Flexible alert conditions beyond simple thresholds | ✓ Good — extensible rule engine |
 | Z-score anomaly detection | Statistical approach, no ML dependency | ✓ Good — auto-creates alerts |
 | WebSocket command catalog | Live registry vs static Convex count | ✓ Good — real-time command visibility |
+| Rubric-inspired Operations page | Dedicated observability surface for agent/cron/pipeline state | ✓ Good — fills operational visibility gap |
 
 ## Evolution
 
@@ -113,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after v4.0 milestone completion*
+*Last updated: 2026-05-06 after v4.0 milestone completion (Phase 59 retroactive update)*

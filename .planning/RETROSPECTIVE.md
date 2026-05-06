@@ -4,8 +4,8 @@
 
 ## Milestone: v4.0 — CodePulse Operational Excellence
 
-**Shipped:** 2026-04-14
-**Phases:** 8 | **Plans:** 37 | **Timeline:** 39 days
+**Shipped:** 2026-04-14 (updated 2026-05-06 with Phase 59)
+**Phases:** 9 | **Plans:** 42 | **Timeline:** 61 days (2026-03-06 → 2026-05-06)
 
 ### What Was Built
 - Paperclip design language across 15 dashboard pages (shadcn/ui New York, oklch, zero border-radius)
@@ -16,6 +16,7 @@
 - Alert routing: configurable rules (static + compound), Discord/Slack webhooks, full lifecycle management
 - Intelligence layer: cost forecasting, LLM session briefings, z-score anomaly detection, memory quality metrics
 - Command catalog: live WebSocket-driven registry on Capabilities page
+- Operations page (Phase 59): real-time agent status grid with 10 agent types and 4 states, 7-day cron calendar with category color coding and system cron toggle, animated pipeline flow diagram with live/replay modes, 3 new Convex tables, 31 tests
 
 ### What Worked
 - Wave-based parallel execution with worktrees — multiple plans executing simultaneously saved significant time
@@ -56,13 +57,13 @@
 
 | Milestone | Timeline | Phases | Key Change |
 |-----------|----------|--------|------------|
-| v4.0 | 39 days | 8 | Wave-based parallel execution, formal verification gates, human UAT |
+| v4.0 | 61 days | 9 | Wave-based parallel execution, formal verification gates, human UAT |
 
 ### Cumulative Quality
 
 | Milestone | Tests | Pass Rate | Key Metric |
 |-----------|-------|-----------|------------|
-| v4.0 | 268+ | 99.6% (1 pre-existing failure) | 311 files, +43,759 lines |
+| v4.0 | 299+ | 99.7% (1 pre-existing failure) | 311+ files, +43,759 lines (core) + Phase 59 additions |
 
 ### Top Lessons (Verified Across Milestones)
 
