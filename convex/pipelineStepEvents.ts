@@ -33,17 +33,21 @@ export const byExecution = query({
 export const recentExecutionIds = query({
   args: { limit: v.optional(v.float64()) },
   handler: async (ctx, args) => {
+    const targetCount = args.limit ?? 10;
+    // Scan more raw events than requested unique IDs, since a single
+    // execution can produce many step events.
     const events = await ctx.db
       .query("pipelineStepEvents")
       .withIndex("by_timestamp")
       .order("desc")
-      .take(args.limit ?? 50);
+      .take(targetCount * 10);
     const seen = new Set<string>();
     const ids: string[] = [];
     for (const e of events) {
       if (!seen.has(e.executionId)) {
         seen.add(e.executionId);
         ids.push(e.executionId);
+        if (ids.length >= targetCount) break;
       }
     }
     return ids;

@@ -3,6 +3,7 @@ import { startOfWeek, addDays, format, isToday } from "date-fns";
 import { CRON_SCHEDULES, estimateNextRun, type CronSchedule } from "../lib/cronSchedules";
 import { useDailyRhythm } from "../hooks/useDailyRhythm";
 import { categorizeRhythm, CATEGORY_COLORS, type RhythmCategory } from "../lib/rhythmCategories";
+import { parseDays } from "../lib/dayUtils";
 import InfoTooltip from "./InfoTooltip";
 
 interface CalendarEntry {
@@ -20,19 +21,6 @@ interface CalendarEntry {
   days?: string;
   cronExpression?: string;
   profileId?: string;
-}
-
-function parseDays(days: string): number[] {
-  const dayMap: Record<string, number> = { mon: 0, tue: 1, wed: 2, thu: 3, fri: 4, sat: 5, sun: 6 };
-  if (days.includes("-")) {
-    const [start, end] = days.split("-").map(d => dayMap[d.trim().toLowerCase()]);
-    if (start !== undefined && end !== undefined) {
-      const result: number[] = [];
-      for (let i = start; i <= (end >= start ? end : end + 7); i++) result.push(i % 7);
-      return result;
-    }
-  }
-  return days.split(",").map(d => dayMap[d.trim().toLowerCase()]).filter((d): d is number => d !== undefined);
 }
 
 function truncate(str: string, max: number): string {
@@ -194,7 +182,7 @@ export default function CronCalendarView() {
   const currentHour = now.getHours();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="relative bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>

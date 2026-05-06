@@ -12,8 +12,8 @@ export const CATEGORY_COLORS: Record<RhythmCategory, string> = {
 export function categorizeRhythm(action: string): RhythmCategory {
   const lower = action.toLowerCase();
   if (/briefing|morning|evening|weekly digest/.test(lower)) return "morning";
-  if (/health|check|monitor|status/.test(lower)) return "health";
-  if (/research|digest|pr review|code review|pr digest/.test(lower)) return "research";
+  if (/health.check|monitor|status.update/.test(lower)) return "health";
+  if (/research|pr review|code review|pr digest/.test(lower)) return "research";
   if (/content|write|generate|create/.test(lower)) return "content";
   if (/review|audit|report/.test(lower)) return "review";
   return "system";

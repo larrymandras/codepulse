@@ -32,7 +32,7 @@ export default function StatusHeartbeatGrid() {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(id);
   }, []);
 
