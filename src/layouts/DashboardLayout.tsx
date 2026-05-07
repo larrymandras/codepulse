@@ -53,6 +53,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Grid3X3,
+  Palette,
 } from "lucide-react";
 import {
   Tooltip,
@@ -93,6 +94,7 @@ const iconComponents: Record<string, React.ElementType> = {
   "wand-2": Wand2,
   "users-round": UsersRound,
   "grid-3x3": Grid3X3,
+  "palette": Palette,
 };
 
 const commandNavItems = [
@@ -127,6 +129,7 @@ const overviewNavItems = [
   { to: "/briefings", label: "Briefings", icon: "scroll", group: "OVERVIEW" },
   { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
   { to: "/operations", label: "Operations", icon: "radio", group: "OVERVIEW" },
+  { to: "/design-studio", label: "Design Studio", icon: "palette", group: "OVERVIEW" },
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
   { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
   { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },

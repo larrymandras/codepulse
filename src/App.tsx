@@ -51,6 +51,9 @@ const ToolMatrixPage = lazy(() => import("./pages/ToolMatrix"));
 // Phase 59: Operations page
 const Operations = lazy(() => import("./pages/Operations"));
 
+// Phase 01: Design Studio
+const DesignStudio = lazy(() => import("./pages/DesignStudio"));
+
 // Phase 095: Transcript viewer
 const Transcripts = lazy(() => import("./pages/Transcripts"));
 
@@ -105,6 +108,8 @@ export default function App() {
               <Route path="/tool-matrix" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tool Matrix...</div>}><ToolMatrixPage /></Suspense>} />
               {/* Phase 59: Operations page */}
               <Route path="/operations" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Operations...</div>}><Operations /></Suspense>} />
+              {/* Phase 01: Design Studio */}
+              <Route path="/design-studio" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Design Studio...</div>}><DesignStudio /></Suspense>} />
               {/* Phase 095: Transcript viewer */}
               <Route path="/transcripts" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Transcripts...</div>}><Transcripts /></Suspense>} />
               {/* Phase 74: HR Section pages */}
