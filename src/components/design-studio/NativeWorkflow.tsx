@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -85,6 +85,16 @@ export default function NativeWorkflow() {
   void setPendingTabSwitch;
   void showAbandonDialog;
 
+  // Holds the cleanup function returned by streamRunEvents so we can abort
+  // the direction-generation SSE stream if the component unmounts mid-run (CR-03)
+  const directionStreamCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      directionStreamCleanupRef.current?.();
+    };
+  }, []);
+
   function canGoToStep(idx: number): boolean {
     // Can't go back past step 4 once generation has started
     if (generationStarted && idx < 4) return false;
@@ -167,7 +177,9 @@ export default function NativeWorkflow() {
       let accumulated = "";
       const controller = new AbortController();
 
-      streamRunEvents(dirRunId, {
+      // Store cleanup so the stream is aborted on unmount (CR-03)
+      directionStreamCleanupRef.current?.(); // abort any previous stream
+      directionStreamCleanupRef.current = streamRunEvents(dirRunId, {
         onToken: (text) => {
           accumulated += text;
         },
