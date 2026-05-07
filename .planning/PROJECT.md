@@ -10,10 +10,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-06 with Phase 59)
+**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-07 with Phase 01 Design Studio)
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
 
-9 phases complete across the v4.0 milestone:
+10 phases complete across the v4.0 milestone:
 1. UI Foundation — Paperclip design language across all pages
 2. Bidirectional Telemetry — WebSocket consumer + command sender
 3. Interaction Layer — Inbox, Command Palette, Agent Chat, Live Run, Insights Chat
@@ -23,6 +23,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 7. Intelligence Layer — Cost forecasting, briefings, anomaly detection, memory quality
 8. Infrastructure Layer (Phase 58) — Command catalog on Capabilities page
 9. Operations page (Phase 59) — Agent status grid, cron calendar, pipeline flow diagram
+10. Design Studio (Phase 01) — Open Design daemon sidecar, sandboxed preview, native 6-step wizard, project gallery, ZIP import/export
 
 ## Requirements
 
@@ -57,6 +58,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - ✓ Memory quality metrics (dedup, staleness, contradictions) — v4.0 Phase 7
 - ✓ WebSocket command catalog on Capabilities page — v4.0 Phase 58
 - ✓ Operations page with agent status grid, cron calendar, pipeline flow — v4.0 Phase 59
+- ✓ Design Studio with Open Design daemon integration, sandboxed preview, native wizard, project gallery — v4.0 Phase 01
 
 ### Active
 
@@ -76,7 +78,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - **CodePulse repo:** C:\Users\mandr\codepulse
 - **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow
-- **Tests:** 268+ passing (Vitest), 31 Phase 59 tests across 5 files, 1 pre-existing failure in Inbox keyboard nav
+- **Tests:** 437+ passing (Vitest), 60 test files, 148 todo stubs. Phase 01 added 34 Design Studio tests.
 
 ## Constraints
 
@@ -97,6 +99,8 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 | Z-score anomaly detection | Statistical approach, no ML dependency | ✓ Good — auto-creates alerts |
 | WebSocket command catalog | Live registry vs static Convex count | ✓ Good — real-time command visibility |
 | Rubric-inspired Operations page | Dedicated observability surface for agent/cron/pipeline state | ✓ Good — fills operational visibility gap |
+| Open Design daemon as Docker sidecar | Sandboxed design generation, browser-triggered Convex sync (cloud cannot reach localhost) | ✓ Good — isolated from main app |
+| Fetch-based SSE over EventSource | Better reconnect control, AbortController cleanup | ✓ Good — matches RESEARCH.md recommendation |
 
 ## Evolution
 
@@ -116,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-06 after v4.0 milestone completion (Phase 59 retroactive update)*
+*Last updated: 2026-05-07 after Phase 01 Design Studio completion*
