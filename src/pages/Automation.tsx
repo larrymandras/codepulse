@@ -8,6 +8,7 @@ import CronJobList, { type CronJob } from "../components/CronJobList";
 import CronSheet from "../components/CronSheet";
 import CronExecutionHistory from "../components/CronExecutionHistory";
 import WakeupQueue from "../components/WakeupQueue";
+import SuperLoopPanel from "../components/SuperLoopPanel";
 import HeartbeatAlertsPanel from "../components/HeartbeatAlertsPanel";
 import JobLifecyclePanel from "../components/JobLifecyclePanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -22,6 +23,7 @@ import {
   useRecentJobs,
 } from "../hooks/useAutomation";
 import { usePendingWakeups, useRecentWakeups } from "../hooks/useWakeups";
+import { useSuperLoopIterations } from "../hooks/useSuperLoops";
 
 function relTime(epoch: number | null): string {
   if (!epoch) return "--";
@@ -48,6 +50,7 @@ export default function Automation() {
   const jobs = useRecentJobs(100);
   const pendingWakeups = usePendingWakeups(50);
   const recentWakeups = useRecentWakeups(50);
+  const superLoopIterations = useSuperLoopIterations(50);
   const checkpointOverview = useQuery(api.pipelineCheckpoints.overview);
   const recentCheckpoints = useQuery(api.pipelineCheckpoints.recent, { limit: 20 });
   const integrationOverview = useQuery(api.integrationCalls.overview);
@@ -129,6 +132,11 @@ export default function Automation() {
       {/* Wakeup Queue */}
       <SectionErrorBoundary name="Wakeup Queue">
         <WakeupQueue pending={pendingWakeups} recent={recentWakeups} />
+      </SectionErrorBoundary>
+
+      {/* Super Loops */}
+      <SectionErrorBoundary name="Super Loops">
+        <SuperLoopPanel iterations={superLoopIterations} />
       </SectionErrorBoundary>
 
       {/* Heartbeats and Jobs side by side */}
