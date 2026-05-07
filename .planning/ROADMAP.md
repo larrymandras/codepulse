@@ -42,9 +42,10 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 **Goal:** Integrate nexu-io/open-design into CodePulse as a first-class Design Studio page with two modes: iframe embed for immediate full-featured access and a native Paperclip-styled UI reimplementing the full Open Design workflow (skill selection, discovery, direction picking, live streaming generation, sandboxed preview, multi-format export).
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12
 **Depends on:** Phase 0
-**Plans:** 5 plans
+**Plans:** 6 plans
 
 Plans:
+- [ ] 01-00-PLAN.md — Wave 0: Dockerfile for Open Design daemon + 6 test stub files
 - [ ] 01-01-PLAN.md — Foundation: types, API client, Convex tables, hooks, Docker sidecar
 - [ ] 01-02-PLAN.md — Page shell, iframe embed, daemon status badge, route/nav registration
 - [ ] 01-03-PLAN.md — Native UI wizard shell + catalog steps 1-3 (skill, design system, brief)
@@ -53,4 +54,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-05-07 — Phase 1 Design Studio planned (5 plans, 3 waves).*
+*Last updated: 2026-05-07 — Phase 1 Design Studio revised (6 plans, 4 waves). Added Wave 0 plan, fixed direction generation, fixed dependencies.*
