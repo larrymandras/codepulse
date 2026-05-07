@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Operational Excellence
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-05-07T20:57:46.388Z"
+stopped_at: "Checkpoint: human-verify after Task 2 of 01-05-PLAN.md"
+last_updated: "2026-05-07T21:03:30.242Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 83
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
 Phase: 01 (design-studio-sandboxed-design-preview-artifact-storage-temp) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████████░░] 83%
 | 58 | 2 | Complete |
 | 59 | 5 | Complete |
 | Phase 01-design-studio P01 | 12 | 2 tasks | 10 files |
+| Phase 01 P05 | 22min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -75,6 +76,8 @@ See PROJECT.md Key Decisions table for full history.
 - [01-01] convex/_generated/api.d.ts updated manually to register designProjects/designTemplates for tsc clean compile; regenerates on next convex dev
 - [01-01] syncFromDaemon Convex action documented with A7 cloud limitation; browser-triggered sync is primary production path (Plan 05)
 - [01-01] SSE streaming uses fetch + ReadableStream not EventSource for reconnect control per RESEARCH.md
+- [Phase ?]: [01-05] Convex domain tests use behavioral documentation pattern matching codebase convention — ctx.db cannot be instantiated in jsdom
+- [Phase ?]: [01-05] Browser-triggered Convex sync (useCallback+useEffect) fires once on mount; avoids A7 cloud→localhost block
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-07T20:57:46.382Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-05-07T21:03:30.236Z
+Stopped at: Checkpoint: human-verify after Task 2 of 01-05-PLAN.md
 Next step: Execute 01-02-PLAN.md
