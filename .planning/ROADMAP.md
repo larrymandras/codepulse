@@ -37,6 +37,16 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 | 58. Infrastructure Layer | v4.0 | 1/1 | Complete | 2026-04-14 |
 | 59. Rubric-Inspired Observability | v4.0 | 5/5 | Complete | 2026-05-06 |
 
+### Phase 1: Design Studio — sandboxed design preview, artifact storage, template gallery, export
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 0
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 1 to break down)
+
 ---
 
 *Last updated: 2026-05-06 — v4.0 milestone closed with Phase 59 retroactive addition.*
