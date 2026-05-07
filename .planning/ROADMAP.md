@@ -39,14 +39,18 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 
 ### Phase 1: Design Studio — sandboxed design preview, artifact storage, template gallery, export
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Integrate nexu-io/open-design into CodePulse as a first-class Design Studio page with two modes: iframe embed for immediate full-featured access and a native Paperclip-styled UI reimplementing the full Open Design workflow (skill selection, discovery, direction picking, live streaming generation, sandboxed preview, multi-format export).
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12
 **Depends on:** Phase 0
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 1 to break down)
+- [ ] 01-01-PLAN.md — Foundation: types, API client, Convex tables, hooks, Docker sidecar
+- [ ] 01-02-PLAN.md — Page shell, iframe embed, daemon status badge, route/nav registration
+- [ ] 01-03-PLAN.md — Native UI wizard shell + catalog steps 1-3 (skill, design system, brief)
+- [ ] 01-04-PLAN.md — Native UI steps 4-6 (direction picker, streaming preview, export panel)
+- [ ] 01-05-PLAN.md — Project gallery, ZIP import, page integration, Convex sync
 
 ---
 
-*Last updated: 2026-05-06 — v4.0 milestone closed with Phase 59 retroactive addition.*
+*Last updated: 2026-05-07 — Phase 1 Design Studio planned (5 plans, 3 waves).*
