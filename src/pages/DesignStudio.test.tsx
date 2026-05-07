@@ -5,6 +5,19 @@ import { MemoryRouter } from "react-router-dom";
 // Mock checkHealth so no network calls are made in tests
 vi.mock("@/lib/openDesignApi", () => ({
   checkHealth: vi.fn(() => Promise.resolve({ status: "ok" })),
+  importClaudeDesign: vi.fn(),
+}));
+
+// Mock Convex hooks — DesignStudio uses useDesignProjects (useQuery) and useAction
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => []),
+  useAction: vi.fn(() => vi.fn()),
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
+// Mock useDesignProjects hook
+vi.mock("@/hooks/useDesignProjects", () => ({
+  useDesignProjects: vi.fn(() => []),
 }));
 
 // Lazy-load friendly import
@@ -42,5 +55,14 @@ describe("DesignStudio page", () => {
     );
     // DaemonStatusBadge starts in "connecting" state and shows "Connecting" text
     expect(screen.getByText("Connecting")).toBeInTheDocument();
+  });
+
+  it("shows Import ZIP button in page header", () => {
+    render(
+      <MemoryRouter>
+        <DesignStudio />
+      </MemoryRouter>
+    );
+    expect(screen.getByRole("button", { name: "Import ZIP" })).toBeInTheDocument();
   });
 });
