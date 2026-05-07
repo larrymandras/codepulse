@@ -41,11 +41,11 @@ interface ProjectGalleryProps {
 
 function statusBadgeClass(status: string): string {
   switch (status) {
-    case "Complete":
+    case "completed":
       return "bg-green-500/10 text-green-400 border-green-500/30";
-    case "In Progress":
+    case "active":
       return "bg-yellow-500/10 text-yellow-400 border-yellow-500/30";
-    case "Failed":
+    case "failed":
       return "bg-red-500/10 text-red-400 border-red-500/30";
     default:
       return "";
