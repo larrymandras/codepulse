@@ -4,14 +4,14 @@ milestone: v4.0
 milestone_name: Operational Excellence
 status: executing
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-05-07T20:37:46.179Z"
+last_updated: "2026-05-07T20:45:22.018Z"
 last_activity: 2026-05-07
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 1
-  percent: 17
+  completed_plans: 2
+  percent: 33
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
 Phase: 01 (design-studio-sandboxed-design-preview-artifact-storage-temp) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-07
 
-Progress: [██░░░░░░░░] 17%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░] 17%
 | 07 | 5 | Complete |
 | 58 | 2 | Complete |
 | 59 | 5 | Complete |
+| Phase 01-design-studio P01 | 12 | 2 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ See PROJECT.md Key Decisions table for full history.
 - Interval-based crons shown as pill summary, not flooding every hour slot
 - Slot detail rendered as positioned popover with close button
 - Pipeline Flow reduced to 180px, always shows 5 nodes in pending state
+- [01-01] convex/_generated/api.d.ts updated manually to register designProjects/designTemplates for tsc clean compile; regenerates on next convex dev
+- [01-01] syncFromDaemon Convex action documented with A7 cloud limitation; browser-triggered sync is primary production path (Plan 05)
+- [01-01] SSE streaming uses fetch + ReadableStream not EventSource for reconnect control per RESEARCH.md
 
 ### Pending Todos
 
@@ -82,6 +86,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-07T20:37:46.172Z
-Stopped at: Phase 1 UI-SPEC approved
-Next step: /gsd-complete-milestone or /gsd-new-milestone
+Last session: 2026-05-07T20:45:22.010Z
+Stopped at: Completed 01-01-PLAN.md
+Next step: Execute 01-02-PLAN.md
