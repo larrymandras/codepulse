@@ -12,8 +12,10 @@ import FileTree from "../components/FileTree";
 import SessionTimeline from "../components/SessionTimeline";
 import BashLog from "../components/BashLog";
 import SessionCapabilities from "../components/SessionCapabilities";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { TurnMetricsTable } from "../components/TurnMetricsTable";
 
-type Tab = "overview" | "timeline" | "files" | "bash" | "errors";
+type Tab = "overview" | "timeline" | "files" | "bash" | "errors" | "turns";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
@@ -21,6 +23,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "files", label: "Files" },
   { key: "bash", label: "Bash" },
   { key: "errors", label: "Errors" },
+  { key: "turns", label: "Turns" },
 ];
 
 export default function SessionDetail() {
@@ -147,6 +150,13 @@ export default function SessionDetail() {
       {/* Errors Tab */}
       {activeTab === "errors" && (
         <ErrorsList errors={errors} />
+      )}
+
+      {/* Turns Tab */}
+      {activeTab === "turns" && id && (
+        <SectionErrorBoundary name="Turn Metrics">
+          <TurnMetricsTable sessionId={id} />
+        </SectionErrorBoundary>
       )}
     </div>
   );

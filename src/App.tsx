@@ -57,6 +57,9 @@ const DesignStudio = lazy(() => import("./pages/DesignStudio"));
 // Phase 095: Transcript viewer
 const Transcripts = lazy(() => import("./pages/Transcripts"));
 
+// Phase 098: Session Kanban
+const SessionKanban = lazy(() => import("./pages/SessionKanban"));
+
 // Phase 74: HR Section stub pages
 const HrRoster = lazy(() => import("./pages/hr/Roster"));
 const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
@@ -72,6 +75,7 @@ export default function App() {
           <Routes>
             <Route element={<DashboardLayout />}>
               <Route path="/" element={<Dashboard />} />
+              <Route path="/sessions" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Sessions...</div>}><SessionKanban /></Suspense>} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/capabilities" element={<Capabilities />} />
               <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />

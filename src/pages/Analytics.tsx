@@ -22,6 +22,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import PromptBudgetPanel from "../components/PromptBudgetPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
+import { ProjectCostBreakdown } from "../components/ProjectCostBreakdown";
 import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
 import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
@@ -114,6 +115,9 @@ export default function Analytics() {
       <GlassPanel className="p-4">
         <CostTrendChart />
       </GlassPanel>
+
+      {/* Project Cost Breakdown — full width */}
+      <ProjectCostBreakdown />
 
       {/* Two-column: LLM Analytics + Capability Growth */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
