@@ -27,7 +27,7 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
-| 1. UI Foundation | v4.0 | 4/4 | Complete | 2026-03-15 |
+| 1. UI Foundation | v4.0 | 1/6 | In Progress|  |
 | 2. Bidirectional Telemetry | v4.0 | 4/4 | Complete | 2026-03-22 |
 | 3. Interaction Layer | v4.0 | 6/6 | Complete | 2026-03-29 |
 | 4. Task Management | v4.0 | 6/6 | Complete | 2026-04-03 |
@@ -42,10 +42,10 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 **Goal:** Integrate nexu-io/open-design into CodePulse as a first-class Design Studio page with two modes: iframe embed for immediate full-featured access and a native Paperclip-styled UI reimplementing the full Open Design workflow (skill selection, discovery, direction picking, live streaming generation, sandboxed preview, multi-format export).
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12
 **Depends on:** Phase 0
-**Plans:** 6 plans
+**Plans:** 1/6 plans executed
 
 Plans:
-- [ ] 01-00-PLAN.md — Wave 0: Dockerfile for Open Design daemon + 6 test stub files
+- [x] 01-00-PLAN.md — Wave 0: Dockerfile for Open Design daemon + 6 test stub files
 - [ ] 01-01-PLAN.md — Foundation: types, API client, Convex tables, hooks, Docker sidecar
 - [ ] 01-02-PLAN.md — Page shell, iframe embed, daemon status badge, route/nav registration
 - [ ] 01-03-PLAN.md — Native UI wizard shell + catalog steps 1-3 (skill, design system, brief)
