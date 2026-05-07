@@ -186,6 +186,8 @@ export default function NativeWorkflow() {
         onError: (err) => {
           toast.error(err.message || "Direction generation failed");
           setDirectionsLoading(false);
+          // Return user to brief step so they can retry (WR-02)
+          setCurrentStep(2);
         },
         onDone: () => {
           const parsed = parseDirections(accumulated);
