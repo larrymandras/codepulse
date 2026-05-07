@@ -62,13 +62,12 @@ Exceptions:
 
 | Role | Font | Size | Weight | Line Height | Usage |
 |------|------|------|--------|-------------|-------|
-| Page heading | Cinzel | 24px (text-2xl) | 700 (bold) | 1.2 | "Design Studio" page title, mode headings |
+| Page heading | Cinzel | 24px (text-2xl) | 600 (semibold) | 1.2 | "Design Studio" page title, mode headings |
 | Section heading | Geist | 16px (text-base) | 600 (semibold) | 1.3 | "Template Gallery", "My Projects", step labels |
 | Body | Geist | 14px (text-sm) | 400 (regular) | 1.5 | Card descriptions, form labels, sidebar items |
-| Caption / meta | Geist | 12px (text-xs) | 400 (regular) | 1.4 | Skill tags, export format labels, status badges, timestamps |
-| Streaming output | JetBrains Mono | 13px | 400 (regular) | 1.6 | Live design generation log lines |
+| Caption / meta | Geist / JetBrains Mono | 12px (text-xs) | 400 (regular) | 1.4 / 1.6 | Skill tags, export format labels, status badges, timestamps; streaming output log lines (JetBrains Mono, line-height 1.6) |
 
-Weights used: 400 (regular) and 600/700 (semibold/bold) only. No other weights.
+Weights used: 400 (regular) and 600 (semibold) only. No other weights.
 
 ---
 
@@ -145,7 +144,7 @@ Components available in this codebase that Design Studio MUST reuse (no new impl
 DashboardLayout (sidebar stays)
 └── DesignStudioPage
     ├── PageHeader
-    │   ├── h1: "Design Studio" [Cinzel, 24px, bold]
+    │   ├── h1: "Design Studio" [Cinzel, 24px, semibold]
     │   ├── DaemonStatusBadge (top-right)
     │   └── Tabs: [Embedded Studio | Native UI]
     │
@@ -169,7 +168,7 @@ DashboardLayout (sidebar stays)
 ### Wizard Step Indicator
 
 - 6 numbered steps, horizontal layout at top of NativeWorkflow
-- Active step: accent color dot + bold label
+- Active step: accent color dot + semibold label
 - Completed step: checkmark icon + muted label
 - Inactive step: number + muted label
 - Connector: 1px horizontal line, `--border` color
@@ -224,7 +223,7 @@ DashboardLayout (sidebar stays)
 
 ### StreamingPreview (Step 5)
 - Split layout: left 50% = streaming log panel, right 50% = srcdoc iframe preview
-- Log panel: dark surface `bg-gray-900`, JetBrains Mono 13px, ScrollArea with auto-scroll to bottom
+- Log panel: dark surface `bg-gray-900`, JetBrains Mono 12px (caption/meta size), line-height 1.6, ScrollArea with auto-scroll to bottom
 - Preview iframe: white background, no border (full bleed within its column)
 - Progress bar above split: 0–100%, accent color fill, labeled "Generating design..."
 - On stream complete: Progress bar reaches 100% and fades out; "Preview Ready" badge (status-ok) appears
@@ -233,9 +232,9 @@ DashboardLayout (sidebar stays)
 
 ### ExportPanel (Step 6)
 - Format buttons: HTML, PDF, PPTX, ZIP, Markdown — as toggle group (single select)
-- "Download" primary CTA button
+- "Download File" primary CTA button
 - Download triggers `GET /api/export/{projectId}?format={format}` → browser download
-- Loading state on Download button while request in-flight (spinner icon)
+- Loading state on Download File button while request in-flight (spinner icon)
 - Success: brief "Downloaded" toast (sonner, 2s, bottom-right)
 - Error: inline error below button (text-xs, status-error color)
 
@@ -264,7 +263,7 @@ DashboardLayout (sidebar stays)
 | Mode tab 2 | Native UI |
 | Primary CTA — generate directions | Generate Directions |
 | Primary CTA — generate design | Generate Design |
-| Primary CTA — download export | Download |
+| Primary CTA — download export | Download File |
 | Daemon connecting | Connecting to Design Studio... |
 | Daemon offline heading | Design Studio Unavailable |
 | Daemon offline body | The Open Design daemon is not running. Start it with `docker compose up open-design` and refresh. |
@@ -290,7 +289,7 @@ DashboardLayout (sidebar stays)
 | Wizard abandon cancel | Keep Working |
 | ZIP import dialog heading | Import Claude Design ZIP |
 | ZIP import dialog body | Select a ZIP file exported from Claude Artifacts. Your skill and design system selections will be preserved. |
-| ZIP import CTA | Import |
+| ZIP import CTA | Import ZIP |
 
 ---
 
