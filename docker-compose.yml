@@ -1,0 +1,49 @@
+# Design Studio — Open Design sidecar
+#
+# Prerequisites:
+#   1. Clone: git clone https://github.com/nexu-io/open-design.git ./open-design
+#   2. Dockerfile already at ./open-design/Dockerfile (created in Plan 00)
+#   3. Run: docker compose up --build -d
+#
+# The daemon serves on port 17456.
+# Set VITE_OPEN_DESIGN_URL=http://localhost:17456 in .env.local
+#
+# CORS note (RESEARCH.md Open Question 1):
+#   If the daemon blocks direct browser requests from localhost:5173 due to CORS,
+#   add a Vite proxy in vite.config.ts:
+#     server: {
+#       proxy: {
+#         '/od-api': {
+#           target: 'http://localhost:17456',
+#           rewrite: (p) => p.replace(/^\/od-api/, '/api'),
+#         },
+#       },
+#     }
+#   Then set VITE_OPEN_DESIGN_URL='' and prefix API paths with /od-api.
+#
+# Convex environment note (RESEARCH.md A7):
+#   When using Convex cloud, the syncFromDaemon action cannot reach localhost:17456.
+#   Set OPEN_DESIGN_URL=http://host.docker.internal:17456 in Convex Dashboard
+#   environment variables (for local Docker sidecar), or use the public daemon URL.
+#   See convex/designProjects.ts syncFromDaemon for full details.
+
+services:
+  open-design:
+    build:
+      context: ./open-design
+      dockerfile: Dockerfile
+    ports:
+      - "17456:17456"
+    volumes:
+      - open-design-data:/app/.od
+    environment:
+      - OD_DATA_DIR=/app/.od
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:17456/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  open-design-data:

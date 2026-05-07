@@ -1493,4 +1493,35 @@ export default defineSchema({
     .index("by_pipeline", ["pipelineName", "timestamp"])
     .index("by_status", ["status", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // DESIGN STUDIO — Open Design project/template mirror (Phase 01)
+  // ============================================================
+
+  designProjects: defineTable({
+    odProjectId: v.string(),        // FK to SQLite projects.id
+    name: v.string(),
+    skillId: v.optional(v.string()),
+    designSystemId: v.optional(v.string()),
+    status: v.string(),             // "active" | "completed" | "failed"
+    thumbnailUrl: v.optional(v.string()),
+    odCreatedAt: v.float64(),
+    odUpdatedAt: v.float64(),
+    syncedAt: v.float64(),
+  })
+    .index("by_odProjectId", ["odProjectId"])
+    .index("by_updatedAt", ["odUpdatedAt"]),
+
+  designTemplates: defineTable({
+    odTemplateId: v.string(),       // FK to SQLite templates.id
+    name: v.string(),
+    description: v.optional(v.string()),
+    sourceProjectId: v.optional(v.string()),
+    skillId: v.optional(v.string()),
+    designSystemId: v.optional(v.string()),
+    odCreatedAt: v.float64(),
+    syncedAt: v.float64(),
+  })
+    .index("by_odTemplateId", ["odTemplateId"])
+    .index("by_createdAt", ["odCreatedAt"]),
 });

@@ -46,6 +46,8 @@ import type * as credentialAudit from "../credentialAudit.js";
 import type * as crons from "../crons.js";
 import type * as dailyRhythm from "../dailyRhythm.js";
 import type * as dataRetention from "../dataRetention.js";
+import type * as designProjects from "../designProjects.js";
+import type * as designTemplates from "../designTemplates.js";
 import type * as docker from "../docker.js";
 import type * as dreaming from "../dreaming.js";
 import type * as drift from "../drift.js";
@@ -174,6 +176,8 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   dailyRhythm: typeof dailyRhythm;
   dataRetention: typeof dataRetention;
+  designProjects: typeof designProjects;
+  designTemplates: typeof designTemplates;
   docker: typeof docker;
   dreaming: typeof dreaming;
   drift: typeof drift;
