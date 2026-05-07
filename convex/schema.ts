@@ -1302,9 +1302,16 @@ export default defineSchema({
     archived: v.optional(v.boolean()),
     complexityTier: v.optional(v.string()),
     fromOverride: v.optional(v.boolean()),
+    sessionId: v.optional(v.string()),
+    turnNumber: v.optional(v.float64()),
+    projectTag: v.optional(v.string()),
+    costUsd: v.optional(v.float64()),
+    toolCallCount: v.optional(v.float64()),
   })
     .index("by_agent_timestamp", ["agentId", "timestamp"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_project_timestamp", ["projectTag", "timestamp"])
+    .index("by_session", ["sessionId", "timestamp"]),
 
   // ============================================================
   // COMPLEXITY ASSESSMENTS (Phase 093)

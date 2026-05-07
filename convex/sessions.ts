@@ -37,6 +37,49 @@ export const upsert = mutation({
   },
 });
 
+export const upsertWithStatus = mutation({
+  args: {
+    sessionId: v.string(),
+    status: v.string(),
+    model: v.optional(v.string()),
+    timestamp: v.float64(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("sessions")
+      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        status: args.status,
+        lastEventAt: args.timestamp,
+        ...(args.model !== undefined ? { model: args.model } : {}),
+      });
+    } else {
+      await ctx.db.insert("sessions", {
+        sessionId: args.sessionId,
+        startedAt: args.timestamp,
+        lastEventAt: args.timestamp,
+        status: args.status,
+        model: args.model,
+        eventCount: 0,
+      });
+    }
+  },
+});
+
+export const listByStatus = query({
+  args: { status: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", args.status))
+      .order("desc")
+      .take(50);
+  },
+});
+
 export const markCompleted = mutation({
   args: {
     sessionId: v.string(),

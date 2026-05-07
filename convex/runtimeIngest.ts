@@ -655,6 +655,11 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             modelUsed: d.modelUsed ?? d.model_used ?? d.model,
             complexityTier: d.complexityTier ?? d.complexity_tier,
             fromOverride: d.fromOverride ?? d.from_override,
+            sessionId: d.sessionId ?? d.session_id,
+            turnNumber: d.turnNumber ?? d.turn_number,
+            projectTag: d.projectTag ?? d.project_tag,
+            costUsd: d.costUsd ?? d.cost_usd,
+            toolCallCount: d.toolCallCount ?? d.tool_call_count,
             timestamp,
           });
           break;
@@ -1010,6 +1015,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             profileId: d.profileId ?? d.profile_id ?? "unknown",
             totalCycles: d.totalCycles ?? d.total_cycles ?? 0,
             goalAchieved: d.goalAchieved ?? d.goal_achieved ?? false,
+            timestamp,
+          });
+          break;
+        }
+        case "session_phase_change": {
+          const d = data as any;
+          await ctx.runMutation(api.sessions.upsertWithStatus, {
+            sessionId: d.sessionId ?? d.session_id ?? "unknown",
+            status: d.phase ?? "received",
+            model: d.model,
             timestamp,
           });
           break;

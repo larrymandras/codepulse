@@ -12,6 +12,11 @@ export const insertMetric = mutation({
     modelUsed: v.optional(v.string()),
     complexityTier: v.optional(v.string()),
     fromOverride: v.optional(v.boolean()),
+    sessionId: v.optional(v.string()),
+    turnNumber: v.optional(v.float64()),
+    projectTag: v.optional(v.string()),
+    costUsd: v.optional(v.float64()),
+    toolCallCount: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("agentMetrics", {
@@ -24,7 +29,49 @@ export const insertMetric = mutation({
       modelUsed: args.modelUsed,
       complexityTier: args.complexityTier,
       fromOverride: args.fromOverride,
+      sessionId: args.sessionId,
+      turnNumber: args.turnNumber,
+      projectTag: args.projectTag,
+      costUsd: args.costUsd,
+      toolCallCount: args.toolCallCount,
     });
+  },
+});
+
+export const costByProject = query({
+  args: {
+    windowStart: v.float64(),
+    windowEnd: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const end = args.windowEnd ?? Date.now() / 1000;
+    const rows = await ctx.db
+      .query("agentMetrics")
+      .withIndex("by_timestamp", (q) =>
+        q.gte("timestamp", args.windowStart).lte("timestamp", end)
+      )
+      .collect();
+
+    const byProjectDay: Record<string, Record<string, number>> = {};
+    for (const row of rows) {
+      const tag = (row as any).projectTag ?? "personal";
+      const dayBucket = new Date(row.timestamp * 1000).toISOString().slice(0, 10);
+      byProjectDay[tag] = byProjectDay[tag] ?? {};
+      byProjectDay[tag][dayBucket] = (byProjectDay[tag][dayBucket] ?? 0) +
+        ((row as any).costUsd ?? 0);
+    }
+    return byProjectDay;
+  },
+});
+
+export const turnMetrics = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("agentMetrics")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("asc")
+      .collect();
   },
 });
 
