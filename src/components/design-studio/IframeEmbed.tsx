@@ -110,7 +110,7 @@ export default function IframeEmbed() {
         <iframe
           src={daemonUrl}
           title="Design Studio"
-          sandbox="allow-scripts allow-same-origin allow-forms"
+          sandbox="allow-scripts allow-forms allow-popups"
           className="w-full border-0"
           style={{
             height: iframeHeight,
