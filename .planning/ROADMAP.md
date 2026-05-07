@@ -47,8 +47,8 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 Plans:
 - [x] 01-00-PLAN.md — Wave 0: Dockerfile for Open Design daemon + 6 test stub files
 - [x] 01-01-PLAN.md — Foundation: types, API client, Convex tables, hooks, Docker sidecar
-- [ ] 01-02-PLAN.md — Page shell, iframe embed, daemon status badge, route/nav registration
-- [ ] 01-03-PLAN.md — Native UI wizard shell + catalog steps 1-3 (skill, design system, brief)
+- [x] 01-02-PLAN.md — Page shell, iframe embed, daemon status badge, route/nav registration
+- [x] 01-03-PLAN.md — Native UI wizard shell + catalog steps 1-3 (skill, design system, brief)
 - [ ] 01-04-PLAN.md — Native UI steps 4-6 (direction picker, streaming preview, export panel)
 - [ ] 01-05-PLAN.md — Project gallery, ZIP import, page integration, Convex sync
 
