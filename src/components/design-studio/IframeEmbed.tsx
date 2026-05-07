@@ -63,8 +63,8 @@ export default function IframeEmbed() {
   useEffect(() => {
     startPolling();
     return () => stopPolling();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Re-poll if daemon URL changes (e.g. env var hot-reload in dev)
+  }, [daemonUrl]); // eslint-disable-line react-hooks/exhaustive-deps -- startPolling/stopPolling are stable (only close over refs)
 
   const iframeHeight = "calc(100vh - 56px)";
 
