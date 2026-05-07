@@ -989,6 +989,31 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "super_loop_iteration": {
+          const d = data as any;
+          await ctx.runMutation(api.superLoops.recordIteration, {
+            loopId: d.loopId ?? d.loop_id ?? "unknown",
+            profileId: d.profileId ?? d.profile_id ?? "unknown",
+            cycleNum: d.cycleNum ?? d.cycle_num ?? 0,
+            goalComplete: d.goalComplete ?? d.goal_complete ?? false,
+            confidence: d.confidence ?? 0,
+            outcome: d.outcome ?? "",
+            status: d.status ?? "running",
+            timestamp,
+          });
+          break;
+        }
+        case "super_loop_complete": {
+          const d = data as any;
+          await ctx.runMutation(api.superLoops.recordComplete, {
+            loopId: d.loopId ?? d.loop_id ?? "unknown",
+            profileId: d.profileId ?? d.profile_id ?? "unknown",
+            totalCycles: d.totalCycles ?? d.total_cycles ?? 0,
+            goalAchieved: d.goalAchieved ?? d.goal_achieved ?? false,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

@@ -110,6 +110,7 @@ import type * as selfHealing from "../selfHealing.js";
 import type * as sessions from "../sessions.js";
 import type * as startupEvents from "../startupEvents.js";
 import type * as supabase from "../supabase.js";
+import type * as superLoops from "../superLoops.js";
 import type * as systemResources from "../systemResources.js";
 import type * as tasks from "../tasks.js";
 import type * as teamPresets from "../teamPresets.js";
@@ -237,6 +238,7 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   startupEvents: typeof startupEvents;
   supabase: typeof supabase;
+  superLoops: typeof superLoops;
   systemResources: typeof systemResources;
   tasks: typeof tasks;
   teamPresets: typeof teamPresets;

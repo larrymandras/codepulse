@@ -398,6 +398,22 @@ export default defineSchema({
     .index("by_status", ["status", "fireAt"])
     .index("by_timestamp", ["timestamp"]),
 
+  superLoopIterations: defineTable({
+    loopId: v.string(),
+    profileId: v.string(),
+    goal: v.optional(v.string()),
+    cycleNum: v.float64(),
+    goalComplete: v.boolean(),
+    confidence: v.float64(),
+    outcome: v.optional(v.string()),
+    status: v.optional(v.string()),
+    totalCycles: v.optional(v.float64()),
+    timestamp: v.float64(),
+  })
+    .index("by_loopId", ["loopId"])
+    .index("by_profileId", ["profileId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
   heartbeatAlerts: defineTable({
     alerts: v.any(), // array of check results
     alertCount: v.float64(),
