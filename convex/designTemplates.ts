@@ -54,8 +54,19 @@ export const list = query({
 export const listIds = query({
   args: {},
   handler: async (ctx) => {
-    const docs = await ctx.db.query("designTemplates").collect();
+    const docs = await ctx.db.query("designTemplates").take(500);
     return docs.map((d) => d.odTemplateId);
+  },
+});
+
+export const getSyncedAt = query({
+  args: { odTemplateId: v.string() },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db
+      .query("designTemplates")
+      .withIndex("by_odTemplateId", (q) => q.eq("odTemplateId", args.odTemplateId))
+      .first();
+    return doc?.syncedAt ?? null;
   },
 });
 
@@ -71,6 +82,10 @@ export const syncFromDaemon = action({
     const url = process.env.OPEN_DESIGN_URL;
     if (!url) return { synced: 0, removed: 0 };
     try {
+      // Record action start time before reading existingIds (CR-04 TOCTOU guard)
+      const actionStartedAt = Date.now();
+      const REMOVAL_GRACE_MS = 60_000;
+
       const res = await fetch(`${url}/api/templates`);
       if (!res.ok) return { synced: 0, removed: 0 };
       const templates = await res.json() as Array<{
@@ -94,6 +109,13 @@ export const syncFromDaemon = action({
       let removed = 0;
       for (const id of existingIds) {
         if (!incomingIds.has(id)) {
+          const syncedAt: number | null = await ctx.runQuery(
+            api.designTemplates.getSyncedAt,
+            { odTemplateId: id },
+          );
+          if (syncedAt !== null && actionStartedAt - syncedAt < REMOVAL_GRACE_MS) {
+            continue;
+          }
           await ctx.runMutation(api.designTemplates.remove, { odTemplateId: id });
           removed++;
         }

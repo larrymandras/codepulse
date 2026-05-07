@@ -53,8 +53,19 @@ export const list = query({
 export const listIds = query({
   args: {},
   handler: async (ctx) => {
-    const docs = await ctx.db.query("designProjects").collect();
+    const docs = await ctx.db.query("designProjects").take(500);
     return docs.map((d) => d.odProjectId);
+  },
+});
+
+export const getSyncedAt = query({
+  args: { odProjectId: v.string() },
+  handler: async (ctx, args) => {
+    const doc = await ctx.db
+      .query("designProjects")
+      .withIndex("by_odProjectId", (q) => q.eq("odProjectId", args.odProjectId))
+      .first();
+    return doc?.syncedAt ?? null;
   },
 });
 
@@ -79,6 +90,13 @@ export const syncFromDaemon = action({
     const url = process.env.OPEN_DESIGN_URL;
     if (!url) return { synced: 0, removed: 0 };
     try {
+      // Record action start time before reading existingIds (CR-04 TOCTOU guard)
+      const actionStartedAt = Date.now();
+      // Grace window: don't remove projects syncedAt within the last 60 seconds.
+      // This prevents deleting projects just created browser-side that the daemon
+      // hasn't seen yet (race between listIds read and incoming daemon snapshot).
+      const REMOVAL_GRACE_MS = 60_000;
+
       const res = await fetch(`${url}/api/projects`);
       if (!res.ok) return { synced: 0, removed: 0 };
       const projects = await res.json() as Array<{
@@ -105,6 +123,16 @@ export const syncFromDaemon = action({
       let removed = 0;
       for (const id of existingIds) {
         if (!incomingIds.has(id)) {
+          // Skip removal if the record was synced after this action started —
+          // it was likely just created by the browser and the daemon hasn't
+          // returned it yet (CR-04 TOCTOU protection).
+          const syncedAt: number | null = await ctx.runQuery(
+            api.designProjects.getSyncedAt,
+            { odProjectId: id },
+          );
+          if (syncedAt !== null && actionStartedAt - syncedAt < REMOVAL_GRACE_MS) {
+            continue;
+          }
           await ctx.runMutation(api.designProjects.remove, { odProjectId: id });
           removed++;
         }
