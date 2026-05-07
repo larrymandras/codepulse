@@ -36,6 +36,11 @@ export default function StreamingPreview({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
 
+  // Stable refs for callbacks — prevents stale closure captures when the
+  // parent re-renders and passes new inline arrow functions (WR-01)
+  const onGenerationCompleteRef = useRef(onGenerationComplete);
+  useEffect(() => { onGenerationCompleteRef.current = onGenerationComplete; });
+
   // Suppress unused variable warning — accumulatedText exposed for debugging
   void accumulatedText;
 
@@ -73,7 +78,7 @@ export default function StreamingPreview({
       onDone: () => {
         setStreamStatus("complete");
         setProgress(100);
-        onGenerationComplete();
+        onGenerationCompleteRef.current();
       },
       signal: controller.signal,
     });
