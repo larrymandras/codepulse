@@ -36,6 +36,10 @@ export default function ZipImportDialog({
 
   async function handleImport() {
     if (!file) return;
+    if (!file.name.endsWith(".zip") && file.type !== "application/zip") {
+      setError("Please select a ZIP file.");
+      return;
+    }
     setImporting(true);
     setError(null);
     try {
