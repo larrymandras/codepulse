@@ -1,8 +1,6 @@
 // Open Design daemon API client
-// Modeled on astridrApi.ts pattern — see RESEARCH.md Pattern 4
-//
-// The daemon has no authentication by default — it is designed for local-only use.
-// VITE_OPEN_DESIGN_URL defaults to http://localhost:17456 (daemon default port).
+// Requests go through the Vite proxy (/od-api → localhost:17456/api) to avoid
+// CORS rejection by the daemon's loopback-only origin policy.
 
 import type {
   Skill,
@@ -16,7 +14,7 @@ import type {
   ExportFormat,
 } from "./openDesignTypes";
 
-const OD_BASE = import.meta.env.VITE_OPEN_DESIGN_URL ?? "http://localhost:17456";
+const OD_BASE = import.meta.env.VITE_OPEN_DESIGN_URL ?? "";
 
 export class OpenDesignApiError extends Error {
   status: number;
@@ -47,21 +45,24 @@ async function odRequest<T>(path: string, init?: RequestInit): Promise<T> {
 // Catalog endpoints
 // ---------------------------------------------------------------------------
 
-export function fetchSkills(): Promise<Skill[]> {
-  return odRequest<Skill[]>("/api/skills");
+export async function fetchSkills(): Promise<Skill[]> {
+  const res = await odRequest<{ skills: Skill[] }>("/od-api/skills");
+  return res.skills;
 }
 
-export function fetchDesignSystems(): Promise<DesignSystem[]> {
-  return odRequest<DesignSystem[]>("/api/design-systems");
+export async function fetchDesignSystems(): Promise<DesignSystem[]> {
+  const res = await odRequest<{ designSystems: DesignSystem[] }>("/od-api/design-systems");
+  return res.designSystems;
 }
 
-export function fetchAgents(): Promise<OdAgent[]> {
-  return odRequest<OdAgent[]>("/api/agents");
+export async function fetchAgents(): Promise<OdAgent[]> {
+  const res = await odRequest<{ agents: OdAgent[] }>("/od-api/agents");
+  return res.agents;
 }
 
 // Health check with 3s timeout — T-01-04 mitigation (STRIDE)
 export function checkHealth(): Promise<HealthResponse> {
-  return odRequest<HealthResponse>("/api/health", {
+  return odRequest<HealthResponse>("/od-api/health", {
     signal: AbortSignal.timeout(3000),
   });
 }
@@ -75,14 +76,15 @@ export function createProject(body: {
   skill_id?: string;
   design_system_id?: string;
 }): Promise<OdProject> {
-  return odRequest<OdProject>("/api/projects", {
+  return odRequest<OdProject>("/od-api/projects", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
-export function listProjects(): Promise<OdProject[]> {
-  return odRequest<OdProject[]>("/api/projects");
+export async function listProjects(): Promise<OdProject[]> {
+  const res = await odRequest<{ projects: OdProject[] }>("/od-api/projects");
+  return res.projects;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,7 +92,7 @@ export function listProjects(): Promise<OdProject[]> {
 // ---------------------------------------------------------------------------
 
 export function createRun(body: RunRequest): Promise<{ runId: string }> {
-  return odRequest<{ runId: string }>("/api/runs", {
+  return odRequest<{ runId: string }>("/od-api/runs", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -187,7 +189,7 @@ export function saveArtifact(body: {
   html: string;
   projectId: string;
 }): Promise<void> {
-  return odRequest<void>("/api/artifacts/save", {
+  return odRequest<void>("/od-api/artifacts/save", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -247,6 +249,7 @@ export async function importClaudeDesign(file: File): Promise<OdProject> {
 // Template endpoints
 // ---------------------------------------------------------------------------
 
-export function listTemplates(): Promise<OdTemplate[]> {
-  return odRequest<OdTemplate[]>("/api/templates");
+export async function listTemplates(): Promise<OdTemplate[]> {
+  const res = await odRequest<{ templates: OdTemplate[] }>("/od-api/templates");
+  return res.templates;
 }

@@ -12,5 +12,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    proxy: {
+      "/od-api": {
+        target: "http://localhost:17456",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/od-api/, "/api"),
+      },
+    },
   },
 });

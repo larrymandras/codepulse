@@ -67,6 +67,7 @@ export default function DaemonStatusBadge() {
 
   const daemonUrl =
     import.meta.env.VITE_OPEN_DESIGN_URL ?? "http://localhost:17456";
+  const displayUrl = daemonUrl || "http://localhost:17456";
 
   return (
     <TooltipProvider>
@@ -84,7 +85,7 @@ export default function DaemonStatusBadge() {
           </div>
         </TooltipTrigger>
         <TooltipContent side="bottom" align="end">
-          <p className="text-xs font-mono">{daemonUrl}</p>
+          <p className="text-xs font-mono">{displayUrl}</p>
           {lastChecked && (
             <p className="text-xs text-muted-foreground">
               Last checked: {lastChecked.toLocaleTimeString()}

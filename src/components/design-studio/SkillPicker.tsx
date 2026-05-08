@@ -44,8 +44,9 @@ export default function SkillPicker({ selectedSkillId, onSelect }: SkillPickerPr
 
   const filtered = skills.filter(
     (s) =>
-      s.title.toLowerCase().includes(search.toLowerCase()) ||
-      s.category.toLowerCase().includes(search.toLowerCase()),
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.mode.toLowerCase().includes(search.toLowerCase()) ||
+      s.description.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -82,13 +83,13 @@ export default function SkillPicker({ selectedSkillId, onSelect }: SkillPickerPr
                 )}
               >
                 <h3 className="text-sm font-medium text-foreground">
-                  {skill.title}
+                  {skill.name}
                 </h3>
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded w-fit">
-                  {skill.category}
+                  {skill.mode}
                 </span>
                 <p className="text-xs text-muted-foreground line-clamp-2">
-                  {skill.summary}
+                  {skill.description}
                 </p>
               </div>
             ))}

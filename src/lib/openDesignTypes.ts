@@ -3,9 +3,12 @@
 
 export interface Skill {
   id: string;
-  title: string;
-  category: string;
-  summary: string;
+  name: string;
+  description: string;
+  mode: string;
+  surface: string;
+  designSystemRequired: boolean;
+  examplePrompt: string;
 }
 
 export interface DesignSystem {
@@ -68,7 +71,8 @@ export interface RunEvent {
 }
 
 export interface HealthResponse {
-  status: string;
+  ok: boolean;
+  version: string;
 }
 
 export type ExportFormat = "html" | "pdf" | "pptx" | "zip" | "md";

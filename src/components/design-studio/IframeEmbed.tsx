@@ -13,8 +13,8 @@ export default function IframeEmbed() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const daemonUrl =
-    import.meta.env.VITE_OPEN_DESIGN_URL ?? "http://localhost:17456";
+  const webUiUrl =
+    import.meta.env.VITE_OPEN_DESIGN_WEB_URL ?? "http://localhost:17573";
 
   const stopPolling = () => {
     if (pollingRef.current) {
@@ -64,7 +64,7 @@ export default function IframeEmbed() {
     startPolling();
     return () => stopPolling();
     // Re-poll if daemon URL changes (e.g. env var hot-reload in dev)
-  }, [daemonUrl]); // eslint-disable-line react-hooks/exhaustive-deps -- startPolling/stopPolling are stable (only close over refs)
+  }, [webUiUrl]); // eslint-disable-line react-hooks/exhaustive-deps -- startPolling/stopPolling are stable (only close over refs)
 
   const iframeHeight = "calc(100vh - 56px)";
 
@@ -108,9 +108,9 @@ export default function IframeEmbed() {
       {/* Iframe — rendered once ready */}
       {status === "ready" && (
         <iframe
-          src={daemonUrl}
+          src={webUiUrl}
           title="Design Studio"
-          sandbox="allow-scripts allow-forms allow-popups"
+          sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
           className="w-full border-0"
           style={{
             height: iframeHeight,
