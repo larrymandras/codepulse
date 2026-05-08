@@ -150,3 +150,100 @@ export const setBudgetCap = mutation({
     return { budgetCap: args.cap };
   },
 });
+
+// ---- Cost Guardrails ----
+
+const GUARDRAIL_KEYS = {
+  session: "cost_guardrail.session_limit_usd",
+  daily: "cost_guardrail.daily_limit_usd",
+  hourly: "cost_guardrail.hourly_limit_usd",
+} as const;
+
+export const getCostGuardrails = query({
+  args: {},
+  handler: async (ctx) => {
+    const sessionRow = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", GUARDRAIL_KEYS.session))
+      .first();
+    const dailyRow = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", GUARDRAIL_KEYS.daily))
+      .first();
+    const hourlyRow = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", GUARDRAIL_KEYS.hourly))
+      .first();
+
+    return {
+      sessionLimitUsd: sessionRow != null ? (sessionRow.value as number) : null,
+      dailyLimitUsd: dailyRow != null ? (dailyRow.value as number) : null,
+      hourlyLimitUsd: hourlyRow != null ? (hourlyRow.value as number) : null,
+    };
+  },
+});
+
+export const setCostGuardrails = mutation({
+  args: {
+    sessionLimitUsd: v.optional(v.float64()),
+    dailyLimitUsd: v.optional(v.float64()),
+    hourlyLimitUsd: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const fields: Array<{
+      argValue: number | undefined;
+      configKey: string;
+      label: string;
+    }> = [
+      { argValue: args.sessionLimitUsd, configKey: GUARDRAIL_KEYS.session, label: "sessionLimitUsd" },
+      { argValue: args.dailyLimitUsd, configKey: GUARDRAIL_KEYS.daily, label: "dailyLimitUsd" },
+      { argValue: args.hourlyLimitUsd, configKey: GUARDRAIL_KEYS.hourly, label: "hourlyLimitUsd" },
+    ];
+
+    const saved: Record<string, number> = {};
+
+    for (const { argValue, configKey, label } of fields) {
+      if (argValue === undefined) continue;
+
+      if (!(argValue > 0 && argValue < 1000)) {
+        throw new Error(`${label} must be greater than 0 and less than 1000`);
+      }
+
+      const existing = await ctx.db
+        .query("agentConfigs")
+        .withIndex("by_key", (q) => q.eq("configKey", configKey))
+        .first();
+
+      const oldValue = existing != null ? existing.value : null;
+      const now = Date.now() / 1000;
+
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          value: argValue,
+          source: "dashboard",
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("agentConfigs", {
+          configKey,
+          value: argValue,
+          source: "dashboard",
+          updatedAt: now,
+        });
+      }
+
+      // Audit trail
+      await ctx.db.insert("configChanges", {
+        configKey,
+        oldValue: oldValue ?? undefined,
+        newValue: argValue,
+        changedBy: "dashboard",
+        changedAt: now,
+      });
+
+      saved[label] = argValue;
+    }
+
+    return saved;
+  },
+});

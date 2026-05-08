@@ -36,6 +36,7 @@ import type * as channelHealth from "../channelHealth.js";
 import type * as commandExecutions from "../commandExecutions.js";
 import type * as compactionEvents from "../compactionEvents.js";
 import type * as complexityAssessments from "../complexityAssessments.js";
+import type * as configApi from "../configApi.js";
 import type * as configVersionIngest from "../configVersionIngest.js";
 import type * as contextPressure from "../contextPressure.js";
 import type * as contextSnapshots from "../contextSnapshots.js";
@@ -166,6 +167,7 @@ declare const fullApi: ApiFromModules<{
   commandExecutions: typeof commandExecutions;
   compactionEvents: typeof compactionEvents;
   complexityAssessments: typeof complexityAssessments;
+  configApi: typeof configApi;
   configVersionIngest: typeof configVersionIngest;
   contextPressure: typeof contextPressure;
   contextSnapshots: typeof contextSnapshots;

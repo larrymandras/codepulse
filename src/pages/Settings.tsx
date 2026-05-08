@@ -126,6 +126,23 @@ function IntelligenceSettings() {
   const [cap, setCap] = useState<number>(0);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
+  // Cost guardrails
+  const guardrails = useQuery(api.forecasts.getCostGuardrails);
+  const setGuardrailsMutation = useMutation(api.forecasts.setCostGuardrails);
+  const [sessionLimit, setSessionLimit] = useState<string>("");
+  const [hourlyLimit, setHourlyLimit] = useState<string>("");
+  const [dailyLimit, setDailyLimit] = useState<string>("");
+  const [guardrailSaveState, setGuardrailSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  // Sync guardrail values when server data loads
+  useEffect(() => {
+    if (guardrails) {
+      setSessionLimit(guardrails.sessionLimitUsd != null ? String(guardrails.sessionLimitUsd) : "");
+      setHourlyLimit(guardrails.hourlyLimitUsd != null ? String(guardrails.hourlyLimitUsd) : "");
+      setDailyLimit(guardrails.dailyLimitUsd != null ? String(guardrails.dailyLimitUsd) : "");
+    }
+  }, [guardrails]);
+
   // Sync local state when server value loads
   useEffect(() => {
     if (budgetConfig?.budgetCap != null) {
@@ -144,6 +161,33 @@ function IntelligenceSettings() {
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
       setSaveState("idle");
+    }
+  };
+
+  const isGuardrailValueValid = (v: string) => {
+    if (v === "" || v === "0") return true;
+    const n = Number(v);
+    return !isNaN(n) && n > 0 && n < 1000;
+  };
+
+  const guardrailsValid =
+    isGuardrailValueValid(sessionLimit) &&
+    isGuardrailValueValid(hourlyLimit) &&
+    isGuardrailValueValid(dailyLimit);
+
+  const handleGuardrailSave = async () => {
+    if (!guardrailsValid) return;
+    setGuardrailSaveState("saving");
+    try {
+      await setGuardrailsMutation({
+        sessionLimitUsd: sessionLimit && Number(sessionLimit) > 0 ? Number(sessionLimit) : undefined,
+        hourlyLimitUsd: hourlyLimit && Number(hourlyLimit) > 0 ? Number(hourlyLimit) : undefined,
+        dailyLimitUsd: dailyLimit && Number(dailyLimit) > 0 ? Number(dailyLimit) : undefined,
+      });
+      setGuardrailSaveState("saved");
+      setTimeout(() => setGuardrailSaveState("idle"), 2000);
+    } catch {
+      setGuardrailSaveState("idle");
     }
   };
 
@@ -186,6 +230,76 @@ function IntelligenceSettings() {
           )}
           <p className="text-sm text-muted-foreground">
             Monthly spending cap for cost forecasting. Set to 0 or leave blank to disable budget tracking.
+          </p>
+        </div>
+
+        {/* Cost Guardrails subsection */}
+        <h4 className="text-xs font-normal uppercase tracking-wide text-muted-foreground mt-6">
+          Cost Guardrails
+        </h4>
+        <div className="space-y-3">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Per-Session Limit ($)</label>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                value={sessionLimit}
+                onChange={(e) => setSessionLimit(e.target.value)}
+                disabled={guardrailSaveState === "saving"}
+                placeholder="e.g. 5"
+                className={`w-24 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+                  !isGuardrailValueValid(sessionLimit) ? "border-destructive" : "border-input"
+                } focus:outline-none focus:ring-1 focus:ring-ring/50`}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Hourly Limit ($)</label>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                value={hourlyLimit}
+                onChange={(e) => setHourlyLimit(e.target.value)}
+                disabled={guardrailSaveState === "saving"}
+                placeholder="e.g. 5"
+                className={`w-24 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+                  !isGuardrailValueValid(hourlyLimit) ? "border-destructive" : "border-input"
+                } focus:outline-none focus:ring-1 focus:ring-ring/50`}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Daily Limit ($)</label>
+              <input
+                type="number"
+                min={0}
+                max={999}
+                value={dailyLimit}
+                onChange={(e) => setDailyLimit(e.target.value)}
+                disabled={guardrailSaveState === "saving"}
+                placeholder="e.g. 10"
+                className={`w-24 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+                  !isGuardrailValueValid(dailyLimit) ? "border-destructive" : "border-input"
+                } focus:outline-none focus:ring-1 focus:ring-ring/50`}
+              />
+            </div>
+            <button
+              onClick={handleGuardrailSave}
+              disabled={!guardrailsValid || guardrailSaveState === "saving"}
+              className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+            >
+              {guardrailSaveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
+              {guardrailSaveState === "saved" ? "Saved" : guardrailSaveState === "saving" ? "Saving..." : "Save Guardrails"}
+            </button>
+          </div>
+          {(!isGuardrailValueValid(sessionLimit) || !isGuardrailValueValid(hourlyLimit) || !isGuardrailValueValid(dailyLimit)) && (
+            <p className="text-xs text-[hsl(var(--status-error))]">
+              Each value must be greater than 0 and less than 1,000, or empty to use the default.
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            Default: $5.00/session, $5.00/hour, $10.00/day. Leave blank or set to 0 to use framework defaults.
           </p>
         </div>
 

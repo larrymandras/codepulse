@@ -21,6 +21,7 @@ import {
 } from "./warRoomIngest";
 import { hrIngest } from "./hrIngest";
 import { configVersionIngest } from "./configVersionIngest";
+import { costGuardrailConfig } from "./configApi";
 
 const http = httpRouter();
 
@@ -66,5 +67,9 @@ http.route({ path: "/hr-ingest", method: "OPTIONS", handler: hrIngest });
 // Phase 80: Config Versioning ingest endpoint
 http.route({ path: "/api/ingest/agent-config-version", method: "POST", handler: configVersionIngest });
 http.route({ path: "/api/ingest/agent-config-version", method: "OPTIONS", handler: configVersionIngest });
+
+// Cost guardrail config API (read by Astridr at boot)
+http.route({ path: "/api/config/cost-guardrails", method: "GET", handler: costGuardrailConfig });
+http.route({ path: "/api/config/cost-guardrails", method: "OPTIONS", handler: costGuardrailConfig });
 
 export default http;
