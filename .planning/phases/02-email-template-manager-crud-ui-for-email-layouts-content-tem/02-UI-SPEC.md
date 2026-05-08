@@ -63,14 +63,14 @@ Exceptions:
 
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
-| Page heading | 24px (text-2xl) | 700 (bold) | 1.2 | Cinzel | `<h1>Email Templates` — matches Operations.tsx pattern |
+| Page heading | 24px (text-2xl) | 600 (semibold) | 1.2 | Cinzel | `<h1>Email Templates` — matches Operations.tsx pattern |
 | Section heading | 16px (text-base) | 600 (semibold) | 1.3 | Geist | Sheet panel title, tab section labels |
 | Body | 14px (text-sm) | 400 (regular) | 1.5 | Geist | Card descriptions, form labels, list items |
 | Caption / meta | 12px (text-xs) | 400 (regular) | 1.4 | Geist | File size, timestamps, variable type labels, "0 layouts" counts |
 
 Monaco Editor renders its own typography internally (JetBrains Mono, 13px, line-height 20px) — do not override Monaco's built-in sizing.
 
-Variable chips use 12px / weight 500 / Geist with `px-2 py-0.5` padding (caption scale).
+Variable chips use 12px / weight 400 / Geist with `px-2 py-0.5` padding (caption scale).
 
 ---
 
@@ -92,7 +92,7 @@ All values reference CSS custom properties defined in `src/index.css`. The dark 
 
 **Accent reserved for (explicit list — never applied globally):**
 1. Active nav indicator bar in sidebar (left border on current route)
-2. Primary action buttons: "New Layout", "New Template", "Save", "Upload"
+2. Primary action buttons: "New Layout", "New Template", "Save Layout", "Save Template", "Save Settings", "Upload"
 3. Active tab underline indicator within the 4-tab bar
 4. Variable chip hover state (background fill)
 5. Dropzone active/drag-over border glow
@@ -109,7 +109,7 @@ Note: indigo-600 (`#4f46e5`) mentioned in CLAUDE.md is the semantic accent from 
 ```
 DashboardLayout (existing)
 └── EmailTemplatesPage
-    ├── h1: "Email Templates"  [Cinzel, text-2xl, font-bold]
+    ├── h1: "Email Templates"  [Cinzel, text-2xl, font-semibold]
     ├── Page-level action row  [flex justify-between items-center mb-6]
     │   └── "New [Tab-specific entity]" Button  [primary, right-aligned]
     └── Tabs (shadcn/ui Tabs, 4 triggers)
@@ -244,8 +244,8 @@ Variable syntax highlighting: apply Monaco `ITextModel.deltaDecorations` to high
 2. Sheet slides in from right with 200ms ease-out transition (shadcn default).
 3. For create: all fields pre-filled with empty defaults (name: "", slug: "", body: "").
 4. For edit: all fields populated from API response on Sheet open.
-5. User edits fields. "Save" button: `disabled` until form is dirty AND name is non-empty.
-6. On save: show spinner in button label ("Saving…"), call API, close Sheet on success, show Sonner toast "Layout saved".
+5. User edits fields. Save button: `disabled` until form is dirty AND name is non-empty.
+6. On save: show spinner in button label ("Saving…"), call API, close Sheet on success, show Sonner toast per entity (see Copywriting Contract).
 7. On API error: keep Sheet open, show inline error below the save button (text-sm text-destructive).
 
 ### Debounced Preview (D-10)
@@ -293,7 +293,7 @@ Table columns:
 | Required | 10% | `Switch` |
 | Description | 30% | `Input` |
 | Example | 20% | `Input` |
-| Delete | — | `Button` icon-only, `X` icon, ghost variant |
+| Delete | — | `Button` icon-only, `X` icon, ghost variant, `aria-label="Remove variable"` |
 
 Row height: 40px. Add row button below table: "+ Add Variable" (ghost, text-sm).
 
@@ -344,7 +344,9 @@ Asset tab empty state icon: `ImageOff`. Layouts: `LayoutTemplate`. Templates: `F
 | Sheet title — create template | "New Template" |
 | Sheet title — edit template | "Edit Template" |
 | Sheet title — edit agent default | "Agent Email Settings" |
-| Save button label | "Save" (idle), "Saving…" (loading) |
+| Save button — LayoutSheet | "Save Layout" (idle), "Saving…" (loading) |
+| Save button — TemplateSheet | "Save Template" (idle), "Saving…" (loading) |
+| Save button — AgentDefaultSheet | "Save Settings" (idle), "Saving…" (loading) |
 | Upload button label | "Upload" (idle), "Uploading…" (loading) |
 | Preview toggle label | "SMTP" / "Gmail" (channel switcher pills) |
 | Preview loading | "Updating preview…" |
@@ -421,6 +423,7 @@ Additional npm package required: `@monaco-editor/react` — not a shadcn registr
 - AlertDialog must be keyboard-dismissible (Escape key) — shadcn default behavior.
 - Asset thumbnail grid cells must have `alt` text from filename.
 - Variable chip buttons: `aria-label="Insert {{variable_name}}"`.
+- Variable schema table delete button: `aria-label="Remove variable"` (icon-only, no visible label).
 - Monaco Editor: not fully accessible — acceptable for power-user developer tool context.
 - Dropzone: `<input type="file" />` hidden behind dropzone, clickable for keyboard users.
 - Minimum touch target for icon-only buttons: 40px × 40px (use `p-2` on h-4 w-4 icons).
