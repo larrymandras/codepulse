@@ -54,6 +54,22 @@ export const acknowledge = mutation({
   },
 });
 
+export const acknowledgeInternal = internalMutation({
+  args: {
+    id: v.id("alerts"),
+    acknowledgedBy: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      acknowledged: true,
+      acknowledgedBy: args.acknowledgedBy,
+      acknowledgedAt: Date.now() / 1000,
+      status: "resolved",
+      resolvedAt: Date.now() / 1000,
+    });
+  },
+});
+
 export const listActive = query({
   args: {},
   handler: async (ctx) => {

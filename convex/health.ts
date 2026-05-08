@@ -5,19 +5,43 @@ import { api } from "./_generated/api";
 export const detectStaleSessions = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const thirtyMinAgo = Date.now() / 1000 - 1800;
-    const activeSessions = await ctx.db
-      .query("sessions")
-      .withIndex("by_status", (q) => q.eq("status", "active"))
-      .collect();
+    const now = Date.now() / 1000;
+    const thirtyMinAgo = now - 1800;
+    const nonTerminalStatuses = ["active", "awaiting_human"] as const;
 
     let marked = 0;
-    for (const session of activeSessions) {
-      if (session.lastEventAt < thirtyMinAgo) {
-        await ctx.db.patch(session._id, { status: "completed" });
-        marked++;
+    for (const status of nonTerminalStatuses) {
+      const sessions = await ctx.db
+        .query("sessions")
+        .withIndex("by_status", (q) => q.eq("status", status))
+        .collect();
+      for (const session of sessions) {
+        if (session.lastEventAt < thirtyMinAgo) {
+          await ctx.db.patch(session._id, { status: "completed" });
+          marked++;
+        }
       }
     }
+
+    // Auto-resolve stale-session alerts when no stale sessions remain
+    if (marked > 0) {
+      const staleAlerts = await ctx.db
+        .query("alerts")
+        .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+        .collect();
+      for (const alert of staleAlerts) {
+        if (alert.source === "std-stale-sessions") {
+          await ctx.db.patch(alert._id, {
+            status: "resolved",
+            resolvedAt: now,
+            acknowledged: true,
+            acknowledgedBy: "detect-stale-sessions",
+            acknowledgedAt: now,
+          });
+        }
+      }
+    }
+
     return { marked };
   },
 });

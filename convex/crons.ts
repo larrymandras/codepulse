@@ -3,7 +3,12 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Existing
+crons.interval(
+  "detect-stale-sessions",
+  { minutes: 15 },
+  internal.health.detectStaleSessions
+);
+
 crons.interval(
   "auto-acknowledge stale alerts",
   { hours: 1 },
