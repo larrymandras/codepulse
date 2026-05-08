@@ -52,6 +52,16 @@ Plans:
 - [x] 01-04-PLAN.md — Native UI steps 4-6 (direction picker, streaming preview, export panel)
 - [x] 01-05-PLAN.md — Project gallery, ZIP import, page integration, Convex sync
 
+### Phase 2: Email Template Manager — CRUD UI for email layouts, content templates, per-agent signature defaults, and asset management
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 1
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 2 to break down)
+
 ---
 
 *Last updated: 2026-05-07 — Phase 1 Design Studio revised (6 plans, 4 waves). Added Wave 0 plan, fixed direction generation, fixed dependencies.*
