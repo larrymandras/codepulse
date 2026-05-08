@@ -91,7 +91,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
       }
 
       // Always insert into legacy runtime_events
-      await ctx.runMutation(api.events.insertEvent, {
+      await ctx.runMutation(internal.events.insertEvent, {
         eventType: evt.eventType,
         data: data,
         timestamp: timestamp,

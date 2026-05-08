@@ -74,7 +74,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
     const timestamp = body.timestamp ?? Date.now() / 1000;
 
     // 1. Store in events table
-    await ctx.runMutation(api.events.ingest, {
+    await ctx.runMutation(internal.events.ingest, {
       sessionId: sessionId ?? "unknown",
       eventType: eventType ?? "unknown",
       toolName,
@@ -223,7 +223,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
 
     // TaskCompleted — agent coordination
     if (eventType === "TaskCompleted") {
-      await ctx.runMutation(api.events.ingest, {
+      await ctx.runMutation(internal.events.ingest, {
         sessionId: sid,
         eventType: "TaskCompleted",
         toolName,

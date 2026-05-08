@@ -1,5 +1,5 @@
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import {
   getCorsHeaders,
   validateIngestAuth,
@@ -266,7 +266,7 @@ async function routeMetric(
 
     default: {
       // Store unknown metrics in the generic events table as a fallback
-      await ctx.runMutation(api.events.ingest, {
+      await ctx.runMutation(internal.events.ingest, {
         sessionId,
         eventType: `otel_metric:${name}`,
         payload: { value, attributes: attrs },

@@ -1,5 +1,5 @@
 import { httpAction } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import {
   getCorsHeaders,
   validateIngestAuth,
@@ -272,7 +272,7 @@ async function routeLogRecord(
 
     default: {
       // Store unrecognized events in the generic events table
-      await ctx.runMutation(api.events.ingest, {
+      await ctx.runMutation(internal.events.ingest, {
         sessionId,
         eventType: `otel_log:${eventName}`,
         payload: attrsToObj(attrs),
