@@ -21,7 +21,7 @@ export default function Tasks() {
   const { dispatch } = useCommandDispatch();
 
   // Convex tasks table — sole source of truth (D-05)
-  const rawTasks = useQuery(anyApi.tasks.listByColumn) ?? [];
+  const rawTasks = useQuery(anyApi.tasks.listByColumn);
   const moveColumn = useMutation(anyApi.tasks.moveColumn);
   const createTask = useMutation(anyApi.tasks.create);
 
@@ -31,6 +31,14 @@ export default function Tasks() {
   const [createColumn, setCreateColumn] = useState<TaskColumn>("backlog");
   const [createOpen, setCreateOpen] = useState(false);
   const [prefillData, setPrefillData] = useState<Partial<NewTask> | null>(null);
+
+  if (rawTasks === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-(--muted-foreground)">Loading tasks...</p>
+      </div>
+    );
+  }
 
   // Map Convex documents to KanbanTask
   const tasks: KanbanTask[] = (rawTasks as any[]).map((t) => ({
@@ -64,7 +72,12 @@ export default function Tasks() {
           label: "Confirm",
           onClick: async () => {
             // Optimistic Convex update
-            await moveColumn({ id: task._id as any, column: newColumn });
+            try {
+              await moveColumn({ id: task._id as any, column: newColumn });
+            } catch (e) {
+              toast.error(`Failed to move task: ${e instanceof Error ? e.message : "Unknown error"}`);
+              return;
+            }
             // Send WS command to Astrid
             dispatch(
               { type: "task.move", task_id: taskId, column: newColumn },
@@ -79,7 +92,11 @@ export default function Tasks() {
       });
     } else {
       // Non-action columns: move immediately, no WS command
-      await moveColumn({ id: task._id as any, column: newColumn });
+      try {
+        await moveColumn({ id: task._id as any, column: newColumn });
+      } catch (e) {
+        toast.error(`Failed to move task: ${e instanceof Error ? e.message : "Unknown error"}`);
+      }
     }
   }
 
@@ -136,18 +153,22 @@ export default function Tasks() {
         prefillData={prefillData}
         onCancel={() => setCreateOpen(false)}
         onSubmit={async (newTask) => {
-          await createTask({
-            title: newTask.title,
-            description: newTask.description,
-            priority: newTask.priority,
-            agentId: newTask.agentId,
-            agentName: newTask.agentName,
-            labels: newTask.labels,
-            dueAt: newTask.dueAt,
-            findingId: newTask.findingId as any,
-          });
-          setCreateOpen(false);
-          toast("Task created.");
+          try {
+            await createTask({
+              title: newTask.title,
+              description: newTask.description,
+              priority: newTask.priority,
+              agentId: newTask.agentId,
+              agentName: newTask.agentName,
+              labels: newTask.labels,
+              dueAt: newTask.dueAt,
+              findingId: newTask.findingId as any,
+            });
+            setCreateOpen(false);
+            toast("Task created.");
+          } catch (e) {
+            toast.error(`Failed to create task: ${e instanceof Error ? e.message : "Unknown error"}`);
+          }
         }}
       />
     </div>

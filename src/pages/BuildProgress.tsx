@@ -7,11 +7,19 @@ import BuildActivityFeed from "../components/BuildActivityFeed";
 import ComponentTable from "../components/ComponentTable";
 
 export default function BuildProgress() {
-  const components = useQuery(api.build.phaseProgress) ?? [];
-  const phases = useQuery(api.build.phaseOverview) ?? [];
-  const activity = useQuery(api.build.recentActivity, { limit: 20 }) ?? [];
-  const pipelines = useQuery(api.pipelines.listAll, {}) ?? [];
-  const activePipelines = useQuery(api.pipelines.listActive) ?? [];
+  const components = useQuery(api.build.phaseProgress);
+  const phases = useQuery(api.build.phaseOverview);
+  const activity = useQuery(api.build.recentActivity, { limit: 20 });
+  const pipelines = useQuery(api.pipelines.listAll, {});
+  const activePipelines = useQuery(api.pipelines.listActive);
+
+  if (components === undefined || phases === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-(--muted-foreground)">Loading build progress...</p>
+      </div>
+    );
+  }
 
   const totalComponents = components.length;
   const completedCount = components.filter((c: any) => c.status === "completed").length;
@@ -29,7 +37,7 @@ export default function BuildProgress() {
             value={`${completedPct}%`}
             trend={completedPct >= 80 ? "up" : completedPct >= 40 ? "neutral" : "down"}
           />
-          <MetricCard label="Active Pipelines" value={activePipelines.length} />
+          <MetricCard label="Active Pipelines" value={(activePipelines ?? []).length} />
         </div>
       </div>
 
@@ -38,8 +46,8 @@ export default function BuildProgress() {
 
       {/* Two-column grid: teams + activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TeamStatusCards components={components as any} pipelines={pipelines as any} />
-        <BuildActivityFeed entries={activity as any} />
+        <TeamStatusCards components={components as any} pipelines={(pipelines ?? []) as any} />
+        <BuildActivityFeed entries={(activity ?? []) as any} />
       </div>
 
       {/* Component table — full width */}

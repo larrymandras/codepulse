@@ -10,7 +10,21 @@ import { SignedIn, SignedOut, SignInButton } from "@clerk/clerk-react";
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
-  if (!CLERK_KEY) return <>{children}</>;
+  if (!CLERK_KEY) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-950">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-red-600 flex items-center justify-center text-2xl font-bold text-white">
+            !
+          </div>
+          <h1 className="text-xl font-semibold text-gray-100">Authentication Not Configured</h1>
+          <p className="text-sm text-gray-400 max-w-md">
+            Set <code className="text-amber-400">VITE_CLERK_PUBLISHABLE_KEY</code> to enable access to the dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -1,5 +1,6 @@
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 // ============================================================
 // ALERT LIFECYCLE MUTATIONS (D-09, D-11)
@@ -11,6 +12,7 @@ export const acknowledgeAlert = mutation({
     acknowledgedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.alertId, {
       status: "acknowledged",
       acknowledged: true,
@@ -25,6 +27,7 @@ export const resolveAlert = mutation({
     alertId: v.id("alerts"),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.patch(args.alertId, {
       status: "resolved",
       resolvedAt: Date.now() / 1000,
@@ -55,6 +58,7 @@ export const escalateToTask = mutation({
     priority: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const alert = await ctx.db.get(args.alertId);
     if (!alert) {
       throw new Error(`Alert ${args.alertId} not found`);

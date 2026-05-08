@@ -1,10 +1,10 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 
 // ---- NEW events table functions ----
 
-export const ingest = mutation({
+export const ingest = internalMutation({
   args: {
     sessionId: v.string(),
     eventType: v.string(),
@@ -141,7 +141,7 @@ export const listRecentPaginated = query({
 
 // ---- LEGACY runtime_events functions (kept for backward compat) ----
 
-export const insertEvent = mutation({
+export const insertEvent = internalMutation({
   args: {
     eventType: v.string(),
     data: v.any(),

@@ -99,7 +99,7 @@ export function createRun(body: RunRequest): Promise<{ runId: string }> {
 }
 
 export function getRunStatus(runId: string): Promise<RunStatus> {
-  return odRequest<RunStatus>(`/api/runs/${runId}`);
+  return odRequest<RunStatus>(`/od-api/runs/${runId}`);
 }
 
 /**

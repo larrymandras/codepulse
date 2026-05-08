@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { requireAuth } from "./lib/auth";
 
 export const register = mutation({
   args: {
@@ -11,6 +12,7 @@ export const register = mutation({
     model: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.insert("agents", {
       sessionId: args.sessionId,
       agentId: args.agentId,
@@ -30,6 +32,7 @@ export const updateStatus = mutation({
     endedAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const agent = await ctx.db
       .query("agents")
       .withIndex("by_agentId", (q) => q.eq("agentId", args.agentId))

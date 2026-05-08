@@ -42,14 +42,20 @@ export default function Analytics() {
   const { events } = useRecentEvents(100);
   const { calls: llmCalls } = useLlmMetrics();
   // Swap 1: costByProvider now reads from pre-computed aggregates (D-11, DP-02)
-  const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
-  // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
-  const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" }) ?? [];
-  // Swap 3: event counts aggregate for Total Events MetricCard
-  const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
-  const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
+  const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" });
+  const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" });
+  const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" });
+  const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies);
 
-  const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies) ?? {};
+  if (costByProvider === undefined || eventCounts === undefined || anomalies === undefined) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <p className="text-sm text-(--muted-foreground)">Loading analytics...</p>
+      </div>
+    );
+  }
+
+  const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
 
   // Execution depth histogram + Advisor Strategy (CPUX-09)
   const depthHistogram = useQuery(api.advisorEvents.executionDepthHistogram);
@@ -59,8 +65,7 @@ export default function Analytics() {
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
 
-  // Suppress unused variable warning — errorTrend is available for future ErrorRateTrend prop swap
-  void errorTrend;
+  void (errorTrend ?? []);
 
   return (
     <div className="space-y-6">

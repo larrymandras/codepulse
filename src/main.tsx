@@ -8,6 +8,9 @@ import { AmbientProvider } from "./contexts/AmbientContext";
 import App from "./App";
 import "./index.css";
 
+if (!import.meta.env.VITE_CONVEX_URL) {
+  throw new Error("VITE_CONVEX_URL environment variable is required. Add it to .env.local.");
+}
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 

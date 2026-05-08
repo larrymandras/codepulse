@@ -165,8 +165,8 @@ export default function Inbox() {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // ─── Convex data ──────────────────────────────────────────────────────────
-  const alertRecords = useQuery(api.alerts.listActive) ?? [];
-  const notificationRecords = useQuery(api.notifications.bellAll) ?? [];
+  const alertRecords = useQuery(api.alerts.listActive);
+  const notificationRecords = useQuery(api.notifications.bellAll);
   const markNotificationRead = useMutation(api.notifications.markRead);
 
   // ─── WS: accumulate approval_request events (non-HITL agent approvals) ───
@@ -323,8 +323,8 @@ export default function Inbox() {
   );
 
   // ─── Build item lists ─────────────────────────────────────────────────────
-  const alertItems = alertRecords.map(alertToInboxItem);
-  const notifItems = notificationRecords.map(notificationToInboxItem).map(
+  const alertItems = (alertRecords ?? []).map(alertToInboxItem);
+  const notifItems = (notificationRecords ?? []).map(notificationToInboxItem).map(
     (item) => (readIds.has(item.id) ? { ...item, read: true } : item)
   );
 

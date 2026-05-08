@@ -252,7 +252,10 @@ if (isDirectRun) {
       } catch {}
     }
   }
-  if (!url) url = "https://tidy-whale-981.convex.site";
+  if (!url) {
+    console.error("[codepulse-scanner] CODEPULSE_URL is not set and could not be resolved from .env.local.");
+    process.exit(1);
+  }
 
   runScan(sessionId, url).then(() => {
     console.log("[codepulse-scanner] Scan complete.");

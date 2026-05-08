@@ -35,7 +35,7 @@ function resolveUrl() {
     }
   }
 
-  return "https://tidy-whale-981.convex.site";
+  throw new Error("CODEPULSE_URL is not set and could not be resolved from .env.local. Set CODEPULSE_URL or add CONVEX_SITE_URL to .env.local.");
 }
 
 async function main() {

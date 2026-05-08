@@ -19,7 +19,7 @@ import { ExtractionFunnel } from "@/components/ExtractionFunnel";
 import { StatusBadge } from "@/components/StatusBadge";
 import MetricCard, { AnimatedNumber } from "@/components/MetricCard";
 
-type DreamingTab = "timeline" | "facts" | "cost" | "backfill";
+type DreamingTab = "timeline" | "facts" | "cost";
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
@@ -80,7 +80,6 @@ export default function Dreaming() {
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="facts">Facts</TabsTrigger>
           <TabsTrigger value="cost">Cost</TabsTrigger>
-          <TabsTrigger value="backfill">Backfill</TabsTrigger>
         </TabsList>
 
         {/* === TIMELINE TAB === */}
@@ -329,32 +328,6 @@ export default function Dreaming() {
           </SectionErrorBoundary>
         </TabsContent>
 
-        {/* === BACKFILL TAB === */}
-        <TabsContent value="backfill">
-          <SectionErrorBoundary name="Dreaming Backfill">
-            <div className="space-y-6 mt-4">
-              <GlassPanel className="rounded-xl p-6">
-                <SectionHeader title="Backfill Controls" />
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    A backfill run processes your full conversation history to
-                    extract durable facts — not just the last night's sessions.
-                    This is useful after the first installation or after a gap
-                    in nightly runs.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Note: Backfill controls are UI-ready but require Ástríðr to
-                    expose a backfill endpoint before they can be activated.
-                  </p>
-                  {/* Threat T-63-09: button disabled; server-side identity validation required when wired */}
-                  <Button disabled className="cursor-not-allowed opacity-60">
-                    Start Backfill
-                  </Button>
-                </div>
-              </GlassPanel>
-            </div>
-          </SectionErrorBoundary>
-        </TabsContent>
       </Tabs>
     </div>
   );

@@ -1,7 +1,9 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireAuth } from "./lib/auth";
 
 const VALID_COLUMNS = ["backlog", "queued", "running", "review", "done", "cancelled"] as const;
+const validPriority = v.union(v.literal("high"), v.literal("medium"), v.literal("low"));
 
 export const listByColumn = query({
   handler: async (ctx) => {
@@ -13,7 +15,7 @@ export const create = mutation({
   args: {
     title: v.string(),
     description: v.optional(v.string()),
-    priority: v.string(),
+    priority: validPriority,
     agentId: v.optional(v.string()),
     agentName: v.optional(v.string()),
     labels: v.optional(v.array(v.string())),
@@ -21,6 +23,7 @@ export const create = mutation({
     findingId: v.optional(v.id("ideationFindings")),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     const now = Date.now() / 1000;
     return await ctx.db.insert("tasks", {
       taskId: crypto.randomUUID(),
@@ -45,6 +48,7 @@ export const moveColumn = mutation({
     column: v.string(),
   },
   handler: async (ctx, { id, column }) => {
+    await requireAuth(ctx);
     if (!(VALID_COLUMNS as readonly string[]).includes(column)) {
       throw new Error(`Invalid column: ${column}. Must be one of: ${VALID_COLUMNS.join(", ")}`);
     }
@@ -60,13 +64,14 @@ export const update = mutation({
     id: v.id("tasks"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
-    priority: v.optional(v.string()),
+    priority: v.optional(validPriority),
     labels: v.optional(v.array(v.string())),
     dueAt: v.optional(v.number()),
     agentId: v.optional(v.string()),
     agentName: v.optional(v.string()),
   },
   handler: async (ctx, { id, ...fields }) => {
+    await requireAuth(ctx);
     const patch: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(fields)) {
       if (value !== undefined) patch[key] = value;
@@ -78,6 +83,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("tasks") },
   handler: async (ctx, { id }) => {
+    await requireAuth(ctx);
     await ctx.db.delete(id);
   },
 });

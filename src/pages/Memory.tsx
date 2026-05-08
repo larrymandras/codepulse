@@ -687,12 +687,6 @@ export default function Memory() {
         <TabsContent value="imports">
           <SectionErrorBoundary name="Conversation Imports">
             <div className="space-y-6 mt-4">
-              <div className="flex justify-end">
-                {/* Requires Astridr endpoint — non-functional in Phase 63 */}
-                <Button disabled className="cursor-not-allowed opacity-60">
-                  Import Conversations
-                </Button>
-              </div>
 
               {!imports || imports.length === 0 ? (
                 <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">

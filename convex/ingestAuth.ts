@@ -59,7 +59,7 @@ export const corsHeaders: Record<string, string> = getCorsHeaders();
  */
 export function validateIngestAuth(request: Request): boolean {
   const expectedKey = _env.ASTRIDR_INGEST_API_KEY;
-  if (!expectedKey) return true; // Skip auth in dev when no key configured
+  if (!expectedKey) return false; // Fail-closed: deny all requests when key is not configured
   const authHeader = request.headers.get("Authorization") ?? "";
   return authHeader === `Bearer ${expectedKey}`;
 }
