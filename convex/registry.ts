@@ -1,13 +1,11 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./lib/auth";
 
 export const syncInventory = mutation({
   args: {
     snapshot: v.any(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const snap = args.snapshot;
     const now = Date.now() / 1000;
 
@@ -196,7 +194,6 @@ export const syncFullInventory = mutation({
     snapshot: v.any(),
   },
   handler: async (ctx, args) => {
-    await requireAuth(ctx);
     const snap = args.snapshot;
     const now = Date.now() / 1000;
 
