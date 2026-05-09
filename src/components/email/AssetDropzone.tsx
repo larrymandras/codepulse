@@ -51,7 +51,9 @@ export function AssetDropzone({
         onUploaded(result);
       } catch {
         toast.error("Upload failed");
-        setState(previewUrl ? "uploaded" : "idle");
+        setState((prev) =>
+          prev === "uploading" ? (previewUrl ? "uploaded" : "idle") : prev,
+        );
       }
     },
     [folder, onUploaded, previewUrl],
@@ -60,12 +62,12 @@ export function AssetDropzone({
   const onDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
-      setState(previewUrl ? "uploaded" : "idle");
+      if (state === "uploading") return;
       const file = e.dataTransfer.files[0];
       if (!file) return;
       void validateAndUpload(file);
     },
-    [validateAndUpload, previewUrl],
+    [validateAndUpload, state],
   );
 
   const onDragOver = (e: React.DragEvent) => {
