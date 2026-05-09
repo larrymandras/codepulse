@@ -455,7 +455,7 @@ export function TemplateSheet({
                 <div className="space-y-2 pt-2 pb-6">
                   <div className="flex items-center gap-2">
                     <Button
-                      onClick={handleSave}
+                      onClick={() => void handleSave()}
                       disabled={!isDirty || !name.trim() || saving}
                       className="bg-primary text-primary-foreground"
                     >
@@ -509,7 +509,7 @@ export function TemplateSheet({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDelete}
+              onClick={() => void handleDelete()}
               disabled={deleting}
             >
               {deleting && (
