@@ -54,14 +54,18 @@ Plans:
 
 ### Phase 2: Email Template Manager — CRUD UI for email layouts, content templates, per-agent signature defaults, and asset management
 
-**Goal:** [To be planned]
-**Requirements**: TBD
+**Goal:** Build a dedicated /email-templates page in CodePulse with 4 tabs (Layouts, Templates, Agent Defaults, Assets) that provides full CRUD management of Astríðr's email template system via REST API, including Monaco-based HTML/CSS editing, live debounced preview, variable schema management with insert-at-cursor chips, per-agent email signature defaults, and image asset gallery with upload.
+**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14
 **Depends on:** Phase 1
-**Plans:** 0 plans
+**Plans:** 5 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 2 to break down)
+- [ ] 02-01-PLAN.md — Foundation: types, API functions, utility library, CRUD hooks
+- [ ] 02-02-PLAN.md — Page shell with 4 tabs, route/nav registration
+- [ ] 02-03-PLAN.md — LayoutSheet with Monaco sub-tabs, asset components (dropzone, gallery, picker)
+- [ ] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
+- [ ] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
 
 ---
 
-*Last updated: 2026-05-07 — Phase 1 Design Studio revised (6 plans, 4 waves). Added Wave 0 plan, fixed direction generation, fixed dependencies.*
+*Last updated: 2026-05-09 — Phase 2 Email Template Manager planned (5 plans, 3 waves).*
