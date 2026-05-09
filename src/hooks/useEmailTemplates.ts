@@ -14,7 +14,7 @@ export function useEmailTemplates() {
       const data = await fetchTemplates();
       // Belt-and-suspenders: API filters with ?is_active=eq.true but client
       // also filters in case server doesn't support that query param syntax.
-      setTemplates(data.filter((t) => t.is_active !== false));
+      setTemplates(data.filter((t) => t.is_active === true));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load templates");
     } finally {
