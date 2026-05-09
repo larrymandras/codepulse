@@ -73,12 +73,13 @@ export async function createAgent(
 export async function validateAgent(
   config: Record<string, unknown>,
 ): Promise<{ valid: boolean; errors?: string[] }> {
-  const res = await fetch(`${ASTRIDR_API_BASE}/api/agents/validate`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ config }),
-  });
-  return res.json();
+  return apiRequest<{ valid: boolean; errors?: string[] }>(
+    "/api/agents/validate",
+    {
+      method: "POST",
+      body: JSON.stringify({ config }),
+    },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -493,8 +494,8 @@ export async function uploadEmailAsset(
 
 // Asset listing — list all assets from email-assets bucket
 export const fetchEmailAssets = (folder?: "avatars" | "logos") => {
-  const params = folder ? `?folder=${folder}` : "";
-  return apiRequest<EmailAssetItem[]>(`/api/email-assets${params}`);
+  const qs = folder ? `?folder=${encodeURIComponent(folder)}` : "";
+  return apiRequest<EmailAssetItem[]>(`/api/email-assets${qs}`);
 };
 
 // Asset deletion
