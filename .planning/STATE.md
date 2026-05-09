@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Operational Excellence
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-05-09T16:24:51.090Z"
+stopped_at: Completed 02-05-PLAN.md
+last_updated: "2026-05-09T17:05:00.000Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 9
-  percent: 75
+  completed_plans: 10
+  percent: 83
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
 Phase: 02 (email-template-manager-crud-ui-for-email-layouts-content-tem) — EXECUTING
-Plan: 4 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 83%
 
 ## Performance Metrics
 
@@ -58,6 +58,7 @@ Progress: [████████░░] 75%
 | Phase 01 P05 | 22min | 2 tasks | 7 files |
 | Phase 02 P01 | 4min | 2 tasks | 7 files |
 | Phase 02 P02 | 10min | 2 tasks | 3 files |
+| Phase 02 P05 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ See PROJECT.md Key Decisions table for full history.
 - [02-01] uploadEmailAsset uses raw fetch + FormData, NOT authHeaders() — follows importAgentYaml multipart pattern exactly (T-02-01)
 - [02-01] Client-side is_active filter as belt-and-suspenders guard on layouts/templates hooks
 - [02-01] useAgentDefaults catches AstridrApiError 404 per-agent, returning null for unconfigured agents
+- [02-05] AgentDefaultSheet AssetPicker rendered as sibling to Sheet (not inside) to avoid z-index stacking conflicts
+- [02-05] Avatar URL construction uses http prefix check to support both storage paths and full URLs
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-09T16:24:51.084Z
-Stopped at: Completed 02-01-PLAN.md
-Next step: Execute 02-02-PLAN.md
+Last session: 2026-05-09T17:05:00.000Z
+Stopped at: Completed 02-05-PLAN.md
+Next step: Execute 02-06-PLAN.md

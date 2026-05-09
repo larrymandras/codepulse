@@ -57,7 +57,7 @@ Plans:
 **Goal:** Build a dedicated /email-templates page in CodePulse with 4 tabs (Layouts, Templates, Agent Defaults, Assets) that provides full CRUD management of Astríðr's email template system via REST API, including Monaco-based HTML/CSS editing, live debounced preview, variable schema management with insert-at-cursor chips, per-agent email signature defaults, and image asset gallery with upload.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14
 **Depends on:** Phase 1
-**Plans:** 3/6 plans executed
+**Plans:** 5/6 plans executed
 
 Plans:
 - [x] 02-00-PLAN.md — Wave 0: backend prerequisite (GET /api/email-assets) + test stubs + API connectivity
@@ -65,7 +65,7 @@ Plans:
 - [x] 02-02-PLAN.md — Page shell with 4 tabs, route/nav registration
 - [x] 02-03-PLAN.md — LayoutSheet with Monaco sub-tabs, asset components (dropzone, gallery, picker)
 - [x] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
-- [ ] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
+- [x] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
 
 ---
 
