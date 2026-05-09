@@ -63,8 +63,8 @@ Plans:
 - [x] 02-00-PLAN.md — Wave 0: backend prerequisite (GET /api/email-assets) + test stubs + API connectivity
 - [x] 02-01-PLAN.md — Foundation: types, API functions, utility library, CRUD hooks
 - [x] 02-02-PLAN.md — Page shell with 4 tabs, route/nav registration
-- [ ] 02-03-PLAN.md — LayoutSheet with Monaco sub-tabs, asset components (dropzone, gallery, picker)
-- [ ] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
+- [x] 02-03-PLAN.md — LayoutSheet with Monaco sub-tabs, asset components (dropzone, gallery, picker)
+- [x] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
 - [ ] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
 
 ---
