@@ -10,7 +10,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-07 with Phase 01 Design Studio)
+**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-09 with Phase 02 Email Template Manager)
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
 
 10 phases complete across the v4.0 milestone:
@@ -24,6 +24,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 8. Infrastructure Layer (Phase 58) — Command catalog on Capabilities page
 9. Operations page (Phase 59) — Agent status grid, cron calendar, pipeline flow diagram
 10. Design Studio (Phase 01) — Open Design daemon sidecar, sandboxed preview, native 6-step wizard, project gallery, ZIP import/export
+11. Email Template Manager (Phase 02) — CRUD UI for layouts/templates/agent-defaults/assets, Monaco editing, live preview, variable chips
 
 ## Requirements
 
@@ -59,6 +60,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - ✓ WebSocket command catalog on Capabilities page — v4.0 Phase 58
 - ✓ Operations page with agent status grid, cron calendar, pipeline flow — v4.0 Phase 59
 - ✓ Design Studio with Open Design daemon integration, sandboxed preview, native wizard, project gallery — v4.0 Phase 01
+- ✓ Email Template Manager with 4-tab CRUD UI, Monaco editing, live preview, variable chips, asset gallery — v4.0 Phase 02
 
 ### Active
 
@@ -78,7 +80,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - **CodePulse repo:** C:\Users\mandr\codepulse
 - **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow
-- **Tests:** 437+ passing (Vitest), 60 test files, 148 todo stubs. Phase 01 added 34 Design Studio tests.
+- **Tests:** 467+ passing (Vitest), 63 test files, 145 todo stubs. Phase 02 added email template utility tests.
 
 ## Constraints
 
@@ -101,6 +103,8 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 | Rubric-inspired Operations page | Dedicated observability surface for agent/cron/pipeline state | ✓ Good — fills operational visibility gap |
 | Open Design daemon as Docker sidecar | Sandboxed design generation, browser-triggered Convex sync (cloud cannot reach localhost) | ✓ Good — isolated from main app |
 | Fetch-based SSE over EventSource | Better reconnect control, AbortController cleanup | ✓ Good — matches RESEARCH.md recommendation |
+| Monaco for HTML/CSS editing | Rich syntax highlighting, insert-at-cursor API for variable chips | ✓ Good — consistent editor experience |
+| Ástríðr REST API for email data | Templates/layouts live in Ástríðr DB, not Convex | ✓ Good — single source of truth |
 
 ## Evolution
 
@@ -120,4 +124,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-07 after Phase 01 Design Studio completion*
+*Last updated: 2026-05-09 after Phase 02 Email Template Manager completion*
