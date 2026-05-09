@@ -54,6 +54,9 @@ const Operations = lazy(() => import("./pages/Operations"));
 // Phase 01: Design Studio
 const DesignStudio = lazy(() => import("./pages/DesignStudio"));
 
+// Phase 02: Email Template Manager
+const EmailTemplates = lazy(() => import("./pages/EmailTemplates"));
+
 // Phase 095: Transcript viewer
 const Transcripts = lazy(() => import("./pages/Transcripts"));
 
@@ -114,6 +117,8 @@ export default function App() {
               <Route path="/operations" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Operations...</div>}><Operations /></Suspense>} />
               {/* Phase 01: Design Studio */}
               <Route path="/design-studio" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Design Studio...</div>}><DesignStudio /></Suspense>} />
+              {/* Phase 02: Email Template Manager */}
+              <Route path="/email-templates" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Email Templates...</div>}><EmailTemplates /></Suspense>} />
               {/* Phase 095: Transcript viewer */}
               <Route path="/transcripts" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Transcripts...</div>}><Transcripts /></Suspense>} />
               {/* Phase 74: HR Section pages */}
