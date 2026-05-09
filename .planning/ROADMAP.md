@@ -28,7 +28,7 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 | Phase | Milestone | Plans | Status | Completed |
 |-------|-----------|-------|--------|-----------|
 | 1. UI Foundation | v4.0 | 6/6 | Complete   | 2026-05-07 |
-| 2. Bidirectional Telemetry | v4.0 | 1/6 | In Progress|  |
+| 2. Bidirectional Telemetry | v4.0 | 2/6 | In Progress|  |
 | 3. Interaction Layer | v4.0 | 6/6 | Complete | 2026-03-29 |
 | 4. Task Management | v4.0 | 6/6 | Complete | 2026-04-03 |
 | 5. Data Pipeline | v4.0 | 5/5 | Complete | 2026-04-06 |
@@ -57,11 +57,11 @@ Plans:
 **Goal:** Build a dedicated /email-templates page in CodePulse with 4 tabs (Layouts, Templates, Agent Defaults, Assets) that provides full CRUD management of Astríðr's email template system via REST API, including Monaco-based HTML/CSS editing, live debounced preview, variable schema management with insert-at-cursor chips, per-agent email signature defaults, and image asset gallery with upload.
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08, D-09, D-10, D-11, D-12, D-13, D-14
 **Depends on:** Phase 1
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 - [x] 02-00-PLAN.md — Wave 0: backend prerequisite (GET /api/email-assets) + test stubs + API connectivity
-- [ ] 02-01-PLAN.md — Foundation: types, API functions, utility library, CRUD hooks
+- [x] 02-01-PLAN.md — Foundation: types, API functions, utility library, CRUD hooks
 - [ ] 02-02-PLAN.md — Page shell with 4 tabs, route/nav registration
 - [ ] 02-03-PLAN.md — LayoutSheet with Monaco sub-tabs, asset components (dropzone, gallery, picker)
 - [ ] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar

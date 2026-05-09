@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v4.0
 milestone_name: Operational Excellence
 status: executing
-stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-09T16:13:25.401Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-05-09T16:18:46Z"
 last_activity: 2026-05-09
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 12
-  completed_plans: 7
-  percent: 58
+  completed_plans: 8
+  percent: 67
 ---
 
 # Project State
@@ -27,11 +27,11 @@ See: .planning/PROJECT.md (updated 2026-04-14)
 
 Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
 Phase: 02 (email-template-manager-crud-ui-for-email-layouts-content-tem) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-05-09
 
-Progress: [██████░░░░] 58%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████░░░░] 58%
 | 59 | 5 | Complete |
 | Phase 01-design-studio P01 | 12 | 2 tasks | 10 files |
 | Phase 01 P05 | 22min | 2 tasks | 7 files |
+| Phase 02 P01 | 4min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ See PROJECT.md Key Decisions table for full history.
 - [01-01] SSE streaming uses fetch + ReadableStream not EventSource for reconnect control per RESEARCH.md
 - [Phase ?]: [01-05] Convex domain tests use behavioral documentation pattern matching codebase convention — ctx.db cannot be instantiated in jsdom
 - [Phase ?]: [01-05] Browser-triggered Convex sync (useCallback+useEffect) fires once on mount; avoids A7 cloud→localhost block
+- [02-01] uploadEmailAsset uses raw fetch + FormData, NOT authHeaders() — follows importAgentYaml multipart pattern exactly (T-02-01)
+- [02-01] Client-side is_active filter as belt-and-suspenders guard on layouts/templates hooks
+- [02-01] useAgentDefaults catches AstridrApiError 404 per-agent, returning null for unconfigured agents
 
 ### Pending Todos
 
@@ -90,6 +94,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-09T16:13:25.395Z
-Stopped at: Phase 2 UI-SPEC approved
-Next step: Execute 01-02-PLAN.md
+Last session: 2026-05-09T16:18:46Z
+Stopped at: Completed 02-01-PLAN.md
+Next step: Execute 02-02-PLAN.md
