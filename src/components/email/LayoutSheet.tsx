@@ -217,14 +217,13 @@ export function LayoutSheet({
       if (mode === "create") {
         await createLayout(body);
         toast.success("Layout saved");
-      } else {
-        await updateLayout(form.slug, body);
+      } else if (layoutSlug) {
+        await updateLayout(layoutSlug, body);
         toast.success("Layout saved");
       }
       onSaved();
       onOpenChange(false);
-    } catch (err) {
-      console.error("Failed to save layout:", err);
+    } catch {
       setSaveError("Failed to save layout. Try again.");
     } finally {
       setSaving(false);
@@ -239,8 +238,7 @@ export function LayoutSheet({
       setShowDeleteConfirm(false);
       onSaved();
       onOpenChange(false);
-    } catch (err) {
-      console.error("Failed to delete layout:", err);
+    } catch {
       toast.error("Failed to delete layout");
     } finally {
       setDeleting(false);
@@ -438,7 +436,13 @@ export function LayoutSheet({
                     <Label>Logo</Label>
                     <AssetDropzone
                       folder="logos"
-                      currentUrl={undefined}
+                      currentUrl={
+                        form.logo_storage_path
+                          ? form.logo_storage_path.startsWith("http")
+                            ? form.logo_storage_path
+                            : `${import.meta.env.VITE_ASTRIDR_API_URL ?? ""}/api/email-assets/public/${form.logo_storage_path}`
+                          : undefined
+                      }
                       onUploaded={(asset) =>
                         setField("logo_storage_path", asset.storage_path)
                       }
