@@ -89,7 +89,7 @@ export default function EmailTemplates() {
 // Phase 01: Design Studio
 const DesignStudio = lazy(() => import("./pages/DesignStudio"));
 
-// Phase 02: Email Template Manager  ← add here
+// Phase 02: Email Template Manager  <- add here
 const EmailTemplates = lazy(() => import("./pages/EmailTemplates"));
 ```
 
@@ -112,7 +112,7 @@ const EmailTemplates = lazy(() => import("./pages/EmailTemplates"));
 import {
   // ... existing icons ...
   Palette,
-  Mail,          // ← add here
+  Mail,          // <- add here
 } from "lucide-react";
 ```
 
@@ -121,7 +121,7 @@ import {
 const iconComponents: Record<string, React.ElementType> = {
   // ... existing entries ...
   "palette": Palette,
-  "mail": Mail,    // ← add here
+  "mail": Mail,    // <- add here
 };
 ```
 
@@ -130,7 +130,7 @@ const iconComponents: Record<string, React.ElementType> = {
 const overviewNavItems = [
   // ... existing items ...
   { to: "/design-studio", label: "Design Studio", icon: "palette", group: "OVERVIEW" },
-  { to: "/email-templates", label: "Email Templates", icon: "mail", group: "OVERVIEW" },  // ← add here
+  { to: "/email-templates", label: "Email Templates", icon: "mail", group: "OVERVIEW" },  // <- add here
   { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
   // ...
 ];
@@ -248,7 +248,7 @@ export async function uploadEmailAsset(
 **No direct analog** — pure transform functions with no codebase equivalent. Implement fresh:
 
 ```typescript
-// Variable schema converters (needed for VariableSchemaTable ↔ API JSONB)
+// Variable schema converters (needed for VariableSchemaTable <-> API JSONB)
 type VariableRow = { name: string } & VariableDefinition;
 
 export function variableSchemaToRows(schema: Record<string, VariableDefinition>): VariableRow[] {
@@ -403,11 +403,11 @@ export function LayoutSheet({ layoutSlug, mode, open, onOpenChange, onSaved }) {
   };
 ```
 
-**Sheet width for split-layout** (wider than CronSheet's 400px):
+**Sheet width for LayoutSheet** (per UI-SPEC Sheet Width Contract: 640px):
 ```typescript
-<SheetContent side="right" className="w-[480px] sm:max-w-[480px] overflow-y-auto">
+<SheetContent side="right" className="w-[640px] sm:max-w-[640px] overflow-y-auto">
 ```
-For TemplateSheet (split editor + preview), use `w-[900px] sm:max-w-[900px]`.
+For TemplateSheet (split editor + preview), use `w-[1100px] sm:max-w-[1100px]`.
 
 **Loading skeleton pattern** (AgentDetailSheet.tsx lines 140-152):
 ```typescript
@@ -483,9 +483,9 @@ useEffect(() => {
 />
 ```
 
-**Split layout for TemplateSheet:**
+**Split layout for TemplateSheet (per UI-SPEC Sheet Width Contract: 1100px):**
 ```typescript
-<SheetContent side="right" className="w-[900px] sm:max-w-[900px] overflow-y-auto">
+<SheetContent side="right" className="w-[1100px] sm:max-w-[1100px] overflow-y-auto">
   <div className="flex gap-4 h-[calc(100vh-80px)]">
     <div className="flex-1 overflow-y-auto space-y-4">{/* editor left */}</div>
     <div className="w-[400px] shrink-0 flex flex-col">{/* preview right */}</div>
@@ -783,7 +783,7 @@ const updateRow = (i: number, field: keyof VariableRow, value: unknown) =>
 
 ## Shared Patterns
 
-### Auth Headers for Ástríðr API Calls
+### Auth Headers for Astríðr API Calls
 **Source:** `src/lib/astridrApi.ts` lines 117-121 (`authHeaders`) and lines 123-133 (`apiRequest<T>`)
 **Apply to:** All hooks (`useEmailLayouts`, `useEmailTemplates`, `useAgentDefaults`, `useEmailAssets`) — these call through `apiRequest<T>` so auth is automatic.
 ```typescript

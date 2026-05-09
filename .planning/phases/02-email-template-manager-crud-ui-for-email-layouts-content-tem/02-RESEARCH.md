@@ -44,7 +44,7 @@ None — discussion stayed within phase scope.
 
 ## Summary
 
-Phase 2 builds a dedicated `/email-templates` page in CodePulse that is a pure frontend-to-API integration exercise. The Ástríðr backend is already complete: Supabase tables exist, REST API is implemented in `template_routes.py`, and the rendering engine is live. This phase adds zero Convex tables and makes no backend changes — all data flows through `fetch()` calls to the Ástríðr REST API using the existing `authHeaders()` / `apiRequest<T>()` pattern already in `src/lib/astridrApi.ts`.
+Phase 2 builds a dedicated `/email-templates` page in CodePulse that is a pure frontend-to-API integration exercise. The Astríðr backend is already complete: Supabase tables exist, REST API is implemented in `template_routes.py`, and the rendering engine is live. This phase adds zero Convex tables and makes no backend changes — all data flows through `fetch()` calls to the Astríðr REST API using the existing `authHeaders()` / `apiRequest<T>()` pattern already in `src/lib/astridrApi.ts`.
 
 The two technically novel elements are (1) Monaco Editor integration and (2) multipart file upload. Monaco requires `@monaco-editor/react` (not currently installed) with CDN-loaded workers — no Vite worker configuration needed with the default CDN strategy. File upload must use raw `fetch()` with FormData and a manual `Authorization` header (not `authHeaders()`, which sets `Content-Type: application/json`). This pattern already exists in the codebase in `importAgentYaml()`.
 
@@ -58,12 +58,12 @@ The UI-SPEC.md is detailed and precise. The planner can treat it as a binding co
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
-| Layout/template CRUD | Browser (React) | API (Ástríðr) | CodePulse is a browser SPA; Ástríðr owns data persistence |
+| Layout/template CRUD | Browser (React) | API (Astríðr) | CodePulse is a browser SPA; Astríðr owns data persistence |
 | HTML editing | Browser | — | Monaco runs entirely in-browser; no server involvement |
-| Live preview rendering | API (Ástríðr) | Browser (iframe) | Preview endpoint does server-side Mustache render + layout assembly |
-| Asset storage | API (Ástríðr) | Supabase Storage | Upload proxies through Ástríðr to Supabase Storage bucket |
-| Asset listing | Browser | API (Ástríðr) | No dedicated list endpoint — Assets tab uses Supabase Storage API via Ástríðr proxy |
-| Agent defaults persistence | API (Ástríðr) | Supabase | Upsert via `PUT /api/agents/{agent_id}/email-defaults` |
+| Live preview rendering | API (Astríðr) | Browser (iframe) | Preview endpoint does server-side Mustache render + layout assembly |
+| Asset storage | API (Astríðr) | Supabase Storage | Upload proxies through Astríðr to Supabase Storage bucket |
+| Asset listing | API (Astríðr) | Browser | Wave 0 adds `GET /api/email-assets` list endpoint to template_routes.py |
+| Agent defaults persistence | API (Astríðr) | Supabase | Upsert via `PUT /api/agents/{agent_id}/email-defaults` |
 | Navigation registration | Browser | — | `overviewNavItems` array in `DashboardLayout.tsx` + `iconComponents` map |
 
 ---
@@ -86,7 +86,7 @@ The UI-SPEC.md is detailed and precise. The planner can treat it as a binding co
 |---------|---------|---------|--------------|
 | @monaco-editor/react | 4.7.0 | HTML/CSS editor with syntax highlighting | VS Code engine; CDN worker loading; `@uiw/react-codemirror` already installed but Monaco is locked by D-05 |
 
-**Version verified:** `npm view @monaco-editor/react version` → `4.7.0` [VERIFIED: npm registry]
+**Version verified:** `npm view @monaco-editor/react version` -> `4.7.0` [VERIFIED: npm registry]
 
 **Installation:**
 ```bash
@@ -98,13 +98,7 @@ No additional packages needed. React-dropzone (15.0.0 available) is NOT required
 ### Note on asset listing endpoint
 The API spec defines `GET /api/email-assets/{path}` as a proxy for single asset retrieval, NOT a listing endpoint. There is no `GET /api/email-assets` (list all) endpoint in `template_routes.py`. [VERIFIED: template_routes.py read]
 
-The Assets tab thumbnail grid requires a list of all uploaded assets. **Options (Claude's discretion):**
-1. Ástríðr exposes a Supabase Storage list via a new endpoint (backend change needed — out of phase scope)
-2. Track uploaded assets client-side in React state during the session
-3. Call the Supabase Storage REST API directly from the browser using the Supabase public URL pattern
-4. Add a thin `GET /api/email-assets` list endpoint to `template_routes.py` as a Wave 0 task (minimal backend addition, stays within phase boundary)
-
-**Recommendation:** Option 4 — add one thin list endpoint. The assets tab is useless without it, and the endpoint is 5 lines of httpx against Supabase Storage's list API. This should be flagged in the plan as a backend prerequisite task.
+The Assets tab thumbnail grid requires a list of all uploaded assets. **Resolution:** Wave 0 Plan (02-00) adds a thin `GET /api/email-assets` list endpoint to `template_routes.py` as a cross-repo backend prerequisite. The endpoint calls Supabase Storage's POST list API and returns `[{name, public_url, storage_path, size, created_at}]`.
 
 ---
 
@@ -122,7 +116,7 @@ Browser (CodePulse SPA)
       │   └── LayoutSheet                                  │
       │       ├── Monaco Editor (html, css)                │
       │       ├── AssetPicker → AssetGallery               ▼
-      │       └── POST/PUT /api/email-layouts        Ástríðr REST API
+      │       └── POST/PUT /api/email-layouts        Astríðr REST API
       │                                                    │
       ├── Templates tab                                     │
       │   ├── fetch GET /api/email-templates               │
@@ -143,7 +137,7 @@ Browser (CodePulse SPA)
       │       └── PUT /api/agents/{id}/email-defaults       │
       │                                                     │
       └── Assets tab                                        │
-          ├── fetch GET /api/email-assets  [NEW ENDPOINT]   │
+          ├── fetch GET /api/email-assets  [WAVE 0]         │
           ├── AssetGallery (thumbnail grid)                  │
           └── POST /api/email-assets/upload (multipart)─────┘
                                                             │
@@ -385,7 +379,7 @@ useEffect(() => {
 **Warning signs:** 404 errors from preview endpoint during template creation.
 
 ### Pitfall 4: Agent Defaults Tab — No Agents Returned
-**What goes wrong:** If Ástríðr is not running or `GET /api/agents` returns empty, the Agent Defaults tab shows the "No agent defaults" empty state even when defaults exist in Supabase.
+**What goes wrong:** If Astríðr is not running or `GET /api/agents` returns empty, the Agent Defaults tab shows the "No agent defaults" empty state even when defaults exist in Supabase.
 **Why it happens:** The tab must enumerate agents first, then fetch defaults per agent.
 **How to avoid:** Distinguish between "no agents registered" and "agents exist but no defaults configured." Use `fetchAgents()` (already in astridrApi.ts) to drive the card grid, then overlay defaults on top.
 **Warning signs:** Empty Agent Defaults tab despite Supabase records existing.
@@ -399,7 +393,7 @@ useEffect(() => {
 ### Pitfall 6: Missing Asset List Endpoint
 **What goes wrong:** The Assets tab has no data to display — no endpoint to list bucket contents.
 **Why it happens:** `template_routes.py` only has `GET /api/email-assets/{path}` (single asset proxy), not a list. [VERIFIED: template_routes.py — no list endpoint exists]
-**How to avoid:** Wave 0 must include a backend task to add `GET /api/email-assets` endpoint to `template_routes.py`. The endpoint calls Supabase Storage list API and returns `[{name, public_url, size, created_at}]`.
+**How to avoid:** Wave 0 (Plan 02-00) adds `GET /api/email-assets` endpoint to `template_routes.py`. The endpoint calls Supabase Storage list API and returns `[{name, public_url, storage_path, size, created_at}]`.
 **Warning signs:** Assets tab always shows empty state or requires client-side tracking.
 
 ### Pitfall 7: Sheet + Monaco Editor Height Collapse
@@ -588,7 +582,7 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 
 | Dependency | Required By | Available | Version | Fallback |
 |------------|------------|-----------|---------|----------|
-| Ástríðr REST API | All 4 data domains | Unknown at research time | — | Feature gates on `VITE_ASTRIDR_API_URL` env var |
+| Astríðr REST API | All 4 data domains | Unknown at research time | — | Feature gates on `VITE_ASTRIDR_API_URL` env var |
 | @monaco-editor/react | HTML/CSS editing (D-05) | NOT INSTALLED | — | Install: `npm install @monaco-editor/react` |
 | Supabase Storage `email-assets` bucket | Asset upload/gallery | Unknown — depends on Phase 1 backend completion | — | Upload fails with 502 if bucket missing |
 | Node.js / npm | Build tooling | Available | — | — |
@@ -596,10 +590,10 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 **Missing dependencies with no fallback:**
 - `@monaco-editor/react` must be installed before any Monaco editor component can be built.
 - `email-assets` Supabase Storage bucket must exist (Phase 1 backend deliverable) before upload works.
-- `GET /api/email-assets` list endpoint does not exist in current backend — required for Assets tab.
+- `GET /api/email-assets` list endpoint — added by Wave 0 Plan (02-00) as a cross-repo prerequisite.
 
 **Missing dependencies with fallback:**
-- If Ástríðr API is unavailable during development, each hook can return mock data. The existing `VITE_ASTRIDR_API_URL` defaults to `http://localhost:8181`.
+- If Astríðr API is unavailable during development, each hook can return mock data. The existing `VITE_ASTRIDR_API_URL` defaults to `http://localhost:8181`.
 
 ---
 
@@ -615,7 +609,7 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 
 **Baseline:** 3 test files currently failing (pre-existing `SkillPicker.test.tsx` type errors + `ingestAuth` + `openDesignApi` failures — not related to this phase). 62 test files pass. Do not break the 62 passing files.
 
-### Phase Requirements → Test Map
+### Phase Requirements -> Test Map
 | Behavior | Test Type | Automated Command | File |
 |----------|-----------|-------------------|------|
 | `variableSchemaToRows` / `rowsToVariableSchema` round-trip | unit | `npx vitest run src/lib/emailTemplateUtils.test.ts` | Wave 0 |
@@ -633,11 +627,12 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 - **Phase gate:** Full suite green (matching or better than baseline 62 passing files) before `/gsd-verify-work`
 
 ### Wave 0 Gaps
-- [ ] `src/lib/emailTemplateUtils.ts` + `src/lib/emailTemplateUtils.test.ts` — variable schema converters + sample variable builder
-- [ ] `src/hooks/useEmailLayouts.test.ts` — is_active filter behavior
-- [ ] `src/components/email/` directory — all 9 new component files
-- [ ] `src/hooks/useEmailLayouts.ts`, `useEmailTemplates.ts`, `useAgentDefaults.ts`, `useEmailAssets.ts`
-- [ ] Backend: `GET /api/email-assets` list endpoint in `astridr-repo/astridr/api/template_routes.py`
+- [x] `src/lib/emailTemplateUtils.test.ts` — variable schema converters + sample variable builder (created in 02-00)
+- [x] `src/lib/astridrApi.test.ts` — uploadEmailAsset auth header behavior (created in 02-00)
+- [x] `src/hooks/useEmailLayouts.test.ts` — is_active filter behavior (created in 02-00)
+- [x] `src/components/email/__tests__/AssetDropzone.test.tsx` — file validation (created in 02-00)
+- [x] `src/components/email/__tests__/EmailPreviewPane.test.tsx` — create-mode placeholder (created in 02-00)
+- [x] Backend: `GET /api/email-assets` list endpoint in `astridr-repo/astridr/api/template_routes.py` (created in 02-00)
 
 ---
 
@@ -647,10 +642,10 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 
 | ASVS Category | Applies | Standard Control |
 |---------------|---------|-----------------|
-| V2 Authentication | No | CodePulse has optional Clerk auth; Ástríðr API requires Bearer token via `VITE_ASTRIDR_API_KEY` |
+| V2 Authentication | No | CodePulse has optional Clerk auth; Astríðr API requires Bearer token via `VITE_ASTRIDR_API_KEY` |
 | V3 Session Management | No | SPA session managed by Clerk/localStorage |
 | V4 Access Control | No | All users who can access CodePulse can manage email templates |
-| V5 Input Validation | Yes | Client-side: variable name regex `[a-z_][a-z0-9_]*`, file size ≤ 5MB, file type image/* |
+| V5 Input Validation | Yes | Client-side: variable name regex `[a-z_][a-z0-9_]*`, file size <= 5MB, file type image/* |
 | V6 Cryptography | No | No crypto in this phase |
 | V7 Error Handling | Yes | Never expose raw error details in toast messages — use generic copy from UI-SPEC |
 
@@ -659,7 +654,7 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
 | XSS via HTML template injection | Tampering | Preview renders in `iframe` with `srcdoc` — sandboxed from CodePulse DOM. Do NOT use `dangerouslySetInnerHTML` for preview. |
-| Oversized file upload bypass | Tampering | Client-side: validate ≤ 5MB before upload. Server-side: Ástríðr also enforces 5MB. [VERIFIED: template_routes.py line 277] |
+| Oversized file upload bypass | Tampering | Client-side: validate <= 5MB before upload. Server-side: Astríðr also enforces 5MB. [VERIFIED: template_routes.py line 277] |
 | API key exposure in browser | Information Disclosure | `VITE_ASTRIDR_API_KEY` is already in use across the codebase. Follow existing pattern — no change needed. |
 | Arbitrary file type upload | Tampering | Client-side: accept `image/png,image/jpeg,image/webp` only. Server uses `file.content_type`. |
 
@@ -674,26 +669,20 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 | A1 | Monaco `executeEdits` range can be a plain object `{startLineNumber, startColumn, endLineNumber, endColumn}` without importing `monaco.Range` | Code Examples | Cursor insertion fails — TypeScript error; fix: import `monaco` from onMount second param |
 | A2 | CDN-loaded Monaco workers work without Vite worker config in production Vite 7 build | Standard Stack | Monaco editors fail to load in production build; fix: add vite-plugin-monaco-editor |
 | A3 | `iframe srcdoc` sandbox without `allow-scripts` is sufficient for email HTML preview | Security Domain | Layout HTML with inline JS would be silently blocked — acceptable for email templates |
-| A4 | Supabase Storage list API is accessible via Ástríðr's `_supabase_url` + service key pattern used in upload endpoint | Common Pitfalls | List endpoint implementation differs; fix: test against actual Supabase instance |
+| A4 | Supabase Storage list API is accessible via Astríðr's `_supabase_url` + service key pattern used in upload endpoint | Common Pitfalls | List endpoint implementation differs; fix: test against actual Supabase instance |
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Asset list endpoint — backend or workaround?**
-   - What we know: No list endpoint exists in `template_routes.py`
-   - What's unclear: Whether adding a backend endpoint is within Phase 2 scope, or if a workaround (client-side tracking) is acceptable
-   - Recommendation: Add the list endpoint in Wave 0 as a backend prerequisite. It's 5-10 lines and unblocks the Assets tab entirely. Mark it as a cross-repo task.
+1. **Asset list endpoint — backend or workaround?** (RESOLVED)
+   - **Resolution:** Wave 0 Plan (02-00) adds `GET /api/email-assets` endpoint to `astridr-repo/astridr/api/template_routes.py`. The endpoint calls Supabase Storage's POST list API (`/storage/v1/object/list/{bucket}`) and returns `[{name, public_url, storage_path, size, created_at}]`. This is a cross-repo backend task that runs before any CodePulse UI work.
 
-2. **Phase 1 backend completion status**
-   - What we know: `template_routes.py` and `renderer.py` exist and are fully implemented
-   - What's unclear: Whether the Supabase migration has been applied and the `email-assets` bucket created
-   - Recommendation: Wave 0 should include a verification step — hit `GET /api/email-layouts` against the running Ástríðr and confirm 200 (not 503 "Template service not initialized").
+2. **Phase 1 backend completion status** (RESOLVED)
+   - **Resolution:** Wave 0 Plan (02-00) Task 2 includes an API connectivity verification step that hits `GET /api/email-layouts` against the running Astríðr instance. If it returns 200, backend is confirmed. If it fails, the note is logged but does not block UI development (the UI can be built against the API contract and tested end-to-end later).
 
-3. **Agent Defaults — which agent list to use?**
-   - What we know: `fetchAgents()` returns `AgentListItem[]` from `GET /api/agents`
-   - What's unclear: Whether ALL agents should appear in the grid, or only those with existing `agent_email_defaults` rows
-   - Recommendation: Show all agents (from `GET /api/agents`) and overlay defaults. Cards without defaults show "No email defaults configured" state. This matches D-03 intent.
+3. **Agent Defaults — which agent list to use?** (RESOLVED)
+   - **Resolution:** Show ALL agents from `GET /api/agents` (via existing `fetchAgents()`) and overlay email defaults on top. Cards without defaults show "No email defaults configured" state. This matches D-03 intent ("displays agents as a card grid"). The `useAgentDefaults` hook fetches agents first, then fetches defaults per agent, handling 404 as "no defaults yet."
 
 ---
 
@@ -708,7 +697,7 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 - `C:\Users\mandr\codepulse\src\hooks\useCatalog.ts` — Debounce + fetch hook pattern
 - `C:\Users\mandr\codepulse\.planning\phases\02-.../02-CONTEXT.md` — All locked decisions
 - `C:\Users\mandr\codepulse\.planning\phases\02-.../02-UI-SPEC.md` — Complete visual/interaction contract
-- `npm view @monaco-editor/react version` → 4.7.0 [VERIFIED: npm registry]
+- `npm view @monaco-editor/react version` -> 4.7.0 [VERIFIED: npm registry]
 
 ### Secondary (MEDIUM confidence)
 - `https://github.com/suren-atoyan/monaco-react` — `onMount` signature, `loader.config`, `loading` prop, CDN worker default behavior [CITED: GitHub README via WebFetch]
@@ -727,7 +716,7 @@ This is a greenfield UI phase — no rename, refactor, or data migration involve
 - Standard Stack: HIGH — npm registry verified, existing codebase patterns confirmed
 - Architecture patterns: HIGH — derived from verified codebase reads
 - Monaco integration: MEDIUM — README verified, insert-at-cursor detail assumed
-- Asset list gap: HIGH — confirmed absent from `template_routes.py`
+- Asset list gap: HIGH — confirmed absent from `template_routes.py`, resolved via Wave 0
 
 **Research date:** 2026-05-08
-**Valid until:** 2026-06-08 (stable stack; Ástríðr API is local so no remote versioning concern)
+**Valid until:** 2026-06-08 (stable stack; Astríðr API is local so no remote versioning concern)
