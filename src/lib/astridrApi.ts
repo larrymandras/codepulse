@@ -127,8 +127,8 @@ async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   });
   if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new AstridrApiError(res.status, body.error ?? res.statusText);
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new AstridrApiError(res.status, body.detail ?? body.error ?? res.statusText);
   }
   return res.json() as Promise<T>;
 }
