@@ -35,39 +35,38 @@ describe("openDesignApi", () => {
   });
 
   describe("fetchSkills", () => {
-    it("calls GET /api/skills using VITE_OPEN_DESIGN_URL env var", async () => {
+    it("calls GET /od-api/skills and unwraps the skills array", async () => {
       const skills = [
-        { id: "landing", title: "Landing Page", category: "web", summary: "Build a landing page" },
+        { id: "landing", name: "Landing Page", description: "Build a landing page", mode: "web", surface: "web", designSystemRequired: false, examplePrompt: "" },
       ];
-      mockFetch.mockResolvedValueOnce(mockResponse(skills));
+      mockFetch.mockResolvedValueOnce(mockResponse({ skills }));
 
       const result = await fetchSkills();
 
       expect(mockFetch).toHaveBeenCalledOnce();
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(url).toContain("/api/skills");
+      expect(url).toContain("/od-api/skills");
       expect(init?.method).toBeUndefined(); // GET is implicit
       expect(result).toEqual(skills);
     });
   });
 
   describe("checkHealth", () => {
-    it("calls GET /api/health with 3s timeout", async () => {
+    it("calls GET /od-api/health with 3s timeout", async () => {
       mockFetch.mockResolvedValueOnce(mockResponse({ status: "ok" }));
 
       const result = await checkHealth();
 
       expect(mockFetch).toHaveBeenCalledOnce();
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(url).toContain("/api/health");
-      // AbortSignal.timeout creates an AbortSignal — verify it was passed
+      expect(url).toContain("/od-api/health");
       expect(init?.signal).toBeDefined();
       expect(result).toEqual({ status: "ok" });
     });
   });
 
   describe("createRun", () => {
-    it("POSTs to /api/runs with correct body shape", async () => {
+    it("POSTs to /od-api/runs with correct body shape", async () => {
       const runRequest = {
         agentId: "claude-code",
         message: "Build me a landing page",
@@ -79,7 +78,7 @@ describe("openDesignApi", () => {
 
       expect(mockFetch).toHaveBeenCalledOnce();
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(url).toContain("/api/runs");
+      expect(url).toContain("/od-api/runs");
       expect(init?.method).toBe("POST");
       expect(JSON.parse(init?.body as string)).toEqual(runRequest);
       expect(result).toEqual({ runId: "run-abc" });

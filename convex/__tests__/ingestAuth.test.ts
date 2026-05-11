@@ -35,10 +35,10 @@ describe("ingestAuth (CPHLTH-02)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("skips auth when no API key configured (dev mode)", () => {
+  it("rejects when no API key configured (fail-closed)", () => {
     vi.stubEnv("ASTRIDR_INGEST_API_KEY", "");
     const req = new Request("http://localhost/ingest", { method: "POST" });
-    expect(validateIngestAuth(req)).toBe(true);
+    expect(validateIngestAuth(req)).toBe(false);
     vi.unstubAllEnvs();
   });
 
