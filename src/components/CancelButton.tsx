@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authHeaders } from "@/lib/astridrApi";
 
 const ASTRIDR_API_BASE = import.meta.env.VITE_ASTRIDR_API_URL ?? "";
 
@@ -17,6 +18,7 @@ export default function CancelButton({ executionId }: CancelButtonProps) {
     try {
       const res = await fetch(`${ASTRIDR_API_BASE}/api/executions/${executionId}/cancel`, {
         method: "POST",
+        headers: authHeaders(),
       });
 
       if (res.ok) {
