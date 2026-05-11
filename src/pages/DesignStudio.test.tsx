@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock checkHealth so no network calls are made in tests
@@ -11,13 +11,23 @@ vi.mock("@/lib/openDesignApi", () => ({
 // Mock Convex hooks — DesignStudio uses useDesignProjects (useQuery) and useAction
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
-  useAction: vi.fn(() => vi.fn()),
+  useAction: vi.fn(() => vi.fn(() => Promise.resolve())),
   useMutation: vi.fn(() => vi.fn()),
 }));
 
 // Mock useDesignProjects hook
 vi.mock("@/hooks/useDesignProjects", () => ({
   useDesignProjects: vi.fn(() => []),
+}));
+
+// Mock DaemonStatusBadge and IframeEmbed — both fire async state updates via
+// checkHealth polling after mount. Synchronous stubs eliminate those act(...)
+// warnings. These components have their own unit tests.
+vi.mock("@/components/design-studio/DaemonStatusBadge", () => ({
+  default: () => <span>Connecting</span>,
+}));
+vi.mock("@/components/design-studio/IframeEmbed", () => ({
+  default: () => <div data-testid="iframe-embed" />,
 }));
 
 // Lazy-load friendly import
@@ -28,41 +38,45 @@ beforeEach(() => {
 });
 
 describe("DesignStudio page", () => {
-  it("renders without crashing at /design-studio route", () => {
+  it("renders without crashing at /design-studio route", async () => {
     const { container } = render(
       <MemoryRouter initialEntries={["/design-studio"]}>
         <DesignStudio />
       </MemoryRouter>
     );
-    expect(container.firstChild).toBeTruthy();
+    await waitFor(() => expect(container.firstChild).toBeTruthy());
   });
 
-  it("shows Embedded Studio and Native UI tabs", () => {
+  it("shows Embedded Studio and Native UI tabs", async () => {
     render(
       <MemoryRouter>
         <DesignStudio />
       </MemoryRouter>
     );
-    expect(screen.getByRole("tab", { name: "Embedded Studio" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Native UI" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Embedded Studio" })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: "Native UI" })).toBeInTheDocument();
+    });
   });
 
-  it("shows DaemonStatusBadge in page header", () => {
+  it("shows DaemonStatusBadge in page header", async () => {
     render(
       <MemoryRouter>
         <DesignStudio />
       </MemoryRouter>
     );
-    // DaemonStatusBadge starts in "connecting" state and shows "Connecting" text
-    expect(screen.getByText("Connecting")).toBeInTheDocument();
+    // DaemonStatusBadge is mocked to render "Connecting" synchronously
+    await waitFor(() => expect(screen.getByText("Connecting")).toBeInTheDocument());
   });
 
-  it("shows Import ZIP button in page header", () => {
+  it("shows Import ZIP button in page header", async () => {
     render(
       <MemoryRouter>
         <DesignStudio />
       </MemoryRouter>
     );
-    expect(screen.getByRole("button", { name: "Import ZIP" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Import ZIP" })).toBeInTheDocument()
+    );
   });
 });

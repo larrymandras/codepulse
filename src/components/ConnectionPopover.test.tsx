@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import type { WSStatus } from "@/contexts/AstridrWSContext";
 
 let mockStatus: WSStatus = "connected";
@@ -21,13 +21,16 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
 import { ConnectionPopover } from "./ConnectionPopover";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 
-function openPopover() {
+async function openPopover() {
   const trigger = screen.getByRole("button", { name: /open connection details/i });
-  fireEvent.click(trigger);
+  await act(async () => {
+    fireEvent.click(trigger);
+  });
 }
 
 describe("ConnectionPopover", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     mockStatus = "connected";
     mockReconnect.mockClear();
     mockSendCommand.mockClear();
@@ -40,13 +43,19 @@ describe("ConnectionPopover", () => {
     }));
   });
 
-  it("renders CONNECTION DETAILS header", () => {
-    render(<ConnectionPopover />);
-    openPopover();
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders CONNECTION DETAILS header", async () => {
+    await act(async () => {
+      render(<ConnectionPopover />);
+    });
+    await openPopover();
     expect(screen.getByText("CONNECTION DETAILS")).toBeInTheDocument();
   });
 
-  it("shows Disconnected status with status-error styling when disconnected", () => {
+  it("shows Disconnected status with status-error styling when disconnected", async () => {
     mockStatus = "disconnected";
     (useAstridrWS as Mock).mockImplementation(() => ({
       status: mockStatus,
@@ -56,13 +65,15 @@ describe("ConnectionPopover", () => {
       reconnect: mockReconnect,
     }));
 
-    render(<ConnectionPopover />);
-    openPopover();
+    await act(async () => {
+      render(<ConnectionPopover />);
+    });
+    await openPopover();
     // "Disconnected" appears in both the trigger (WSStatusIndicator) and inside the popover status row
     expect(screen.getAllByText("Disconnected").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows Reconnect button only when disconnected", () => {
+  it("shows Reconnect button only when disconnected", async () => {
     mockStatus = "disconnected";
     (useAstridrWS as Mock).mockImplementation(() => ({
       status: mockStatus,
@@ -72,22 +83,28 @@ describe("ConnectionPopover", () => {
       reconnect: mockReconnect,
     }));
 
-    render(<ConnectionPopover />);
-    openPopover();
+    await act(async () => {
+      render(<ConnectionPopover />);
+    });
+    await openPopover();
     expect(screen.getByRole("button", { name: /reconnect/i })).toBeInTheDocument();
   });
 
-  it("hides Reconnect button when connected", () => {
+  it("hides Reconnect button when connected", async () => {
     mockStatus = "connected";
 
-    render(<ConnectionPopover />);
-    openPopover();
+    await act(async () => {
+      render(<ConnectionPopover />);
+    });
+    await openPopover();
     expect(screen.queryByRole("button", { name: /^reconnect$/i })).not.toBeInTheDocument();
   });
 
-  it("renders URL, uptime, latency, topics, last event rows", () => {
-    render(<ConnectionPopover />);
-    openPopover();
+  it("renders URL, uptime, latency, topics, last event rows", async () => {
+    await act(async () => {
+      render(<ConnectionPopover />);
+    });
+    await openPopover();
     expect(screen.getByText("URL")).toBeInTheDocument();
     expect(screen.getByText("Uptime")).toBeInTheDocument();
     expect(screen.getByText("Latency")).toBeInTheDocument();
@@ -95,9 +112,11 @@ describe("ConnectionPopover", () => {
     expect(screen.getByText("Last event")).toBeInTheDocument();
   });
 
-  it("shows Authentication failed error when forceAuthError is true", () => {
-    render(<ConnectionPopover forceAuthError />);
-    openPopover();
+  it("shows Authentication failed error when forceAuthError is true", async () => {
+    await act(async () => {
+      render(<ConnectionPopover forceAuthError />);
+    });
+    await openPopover();
     expect(screen.getByText(/Authentication failed/i)).toBeInTheDocument();
   });
 });

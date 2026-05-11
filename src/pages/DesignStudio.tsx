@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
@@ -20,18 +20,22 @@ export default function DesignStudio() {
   const projects = useDesignProjects();
   const syncProjects = useAction(api.designProjects.syncFromDaemon);
 
-  const handleSync = useCallback(async () => {
+  const mountedRef = useRef(true);
+
+  const handleSync = useCallback(() => {
     setSyncing(true);
-    try {
-      await syncProjects();
-    } finally {
-      setSyncing(false);
-    }
+    syncProjects()
+      .catch(() => {})
+      .finally(() => {
+        if (mountedRef.current) setSyncing(false);
+      });
   }, [syncProjects]);
 
-  // Auto-sync on mount — fires once (useCallback stabilizes the dependency)
+  // Auto-sync on mount
   useEffect(() => {
-    void handleSync();
+    mountedRef.current = true;
+    handleSync();
+    return () => { mountedRef.current = false; };
   }, [handleSync]);
 
   return (

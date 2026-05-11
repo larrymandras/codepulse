@@ -143,12 +143,12 @@ describe("Inbox — keyboard navigation", () => {
     expect(screen.getByText("action_item-1")).toBeInTheDocument();
   });
 
-  test("'A' key triggers approve on focused approval item", () => {
+  test("'A' key triggers approve on focused approval item", async () => {
     renderInbox();
     injectApprovalItem(makeApprovalItem("item-1"));
 
     act(() => { fireEvent.keyDown(document, { key: "ArrowDown" }); });
-    act(() => { fireEvent.keyDown(document, { key: "a" }); });
+    await act(async () => { fireEvent.keyDown(document, { key: "a" }); });
 
     expect(mockSendCommand).toHaveBeenCalledWith(
       expect.objectContaining({ type: "approval.respond" })
