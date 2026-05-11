@@ -10,6 +10,7 @@ export const recordMetrics = mutation({
     tags: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
+    await requireAuth(ctx);
     await ctx.db.insert("profileMetrics", {
       profileId: args.profileId,
       metric: args.metric,
