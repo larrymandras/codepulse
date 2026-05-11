@@ -31,16 +31,23 @@ export const costGuardrailConfig = httpAction(async (ctx, request) => {
     return unauthorizedResponse(headers);
   }
 
-  const result = await ctx.runQuery(api.forecasts.getCostGuardrails);
+  try {
+    const result = await ctx.runQuery(api.forecasts.getCostGuardrails);
 
-  const body = JSON.stringify({
-    session_limit_usd: result.sessionLimitUsd,
-    daily_limit_usd: result.dailyLimitUsd,
-    hourly_limit_usd: result.hourlyLimitUsd,
-  });
+    const body = JSON.stringify({
+      session_limit_usd: result.sessionLimitUsd,
+      daily_limit_usd: result.dailyLimitUsd,
+      hourly_limit_usd: result.hourlyLimitUsd,
+    });
 
-  return new Response(body, {
-    status: 200,
-    headers: { "Content-Type": "application/json", ...headers },
-  });
+    return new Response(body, {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...headers },
+    });
+  } catch (e: any) {
+    return new Response(
+      JSON.stringify({ error: e.message ?? "Internal error" }),
+      { status: 500, headers: { "Content-Type": "application/json", ...headers } },
+    );
+  }
 });
