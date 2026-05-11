@@ -11,9 +11,9 @@ import { fetchSkills } from "@/lib/openDesignApi";
 const mockFetchSkills = vi.mocked(fetchSkills);
 
 const MOCK_SKILLS = [
-  { id: "skill-1", title: "Web Components", category: "frontend", summary: "Build reusable web components" },
-  { id: "skill-2", title: "Data Visualization", category: "analytics", summary: "Create interactive charts" },
-  { id: "skill-3", title: "API Design", category: "backend", summary: "Design RESTful APIs" },
+  { id: "skill-1", name: "Web Components", description: "Build reusable web components", mode: "frontend", surface: "web", designSystemRequired: false, examplePrompt: "" },
+  { id: "skill-2", name: "Data Visualization", description: "Create interactive charts", mode: "analytics", surface: "web", designSystemRequired: false, examplePrompt: "" },
+  { id: "skill-3", name: "API Design", description: "Design RESTful APIs", mode: "backend", surface: "api", designSystemRequired: false, examplePrompt: "" },
 ];
 
 beforeEach(() => {

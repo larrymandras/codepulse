@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Sheet,
@@ -26,14 +26,23 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import AgentAvatar from "@/components/AgentAvatar";
 import { StatusBadge } from "@/components/StatusBadge";
-import { fetchAgentDetail, deleteAgent, cloneAgent, type AgentDetail } from "@/lib/astridrApi";
+import {
+  fetchAgentDetail,
+  fetchAgentEmailDefaults,
+  upsertAgentEmailDefaults,
+  uploadEmailAsset,
+  deleteAgent,
+  cloneAgent,
+  AstridrApiError,
+  type AgentDetail,
+} from "@/lib/astridrApi";
 import { DetailConfigTab } from "@/components/hr/detail/DetailConfigTab";
 import { DetailRuntimeTab } from "@/components/hr/detail/DetailRuntimeTab";
 import { DetailTopologyTab } from "@/components/hr/detail/DetailTopologyTab";
 import { DetailSecurityTab } from "@/components/hr/detail/DetailSecurityTab";
 import { DetailActivityTab } from "@/components/hr/detail/DetailActivityTab";
 import { DetailVersionsTab } from "@/components/hr/detail/DetailVersionsTab";
-import { Maximize2, Trash2, Loader2, RefreshCw, Copy } from "lucide-react";
+import { Maximize2, Trash2, Loader2, RefreshCw, Copy, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 interface AgentDetailSheetProps {
@@ -60,10 +69,17 @@ export function AgentDetailSheet({
   const [showDeregister, setShowDeregister] = useState(false);
   const [deregistering, setDeregistering] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPath, setAvatarPath] = useState<string>("");
+  const [showAvatarUpload, setShowAvatarUpload] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!agentId) {
       setAgentDetail(null);
+      setAvatarUrl(null);
+      setAvatarPath("");
       return;
     }
     setLoading(true);
@@ -74,7 +90,50 @@ export function AgentDetailSheet({
         setError(err instanceof Error ? err.message : "Failed to load agent"),
       )
       .finally(() => setLoading(false));
+
+    fetchAgentEmailDefaults(agentId)
+      .then((defaults) => {
+        if (defaults.avatar_storage_path) {
+          setAvatarPath(defaults.avatar_storage_path);
+          const base = import.meta.env.VITE_ASTRIDR_API_URL ?? "";
+          setAvatarUrl(`${base}/api/email-assets/public/${defaults.avatar_storage_path}`);
+        }
+      })
+      .catch((err) => {
+        if (!(err instanceof AstridrApiError && err.status === 404)) {
+          console.warn("Failed to load avatar defaults:", err);
+        }
+      });
   }, [agentId]);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!agentId) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File exceeds 5 MB limit");
+      return;
+    }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      toast.error("Only PNG, JPEG, or WebP images are supported");
+      return;
+    }
+    setAvatarUploading(true);
+    try {
+      const result = await uploadEmailAsset(file, "avatars");
+      await upsertAgentEmailDefaults(agentId, {
+        signature_name: agentDetail?.name ?? "",
+        signature_title: "",
+        avatar_storage_path: result.storage_path,
+      });
+      setAvatarUrl(result.public_url);
+      setAvatarPath(result.storage_path);
+      setShowAvatarUpload(false);
+      toast.success("Avatar updated");
+    } catch {
+      toast.error("Avatar upload failed");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const handleExpand = () => {
     if (agentId) {
@@ -165,11 +224,36 @@ export function AgentDetailSheet({
             <>
               <SheetHeader className="pb-4">
                 <div className="flex items-start gap-3">
-                  <AgentAvatar
-                    avatar={{ name: agentDetail.name }}
-                    status={avatarStatus as "active" | "idle"}
-                    size="lg"
-                  />
+                  <button
+                    type="button"
+                    className="relative group flex-shrink-0"
+                    onClick={() => setShowAvatarUpload(true)}
+                    title="Change avatar"
+                  >
+                    {avatarUrl ? (
+                      <div className="relative">
+                        <img
+                          src={avatarUrl}
+                          alt={agentDetail.name}
+                          className="w-16 h-16 rounded-full object-cover ring-2 ring-gray-500"
+                        />
+                        <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                          <Camera className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <AgentAvatar
+                          avatar={{ name: agentDetail.name }}
+                          status={avatarStatus as "active" | "idle"}
+                          size="lg"
+                        />
+                        <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
+                          <Camera className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                    )}
+                  </button>
                   <div className="flex-1 min-w-0">
                     <SheetTitle className="text-xl font-semibold text-foreground truncate">
                       {agentDetail.name}
@@ -279,6 +363,71 @@ export function AgentDetailSheet({
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Avatar upload dialog */}
+      <Dialog open={showAvatarUpload} onOpenChange={setShowAvatarUpload}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Update Avatar</DialogTitle>
+            <DialogDescription>
+              Upload a 512×512 PNG or JPG for {agentDetail?.name ?? "this agent"}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {avatarUrl && (
+              <div className="flex justify-center">
+                <img
+                  src={avatarUrl}
+                  alt="Current avatar"
+                  className="w-24 h-24 rounded-full object-cover ring-2 ring-border"
+                />
+              </div>
+            )}
+            <div
+              className={[
+                "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+                avatarUploading
+                  ? "border-border/50 cursor-not-allowed"
+                  : "border-border/50 hover:border-primary/50 cursor-pointer",
+              ].join(" ")}
+              onClick={() => !avatarUploading && avatarInputRef.current?.click()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const file = e.dataTransfer.files[0];
+                if (file) void handleAvatarUpload(file);
+              }}
+              onDragOver={(e) => e.preventDefault()}
+            >
+              {avatarUploading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Uploading...</span>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Drop image here or click to browse
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">
+                    PNG, JPG, WebP — max 5 MB
+                  </p>
+                </>
+              )}
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleAvatarUpload(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Deregister confirmation dialog */}
       <Dialog open={showDeregister} onOpenChange={setShowDeregister}>
