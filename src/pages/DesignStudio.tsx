@@ -25,7 +25,7 @@ export default function DesignStudio() {
   const handleSync = useCallback(() => {
     setSyncing(true);
     syncProjects()
-      .catch(() => {})
+      .catch((err: unknown) => { console.error("design-studio sync failed", err); })
       .finally(() => {
         if (mountedRef.current) setSyncing(false);
       });

@@ -79,4 +79,29 @@ describe("DesignStudio page", () => {
       expect(screen.getByRole("button", { name: "Import ZIP" })).toBeInTheDocument()
     );
   });
+
+  it("bug_006_logs_sync_errors_instead_of_swallowing", async () => {
+    const { useAction } = await import("convex/react");
+    const syncError = new Error("Sync failed");
+    (useAction as ReturnType<typeof vi.fn>).mockReturnValue(
+      vi.fn(() => Promise.reject(syncError))
+    );
+
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    render(
+      <MemoryRouter>
+        <DesignStudio />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining("sync"),
+        expect.anything()
+      );
+    });
+
+    consoleSpy.mockRestore();
+  });
 });
