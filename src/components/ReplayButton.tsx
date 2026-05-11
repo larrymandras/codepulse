@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authHeaders } from "@/lib/astridrApi";
 
 const ASTRIDR_API_BASE = import.meta.env.VITE_ASTRIDR_API_URL ?? "";
 
@@ -24,7 +25,7 @@ export default function ReplayButton({ executionId, profileId, disabled }: Repla
     try {
       const res = await fetch(`${ASTRIDR_API_BASE}/api/executions/${executionId}/replay`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({ profile_id: profileId }),
       });
 
