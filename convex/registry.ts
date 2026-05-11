@@ -18,15 +18,13 @@ export const syncInventory = mutation({
 
     // --- MCP Servers: upsert + drift detection ---
     const existingServers = await ctx.db.query("mcpServers").collect();
+    const serverMap = new Map(existingServers.map((s) => [s.name, s]));
     const incomingServerNames = new Set<string>();
 
     if (Array.isArray(snap.mcpServers)) {
       for (const server of snap.mcpServers) {
         incomingServerNames.add(server.name);
-        const existing = await ctx.db
-          .query("mcpServers")
-          .withIndex("by_name", (q) => q.eq("name", server.name))
-          .first();
+        const existing = serverMap.get(server.name);
         if (existing) {
           await ctx.db.patch(existing._id, {
             status: server.status ?? "connected",
@@ -66,15 +64,13 @@ export const syncInventory = mutation({
 
     // --- Plugins: upsert + drift detection ---
     const existingPlugins = await ctx.db.query("plugins").collect();
+    const pluginMap = new Map(existingPlugins.map((p) => [p.name, p]));
     const incomingPluginNames = new Set<string>();
 
     if (Array.isArray(snap.plugins)) {
       for (const plugin of snap.plugins) {
         incomingPluginNames.add(plugin.name);
-        const existing = await ctx.db
-          .query("plugins")
-          .withIndex("by_name", (q) => q.eq("name", plugin.name))
-          .first();
+        const existing = pluginMap.get(plugin.name);
         if (!existing) {
           await ctx.db.insert("plugins", {
             name: plugin.name,
@@ -110,15 +106,13 @@ export const syncInventory = mutation({
 
     // --- Skills: upsert + drift detection ---
     const existingSkills = await ctx.db.query("skills").collect();
+    const skillMap = new Map(existingSkills.map((s) => [s.name, s]));
     const incomingSkillNames = new Set<string>();
 
     if (Array.isArray(snap.skills)) {
       for (const skill of snap.skills) {
         incomingSkillNames.add(skill.name);
-        const existing = await ctx.db
-          .query("skills")
-          .withIndex("by_name", (q) => q.eq("name", skill.name))
-          .first();
+        const existing = skillMap.get(skill.name);
         if (!existing) {
           await ctx.db.insert("skills", {
             name: skill.name,
