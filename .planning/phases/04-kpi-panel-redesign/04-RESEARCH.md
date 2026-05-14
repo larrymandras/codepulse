@@ -514,7 +514,7 @@ const flatSparkline = (value: number, length = 12): number[] =>
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Error Rate sparkline derivation**
    - What we know: `eventSparkline` gives total event counts per 5-min bucket. No per-bucket error count is exposed by `heroStats.summary`.
