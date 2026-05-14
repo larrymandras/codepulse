@@ -11,7 +11,8 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 ## Current State
 
 **Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-09 with Phase 02 Email Template Manager)
-**Next:** v5.0 Premium Dashboard — visual upgrade stealing patterns from Claude OS (OKLCH color tokens, SVG gauges, 3D memory graph, prescription cards)
+**Active:** v5.0 Premium Dashboard — visual upgrade stealing patterns from Claude OS (OKLCH color tokens, SVG gauges, 3D memory graph, prescription cards)
+**Phase 03 complete** (2026-05-14) — Design Token Refresh: whisper-tint OKLCH dark theme, 5 category accent hues, radial gradient cards, lift-on-hover
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
 
 10 phases complete across the v4.0 milestone:
@@ -81,7 +82,7 @@ See REQUIREMENTS-v5.md for full v5.0 requirement set.
 - **CodePulse repo:** C:\Users\mandr\codepulse
 - **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow
-- **Tests:** 467+ passing (Vitest), 63 test files, 145 todo stubs. Phase 02 added email template utility tests.
+- **Tests:** 481+ passing (Vitest), 71 test files, 145 todo stubs. Phase 02 added email template utility tests.
 
 ## Constraints
 
