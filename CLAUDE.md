@@ -95,10 +95,10 @@ Path alias `@/` resolves to `./src/` in both Vite and tsconfig.
 
 ## graphify
 
-This project has a graphify knowledge graph at graphify-out/.
+This project has a knowledge graph at graphify-out/.
 
 Rules:
-- Before answering architecture or codebase questions, read graphify-out/GRAPH_REPORT.md for god nodes and community structure
-- If graphify-out/wiki/index.md exists, navigate it instead of reading raw files
-- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
-- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost)
+- For architecture and codebase questions, use `graphify query "<question>" --budget 2000` — this traverses the graph and caps output at ~2000 tokens. Do NOT read GRAPH_REPORT.md directly (it can be 300KB+).
+- For cross-module relationships, prefer `graphify path "<A>" "<B>"` or `graphify explain "<concept>"` over grep — these traverse EXTRACTED + INFERRED edges.
+- Only read GRAPH_REPORT.md if you specifically need the full community overview and the user asks for it.
+- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost).
