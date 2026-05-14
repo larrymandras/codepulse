@@ -89,10 +89,10 @@ Plans:
   4. `.lift-on-hover` utility class exists and is applied to interactive cards — verified with translateY(-2px) on hover
   5. All 15 existing dashboard pages render without visual regressions — verified in browser
   6. `prefers-reduced-motion: reduce` disables all new transitions
-**Plans:** 0/3 plans complete
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 03-01-PLAN.md — Wave 1: Token foundation: whisper-tint dark theme, accent hues, lift-on-hover, data-accent gradient selectors
+- [x] 03-01-PLAN.md — Wave 1: Token foundation: whisper-tint dark theme, accent hues, lift-on-hover, data-accent gradient selectors
 - [ ] 03-02-PLAN.md — Wave 2 (depends 03-01): Component adoption: MetricCard, GlassPanel, HeroStatsBar get accent gradients and lift-on-hover
 - [ ] 03-03-PLAN.md — Wave 3 (depends 03-02): Visual regression verification: build/test/type check + human visual checkpoint
 
