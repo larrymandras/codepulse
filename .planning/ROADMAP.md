@@ -106,7 +106,12 @@ Plans:
   3. Stat values animate on data change using Motion spring animation with tabular-nums font variant
   4. Clicking a KPI tile navigates to the relevant detail page (sessions → SessionKanban, errors → Alerts, etc.)
   5. Sparkline data comes from existing hourly aggregation tables — no new Convex queries added
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Wave 1: Foundation: tone CSS tokens, thresholdTone() utility, BackgroundSparkline component + tests
+- [ ] 04-02-PLAN.md — Wave 2 (depends 04-01): Integration: wire BackgroundSparkline + tone system into HeroStatsBar + tests
+- [ ] 04-03-PLAN.md — Wave 3 (depends 04-02): Visual verification: build/test/type check + human visual checkpoint
 
 ### Phase 05: Usage Gauges & Model Metrics
 **Goal**: Cost and usage data is displayed through rich visual components — circular gauges, gradient strip charts, and provider rows — replacing flat tables and basic bar charts
