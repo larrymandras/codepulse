@@ -68,7 +68,7 @@ Plans:
 - [x] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
 - [x] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
 
-### 📋 v5.0 Premium Dashboard
+### v5.0 Premium Dashboard
 
 - [ ] **Phase 03: Design Token Refresh** — Colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover, no regressions
 - [ ] **Phase 04: KPI Panel Redesign** — SVG sparkline backgrounds on HeroStatsBar, tone-based three-layer status pills, animated count-up
@@ -89,7 +89,12 @@ Plans:
   4. `.lift-on-hover` utility class exists and is applied to interactive cards — verified with translateY(-2px) on hover
   5. All 15 existing dashboard pages render without visual regressions — verified in browser
   6. `prefers-reduced-motion: reduce` disables all new transitions
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Token foundation: whisper-tint dark theme, accent hues, lift-on-hover, data-accent gradient selectors
+- [ ] 03-02-PLAN.md — Component adoption: MetricCard, GlassPanel, HeroStatsBar get accent gradients and lift-on-hover
+- [ ] 03-03-PLAN.md — Visual regression verification: build/test/type check + human visual checkpoint
 
 ### Phase 04: KPI Panel Redesign
 **Goal**: The HeroStatsBar transforms from flat colored tiles to a premium panel with decorative SVG sparkline backgrounds, semantic status pills, and animated values
@@ -117,7 +122,7 @@ Plans:
 **Plans**: TBD
 
 ### Phase 06: Memory Graph 3D
-**Goal**: An interactive 3D force-directed graph visualizes Ástríðr's memory topology — nodes are memories, edges are relationships — with bloom effects, a starfield backdrop, and multiple view modes
+**Goal**: An interactive 3D force-directed graph visualizes Astríðr's memory topology — nodes are memories, edges are relationships — with bloom effects, a starfield backdrop, and multiple view modes
 **Depends on**: Phase 03 (color tokens for node types)
 **Requirements**: MG-01, MG-02, MG-03, MG-04, MG-05, MG-06, MG-07, MG-08
 **Success Criteria** (what must be TRUE):
@@ -127,20 +132,20 @@ Plans:
   4. Hovering a node highlights its connected neighbors and dims non-adjacent nodes
   5. A 2D SVG constellation renders on the Dashboard as a lightweight preview (no WebGL needed)
   6. The 3D graph bundle is lazy-loaded — initial page load does not include three.js or react-force-graph-3d (confirmed via network tab)
-  7. Memory data is fetched from Ástríðr's memory API (REST or WebSocket) and transformed into graph nodes/edges
+  7. Memory data is fetched from Astríðr's memory API (REST or WebSocket) and transformed into graph nodes/edges
 **Plans**: TBD
 
 ### Phase 07: Intelligence Dashboard Panel
-**Goal**: Prescriptions from Ástríðr's Intelligence Engine (v15.0) are displayed as actionable cards with state management, and the Operator Score is the hero metric on the dashboard
+**Goal**: Prescriptions from Astríðr's Intelligence Engine (v15.0) are displayed as actionable cards with state management, and the Operator Score is the hero metric on the dashboard
 **Depends on**: Phase 03 (tokens), Phase 04 (status pill patterns), Phase 05 (gauge component for score display)
 **Requirements**: ID-01, ID-02, ID-03, ID-04, ID-05, ID-06, ID-07
 **Success Criteria** (what must be TRUE):
   1. Prescription cards render with category icon, tone-based border (info=blue, warn=yellow, action=orange), headline, evidence bullets, and command button
-  2. Accept/dismiss actions on prescription cards push state changes back to Ástríðr and update the UI immediately
+  2. Accept/dismiss actions on prescription cards push state changes back to Astríðr and update the UI immediately
   3. Operator Score renders as a circular gauge with trend arrow and a 30-day sparkline below
   4. Score sub-dimensions (memory, ROI, activity, baseline) render as horizontal breakdown bars with green/yellow/red thresholds
   5. Dream review section renders as a horizontally scrollable carousel of prescription cards
-  6. When Ástríðr v15.0 is not active, the panel shows "Intelligence Engine not active" placeholder — no errors, no blank space
+  6. When Astríðr v15.0 is not active, the panel shows "Intelligence Engine not active" placeholder — no errors, no blank space
   7. Prescription and score data syncs to Convex tables for persistence
 **Plans**: TBD
 
