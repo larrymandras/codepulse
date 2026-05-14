@@ -5,9 +5,10 @@ interface GlassPanelProps {
   children: React.ReactNode;
   className?: string;
   animate?: boolean; // default true; set false to opt out of entry animation
+  accent?: "cost" | "health" | "activity" | "memory" | "alerts";
 }
 
-export function GlassPanel({ children, className, animate = true }: GlassPanelProps) {
+export function GlassPanel({ children, className, animate = true, accent }: GlassPanelProps) {
   const shouldReduce = useReducedMotion();
   const skipMotion = !animate || shouldReduce;
 
@@ -21,6 +22,7 @@ export function GlassPanel({ children, className, animate = true }: GlassPanelPr
         "dark:bg-[var(--glass-bg)] dark:border-[var(--glass-border)] dark:backdrop-blur-[12px]",
         className
       )}
+      {...(accent ? { "data-accent": accent } : {})}
     >
       {children}
     </motion.div>

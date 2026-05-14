@@ -60,6 +60,7 @@ interface MetricCardProps {
   format?: (v: number) => string;
   onClick?: () => void;
   sparklineData?: number[];
+  accent?: "cost" | "health" | "activity" | "memory" | "alerts";
 }
 
 function MetricCardInner({
@@ -70,6 +71,7 @@ function MetricCardInner({
   threshold,
   format,
   onClick,
+  accent,
 }: MetricCardProps) {
   const trendColor =
     trend === "up" ? "text-(--status-ok)"
@@ -82,7 +84,11 @@ function MetricCardInner({
       : undefined;
 
   return (
-    <div className="p-4" onClick={onClick} style={onClick ? { cursor: "pointer" } : undefined}>
+    <div
+      className={`p-4${onClick ? ' lift-on-hover cursor-pointer' : ''}`}
+      onClick={onClick}
+      {...(accent ? { "data-accent": accent } : {})}
+    >
       <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
       <div className="mt-1 flex items-baseline gap-2">
         <span
