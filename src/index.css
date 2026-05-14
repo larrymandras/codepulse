@@ -118,39 +118,46 @@
   --tier-moderate: oklch(0.72 0.10 85);
   --tier-complex: oklch(0.60 0.16 270);
   --tier-critical: oklch(0.60 0.18 320);
+
+  /* Phase 03: Category accent tokens (light — lower chroma) */
+  --accent-cost: oklch(0.55 0.10 80);
+  --accent-health: oklch(0.55 0.10 142);
+  --accent-activity: oklch(0.55 0.08 230);
+  --accent-memory: oklch(0.55 0.08 290);
+  --accent-alerts: oklch(0.55 0.12 27);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
+  --background: oklch(0.160 0.012 260);
+  --foreground: oklch(0.96 0.003 247);
+  --card: oklch(0.195 0.014 260);
+  --card-foreground: oklch(0.96 0.003 247);
+  --popover: oklch(0.195 0.014 260);
+  --popover-foreground: oklch(0.96 0.003 247);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --secondary: oklch(0.235 0.015 260);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: oklch(0.225 0.013 260);
+  --muted-foreground: oklch(0.65 0.02 256);
+  --accent: oklch(0.255 0.018 260);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: oklch(0.175 0.013 260);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.279 0.041 260);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.439 0 0);
 
   --status-ok: oklch(0.72 0.17 142);
@@ -167,8 +174,8 @@
   --speaking-ring-glow: oklch(0.72 0.17 142 / 0.35);
 
   /* Phase 63 dark overrides */
-  --glass-bg: oklch(0.205 0 0 / 0.60);
-  --glass-border: oklch(0.269 0 0 / 0.5);
+  --glass-bg: oklch(0.195 0.014 260 / 0.60);
+  --glass-border: oklch(1 0 0 / 8%);
   --glass-blur: 12px;
 
   /* Phase 093: Effort tier segment colors (dark) */
@@ -177,6 +184,13 @@
   --tier-moderate: oklch(0.78 0.12 85);
   --tier-complex: oklch(0.68 0.18 270);
   --tier-critical: oklch(0.68 0.20 320);
+
+  /* Phase 03: Category accent tokens */
+  --accent-cost: oklch(0.70 0.15 80);
+  --accent-health: oklch(0.70 0.15 142);
+  --accent-activity: oklch(0.70 0.12 230);
+  --accent-memory: oklch(0.70 0.12 290);
+  --accent-alerts: oklch(0.70 0.18 27);
 }
 
 @layer base {
