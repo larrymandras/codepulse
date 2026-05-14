@@ -70,7 +70,7 @@ Plans:
 
 ### v5.0 Premium Dashboard
 
-- [ ] **Phase 03: Design Token Refresh** — Colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover, no regressions
+- [x] **Phase 03: Design Token Refresh** — Colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover, no regressions (completed 2026-05-14)
 - [ ] **Phase 04: KPI Panel Redesign** — SVG sparkline backgrounds on HeroStatsBar, tone-based three-layer status pills, animated count-up
 - [ ] **Phase 05: Usage Gauges & Model Metrics** — SVG dial gauges, model split strip with gradient fills, provider rows with radial gradients, window bars
 - [ ] **Phase 06: Memory Graph 3D** — react-force-graph-3d + three.js, bloom post-processing, starfield, view modes, lazy-loaded, 2D constellation fallback
@@ -89,12 +89,12 @@ Plans:
   4. `.lift-on-hover` utility class exists and is applied to interactive cards — verified with translateY(-2px) on hover
   5. All 15 existing dashboard pages render without visual regressions — verified in browser
   6. `prefers-reduced-motion: reduce` disables all new transitions
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 03-01-PLAN.md — Wave 1: Token foundation: whisper-tint dark theme, accent hues, lift-on-hover, data-accent gradient selectors
 - [x] 03-02-PLAN.md — Wave 2 (depends 03-01): Component adoption: MetricCard, GlassPanel, HeroStatsBar get accent gradients and lift-on-hover
-- [ ] 03-03-PLAN.md — Wave 3 (depends 03-02): Visual regression verification: build/test/type check + human visual checkpoint
+- [x] 03-03-PLAN.md — Wave 3 (depends 03-02): Visual regression verification: build/test/type check + human visual checkpoint
 
 ### Phase 04: KPI Panel Redesign
 **Goal**: The HeroStatsBar transforms from flat colored tiles to a premium panel with decorative SVG sparkline backgrounds, semantic status pills, and animated values

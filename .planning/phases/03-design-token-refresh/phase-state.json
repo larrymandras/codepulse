@@ -10,9 +10,15 @@
       "missing": [
         "UI-SPEC.md"
       ]
+    },
+    {
+      "timestamp": "2026-05-14T20:55:22.082Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
     }
   ],
-  "lastCheck": "2026-05-14T20:12:48.838Z",
+  "lastCheck": "2026-05-14T20:55:22.081Z",
   "isFrontend": true,
   "artifacts": {
     "CONTEXT.md": {
@@ -27,6 +33,24 @@
       "count": 1,
       "files": [
         "03-DISCUSSION-LOG.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 3,
+      "files": [
+        "03-01-PLAN.md",
+        "03-02-PLAN.md",
+        "03-03-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 3,
+      "files": [
+        "03-01-SUMMARY.md",
+        "03-02-SUMMARY.md",
+        "03-03-SUMMARY.md"
       ]
     }
   }
