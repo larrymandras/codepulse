@@ -47,7 +47,7 @@ Standard 8-point scale. All spacing values are multiples of 4.
 Exceptions:
 - KPI tile `min-h-[72px]` — not a spacing token, it is a layout constraint for sparkline breathing room (D-11)
 - Grid gap between tiles is `gap-3` (12px) — preserved from current implementation, not changed in this phase
-- Tile has negative margin offsets `-mx-2 -my-1.5` (preserved from current layout)
+- Tile has negative margin offset `-mx-2` (preserved from current layout)
 
 ---
 
@@ -58,7 +58,6 @@ Exceptions:
 | KPI value (stat) | 20px (text-xl) | 700 (bold) | 1.2 | `tabular-nums` |
 | KPI label (category) | 10px (text-[10px]) | 400 (regular) | 1.4 | `uppercase tracking-wider` |
 | KPI sub-label | 10px (text-[10px]) | 400 (regular) | 1.4 | normal |
-| System header text | 14px (text-sm) | 600 (semibold) | 1.5 | normal |
 
 > Source: `HeroStatsBar.tsx` current implementation — no typography changes in this phase; contract locks existing values.
 
@@ -234,7 +233,7 @@ Add under `/* Phase 04: Tone tokens */` comment block in `.dark {}` (and mirrore
 /* Phase 04: data-tone attribute selectors */
 [data-tone="good"]   { --tile-tone: var(--tone-good); }
 [data-tone="warn"]   { --tile-tone: var(--tone-warn); }
-[data-tone="danger"] { --tile-tone: var(--tile-danger); }
+[data-tone="danger"] { --tile-tone: var(--tone-danger); }
 /* default: no data-tone attribute → --tile-tone falls through to tile's --accent-{category} */
 ```
 
