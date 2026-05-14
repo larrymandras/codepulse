@@ -11,6 +11,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 ## Current State
 
 **Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14, updated 2026-05-09 with Phase 02 Email Template Manager)
+**Next:** v5.0 Premium Dashboard — visual upgrade stealing patterns from Claude OS (OKLCH color tokens, SVG gauges, 3D memory graph, prescription cards)
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
 
 10 phases complete across the v4.0 milestone:
@@ -64,7 +65,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ### Active
 
-(None — next milestone requirements TBD via `/gsd-new-milestone`)
+See REQUIREMENTS-v5.md for full v5.0 requirement set.
 
 ### Out of Scope
 
@@ -72,7 +73,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - Multi-tenant — single operator dashboard
 - OpenTelemetry collector — Convex handles persistence
 - Historical data migration — new aggregation tables start fresh
-- React Three Fiber / 3D visualizations — not operationally useful
+- ~~React Three Fiber / 3D visualizations — not operationally useful~~ → Revised for v5.0: 3D memory graph IS operationally useful for topology understanding (uses react-force-graph-3d, not R3F)
 
 ## Context
 

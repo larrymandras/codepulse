@@ -2,7 +2,8 @@
 
 ## Milestones
 
-- ✅ **v4.0 Operational Excellence** — Phases 1-7, 58, 59 (shipped 2026-04-14, updated 2026-05-06)
+- ✅ **v4.0 Operational Excellence** — Phases 1-7, 58, 59, 01, 02 (shipped 2026-04-14, updated 2026-05-09)
+- 📋 **v5.0 Premium Dashboard** — Phases 03-07 (planned)
 
 ## Phases
 
@@ -67,6 +68,82 @@ Plans:
 - [x] 02-04-PLAN.md — TemplateSheet with split editor+preview, variable schema table, chips toolbar
 - [x] 02-05-PLAN.md — AgentDefaultSheet, wire Templates + Agent Defaults tabs, visual checkpoint
 
+### 📋 v5.0 Premium Dashboard
+
+- [ ] **Phase 03: Design Token Refresh** — Colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover, no regressions
+- [ ] **Phase 04: KPI Panel Redesign** — SVG sparkline backgrounds on HeroStatsBar, tone-based three-layer status pills, animated count-up
+- [ ] **Phase 05: Usage Gauges & Model Metrics** — SVG dial gauges, model split strip with gradient fills, provider rows with radial gradients, window bars
+- [ ] **Phase 06: Memory Graph 3D** — react-force-graph-3d + three.js, bloom post-processing, starfield, view modes, lazy-loaded, 2D constellation fallback
+- [ ] **Phase 07: Intelligence Dashboard Panel** — Prescription cards, operator score gauge, dream review carousel, score sub-dimensions, v15.0 backend integration
+
+## Phase Details (v5.0)
+
+### Phase 03: Design Token Refresh
+**Goal**: CodePulse's dark theme evolves from pure monochromatic grayscale to a subtle colored OKLCH palette with per-category accents — every existing page still renders correctly
+**Depends on**: v4.0 completion (Phase 02)
+**Requirements**: DT-01, DT-02, DT-03, DT-04, DT-05, DT-06
+**Success Criteria** (what must be TRUE):
+  1. Dark mode background is `oklch(0.16 0.012 260)` (subtle blue tint) instead of `oklch(0.145 0 0)` (pure gray) — visually warmer
+  2. Five accent hue tokens exist in index.css: cost (amber ~80°), health (green ~142°), activity (blue ~230°), memory (violet ~290°), alerts (red ~27°) — each used in at least one component
+  3. At least 3 card types (MetricCard, GlassPanel, HeroStatsBar tile) use radial gradient backgrounds with the category accent
+  4. `.lift-on-hover` utility class exists and is applied to interactive cards — verified with translateY(-2px) on hover
+  5. All 15 existing dashboard pages render without visual regressions — verified in browser
+  6. `prefers-reduced-motion: reduce` disables all new transitions
+**Plans**: TBD
+
+### Phase 04: KPI Panel Redesign
+**Goal**: The HeroStatsBar transforms from flat colored tiles to a premium panel with decorative SVG sparkline backgrounds, semantic status pills, and animated values
+**Depends on**: Phase 03 (accent tokens must exist)
+**Requirements**: KPI-01, KPI-02, KPI-03, KPI-04, KPI-05
+**Success Criteria** (what must be TRUE):
+  1. Each HeroStatsBar tile renders an inline SVG sparkline as a decorative background — cubic Bezier path visible behind the stat value
+  2. Tiles change tone based on thresholds: green (good), yellow (warn), red (danger) — with three-layer styling (bg/text/border at different opacities)
+  3. Stat values animate on data change using Motion spring animation with tabular-nums font variant
+  4. Clicking a KPI tile navigates to the relevant detail page (sessions → SessionKanban, errors → Alerts, etc.)
+  5. Sparkline data comes from existing hourly aggregation tables — no new Convex queries added
+**Plans**: TBD
+
+### Phase 05: Usage Gauges & Model Metrics
+**Goal**: Cost and usage data is displayed through rich visual components — circular gauges, gradient strip charts, and provider rows — replacing flat tables and basic bar charts
+**Depends on**: Phase 03 (accent tokens), Phase 04 (status pill patterns)
+**Requirements**: UG-01, UG-02, UG-03, UG-04, UG-05, UG-06
+**Success Criteria** (what must be TRUE):
+  1. A 76px SVG dial gauge renders on the Analytics page showing budget utilization with animated strokeDashoffset
+  2. Model split strip shows per-model cost allocation as a horizontal stacked bar — clicking a segment expands to show detail (model name, cost, percentage)
+  3. Provider rows have radial gradient backgrounds with the provider's brand color
+  4. Window bar shows usage over a time range with gradient fill and tick marks at hourly intervals
+  5. All data comes from existing Convex analytics/cost tables — no new aggregation mutations
+  6. Gauges animate smoothly on Convex subscription updates (no flash/jump)
+**Plans**: TBD
+
+### Phase 06: Memory Graph 3D
+**Goal**: An interactive 3D force-directed graph visualizes Ástríðr's memory topology — nodes are memories, edges are relationships — with bloom effects, a starfield backdrop, and multiple view modes
+**Depends on**: Phase 03 (color tokens for node types)
+**Requirements**: MG-01, MG-02, MG-03, MG-04, MG-05, MG-06, MG-07, MG-08
+**Success Criteria** (what must be TRUE):
+  1. The Memory page renders an interactive 3D force graph with nodes colored/sized by type (hub, workspace, file, decision, session, skill, vector_store)
+  2. UnrealBloomPass bloom effect is visible on bright nodes, with a 1200+ point starfield and fog for depth
+  3. At least 3 view modes are switchable: structured (by type), blend (force-directed), spheres (clustered)
+  4. Hovering a node highlights its connected neighbors and dims non-adjacent nodes
+  5. A 2D SVG constellation renders on the Dashboard as a lightweight preview (no WebGL needed)
+  6. The 3D graph bundle is lazy-loaded — initial page load does not include three.js or react-force-graph-3d (confirmed via network tab)
+  7. Memory data is fetched from Ástríðr's memory API (REST or WebSocket) and transformed into graph nodes/edges
+**Plans**: TBD
+
+### Phase 07: Intelligence Dashboard Panel
+**Goal**: Prescriptions from Ástríðr's Intelligence Engine (v15.0) are displayed as actionable cards with state management, and the Operator Score is the hero metric on the dashboard
+**Depends on**: Phase 03 (tokens), Phase 04 (status pill patterns), Phase 05 (gauge component for score display)
+**Requirements**: ID-01, ID-02, ID-03, ID-04, ID-05, ID-06, ID-07
+**Success Criteria** (what must be TRUE):
+  1. Prescription cards render with category icon, tone-based border (info=blue, warn=yellow, action=orange), headline, evidence bullets, and command button
+  2. Accept/dismiss actions on prescription cards push state changes back to Ástríðr and update the UI immediately
+  3. Operator Score renders as a circular gauge with trend arrow and a 30-day sparkline below
+  4. Score sub-dimensions (memory, ROI, activity, baseline) render as horizontal breakdown bars with green/yellow/red thresholds
+  5. Dream review section renders as a horizontally scrollable carousel of prescription cards
+  6. When Ástríðr v15.0 is not active, the panel shows "Intelligence Engine not active" placeholder — no errors, no blank space
+  7. Prescription and score data syncs to Convex tables for persistence
+**Plans**: TBD
+
 ---
 
-*Last updated: 2026-05-09 — Phase 2 Email Template Manager planned (6 plans, 4 waves).*
+*Last updated: 2026-05-14 — v5.0 Premium Dashboard milestone planned (5 phases).*
