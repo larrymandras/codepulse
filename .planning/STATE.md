@@ -1,92 +1,71 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: milestone
-status: completed
-stopped_at: context exhaustion at 75% (2026-05-11)
-last_updated: "2026-05-11T13:41:48.939Z"
-last_activity: 2026-05-09
+milestone: v5.0
+milestone_name: Premium Dashboard
+status: executing
+stopped_at: Planning complete
+last_updated: "2026-05-14T20:32:32.039Z"
+last_activity: 2026-05-14 -- Phase 03 execution started
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-14)
+See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 02 — email-template-manager-crud-ui-for-email-layouts-content-tem
+**Current focus:** Phase 03 — design-token-refresh
 
 ## Current Position
 
-Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
-Phase: 02
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-05-09
+Milestone: v5.0 Premium Dashboard
+Phase: 03 (design-token-refresh) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 03
+Last activity: 2026-05-14 -- Phase 03 execution started
 
-Progress: [████████░░] 83%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
-**Velocity:**
+**Prior milestone (v4.0):**
 
 - Total plans completed: 54
-- Phases: 8
-- Timeline: 39 days (2026-03-06 → 2026-04-14)
+- Phases: 11 (Phases 1-7, 58, 59, 01, 02)
+- Timeline: 39 days (2026-03-06 → 2026-04-14), updated through 2026-05-11
 
-**By Phase:**
+**Current milestone (v5.0):**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 01 | 4 | Complete |
-| 02 | 4 | Complete |
-| 03 | 6 | Complete |
-| 04 | 6 | Complete |
-| 05 | 5 | Complete |
-| 06 | 5 | Complete |
-| 07 | 5 | Complete |
-| 58 | 2 | Complete |
-| 59 | 5 | Complete |
-| Phase 01-design-studio P01 | 12 | 2 tasks | 10 files |
-| Phase 01 P05 | 22min | 2 tasks | 7 files |
-| Phase 02 P01 | 4min | 2 tasks | 7 files |
-| Phase 02 P02 | 10min | 2 tasks | 3 files |
-| Phase 02 P05 | 8min | 2 tasks | 2 files |
+| 03 | 0/3 | Planned |
+| 04 | TBD | Not planned |
+| 05 | TBD | Not planned |
+| 06 | TBD | Not planned |
+| 07 | TBD | Not planned |
 
 ## Accumulated Context
 
 ### Roadmap Evolution
 
-- Phase 2 added: Email Template Manager — CRUD UI for email layouts, content templates, per-agent signature defaults, and asset management
-- Phase 59 added: Rubric-Inspired Observability — Status heartbeat grid, cron calendar view, pipeline flow visualization
-- Phase 1 added: Design Studio — sandboxed design preview, artifact storage, template gallery, export
+- Phase 03 planned: Design Token Refresh — colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover
 
 ### Decisions
 
-See PROJECT.md Key Decisions table for full history.
-
-- Adapted CronCalendarView to actual cronSchedules.ts interface (CronSchedule object) instead of plan-assumed string-based interface
-- Updated CRON_SCHEDULES to match actual convex/crons.ts (was stale static list)
-- Interval-based crons shown as pill summary, not flooding every hour slot
-- Slot detail rendered as positioned popover with close button
-- Pipeline Flow reduced to 180px, always shows 5 nodes in pending state
-- [01-01] convex/_generated/api.d.ts updated manually to register designProjects/designTemplates for tsc clean compile; regenerates on next convex dev
-- [01-01] syncFromDaemon Convex action documented with A7 cloud limitation; browser-triggered sync is primary production path (Plan 05)
-- [01-01] SSE streaming uses fetch + ReadableStream not EventSource for reconnect control per RESEARCH.md
-- [Phase ?]: [01-05] Convex domain tests use behavioral documentation pattern matching codebase convention — ctx.db cannot be instantiated in jsdom
-- [Phase ?]: [01-05] Browser-triggered Convex sync (useCallback+useEffect) fires once on mount; avoids A7 cloud→localhost block
-- [02-01] uploadEmailAsset uses raw fetch + FormData, NOT authHeaders() — follows importAgentYaml multipart pattern exactly (T-02-01)
-- [02-01] Client-side is_active filter as belt-and-suspenders guard on layouts/templates hooks
-- [02-01] useAgentDefaults catches AstridrApiError 404 per-agent, returning null for unconfigured agents
-- [02-05] AgentDefaultSheet AssetPicker rendered as sibling to Sheet (not inside) to avoid z-index stacking conflicts
-- [02-05] Avatar URL construction uses http prefix check to support both storage paths and full URLs
+- [03-D-01] Dark theme whisper tint: oklch(0.160 0.012 260) background, matching Claude OS values exactly
+- [03-D-02] Light theme untouched — pure monochromatic
+- [03-D-03] Five accent hues: cost(80°), health(142°), activity(230°), memory(290°), alerts(27°)
+- [03-D-05] Radial gradient fill on cards via data-accent attribute
+- [03-D-06] .lift-on-hover utility: translateY(-2px) with 240ms cubic-bezier transition
+- [03-D-07] Additive migration: base dark tokens swapped, accent tokens added alongside existing
+- [03-D-08] Accent tokens also in :root at lower chroma for dual-mode components
 
 ### Pending Todos
 
@@ -98,6 +77,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-11T13:41:48.935Z
-Stopped at: context exhaustion at 75% (2026-05-11)
-Next step: Execute 02-06-PLAN.md
+Last session: 2026-05-14
+Stopped at: Planning complete
+Next step: /gsd-execute-phase 03
