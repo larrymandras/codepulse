@@ -207,19 +207,19 @@
 
 /* Phase 03: Category accent radial gradient backgrounds (D-05) */
 [data-accent="cost"] {
-  background-image: radial-gradient(120% 60% at 0% 50%, oklch(0.70 0.15 80 / 0.10), transparent 55%);
+  background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-cost) 10%, transparent), transparent 55%);
 }
 [data-accent="health"] {
-  background-image: radial-gradient(120% 60% at 0% 50%, oklch(0.70 0.15 142 / 0.10), transparent 55%);
+  background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-health) 10%, transparent), transparent 55%);
 }
 [data-accent="activity"] {
-  background-image: radial-gradient(120% 60% at 0% 50%, oklch(0.70 0.12 230 / 0.10), transparent 55%);
+  background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-activity) 10%, transparent), transparent 55%);
 }
 [data-accent="memory"] {
-  background-image: radial-gradient(120% 60% at 0% 50%, oklch(0.70 0.12 290 / 0.10), transparent 55%);
+  background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-memory) 10%, transparent), transparent 55%);
 }
 [data-accent="alerts"] {
-  background-image: radial-gradient(120% 60% at 0% 50%, oklch(0.70 0.18 27 / 0.10), transparent 55%);
+  background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-alerts) 10%, transparent), transparent 55%);
 }
 
 @layer base {

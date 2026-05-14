@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect } from "react";
 import { useMotionValue, useSpring, useTransform, motion } from "motion/react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -16,10 +16,7 @@ export function AnimatedNumber({
   const displayed = useTransform(springValue, (v: number) =>
     format ? format(v) : Math.round(v).toString()
   );
-  const prevRef = useRef(0);
-
   useEffect(() => {
-    prevRef.current = motionValue.get();
     motionValue.set(value);
   }, [value, motionValue]);
 
@@ -59,7 +56,6 @@ interface MetricCardProps {
   threshold?: ThresholdConfig;
   format?: (v: number) => string;
   onClick?: () => void;
-  sparklineData?: number[];
   accent?: "cost" | "health" | "activity" | "memory" | "alerts";
 }
 

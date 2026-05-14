@@ -7,9 +7,9 @@ import Sparkline from "./Sparkline";
 import InfoTooltip from "./InfoTooltip";
 
 const healthConfig = {
-  green: { bg: "bg-emerald-500", label: "Healthy", ring: "ring-emerald-500/30" },
-  yellow: { bg: "bg-yellow-500", label: "Warning", ring: "ring-yellow-500/30" },
-  red: { bg: "bg-red-500", label: "Critical", ring: "ring-red-500/30" },
+  green: { dotStyle: { background: "var(--status-ok)" }, ringClass: "ring-2 ring-[color:var(--status-ok)]/30", label: "Healthy" },
+  yellow: { dotStyle: { background: "var(--status-warn)" }, ringClass: "ring-2 ring-[color:var(--status-warn)]/30", label: "Warning" },
+  red: { dotStyle: { background: "var(--status-error)" }, ringClass: "ring-2 ring-[color:var(--status-error)]/30", label: "Critical" },
 };
 
 interface KpiDef {
@@ -103,6 +103,7 @@ export default function HeroStatsBar() {
       numericValue: durableFactsCount,
       threshold: { ok: 10, warn: 3, invertDirection: true },
       format: (v: number) => Math.round(v).toString(),
+      sub: "recent",
       accent: "memory",
       onClick: () => navigate("/dreaming"),
     },
@@ -115,32 +116,23 @@ export default function HeroStatsBar() {
       accent: "cost",
       onClick: () => navigate("/analytics"),
     },
-    {
-      label: "Startup Time",
-      value: "\u2014",
-      numericValue: undefined,
-      threshold: { ok: 3000, warn: 8000 },
-      format: (v: number) => `${(v / 1000).toFixed(1)}s`,
-      accent: "health",
-      onClick: () => navigate("/infrastructure"),
-    },
   ];
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card border border-border rounded-xl p-4">
       <div className="flex items-center gap-4 mb-4">
         {/* Health indicator */}
         <div className="flex items-center gap-2">
-          <span className={`w-3 h-3 rounded-full ${hc.bg} ring-4 ${hc.ring}`} />
-          <span className="text-sm font-semibold text-gray-200">{hc.label}</span>
+          <span className={`w-3 h-3 rounded-full ${hc.ringClass}`} style={hc.dotStyle} />
+          <span className="text-sm font-semibold text-foreground">{hc.label}</span>
         </div>
-        <div className="h-4 w-px bg-gray-700" />
-        <span className="text-xs text-gray-500">System Status — Last Hour</span>
+        <div className="h-4 w-px bg-border" />
+        <span className="text-xs text-muted-foreground">System Status — Last Hour</span>
         <InfoTooltip text="Key performance indicators: sessions, errors, alerts, security, memory hit rate, durable facts, advisor savings, and startup time" />
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {kpis.map((kpi) => {
           const color =
             kpi.threshold != null && kpi.numericValue != null
@@ -154,7 +146,7 @@ export default function HeroStatsBar() {
               data-accent={kpi.accent}
               className="group flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 lift-on-hover"
             >
-              <span className="text-[10px] text-gray-500 uppercase tracking-wider">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                 {kpi.label}
               </span>
               <div className="flex items-end gap-2">
@@ -173,7 +165,7 @@ export default function HeroStatsBar() {
                 )}
               </div>
               {kpi.sub && (
-                <span className="text-[10px] text-gray-500">{kpi.sub}</span>
+                <span className="text-[10px] text-muted-foreground">{kpi.sub}</span>
               )}
             </div>
           );
