@@ -21,6 +21,7 @@ interface KpiDef {
   sparkline?: number[];
   sub?: string;
   color?: string;
+  accent?: "cost" | "health" | "activity" | "memory" | "alerts";
   onClick: () => void;
 }
 
@@ -49,7 +50,8 @@ export default function HeroStatsBar() {
       value: stats.activeSessions,
       numericValue: typeof stats.activeSessions === "number" ? stats.activeSessions : undefined,
       sub: `${stats.runningAgents} agents`,
-      color: "#60a5fa",
+      color: "var(--accent-activity)",
+      accent: "activity",
       onClick: () => navigate("/agents"),
     },
     {
@@ -59,6 +61,7 @@ export default function HeroStatsBar() {
       threshold: { ok: 10, warn: 20 },
       format: (v: number) => `${Math.round(v)}%`,
       sub: `${stats.errorsThisHour} errors`,
+      accent: "alerts",
       onClick: () => navigate("/alerts"),
     },
     {
@@ -72,7 +75,8 @@ export default function HeroStatsBar() {
             ? `${stats.errorAlerts} errors`
             : "all clear",
       color:
-        stats.criticalAlerts > 0 ? "#f87171" : stats.errorAlerts > 0 ? "#fb923c" : "#34d399",
+        stats.criticalAlerts > 0 ? "var(--accent-alerts)" : stats.errorAlerts > 0 ? "var(--status-warn)" : "var(--accent-health)",
+      accent: "alerts",
       onClick: () => navigate("/alerts"),
     },
     {
@@ -80,7 +84,8 @@ export default function HeroStatsBar() {
       value: stats.securityEvents,
       numericValue: typeof stats.securityEvents === "number" ? stats.securityEvents : undefined,
       sub: "this hour",
-      color: stats.securityEvents > 0 ? "#fb923c" : "#34d399",
+      color: stats.securityEvents > 0 ? "var(--status-warn)" : "var(--accent-health)",
+      accent: "alerts",
       onClick: () => navigate("/security"),
     },
     {
@@ -89,6 +94,7 @@ export default function HeroStatsBar() {
       numericValue: hitRateValue,
       threshold: { ok: 70, warn: 40, invertDirection: true },
       format: (v: number) => `${Math.round(v)}%`,
+      accent: "memory",
       onClick: () => navigate("/memory"),
     },
     {
@@ -97,6 +103,7 @@ export default function HeroStatsBar() {
       numericValue: durableFactsCount,
       threshold: { ok: 10, warn: 3, invertDirection: true },
       format: (v: number) => Math.round(v).toString(),
+      accent: "memory",
       onClick: () => navigate("/dreaming"),
     },
     {
@@ -105,6 +112,7 @@ export default function HeroStatsBar() {
       numericValue: advisorSavingsValue,
       threshold: { ok: 1.0, warn: 0.1, invertDirection: true },
       format: (v: number) => `$${v.toFixed(2)}`,
+      accent: "cost",
       onClick: () => navigate("/analytics"),
     },
     {
@@ -113,6 +121,7 @@ export default function HeroStatsBar() {
       numericValue: undefined,
       threshold: { ok: 3000, warn: 8000 },
       format: (v: number) => `${(v / 1000).toFixed(1)}s`,
+      accent: "health",
       onClick: () => navigate("/infrastructure"),
     },
   ];
@@ -142,7 +151,8 @@ export default function HeroStatsBar() {
             <div
               key={kpi.label}
               onClick={kpi.onClick}
-              className="group flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 transition-colors hover:bg-gray-800/70"
+              data-accent={kpi.accent}
+              className="group flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 lift-on-hover"
             >
               <span className="text-[10px] text-gray-500 uppercase tracking-wider">
                 {kpi.label}
@@ -159,7 +169,7 @@ export default function HeroStatsBar() {
                   )}
                 </span>
                 {kpi.sparkline && kpi.sparkline.length > 0 && (
-                  <Sparkline data={kpi.sparkline} color={color ?? "#6366f1"} />
+                  <Sparkline data={kpi.sparkline} color={color ?? "var(--accent-activity)"} />
                 )}
               </div>
               {kpi.sub && (
