@@ -124,7 +124,13 @@ Plans:
   4. Window bar shows usage over a time range with gradient fill and tick marks at hourly intervals
   5. All data comes from existing Convex analytics/cost tables — no new aggregation mutations
   6. Gauges animate smoothly on Convex subscription updates (no flash/jump)
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 05-01-PLAN.md -- CSS provider tokens + DialGauge SVG component with tests
+- [ ] 05-02-PLAN.md -- ModelSplitStrip stacked bar with expand-on-click detail panels
+- [ ] 05-03-PLAN.md -- Convex time-series query + WindowBar + ProviderRow components
+- [ ] 05-04-PLAN.md -- DialGaugeRow data wiring + Analytics page integration + visual checkpoint
 
 ### Phase 06: Memory Graph 3D
 **Goal**: An interactive 3D force-directed graph visualizes Astríðr's memory topology — nodes are memories, edges are relationships — with bloom effects, a starfield backdrop, and multiple view modes
@@ -156,4 +162,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-05-14 — v5.0 Premium Dashboard milestone planned (5 phases).*
+*Last updated: 2026-05-15 — Phase 05 planned (4 plans, 3 waves).*
