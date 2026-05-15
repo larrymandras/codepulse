@@ -77,40 +77,50 @@ export const recordActivityBatch = mutation({
   },
 });
 
-// Profile config sync
+const upsertConfigArgs = {
+  profileId: v.string(),
+  channels: v.optional(v.any()),
+  budget: v.optional(v.any()),
+  modelPreferences: v.optional(v.any()),
+  emailAddress: v.optional(v.string()),
+};
+
+async function _upsertConfigImpl(ctx: any, args: any) {
+  const now = Date.now() / 1000;
+  const existing = await ctx.db
+    .query("profileConfigs")
+    .withIndex("by_profileId", (q: any) => q.eq("profileId", args.profileId))
+    .first();
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      channels: args.channels ?? existing.channels,
+      budget: args.budget ?? existing.budget,
+      modelPreferences: args.modelPreferences ?? existing.modelPreferences,
+      ...(args.emailAddress !== undefined && { emailAddress: args.emailAddress }),
+      updatedAt: now,
+    });
+  } else {
+    await ctx.db.insert("profileConfigs", {
+      profileId: args.profileId,
+      channels: args.channels,
+      budget: args.budget,
+      modelPreferences: args.modelPreferences,
+      emailAddress: args.emailAddress,
+      updatedAt: now,
+    });
+  }
+}
+
+// Profile config sync (client-facing, requires Clerk auth)
 export const upsertConfig = mutation({
-  args: {
-    profileId: v.string(),
-    channels: v.optional(v.any()),
-    budget: v.optional(v.any()),
-    modelPreferences: v.optional(v.any()),
-    emailAddress: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now() / 1000;
-    const existing = await ctx.db
-      .query("profileConfigs")
-      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
-      .first();
-    if (existing) {
-      await ctx.db.patch(existing._id, {
-        channels: args.channels ?? existing.channels,
-        budget: args.budget ?? existing.budget,
-        modelPreferences: args.modelPreferences ?? existing.modelPreferences,
-        ...(args.emailAddress !== undefined && { emailAddress: args.emailAddress }),
-        updatedAt: now,
-      });
-    } else {
-      await ctx.db.insert("profileConfigs", {
-        profileId: args.profileId,
-        channels: args.channels,
-        budget: args.budget,
-        modelPreferences: args.modelPreferences,
-        emailAddress: args.emailAddress,
-        updatedAt: now,
-      });
-    }
-  },
+  args: upsertConfigArgs,
+  handler: async (ctx, args) => _upsertConfigImpl(ctx, args),
+});
+
+// Internal variant for runtime ingest (no Clerk auth needed)
+export const upsertConfigInternal = internalMutation({
+  args: upsertConfigArgs,
+  handler: async (ctx, args) => _upsertConfigImpl(ctx, args),
 });
 
 export const updateEmail = mutation({

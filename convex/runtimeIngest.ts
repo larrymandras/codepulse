@@ -417,11 +417,12 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "profile_config": {
           const d = data as any;
-          await ctx.runMutation(api.profiles.upsertConfig, {
+          await ctx.runMutation(internal.profiles.upsertConfigInternal, {
             profileId: d.profileId ?? d.profile_id ?? "unknown",
             channels: d.channels,
             budget: d.budget,
             modelPreferences: d.modelPreferences ?? d.model_preferences,
+            emailAddress: d.emailAddress ?? d.email_address,
           });
           break;
         }
