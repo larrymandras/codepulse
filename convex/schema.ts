@@ -192,6 +192,7 @@ export default defineSchema({
     lastUsedAt: v.optional(v.float64()),
     discoveredAt: v.float64(),
     origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
+    useCount: v.optional(v.float64()),
   }).index("by_name", ["name"]),
 
   registeredHooks: defineTable({
