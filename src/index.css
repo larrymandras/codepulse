@@ -125,6 +125,11 @@
   --accent-activity: oklch(0.55 0.08 230);
   --accent-memory: oklch(0.55 0.08 290);
   --accent-alerts: oklch(0.55 0.12 27);
+
+  /* Phase 04: Tone tokens (light — lower chroma) */
+  --tone-good:   oklch(0.70 0.15 142);
+  --tone-warn:   oklch(0.70 0.15 80);
+  --tone-danger: oklch(0.70 0.18 27);
 }
 
 .dark {
@@ -191,6 +196,11 @@
   --accent-activity: oklch(0.70 0.12 230);
   --accent-memory: oklch(0.70 0.12 290);
   --accent-alerts: oklch(0.70 0.18 27);
+
+  /* Phase 04: Tone tokens (dark) */
+  --tone-good:   oklch(0.72 0.17 142);
+  --tone-warn:   oklch(0.78 0.15 80);
+  --tone-danger: oklch(0.72 0.20 27);
 }
 
 /* Phase 03: Lift-on-hover utility (D-06) */
@@ -221,6 +231,11 @@
 [data-accent="alerts"] {
   background-image: radial-gradient(120% 60% at 0% 50%, color-mix(in oklch, var(--accent-alerts) 10%, transparent), transparent 55%);
 }
+
+/* Phase 04: Tone selectors (D-05, D-06, D-07) */
+[data-tone="good"]   { --tile-tone: var(--tone-good); }
+[data-tone="warn"]   { --tile-tone: var(--tone-warn); }
+[data-tone="danger"] { --tile-tone: var(--tone-danger); }
 
 @layer base {
   * {

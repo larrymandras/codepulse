@@ -45,6 +45,21 @@ export function thresholdColor(value: number, config: ThresholdConfig): string {
   return "var(--metric-error)";
 }
 
+export type Tone = 'good' | 'warn' | 'danger' | 'default';
+
+export function thresholdTone(value: number, config: ThresholdConfig): Tone {
+  if (config.invertDirection) {
+    // Higher is better: >= ok = good, >= warn = warn, < warn = danger
+    if (value >= config.ok) return 'good';
+    if (value >= config.warn) return 'warn';
+    return 'danger';
+  }
+  // Lower is better: <= ok = good, <= warn = warn, > warn = danger
+  if (value <= config.ok) return 'good';
+  if (value <= config.warn) return 'warn';
+  return 'danger';
+}
+
 // ─── MetricCard ──────────────────────────────────────────────────────────────
 
 interface MetricCardProps {
