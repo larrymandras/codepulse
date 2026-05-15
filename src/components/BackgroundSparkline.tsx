@@ -115,7 +115,7 @@ function BackgroundSparklineInner({ data, accentColor, tileIndex = 0 }: Backgrou
           x2="0" y2={VIEWBOX_H}
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor={accentColor} stopOpacity={0.08} />
+          <stop offset="0%" stopColor={accentColor} stopOpacity={0.05} />
           <stop offset="100%" stopColor={accentColor} stopOpacity={0} />
         </linearGradient>
       </defs>
@@ -133,7 +133,7 @@ function BackgroundSparklineInner({ data, accentColor, tileIndex = 0 }: Backgrou
         fill="none"
         stroke={accentColor}
         strokeWidth={1.5}
-        strokeOpacity={0.2}
+        strokeOpacity={0.15}
         initial={shouldReduce ? undefined : { pathLength: 0, opacity: 0 }}
         animate={shouldReduce ? undefined : { pathLength: 1, opacity: 1 }}
         transition={{

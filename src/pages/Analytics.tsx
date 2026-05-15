@@ -46,6 +46,9 @@ export default function Analytics() {
   const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" });
   const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" });
   const anomalies = useQuery(api.anomalyDetection.getActiveAnomalies);
+  const depthHistogram = useQuery(api.advisorEvents.executionDepthHistogram);
+  const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
+  const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
 
   if (costByProvider === undefined || eventCounts === undefined || anomalies === undefined) {
     return (
@@ -56,11 +59,6 @@ export default function Analytics() {
   }
 
   const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
-
-  // Execution depth histogram + Advisor Strategy (CPUX-09)
-  const depthHistogram = useQuery(api.advisorEvents.executionDepthHistogram);
-  const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
-  const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
 
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
