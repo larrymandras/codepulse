@@ -104,7 +104,7 @@ export const leaderboard = query({
 
     const filtered = args.agentIds
       ? allMetrics.filter((m) => args.agentIds!.includes(m.agentId))
-      : allMetrics;
+      : allMetrics.filter((m) => m.agentId !== "unknown");
 
     const byAgent = new Map<
       string,
