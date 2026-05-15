@@ -590,6 +590,21 @@ export const listSkills = query({
   },
 });
 
+export const recordSkillLaunch = mutation({
+  args: { name: v.string() },
+  handler: async (ctx, args) => {
+    const skill = await ctx.db
+      .query("skills")
+      .withIndex("by_name", (q) => q.eq("name", args.name))
+      .first();
+    if (!skill) return;
+    await ctx.db.patch(skill._id, {
+      useCount: (skill.useCount ?? 0) + 1,
+      lastUsedAt: Date.now(),
+    });
+  },
+});
+
 export const listHooks = query({
   args: {},
   handler: async (ctx) => {
