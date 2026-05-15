@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: Premium Dashboard
 status: executing
-stopped_at: Phase 04 UI-SPEC approved
-last_updated: "2026-05-14T23:15:13.558Z"
-last_activity: 2026-05-14 -- Phase 4 planning complete
+stopped_at: Phase 04 Plan 01 complete
+last_updated: "2026-05-15T11:46:48.220Z"
+last_activity: 2026-05-15
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
-  percent: 50
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-14)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 03 — design-token-refresh
+**Current focus:** Phase 04 — kpi-panel-redesign
 
 ## Current Position
 
 Milestone: v5.0 Premium Dashboard
-Phase: 04
-Plan: Not started
+Phase: 04 (kpi-panel-redesign) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-05-14 -- Phase 4 planning complete
+Last activity: 2026-05-15
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -46,10 +46,15 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Status |
 |-------|-------|--------|
 | 03 | 0/3 | Planned |
-| 04 | TBD | Not planned |
+| 04 | 1/3 complete | Executing |
 | 05 | TBD | Not planned |
 | 06 | TBD | Not planned |
 | 07 | TBD | Not planned |
+
+**Plan execution log:**
+| Plan | Duration | Tasks | Files |
+|------|----------|-------|-------|
+| 04-01 | 3min | 2 | 5 |
 
 ## Accumulated Context
 
@@ -66,6 +71,9 @@ Progress: [░░░░░░░░░░] 0%
 - [03-D-06] .lift-on-hover utility: translateY(-2px) with 240ms cubic-bezier transition
 - [03-D-07] Additive migration: base dark tokens swapped, accent tokens added alongside existing
 - [03-D-08] Accent tokens also in :root at lower chroma for dual-mode components
+- [04-01-D-01] esbuild in this project does not support ** operator — use Math.pow() in SVG path math
+- [04-01-D-02] motion.path animate d prop for live morph (JS interpolation, not CSS transition — Safari unsupported)
+- [04-01-D-03] useId() for linearGradient IDs prevents collision when multiple BackgroundSparkline instances render on same page
 
 ### Pending Todos
 
@@ -77,6 +85,6 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-05-14T22:36:43.453Z
-Stopped at: Phase 04 UI-SPEC approved
-Next step: /gsd-execute-phase 03
+Last session: 2026-05-15T11:46:48.214Z
+Stopped at: Phase 04 Plan 01 complete
+Next step: Execute Phase 04 Plan 02 (HeroStatsBar wiring)
