@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { requireAuth } from "./lib/auth";
 
@@ -85,5 +85,27 @@ export const remove = mutation({
   handler: async (ctx, { id }) => {
     await requireAuth(ctx);
     await ctx.db.delete(id);
+  },
+});
+
+const TERMINAL_COLUMNS = ["done", "cancelled"];
+const RETENTION_MS = 24 * 60 * 60 * 1000;
+
+export const cleanupTerminalTasks = internalMutation({
+  handler: async (ctx) => {
+    const cutoff = (Date.now() - RETENTION_MS) / 1000;
+    let deleted = 0;
+    for (const column of TERMINAL_COLUMNS) {
+      const stale = await ctx.db
+        .query("tasks")
+        .withIndex("by_column", (q) => q.eq("column", column))
+        .filter((q) => q.lt(q.field("columnEnteredAt"), cutoff))
+        .collect();
+      for (const task of stale) {
+        await ctx.db.delete(task._id);
+        deleted++;
+      }
+    }
+    return { deleted };
   },
 });

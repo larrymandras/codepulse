@@ -92,4 +92,11 @@ crons.daily(
   internal.transcripts.cleanupOldRecords,
 );
 
+// Task board: purge done/cancelled tasks older than 24 hours (every 6 hours)
+crons.interval(
+  "cleanup-terminal-tasks",
+  { hours: 6 },
+  internal.tasks.cleanupTerminalTasks
+);
+
 export default crons;

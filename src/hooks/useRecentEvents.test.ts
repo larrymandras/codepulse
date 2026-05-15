@@ -1,28 +1,25 @@
 import { describe, test, expect, vi, type MockedFunction } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { usePaginatedQuery } from "convex/react";
+import { renderHook, act } from "@testing-library/react";
+import { useQuery } from "convex/react";
 
-// Mock convex/react to avoid needing a real Convex client
 vi.mock("convex/react", () => ({
-  usePaginatedQuery: vi.fn(() => ({
-    results: [{ _id: "1", eventType: "Info", timestamp: 1000 }],
-    status: "CanLoadMore" as const,
-    loadMore: vi.fn(),
-  })),
+  useQuery: vi.fn(() => [
+    { _id: "1", eventType: "llm_call", source: "runtime", timestamp: 1000 },
+    { _id: "2", eventType: "ToolUse", source: "build", timestamp: 999 },
+  ]),
 }));
 
-// Mock the generated API
 vi.mock("../../convex/_generated/api", () => ({
   api: {
-    events: { listRecentPaginated: "events.listRecentPaginated" },
+    events: { listRecentMerged: "events.listRecentMerged" },
   },
 }));
 
 import { useRecentEvents } from "./useRecentEvents";
 
-const mockUsePaginatedQuery = usePaginatedQuery as MockedFunction<typeof usePaginatedQuery>;
+const mockUseQuery = useQuery as MockedFunction<typeof useQuery>;
 
-describe("useRecentEvents (paginated)", () => {
+describe("useRecentEvents (merged)", () => {
   test("returns { events, status, loadMore } shape", () => {
     const { result } = renderHook(() => useRecentEvents());
     expect(result.current).toHaveProperty("events");
@@ -35,24 +32,31 @@ describe("useRecentEvents (paginated)", () => {
     expect(Array.isArray(result.current.events)).toBe(true);
   });
 
-  test("status is a valid pagination status string", () => {
+  test("status is Exhausted when results are fewer than limit", () => {
+    const { result } = renderHook(() => useRecentEvents(50));
+    expect(result.current.status).toBe("Exhausted");
+  });
+
+  test("status is LoadingFirstPage when query returns undefined", () => {
+    mockUseQuery.mockReturnValueOnce(undefined);
     const { result } = renderHook(() => useRecentEvents());
-    expect(["LoadingFirstPage", "CanLoadMore", "LoadingMore", "Exhausted"]).toContain(
-      result.current.status
+    expect(result.current.status).toBe("LoadingFirstPage");
+  });
+
+  test("loadMore increases the limit", () => {
+    const { result } = renderHook(() => useRecentEvents(50));
+    act(() => result.current.loadMore(25));
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.anything(),
+      { limit: 75 }
     );
   });
 
-  test("loadMore is a callable function", () => {
-    const { result } = renderHook(() => useRecentEvents());
-    expect(typeof result.current.loadMore).toBe("function");
-  });
-
-  test("passes initialNumItems of 25 by default", () => {
+  test("passes default limit of 50", () => {
     renderHook(() => useRecentEvents());
-    expect(mockUsePaginatedQuery).toHaveBeenCalledWith(
+    expect(mockUseQuery).toHaveBeenCalledWith(
       expect.anything(),
-      {},
-      { initialNumItems: 25 }
+      { limit: 50 }
     );
   });
 });

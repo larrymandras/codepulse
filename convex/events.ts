@@ -139,6 +139,51 @@ export const listRecentPaginated = query({
   },
 });
 
+export const listRecentMerged = query({
+  args: { limit: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    const fetchCount = limit + 10;
+
+    const [buildEvents, runtimeEvents] = await Promise.all([
+      ctx.db
+        .query("events")
+        .withIndex("by_timestamp")
+        .order("desc")
+        .filter((q) => q.neq(q.field("archived"), true))
+        .take(fetchCount),
+      ctx.db
+        .query("runtime_events")
+        .withIndex("by_timestamp")
+        .order("desc")
+        .filter((q) => q.neq(q.field("archived"), true))
+        .take(fetchCount),
+    ]);
+
+    const normalized = [
+      ...buildEvents.map((e) => ({
+        _id: e._id,
+        source: "build" as const,
+        eventType: e.eventType,
+        toolName: e.toolName,
+        sessionId: e.sessionId,
+        timestamp: e.timestamp,
+      })),
+      ...runtimeEvents.map((e) => ({
+        _id: e._id,
+        source: "runtime" as const,
+        eventType: e.eventType,
+        toolName: (e.data as any)?.toolName,
+        sessionId: (e.data as any)?.sessionId ?? (e.data as any)?.session_id,
+        timestamp: e.timestamp,
+      })),
+    ];
+
+    normalized.sort((a, b) => b.timestamp - a.timestamp);
+    return normalized.slice(0, limit);
+  },
+});
+
 // ---- LEGACY runtime_events functions (kept for backward compat) ----
 
 export const insertEvent = internalMutation({

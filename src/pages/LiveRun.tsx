@@ -56,7 +56,7 @@ export default function LiveRun() {
 
   const [liveBlocks, setLiveBlocks] = useState<Block[]>([]);
   const [liveSessionId, setLiveSessionId] = useState<string | null>(null);
-  const [runDone, setRunDone] = useState(false);
+  const [runDone, setRunDone] = useState(true);
   const [runMeta, setRunMeta] = useState<RunMeta>(INITIAL_META);
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
