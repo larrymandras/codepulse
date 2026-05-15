@@ -71,7 +71,7 @@ Plans:
 ### v5.0 Premium Dashboard
 
 - [x] **Phase 03: Design Token Refresh** — Colored OKLCH dark theme, per-category accent hues, radial gradient cards, lift-on-hover, no regressions (completed 2026-05-14)
-- [ ] **Phase 04: KPI Panel Redesign** — SVG sparkline backgrounds on HeroStatsBar, tone-based three-layer status pills, animated count-up
+- [x] **Phase 04: KPI Panel Redesign** — SVG sparkline backgrounds on HeroStatsBar, tone-based three-layer status pills, animated count-up (completed 2026-05-15)
 - [ ] **Phase 05: Usage Gauges & Model Metrics** — SVG dial gauges, model split strip with gradient fills, provider rows with radial gradients, window bars
 - [ ] **Phase 06: Memory Graph 3D** — react-force-graph-3d + three.js, bloom post-processing, starfield, view modes, lazy-loaded, 2D constellation fallback
 - [ ] **Phase 07: Intelligence Dashboard Panel** — Prescription cards, operator score gauge, dream review carousel, score sub-dimensions, v15.0 backend integration
@@ -106,12 +106,12 @@ Plans:
   3. Stat values animate on data change using Motion spring animation with tabular-nums font variant
   4. Clicking a KPI tile navigates to the relevant detail page (sessions → SessionKanban, errors → Alerts, etc.)
   5. Sparkline data comes from existing hourly aggregation tables — no new Convex queries added
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 04-01-PLAN.md — Wave 1: Foundation: tone CSS tokens, thresholdTone() utility, BackgroundSparkline component + tests
 - [x] 04-02-PLAN.md — Wave 2 (depends 04-01): Integration: wire BackgroundSparkline + tone system into HeroStatsBar + tests
-- [ ] 04-03-PLAN.md — Wave 3 (depends 04-02): Visual verification: build/test/type check + human visual checkpoint
+- [x] 04-03-PLAN.md — Wave 3 (depends 04-02): Visual verification: build/test/type check + human visual checkpoint
 
 ### Phase 05: Usage Gauges & Model Metrics
 **Goal**: Cost and usage data is displayed through rich visual components — circular gauges, gradient strip charts, and provider rows — replacing flat tables and basic bar charts
