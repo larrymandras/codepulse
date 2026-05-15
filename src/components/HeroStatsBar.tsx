@@ -186,7 +186,7 @@ export default function HeroStatsBar() {
               )}
               {/* Layer 2: data-accent radial gradient is CSS background-image from index.css Phase 03 */}
               {/* Layer 3: Tile content (relative, z-10) */}
-              <span className="relative z-10 text-[10px] text-foreground/70 uppercase tracking-wider drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
+              <span className="relative z-10 text-[10px] text-foreground uppercase tracking-wider drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]">
                 {kpi.label}
               </span>
               <div className="relative z-10 flex items-end gap-2">
@@ -205,7 +205,7 @@ export default function HeroStatsBar() {
                 )}
               </div>
               {kpi.sub && (
-                <span className="relative z-10 text-[10px] text-foreground/50 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">{kpi.sub}</span>
+                <span className="relative z-10 text-[10px] text-foreground/70 drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]">{kpi.sub}</span>
               )}
             </div>
           );
