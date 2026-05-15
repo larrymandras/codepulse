@@ -31,7 +31,7 @@ Full details: [milestones/v4.0-ROADMAP.md](milestones/v4.0-ROADMAP.md)
 | 1. UI Foundation | v4.0 | 6/6 | Complete   | 2026-05-07 |
 | 2. Bidirectional Telemetry | v4.0 | 3/6 | In Progress|  |
 | 3. Interaction Layer | v4.0 | 6/6 | Complete | 2026-03-29 |
-| 4. Task Management | v4.0 | 1/3 | In Progress|  |
+| 4. Task Management | v4.0 | 2/3 | In Progress|  |
 | 5. Data Pipeline | v4.0 | 5/5 | Complete | 2026-04-06 |
 | 6. Alert Routing | v4.0 | 5/5 | Complete | 2026-04-09 |
 | 7. Intelligence Layer | v4.0 | 5/5 | Complete | 2026-04-12 |
@@ -110,7 +110,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Wave 1: Foundation: tone CSS tokens, thresholdTone() utility, BackgroundSparkline component + tests
-- [ ] 04-02-PLAN.md — Wave 2 (depends 04-01): Integration: wire BackgroundSparkline + tone system into HeroStatsBar + tests
+- [x] 04-02-PLAN.md — Wave 2 (depends 04-01): Integration: wire BackgroundSparkline + tone system into HeroStatsBar + tests
 - [ ] 04-03-PLAN.md — Wave 3 (depends 04-02): Visual verification: build/test/type check + human visual checkpoint
 
 ### Phase 05: Usage Gauges & Model Metrics
