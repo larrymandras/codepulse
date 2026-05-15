@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useHeroStats } from "../hooks/useHeroStats";
-import { AnimatedNumber, thresholdColor, ThresholdConfig } from "./MetricCard";
+import { AnimatedNumber, thresholdColor, ThresholdConfig, thresholdTone, Tone } from "./MetricCard";
+import { BackgroundSparkline, flatSparkline } from "./BackgroundSparkline";
 import Sparkline from "./Sparkline";
 import InfoTooltip from "./InfoTooltip";
 
@@ -19,6 +20,7 @@ interface KpiDef {
   threshold?: ThresholdConfig;
   format?: (v: number) => string;
   sparkline?: number[];
+  sparklineData?: number[];   // Background sparkline data (12 buckets)
   sub?: string;
   color?: string;
   accent?: "cost" | "health" | "activity" | "memory" | "alerts";
@@ -52,6 +54,7 @@ export default function HeroStatsBar() {
       sub: `${stats.runningAgents} agents`,
       color: "var(--accent-activity)",
       accent: "activity",
+      sparklineData: stats.eventSparkline.length > 0 ? stats.eventSparkline : flatSparkline(stats.activeSessions),
       onClick: () => navigate("/agents"),
     },
     {
@@ -62,6 +65,7 @@ export default function HeroStatsBar() {
       format: (v: number) => `${Math.round(v)}%`,
       sub: `${stats.errorsThisHour} errors`,
       accent: "alerts",
+      sparklineData: flatSparkline(stats.errorRate),
       onClick: () => navigate("/alerts"),
     },
     {
@@ -77,6 +81,7 @@ export default function HeroStatsBar() {
       color:
         stats.criticalAlerts > 0 ? "var(--accent-alerts)" : stats.errorAlerts > 0 ? "var(--status-warn)" : "var(--accent-health)",
       accent: "alerts",
+      sparklineData: flatSparkline(stats.activeAlerts),
       onClick: () => navigate("/alerts"),
     },
     {
@@ -86,6 +91,7 @@ export default function HeroStatsBar() {
       sub: "this hour",
       color: stats.securityEvents > 0 ? "var(--status-warn)" : "var(--accent-health)",
       accent: "alerts",
+      sparklineData: flatSparkline(stats.securityEvents),
       onClick: () => navigate("/security"),
     },
     {
@@ -95,6 +101,7 @@ export default function HeroStatsBar() {
       threshold: { ok: 70, warn: 40, invertDirection: true },
       format: (v: number) => `${Math.round(v)}%`,
       accent: "memory",
+      sparklineData: flatSparkline(hitRateValue ?? 0),
       onClick: () => navigate("/memory"),
     },
     {
@@ -105,6 +112,7 @@ export default function HeroStatsBar() {
       format: (v: number) => Math.round(v).toString(),
       sub: "recent",
       accent: "memory",
+      sparklineData: flatSparkline(durableFactsCount ?? 0),
       onClick: () => navigate("/dreaming"),
     },
     {
@@ -114,6 +122,7 @@ export default function HeroStatsBar() {
       threshold: { ok: 1.0, warn: 0.1, invertDirection: true },
       format: (v: number) => `$${v.toFixed(2)}`,
       accent: "cost",
+      sparklineData: stats.costSparkline.length > 0 ? stats.costSparkline : flatSparkline(advisorSavingsValue ?? 0),
       onClick: () => navigate("/analytics"),
     },
   ];
@@ -133,23 +142,54 @@ export default function HeroStatsBar() {
 
       {/* KPI grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        {kpis.map((kpi) => {
+        {kpis.map((kpi, index) => {
           const color =
             kpi.threshold != null && kpi.numericValue != null
               ? thresholdColor(kpi.numericValue, kpi.threshold)
               : kpi.color;
+
+          // Per D-05, D-08: Compute tone for tiles with thresholds; default for tiles without
+          const tone: Tone =
+            kpi.threshold != null && kpi.numericValue != null
+              ? thresholdTone(kpi.numericValue, kpi.threshold)
+              : 'default';
+
+          // Per D-06, D-07: Resolve the color for three-layer styling
+          // For non-default tones: use the tone CSS variable
+          // For default tone: use the tile's accent CSS variable
+          const toneColor = tone !== 'default'
+            ? `var(--tone-${tone})`
+            : `var(--accent-${kpi.accent})`;
+
+          // Per D-07: border opacity is 15% for good/default, 20% for warn/danger
+          const borderPct = tone === 'warn' || tone === 'danger' ? 20 : 15;
 
           return (
             <div
               key={kpi.label}
               onClick={kpi.onClick}
               data-accent={kpi.accent}
-              className="group flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 lift-on-hover"
+              {...(tone !== 'default' ? { "data-tone": tone } : {})}
+              className="group relative overflow-hidden flex flex-col gap-1 cursor-pointer rounded-lg px-2 py-1.5 -mx-2 -my-1.5 min-h-[72px] border lift-on-hover"
+              style={{
+                backgroundColor: `color-mix(in oklch, ${toneColor} 8%, transparent)`,
+                borderColor: `color-mix(in oklch, ${toneColor} ${borderPct}%, transparent)`,
+              }}
             >
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              {/* Layer 1: Background sparkline (absolute, z-0) — per D-02 */}
+              {kpi.sparklineData && kpi.sparklineData.length > 0 && (
+                <BackgroundSparkline
+                  data={kpi.sparklineData}
+                  accentColor={toneColor}
+                  tileIndex={index}
+                />
+              )}
+              {/* Layer 2: data-accent radial gradient is CSS background-image from index.css Phase 03 */}
+              {/* Layer 3: Tile content (relative, z-10) */}
+              <span className="relative z-10 text-[10px] text-muted-foreground uppercase tracking-wider">
                 {kpi.label}
               </span>
-              <div className="flex items-end gap-2">
+              <div className="relative z-10 flex items-end gap-2">
                 <span
                   className="text-xl font-bold tabular-nums"
                   style={color ? { color } : undefined}
@@ -165,7 +205,7 @@ export default function HeroStatsBar() {
                 )}
               </div>
               {kpi.sub && (
-                <span className="text-[10px] text-muted-foreground">{kpi.sub}</span>
+                <span className="relative z-10 text-[10px] text-muted-foreground">{kpi.sub}</span>
               )}
             </div>
           );
