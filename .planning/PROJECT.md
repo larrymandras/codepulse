@@ -8,6 +8,18 @@ Real-time operational command center for Ástríðr AI assistant. React 19 + Vit
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
+## Current Milestone: v5.0 Advanced Visualization & Integrations
+
+**Goal:** Extend CodePulse with deep operational visualizations and external delivery channels so operators can see token/dependency flows at a glance and get alerted through their existing tooling.
+
+**Target features:**
+- Call graph visualization showing integration dependencies and error propagation
+- Real-time context window growth/shrink visualization during active sessions
+- Token sunburst showing per-agent/per-tool token consumption breakdown
+- Email digest delivery for daily/weekly summaries
+- PagerDuty integration for critical alert escalation
+- GitHub Actions trigger from alert rules (auto-remediation)
+
 ## Current State
 
 **Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14)
@@ -58,7 +70,12 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ### Active
 
-(None — next milestone requirements TBD via `/gsd-new-milestone`)
+- Call graph visualization (VIZ-01)
+- Context window growth visualization (VIZ-02)
+- Token sunburst (VIZ-03)
+- Email digest delivery (EXT-01)
+- PagerDuty integration (EXT-02)
+- GitHub Actions trigger from alerts (EXT-03)
 
 ### Out of Scope
 
@@ -113,4 +130,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-14 after v4.0 milestone completion*
+*Last updated: 2026-05-16 — v5.0 milestone started*
