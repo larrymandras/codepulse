@@ -1220,6 +1220,13 @@ export default defineSchema({
     outputTokens: v.float64(),
     modelUsed: v.optional(v.string()),
     archived: v.optional(v.boolean()),
+    costUsd: v.optional(v.float64()),
+    sessionId: v.optional(v.string()),
+    toolCallCount: v.optional(v.float64()),
+    turnNumber: v.optional(v.float64()),
+    complexityTier: v.optional(v.string()),
+    fromOverride: v.optional(v.boolean()),
+    projectTag: v.optional(v.string()),
   })
     .index("by_agent_timestamp", ["agentId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),

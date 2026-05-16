@@ -481,6 +481,7 @@ export const importToolInventory = mutation({
         description: v.optional(v.string()),
         category: v.optional(v.string()),
         source: v.optional(v.string()),
+        serverName: v.optional(v.string()),
         registryType: v.optional(v.string()),
       })
     ),
@@ -501,7 +502,7 @@ export const importToolInventory = mutation({
         const patch: Record<string, any> = {};
         if (tool.description) patch.description = tool.description;
         if (tool.source) patch.source = tool.source;
-        if (tool.category) patch.serverName = tool.category;
+        if (tool.serverName) patch.serverName = tool.serverName;
         if (Object.keys(patch).length > 0) {
           await ctx.db.patch(existing._id, patch);
           updated++;
@@ -510,7 +511,7 @@ export const importToolInventory = mutation({
         await ctx.db.insert("discoveredTools", {
           name: tool.name,
           source: tool.source ?? args.importSource,
-          serverName: tool.category,
+          serverName: tool.serverName,
           description: tool.description,
           usageCount: 0,
           lastUsedAt: now,
