@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, type UIEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
@@ -30,6 +31,18 @@ function generateId(): string {
 export default function Chat() {
   const { status, sendCommand, subscribeEvent } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
+
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const skillParam = searchParams.get("skill");
+  const [skillBadge, setSkillBadge] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (skillParam) {
+      setSkillBadge(skillParam);
+      setSearchParams({}, { replace: true });
+    }
+  }, [skillParam, setSearchParams]);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -434,11 +447,25 @@ export default function Chat() {
       )}
 
       {/* Input */}
+      {skillBadge && (
+        <div className="flex items-center gap-2 px-4 pb-1">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-xs text-indigo-300">
+            Skill: {skillBadge}
+            <button
+              onClick={() => setSkillBadge(null)}
+              className="hover:text-white ml-1"
+            >
+              &times;
+            </button>
+          </span>
+        </div>
+      )}
       <ChatInput
         onSend={handleSend}
         onVoiceSend={handleVoiceSend}
         disabled={isStreaming || isDisconnected}
         disconnected={isDisconnected}
+        initialValue={skillBadge ? `/${skillBadge}` : undefined}
       />
     </div>
   );
