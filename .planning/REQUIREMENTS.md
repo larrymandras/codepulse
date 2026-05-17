@@ -93,13 +93,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCH-01 | TBD | Pending |
-| SCH-02 | TBD | Pending |
-| SCH-03 | TBD | Pending |
-| SCH-04 | TBD | Pending |
-| VIZ-01 | TBD | Pending |
-| VIZ-02 | TBD | Pending |
-| VIZ-03 | TBD | Pending |
-| EXT-01 | TBD | Pending |
-| EXT-02 | TBD | Pending |
-| EXT-03 | TBD | Pending |
+| SCH-01 | Phase 59 | Pending |
+| SCH-02 | Phase 59 | Pending |
+| SCH-03 | Phase 59 | Pending |
+| SCH-04 | Phase 59 | Pending |
+| VIZ-02 | Phase 60 | Pending |
+| VIZ-03 | Phase 61 | Pending |
+| EXT-01 | Phase 62 | Pending |
+| VIZ-01 | Phase 63 | Pending |
+| EXT-02 | Phase 64 | Pending |
+| EXT-03 | Phase 65 | Pending |
