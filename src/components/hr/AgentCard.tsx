@@ -79,7 +79,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
         {/* Avatar overlapping header */}
         <div className="-mt-10">
           <AgentAvatar
-            avatar={{ name: agent.name }}
+            avatar={agent.avatarData ?? { name: agent.name }}
             status={avatarStatus as "active" | "working" | "idle"}
             size="xl"
           />

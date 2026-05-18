@@ -2,16 +2,25 @@ import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { fetchAgents, type AgentListItem } from "@/lib/astridrApi";
+import type { Id } from "../../convex/_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+export interface AvatarData {
+  name: string;
+  emoji?: string;
+  color?: string;
+  imageStorageId?: Id<"_storage">;
+}
 
 export interface RosterAgent extends AgentListItem {
   status: "active" | "idle" | "pending";
   approvalId?: string;
   requestedAt?: number;
   configSnapshot?: unknown;
+  avatarData?: AvatarData;
 }
 
 export interface RosterFilters {
@@ -34,6 +43,8 @@ export function useRosterAgents() {
 
   const pendingApprovals = useQuery(api.approvalQueue.list, { status: "pending" }) ?? [];
   const convexAgents = useQuery(api.agentConfigVersions.listAgents) ?? [];
+  const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
+  const avatarRecords = useQuery(api.avatars.list) ?? [];
 
   const load = useCallback(async () => {
     try {
@@ -62,10 +73,26 @@ export function useRosterAgents() {
       : isLoading ? [] : convexAgents as AgentListItem[];
     const apiIds = new Set(baseAgents.map((a) => a.id));
 
-    const merged: RosterAgent[] = baseAgents.map((a) => ({
-      ...a,
-      status: a.active ? ("active" as const) : ("idle" as const),
-    }));
+    const merged: RosterAgent[] = baseAgents.map((a) => {
+      const profile = agentProfiles.find(
+        (p) => p.profileId === a.id || p.name === a.name,
+      );
+      const avatar = profile?.avatarId
+        ? avatarRecords.find((av) => av._id === profile.avatarId)
+        : undefined;
+      return {
+        ...a,
+        status: a.active ? ("active" as const) : ("idle" as const),
+        avatarData: avatar
+          ? {
+              name: avatar.name,
+              emoji: avatar.emoji,
+              color: avatar.color,
+              imageStorageId: avatar.imageStorageId,
+            }
+          : undefined,
+      };
+    });
 
     // Append pending approvals not yet in API list
     for (const approval of pendingApprovals) {

@@ -25,7 +25,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import AgentAvatar from "@/components/AgentAvatar";
+import AvatarUploader from "@/components/AvatarUploader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useAgentProfiles } from "@/hooks/useAgentProfiles";
+import { useAvatars, useAvatarMutations } from "@/hooks/useAvatars";
 import { fetchAgentDetail, deleteAgent, cloneAgent, type AgentDetail } from "@/lib/astridrApi";
 import { DetailConfigTab } from "@/components/hr/detail/DetailConfigTab";
 import { DetailRuntimeTab } from "@/components/hr/detail/DetailRuntimeTab";
@@ -33,7 +36,7 @@ import { DetailTopologyTab } from "@/components/hr/detail/DetailTopologyTab";
 import { DetailSecurityTab } from "@/components/hr/detail/DetailSecurityTab";
 import { DetailActivityTab } from "@/components/hr/detail/DetailActivityTab";
 import { DetailVersionsTab } from "@/components/hr/detail/DetailVersionsTab";
-import { Maximize2, Trash2, Loader2, RefreshCw, Copy } from "lucide-react";
+import { Maximize2, Trash2, Loader2, RefreshCw, Copy, Camera } from "lucide-react";
 import { toast } from "sonner";
 
 interface AgentDetailSheetProps {
@@ -60,6 +63,11 @@ export function AgentDetailSheet({
   const [showDeregister, setShowDeregister] = useState(false);
   const [deregistering, setDeregistering] = useState(false);
   const [cloning, setCloning] = useState(false);
+  const [showAvatarUpload, setShowAvatarUpload] = useState(false);
+
+  const profiles = useAgentProfiles();
+  const avatars = useAvatars();
+  const { saveImage } = useAvatarMutations();
 
   useEffect(() => {
     if (!agentId) {
@@ -130,9 +138,27 @@ export function AgentDetailSheet({
       : "idle"
     : "idle";
 
+  const matchedProfile = profiles.find(
+    (p) => p.profileId === agentDetail?.id || p.name === agentDetail?.name,
+  );
+  const matchedAvatar = matchedProfile?.avatarId
+    ? avatars.find((a) => a._id === matchedProfile.avatarId)
+    : undefined;
+
+  const handleAvatarUpload = async (storageId: string) => {
+    if (matchedAvatar) {
+      await saveImage({
+        id: matchedAvatar._id,
+        storageId: storageId as any,
+      });
+      toast.success("Avatar updated");
+    }
+    setShowAvatarUpload(false);
+  };
+
   return (
     <>
-      <Sheet open={!!agentId} onOpenChange={(open) => !open && onClose()}>
+      <Sheet open={!!agentId} onOpenChange={(open) => { if (!open) { onClose(); setShowAvatarUpload(false); } }}>
         <SheetContent
           side="right"
           className="w-[480px] sm:max-w-[480px] overflow-y-auto"
@@ -165,11 +191,20 @@ export function AgentDetailSheet({
             <>
               <SheetHeader className="pb-4">
                 <div className="flex items-start gap-3">
-                  <AgentAvatar
-                    avatar={{ name: agentDetail.name }}
-                    status={avatarStatus as "active" | "idle"}
-                    size="lg"
-                  />
+                  <div
+                    className="relative group cursor-pointer"
+                    onClick={() => setShowAvatarUpload(!showAvatarUpload)}
+                    title="Click to change avatar"
+                  >
+                    <AgentAvatar
+                      avatar={matchedAvatar ?? { name: agentDetail.name }}
+                      status={avatarStatus as "active" | "idle"}
+                      size="lg"
+                    />
+                    <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="h-5 w-5 text-white" />
+                    </div>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <SheetTitle className="text-xl font-semibold text-foreground truncate">
                       {agentDetail.name}
@@ -222,6 +257,14 @@ export function AgentDetailSheet({
                     Deregister
                   </Button>
                 </div>
+                {showAvatarUpload && (
+                  <div className="border border-border rounded-lg p-3 mt-3">
+                    <AvatarUploader
+                      onUpload={handleAvatarUpload}
+                      onCancel={() => setShowAvatarUpload(false)}
+                    />
+                  </div>
+                )}
               </SheetHeader>
 
               {/* Tabs */}
