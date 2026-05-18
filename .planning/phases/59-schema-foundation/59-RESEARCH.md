@@ -106,32 +106,34 @@ None — this is a pure Convex backend phase. The existing stack is locked.
 
 ```
 runtimeIngest.ts (httpAction)
-  │
-  ├─ [tool_execution event] ──→ callGraphEdges.upsertEdge()
-  │                                   ↓
-  │                           callGraphEdges table
-  │                         (agentId, toolName, sessionId,
-  │                          callCount, errorCount, status)
-  │
-  └─ [llm_call event] ──→ llm.recordCall() (extended args)
-                                ↓
-                         llmMetrics table
-                       (+ optional agentId, toolName, by_agent index)
+  |
+  |-- [hive_mind_entry event] ---> callGraphEdges.upsertEdge() (primary path)
+  |                                      |
+  |-- [tool_execution event] ----> callGraphEdges.upsertEdge() (secondary/future path)
+  |                                      |
+  |                              callGraphEdges table
+  |                            (agentId, toolName, sessionId,
+  |                             callCount, errorCount, status)
+  |
+  +-- [llm_call event] -----> llm.recordCall() (extended args)
+                                   |
+                            llmMetrics table
+                          (+ optional agentId, toolName, by_agent index)
 
 Phase 64/65 dispatch actions
-  │
-  └─ insert ──→ emailDeliveryLog / pagerdutyDeliveryLog / githubTriggerLog
-                (alertId, ruleId, status, sentAt, channel-specific fields)
+  |
+  +-- insert ---> emailDeliveryLog / pagerdutyDeliveryLog / githubTriggerLog
+               (alertId, ruleId, status, sentAt, channel-specific fields)
 
 alertRuleCustom CRUD mutations (alertRuleCustom.ts)
-  │
-  └─ create/update (extended) ──→ alertRuleCustom table
-                                 (+ pagerdutyConfig, githubTrigger objects)
+  |
+  +-- create/update (extended) ---> alertRuleCustom table
+                                (+ pagerdutyConfig, githubTrigger objects)
 
-backfillLlmMetrics (internalMutation — one-time)
-  │
-  ├─ query events table (by_session)
-  └─ patch llmMetrics rows (agentId, toolName where derivable)
+backfillLlmMetrics (internalMutation -- one-time)
+  |
+  |-- query events table (by_session)
+  +-- patch llmMetrics rows (agentId, toolName where derivable)
 ```
 
 ### Recommended Project Structure
@@ -362,7 +364,7 @@ npx convex run llm:backfillAgentId
 
 ### Pitfall 3: callGraphEdges Upsert Race Condition
 
-**What goes wrong:** Two concurrent `tool_execution` events for the same agent+tool arrive simultaneously. Both query the table, both find no row, both insert — creating duplicates.
+**What goes wrong:** Two concurrent tool execution events for the same agent+tool arrive simultaneously. Both query the table, both find no row, both insert — creating duplicates.
 **Why it happens:** Convex mutations are serialized per document but not per table-query-then-insert. Two concurrent mutations can both read "no row" before either inserts.
 **How to avoid:** In practice this is rare for this use case (agent tool calls are sequential within a session). The duplicate row is a cosmetic issue (inflated callCount on the next real upsert will not merge them). Add a `by_agent_tool_session` index (compound on agentId + toolName + sessionId) as a lookup key and document this as a known edge case for Phase 63.
 **Warning signs:** Multiple `callGraphEdges` rows with identical agentId + toolName.
@@ -405,10 +407,14 @@ callGraphEdges: defineTable({
   .index("by_timestamp", ["lastCallAt"]),
 ```
 
-### runtimeIngest.ts addition for tool_execution event
+### runtimeIngest.ts addition for callGraphEdges upsert
 
 ```typescript
-// convex/runtimeIngest.ts — add case inside switch(evt.eventType)
+// convex/runtimeIngest.ts — PRIMARY: add upsertEdge dispatch inside existing hive_mind_entry case
+// The hive_mind_entry case (line 583) already receives agentType/toolName/success/sessionKey
+// from Astrid runtime agents. Add upsertEdge call within that handler.
+//
+// SECONDARY: add standalone tool_execution case for future-proofing
 case "tool_execution": {
   const d = data as any;
   await ctx.runMutation(api.callGraphEdges.upsertEdge, {
@@ -466,22 +472,20 @@ githubTrigger: v.optional(githubTriggerValidator),
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | `tool_execution` is a valid incoming event type from Ástríðr (or will be — this phase creates the handler) | Architecture Patterns / runtimeIngest | If Ástríðr never sends this event type, callGraphEdges will stay empty; planner should clarify event name with Ástríðr team |
+| A1 | `hive_mind_entry` is the primary runtime event carrying agentId (as `agent_type`/`agentType`) and toolName for call graph edges. Verified at runtimeIngest.ts line 583: `hive_mind_entry` case carries `agent_type`, `tool_name`, `success`, `session_key`. A secondary `tool_execution` case is added for future-proofing. (RESOLVED) | Architecture Patterns / runtimeIngest | Low -- dual-case handler covers both current and future event types |
 | A2 | Historical backfill coverage for `llmMetrics.agentId` will be low/partial because `toolExecutions` has no agentId | Common Pitfalls | If the events table carries enough data to reconstruct agentId per timestamp, coverage could be higher — investigate during implementation |
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **What event type does Ástríðr use for tool executions in the runtime ingest path?**
-   - What we know: `runtimeIngest.ts` already handles many event types. The build-time ingest handles `PostToolUse`. For runtime agents (not Claude Code hooks), there is `hive_mind_entry` which carries `toolName` and `agentId`.
-   - What's unclear: Whether Ástríðr sends a dedicated `tool_execution` runtime event, or whether `callGraphEdges` should be populated from `hive_mind_entry` instead.
-   - Recommendation: Check with Larry before the plan locks the event type. If `hive_mind_entry` already carries `agentId` and `toolName`, upsert callGraphEdges from that handler instead of a new `tool_execution` case.
+1. **What event type does Astrid use for tool executions in the runtime ingest path?** (RESOLVED)
+   - What we know: `runtimeIngest.ts` already handles many event types. The build-time ingest handles `PostToolUse`. For runtime agents (not Claude Code hooks), there is `hive_mind_entry` which carries `toolName` and `agentType`.
+   - Resolution: Verified at runtimeIngest.ts line 583 -- the `hive_mind_entry` case already carries `agent_type`/`agentType`, `tool_name`/`toolName`, `success`, and `session_key`/`sessionKey`. The plan adds upsertEdge dispatch to the existing `hive_mind_entry` handler (primary path) AND adds a standalone `tool_execution` case as a secondary handler for future-proofing. This dual approach ensures callGraphEdges is populated from existing Astrid events immediately, while also supporting any future dedicated tool_execution event type.
 
-2. **Backfill: should it run as a one-shot manual run or as a cron that self-terminates?**
+2. **Backfill: should it run as a one-shot manual run or as a cron that self-terminates?** (RESOLVED)
    - What we know: D-12 says "one-time backfill mutation." `internalMutation` with `.take(100)` is idiomatic.
-   - What's unclear: Whether Phase 61 (Token Sunburst) actually needs pre-existing `agentId` data, or whether it queries forward-only from Phase 59 deployment.
-   - Recommendation: Plan for manual multi-run via `npx convex run llm:backfillAgentId`, and note that historical coverage is best-effort.
+   - Resolution: Plan uses manual multi-run via `npx convex run llm:backfillAgentId`. Historical coverage is best-effort. Phase 61 (Token Sunburst) will primarily use forward-only data from Phase 59 deployment; backfill provides bonus coverage for historical rows where agentId can be derived.
 
 ---
 
@@ -566,7 +570,7 @@ No missing dependencies. All tooling is available.
 - `convex/schema.ts` — full table inventory, webhookDeliveryLog reference pattern (lines 893-901), alertRuleCustom schema (lines 859-882), llmMetrics schema (lines 269-284) [VERIFIED: read directly]
 - `convex/alertRuleCustom.ts` — CRUD mutation pattern, conditionValidator reuse, Clerk auth check [VERIFIED: read directly]
 - `convex/llm.ts` — recordCall mutation pattern, internalMutation backfill reference (rollupCosts) [VERIFIED: read directly]
-- `convex/runtimeIngest.ts` — ingest switch block, mutation dispatch pattern [VERIFIED: read directly]
+- `convex/runtimeIngest.ts` — ingest switch block, mutation dispatch pattern, hive_mind_entry case at line 583 carrying agentType/toolName/success/sessionKey [VERIFIED: read directly]
 - `convex/archival.ts` — table list in markStaleArchived [VERIFIED: read directly]
 - Context7 `/llmstxt/convex_dev_llms_txt` — upsert pattern (query-then-patch-or-insert), defineTable, v.optional [CITED: ctx7 docs]
 
