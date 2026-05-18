@@ -14,7 +14,7 @@ export const markStaleArchived = internalMutation({
     const retentionDays = config?.value != null ? Number(config.value) : 30;
     const cutoff = Date.now() / 1000 - retentionDays * 86400;
 
-    const tables = ["events", "runtime_events", "llmMetrics", "toolExecutions", "agentMetrics"] as const;
+    const tables = ["events", "runtime_events", "llmMetrics", "toolExecutions", "agentMetrics", "emailDeliveryLog", "pagerdutyDeliveryLog", "githubTriggerLog"] as const;
     for (const table of tables) {
       const stale = await ctx.db
         .query(table)

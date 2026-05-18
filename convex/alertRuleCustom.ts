@@ -14,6 +14,19 @@ const conditionGroupValidator = v.object({
   logic: v.string(),
 });
 
+const pagerdutyConfigValidator = v.object({
+  enabled: v.boolean(),
+  routingKey: v.string(),
+  severity: v.optional(v.string()),
+});
+
+const githubTriggerValidator = v.object({
+  enabled: v.boolean(),
+  repo: v.string(),
+  workflowFile: v.string(),
+  ref: v.string(),
+});
+
 // ============================================================
 // CUSTOM RULE CRUD
 // ============================================================
@@ -26,6 +39,8 @@ export const create = mutation({
     conditionLogic: v.string(),
     conditionGroups: v.optional(v.array(conditionGroupValidator)),
     messageTemplate: v.optional(v.string()),
+    pagerdutyConfig: v.optional(pagerdutyConfigValidator),
+    githubTrigger: v.optional(githubTriggerValidator),
   },
   handler: async (ctx, args) => {
     // CPHLTH-01: Require authenticated Clerk identity.
@@ -40,6 +55,8 @@ export const create = mutation({
       conditionLogic: args.conditionLogic,
       conditionGroups: args.conditionGroups,
       messageTemplate: args.messageTemplate,
+      pagerdutyConfig: args.pagerdutyConfig,
+      githubTrigger: args.githubTrigger,
       enabled: true,
       createdAt: now,
       updatedAt: now,
@@ -57,6 +74,8 @@ export const update = mutation({
     conditionGroups: v.optional(v.array(conditionGroupValidator)),
     messageTemplate: v.optional(v.string()),
     enabled: v.optional(v.boolean()),
+    pagerdutyConfig: v.optional(pagerdutyConfigValidator),
+    githubTrigger: v.optional(githubTriggerValidator),
   },
   handler: async (ctx, args) => {
     // CPHLTH-01: Require authenticated Clerk identity.

@@ -13,6 +13,8 @@ export const recordCall = mutation({
     cost: v.optional(v.float64()),
     sessionId: v.optional(v.string()),
     timestamp: v.float64(),
+    agentId: v.optional(v.string()),
+    toolName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("llmMetrics", {
@@ -25,6 +27,8 @@ export const recordCall = mutation({
       cost: args.cost,
       sessionId: args.sessionId,
       timestamp: args.timestamp,
+      agentId: args.agentId,
+      toolName: args.toolName,
     });
   },
 });
@@ -185,5 +189,42 @@ export const rollupCosts = internalMutation({
     }
 
     return { providers: Object.keys(byProvider).length };
+  },
+});
+
+export const backfillAgentId = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    // Process in batches of 100 to avoid mutation timeout
+    const rows = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp")
+      .filter((q) => q.eq(q.field("agentId"), undefined))
+      .take(100);
+
+    let patched = 0;
+    for (const row of rows) {
+      // Attempt to derive agentId via sessionId -> agents table lookup
+      let derivedAgentId: string | undefined;
+
+      if (row.sessionId) {
+        const agent = await ctx.db
+          .query("agents")
+          .withIndex("by_session", (q) => q.eq("sessionId", row.sessionId!))
+          .first();
+        if (agent) {
+          derivedAgentId = agent.agentId;
+        }
+      }
+
+      // Only patch if we found a value to set
+      if (derivedAgentId) {
+        await ctx.db.patch(row._id, { agentId: derivedAgentId });
+        patched++;
+      }
+    }
+
+    // Return processed count: caller repeats until processed === 0
+    return { processed: rows.length, patched };
   },
 });
