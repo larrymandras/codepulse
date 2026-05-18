@@ -27,7 +27,7 @@ export interface TaskItem {
 export interface AgentColumn {
   agentId: string;
   agentName: string;
-  avatar?: { name: string; emoji?: string; color?: string } | null;
+  avatar?: { name: string; emoji?: string; color?: string; imageStorageId?: any } | null;
 }
 
 export interface WarRoomKanbanColumnProps {

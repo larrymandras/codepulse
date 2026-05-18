@@ -169,9 +169,14 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8181";
     const url = `${wsUrl}/ws/telemetry`;
 
+    const apiKey = (import.meta.env.VITE_ASTRIDR_API_KEY as string | undefined) ?? "";
+    const protocols = apiKey
+      ? [`bearer.${btoa(apiKey).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "")}`]
+      : undefined;
+
     let ws: WebSocket;
     try {
-      ws = new WebSocket(url);
+      ws = new WebSocket(url, protocols);
     } catch {
       scheduleRetry();
       return;
@@ -182,14 +187,6 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     ws.onopen = () => {
       if (!mountedRef.current) { ws.close(); return; }
       retryCountRef.current = 0;
-
-      // CPHLTH-03: Authenticate via first message instead of URL query param.
-      // The key is not included in the WS URL to prevent exposure in browser
-      // history, proxy logs, and server access logs.
-      const apiKey = (import.meta.env.VITE_ASTRIDR_API_KEY as string | undefined) ?? "";
-      if (apiKey) {
-        ws.send(JSON.stringify({ action: "authenticate", api_key: apiKey }));
-      }
 
       setStatusSync("connected");
 

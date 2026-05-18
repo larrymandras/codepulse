@@ -97,6 +97,7 @@ import type * as security from "../security.js";
 import type * as seedTeams from "../seedTeams.js";
 import type * as selfHealing from "../selfHealing.js";
 import type * as sessions from "../sessions.js";
+import type * as skillCategories from "../skillCategories.js";
 import type * as startupEvents from "../startupEvents.js";
 import type * as supabase from "../supabase.js";
 import type * as systemResources from "../systemResources.js";
@@ -210,6 +211,7 @@ declare const fullApi: ApiFromModules<{
   seedTeams: typeof seedTeams;
   selfHealing: typeof selfHealing;
   sessions: typeof sessions;
+  skillCategories: typeof skillCategories;
   startupEvents: typeof startupEvents;
   supabase: typeof supabase;
   systemResources: typeof systemResources;

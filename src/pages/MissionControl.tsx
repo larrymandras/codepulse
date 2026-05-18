@@ -6,6 +6,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { useAvatars } from "@/hooks/useAvatars";
 import {
   DndContext,
   DragEndEvent,
@@ -36,6 +37,7 @@ const FALLBACK_AGENTS = [
 export default function MissionControl() {
   const serverTasks = useQuery(api.missionControl.listTasksByAgent) ?? [];
   const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
+  const avatars = useAvatars();
   const reassignTaskMutation = useMutation(api.missionControl.reassignTask);
   const [localTasks, setLocalTasks] = useState<TaskItem[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -62,6 +64,14 @@ export default function MissionControl() {
 
   // Determine column source
   const agents = agentProfiles.length > 0 ? agentProfiles : FALLBACK_AGENTS;
+
+  const avatarMap = useMemo(() => {
+    const map: Record<string, (typeof avatars)[number]> = {};
+    for (const a of avatars) {
+      map[a._id] = a;
+    }
+    return map;
+  }, [avatars]);
 
   // Group tasks by agentId
   const tasksByAgent = useMemo(() => {
@@ -150,17 +160,23 @@ export default function MissionControl() {
         >
           <div className="overflow-y-auto">
             <div className="grid grid-cols-6 gap-4 pb-4">
-              {agents.map((agent) => (
-                <WarRoomKanbanColumn
-                  key={agent.profileId}
-                  agent={{
-                    agentId: agent.profileId,
-                    agentName: agent.name,
-                    avatar: { name: agent.name },
-                  }}
-                  tasks={tasksByAgent.get(agent.profileId) ?? []}
-                />
-              ))}
+              {agents.map((agent) => {
+                const avatarId = "avatarId" in agent ? agent.avatarId : undefined;
+                const av = avatarId ? avatarMap[avatarId] : null;
+                return (
+                  <WarRoomKanbanColumn
+                    key={agent.profileId}
+                    agent={{
+                      agentId: agent.profileId,
+                      agentName: agent.name,
+                      avatar: av
+                        ? { name: av.name, emoji: av.emoji, color: av.color, imageStorageId: av.imageStorageId }
+                        : { name: agent.name },
+                    }}
+                    tasks={tasksByAgent.get(agent.profileId) ?? []}
+                  />
+                );
+              })}
               {agents.length === 0 && (
                 <div className="text-sm text-muted-foreground py-8 text-center w-full">
                   Could not load tasks. Refresh to retry.
