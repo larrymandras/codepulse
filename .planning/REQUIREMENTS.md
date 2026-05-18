@@ -19,10 +19,10 @@
 
 ### Schema Foundation
 
-- [ ] **SCH-01**: New `callGraphEdges` table with materialized integration dependency edges upserted on ingest events
-- [ ] **SCH-02**: `llmMetrics` table extended with optional `agentId` and `toolName` fields and `by_agent` index for sunburst hierarchy
-- [ ] **SCH-03**: `alertRuleCustom` table extended with `pagerdutyConfig` (nested object: enabled, routingKey, severity?) and `githubTrigger` (nested object: enabled, repo, workflowFile, ref) fields for integration delivery config
-- [ ] **SCH-04**: New delivery log tables (`emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) for audit trails
+- [x] **SCH-01**: New `callGraphEdges` table with materialized integration dependency edges upserted on ingest events
+- [x] **SCH-02**: `llmMetrics` table extended with optional `agentId` and `toolName` fields and `by_agent` index for sunburst hierarchy
+- [x] **SCH-03**: `alertRuleCustom` table extended with `pagerdutyConfig` (nested object: enabled, routingKey, severity?) and `githubTrigger` (nested object: enabled, repo, workflowFile, ref) fields for integration delivery config
+- [x] **SCH-04**: New delivery log tables (`emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) for audit trails
 
 ## v4.0 Requirements (Validated)
 
@@ -93,10 +93,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCH-01 | Phase 59 | Pending |
-| SCH-02 | Phase 59 | Pending |
-| SCH-03 | Phase 59 | Pending |
-| SCH-04 | Phase 59 | Pending |
+| SCH-01 | Phase 59 | Complete |
+| SCH-02 | Phase 59 | Complete |
+| SCH-03 | Phase 59 | Complete |
+| SCH-04 | Phase 59 | Complete |
 | VIZ-02 | Phase 60 | Pending |
 | VIZ-03 | Phase 61 | Pending |
 | EXT-01 | Phase 62 | Pending |
