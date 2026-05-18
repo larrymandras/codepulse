@@ -62,6 +62,8 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             cost: d.cost ?? d.costUsd ?? d.cost_usd,
             sessionId: d.sessionId ?? d.session_id,
             timestamp,
+            agentId: d.agentId ?? d.agent_id,
+            toolName: d.toolName ?? d.tool_name,
           });
           break;
         }
@@ -599,6 +601,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             sessionKey: d.session_key ?? d.sessionKey,
             timestamp,
           });
+          // Populate callGraphEdges from hive_mind_entry data (D-04, per RESEARCH.md A1 resolution)
+          if (d.tool_name ?? d.toolName) {
+            await ctx.runMutation(api.callGraphEdges.upsertEdge, {
+              agentId: d.agent_type ?? d.agentType ?? "unknown",
+              toolName: d.tool_name ?? d.toolName ?? "unknown",
+              sessionId: d.session_key ?? d.sessionKey ?? d.sessionId ?? d.session_id ?? "unknown",
+              success: d.success ?? true,
+              timestamp,
+            });
+          }
           break;
         }
         case "channel_health": {
@@ -695,6 +707,17 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             value: d.value ?? 0,
             tags: d.tags,
             timestamp: d.timestamp ?? timestamp,
+          });
+          break;
+        }
+        case "tool_execution": {
+          const d = data as any;
+          await ctx.runMutation(api.callGraphEdges.upsertEdge, {
+            agentId: d.agentId ?? d.agent_id ?? "unknown",
+            toolName: d.toolName ?? d.tool_name ?? "unknown",
+            sessionId: d.sessionId ?? d.session_id ?? "unknown",
+            success: d.success ?? true,
+            timestamp,
           });
           break;
         }
