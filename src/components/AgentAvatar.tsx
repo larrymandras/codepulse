@@ -12,10 +12,10 @@ interface AvatarData {
 interface AgentAvatarProps {
   avatar: AvatarData | null;
   status?: "active" | "working" | "idle" | "completed" | "error";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
-const SIZE_MAP = { sm: 24, md: 40, lg: 64 };
+const SIZE_MAP = { sm: 24, md: 40, lg: 64, xl: 150 };
 
 const STATUS_RING: Record<string, string> = {
   active: "ring-green-400 shadow-[0_0_6px_rgba(74,222,128,0.4)]",
@@ -62,7 +62,7 @@ function AvatarImage({ storageId, size, alt }: { storageId: Id<"_storage">; size
 export default function AgentAvatar({ avatar, status = "idle", size = "md" }: AgentAvatarProps) {
   const px = SIZE_MAP[size];
   const ringClass = STATUS_RING[status] ?? STATUS_RING.idle;
-  const fontSize = size === "sm" ? "text-xs" : size === "md" ? "text-base" : "text-2xl";
+  const fontSize = size === "sm" ? "text-xs" : size === "md" ? "text-base" : size === "xl" ? "text-5xl" : "text-2xl";
 
   return (
     <div

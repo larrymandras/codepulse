@@ -46,6 +46,7 @@ export interface ChatInputProps {
   onVoiceSend?: (text: string) => void;
   disabled?: boolean;
   disconnected?: boolean;
+  initialValue?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -56,12 +57,20 @@ function getSpeechRecognitionClass(): (new () => SpeechRecognitionInstance) | nu
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected = false }: ChatInputProps) {
+export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected = false, initialValue }: ChatInputProps) {
   const [value, setValue] = useState("");
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const isVoiceInputRef = useRef(false);
+  const initialAppliedRef = useRef(false);
+
+  useEffect(() => {
+    if (initialValue && !initialAppliedRef.current) {
+      setValue(initialValue);
+      initialAppliedRef.current = true;
+    }
+  }, [initialValue]);
 
   const speechAvailable = typeof window !== "undefined" && getSpeechRecognitionClass() !== null;
   const canSend = value.trim().length > 0 && !disabled;

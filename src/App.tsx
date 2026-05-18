@@ -45,6 +45,9 @@ const WarRoom = lazy(() => import("./pages/WarRoom"));
 const MeetingBot = lazy(() => import("./pages/MeetingBot"));
 const MissionControl = lazy(() => import("./pages/MissionControl"));
 
+// Skills browser
+const Skills = lazy(() => import("./pages/Skills"));
+
 // Phase 74: HR Section stub pages
 const HrRoster = lazy(() => import("./pages/hr/Roster"));
 const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
@@ -78,6 +81,7 @@ export default function App() {
               <Route path="/settings" element={<Settings />} />
               {/* Phase 56: Command Center pages */}
               <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
+              <Route path="/skills" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Skills...</div>}><Skills /></Suspense>} />
               <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
               <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
               <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />

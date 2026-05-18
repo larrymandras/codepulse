@@ -101,6 +101,16 @@ const VALKYRJUR = [
     description: "Research and memory across all profiles. Central nervous system of coordination.",
     capabilities: ["Deep research", "Knowledge graph", "Memory consolidation", "Entity tracking", "Intelligence digests", "Semantic search"],
   },
+  {
+    profileId: "verdandi",
+    name: "Verðandi",
+    displayName: "Verðandi — Legal & Compliance",
+    model: "claude-opus-4-6",
+    emoji: "⚖️",
+    color: "#94A3B8",
+    description: "Legal agent. Reviews contracts clause-by-clause with 21-category taxonomy and risk scoring, generates legal documents, searches IP, maintains counterparty history.",
+    capabilities: ["Contract review", "Document generation", "IP search", "Redline tracking", "Risk scoring", "Clause taxonomy"],
+  },
 ];
 
 export const seed = mutation({

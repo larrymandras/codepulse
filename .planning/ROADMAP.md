@@ -6,6 +6,8 @@ Seven phases transform CodePulse from a monitoring dashboard into an all-in-one 
 
 Phase 58 (Infrastructure Layer) is a cross-project phase from Astridr that adds a command catalog frontend surface to the Capabilities page.
 
+v5.0 (Phases 59-65) extends CodePulse with deep operational visualizations and external delivery channels.
+
 **Research sources:**
 - Paperclip AI (agent orchestration platform) — chat interaction, live runs, inbox, Kanban, approvals
 - Aperant (autonomous coding IDE) — insights chat, ideation findings, changelog
@@ -28,6 +30,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
 - [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search (completed 2026-04-14)
+- [x] **Phase 59: Schema Foundation** - New tables and field extensions that unblock all v5.0 visualizations and integrations (completed 2026-05-18)
+- [ ] **Phase 60: Context Window Animation** - Real-time animated context window progress bar with area chart and compaction markers
+- [ ] **Phase 61: Token Sunburst** - Two-level ring chart showing per-agent/per-tool token consumption with drill-down
+- [ ] **Phase 62: Email Digest** - Scheduled HTML email delivery of daily/weekly operational summaries via Resend
+- [ ] **Phase 63: Call Graph** - Directed agent/tool dependency graph with dagre layout, node state coloring, and error path highlighting
+- [ ] **Phase 64: PagerDuty** - Incident trigger/resolve lifecycle via PagerDuty Events API v2 with per-rule toggle
+- [ ] **Phase 65: GitHub Actions** - Workflow dispatch trigger from alert rules with configurable repo/PAT and rate limiting
 
 ## Phase Details
 
@@ -213,6 +222,89 @@ Plans:
 - [x] 58-01-PLAN.md — Status field on CommandEntry, collapsible sections, dynamic search placeholder, test update, visual verification
 **UI hint**: yes
 
+### Phase 59: Schema Foundation
+**Goal**: All new Convex tables and field extensions required by v5.0 are in place so that visualization and integration phases have a stable backend to build against
+**Depends on**: Phase 58 (last shipped phase)
+**Requirements**: SCH-01, SCH-02, SCH-03, SCH-04
+**Success Criteria** (what must be TRUE):
+  1. A `callGraphEdges` table exists in the Convex schema with integration dependency fields and can be upserted from ingest events
+  2. `llmMetrics` rows carry optional `agentId` and `toolName` fields with a working `by_agent` index queryable from the dashboard
+  3. Each `alertRuleCustom` row has `pagerdutyConfig` (nested object with enabled/routingKey/severity) and `githubTrigger` (nested object with enabled/repo/workflowFile/ref) fields editable through existing alert rule mutations
+  4. Three delivery log tables (`emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) exist and accept insert mutations
+**Plans**: 2 plans
+Plans:
+- [x] 59-01-PLAN.md -- Schema definitions (4 new tables, 2 extensions) + Wave 0 test stubs
+- [x] 59-02-PLAN.md -- Mutations, ingest wiring, archival extension, backfill
+
+### Phase 60: Context Window Animation
+**Goal**: Operators can see how a session's context window is filling in real time — growth rate, current pressure, and when compactions occur
+**Depends on**: Phase 59
+**Requirements**: VIZ-02
+**Success Criteria** (what must be TRUE):
+  1. An animated progress bar on the session detail view shows current context window fill percentage with color change at 70% (warning) and 90% (critical)
+  2. An area chart below the bar plots token count growth over session elapsed time, updating as new LLM events arrive
+  3. Compaction events appear as vertical markers on the area chart at the timestamp they occurred
+  4. The component renders correctly when no session is active (empty/zero state)
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 61: Token Sunburst
+**Goal**: Operators can see exactly which agents and tools are consuming tokens at a glance, with the ability to drill into any subtree
+**Depends on**: Phase 59 (agentId field on llmMetrics)
+**Requirements**: VIZ-03
+**Success Criteria** (what must be TRUE):
+  1. A two-level ring chart renders on the Analytics page with agents as the inner ring and tools as the outer ring, each arc sized proportionally to token count
+  2. Hovering any arc shows a tooltip with entity name, token count, and percentage of total
+  3. Clicking an agent arc zooms the chart to show only that agent's tool breakdown
+  4. The center of the chart displays total tokens consumed and estimated cost for the visible selection
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 62: Email Digest
+**Goal**: Operators receive a rich HTML operational summary in their inbox on a schedule, without having to visit the dashboard
+**Depends on**: Phase 59 (emailDeliveryLog table)
+**Requirements**: EXT-01
+**Success Criteria** (what must be TRUE):
+  1. A Convex cron job fires on the configured schedule (daily and/or weekly) and sends an HTML email to the configured recipient via Resend
+  2. The email body includes sections for active alerts, token cost, anomaly flags, and the latest briefing narrative
+  3. Every send attempt (success or failure) writes a row to `emailDeliveryLog` visible in the Settings page
+  4. The operator can configure recipient address and schedule from the Settings page without redeploying
+**Plans**: TBD
+
+### Phase 63: Call Graph
+**Goal**: Operators can see the live dependency graph of agent/tool integrations, identify which nodes are erroring, and trace how errors propagate
+**Depends on**: Phase 59 (callGraphEdges table), Phase 60 (establishes D3/React pattern)
+**Requirements**: VIZ-01
+**Success Criteria** (what must be TRUE):
+  1. The Call Graph page renders a directed graph with dagre top-down auto-layout showing all agent and tool nodes with edges representing call dependencies
+  2. Each node is colored by its current state: healthy (default), errored (red), or pending (muted)
+  3. When a node is in an errored state, the edges forming the error propagation path are highlighted
+  4. The graph updates in real time as new ingest events arrive without requiring a page reload
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 64: PagerDuty
+**Goal**: Critical alerts automatically open PagerDuty incidents and resolve them when the alert clears — operators get paged through their existing on-call tooling
+**Depends on**: Phase 59 (pagerdutyConfig field, pagerdutyDeliveryLog table)
+**Requirements**: EXT-02
+**Success Criteria** (what must be TRUE):
+  1. An alert rule with PagerDuty enabled triggers a PagerDuty incident via Events API v2 within 60 seconds of the rule firing
+  2. When the same alert rule resolves, the PagerDuty incident closes using the same stable `dedup_key`
+  3. Each trigger and resolve attempt writes a log row to `pagerdutyDeliveryLog` with status and timestamp
+  4. The operator can configure the routing key and enable/disable PagerDuty per rule from the alert rule editor
+**Plans**: TBD
+
+### Phase 65: GitHub Actions
+**Goal**: Alert rules can automatically dispatch GitHub Actions workflows — enabling auto-remediation without manual intervention
+**Depends on**: Phase 59 (githubTrigger field, githubTriggerLog table)
+**Requirements**: EXT-03
+**Success Criteria** (what must be TRUE):
+  1. An alert rule with GitHub trigger enabled fires a `workflow_dispatch` event to the configured repo/workflow/ref when the rule matches
+  2. Rate limiting prevents more than one dispatch per rule within the configured window
+  3. Each dispatch attempt (success, rate-limited, or failed) writes a row to `githubTriggerLog` visible from the Settings or Alerts page
+  4. The operator can configure repo, workflow file, ref, and PAT per rule from the alert rule editor
+**Plans**: TBD
+
 ## Execution Order
 
 ```
@@ -229,23 +321,41 @@ Phase 4 (Tasks)               ░░░░░░░░░░░░░░░░�
 Phase 6 (Alerts)              ░░░░░░░░░░░░██████████  After Phase 2
                                                     │
 Phase 7 (Intelligence)        ░░░░░░░░░░░░░░░░░░░░░░██████████  After Phase 5
+Phase 58 (Infrastructure)     Shipped 2026-04-14
+
+Phase 59 (Schema Foundation)  ██████████  Start now — unblocks all v5.0 phases
+                                  │
+Phase 60 (Context Window)     ░░░░██████████  After 59 — establishes viz pattern
+Phase 61 (Token Sunburst)     ░░░░░░░░██████████  After 59
+Phase 62 (Email Digest)       ░░░░██████████  After 59 — validates delivery pattern
+                                  │
+Phase 63 (Call Graph)         ░░░░░░░░░░░░██████████  After 59 + 60 (pattern)
+Phase 64 (PagerDuty)          ░░░░░░░░████████████  After 59
+Phase 65 (GitHub Actions)     ░░░░░░░░░░░░████████  After 59
 ```
 
-**Critical path:** Phase 1 -> Phase 2 -> Phase 3 (vision shift) -> Phase 4
+**Critical path (v5.0):** Phase 59 (schema) -> Phase 60 (viz pattern) -> Phase 63 (call graph)
 
 ## Progress
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. UI Foundation | 4/4 | Complete |  |
-| 2. Bidirectional Telemetry | 0/4 | Planned | - |
-| 3. Interaction Layer | 0/6 | Planned | - |
-| 4. Task Management | 0/6 | Planned | - |
-| 5. Data Pipeline | 0/5 | Planned | - |
-| 6. Alert Routing | 0/5 | Planned | - |
-| 7. Intelligence Layer | 0/5 | Planned | - |
-| 58. Infrastructure Layer | 2/1 | Complete    | 2026-04-14 |
+| 1. UI Foundation | 4/4 | Complete | - |
+| 2. Bidirectional Telemetry | 4/4 | Complete | - |
+| 3. Interaction Layer | 6/6 | Complete | - |
+| 4. Task Management | 6/6 | Complete | - |
+| 5. Data Pipeline | 5/5 | Complete | - |
+| 6. Alert Routing | 5/5 | Complete | - |
+| 7. Intelligence Layer | 5/5 | Complete | - |
+| 58. Infrastructure Layer | 1/1 | Complete | 2026-04-14 |
+| 59. Schema Foundation | 2/2 | Complete    | 2026-05-18 |
+| 60. Context Window Animation | 0/TBD | Not started | - |
+| 61. Token Sunburst | 0/TBD | Not started | - |
+| 62. Email Digest | 0/TBD | Not started | - |
+| 63. Call Graph | 0/TBD | Not started | - |
+| 64. PagerDuty | 0/TBD | Not started | - |
+| 65. GitHub Actions | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-04-14 — Phase 58 (Infrastructure Layer) replanned: consolidated from 2 plans to 1 plan covering D-02 (status field), D-06/D-07 (collapsible sections), D-12 (dynamic placeholder).*
+*Last updated: 2026-05-17 — v5.0 roadmap added (Phases 59-65)*

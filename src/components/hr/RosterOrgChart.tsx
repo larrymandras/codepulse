@@ -15,7 +15,7 @@ import dagre from "dagre";
 import AgentAvatar from "@/components/AgentAvatar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
-import type { RosterAgent } from "@/hooks/useRosterAgents";
+import type { RosterAgent, AvatarData } from "@/hooks/useRosterAgents";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -52,6 +52,7 @@ interface RosterNodeData {
   description?: string;
   tier: string;
   status: string;
+  avatarData?: AvatarData;
   [key: string]: unknown;
 }
 
@@ -79,7 +80,7 @@ function RosterNode({ data }: NodeProps<Node<RosterNodeData>>) {
       />
       <div className="flex items-center gap-2 mb-1.5">
         <AgentAvatar
-          avatar={{ name: data.name }}
+          avatar={data.avatarData ?? { name: data.name }}
           status={avatarStatus as "active" | "working" | "idle"}
           size="sm"
         />
@@ -172,6 +173,7 @@ function buildLayout(agents: RosterAgent[]) {
         description: agent.description,
         tier: agent.tier,
         status: agent.status,
+        avatarData: agent.avatarData,
       },
     };
   });

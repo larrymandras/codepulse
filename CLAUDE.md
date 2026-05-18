@@ -92,3 +92,14 @@ All `fetch()` calls to the Ástríðr backend (`ASTRIDR_API_BASE`) MUST include 
 Vitest with jsdom. Setup file at `src/test/setup.ts` mocks heavy externals (Clerk, Recharts, Three.js, Globe, React Flow, Tone.js). Tests live alongside source: `src/**/*.test.tsx`, `convex/**/*.test.ts`.
 
 Path alias `@/` resolves to `./src/` in both Vite and tsconfig.
+
+## graphify
+
+This project has a knowledge graph at graphify-out/.
+
+Rules:
+- If graphify-out/wiki/index.md exists, start there — read community and god node articles for cheap navigable context before grepping raw files.
+- For architecture and codebase questions, use `graphify query "<question>" --budget 2000` — this traverses the graph and caps output at ~2000 tokens. Do NOT read GRAPH_REPORT.md directly (it can be 300KB+).
+- For cross-module relationships, prefer `graphify path "<A>" "<B>"` or `graphify explain "<concept>"` over grep — these traverse EXTRACTED + INFERRED edges.
+- Only read GRAPH_REPORT.md if you specifically need the full community overview and the user asks for it.
+- After modifying code files in this session, run `graphify update .` to keep the graph current (AST-only, no API cost).

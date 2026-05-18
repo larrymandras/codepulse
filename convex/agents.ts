@@ -20,6 +20,27 @@ export const register = mutation({
       startedAt: Date.now() / 1000,
       model: args.model,
     });
+
+    // Auto-create agentProfile + avatar if this agent doesn't have one yet
+    const existing = await ctx.db
+      .query("agentProfiles")
+      .withIndex("by_profileId", (q) => q.eq("profileId", args.agentId))
+      .first();
+    if (!existing) {
+      const now = Date.now() / 1000;
+      const avatarId = await ctx.db.insert("avatars", {
+        name: args.agentId,
+        createdAt: now,
+      });
+      await ctx.db.insert("agentProfiles", {
+        profileId: args.agentId,
+        name: args.agentId,
+        model: args.model,
+        avatarId,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
   },
 });
 

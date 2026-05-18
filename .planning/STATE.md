@@ -1,46 +1,50 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: CodePulse Operational Excellence
-status: complete
-stopped_at: Milestone v4.0 complete
-last_updated: "2026-04-14T20:30:00.000Z"
-last_activity: 2026-04-14
+milestone: v5.0
+milestone_name: milestone
+status: ready_to_plan
+stopped_at: Phase 59 context gathered
+last_updated: "2026-05-18T02:12:02.024Z"
+last_activity: 2026-05-18 -- Phase 59 execution started
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 36
-  completed_plans: 37
-  percent: 100
+  total_phases: 15
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 0
+  percent: 7
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-14)
+See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Milestone v4.0 shipped — planning next milestone
+**Current focus:** Phase 59 — schema-foundation
 
 ## Current Position
 
-Milestone: v4.0 CodePulse Operational Excellence — SHIPPED
-Phase: All 8 phases complete
-Status: Ready for next milestone
-Last activity: 2026-04-14
+Phase: 60
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-18
 
-Progress: [██████████] 100%
+```
+v5.0 Progress: [                                   ] 0%
+Phase 59 ░  Phase 60 ░  Phase 61 ░  Phase 62 ░
+Phase 63 ░  Phase 64 ░  Phase 65 ░
+```
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v4.0 baseline):**
 
-- Total plans completed: 37
+- Total plans completed: 39
 - Phases: 8
 - Timeline: 39 days (2026-03-06 → 2026-04-14)
 
-**By Phase:**
+**v4.0 By Phase:**
 
 | Phase | Plans | Status |
 |-------|-------|--------|
@@ -51,7 +55,19 @@ Progress: [██████████] 100%
 | 05 | 5 | Complete |
 | 06 | 5 | Complete |
 | 07 | 5 | Complete |
-| 58 | 2 | Complete |
+| 58 | 1 | Complete |
+
+**v5.0 By Phase:**
+
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 59 | TBD | Not started |
+| 60 | TBD | Not started |
+| 61 | TBD | Not started |
+| 62 | TBD | Not started |
+| 63 | TBD | Not started |
+| 64 | TBD | Not started |
+| 65 | TBD | Not started |
 
 ## Accumulated Context
 
@@ -59,16 +75,23 @@ Progress: [██████████] 100%
 
 See PROJECT.md Key Decisions table for full history.
 
+**v5.0 key constraints:**
+
+- D3.js (or Recharts) for sunburst/area charts — dagre already available from Phase 3 for call graph layout
+- Resend for email delivery (consistent with existing Convex action pattern)
+- PagerDuty Events API v2 (not REST API) — stable dedup_key pattern for trigger/resolve lifecycle
+- GitHub PAT for Actions dispatch — GitHub App auth deferred to future requirement (EXT-03d2)
+
 ### Pending Todos
 
-None.
+- Run `/gsd-plan-phase 59` to begin Phase 59 planning
 
 ### Blockers/Concerns
 
-None.
+None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-04-14
-Stopped at: Milestone v4.0 complete
-Next step: /gsd-new-milestone
+Last session: 2026-05-17T19:20:05.942Z
+Stopped at: Phase 59 context gathered
+Next step: `/gsd-plan-phase 59`
