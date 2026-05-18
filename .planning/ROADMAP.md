@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 6: Alert Routing** - Configurable alert rules with Discord/Slack delivery and dashboard management
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
 - [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search (completed 2026-04-14)
-- [ ] **Phase 59: Schema Foundation** - New tables and field extensions that unblock all v5.0 visualizations and integrations
+- [x] **Phase 59: Schema Foundation** - New tables and field extensions that unblock all v5.0 visualizations and integrations (completed 2026-05-18)
 - [ ] **Phase 60: Context Window Animation** - Real-time animated context window progress bar with area chart and compaction markers
 - [ ] **Phase 61: Token Sunburst** - Two-level ring chart showing per-agent/per-tool token consumption with drill-down
 - [ ] **Phase 62: Email Digest** - Scheduled HTML email delivery of daily/weekly operational summaries via Resend
@@ -234,7 +234,7 @@ Plans:
 **Plans**: 2 plans
 Plans:
 - [x] 59-01-PLAN.md -- Schema definitions (4 new tables, 2 extensions) + Wave 0 test stubs
-- [ ] 59-02-PLAN.md -- Mutations, ingest wiring, archival extension, backfill
+- [x] 59-02-PLAN.md -- Mutations, ingest wiring, archival extension, backfill
 
 ### Phase 60: Context Window Animation
 **Goal**: Operators can see how a session's context window is filling in real time — growth rate, current pressure, and when compactions occur
@@ -348,7 +348,7 @@ Phase 65 (GitHub Actions)     ░░░░░░░░░░░░████�
 | 6. Alert Routing | 5/5 | Complete | - |
 | 7. Intelligence Layer | 5/5 | Complete | - |
 | 58. Infrastructure Layer | 1/1 | Complete | 2026-04-14 |
-| 59. Schema Foundation | 1/2 | In Progress|  |
+| 59. Schema Foundation | 2/2 | Complete   | 2026-05-18 |
 | 60. Context Window Animation | 0/TBD | Not started | - |
 | 61. Token Sunburst | 0/TBD | Not started | - |
 | 62. Email Digest | 0/TBD | Not started | - |
