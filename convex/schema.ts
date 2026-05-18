@@ -277,11 +277,14 @@ export default defineSchema({
     sessionId: v.optional(v.string()),
     timestamp: v.float64(),
     archived: v.optional(v.boolean()),
+    agentId: v.optional(v.string()),    // Phase 59 SCH-02
+    toolName: v.optional(v.string()),   // Phase 59 SCH-02
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])
     .index("by_session", ["sessionId", "timestamp"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_agent", ["agentId", "timestamp"]),
 
   securityEvents: defineTable({
     eventType: v.string(),
@@ -877,6 +880,17 @@ export default defineSchema({
       logic: v.string(),          // "AND" | "OR"
     }))),
     messageTemplate: v.optional(v.string()),
+    pagerdutyConfig: v.optional(v.object({   // Phase 59 D-06
+      enabled: v.boolean(),
+      routingKey: v.string(),
+      severity: v.optional(v.string()),
+    })),
+    githubTrigger: v.optional(v.object({     // Phase 59 D-05
+      enabled: v.boolean(),
+      repo: v.string(),
+      workflowFile: v.string(),
+      ref: v.string(),
+    })),
     createdAt: v.float64(),
     updatedAt: v.float64(),
   }).index("by_enabled", ["enabled"]).index("by_severity", ["severity"]),
@@ -899,6 +913,74 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
     sentAt: v.float64(),
   }).index("by_alert", ["alertId", "sentAt"]),
+
+  // ============================================================
+  // SCHEMA FOUNDATION (Phase 59)
+  // ============================================================
+
+  callGraphEdges: defineTable({
+    agentId: v.string(),
+    toolName: v.string(),
+    sessionId: v.string(),
+    callCount: v.float64(),
+    lastCallAt: v.float64(),
+    lastErrorAt: v.optional(v.float64()),
+    errorCount: v.float64(),
+    status: v.string(),           // "healthy" | "errored"
+    archived: v.optional(v.boolean()),
+  })
+    .index("by_agent_tool", ["agentId", "toolName"])
+    .index("by_session", ["sessionId"])
+    .index("by_timestamp", ["lastCallAt"]),
+
+  emailDeliveryLog: defineTable({
+    alertId: v.id("alerts"),
+    ruleId: v.string(),
+    attempt: v.float64(),
+    status: v.string(),           // "success" | "failed"
+    errorMessage: v.optional(v.string()),
+    recipient: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    sentAt: v.float64(),
+    archived: v.optional(v.boolean()),
+  })
+    .index("by_alert", ["alertId", "sentAt"])
+    .index("by_rule", ["ruleId", "sentAt"])
+    .index("by_timestamp", ["sentAt"]),
+
+  pagerdutyDeliveryLog: defineTable({
+    alertId: v.id("alerts"),
+    ruleId: v.string(),
+    attempt: v.float64(),
+    status: v.string(),           // "success" | "failed" | "resolved"
+    errorMessage: v.optional(v.string()),
+    dedupKey: v.optional(v.string()),
+    incidentKey: v.optional(v.string()),
+    action: v.optional(v.string()),   // "trigger" | "resolve"
+    sentAt: v.float64(),
+    archived: v.optional(v.boolean()),
+  })
+    .index("by_alert", ["alertId", "sentAt"])
+    .index("by_rule", ["ruleId", "sentAt"])
+    .index("by_timestamp", ["sentAt"]),
+
+  githubTriggerLog: defineTable({
+    alertId: v.id("alerts"),
+    ruleId: v.string(),
+    attempt: v.float64(),
+    status: v.string(),           // "success" | "failed" | "rate_limited"
+    errorMessage: v.optional(v.string()),
+    dispatchId: v.optional(v.string()),
+    runUrl: v.optional(v.string()),
+    rateLimited: v.optional(v.boolean()),
+    repo: v.optional(v.string()),
+    workflowFile: v.optional(v.string()),
+    sentAt: v.float64(),
+    archived: v.optional(v.boolean()),
+  })
+    .index("by_alert", ["alertId", "sentAt"])
+    .index("by_rule", ["ruleId", "sentAt"])
+    .index("by_timestamp", ["sentAt"]),
 
   // ============================================================
   // INTELLIGENCE LAYER (Phase 7)
