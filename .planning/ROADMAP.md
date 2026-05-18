@@ -229,7 +229,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. A `callGraphEdges` table exists in the Convex schema with integration dependency fields and can be upserted from ingest events
   2. `llmMetrics` rows carry optional `agentId` and `toolName` fields with a working `by_agent` index queryable from the dashboard
-  3. Each `alertRuleCustom` row has `pagerdutyEnabled` and `githubTrigger` fields editable through existing alert rule mutations
+  3. Each `alertRuleCustom` row has `pagerdutyConfig` (nested object with enabled/routingKey/severity) and `githubTrigger` (nested object with enabled/repo/workflowFile/ref) fields editable through existing alert rule mutations
   4. Three delivery log tables (`emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) exist and accept insert mutations
 **Plans**: 2 plans
 Plans:
@@ -285,7 +285,7 @@ Plans:
 
 ### Phase 64: PagerDuty
 **Goal**: Critical alerts automatically open PagerDuty incidents and resolve them when the alert clears — operators get paged through their existing on-call tooling
-**Depends on**: Phase 59 (pagerdutyEnabled field, pagerdutyDeliveryLog table)
+**Depends on**: Phase 59 (pagerdutyConfig field, pagerdutyDeliveryLog table)
 **Requirements**: EXT-02
 **Success Criteria** (what must be TRUE):
   1. An alert rule with PagerDuty enabled triggers a PagerDuty incident via Events API v2 within 60 seconds of the rule firing

@@ -217,11 +217,10 @@ export const backfillAgentId = internalMutation({
         }
       }
 
-      // Only patch if we found a value to set
-      if (derivedAgentId) {
-        await ctx.db.patch(row._id, { agentId: derivedAgentId });
-        patched++;
-      }
+      await ctx.db.patch(row._id, {
+        agentId: derivedAgentId ?? "_unknown",
+      });
+      patched++;
     }
 
     // Return processed count: caller repeats until processed === 0

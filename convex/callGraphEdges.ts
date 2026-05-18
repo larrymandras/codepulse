@@ -23,6 +23,7 @@ export const upsertEdge = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, {
+        sessionId: args.sessionId,
         callCount: existing.callCount + 1,
         lastCallAt: args.timestamp,
         errorCount: args.success ? existing.errorCount : existing.errorCount + 1,

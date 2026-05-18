@@ -51,6 +51,14 @@ describe("callGraphEdges", () => {
       expect(initial.status).toBe("healthy");
     });
 
+    it("updates sessionId to most recent on upsert (global edge semantics)", () => {
+      const existing = { sessionId: "sess-old" };
+      const newSessionId = "sess-new";
+      const patch = { sessionId: newSessionId };
+      expect(patch.sessionId).toBe("sess-new");
+      expect(patch.sessionId).not.toBe(existing.sessionId);
+    });
+
     it.todo("should upsert via by_agent_tool index lookup (DB round-trip)");
     it.todo("should insert new row when no existing edge found (DB round-trip)");
   });

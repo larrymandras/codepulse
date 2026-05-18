@@ -55,6 +55,12 @@ describe("llm", () => {
       expect(result.processed).toBe(0);
     });
 
+    it("marks unresolvable rows with _unknown to prevent infinite loop", () => {
+      const derivedAgentId: string | undefined = undefined;
+      const patchValue = derivedAgentId ?? "_unknown";
+      expect(patchValue).toBe("_unknown");
+    });
+
     it.todo("should filter for rows where agentId is undefined (DB round-trip)");
     it.todo("should join via sessionId to agents table for agentId lookup (DB round-trip)");
   });

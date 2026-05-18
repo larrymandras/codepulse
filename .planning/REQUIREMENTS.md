@@ -21,7 +21,7 @@
 
 - [ ] **SCH-01**: New `callGraphEdges` table with materialized integration dependency edges upserted on ingest events
 - [ ] **SCH-02**: `llmMetrics` table extended with optional `agentId` and `toolName` fields and `by_agent` index for sunburst hierarchy
-- [ ] **SCH-03**: `alertRuleCustom` table extended with `pagerdutyEnabled` and `githubTrigger` fields for integration delivery config
+- [ ] **SCH-03**: `alertRuleCustom` table extended with `pagerdutyConfig` (nested object: enabled, routingKey, severity?) and `githubTrigger` (nested object: enabled, repo, workflowFile, ref) fields for integration delivery config
 - [ ] **SCH-04**: New delivery log tables (`emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) for audit trails
 
 ## v4.0 Requirements (Validated)
