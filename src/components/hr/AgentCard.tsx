@@ -62,7 +62,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
     >
       {/* Gradient header strip */}
       <div
-        className={`h-6 relative ${TIER_GRADIENT[agent.tier] ?? TIER_GRADIENT.shared}`}
+        className={`h-16 relative ${TIER_GRADIENT[agent.tier] ?? TIER_GRADIENT.shared}`}
       >
         <button
           className="absolute right-1 top-1 p-0.5 rounded hover:bg-white/20 transition-colors"
@@ -77,11 +77,11 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       {/* Content */}
       <div className="flex flex-col items-center px-4 pb-4">
         {/* Avatar overlapping header */}
-        <div className="-mt-3">
+        <div className="-mt-10">
           <AgentAvatar
             avatar={{ name: agent.name }}
             status={avatarStatus as "active" | "working" | "idle"}
-            size="md"
+            size="xl"
           />
         </div>
 

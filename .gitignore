@@ -2,3 +2,15 @@ node_modules/
 dist/
 .env.local
 .worktrees/
+graphify-out/
+
+# Claude Code
+.claude/
+.last-update-check
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Design artifacts
+open-design/
