@@ -195,6 +195,26 @@ export default defineSchema({
     useCount: v.optional(v.float64()),
   }).index("by_name", ["name"]),
 
+  skillCategories: defineTable({
+    name: v.string(),
+    displayName: v.string(),
+    description: v.string(),
+    icon: v.string(),
+    color: v.string(),
+    sortOrder: v.float64(),
+  }).index("by_name", ["name"]),
+
+  skillOverrides: defineTable({
+    skillName: v.string(),
+    displayName: v.string(),
+    categoryName: v.string(),
+    description: v.optional(v.string()),
+    hidden: v.boolean(),
+    isAutoAssigned: v.boolean(),
+  })
+    .index("by_skillName", ["skillName"])
+    .index("by_categoryName", ["categoryName"]),
+
   registeredHooks: defineTable({
     hookType: v.string(), // "PreToolUse" | "PostToolUse" | etc.
     command: v.string(),
