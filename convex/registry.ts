@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 export const syncInventory = mutation({
   args: {
@@ -125,6 +126,9 @@ export const syncInventory = mutation({
             description: skill.description,
             source: skill.source,
             discoveredAt: now,
+          });
+          await ctx.runMutation(api.skillCategories.autoSeedSkill, {
+            skillName: skill.name,
           });
           // Log addition
           await ctx.db.insert("configChanges", {
@@ -272,6 +276,9 @@ export const syncFullInventory = mutation({
             source: skill.source ?? undefined,
             discoveredAt: now,
             origin: skill.origin ?? undefined,
+          });
+          await ctx.runMutation(api.skillCategories.autoSeedSkill, {
+            skillName: skill.name,
           });
           await ctx.db.insert("configChanges", {
             configKey: `skill:${skill.name}`,
@@ -858,6 +865,9 @@ export const importSkills = mutation({
           description: item.description,
           source: item.source ?? args.importSource,
           discoveredAt: now,
+        });
+        await ctx.runMutation(api.skillCategories.autoSeedSkill, {
+          skillName: item.name,
         });
         created++;
       }
