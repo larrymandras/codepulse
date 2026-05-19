@@ -52,11 +52,11 @@ export function WarRoomKanbanColumn({
       }`}
     >
       {/* Column header */}
-      <div className="h-12 px-4 flex items-center gap-2 border-b border-(--border)">
+      <div className="h-14 px-4 flex items-center gap-3 border-b border-(--border)">
         <AgentAvatar
           avatar={agent.avatar ?? { name: agent.agentName }}
           status="active"
-          size="sm"
+          size="md"
         />
         <span className="text-sm font-semibold">{agent.agentName}</span>
         <span className="text-xs text-muted-foreground ml-auto">
