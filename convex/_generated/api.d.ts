@@ -78,6 +78,7 @@ import type * as metrics from "../metrics.js";
 import type * as missionControl from "../missionControl.js";
 import type * as navCounts from "../navCounts.js";
 import type * as notifications from "../notifications.js";
+import type * as operatorScores from "../operatorScores.js";
 import type * as otelLogs from "../otelLogs.js";
 import type * as otelMetrics from "../otelMetrics.js";
 import type * as permissionRequests from "../permissionRequests.js";
@@ -192,6 +193,7 @@ declare const fullApi: ApiFromModules<{
   missionControl: typeof missionControl;
   navCounts: typeof navCounts;
   notifications: typeof notifications;
+  operatorScores: typeof operatorScores;
   otelLogs: typeof otelLogs;
   otelMetrics: typeof otelMetrics;
   permissionRequests: typeof permissionRequests;

@@ -72,8 +72,8 @@ function MetricCardInner({
   onClick,
 }: MetricCardProps) {
   const trendColor =
-    trend === "up" ? "text-(--status-ok)"
-    : trend === "down" ? "text-(--status-error)"
+    trend === "up" ? "text-emerald-500"
+    : trend === "down" ? "text-red-500"
     : "text-muted-foreground";
 
   const valueColor =
@@ -82,11 +82,17 @@ function MetricCardInner({
       : undefined;
 
   return (
-    <div className="p-4" onClick={onClick} style={onClick ? { cursor: "pointer" } : undefined}>
-      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
-      <div className="mt-1 flex items-baseline gap-2">
+    <div 
+      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-colors hover:border-primary/50" 
+      onClick={onClick} 
+      style={onClick ? { cursor: "pointer" } : undefined}
+    >
+      <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+      
+      <p className="text-xs text-muted-foreground uppercase tracking-widest font-mono z-10 relative">{label}</p>
+      <div className="mt-2 flex items-baseline gap-2 z-10 relative">
         <span
-          className="text-2xl font-semibold tabular-nums"
+          className="text-3xl font-medium tracking-tight text-white"
           style={valueColor ? { color: valueColor } : undefined}
         >
           {numericValue != null ? (

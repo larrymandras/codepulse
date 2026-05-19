@@ -114,54 +114,54 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: #09090b;
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: #141416;
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: #141416;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: #f97316;
+  --primary-foreground: #09090b;
+  --secondary: #27272a;
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(0.269 0 0);
-  --input: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #f97316;
+  --chart-1: #f97316;
+  --chart-2: #22c55e;
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: #141416;
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: #f97316;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #27272a;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  --sidebar-border: #27272a;
+  --sidebar-ring: #f97316;
 
-  --status-ok: oklch(0.72 0.17 142);
-  --status-error: oklch(0.72 0.20 27);
-  --status-warn: oklch(0.80 0.14 85);
-  --chart-bar: oklch(0.55 0 0);
-  --chart-bar-accent: oklch(0.70 0.10 220);
-  --chart-p50: oklch(0.70 0.10 220);
-  --chart-p95: oklch(0.80 0.14 85);
-  --chart-p99: oklch(0.72 0.20 27);
+  --status-ok: #22c55e;
+  --status-error: #ef4444;
+  --status-warn: #f59e0b;
+  --chart-bar: #27272a;
+  --chart-bar-accent: #f97316;
+  --chart-p50: #f97316;
+  --chart-p95: #f59e0b;
+  --chart-p99: #ef4444;
 
   /* Phase 72: War Room speaking ring tokens */
-  --speaking-ring: oklch(0.72 0.17 142);
-  --speaking-ring-glow: oklch(0.72 0.17 142 / 0.35);
+  --speaking-ring: #22c55e;
+  --speaking-ring-glow: rgba(34, 197, 94, 0.35);
 
   /* Phase 63 dark overrides */
-  --glass-bg: oklch(0.205 0 0 / 0.60);
-  --glass-border: oklch(0.269 0 0 / 0.5);
+  --glass-bg: rgba(20, 20, 22, 0.75);
+  --glass-border: rgba(39, 39, 42, 0.6);
   --glass-blur: 12px;
 }
 
@@ -179,6 +179,29 @@
 
 body {
   font-family: var(--font-geist);
+}
+
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 50% 100%, rgba(249, 115, 22, 0.15) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 code, pre, .font-mono {
