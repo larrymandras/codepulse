@@ -16,6 +16,7 @@ import DriftTimeline from "../components/DriftTimeline";
 import ToolExecutionPanel from "../components/ToolExecutionPanel";
 import GitActivityWidget from "../components/GitActivityWidget";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import OperatorScoreCard from "../components/OperatorScoreCard";
 
 type ChartTab = "pulse" | "timeline";
 
@@ -51,6 +52,11 @@ export default function Dashboard() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
+      {/* Operator Score Hero Card (Phase 120) */}
+      <SectionErrorBoundary name="Operator Score">
+        <OperatorScoreCard />
+      </SectionErrorBoundary>
+
       {/* Hero Stats Bar */}
       <SectionErrorBoundary name="Live Metrics">
         <div ref={heroFlashRef}>
@@ -60,30 +66,30 @@ export default function Dashboard() {
 
       {/* Activity Charts with Tab Toggle */}
       <SectionErrorBoundary name="Activity Charts">
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl">
-          <div className="flex items-center gap-1 p-2 pb-0">
+        <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl relative group overflow-hidden">
+          <div className="flex items-center gap-6 p-4 pb-0 border-b border-border/50">
             <button
               onClick={() => setChartTab("pulse")}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "pulse"
-                  ? "bg-gray-700 text-gray-100"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent hover:text-gray-200"
               }`}
             >
               Activity Pulse
             </button>
             <button
               onClick={() => setChartTab("timeline")}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "timeline"
-                  ? "bg-gray-700 text-gray-100"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "text-primary border-primary"
+                  : "text-muted-foreground border-transparent hover:text-gray-200"
               }`}
             >
               Conversation Timeline
             </button>
           </div>
-          <div className="p-0">
+          <div className="p-0 bg-grid-pattern min-h-[300px]">
             {chartTab === "pulse" ? (
               <PulseChart events={events} />
             ) : (
