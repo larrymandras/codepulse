@@ -23,6 +23,7 @@ export default function Skills() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [view, setView] = useState<SkillsView>(getStoredView);
   const [editMode, setEditMode] = useState(false);
+  const [manualSetup, setManualSetup] = useState(false);
   const [editingSkill, setEditingSkill] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Doc<"skillCategories"> | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -117,7 +118,7 @@ export default function Skills() {
     setEditMode(true);
   };
 
-  const needsSeed = enrichedSkills.length > 0 && categories.length === 0;
+  const needsSeed = enrichedSkills.length > 0 && categories.length === 0 && !manualSetup;
 
   const editingSkillData = editingSkill
     ? enrichedSkills.find((s) => s.name === editingSkill)
@@ -145,12 +146,20 @@ export default function Skills() {
           <p className="text-gray-300 mb-3">
             Skills found but no categories set up yet.
           </p>
-          <button
-            onClick={() => seedAll()}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors text-sm"
-          >
-            Set Up Categories
-          </button>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => seedAll()}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors text-sm"
+            >
+              Auto-Classify
+            </button>
+            <button
+              onClick={() => { setManualSetup(true); setEditMode(true); }}
+              className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+            >
+              Set Up Manually
+            </button>
+          </div>
         </div>
       )}
 

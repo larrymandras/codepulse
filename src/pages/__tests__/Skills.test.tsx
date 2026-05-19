@@ -190,7 +190,8 @@ describe("Skills page", () => {
     setupMocks(MOCK_ENRICHED_SKILLS, [], 0);
     render(<Skills />);
     expect(screen.getByText(/no categories set up yet/)).toBeInTheDocument();
-    expect(screen.getByText("Set Up Categories")).toBeInTheDocument();
+    expect(screen.getByText("Auto-Classify")).toBeInTheDocument();
+    expect(screen.getByText("Set Up Manually")).toBeInTheDocument();
   });
 
   it("shows new skills banner when auto-assigned count > 0", () => {
