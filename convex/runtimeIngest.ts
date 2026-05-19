@@ -721,6 +721,20 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "operator_score": {
+          const d = data as any;
+          await ctx.runMutation(api.operatorScores.insert, {
+            score: d.score ?? 0,
+            memoryFreshness: d.memoryFreshness ?? d.memory_freshness ?? 0,
+            skillRoi: d.skillRoi ?? d.skill_roi ?? 0,
+            activityLevel: d.activityLevel ?? d.activity_level ?? 0,
+            uptime: d.uptime ?? 0,
+            trendDay: d.trendDay ?? d.trend_day ?? undefined,
+            trend7d: d.trend7d ?? d.trend_7d ?? undefined,
+            computedAt: d.computedAt ?? d.computed_at ?? Date.now(),
+          });
+          break;
+        }
       }
     }
 

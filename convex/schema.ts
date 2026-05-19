@@ -1310,6 +1310,21 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"]),
 
   // ============================================================
+  // OPERATOR SCORES (Phase 120)
+  // ============================================================
+
+  operatorScores: defineTable({
+    score: v.float64(),
+    memoryFreshness: v.float64(),
+    skillRoi: v.float64(),
+    activityLevel: v.float64(),
+    uptime: v.float64(),
+    trendDay: v.optional(v.string()),   // "up" | "down" | "flat" -- backend-computed
+    trend7d: v.optional(v.string()),    // "improving" | "declining" | "flat" -- backend-computed
+    computedAt: v.float64(),
+  }).index("by_computedAt", ["computedAt"]),
+
+  // ============================================================
   // AGENT PERFORMANCE METRICS (Phase 81)
   // ============================================================
 
