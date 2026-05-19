@@ -37,7 +37,8 @@ export const DEFAULT_COLORS: Record<string, string> = {
 
 export function extractPrefix(skillName: string): string {
   if (!skillName) return "uncategorized";
-  const match = skillName.match(/^([a-zA-Z]+)/);
+  const normalized = skillName.replace(/^cc_/, "");
+  const match = normalized.match(/^([a-zA-Z][a-zA-Z0-9]*)/);
   if (!match) return "uncategorized";
   return match[1].toLowerCase();
 }
@@ -51,10 +52,11 @@ export function generateDisplayName(
   skillName: string,
   prefix: string
 ): string {
+  const normalized = skillName.replace(/^cc_/, "");
   if (prefix === "uncategorized") {
-    return skillName.split(/[-_]/).map(titleCase).join(" ");
+    return normalized.split(/[-_]/).map(titleCase).join(" ");
   }
-  const withoutPrefix = skillName.replace(new RegExp(`^${prefix}[-_]?`), "");
+  const withoutPrefix = normalized.replace(new RegExp(`^${prefix}[-_]?`), "");
   if (!withoutPrefix) return titleCase(prefix);
   return withoutPrefix
     .split(/[-_]/)

@@ -15,8 +15,16 @@ describe("extractPrefix", () => {
     expect(extractPrefix("legal-nda")).toBe("legal");
   });
 
-  it("extracts prefix from underscore-separated names", () => {
-    expect(extractPrefix("cc_article-writer")).toBe("cc");
+  it("strips cc_ namespace and extracts real prefix", () => {
+    expect(extractPrefix("cc_article-writer")).toBe("article");
+  });
+
+  it("strips cc_ and extracts prefix from gsd skill", () => {
+    expect(extractPrefix("cc_gsd-plan-phase")).toBe("gsd");
+  });
+
+  it("handles alphanumeric prefixes like d3js", () => {
+    expect(extractPrefix("cc_d3js-visualization")).toBe("d3js");
   });
 
   it("extracts prefix from names without separators", () => {
@@ -45,8 +53,12 @@ describe("generateDisplayName", () => {
     expect(generateDisplayName("init", "uncategorized")).toBe("Init");
   });
 
-  it("handles underscore-separated skill names", () => {
-    expect(generateDisplayName("cc_article-writer", "cc")).toBe("Article Writer");
+  it("strips cc_ namespace before generating display name", () => {
+    expect(generateDisplayName("cc_article-writer", "article")).toBe("Writer");
+  });
+
+  it("strips cc_ and prefix for gsd skills", () => {
+    expect(generateDisplayName("cc_gsd-plan-phase", "gsd")).toBe("Plan Phase");
   });
 
   it("handles multi-word segments", () => {
