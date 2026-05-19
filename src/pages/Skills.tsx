@@ -2,31 +2,23 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { CategoryTabs } from "@/components/skills/CategoryTabs";
-import { ViewToggle, type SkillsView } from "@/components/skills/ViewToggle";
-import { EditModeToggle } from "@/components/skills/EditModeToggle";
-import { SkillGrid } from "@/components/skills/SkillGrid";
-import { SkillList } from "@/components/skills/SkillList";
+import { CategoryGrid } from "@/components/skills/CategoryGrid";
+import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
+import { UncategorizedSkills } from "@/components/skills/UncategorizedSkills";
 import { FrequentSkills } from "@/components/skills/FrequentSkills";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
 import { CategoryEditPopover } from "@/components/skills/CategoryEditPopover";
 import type { Doc } from "../../convex/_generated/dataModel";
 
-function getStoredView(): SkillsView {
-  return (localStorage.getItem("codepulse-skills-view") as SkillsView) ?? "grid";
-}
-
 export default function Skills() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [view, setView] = useState<SkillsView>(getStoredView);
-  const [editMode, setEditMode] = useState(false);
-  const [manualSetup, setManualSetup] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [editingSkill, setEditingSkill] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Doc<"skillCategories"> | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
@@ -41,10 +33,26 @@ export default function Skills() {
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
 
   const visibleSkills = useMemo(() => {
-    let filtered = enrichedSkills.filter((s) => !s.hidden);
-    if (activeCategory) {
-      filtered = filtered.filter((s) => s.categoryName === activeCategory);
+    return enrichedSkills.filter((s) => !s.hidden);
+  }, [enrichedSkills]);
+
+  const skillCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of visibleSkills) {
+      if (s.categoryName) {
+        counts[s.categoryName] = (counts[s.categoryName] ?? 0) + 1;
+      }
     }
+    return counts;
+  }, [visibleSkills]);
+
+  const uncategorizedSkills = useMemo(() => {
+    return visibleSkills.filter((s) => !s.categoryName);
+  }, [visibleSkills]);
+
+  const categorySkills = useMemo(() => {
+    if (!selectedCategory) return [];
+    let filtered = visibleSkills.filter((s) => s.categoryName === selectedCategory);
     if (search) {
       const q = search.toLowerCase();
       filtered = filtered.filter(
@@ -55,16 +63,29 @@ export default function Skills() {
       );
     }
     return filtered;
-  }, [enrichedSkills, activeCategory, search]);
+  }, [visibleSkills, selectedCategory, search]);
+
+  const selectedCategoryData = useMemo(() => {
+    if (!selectedCategory) return null;
+    const cat = categories.find((c) => c.name === selectedCategory);
+    if (!cat) return null;
+    return { name: cat.name, displayName: cat.displayName, icon: cat.icon, color: cat.color };
+  }, [selectedCategory, categories]);
 
   const handleLaunch = async (skillName: string) => {
     await recordLaunch({ name: skillName });
     navigate(`/chat?skill=${encodeURIComponent(skillName)}`);
   };
 
-  const handleViewChange = (v: SkillsView) => {
-    setView(v);
-    localStorage.setItem("codepulse-skills-view", v);
+  const handleReassignSkill = async (skillName: string, newCategoryName: string) => {
+    await updateOverride({ skillName, categoryName: newCategoryName });
+  };
+
+  const handleDropOnCategory = async (categoryName: string, e?: React.DragEvent) => {
+    const skillName = e?.dataTransfer.getData("text/plain");
+    if (!skillName) return;
+    await updateOverride({ skillName, categoryName });
+    setDropTarget(null);
   };
 
   const handleSaveSkillOverride = async (updates: {
@@ -74,10 +95,7 @@ export default function Skills() {
     hidden: boolean;
   }) => {
     if (!editingSkill) return;
-    await updateOverride({
-      skillName: editingSkill,
-      ...updates,
-    });
+    await updateOverride({ skillName: editingSkill, ...updates });
     setEditingSkill(null);
   };
 
@@ -100,11 +118,7 @@ export default function Skills() {
     color: string;
   }) => {
     const name = data.displayName.toLowerCase().replace(/\s+/g, "-");
-    await createCat({
-      name,
-      ...data,
-      sortOrder: Date.now(),
-    });
+    await createCat({ name, ...data, sortOrder: Date.now() });
     setCreatingCategory(false);
   };
 
@@ -114,11 +128,7 @@ export default function Skills() {
     setEditingCategory(null);
   };
 
-  const handleReviewNew = () => {
-    setEditMode(true);
-  };
-
-  const needsSeed = enrichedSkills.length > 0 && categories.length === 0 && !manualSetup;
+  const needsSeed = enrichedSkills.length > 0 && categories.length === 0;
 
   const editingSkillData = editingSkill
     ? enrichedSkills.find((s) => s.name === editingSkill)
@@ -129,17 +139,8 @@ export default function Skills() {
     : 0;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-white font-heading">
-          Skills
-        </h1>
-        {editMode && (
-          <span className="text-xs text-indigo-400 bg-indigo-900/30 px-2 py-1 rounded">
-            Edit Mode
-          </span>
-        )}
-      </div>
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      <h1 className="text-xl font-semibold text-white font-heading">Skills</h1>
 
       {needsSeed && (
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 text-center">
@@ -154,7 +155,7 @@ export default function Skills() {
               Auto-Classify
             </button>
             <button
-              onClick={() => { setManualSetup(true); setEditMode(true); }}
+              onClick={() => setCreatingCategory(true)}
               className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
             >
               Set Up Manually
@@ -163,63 +164,80 @@ export default function Skills() {
         </div>
       )}
 
-      {!needsSeed && (
+      {/* ── Main view: category grid + uncategorized ── */}
+      {!needsSeed && !selectedCategory && (
         <>
-          <input
-            type="text"
-            placeholder="Search skills..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none"
-          />
-
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <CategoryTabs
-                categories={categories}
-                activeCategory={activeCategory}
-                onSelect={setActiveCategory}
-                editMode={editMode}
-                onEditCategory={setEditingCategory}
-                onAddCategory={() => setCreatingCategory(true)}
-              />
-            </div>
-            <ViewToggle view={view} onChange={handleViewChange} />
-            <EditModeToggle
-              editMode={editMode}
-              onToggle={() => setEditMode(!editMode)}
-            />
-          </div>
-
           {autoAssignedCount > 0 && (
             <NewSkillsBanner
               count={autoAssignedCount}
-              onReview={handleReviewNew}
+              onReview={() => {}}
               onAcceptAll={() => bulkAccept()}
             />
           )}
 
           <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
 
-          {view === "grid" ? (
-            <SkillGrid
-              skills={visibleSkills}
-              editMode={editMode}
-              onLaunch={handleLaunch}
-              onEditSkill={setEditingSkill}
-            />
-          ) : (
-            <SkillList
-              skills={visibleSkills}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Categories
+            </h2>
+            <CategoryGrid
               categories={categories}
-              editMode={editMode}
-              onLaunch={handleLaunch}
-              onEditSkill={setEditingSkill}
+              skillCounts={skillCounts}
+              onSelectCategory={setSelectedCategory}
+              onEditCategory={setEditingCategory}
+              onAddCategory={() => setCreatingCategory(true)}
+              dropTargetCategory={dropTarget}
+              onDragOverCategory={(name) => setDropTarget(name)}
+              onDragLeaveCategory={() => setDropTarget(null)}
+              onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
             />
+          </div>
+
+          {uncategorizedSkills.length > 0 && (
+            <div className="border-t border-gray-700/50 pt-6">
+              <UncategorizedSkills
+                skills={uncategorizedSkills}
+                onLaunch={handleLaunch}
+                onEditSkill={setEditingSkill}
+              />
+            </div>
           )}
         </>
       )}
 
+      {/* ── Drill-in: skills in a selected category ── */}
+      {!needsSeed && selectedCategory && selectedCategoryData && (
+        <div>
+          <input
+            type="text"
+            placeholder="Search skills..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none mb-4"
+          />
+
+          <SkillsInCategory
+            categoryName={selectedCategoryData.name}
+            categoryDisplayName={selectedCategoryData.displayName}
+            categoryIcon={selectedCategoryData.icon}
+            categoryColor={selectedCategoryData.color}
+            skills={categorySkills}
+            categories={categories.map((c) => ({
+              name: c.name,
+              displayName: c.displayName,
+              icon: c.icon,
+              color: c.color,
+            }))}
+            onBack={() => { setSelectedCategory(null); setSearch(""); }}
+            onLaunch={handleLaunch}
+            onEditSkill={setEditingSkill}
+            onReassignSkill={handleReassignSkill}
+          />
+        </div>
+      )}
+
+      {/* ── Modals ── */}
       {editingSkillData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <SkillEditPopover
@@ -227,8 +245,7 @@ export default function Skills() {
             displayName={editingSkillData.displayName}
             description={
               editingSkillData.overrideDescription ??
-              editingSkillData.description ??
-              ""
+              editingSkillData.description ?? ""
             }
             categoryName={editingSkillData.categoryName ?? "uncategorized"}
             hidden={editingSkillData.hidden}
@@ -269,6 +286,7 @@ export default function Skills() {
             onCancel={() => setCreatingCategory(false)}
             onDelete={() => {}}
             canDelete={false}
+            isNew
           />
         </div>
       )}

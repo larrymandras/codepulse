@@ -15,12 +15,20 @@ describe("extractPrefix", () => {
     expect(extractPrefix("legal-nda")).toBe("legal");
   });
 
-  it('returns "uncategorized" for names without hyphens', () => {
-    expect(extractPrefix("init")).toBe("uncategorized");
+  it("extracts prefix from underscore-separated names", () => {
+    expect(extractPrefix("cc_article-writer")).toBe("cc");
+  });
+
+  it("extracts prefix from names without separators", () => {
+    expect(extractPrefix("init")).toBe("init");
   });
 
   it('returns "uncategorized" for empty string', () => {
     expect(extractPrefix("")).toBe("uncategorized");
+  });
+
+  it('returns "uncategorized" for non-alpha start', () => {
+    expect(extractPrefix("123-test")).toBe("uncategorized");
   });
 });
 
@@ -35,6 +43,10 @@ describe("generateDisplayName", () => {
 
   it("titlecases the full name for uncategorized skills", () => {
     expect(generateDisplayName("init", "uncategorized")).toBe("Init");
+  });
+
+  it("handles underscore-separated skill names", () => {
+    expect(generateDisplayName("cc_article-writer", "cc")).toBe("Article Writer");
   });
 
   it("handles multi-word segments", () => {

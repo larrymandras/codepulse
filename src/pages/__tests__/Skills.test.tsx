@@ -127,6 +127,25 @@ const MOCK_ENRICHED_SKILLS = [
   },
 ];
 
+const MOCK_WITH_UNCATEGORIZED = [
+  ...MOCK_ENRICHED_SKILLS,
+  {
+    _id: "s4",
+    name: "misc-tool",
+    displayName: "Misc Tool",
+    description: "Unassigned skill",
+    categoryName: null as string | null,
+    categoryDisplayName: null as string | null,
+    categoryIcon: "⚡",
+    categoryColor: "gray",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: true,
+    useCount: 0,
+    discoveredAt: 1003,
+  },
+];
+
 function setupMocks(
   skills = MOCK_ENRICHED_SKILLS,
   categories = MOCK_CATEGORIES,
@@ -151,39 +170,50 @@ describe("Skills page", () => {
     expect(screen.getByText("Skills")).toBeInTheDocument();
   });
 
-  it("renders category tabs", () => {
+  it("renders category cards on default view", () => {
     render(<Skills />);
-    expect(screen.getByText("All")).toBeInTheDocument();
-    expect(screen.getByText("⚖️ Legal")).toBeInTheDocument();
-    expect(screen.getByText("📋 Project Management")).toBeInTheDocument();
+    expect(screen.getByText("Legal")).toBeInTheDocument();
+    expect(screen.getByText("Project Management")).toBeInTheDocument();
   });
 
-  it("renders skill cards in grid view", () => {
+  it("shows skill counts on category cards", () => {
     render(<Skills />);
-    expect(screen.getAllByText("NDA Generator").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("2 skills")).toBeInTheDocument();
+    expect(screen.getByText("1 skill")).toBeInTheDocument();
+  });
+
+  it("shows Add Category card", () => {
+    render(<Skills />);
+    expect(screen.getByText("Add Category")).toBeInTheDocument();
+  });
+
+  it("shows uncategorized section with separator when uncategorized skills exist", () => {
+    setupMocks(MOCK_WITH_UNCATEGORIZED as any);
+    render(<Skills />);
+    expect(screen.getByText("Uncategorized")).toBeInTheDocument();
+    expect(screen.getByText("Misc Tool")).toBeInTheDocument();
+    expect(screen.getByText("Drag onto a category to assign")).toBeInTheDocument();
+  });
+
+  it("does not show uncategorized section when all skills are categorized", () => {
+    render(<Skills />);
+    expect(screen.queryByText("Uncategorized")).not.toBeInTheDocument();
+  });
+
+  it("drills into category when card is clicked", () => {
+    render(<Skills />);
+    fireEvent.click(screen.getByText("Legal"));
+    expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     expect(screen.getByText("Contract Review")).toBeInTheDocument();
-    expect(screen.getAllByText("Plan Phase").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument();
   });
 
-  it("filters by category when tab clicked", () => {
-    const { container } = render(<Skills />);
-    fireEvent.click(screen.getByText("⚖️ Legal"));
-    const gridCards = container.querySelectorAll("[data-skill]");
-    const gridNames = Array.from(gridCards).map((c) => c.getAttribute("data-skill"));
-    expect(gridNames).toContain("legal-nda");
-    expect(gridNames).toContain("legal-review");
-    expect(gridNames).not.toContain("gsd-plan-phase");
-  });
-
-  it("filters skills by search text", () => {
-    const { container } = render(<Skills />);
-    const search = screen.getByPlaceholderText("Search skills...");
-    fireEvent.change(search, { target: { value: "nda" } });
-    const gridCards = container.querySelectorAll("[data-skill]");
-    const gridNames = Array.from(gridCards).map((c) => c.getAttribute("data-skill"));
-    expect(gridNames).toContain("legal-nda");
-    expect(gridNames).not.toContain("legal-review");
-    expect(gridNames).not.toContain("gsd-plan-phase");
+  it("goes back to category grid from drill-in", () => {
+    render(<Skills />);
+    fireEvent.click(screen.getByText("Legal"));
+    expect(screen.getByText("NDA Generator")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Back"));
+    expect(screen.getByText("Add Category")).toBeInTheDocument();
   });
 
   it("shows seed CTA when skills exist but no categories", () => {
@@ -206,13 +236,22 @@ describe("Skills page", () => {
   });
 
   it("navigates to chat on skill launch", async () => {
-    const { container } = render(<Skills />);
-    const gridCard = container.querySelector('[data-skill="legal-nda"]');
-    expect(gridCard).toBeTruthy();
-    fireEvent.click(gridCard!);
+    render(<Skills />);
+    fireEvent.click(screen.getByText("Legal"));
+    const launchButtons = screen.getAllByText("Launch");
+    fireEvent.click(launchButtons[0]);
     expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/chat?skill=legal-nda");
     });
+  });
+
+  it("filters skills by search in drill-in view", () => {
+    render(<Skills />);
+    fireEvent.click(screen.getByText("Legal"));
+    const searchInput = screen.getByPlaceholderText("Search skills...");
+    fireEvent.change(searchInput, { target: { value: "nda" } });
+    expect(screen.getByText("NDA Generator")).toBeInTheDocument();
+    expect(screen.queryByText("Contract Review")).not.toBeInTheDocument();
   });
 });

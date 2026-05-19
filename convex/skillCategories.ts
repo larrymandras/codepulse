@@ -36,8 +36,10 @@ export const DEFAULT_COLORS: Record<string, string> = {
 };
 
 export function extractPrefix(skillName: string): string {
-  if (!skillName || !skillName.includes("-")) return "uncategorized";
-  return skillName.split("-")[0];
+  if (!skillName) return "uncategorized";
+  const match = skillName.match(/^([a-zA-Z]+)/);
+  if (!match) return "uncategorized";
+  return match[1].toLowerCase();
 }
 
 function titleCase(s: string): string {
@@ -50,11 +52,12 @@ export function generateDisplayName(
   prefix: string
 ): string {
   if (prefix === "uncategorized") {
-    return titleCase(skillName);
+    return skillName.split(/[-_]/).map(titleCase).join(" ");
   }
-  const withoutPrefix = skillName.slice(prefix.length + 1);
+  const withoutPrefix = skillName.replace(new RegExp(`^${prefix}[-_]?`), "");
+  if (!withoutPrefix) return titleCase(prefix);
   return withoutPrefix
-    .split("-")
+    .split(/[-_]/)
     .map(titleCase)
     .join(" ");
 }
@@ -275,5 +278,20 @@ export const seedExistingSkills = mutation({
       seeded++;
     }
     return seeded;
+  },
+});
+
+export const resetAllCategoriesAndOverrides = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const categories = await ctx.db.query("skillCategories").collect();
+    for (const cat of categories) {
+      await ctx.db.delete(cat._id);
+    }
+    const overrides = await ctx.db.query("skillOverrides").collect();
+    for (const ov of overrides) {
+      await ctx.db.delete(ov._id);
+    }
+    return { deletedCategories: categories.length, deletedOverrides: overrides.length };
   },
 });
