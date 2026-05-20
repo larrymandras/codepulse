@@ -55,6 +55,7 @@ export const syncInventory = mutation({
     // Detect removed MCP servers
     for (const existing of existingServers) {
       if (!incomingServerNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `mcpServer:${existing.name}`,
           oldValue: existing,
@@ -99,6 +100,7 @@ export const syncInventory = mutation({
     // Detect removed plugins
     for (const existing of existingPlugins) {
       if (!incomingPluginNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `plugin:${existing.name}`,
           oldValue: existing,
@@ -145,6 +147,7 @@ export const syncInventory = mutation({
     // Detect removed skills
     for (const existing of existingSkills) {
       if (!incomingSkillNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `skill:${existing.name}`,
           oldValue: existing,
@@ -242,6 +245,7 @@ export const syncFullInventory = mutation({
     // Detect removed MCP servers
     for (const existing of existingServers) {
       if (!incomingServerNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `mcpServer:${existing.name}`,
           oldValue: existing,
@@ -293,6 +297,7 @@ export const syncFullInventory = mutation({
 
     for (const existing of existingSkills) {
       if (!incomingSkillNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `skill:${existing.name}`,
           oldValue: existing,
@@ -368,6 +373,7 @@ export const syncFullInventory = mutation({
 
     for (const existing of existingPlugins) {
       if (!incomingPluginNames.has(existing.name)) {
+        await ctx.db.delete(existing._id);
         await ctx.db.insert("configChanges", {
           configKey: `plugin:${existing.name}`,
           oldValue: existing,
