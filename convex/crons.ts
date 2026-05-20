@@ -73,4 +73,11 @@ crons.daily(
   internal.memoryQuality.evaluateInternal
 );
 
+// Docker container staleness cleanup (every 5 minutes)
+crons.interval(
+  "docker-health-cleanup",
+  { minutes: 5 },
+  internal.docker.pollHealth
+);
+
 export default crons;
