@@ -139,6 +139,52 @@ export const listRecentPaginated = query({
   },
 });
 
+export const listRecentUnified = query({
+  args: {
+    limit: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 50;
+    const fetchCount = Math.max(limit, 100);
+
+    const buildEvents = await ctx.db
+      .query("events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .take(fetchCount);
+
+    const runtimeEvents = await ctx.db
+      .query("runtime_events")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .take(fetchCount);
+
+    const unified = [
+      ...buildEvents.map((e) => ({
+        _id: e._id,
+        eventType: e.eventType,
+        toolName: e.toolName,
+        sessionId: e.sessionId,
+        timestamp: e.timestamp,
+        source: "build" as const,
+      })),
+      ...runtimeEvents.map((e) => ({
+        _id: e._id,
+        eventType: e.eventType,
+        toolName: (e.data as any)?.toolName ?? (e.data as any)?.tool_name,
+        sessionId: (e.data as any)?.session_id ?? (e.data as any)?.sessionId,
+        timestamp: e.timestamp,
+        source: "runtime" as const,
+      })),
+    ];
+
+    unified.sort((a, b) => b.timestamp - a.timestamp);
+    return unified.slice(0, limit);
+  },
+});
+
 // ---- LEGACY runtime_events functions (kept for backward compat) ----
 
 export const insertEvent = mutation({
