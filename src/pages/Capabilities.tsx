@@ -58,7 +58,7 @@ function SkillsPanel({
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Skills
         <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
         <InfoTooltip text="Composed multi-step workflows like code generation, PR management, and web search. Click to expand." />
@@ -163,7 +163,7 @@ function HooksPanel({
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Hooks
         <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
         <InfoTooltip text="Event-driven shell hooks that fire before/after tool use, on prompt submit, etc. Click to see full command." />
@@ -260,7 +260,7 @@ function SlashCommandsPanel({
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Slash Commands
         <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
         <InfoTooltip text="Claude Code slash commands discovered from environment snapshots. These are invoked via /command in Claude Code." />
@@ -394,7 +394,7 @@ export default function Capabilities() {
 
       {/* 2. Config Change Feed */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Configuration Changes
           <InfoTooltip text="Tracks additions, removals, and modifications to your registry — MCP servers, plugins, skills, and hooks." />
         </h2>
@@ -446,7 +446,7 @@ export default function Capabilities() {
 
       {/* 5. CLI Tools */}
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           CLI Tools
           <span className="ml-2 text-xs text-gray-500 font-normal">{cliTools.length}</span>
           <InfoTooltip text="Host CLI tools available for delegation to Claude Code." />

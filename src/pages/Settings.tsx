@@ -265,7 +265,7 @@ export default function Settings() {
       {/* Connection Status */}
       <SectionErrorBoundary name="Connection Status">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Connection Status<InfoTooltip text="Backend connection details and environment configuration" />
         </h2>
         <div className="space-y-2">
@@ -306,7 +306,7 @@ export default function Settings() {
       {/* Profile Email Addresses */}
       <SectionErrorBoundary name="Profile Emails">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Profile Email Addresses
           <InfoTooltip text="Email addresses used by each profile for briefings and notifications. Changes are synced to the framework on next restart." />
         </h2>
@@ -674,7 +674,7 @@ export default function Settings() {
 
       <SectionErrorBoundary name="Hooks">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Hooks</h2>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Hooks</h2>
         <p className="text-sm text-gray-500">
           Configure Claude Code hooks to point to CodePulse for live telemetry.
         </p>
@@ -691,7 +691,7 @@ export default function Settings() {
 
       <SectionErrorBoundary name="About">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">About</h2>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">About</h2>
         <div className="space-y-1 text-sm text-gray-500">
           <p>CodePulse v0.1.0</p>
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>

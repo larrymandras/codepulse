@@ -33,7 +33,7 @@ export default function GitActivityWidget() {
     .reverse();
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Git Activity

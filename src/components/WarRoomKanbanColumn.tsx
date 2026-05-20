@@ -27,6 +27,7 @@ export interface TaskItem {
 export interface AgentColumn {
   agentId: string;
   agentName: string;
+  role?: string;
   avatar?: { name: string; emoji?: string; color?: string; imageStorageId?: any } | null;
 }
 
@@ -45,23 +46,34 @@ export function WarRoomKanbanColumn({
 
   return (
     <div
-      className={`flex flex-col w-72 flex-shrink-0 rounded-xl overflow-hidden ${
+      className={`flex flex-col w-full max-h-[80vh] flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ${
         isOver
-          ? "border-2 border-dashed border-[var(--speaking-ring)] bg-(--accent)/30"
-          : "border border-(--border)"
+          ? "border-2 border-dashed border-primary bg-primary/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
+          : "border border-border/50 glow-card hover:border-primary/50 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]"
       }`}
     >
       {/* Column header */}
-      <div className="h-14 px-4 flex items-center gap-3 border-b border-(--border)">
+      <div className="p-4 flex items-center gap-4 border-b border-border/50 bg-background/50 backdrop-blur">
         <AgentAvatar
           avatar={agent.avatar ?? { name: agent.agentName }}
           status="active"
-          size="md"
+          size="lg"
         />
-        <span className="text-sm font-semibold">{agent.agentName}</span>
-        <span className="text-xs text-muted-foreground ml-auto">
+        <div className="flex flex-col">
+          <span className="text-sm font-bold text-foreground font-mono tracking-wide">{agent.agentName}</span>
+          {agent.role && (
+            <span className="text-xs text-muted-foreground/80 font-mono tracking-widest mt-0.5 uppercase">
+              {agent.role}
+            </span>
+          )}
+          <span className="text-[10px] text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            Online
+          </span>
+        </div>
+        <div className="ml-auto flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs font-mono">
           {tasks.length}
-        </span>
+        </div>
       </div>
 
       {/* Droppable area */}

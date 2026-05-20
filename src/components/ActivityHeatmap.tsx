@@ -23,7 +23,7 @@ export default function ActivityHeatmap() {
   if (cells.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Activity Heatmap<InfoTooltip text="Event density heatmap by day of week and hour — identify peak activity patterns" /></h2>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Activity Heatmap<InfoTooltip text="Event density heatmap by day of week and hour — identify peak activity patterns" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );
@@ -31,7 +31,7 @@ export default function ActivityHeatmap() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Activity Heatmap</h2>
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Activity Heatmap</h2>
       <div className="overflow-x-auto">
         {/* Hour labels */}
         <div className="flex ml-10 mb-1 gap-px">

@@ -200,7 +200,7 @@ export default function LiveRun() {
     : displayBlocks.filter((b) => b.type === "thinking" || b.type === "reasoning").length || undefined;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[500px]">
       <div className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
         <h1 className="text-xl font-semibold text-(--foreground)">Live Run</h1>
         <div className="flex items-center gap-3">
@@ -240,7 +240,7 @@ export default function LiveRun() {
       {activeTab === "timeline" ? (
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4" onScroll={handleScroll}>
           {displayBlocks.length === 0 && !displayStreaming ? (
-            <div className="flex items-center justify-center h-full">
+            <div className="flex items-center justify-center h-64">
               <p className="text-sm text-(--muted-foreground) text-center">
                 {isLive ? "No active run. Start a task from Agent Chat." : "No blocks found for this session."}
               </p>

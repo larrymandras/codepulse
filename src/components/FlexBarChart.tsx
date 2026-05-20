@@ -6,11 +6,11 @@ interface FlexBarSegment {
 
 interface FlexBarChartProps {
   data: FlexBarSegment[];
-  height?: number;
+  height?: number | string;
   onSegmentClick?: (label: string, value: number) => void;
 }
 
-export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarChartProps & { height?: number | string }) {
+export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarChartProps) {
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
     <div className="flex items-end gap-1 w-full" style={{ height }}>

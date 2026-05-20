@@ -359,7 +359,7 @@ export default function Chat() {
   const isDisconnected = status !== "connected";
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[500px]">
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
         <h1 className="text-base font-semibold text-(--foreground)">Chat</h1>

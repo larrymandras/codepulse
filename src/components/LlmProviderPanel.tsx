@@ -28,7 +28,7 @@ export default function LlmProviderPanel() {
   }
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         LLM Metrics
@@ -57,12 +57,12 @@ export default function LlmProviderPanel() {
             </div>
           </div>
 
-          <div className="border-t border-border/30 pt-4">
+          <div className="border-t border-border/30 pt-4 flex-1 overflow-hidden flex flex-col">
             <p className="text-[10px] font-mono tracking-widest uppercase text-primary/70 mb-3 flex items-center gap-2">
               <span className="w-1 h-1 bg-primary/50 rounded-full" />
               By Model
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-y-auto pr-2">
               {Array.from(byModel.entries())
                 .sort((a, b) => b[1].cost - a[1].cost)
                 .map(([model, stats]) => (

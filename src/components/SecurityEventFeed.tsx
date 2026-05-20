@@ -19,7 +19,7 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
       {events.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">No security events recorded</p>
       ) : (

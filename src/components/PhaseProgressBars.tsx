@@ -39,7 +39,7 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">Phase Progress</h3>
+      <h3 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Phase Progress</h3>
       {sorted.map((p) => {
         const isComplete = p.total > 0 && p.completed === p.total;
         const failedPct = p.total > 0 ? (p.failed / p.total) * 100 : 0;

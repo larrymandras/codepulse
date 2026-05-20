@@ -44,7 +44,7 @@ export default function EventFeed() {
   }, [filtered.length]);
 
   return (
-    <div className="glow-card bg-[#09090b] border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col h-full">
+    <div className="glow-card bg-[#09090b] border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       {/* Scanline specifically for this terminal */}
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden mix-blend-overlay opacity-30">
         <div className="w-full h-[2px] bg-primary/40 animate-scanline" />

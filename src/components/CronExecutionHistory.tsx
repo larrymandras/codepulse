@@ -8,7 +8,7 @@ interface CronExecutionHistoryProps {
 export default function CronExecutionHistory({ executions }: CronExecutionHistoryProps) {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Execution History
         <span className="ml-2 text-xs text-gray-500 font-normal">{executions.length}</span>
         <InfoTooltip text="Recent cron job executions across all jobs, ordered by time." />

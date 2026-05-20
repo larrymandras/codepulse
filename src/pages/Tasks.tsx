@@ -95,7 +95,7 @@ export default function Tasks() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[500px]">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-(--border) flex-shrink-0">
         <h1 className="text-lg font-semibold text-(--foreground)">Tasks</h1>

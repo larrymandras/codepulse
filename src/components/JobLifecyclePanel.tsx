@@ -46,7 +46,7 @@ export default function JobLifecyclePanel({ jobs }: JobLifecyclePanelProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Job Lifecycle
         <span className="ml-2 text-xs text-gray-500 font-normal">{entries.length}</span>
         <InfoTooltip text="Async jobs tracked by Astridr runtime — pipelines, delegated tasks, and background operations." />

@@ -328,7 +328,7 @@ export default function Security() {
           {/* Sandbox Violations Feed */}
           {(recentViolations ?? []).length > 0 && (
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">
+              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                 Sandbox Violations
                 <InfoTooltip text="Tool capability manifest violations — tools accessing resources beyond their declared permissions" />
               </h2>
@@ -371,7 +371,7 @@ export default function Security() {
 
             {/* Browser Guard event table */}
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">URL Evaluation Log</h2>
+              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">URL Evaluation Log</h2>
               {browserGuardEvents.length === 0 ? (
                 <p className="text-sm text-gray-500 py-6 text-center">
                   No URL blocks recorded. Browser Guard is active and logging will appear here as URLs are evaluated.
@@ -416,7 +416,7 @@ export default function Security() {
           <SectionErrorBoundary name="Network Policy">
             {/* Allowlist placeholder */}
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">
+              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                 Provider Allowlist
                 <InfoTooltip text="Per-provider network allowlist entries from config.yaml network_policy section" />
               </h2>
@@ -437,7 +437,7 @@ export default function Security() {
 
             {/* Network access log */}
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">Network Access Log</h2>
+              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Network Access Log</h2>
               {networkPolicyEvents.length === 0 ? (
                 <p className="text-sm text-gray-500 py-6 text-center">
                   No network policy events recorded. Access log will appear here as providers make outbound requests.

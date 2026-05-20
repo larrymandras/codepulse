@@ -41,7 +41,7 @@ export default function TokenWaterfall() {
   if (rows.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
         <p className="text-gray-500 text-sm">No data yet.</p>
       </div>
     );
@@ -49,7 +49,7 @@ export default function TokenWaterfall() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
       <div className="space-y-3">
         {rows.map(({ model, prompt, completion }) => {
           const total = prompt + completion;

@@ -246,7 +246,7 @@ export default function ConfigEditor() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[500px]">
       {/* Header / action bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-(--border) flex-shrink-0 gap-4">
         <div className="flex items-center gap-4 min-w-0">

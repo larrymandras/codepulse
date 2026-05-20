@@ -14,6 +14,11 @@ import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import AvatarUploader from "../components/AvatarUploader";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import {
   LayoutDashboard,
   Cpu,
@@ -225,6 +230,22 @@ function SidebarContent({
   const dotColor = isConnected ? "bg-green-500" : "bg-yellow-500";
   const statusLabel = isConnected ? "Connected to Convex" : "Convex: reconnecting";
 
+  const [isAvatarUploadOpen, setIsAvatarUploadOpen] = useState(false);
+  const [avatarStorageId, setAvatarStorageId] = useState<string | null>(() => 
+    localStorage.getItem("userAvatarStorageId")
+  );
+
+  const avatarUrl = useQuery(
+    api.avatars.getImageUrl,
+    avatarStorageId ? { storageId: avatarStorageId as Id<"_storage"> } : "skip"
+  );
+
+  const handleAvatarUpload = (storageId: string) => {
+    localStorage.setItem("userAvatarStorageId", storageId);
+    setAvatarStorageId(storageId);
+    setIsAvatarUploadOpen(false);
+  };
+
   return (
     <TooltipProvider delayDuration={200}>
       {/* Logo / Header */}
@@ -238,12 +259,24 @@ function SidebarContent({
             <>
               <div className="flex items-center gap-3 w-full">
                 {/* Avatar Slot */}
-                <div className="w-9 h-9 rounded-full border-2 border-primary/50 overflow-hidden shadow-[0_0_15px_rgba(16,185,129,0.4)] shrink-0 relative group">
-                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center group-hover:bg-primary/40 transition-colors">
-                    <span className="text-primary font-mono text-[10px] font-bold">LM</span>
+                <div 
+                  className="w-10 h-10 rounded-sm border-[1.5px] border-primary/50 overflow-hidden shadow-[0_0_10px_rgba(16,185,129,0.3)] shrink-0 relative group cursor-pointer hover:border-primary transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.6)]"
+                  onClick={() => setIsAvatarUploadOpen(true)}
+                >
+                  <div className="absolute inset-0 bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors pointer-events-none">
+                    <span className="text-primary font-mono text-[11px] font-bold tracking-widest uppercase">LM</span>
                   </div>
-                  {/* User can replace the src below with an actual photo */}
-                  <img src="/avatar-placeholder.png" alt="Larry Mandras" className="w-full h-full object-cover opacity-0 transition-opacity duration-300" onLoad={(e) => e.currentTarget.style.opacity = '1'} onError={(e) => e.currentTarget.style.display = 'none'} />
+                  {avatarUrl && (
+                    <img 
+                      src={avatarUrl} 
+                      alt="Larry Mandras" 
+                      className="w-full h-full object-cover relative z-10 transition-opacity duration-300" 
+                    />
+                  )}
+                  {/* Subtle scanline effect on hover */}
+                  <div className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-full h-[1px] bg-primary/40 animate-scanline" />
+                  </div>
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -296,6 +329,20 @@ function SidebarContent({
           )}
         </div>
       </div>
+
+      <Dialog open={isAvatarUploadOpen} onOpenChange={setIsAvatarUploadOpen}>
+        <DialogContent className="border border-primary/30 bg-card/95 backdrop-blur shadow-[0_0_40px_rgba(16,185,129,0.15)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-primary font-mono uppercase tracking-widest">Update Operator Avatar</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <AvatarUploader 
+              onUpload={handleAvatarUpload} 
+              onCancel={() => setIsAvatarUploadOpen(false)} 
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

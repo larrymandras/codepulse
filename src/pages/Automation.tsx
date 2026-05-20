@@ -137,7 +137,7 @@ export default function Automation() {
         {/* Pipeline Checkpoints */}
         <SectionErrorBoundary name="Pipeline Checkpoints">
           <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-300 mb-3">
+            <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Pipeline Checkpoints
               <InfoTooltip text="Durable pipeline execution — checkpoint persistence for restart-safe pipelines" />
             </h2>
@@ -177,7 +177,7 @@ export default function Automation() {
         {/* Integration Calls */}
         <SectionErrorBoundary name="Integration Calls">
           <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-gray-300 mb-3">
+            <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Integration Calls
               <InfoTooltip text="YAML-defined API integrations — declarative endpoint calls with automatic auth" />
             </h2>

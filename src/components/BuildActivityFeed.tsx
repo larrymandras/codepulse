@@ -49,7 +49,7 @@ export default function BuildActivityFeed({ entries }: { entries: ActivityEntry[
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-gray-300 mb-3">Recent Activity</h3>
+      <h3 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Recent Activity</h3>
       <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
         {entries.slice(0, 20).map((entry) => (
           <div

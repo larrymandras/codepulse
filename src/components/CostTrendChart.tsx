@@ -20,7 +20,7 @@ export default function CostTrendChart() {
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Cost Trend<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
         <p className="text-gray-500 text-sm">No LLM cost data yet.</p>
       </div>
     );
@@ -28,7 +28,7 @@ export default function CostTrendChart() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Cost Trend (Cumulative)<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Cost Trend (Cumulative)<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
       <FlexBarChart data={data} height={300} />
     </div>
   );

@@ -34,6 +34,20 @@ const FALLBACK_AGENTS = [
   { profileId: "ragnhildr", name: "Ragnhildr", avatar: undefined },
 ];
 
+const ROLE_MAP: Record<string, string> = {
+  astrid: "System Orchestrator",
+  hervor: "Security Specialist",
+  gondul: "Data Architect",
+  freya: "Creative Director",
+  ragnhildr: "Infrastructure Lead",
+  brynhildr: "Frontend Engineer",
+  skuld: "Backend Engineer",
+  hildr: "QA & Testing",
+  idunn: "DevOps Engineer",
+  urdr: "Product Manager",
+  verdandi: "Scrum Master",
+};
+
 export default function MissionControl() {
   const serverTasks = useQuery(api.missionControl.listTasksByAgent) ?? [];
   const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
@@ -158,23 +172,26 @@ export default function MissionControl() {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="overflow-y-auto">
-            <div className="grid grid-cols-6 gap-4 pb-4">
+          <div className="overflow-y-auto pb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 px-2">
               {agents.map((agent) => {
                 const avatarId = "avatarId" in agent ? agent.avatarId : undefined;
                 const av = avatarId ? avatarMap[avatarId] : null;
+                const role = ROLE_MAP[agent.profileId.toLowerCase()] || "Autonomous Agent";
                 return (
-                  <WarRoomKanbanColumn
-                    key={agent.profileId}
-                    agent={{
-                      agentId: agent.profileId,
-                      agentName: agent.name,
-                      avatar: av
-                        ? { name: av.name, emoji: av.emoji, color: av.color, imageStorageId: av.imageStorageId }
-                        : { name: agent.name },
-                    }}
-                    tasks={tasksByAgent.get(agent.profileId) ?? []}
-                  />
+                  <div key={agent.profileId}>
+                    <WarRoomKanbanColumn
+                      agent={{
+                        agentId: agent.profileId,
+                        agentName: agent.name,
+                        role: role,
+                        avatar: av
+                          ? { name: av.name, emoji: av.emoji, color: av.color, imageStorageId: av.imageStorageId }
+                          : { name: agent.name },
+                      }}
+                      tasks={tasksByAgent.get(agent.profileId) ?? []}
+                    />
+                  </div>
                 );
               })}
               {agents.length === 0 && (

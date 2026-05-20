@@ -83,7 +83,7 @@ function MetricCardInner({
 
   return (
     <div 
-      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-colors hover:border-primary/50" 
+      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-colors hover:border-primary/50 hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]" 
       onClick={onClick} 
       style={onClick ? { cursor: "pointer" } : undefined}
     >

@@ -65,7 +65,7 @@ export function RunSummary({ rounds, inputTokens, outputTokens, cost, startedAt,
 
   if (status === "idle") {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-64">
         <p className="text-sm text-(--muted-foreground)">No run data yet.</p>
       </div>
     );

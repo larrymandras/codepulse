@@ -44,8 +44,7 @@ function AvatarImage({ storageId, size, alt }: { storageId: Id<"_storage">; size
   if (!url) {
     return (
       <div
-        className="rounded-full bg-gray-700 animate-pulse"
-        style={{ width: size, height: size }}
+        className="rounded-full bg-muted/50 animate-pulse w-full h-full"
       />
     );
   }
@@ -53,8 +52,7 @@ function AvatarImage({ storageId, size, alt }: { storageId: Id<"_storage">; size
     <img
       src={url}
       alt={alt}
-      className="rounded-full object-cover"
-      style={{ width: size, height: size }}
+      className="rounded-full object-cover w-full h-full"
     />
   );
 }

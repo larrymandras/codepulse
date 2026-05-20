@@ -357,7 +357,7 @@ export default function Inbox() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-[500px]">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
         <h1 className="text-xl font-semibold text-(--foreground)">Inbox</h1>
@@ -384,7 +384,7 @@ export default function Inbox() {
       {/* Card list */}
       <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
         {filteredItems.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-64">
             <p className="text-sm text-(--muted-foreground) text-center">
               {emptyText[filter]}
             </p>

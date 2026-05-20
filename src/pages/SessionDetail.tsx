@@ -96,7 +96,7 @@ export default function SessionDetail() {
 
           {agents.length > 0 && (
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-              <h2 className="text-sm font-semibold text-gray-300 mb-3">
+              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                 Agents ({agents.length})
               </h2>
               <div className="space-y-2">
@@ -169,7 +169,7 @@ function ErrorsList({ errors }: { errors: any[] }) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Errors ({errors.length})
       </h2>
       {errors.length === 0 ? (

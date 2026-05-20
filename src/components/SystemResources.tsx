@@ -51,7 +51,7 @@ export default function SystemResources({ data }: SystemResourcesProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         System Resources<InfoTooltip text="System resource utilization: CPU, RAM, and disk usage" />
       </h2>
       {!hasData ? (
