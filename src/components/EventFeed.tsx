@@ -6,7 +6,6 @@ import { formatTimestamp } from "../lib/formatters";
 import { EntityRow } from "./EntityRow";
 import { SectionHeader } from "./SectionHeader";
 import InfoTooltip from "./InfoTooltip";
-import LoadMoreButton from "./LoadMoreButton";
 
 const EVENT_FILTERS = ["All", "Tool", "LLM", "File", "Error", "Agent"] as const;
 type EventFilter = (typeof EVENT_FILTERS)[number];
@@ -31,7 +30,7 @@ const filterMatchers: Record<EventFilter, (eventType: string) => boolean> = {
 };
 
 export default function EventFeed() {
-  const { events, status, loadMore } = useRecentEvents(50);
+  const { events } = useRecentEvents(50);
   const navigate = useNavigate();
   const [filter, setFilter] = useState<EventFilter>("All");
   const prevCountRef = useRef(0);
@@ -121,8 +120,8 @@ export default function EventFeed() {
           })}
         </div>
       )}
-      <div className="mt-4 z-20 relative border-t border-border/30 pt-4">
-        <LoadMoreButton status={status} loadMore={loadMore} />
+      <div className="mt-4 z-20 relative border-t border-border/30 pt-2 text-center">
+        <span className="text-xs text-muted-foreground">Showing last {events.length} events</span>
       </div>
     </div>
   );
