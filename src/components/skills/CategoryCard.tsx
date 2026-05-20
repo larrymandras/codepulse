@@ -45,7 +45,10 @@ export function CategoryCard({
       data-category={category.name}
       role="button"
       tabIndex={0}
-      onClick={() => onSelect(category.name)}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).closest('[data-testid="category-edit-btn"]')) return;
+        onSelect(category.name);
+      }}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -78,7 +81,7 @@ export function CategoryCard({
           e.stopPropagation();
           onEdit(category);
         }}
-        className="absolute top-3 left-3 p-1.5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-background/80 transition-colors z-10"
+        className="absolute top-2 left-2 p-2.5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-background/80 transition-colors z-10"
         aria-label={`Edit ${category.displayName}`}
       >
         <Settings className="w-3.5 h-3.5" />
