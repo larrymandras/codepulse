@@ -81,7 +81,7 @@ export function CategoryCard({
           e.stopPropagation();
           onEdit(category);
         }}
-        className="absolute top-2 left-2 p-2.5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-background/80 transition-colors z-10"
+        className="absolute top-2 left-2 p-2.5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-background/80 transition-colors z-20"
         aria-label={`Edit ${category.displayName}`}
       >
         <Settings className="w-3.5 h-3.5" />
