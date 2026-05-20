@@ -140,7 +140,9 @@ export default function Skills() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <h1 className="text-xl font-semibold text-white font-heading">Skills</h1>
+      <h1 className="text-2xl font-mono tracking-widest uppercase font-bold text-primary">
+        Skills Database
+      </h1>
 
       {needsSeed && (
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 text-center">
@@ -178,7 +180,8 @@ export default function Skills() {
           <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
 
           <div>
-            <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+            <h2 className="text-[10px] font-mono font-bold text-primary/70 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+              <span className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
               Categories
             </h2>
             <CategoryGrid
@@ -209,13 +212,18 @@ export default function Skills() {
       {/* ── Drill-in: skills in a selected category ── */}
       {!needsSeed && selectedCategory && selectedCategoryData && (
         <div>
-          <input
-            type="text"
-            placeholder="Search skills..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none mb-4"
-          />
+          <div className="relative mb-6">
+            <input
+              type="text"
+              placeholder="Search skills..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-background border border-primary/20 rounded px-4 py-2.5 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+               <span className="flex h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse" />
+            </div>
+          </div>
 
           <SkillsInCategory
             categoryName={selectedCategoryData.name}

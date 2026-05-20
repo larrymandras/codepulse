@@ -148,7 +148,13 @@
 
   --status-ok: #22c55e;
   --status-error: #ef4444;
-  --status-warn: #f59e0b;
+  --status-warn: #eab308;
+
+  /* Brighten hardcoded grays for better dark mode contrast */
+  --color-gray-400: #d4d4d8; /* originally #9ca3af or #a1a1aa */
+  --color-gray-500: #a1a1aa; /* originally #6b7280 or #71717a */
+  --color-gray-600: #71717a; /* originally #4b5563 or #52525b */
+
   --chart-bar: #27272a;
   --chart-bar-accent: #10b981;
   --chart-p50: #10b981;

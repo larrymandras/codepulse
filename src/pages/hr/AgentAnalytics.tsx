@@ -95,9 +95,11 @@ export default function AgentAnalytics() {
       <div className="m-6 flex flex-col gap-6">
         {/* Header + time selector */}
         <SectionErrorBoundary name="Header">
-          <GlassPanel className="p-6">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <h1 className="text-xl font-semibold text-foreground">
+          <GlassPanel className="p-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
+            <div className="flex items-center justify-between flex-wrap gap-4 relative z-10">
+              <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                 Agent Analytics
               </h1>
               <ToggleGroup
@@ -109,7 +111,7 @@ export default function AgentAnalytics() {
                   <ToggleGroupItem
                     key={w}
                     value={w}
-                    className="text-xs px-3 h-7"
+                    className="text-[10px] font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all shadow-[0_0_10px_rgba(16,185,129,0)_inset] data-[state=on]:shadow-[0_0_10px_rgba(16,185,129,0.2)_inset]"
                   >
                     {w}
                   </ToggleGroupItem>
@@ -121,7 +123,7 @@ export default function AgentAnalytics() {
 
         {/* Controls: team filter + weight sliders */}
         <SectionErrorBoundary name="Controls">
-          <GlassPanel className="p-6">
+          <GlassPanel className="p-6 glow-card transition-all duration-300">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Team selector */}
               <div className="flex flex-col gap-2 lg:w-64">
@@ -165,7 +167,7 @@ export default function AgentAnalytics() {
         {/* Team summary cards (only when team selected and data present) */}
         {selectedTeamId && scoredRows.length > 0 && (
           <SectionErrorBoundary name="Team Summary">
-            <GlassPanel className="p-6">
+            <GlassPanel className="p-6 glow-card transition-all duration-300">
               <TeamSummaryCards rows={scoredRows} />
             </GlassPanel>
           </SectionErrorBoundary>
@@ -173,8 +175,11 @@ export default function AgentAnalytics() {
 
         {/* Leaderboard */}
         <SectionErrorBoundary name="Leaderboard">
-          <GlassPanel className="p-6">
-            <h2 className="text-base font-semibold mb-4">Leaderboard</h2>
+          <GlassPanel className="p-6 glow-card transition-all duration-300">
+            <h2 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
+              Leaderboard
+            </h2>
             {isLoading ? (
               <div className="flex flex-col gap-3">
                 {Array.from({ length: 5 }).map((_, i) => (
@@ -194,8 +199,9 @@ export default function AgentAnalytics() {
         {/* Comparison chart (only when team selected and data present) */}
         {selectedTeamId && scoredRows.length > 0 && (
           <SectionErrorBoundary name="Comparison Chart">
-            <GlassPanel className="p-6">
-              <h2 className="text-base font-semibold mb-4">
+            <GlassPanel className="p-6 glow-card transition-all duration-300">
+              <h2 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
                 Agent Comparison
               </h2>
               <AgentComparisonChart

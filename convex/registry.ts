@@ -52,17 +52,19 @@ export const syncInventory = mutation({
       }
     }
 
-    // Detect removed MCP servers
-    for (const existing of existingServers) {
-      if (!incomingServerNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `mcpServer:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "scanner",
-          changedAt: now,
-        });
+    // Detect removed MCP servers (only when snapshot included non-empty servers)
+    if (incomingServerNames.size > 0) {
+      for (const existing of existingServers) {
+        if (!incomingServerNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `mcpServer:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "scanner",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -97,17 +99,19 @@ export const syncInventory = mutation({
       }
     }
 
-    // Detect removed plugins
-    for (const existing of existingPlugins) {
-      if (!incomingPluginNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `plugin:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "scanner",
-          changedAt: now,
-        });
+    // Detect removed plugins (only when snapshot included non-empty plugins)
+    if (incomingPluginNames.size > 0) {
+      for (const existing of existingPlugins) {
+        if (!incomingPluginNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `plugin:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "scanner",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -144,17 +148,19 @@ export const syncInventory = mutation({
       }
     }
 
-    // Detect removed skills
-    for (const existing of existingSkills) {
-      if (!incomingSkillNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `skill:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "scanner",
-          changedAt: now,
-        });
+    // Detect removed skills (only when snapshot included non-empty skills)
+    if (incomingSkillNames.size > 0) {
+      for (const existing of existingSkills) {
+        if (!incomingSkillNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `skill:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "scanner",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -242,17 +248,19 @@ export const syncFullInventory = mutation({
       }
     }
 
-    // Detect removed MCP servers
-    for (const existing of existingServers) {
-      if (!incomingServerNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `mcpServer:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "capability_sync",
-          changedAt: now,
-        });
+    // Detect removed MCP servers (only when snapshot included non-empty servers)
+    if (incomingServerNames.size > 0) {
+      for (const existing of existingServers) {
+        if (!incomingServerNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `mcpServer:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -295,16 +303,19 @@ export const syncFullInventory = mutation({
       }
     }
 
-    for (const existing of existingSkills) {
-      if (!incomingSkillNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `skill:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "capability_sync",
-          changedAt: now,
-        });
+    // Detect removed skills (only when snapshot included non-empty skills)
+    if (incomingSkillNames.size > 0) {
+      for (const existing of existingSkills) {
+        if (!incomingSkillNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `skill:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -371,16 +382,19 @@ export const syncFullInventory = mutation({
       }
     }
 
-    for (const existing of existingPlugins) {
-      if (!incomingPluginNames.has(existing.name)) {
-        await ctx.db.delete(existing._id);
-        await ctx.db.insert("configChanges", {
-          configKey: `plugin:${existing.name}`,
-          oldValue: existing,
-          newValue: null,
-          changedBy: "capability_sync",
-          changedAt: now,
-        });
+    // Detect removed plugins (only when snapshot included non-empty plugins)
+    if (incomingPluginNames.size > 0) {
+      for (const existing of existingPlugins) {
+        if (!incomingPluginNames.has(existing.name)) {
+          await ctx.db.delete(existing._id);
+          await ctx.db.insert("configChanges", {
+            configKey: `plugin:${existing.name}`,
+            oldValue: existing,
+            newValue: null,
+            changedBy: "capability_sync",
+            changedAt: now,
+          });
+        }
       }
     }
 
@@ -969,6 +983,32 @@ export const getSessionSnapshot = query({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .order("desc")
       .first();
+  },
+});
+
+export const repairSkillsFromOverrides = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const skills = await ctx.db.query("skills").collect();
+    if (skills.length > 0) return { repaired: 0, message: "skills table not empty, skipping" };
+
+    const overrides = await ctx.db.query("skillOverrides").collect();
+    const now = Date.now() / 1000;
+    let repaired = 0;
+    for (const override of overrides) {
+      const existing = await ctx.db
+        .query("skills")
+        .withIndex("by_name", (q) => q.eq("name", override.skillName))
+        .first();
+      if (!existing) {
+        await ctx.db.insert("skills", {
+          name: override.skillName,
+          discoveredAt: now,
+        });
+        repaired++;
+      }
+    }
+    return { repaired, message: `Recreated ${repaired} skills from overrides` };
   },
 });
 

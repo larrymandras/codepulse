@@ -81,10 +81,10 @@ function SortableMember({ agentId, agent, onRemove }: SortableMemberProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-2 rounded-md border bg-background p-2"
+      className="flex items-center gap-3 rounded-lg border border-border/50 bg-card/60 backdrop-blur p-2.5 shadow-sm hover:border-primary/50 transition-colors group"
     >
       <button
-        className="cursor-grab text-muted-foreground hover:text-foreground"
+        className="cursor-grab text-muted-foreground/50 hover:text-primary transition-colors group-hover:text-muted-foreground"
         {...attributes}
         {...listeners}
       >
@@ -96,20 +96,20 @@ function SortableMember({ agentId, agent, onRemove }: SortableMemberProps) {
         status="idle"
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-foreground truncate">
+        <p className="text-sm font-bold font-mono tracking-wide text-foreground truncate group-hover:text-primary transition-colors">
           {agent?.name ?? agentId}
         </p>
       </div>
       {agent?.tier && (
         <Badge
           variant="secondary"
-          className={`text-[10px] ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
+          className={`text-[9px] font-mono tracking-widest uppercase px-2 py-0.5 ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
         >
           {agent.tier}
         </Badge>
       )}
       <button
-        className="text-muted-foreground hover:text-destructive"
+        className="text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 p-1.5 rounded transition-all opacity-0 group-hover:opacity-100"
         onClick={() => onRemove(agentId)}
       >
         <X className="h-4 w-4" />
@@ -350,8 +350,9 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
           {/* Left panel — Available Agents */}
-          <div className="border rounded-lg p-4 flex flex-col gap-3">
-            <h3 className="text-sm font-semibold text-foreground">
+          <div className="border border-border/50 rounded-xl p-5 flex flex-col gap-4 bg-card/80 backdrop-blur glow-card shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.1)] transition-all">
+            <h3 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary/50" />
               Available Agents
             </h3>
             <div className="relative">
@@ -402,8 +403,10 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
           </div>
 
           {/* Right panel — Team Members */}
-          <div className="border rounded-lg p-4 flex flex-col gap-3 bg-muted/30">
-            <h3 className="text-sm font-semibold text-foreground">
+          <div className="border border-primary/20 rounded-xl p-5 flex flex-col gap-4 bg-primary/5 backdrop-blur glow-card shadow-[inset_0_0_20px_rgba(16,185,129,0.05)] hover:shadow-[inset_0_0_30px_rgba(16,185,129,0.1)] transition-all relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+            <h3 className="text-sm font-bold font-mono tracking-wide text-primary uppercase flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               Team Members ({memberIds.length})
             </h3>
             <SortableContext

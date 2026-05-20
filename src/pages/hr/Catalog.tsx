@@ -15,17 +15,21 @@ export default function Catalog() {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <GlassPanel className="m-6 p-6">
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-foreground">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <GlassPanel className="m-6 p-6 flex-1 flex flex-col min-h-0 overflow-y-auto relative">
+        <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
+        <div className="mb-6 flex flex-col items-start relative z-10">
+          <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             Agent Catalog
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase">
             Browse archetypes from the Astridhr catalog and start onboarding.
           </p>
         </div>
-        <CatalogBrowser onSelectEntry={handleSelect} />
+        <div className="flex-1 min-h-0 relative z-10">
+          <CatalogBrowser onSelectEntry={handleSelect} />
+        </div>
       </GlassPanel>
     </div>
   );

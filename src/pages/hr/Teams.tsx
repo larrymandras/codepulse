@@ -30,8 +30,8 @@ export default function Teams() {
   // Team Editor mode
   if (teamId) {
     return (
-      <div className="flex-1 overflow-auto">
-        <GlassPanel className="m-6 p-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto">
           <TeamEditor teamId={teamId === "new" ? undefined : teamId} />
         </GlassPanel>
       </div>
@@ -40,18 +40,22 @@ export default function Teams() {
 
   // Card grid mode
   return (
-    <div className="flex-1 overflow-auto">
-      <GlassPanel className="m-6 p-8">
-        <div className="flex flex-col gap-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative">
+        <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
+        <div className="flex flex-col gap-6 relative z-10">
           {/* Header */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold text-foreground">Teams</h1>
-              <span className="text-xs text-muted-foreground">
+              <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                Teams
+              </h1>
+              <span className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
                 {teams.length} team{teams.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <Button size="sm" onClick={() => navigate("/hr/teams/new")}>
+            <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-[10px] uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
               <Plus className="h-4 w-4 mr-1" />
               New Team
             </Button>

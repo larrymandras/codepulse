@@ -58,7 +58,7 @@ export default function Onboarding() {
   ];
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 flex flex-col overflow-hidden">
       <FormProvider {...wizard.form}>
         <WizardShell wizard={wizard}>{steps[wizard.currentStep]}</WizardShell>
       </FormProvider>

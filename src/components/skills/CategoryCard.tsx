@@ -55,39 +55,57 @@ export function CategoryCard({
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className={`relative rounded-xl border p-5 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg ${
-        isDropTarget
-          ? "border-2 border-dashed border-indigo-400 scale-[1.03] shadow-lg shadow-indigo-500/20"
-          : "border border-gray-700/50"
+      className={`group relative rounded-lg border p-5 cursor-pointer transition-all duration-300 ${
+        isDropTarget ? "border-dashed scale-[1.03]" : "hover:scale-[1.02]"
       }`}
       style={{
-        backgroundColor: hex + (isDropTarget ? "30" : "15"),
-        minHeight: "200px",
+        boxShadow: isDropTarget 
+          ? `0 0 30px ${hex}40, inset 0 0 20px ${hex}20` 
+          : `0 0 15px ${hex}10, inset 0 0 10px ${hex}05`,
+        borderColor: isDropTarget ? `${hex}80` : `${hex}30`,
+        backgroundColor: isDropTarget ? `${hex}15` : `${hex}05`,
+        minHeight: "160px",
       }}
     >
+      {/* Background scanline effect on hover */}
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500 overflow-hidden rounded-lg">
+        <div className="w-full h-[1px] opacity-30 animate-scanline" style={{ backgroundColor: hex }} />
+      </div>
+
       <button
         data-testid="category-edit-btn"
         onClick={(e) => {
           e.stopPropagation();
           onEdit(category);
         }}
-        className="absolute top-3 left-3 p-1.5 rounded-lg text-gray-400 hover:text-indigo-400 hover:bg-gray-700/50 transition-colors"
+        className="absolute top-3 left-3 p-1.5 rounded text-muted-foreground/50 hover:text-foreground hover:bg-background/80 transition-colors z-10"
         aria-label={`Edit ${category.displayName}`}
       >
-        <Settings className="w-4 h-4" />
+        <Settings className="w-3.5 h-3.5" />
       </button>
 
-      <span className="absolute top-3 right-3 text-xs font-medium text-gray-300 bg-gray-700/60 rounded-full px-2.5 py-0.5">
+      <span 
+        className="absolute top-3 right-3 text-xs font-mono font-bold uppercase tracking-widest rounded px-2 py-0.5 border text-white"
+        style={{
+          borderColor: `${hex}50`,
+          backgroundColor: `${hex}30`,
+        }}
+      >
         {skillCount} {skillCount === 1 ? "skill" : "skills"}
       </span>
 
-      <div className="flex flex-col items-center justify-center text-center gap-2 pt-6">
-        <span className="text-3xl">{category.icon}</span>
-        <div className="text-base font-bold text-white">
+      <div className="flex flex-col items-center justify-center text-center gap-2.5 pt-6 relative z-10">
+        <span 
+          className="text-3xl transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
+          style={{ textShadow: `0 0 15px ${hex}80` }}
+        >
+          {category.icon}
+        </span>
+        <div className="text-sm font-bold font-mono uppercase tracking-widest text-white mt-1">
           {category.displayName}
         </div>
         {category.description && (
-          <div className="text-sm text-gray-400 line-clamp-2">
+          <div className="text-xs text-muted-foreground line-clamp-2 max-w-[90%] leading-relaxed">
             {category.description}
           </div>
         )}
@@ -95,7 +113,9 @@ export function CategoryCard({
 
       {isDropTarget && (
         <div className="absolute inset-x-0 bottom-3 text-center">
-          <span className="text-xs text-indigo-300 font-medium">Drop here to assign</span>
+          <span className="text-[10px] font-mono uppercase tracking-widest font-bold" style={{ color: hex }}>
+            Drop to assign
+          </span>
         </div>
       )}
     </div>

@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAvatars } from "@/hooks/useAvatars";
+import { useRosterAgents } from "@/hooks/useRosterAgents";
 import {
   DndContext,
   DragEndEvent,
@@ -34,24 +35,11 @@ const FALLBACK_AGENTS = [
   { profileId: "ragnhildr", name: "Ragnhildr", avatar: undefined },
 ];
 
-const ROLE_MAP: Record<string, string> = {
-  astrid: "System Orchestrator",
-  hervor: "Security Specialist",
-  gondul: "Data Architect",
-  freya: "Creative Director",
-  ragnhildr: "Infrastructure Lead",
-  brynhildr: "Frontend Engineer",
-  skuld: "Backend Engineer",
-  hildr: "QA & Testing",
-  idunn: "DevOps Engineer",
-  urdr: "Product Manager",
-  verdandi: "Scrum Master",
-};
-
 export default function MissionControl() {
   const serverTasks = useQuery(api.missionControl.listTasksByAgent) ?? [];
   const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
   const avatars = useAvatars();
+  const { agents: rosterAgents } = useRosterAgents();
   const reassignTaskMutation = useMutation(api.missionControl.reassignTask);
   const [localTasks, setLocalTasks] = useState<TaskItem[]>([]);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -177,7 +165,17 @@ export default function MissionControl() {
               {agents.map((agent) => {
                 const avatarId = "avatarId" in agent ? agent.avatarId : undefined;
                 const av = avatarId ? avatarMap[avatarId] : null;
-                const role = ROLE_MAP[agent.profileId.toLowerCase()] || "Autonomous Agent";
+                const rosterAgent = rosterAgents.find((ra) => ra.id === agent.profileId || ra.name === agent.name);
+                const description = rosterAgent?.description;
+                let role = "Autonomous Agent";
+                if (description) {
+                  const match = description.match(/^([A-Za-z0-9\s&]+?)\s*[—–-]/);
+                  if (match) {
+                    role = match[1].trim();
+                  } else {
+                    role = description.split(" — ")[0].split("-")[0].trim();
+                  }
+                }
                 return (
                   <div key={agent.profileId}>
                     <WarRoomKanbanColumn

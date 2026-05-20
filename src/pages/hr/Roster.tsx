@@ -104,25 +104,26 @@ export default function Roster() {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <GlassPanel className="m-6 p-8">
-        <div className="flex flex-col gap-6">
+    <div className="flex-1 flex flex-col overflow-hidden">
+      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative">
+        <div className="flex flex-col gap-6 relative z-10">
           {/* Header row */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold text-foreground">
+              <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                 Agent Roster
               </h1>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-3 text-[10px] font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
                 <span className="flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" />
+                  <Users className="h-3.5 w-3.5 text-primary/70" />
                   {totalCount} total
                 </span>
-                <span className="text-[var(--status-ok)]">
+                <span className="text-[var(--status-ok)] font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">
                   {activeCount} active
                 </span>
                 {pendingCount > 0 && (
-                  <span className="text-[var(--status-warn)]">
+                  <span className="text-[var(--status-warn)] font-bold drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">
                     {pendingCount} pending
                   </span>
                 )}
@@ -133,11 +134,12 @@ export default function Roster() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowImportDialog(true)}
+                className="font-mono text-[10px] uppercase tracking-widest border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
               >
                 <Upload className="h-4 w-4 mr-1" />
                 Import YAML
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
                 <Link to="/hr/onboarding">
                   <Plus className="h-4 w-4 mr-1" />
                   Onboard Agent

@@ -172,47 +172,58 @@ function NavGroup({
   collapsed?: boolean;
 }) {
   return (
-    <>
+    <div className="mb-2">
       {!collapsed && (
-        <p className="px-3 pt-4 pb-1 text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          {label}
-        </p>
+        <div className="px-3 pt-4 pb-2 flex items-center gap-2">
+          <span className="w-1 h-1 rounded-full bg-primary/50 animate-pulse" />
+          <p className="text-[10px] uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
+            {label}
+          </p>
+        </div>
       )}
       {collapsed && <div className="pt-3" />}
-      {items.map((item) => {
-        const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
-        const link = (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            onClick={onNavClick}
-            aria-label={collapsed ? item.label : undefined}
-            className={({ isActive }) =>
-              `flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm transition-colors border-l-2 ${
-                isActive
-                  ? "bg-accent border-[var(--sidebar-active-bar)] text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50"
-              }`
-            }
-          >
-            <IconComponent className="h-4 w-4 shrink-0" />
-            {!collapsed && item.label}
-          </NavLink>
-        );
-        if (collapsed) {
-          return (
-            <Tooltip key={item.to}>
-              <TooltipTrigger asChild>{link}</TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
+      <div className="space-y-[1px]">
+        {items.map((item) => {
+          const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
+          const link = (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/"}
+              onClick={onNavClick}
+              aria-label={collapsed ? item.label : undefined}
+              className={({ isActive }) =>
+                `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-xs font-mono tracking-wider transition-all relative overflow-hidden ${
+                  isActive
+                    ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
+                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
+                }`
+              }
+            >
+              <IconComponent 
+                className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] group-hover:drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+              />
+              {!collapsed && (
+                <span className="group-[.is-active]:drop-shadow-[0_0_5px_rgba(16,185,129,0.4)]">
+                  {item.label}
+                </span>
+              )}
+            </NavLink>
           );
-        }
-        return link;
-      })}
-    </>
+          if (collapsed) {
+            return (
+              <Tooltip key={item.to}>
+                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return link;
+        })}
+      </div>
+    </div>
   );
 }
 
