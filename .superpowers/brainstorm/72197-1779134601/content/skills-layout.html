@@ -1,0 +1,201 @@
+<h2>Skills Page Layout</h2>
+<p class="subtitle">Which overall layout approach feels right for a skill launcher?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>App Launcher Grid</h3>
+      <p>Flat grid of skill cards organized by category tabs across the top. Each card shows icon, name, description, and launch button. Think macOS Launchpad or Windows Start menu.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">App Launcher Grid</div>
+        <div class="mockup-body" style="padding:16px;">
+          <!-- Tab bar -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid #333;padding-bottom:8px;">
+            <span style="padding:4px 12px;background:#6366f1;color:white;border-radius:6px;font-size:13px;">All</span>
+            <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:13px;">Project Mgmt</span>
+            <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:13px;">Legal</span>
+            <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:13px;">Marketing</span>
+            <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:13px;">Sales</span>
+            <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:13px;">SEO</span>
+          </div>
+          <!-- Search -->
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 12px;margin-bottom:16px;color:#666;font-size:13px;">🔍 Search skills...</div>
+          <!-- Grid of cards -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#6366f1;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">📋</div>
+              <div style="color:white;font-size:13px;font-weight:600;">Plan Phase</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Create detailed plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#22c55e;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">▶️</div>
+              <div style="color:white;font-size:13px;font-weight:600;">Execute Phase</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Run phase plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#f59e0b;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">🔍</div>
+              <div style="color:white;font-size:13px;font-weight:600;">Code Review</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Review source files</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#ef4444;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">⚖️</div>
+              <div style="color:white;font-size:13px;font-weight:600;">NDA Generator</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Draft NDAs</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#8b5cf6;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">📈</div>
+              <div style="color:white;font-size:13px;font-weight:600;">Market Research</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Competitive intel</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:16px;text-align:center;">
+              <div style="width:40px;height:40px;background:#06b6d4;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;">🌐</div>
+              <div style="color:white;font-size:13px;font-weight:600;">SEO Audit</div>
+              <div style="color:#666;font-size:11px;margin-top:4px;">Full site analysis</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Sidebar Categories + Detail Cards</h3>
+      <p>Left sidebar with category list (always visible), main area shows cards for selected category. Persistent navigation, good for many skills. Think VS Code extensions or app store.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Sidebar + Detail</div>
+        <div class="mockup-body" style="padding:0;display:flex;min-height:280px;">
+          <!-- Sidebar -->
+          <div style="width:180px;background:#111;border-right:1px solid #333;padding:12px 0;">
+            <div style="padding:8px 16px;margin-bottom:4px;background:#1a1a1a;border-right:2px solid #6366f1;color:white;font-size:13px;">📋 Project Mgmt</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">⚖️ Legal</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">📈 Marketing</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">💼 Sales</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">🌐 SEO / GEO</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">🛠️ Dev Tools</div>
+            <div style="padding:8px 16px;margin-bottom:4px;color:#888;font-size:13px;">🎨 Design</div>
+          </div>
+          <!-- Main content -->
+          <div style="flex:1;padding:16px;">
+            <div style="color:white;font-size:16px;font-weight:600;margin-bottom:4px;">Project Management</div>
+            <div style="color:#888;font-size:12px;margin-bottom:16px;">30 skills for planning, execution, and tracking</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;background:#6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">📋</div>
+                <div style="flex:1;">
+                  <div style="color:white;font-size:13px;font-weight:600;">Plan Phase</div>
+                  <div style="color:#888;font-size:11px;">Create detailed phase plan (PLAN.md) with verification loop</div>
+                </div>
+                <div style="color:#6366f1;font-size:12px;cursor:pointer;">Launch →</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;background:#22c55e;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">▶️</div>
+                <div style="flex:1;">
+                  <div style="color:white;font-size:13px;font-weight:600;">Execute Phase</div>
+                  <div style="color:#888;font-size:11px;">Execute all plans in a phase with wave-based parallelization</div>
+                </div>
+                <div style="color:#6366f1;font-size:12px;cursor:pointer;">Launch →</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:12px;display:flex;align-items:center;gap:12px;">
+                <div style="width:36px;height:36px;background:#f59e0b;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">🔍</div>
+                <div style="flex:1;">
+                  <div style="color:white;font-size:13px;font-weight:600;">Code Review</div>
+                  <div style="color:#888;font-size:11px;">Review source files for bugs, security issues, and quality</div>
+                </div>
+                <div style="color:#6366f1;font-size:12px;cursor:pointer;">Launch →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Grouped Cards with Category Headers</h3>
+      <p>Single scrollable page. Category headers with icon + description break up the grid. Compact cards within each group. Frequent skills pinned at top. Think Notion template gallery.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Grouped Cards</div>
+        <div class="mockup-body" style="padding:16px;">
+          <!-- Search -->
+          <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 12px;margin-bottom:16px;color:#666;font-size:13px;">🔍 Search skills...</div>
+          <!-- Frequent -->
+          <div style="margin-bottom:20px;">
+            <div style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">⚡ Frequently Used</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <span style="background:#6366f1;color:white;padding:6px 14px;border-radius:20px;font-size:12px;">Plan Phase</span>
+              <span style="background:#22c55e;color:white;padding:6px 14px;border-radius:20px;font-size:12px;">Execute Phase</span>
+              <span style="background:#f59e0b;color:white;padding:6px 14px;border-radius:20px;font-size:12px;">Progress</span>
+            </div>
+          </div>
+          <!-- Category: Project Management -->
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;">
+              <span style="font-size:18px;">📋</span>
+              <div>
+                <div style="color:white;font-size:14px;font-weight:600;">Project Management</div>
+                <div style="color:#666;font-size:11px;">Planning, execution, tracking, and verification</div>
+              </div>
+              <span style="margin-left:auto;background:#333;color:#888;padding:2px 8px;border-radius:10px;font-size:11px;">30</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Plan Phase</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Create detailed plans</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Execute Phase</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Run phase plans</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Discuss Phase</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Gather context</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Progress</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Check project status</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Code Review</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Review for bugs & quality</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Debug</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Systematic debugging</div>
+              </div>
+            </div>
+          </div>
+          <!-- Category: Legal -->
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #333;">
+              <span style="font-size:18px;">⚖️</span>
+              <div>
+                <div style="color:white;font-size:14px;font-weight:600;">Legal</div>
+                <div style="color:#666;font-size:11px;">Contracts, compliance, IP, and agreements</div>
+              </div>
+              <span style="margin-left:auto;background:#333;color:#888;padding:2px 8px;border-radius:10px;font-size:11px;">14</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">NDA Generator</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Draft NDAs</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Contract Review</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Analyze contracts</div>
+              </div>
+              <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px;cursor:pointer;">
+                <div style="color:white;font-size:12px;font-weight:600;">Compliance</div>
+                <div style="color:#666;font-size:10px;margin-top:2px;">Check regulations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

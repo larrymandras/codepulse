@@ -1,0 +1,122 @@
+<h2>View Toggle Placement</h2>
+<p class="subtitle">Where should the grid/list toggle live relative to search and filters?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Toolbar Row — Search + Tabs + Toggle</h3>
+      <p>Everything in one horizontal bar. Search left, category filter tabs center, view toggle right. Compact, one line.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Toolbar Row</div>
+        <div class="mockup-body" style="padding:16px;">
+          <!-- Single toolbar row -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:8px 12px;color:#666;font-size:13px;width:200px;">🔍 Search...</div>
+            <div style="display:flex;gap:6px;flex:1;overflow-x:auto;">
+              <span style="padding:4px 12px;background:#6366f1;color:white;border-radius:6px;font-size:12px;white-space:nowrap;">All</span>
+              <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">Project Mgmt</span>
+              <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">Legal</span>
+              <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">Marketing</span>
+              <span style="padding:4px 12px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">Sales</span>
+            </div>
+            <!-- Toggle -->
+            <div style="display:flex;background:#1a1a1a;border:1px solid #333;border-radius:6px;overflow:hidden;flex-shrink:0;">
+              <div style="padding:6px 10px;background:#6366f1;color:white;font-size:14px;cursor:pointer;" title="Grid">⊞</div>
+              <div style="padding:6px 10px;color:#666;font-size:14px;cursor:pointer;" title="List">☰</div>
+            </div>
+          </div>
+          <!-- Preview: Grid view active -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#6366f1;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">📋</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Plan Phase</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Create detailed plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#22c55e;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">▶️</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Execute Phase</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Run phase plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#f59e0b;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">🔍</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Code Review</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Review for bugs</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#ef4444;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">🐛</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Debug</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Fix bugs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Two-Row Header — Search on top, Tabs + Toggle below</h3>
+      <p>Search bar spans full width on row 1. Category tabs and view toggle share row 2. More breathing room, works better with many categories.</p>
+      <div class="mockup" style="margin-top:12px;">
+        <div class="mockup-header">Two-Row Header</div>
+        <div class="mockup-body" style="padding:16px;">
+          <!-- Row 1: Search + Frequent -->
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:10px 14px;color:#666;font-size:13px;flex:1;">🔍 Search skills...</div>
+          </div>
+          <!-- Row 2: Tabs + Toggle -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid #222;">
+            <div style="display:flex;gap:6px;flex:1;overflow-x:auto;">
+              <span style="padding:5px 14px;background:#6366f1;color:white;border-radius:6px;font-size:12px;white-space:nowrap;">All</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">📋 Project Mgmt</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">⚖️ Legal</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">📈 Marketing</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">💼 Sales</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">🌐 SEO</span>
+              <span style="padding:5px 14px;background:#2a2a2a;color:#999;border-radius:6px;font-size:12px;white-space:nowrap;">🛠️ Dev Tools</span>
+            </div>
+            <!-- Toggle -->
+            <div style="display:flex;background:#1a1a1a;border:1px solid #333;border-radius:6px;overflow:hidden;flex-shrink:0;">
+              <div style="padding:6px 10px;background:#6366f1;color:white;font-size:14px;cursor:pointer;" title="Grid">⊞</div>
+              <div style="padding:6px 10px;color:#666;font-size:14px;cursor:pointer;" title="List">☰</div>
+            </div>
+          </div>
+          <!-- Frequent pills -->
+          <div style="margin-bottom:16px;">
+            <div style="color:#888;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">⚡ Frequently Used</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <span style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:5px 12px;border-radius:16px;font-size:11px;">Plan Phase</span>
+              <span style="background:linear-gradient(135deg,#22c55e,#16a34a);color:white;padding:5px 12px;border-radius:16px;font-size:11px;">Execute Phase</span>
+              <span style="background:linear-gradient(135deg,#f59e0b,#d97706);color:white;padding:5px 12px;border-radius:16px;font-size:11px;">Progress</span>
+            </div>
+          </div>
+          <!-- Preview: Grid view -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#6366f1;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">📋</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Plan Phase</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Create detailed plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#22c55e;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">▶️</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Execute Phase</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Run phase plans</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#f59e0b;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">🔍</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Code Review</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Review for bugs</div>
+            </div>
+            <div style="background:#1a1a1a;border:1px solid #333;border-radius:10px;padding:14px;text-align:center;">
+              <div style="width:36px;height:36px;background:#ef4444;border-radius:8px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:18px;">🐛</div>
+              <div style="color:white;font-size:12px;font-weight:600;">Debug</div>
+              <div style="color:#666;font-size:10px;margin-top:2px;">Fix bugs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
