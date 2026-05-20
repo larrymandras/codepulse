@@ -53,10 +53,10 @@ function PillButton({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+      className={`text-[10px] px-2 py-0.5 rounded-sm border font-mono transition-colors uppercase tracking-widest ${
         active
-          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-          : "bg-gray-700/30 text-gray-400 border-gray-600/30 hover:bg-gray-700/50 hover:text-gray-300"
+          ? "bg-primary/20 text-primary border-primary"
+          : "bg-muted/30 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/50"
       }`}
     >
       {children}
@@ -127,26 +127,30 @@ export default function DriftTimeline() {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-gray-300">Config Drift<InfoTooltip text="Configuration change timeline tracking drift across MCP servers, plugins, and settings" /></h2>
+      <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            Config Drift
+            <InfoTooltip text="Configuration change timeline tracking drift across MCP servers, plugins, and settings" />
+          </h2>
           {summary.isDrifting && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-400/10 text-yellow-400 border border-yellow-400/20 font-medium">
+            <span className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 font-mono uppercase tracking-widest animate-pulse">
               DRIFTING
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {filteredChanges.length > 0 && (
             <button
               onClick={handleAcknowledgeAll}
               onBlur={() => setConfirmingAckAll(false)}
-              className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+              className={`text-[10px] px-3 py-1 rounded border font-mono uppercase tracking-widest transition-colors ${
                 confirmingAckAll
-                  ? "bg-red-500/20 text-red-300 border-red-500/40"
-                  : "bg-gray-700/30 text-gray-400 border-gray-600/30 hover:bg-gray-700/50 hover:text-gray-300"
+                  ? "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30"
+                  : "bg-background/50 text-muted-foreground border-border/30 hover:text-foreground hover:border-border/50"
               }`}
             >
               {confirmingAckAll
@@ -154,9 +158,9 @@ export default function DriftTimeline() {
                 : `Ack All (${filteredChanges.length})`}
             </button>
           )}
-          <div className="flex items-center gap-3 text-[10px] text-gray-500">
-            <span>{summary.changesLastHour} / hr</span>
-            <span>{summary.changesLast24h} / 24h</span>
+          <div className="flex items-center gap-3 text-[10px] font-mono tracking-widest uppercase text-muted-foreground">
+            <span className="flex gap-1.5"><span className="text-primary/70">{summary.changesLastHour}</span> / hr</span>
+            <span className="flex gap-1.5"><span className="text-primary/70">{summary.changesLast24h}</span> / 24h</span>
           </div>
         </div>
       </div>

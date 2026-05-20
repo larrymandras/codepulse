@@ -33,35 +33,37 @@ export default function GitActivityWidget() {
     .reverse();
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
-        Git Activity<InfoTooltip text="Git activity: commits, pull requests, and lines of code changed over time" />
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        Git Activity
+        <InfoTooltip text="Git activity: commits, pull requests, and lines of code changed over time" />
       </h2>
 
       {/* Summary stats */}
       {summary && (
-        <div className="grid grid-cols-4 gap-2 mb-4">
-          <div className="bg-gray-900/50 rounded-lg px-2 py-1.5 text-center">
-            <p className="text-[10px] text-gray-400">Commits</p>
-            <p className="text-sm font-bold text-indigo-400">
+        <div className="grid grid-cols-4 gap-3 mb-6 text-[10px] uppercase font-mono tracking-widest">
+          <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+            <p className="text-primary/70 mb-1">Commits</p>
+            <p className="text-sm font-bold tracking-tight text-indigo-400">
               {summary.commits}
             </p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg px-2 py-1.5 text-center">
-            <p className="text-[10px] text-gray-400">PRs</p>
-            <p className="text-sm font-bold text-emerald-400">
+          <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+            <p className="text-primary/70 mb-1">PRs</p>
+            <p className="text-sm font-bold tracking-tight text-primary">
               {summary.pullRequests}
             </p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg px-2 py-1.5 text-center">
-            <p className="text-[10px] text-gray-400">+ Lines</p>
-            <p className="text-sm font-bold text-green-400">
+          <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+            <p className="text-primary/70 mb-1">+ Lines</p>
+            <p className="text-sm font-bold tracking-tight text-green-400">
               +{summary.linesAdded}
             </p>
           </div>
-          <div className="bg-gray-900/50 rounded-lg px-2 py-1.5 text-center">
-            <p className="text-[10px] text-gray-400">- Lines</p>
-            <p className="text-sm font-bold text-red-400">
+          <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+            <p className="text-primary/70 mb-1">- Lines</p>
+            <p className="text-sm font-bold tracking-tight text-red-400">
               -{summary.linesRemoved}
             </p>
           </div>
@@ -71,7 +73,7 @@ export default function GitActivityWidget() {
       {chartData.length > 0 ? (
         <FlexBarChart data={chartData} height={200} />
       ) : (
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-xs font-mono text-muted-foreground py-4 text-center">
           No chart data available
         </p>
       )}

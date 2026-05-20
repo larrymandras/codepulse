@@ -51,24 +51,25 @@ function SubScoreBar({ label, weight, value }: SubScoreBarProps) {
   const barColor =
     value < 40
       ? "var(--status-error, #ef4444)"
-      : "var(--chart-bar-accent, var(--primary, #6366f1))";
+      : "var(--primary, #10b981)";
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground w-32 shrink-0">
-        {label}
-      </span>
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-8 shrink-0">
-        {weight}
-      </span>
-      <div className="flex-1 h-2 rounded-full bg-gray-700/50">
-        <div
-          className="h-2 rounded-full transition-all duration-500"
-          style={{ width: `${Math.min(value, 100)}%`, backgroundColor: barColor }}
-        />
+    <div className="flex items-center gap-3">
+      <div className="flex-1">
+        <div className="flex justify-between items-center mb-1.5">
+          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+            {label} <span className="opacity-50 text-[10px] ml-1">({weight})</span>
+          </span>
+          <span className="text-xs font-bold tabular-nums font-mono text-foreground">
+            {Math.round(value)}
+          </span>
+        </div>
+        <div className="h-1.5 rounded-full bg-muted/30 overflow-hidden relative">
+          <div
+            className="absolute top-0 left-0 h-full rounded-full transition-all duration-500 shadow-[0_0_10px_currentColor]"
+            style={{ width: `${Math.min(value, 100)}%`, backgroundColor: barColor, color: barColor }}
+          />
+        </div>
       </div>
-      <span className="text-sm font-bold tabular-nums w-8 text-right">
-        {Math.round(value)}
-      </span>
     </div>
   );
 }
@@ -146,49 +147,39 @@ function OperatorScoreCard() {
   const weekArrow = WEEK_ARROWS[weekTrend] ?? "->";
 
   return (
-    <GlassPanel className="p-6">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden">
       {/* Header row */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div
-            className="w-3 h-3 rounded-full"
-            style={{ backgroundColor: color }}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: color }} />
+          System Integrity <span className="text-[10px] text-muted-foreground">({label})</span>
+        </h2>
+        <div className="flex items-center gap-3 text-[10px] uppercase font-mono tracking-widest text-muted-foreground">
+          <span title="Day-over-day" className="flex items-center gap-1"><span className="text-primary">{dayArrow}</span> 1D</span>
+          <span title="7-day trend" className="flex items-center gap-1"><span className="text-primary">{weekArrow}</span> 7D</span>
+        </div>
+      </div>
+
+      <div className="flex items-end gap-6 mb-8">
+        {/* Score number */}
+        <div className="text-5xl font-bold tabular-nums drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" style={{ color }}>
+          <AnimatedNumber
+            value={score}
+            format={(v: number) => Math.round(v).toString()}
           />
-          <span className="text-base font-bold">Operator Score</span>
-          <span
-            className="text-[10px] uppercase tracking-wider"
-            style={{ color }}
-          >
-            {label}
-          </span>
+          <span className="text-lg text-muted-foreground font-normal opacity-50">/100</span>
         </div>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <span title="Day-over-day">{dayArrow} day</span>
-          <span title="7-day trend">{weekArrow} 7d</span>
-        </div>
+
+        {/* Sparkline inline */}
+        {sparkData.length >= 2 && (
+          <div className="flex-1 h-12 mb-1 opacity-80">
+            <Sparkline data={sparkData} height={48} color={color} />
+          </div>
+        )}
       </div>
-
-      {/* Score number */}
-      <div className="text-5xl font-bold tabular-nums mb-2" style={{ color }}>
-        <AnimatedNumber
-          value={score}
-          format={(v: number) => Math.round(v).toString()}
-        />
-        <span className="text-lg text-muted-foreground font-normal">/100</span>
-      </div>
-
-      {/* Sparkline */}
-      {sparkData.length >= 2 && (
-        <div className="mb-4">
-          <Sparkline data={sparkData} height={32} color={color} />
-        </div>
-      )}
-
-      {/* Divider */}
-      <div className="border-t border-gray-700/50 my-4" />
 
       {/* Sub-score breakdown (D-16) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
         <SubScoreBar
           label="Memory Freshness"
           weight="25%"
@@ -202,7 +193,7 @@ function OperatorScoreCard() {
         />
         <SubScoreBar label="Uptime" weight="10%" value={latest.uptime} />
       </div>
-    </GlassPanel>
+    </div>
   );
 }
 

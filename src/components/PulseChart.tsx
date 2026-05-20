@@ -20,13 +20,19 @@ export default function PulseChart({ events }: PulseChartProps) {
     .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Activity Pulse<InfoTooltip text="Real-time event activity over the last hour, grouped into 1-minute buckets" /></h2>
-      {data.length === 0 ? (
-        <p className="text-sm text-gray-500 py-12 text-center">No activity data yet</p>
-      ) : (
-        <FlexBarChart data={data} height={200} />
-      )}
+    <div className="p-6 h-full flex flex-col">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        Activity Pulse
+        <InfoTooltip text="Real-time event activity over the last hour, grouped into 1-minute buckets" />
+      </h2>
+      <div className="flex-1 min-h-[200px]">
+        {data.length === 0 ? (
+          <p className="text-xs font-mono text-muted-foreground py-12 text-center">No activity data yet</p>
+        ) : (
+          <FlexBarChart data={data} height={200} />
+        )}
+      </div>
     </div>
   );
 }

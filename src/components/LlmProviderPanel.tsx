@@ -28,43 +28,52 @@ export default function LlmProviderPanel() {
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">LLM Metrics<InfoTooltip text="LLM usage metrics: API calls, token consumption, cost, and latency by provider and model" /></h2>
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        LLM Metrics
+        <InfoTooltip text="LLM usage metrics: API calls, token consumption, cost, and latency by provider and model" />
+      </h2>
       {totalCalls === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">No LLM calls recorded</p>
+        <p className="text-xs font-mono text-muted-foreground py-6 text-center">No LLM calls recorded</p>
       ) : (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="bg-gray-900/50 rounded-lg p-2">
-              <p className="text-gray-500">Calls</p>
-              <p className="text-gray-200 font-semibold">{totalCalls}</p>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-3 text-[10px] font-mono uppercase tracking-widest">
+            <div className="bg-background/50 border border-border/30 rounded-lg p-3 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+              <p className="text-primary/70 mb-1">Calls</p>
+              <p className="text-foreground text-sm font-bold tracking-tight">{totalCalls}</p>
             </div>
-            <div className="bg-gray-900/50 rounded-lg p-2">
-              <p className="text-gray-500">Tokens</p>
-              <p className="text-gray-200 font-semibold">{totalTokens.toLocaleString()}</p>
+            <div className="bg-background/50 border border-border/30 rounded-lg p-3 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+              <p className="text-primary/70 mb-1">Tokens</p>
+              <p className="text-foreground text-sm font-bold tracking-tight">{totalTokens.toLocaleString()}</p>
             </div>
-            <div className="bg-gray-900/50 rounded-lg p-2">
-              <p className="text-gray-500">Cost</p>
-              <p className="text-gray-200 font-semibold">{formatCost(totalCost)}</p>
+            <div className="bg-background/50 border border-border/30 rounded-lg p-3 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+              <p className="text-primary/70 mb-1">Cost</p>
+              <p className="text-foreground text-sm font-bold tracking-tight">{formatCost(totalCost)}</p>
             </div>
-            <div className="bg-gray-900/50 rounded-lg p-2">
-              <p className="text-gray-500">Avg Latency</p>
-              <p className="text-gray-200 font-semibold">{avgLatency.toFixed(0)}ms</p>
+            <div className="bg-background/50 border border-border/30 rounded-lg p-3 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+              <p className="text-primary/70 mb-1">Avg Latency</p>
+              <p className="text-foreground text-sm font-bold tracking-tight">{avgLatency.toFixed(0)}ms</p>
             </div>
           </div>
 
-          <div className="border-t border-gray-700/30 pt-2">
-            <p className="text-xs text-gray-500 mb-1">By Model</p>
-            {Array.from(byModel.entries())
-              .sort((a, b) => b[1].cost - a[1].cost)
-              .map(([model, stats]) => (
-                <div key={model} className="flex justify-between text-xs py-0.5">
-                  <span className="text-gray-400 font-mono">{model}</span>
-                  <span className="text-gray-300">
-                    {stats.count} calls &middot; {formatCost(stats.cost)}
-                  </span>
-                </div>
-              ))}
+          <div className="border-t border-border/30 pt-4">
+            <p className="text-[10px] font-mono tracking-widest uppercase text-primary/70 mb-3 flex items-center gap-2">
+              <span className="w-1 h-1 bg-primary/50 rounded-full" />
+              By Model
+            </p>
+            <div className="space-y-2">
+              {Array.from(byModel.entries())
+                .sort((a, b) => b[1].cost - a[1].cost)
+                .map(([model, stats]) => (
+                  <div key={model} className="flex justify-between items-center text-xs py-1 border-b border-border/10 last:border-0">
+                    <span className="text-muted-foreground font-mono truncate mr-2">{model}</span>
+                    <span className="text-foreground font-mono whitespace-nowrap">
+                      {stats.count} calls <span className="text-primary/40 mx-1">|</span> {formatCost(stats.cost)}
+                    </span>
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
       )}

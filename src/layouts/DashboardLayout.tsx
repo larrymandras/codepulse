@@ -236,16 +236,27 @@ function SidebarContent({
             </div>
           ) : (
             <>
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
-                  CP
+              <div className="flex items-center gap-3 w-full">
+                {/* Avatar Slot */}
+                <div className="w-9 h-9 rounded-full border-2 border-primary/50 overflow-hidden shadow-[0_0_15px_rgba(16,185,129,0.4)] shrink-0 relative group">
+                  <div className="absolute inset-0 bg-primary/20 flex items-center justify-center group-hover:bg-primary/40 transition-colors">
+                    <span className="text-primary font-mono text-[10px] font-bold">LM</span>
+                  </div>
+                  {/* User can replace the src below with an actual photo */}
+                  <img src="/avatar-placeholder.png" alt="Larry Mandras" className="w-full h-full object-cover opacity-0 transition-opacity duration-300" onLoad={(e) => e.currentTarget.style.opacity = '1'} onError={(e) => e.currentTarget.style.display = 'none'} />
                 </div>
-                <div>
-                  <h1 className="text-sm font-semibold text-foreground">CodePulse</h1>
-                  <p className="text-[10px] text-muted-foreground">Telemetry Dashboard</p>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h1 className="text-sm font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
+                    <DarkModeToggle />
+                  </div>
+                  <div className="text-[9px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
+                    <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)] mt-0.5" />
+                    <span className="break-words">Operator: Larry Mandras</span>
+                  </div>
                 </div>
               </div>
-              <DarkModeToggle />
             </>
           )}
         </div>
@@ -403,8 +414,14 @@ export default function DashboardLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      {/* Desktop Sidebar */}
+    <div className="flex h-screen overflow-hidden bg-background relative">
+      <div className="matrix-bg" />
+      {/* CRT Scanline Overlay */}
+      <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden mix-blend-overlay">
+        <div className="w-full h-[5px] bg-primary/40 animate-scanline shadow-[0_0_20px_rgba(16,185,129,0.8)]" />
+      </div>
+      
+      {/* Sidebar Navigation */}
       <aside className={`hidden md:flex ${sidebarCollapsed ? "w-[48px]" : "w-60"} flex-shrink-0 bg-sidebar dark:bg-[var(--glass-bg)] dark:backdrop-blur-[var(--glass-blur)] border-r border-border flex-col transition-[width] duration-200`}>
         <SidebarContent
           collapsed={sidebarCollapsed}
@@ -446,26 +463,46 @@ export default function DashboardLayout() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="h-12 flex-shrink-0 bg-background border-b border-border flex items-center justify-between px-6">
-          {/* Hamburger button - mobile only */}
-          <button
-            onClick={() => setSidebarOpen(true)}
-            aria-label="Open sidebar menu"
-            className="p-1 -ml-1 mr-3 text-muted-foreground hover:text-foreground transition-colors md:hidden"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-          <span className="text-sm text-muted-foreground">
-            Astridr Runtime Telemetry
-          </span>
-          <div className="flex items-center gap-2">
+        <header className="h-14 flex-shrink-0 bg-background/80 backdrop-blur-md border-b border-border flex items-center justify-between px-6 z-10 shadow-[0_4px_20px_rgba(0,0,0,0.3)]">
+          <div className="flex items-center gap-4">
+            {/* Hamburger button - mobile only */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              aria-label="Open sidebar menu"
+              className="p-1 -ml-1 text-muted-foreground hover:text-foreground transition-colors md:hidden"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                <span className="text-[10px] font-mono tracking-widest text-primary uppercase">
+                  Astridr Runtime Telemetry
+                </span>
+              </div>
+              
+              <div className="hidden lg:flex items-center gap-4 text-[10px] font-mono text-primary/60 pl-2 border-l border-primary/20">
+                <span className="flex items-center gap-1.5">
+                  <Cpu className="w-3 h-3 text-primary/80" /> 
+                  SYS: <span className="text-primary font-bold">14%</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Server className="w-3 h-3 text-primary/80" /> 
+                  LAT: <span className="text-primary font-bold">12ms</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
             <EStopButton />
-            <div className="w-px h-5 bg-border mx-1" />
+            <div className="w-px h-4 bg-primary/20 mx-1" />
             <NotificationBell />
             <PrivacyShield />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
-            <div className="w-px h-5 bg-border mx-1" />
+            <div className="w-px h-4 bg-primary/20 mx-1" />
             <UserMenu />
           </div>
         </header>

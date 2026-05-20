@@ -27,10 +27,10 @@ function PillButton({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+      className={`text-[10px] px-2 py-0.5 rounded-sm border font-mono uppercase tracking-widest transition-colors ${
         active
-          ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/40"
-          : "bg-gray-700/30 text-gray-400 border-gray-600/30 hover:bg-gray-700/50 hover:text-gray-300"
+          ? "bg-primary/20 text-primary border-primary"
+          : "bg-muted/30 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/50"
       }`}
     >
       {children}
@@ -123,36 +123,46 @@ export default function ToolExecutionPanel() {
 
   if (executions.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full flex flex-col">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
           Tool Executions
           <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
         </h2>
-        <p className="text-sm text-gray-500 py-4 text-center">No data yet</p>
+        
+        <div className="flex-1 flex flex-col items-center justify-center opacity-70 min-h-[200px]">
+          <div className="w-12 h-12 border border-primary/20 rounded-full border-t-primary animate-spin mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]" />
+          <p className="text-[10px] font-mono tracking-widest text-primary uppercase animate-pulse">Awaiting Telemetry</p>
+          <div className="mt-4 text-[9px] font-mono text-primary/40 flex flex-col items-center gap-1.5">
+            <span className="bg-primary/10 px-2 py-0.5 rounded border border-primary/20">[ SYSTEM STANDBY ]</span>
+            <span>Intercepting agent tool calls...</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Tool Executions
         <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
       </h2>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
-          <p className="text-xs text-gray-400">Total</p>
-          <p className="text-lg font-bold text-gray-100">{totalExecutions}</p>
+      <div className="grid grid-cols-3 gap-3 mb-6 text-[10px] uppercase font-mono tracking-widest">
+        <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+          <p className="text-primary/70 mb-1">Total</p>
+          <p className="text-sm font-bold tracking-tight text-foreground">{totalExecutions}</p>
         </div>
-        <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
-          <p className="text-xs text-gray-400">Success Rate</p>
-          <p className="text-lg font-bold text-emerald-400">{overallRate}%</p>
+        <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+          <p className="text-primary/70 mb-1">Success Rate</p>
+          <p className="text-sm font-bold tracking-tight text-primary">{overallRate}%</p>
         </div>
-        <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
-          <p className="text-xs text-gray-400">Avg Duration</p>
-          <p className="text-lg font-bold text-indigo-400">{avgDuration}ms</p>
+        <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
+          <p className="text-primary/70 mb-1">Avg Duration</p>
+          <p className="text-sm font-bold tracking-tight text-indigo-400">{avgDuration}ms</p>
         </div>
       </div>
 
@@ -214,7 +224,7 @@ export default function ToolExecutionPanel() {
 
       {/* Recent executions list */}
       {filteredExecutions.length === 0 ? (
-        <p className="text-sm text-gray-500 py-2 text-center">
+        <p className="text-xs font-mono text-muted-foreground py-2 text-center">
           No executions match filters.
         </p>
       ) : (
@@ -223,49 +233,60 @@ export default function ToolExecutionPanel() {
             const isExpanded = expandedId === exec._id;
             return (
               <div key={exec._id}>
-                <div
-                  className="flex items-center gap-3 bg-gray-900/30 rounded-lg px-3 py-2 cursor-pointer hover:bg-gray-900/50 transition-colors"
-                  onClick={() =>
-                    setExpandedId((prev) =>
-                      prev === exec._id ? null : exec._id
-                    )
-                  }
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      exec.success ? "bg-emerald-400" : "bg-red-400"
-                    }`}
-                  />
-                  <span className="text-xs text-gray-200 font-mono truncate flex-1">
-                    {exec.toolName}
-                  </span>
-                  {exec.durationMs != null && (
-                    <span className="text-[10px] text-gray-500">
-                      {exec.durationMs.toFixed(0)}ms
-                    </span>
-                  )}
-                  {exec.decision && (
+                  <div
+                    className="flex items-start gap-3 bg-background/30 border-l-2 border-transparent hover:border-primary/50 px-3 py-2 cursor-pointer hover:bg-primary/5 transition-all group"
+                    onClick={() =>
+                      setExpandedId((prev) =>
+                        prev === exec._id ? null : exec._id
+                      )
+                    }
+                  >
                     <span
-                      className={`text-[9px] uppercase tracking-wider font-semibold rounded px-1.5 py-0.5 ${
-                        exec.decision === "accept"
-                          ? "text-emerald-400 bg-emerald-600/10"
-                          : "text-amber-400 bg-amber-600/10"
+                      className={`w-1.5 h-1.5 rounded-full shrink-0 mt-1.5 ${
+                        exec.success ? "bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" : "bg-destructive animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"
                       }`}
-                    >
-                      {exec.decision}
-                    </span>
-                  )}
-                  <span className="text-[10px] text-gray-500 shrink-0">
-                    {relativeTime(exec.timestamp)}
-                  </span>
-                  <span className="text-[10px] text-gray-600">
-                    {isExpanded ? "\u25BE" : "\u25B8"}
-                  </span>
-                </div>
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-foreground font-mono truncate tracking-widest group-hover:text-primary transition-colors">
+                          {exec.toolName}
+                        </span>
+                        {exec.durationMs != null && (
+                          <span className="text-[9px] text-primary/60 font-mono">
+                            {exec.durationMs.toFixed(0)}ms
+                          </span>
+                        )}
+                        {exec.decision && (
+                          <span
+                            className={`text-[8px] uppercase tracking-widest font-mono rounded-sm px-1.5 py-0.5 ml-auto ${
+                              exec.decision === "accept"
+                                ? "text-primary border border-primary/30 bg-primary/10"
+                                : "text-yellow-500 border border-yellow-500/30 bg-yellow-500/10"
+                            }`}
+                          >
+                            {exec.decision}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[9px] font-mono text-muted-foreground/50">
+                          ID: {exec._id.slice(-6)}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                            {relativeTime(exec.timestamp)}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
+                            {isExpanded ? "\u25BE" : "\u25B8"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-1 p-2 bg-gray-900/40 rounded-lg border border-gray-700/30 text-[11px] space-y-1">
+                  <div className="ml-5 mt-1 mb-1 p-2 bg-background/50 rounded-lg border border-border/30 text-[11px] font-mono tracking-wide space-y-1">
                     {!exec.success && exec.errorMessage && (
                       <div>
                         <span className="text-gray-500 font-medium">

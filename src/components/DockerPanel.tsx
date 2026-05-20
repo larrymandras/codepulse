@@ -35,43 +35,53 @@ export default function DockerPanel() {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Docker Containers<InfoTooltip text="Docker container status including health, CPU, and memory usage" /></h2>
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden">
+      <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          Docker Containers
+          <InfoTooltip text="Docker container status including health, CPU, and memory usage" />
+        </h2>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="text-[10px] px-2 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
+          className="text-[10px] uppercase tracking-widest font-mono px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {refreshing ? (
-            <span className="animate-pulse text-yellow-400">Refreshing...</span>
+            <span className="animate-pulse">Refreshing...</span>
           ) : (
             "Refresh"
           )}
         </button>
       </div>
       {containers.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">Docker monitoring active — waiting for container data</p>
+        <p className="text-xs font-mono text-muted-foreground py-6 text-center">Docker monitoring active — waiting for container data</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2">
           {containers.map((c: any) => (
             <div
               key={c._id}
-              className="bg-gray-900/50 border border-gray-700/30 rounded-lg p-3"
+              className="bg-background/80 border-l-2 border-l-primary border border-border/30 rounded-r-lg p-3 hover:border-primary/50 hover:bg-card/80 transition-all hover-glitch shadow-[0_0_10px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${statusColor(c.status ?? "")}`} />
-                  <span className="text-xs font-mono text-gray-300 truncate">{c.name}</span>
+                  <span className={`w-2 h-2 rounded-full ${statusColor(c.status ?? "")} shadow-[0_0_5px_currentColor]`} />
+                  <span className="text-xs font-mono text-foreground truncate">{c.name}</span>
                 </div>
                 {healthBadge(c.health)}
               </div>
               {c.image && (
-                <p className="text-[10px] text-gray-500 font-mono mb-1.5">{c.image}</p>
+                <p className="text-[10px] text-muted-foreground font-mono mb-2 truncate opacity-70">{c.image}</p>
               )}
-              <div className="grid grid-cols-2 gap-1 text-xs text-gray-500">
-                <span>CPU: {c.cpuPercent?.toFixed(1) ?? "N/A"}%</span>
-                <span>Mem: {c.memoryMb?.toFixed(0) ?? "N/A"} MB</span>
+              <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-mono tracking-widest text-muted-foreground pt-2 border-t border-border/30 mt-2">
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-primary/70">CPU</span>
+                  <span className="text-foreground">{c.cpuPercent?.toFixed(1) ?? "N/A"}%</span>
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-primary/70">Mem</span>
+                  <span className="text-foreground">{c.memoryMb?.toFixed(0) ?? "N/A"} MB</span>
+                </span>
               </div>
             </div>
           ))}

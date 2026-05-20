@@ -187,55 +187,63 @@ export default function AgentTopology() {
 
   if (allAgents.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Agent Topology<InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" /></h2>
-        <p className="text-sm text-gray-500 py-8 text-center">No agents running</p>
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          Agent Topology
+          <InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" />
+        </h2>
+        <p className="text-xs font-mono text-muted-foreground py-8 text-center">No agents running</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-        <h2 className="text-sm font-semibold text-gray-300">Agent Topology<InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" /></h2>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-4 border-b border-border/30 pb-4">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          Agent Topology
+          <InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" />
+        </h2>
 
         {/* Status filter */}
-        <div className="flex items-center gap-1 bg-gray-900/50 border border-gray-700/30 rounded-lg p-0.5">
+        <div className="flex items-center gap-1.5 bg-background/50 border border-border/30 rounded-lg p-1 shadow-[0_0_10px_rgba(0,0,0,0.2)]">
           {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
-              className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors ${
+              className={`flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-sm transition-colors ${
                 statusFilter === f.value
-                  ? "bg-gray-700 text-gray-100"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                  : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot}`} />}
+              {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot.replace("bg-green-400", "bg-primary").replace("bg-yellow-400", "bg-yellow-500").replace("bg-red-400", "bg-destructive")}`} />}
               {f.label}
-              <span className="text-gray-500 text-[10px]">({f.count})</span>
+              <span className="text-primary/70 text-[9px] opacity-80">({f.count})</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mb-2 flex-wrap">
-        <span className="text-[9px] text-gray-500 uppercase">Edges:</span>
-        <span className="flex items-center gap-1 text-[9px] text-gray-400">
-          <span className="w-4 h-0.5 bg-green-500 rounded" /> parent→child
+      <div className="flex items-center gap-4 mb-4 flex-wrap font-mono uppercase tracking-widest">
+        <span className="text-[9px] text-muted-foreground">Edges:</span>
+        <span className="flex items-center gap-1.5 text-[9px] text-primary/80">
+          <span className="w-4 h-0.5 bg-primary/60 rounded" /> parent→child
         </span>
         {Object.entries(COORDINATION_COLORS).map(([type, color]) => (
-          <span key={type} className="flex items-center gap-1 text-[9px] text-gray-400">
-            <span className="w-4 h-0.5 rounded" style={{ backgroundColor: color, opacity: 0.7 }} /> {type}
+          <span key={type} className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+            <span className="w-4 h-0.5 rounded shadow-[0_0_5px_rgba(0,0,0,0.5)]" style={{ backgroundColor: color, opacity: 0.8 }} /> {type}
           </span>
         ))}
       </div>
 
       {/* Graph + Detail panel */}
-      <div className="flex gap-3">
-        <div style={{ height: 400 }} className={`rounded-lg overflow-hidden ${selectedAgent ? "flex-1" : "w-full"}`}>
+      <div className="flex gap-4 flex-1 h-[400px]">
+        <div className={`rounded-xl overflow-hidden border border-border/30 bg-background/30 shadow-[inset_0_0_20px_rgba(0,0,0,0.4)] ${selectedAgent ? "flex-1" : "w-full"}`}>
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -246,10 +254,10 @@ export default function AgentTopology() {
             minZoom={0.3}
             maxZoom={2}
           >
-            <Background color="#374151" gap={20} />
+            <Background color="#10b981" gap={20} size={1} />
             <Controls
               showInteractive={false}
-              className="!bg-gray-800 !border-gray-700 !shadow-none [&>button]:!bg-gray-700 [&>button]:!border-gray-600 [&>button]:!text-gray-300 [&>button:hover]:!bg-gray-600"
+              className="!bg-background !border-border !shadow-md [&>button]:!bg-background/80 [&>button]:!border-border/50 [&>button]:!text-primary [&>button:hover]:!bg-primary/20 [&>button:hover]:!text-primary"
             />
           </ReactFlow>
         </div>

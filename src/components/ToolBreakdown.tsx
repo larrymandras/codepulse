@@ -19,12 +19,18 @@ export default function ToolBreakdown({ events }: ToolBreakdownProps) {
     .slice(0, 10);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-sm font-semibold text-gray-300 mb-3">Tool Usage<InfoTooltip text="Top 10 most-used tools ranked by execution count" /></h2>
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden h-full">
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+        Tool Usage
+        <InfoTooltip text="Top 10 most-used tools ranked by execution count" />
+      </h2>
       {data.length === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">No tool data yet</p>
+        <p className="text-xs font-mono text-muted-foreground py-8 text-center">No tool data yet</p>
       ) : (
-        <FlexBarChart data={data} height={200} />
+        <div className="mt-4">
+          <FlexBarChart data={data} height={200} />
+        </div>
       )}
     </div>
   );
