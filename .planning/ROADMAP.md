@@ -326,8 +326,8 @@ Plans:
 **Plans**: 4 plans
 Plans:
 - [x] 66-01-PLAN.md — Schema migration + provider registry + mutation upgrades + Wave 0 test stubs
-- [ ] 66-02-PLAN.md — OTel provider default fix + gateway event routing (otelLogs, otelMetrics, runtimeIngest)
-- [ ] 66-03-PLAN.md — Dynamic ProviderHealthPanel with all 7 providers and extended fields
+- [x] 66-02-PLAN.md — OTel provider default fix + gateway event routing (otelLogs, otelMetrics, runtimeIngest)
+- [x] 66-03-PLAN.md — Dynamic ProviderHealthPanel with all 7 providers and extended fields
 - [ ] 66-04-PLAN.md — CLIGatewayTool telemetry emission (Astridr-side) + hooks documentation
 **UI hint**: yes
 
@@ -455,7 +455,7 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░���░░░░░�
 | 63. Call Graph | 0/TBD | Not started | - |
 | 64. PagerDuty | 0/TBD | Not started | - |
 | 65. GitHub Actions | 0/TBD | Not started | - |
-| 66. Gateway Compatibility | 1/4 | In Progress|  |
+| 66. Gateway Compatibility | 3/4 | In Progress|  |
 | 67. Multi-Provider Pricing | 0/TBD | Not started | - |
 | 68. Gateway Observability | 0/TBD | Not started | - |
 | 69. SDK Guard & UX | 0/TBD | Not started | - |
