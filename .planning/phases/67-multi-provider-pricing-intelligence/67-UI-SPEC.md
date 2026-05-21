@@ -41,9 +41,9 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level top padding |
 
-Exceptions: SDK spend cap gauge touch-target minimum 44px height for clickable area.
+Exceptions: SDK spend cap gauge touch-target minimum height uses `48px` (`min-h-[48px]`), the nearest standard token above the 44px accessibility floor. This satisfies WCAG 2.5.8 touch-target minimums.
 
-Source: Default 8-point scale (no upstream override); gauge exception per D-04.
+Source: Default 8-point scale (no upstream override); gauge exception per D-04, revised from 44px to 48px to comply with standard token set.
 
 ---
 
@@ -118,6 +118,8 @@ Layout for Analytics split view:
 - Right card: "Subscription Usage" — call count + token count, no dollar sign
 - Below: existing cost trend chart unchanged
 
+Primary visual anchor: API Spend and Subscription Usage MetricCards in the split-view grid — the two 28px metric values (tabular-nums, weight 600) are the first thing the eye should land on. All other elements on the Analytics screen subordinate to these two focal points.
+
 Layout for SDK spend cap gauge:
 - Inline with Settings page or as collapsible within Analytics "Intelligence Limits" section
 - Gauge bar width: fill proportional to `currentDaySpend / 5.00`
@@ -130,7 +132,7 @@ Layout for SDK spend cap gauge:
 
 | Element | Copy |
 |---------|------|
-| Primary CTA | "Save Changes" (AgentProfileEditor model dropdown) |
+| Primary CTA | "Update Agent Model" (AgentProfileEditor model dropdown save action) |
 | API Spend section heading | "API Spend" |
 | Subscription Usage section heading | "Subscription Usage" |
 | SDK spend cap gauge label | "SDK Daily Cap" |
@@ -163,6 +165,7 @@ Source: D-01, D-02, D-04 decisions; extended from existing `CostForecastPanel` c
 ### SDK Spend Cap Gauge
 
 - Gauge bar: `<Progress value={pct} />` from shadcn ui, color override via inline style or className swap on status
+- Gauge container: `min-h-[48px]` to meet touch-target minimum (48px standard token)
 - 80% marker: absolutely positioned vertical line `w-px h-full bg-[--status-warn] opacity-70` at `left: 80%` within relative container
 - Auto-alert badge: appears inline right of gauge when `currentDaySpend >= 4.00`; uses `<Badge variant="outline">` with `text-[--status-warn]` text
 
