@@ -29,7 +29,7 @@ const Chat = lazy(() => import("./pages/Chat"));
 const LiveRun = lazy(() => import("./pages/LiveRun"));
 const InboxPage = lazy(() => import("./pages/Inbox"));
 const TasksPage = lazy(() => import("./pages/Tasks"));
-const ConfigEditorPage = lazy(() => import("./pages/ConfigEditor"));
+const ConfigEditorPage = lazy(() => import("./pages/ConfigPage"));
 
 // Lazy-load interaction layer pages (Phase 03)
 const InsightsChat = lazy(() => import("./pages/InsightsChat"));
