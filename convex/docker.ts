@@ -66,6 +66,30 @@ export const currentStatus = query({
   },
 });
 
+export const reconcile = mutation({
+  args: {
+    activeContainerIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const all = await ctx.db
+      .query("dockerContainers")
+      .order("desc")
+      .take(50);
+
+    const activeSet = new Set(args.activeContainerIds);
+    let removed = 0;
+
+    for (const c of all) {
+      if (!activeSet.has(c.containerId)) {
+        await ctx.db.delete(c._id);
+        removed++;
+      }
+    }
+
+    return { removed };
+  },
+});
+
 export const pollHealth = internalMutation({
   args: {},
   handler: async (ctx) => {

@@ -131,8 +131,10 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
 
           // Aggregated format: { containers: [ { name, image, state, healthy, ... }, ... ] }
           if (Array.isArray(d.containers)) {
+            const activeIds: string[] = [];
             for (const c of d.containers) {
               const cid = c.id ?? c.name ?? "unknown";
+              activeIds.push(cid);
               const healthStr = c.health ?? (
                 c.healthy === true ? "healthy"
                 : c.healthy === false ? "unhealthy"
@@ -149,6 +151,10 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
                 memoryMb: c.memoryMb ?? c.memory_mb ?? c.memPercent ?? c.mem_percent,
               });
             }
+            // Remove orphan records not in the current container list
+            await ctx.runMutation(api.docker.reconcile, {
+              activeContainerIds: activeIds,
+            });
           } else {
             // Single-container fallback
             const cid = d.containerId ?? d.container_id;
@@ -542,13 +548,14 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "command_execution": {
           const d = data as any;
+          const execStatus = d.status ?? "queued";
           await ctx.runMutation(api.commandExecutions.upsertLifecycle, {
             executionId: d.executionId ?? d.execution_id ?? "unknown",
             toolName: d.toolName ?? d.tool_name,
             origin: d.origin,
             profileId: d.profileId ?? d.profile_id,
             channelId: d.channelId ?? d.channel_id,
-            status: d.status ?? "queued",
+            status: execStatus,
             queuedAt: d.queuedAt ?? d.queued_at ?? timestamp,
             startedAt: d.startedAt ?? d.started_at,
             completedAt: d.completedAt ?? d.completed_at,
@@ -557,6 +564,19 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             contextSnapshot: d.contextSnapshot ?? d.context_snapshot,
             parentExecutionId: d.parentExecutionId ?? d.parent_execution_id,
           });
+          // Populate toolExecutions table on terminal states for the dashboard panel
+          const terminalStates = ["completed", "failed", "timed_out", "cancelled"];
+          if (terminalStates.includes(execStatus)) {
+            const toolName = d.toolName ?? d.tool_name ?? "unknown";
+            await ctx.runMutation(api.toolExecutions.insert, {
+              sessionId: d.profileId ?? d.profile_id ?? "unknown",
+              toolName,
+              durationMs: d.durationMs ?? d.duration_ms,
+              success: execStatus === "completed",
+              errorMessage: d.errorMessage ?? d.error_message ?? d.error,
+              timestamp,
+            });
+          }
           break;
         }
         case "run.blocks": {
