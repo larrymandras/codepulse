@@ -4,14 +4,14 @@ milestone: v5.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 66 UI-SPEC approved
-last_updated: "2026-05-21T22:12:20.994Z"
-last_activity: 2026-05-21 -- Phase 66 execution started
+last_updated: "2026-05-21T22:47:29.284Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 19
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 2
-  percent: 33
+  completed_plans: 6
+  percent: 100
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 66 (gateway-compatibility) — EXECUTING
-Plan: 1 of 4
+Plan: 2 of 4 (completed 66-04)
 Status: Executing Phase 66
-Last activity: 2026-05-21 -- Phase 66 execution started
+Last activity: 2026-05-21 -- 66-04 complete: CLIGatewayTool telemetry emission added
 
 ```
 v5.0 Progress: [                                   ] 0%
@@ -82,6 +82,13 @@ See PROJECT.md Key Decisions table for full history.
 - PagerDuty Events API v2 (not REST API) — stable dedup_key pattern for trigger/resolve lifecycle
 - GitHub PAT for Actions dispatch — GitHub App auth deferred to future requirement (EXT-03d2)
 
+**Phase 66 decisions:**
+
+- CLIGatewayTool telemetry uses local import pattern (inside branch) to avoid circular deps — matches schedule_wakeup.py analog
+- Fire-and-forget `try/except Exception: pass` guard: telemetry must never break task execution (T-66-08)
+- `session_id` sourced from `get_session_context()` context var, falls back to `task_id` when no active session
+- `duration_ms = duration_seconds * 1000` — gateway returns seconds, CodePulse stores ms
+
 ### Pending Todos
 
 - Run `/gsd-plan-phase 59` to begin Phase 59 planning
@@ -92,6 +99,6 @@ None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-05-21T21:28:24.943Z
+Last session: 2026-05-21T22:47:29.277Z
 Stopped at: Phase 66 UI-SPEC approved
 Next step: `/gsd-plan-phase 60`
