@@ -7,6 +7,7 @@ export const upsert = mutation({
     sessionId: v.string(),
     cwd: v.optional(v.string()),
     model: v.optional(v.string()),
+    provider: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -22,6 +23,7 @@ export const upsert = mutation({
         eventCount: existing.eventCount + 1,
         ...(args.cwd !== undefined ? { cwd: args.cwd } : {}),
         ...(args.model !== undefined ? { model: args.model } : {}),
+        ...(args.provider !== undefined ? { provider: args.provider } : {}),
       });
     } else {
       await ctx.db.insert("sessions", {
@@ -31,6 +33,7 @@ export const upsert = mutation({
         status: "active",
         cwd: args.cwd,
         model: args.model,
+        provider: args.provider,
         eventCount: 1,
       });
     }

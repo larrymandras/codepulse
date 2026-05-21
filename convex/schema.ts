@@ -43,10 +43,12 @@ export default defineSchema({
     status: v.string(), // "active" | "completed" | "errored"
     cwd: v.optional(v.string()),
     model: v.optional(v.string()),
+    provider: v.optional(v.string()),
     eventCount: v.float64(),
   })
     .index("by_sessionId", ["sessionId"])
-    .index("by_status", ["status", "lastEventAt"]),
+    .index("by_status", ["status", "lastEventAt"])
+    .index("by_provider", ["provider"]),
 
   agents: defineTable({
     sessionId: v.string(),
@@ -546,10 +548,12 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
     timestamp: v.float64(),
     archived: v.optional(v.boolean()),
+    provider: v.optional(v.string()),
   })
     .index("by_session", ["sessionId"])
     .index("by_tool", ["toolName", "timestamp"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_provider", ["provider"]),
 
   permissionRequests: defineTable({
     sessionId: v.string(),
@@ -764,6 +768,9 @@ export default defineSchema({
     consecutiveFailures: v.float64(),
     lastSuccessAt: v.float64(),
     timestamp: v.float64(),
+    authenticated: v.optional(v.boolean()),
+    billingType: v.optional(v.string()),
+    quotaRemaining: v.optional(v.float64()),
   })
     .index("by_provider", ["providerName"])
     .index("by_timestamp", ["timestamp"]),

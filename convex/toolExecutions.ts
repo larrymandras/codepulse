@@ -10,6 +10,7 @@ export const insert = mutation({
     decision: v.optional(v.string()),
     decisionSource: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
+    provider: v.optional(v.string()),
     timestamp: v.float64(),
   },
   handler: async (ctx, args) => {
