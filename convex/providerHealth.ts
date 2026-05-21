@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { ALL_PROVIDERS } from "./lib/providers";
 
 export const upsert = mutation({
   args: {
@@ -10,6 +11,9 @@ export const upsert = mutation({
     consecutiveFailures: v.float64(),
     lastSuccessAt: v.float64(),
     timestamp: v.float64(),
+    authenticated: v.optional(v.boolean()),
+    billingType: v.optional(v.string()),
+    quotaRemaining: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -26,6 +30,9 @@ export const upsert = mutation({
         consecutiveFailures: args.consecutiveFailures,
         lastSuccessAt: args.lastSuccessAt,
         timestamp: args.timestamp,
+        authenticated: args.authenticated,
+        billingType: args.billingType,
+        quotaRemaining: args.quotaRemaining,
       });
     } else {
       await ctx.db.insert("providerHealth", args);
@@ -42,6 +49,9 @@ export const recordStateChange = mutation({
     consecutiveFailures: v.float64(),
     lastSuccessAt: v.float64(),
     timestamp: v.float64(),
+    authenticated: v.optional(v.boolean()),
+    billingType: v.optional(v.string()),
+    quotaRemaining: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("providerHealth", args);
@@ -51,7 +61,7 @@ export const recordStateChange = mutation({
 export const latest = query({
   args: {},
   handler: async (ctx) => {
-    const providers = ["anthropic_direct", "openrouter", "ollama"];
+    const providers = ALL_PROVIDERS;
     const results: Record<string, any> = {};
 
     for (const p of providers) {
