@@ -38,6 +38,22 @@ function resolveUrl() {
   return "https://ideal-sandpiper-297.convex.site";
 }
 
+function resolveIngestKey() {
+  if (process.env.CODEPULSE_INGEST_KEY) return process.env.CODEPULSE_INGEST_KEY;
+
+  const envPath = join(__dirname, "..", ".env.local");
+  if (existsSync(envPath)) {
+    try {
+      const envContent = readFileSync(envPath, "utf-8");
+      const keyMatch = envContent.match(/^CODEPULSE_INGEST_KEY\s*=\s*(.+)$/m);
+      if (keyMatch) return keyMatch[1].trim();
+    } catch {
+      // ignore read errors
+    }
+  }
+  return null;
+}
+
 async function main() {
   let input;
   try {
@@ -56,6 +72,7 @@ async function main() {
   }
 
   const codepulseUrl = resolveUrl();
+  const ingestKey = resolveIngestKey();
 
   // Claude Code sends flat snake_case fields:
   //   { session_id, hook_event_name, tool_name, tool_input, cwd, ... }
@@ -81,10 +98,13 @@ async function main() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 3000);
 
+  const ingestHeaders = { "Content-Type": "application/json" };
+  if (ingestKey) ingestHeaders["Authorization"] = `Bearer ${ingestKey}`;
+
   try {
     await fetch(`${codepulseUrl}/ingest`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: ingestHeaders,
       body: JSON.stringify(ingestBody),
       signal: controller.signal,
     });
@@ -109,9 +129,11 @@ async function main() {
 
         const ctrl2 = new AbortController();
         const t2 = setTimeout(() => ctrl2.abort(), 3000);
+        const rtHeaders = { "Content-Type": "application/json" };
+        if (ingestKey) rtHeaders["Authorization"] = `Bearer ${ingestKey}`;
         await fetch(`${codepulseUrl}/runtime-ingest`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: rtHeaders,
           body: JSON.stringify({
             eventType: "git_commit",
             data: { sha, message, author, branch, filesChanged },
