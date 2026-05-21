@@ -48,12 +48,13 @@ This phase is backend-heavy. The **only** UI surface that changes is `ProviderHe
 
 ## Spacing Scale
 
-Declared values (must be multiples of 4):
+Declared values (multiples of 4, plus preserved legacy value):
 
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px | Icon dot size (w-2 h-2), inline badge gap |
 | sm | 8px | Intra-card field spacing (`space-y-2`), icon-to-label gap |
+| sm+ | 12px | Inner card padding (`p-3`) — preserved legacy value from existing `ProviderCard` |
 | md | 16px | Card padding (`p-4`), grid gap between cards |
 | lg | 24px | Panel outer padding, section header bottom margin |
 | xl | 32px | Not used in this phase |
@@ -68,14 +69,16 @@ Source: Existing `ProviderHealthPanel.tsx` uses `p-3` (12px) inner cards and `p-
 
 ## Typography
 
+Maximum 2 weights: 400 (regular) and 500 (medium). Visual differentiation for the panel heading is achieved via `font-mono` face + `tracking-widest` — no third weight stop needed.
+
 | Role | Size | Weight | Line Height | Font |
 |------|------|--------|-------------|------|
-| Panel heading | 12px (`text-xs`) | 600 (`font-mono tracking-widest`) | 1.5 | JetBrains Mono |
+| Panel heading | 12px (`text-xs`) | 500 (`font-medium font-mono tracking-widest`) | 1.5 | JetBrains Mono |
 | Provider name | 14px (`text-sm`) | 500 (`font-medium`) | 1.4 | Geist Variable |
 | Field label/value | 12px (`text-xs`) | 400 | 1.5 | Geist Variable |
 | Quota percentage | 12px (`text-xs`) | 500 (`font-medium`) | 1.0 | JetBrains Mono (tabular-nums) |
 
-Source: Existing `ProviderHealthPanel.tsx` pattern — `text-xs font-mono tracking-widest` for heading, `text-sm font-medium` for provider names, `text-xs` for field data. Phase 66 preserves and extends this pattern.
+Source: Existing `ProviderHealthPanel.tsx` pattern — `text-xs font-mono tracking-widest` for heading, `text-sm font-medium` for provider names, `text-xs` for field data. Phase 66 preserves and extends this pattern. Weight collapsed from 3 stops to 2 per checker revision 2026-05-21.
 
 ---
 
@@ -89,7 +92,7 @@ Source: Existing `ProviderHealthPanel.tsx` pattern — `text-xs font-mono tracki
 | Status OK | `#22c55e` (`--status-ok`) | `available: true` status dot |
 | Status Error | `#ef4444` (`--status-error`) | `available: false` status dot, auth failure indicator |
 | Status Warn | `#eab308` (`--status-warn`) | `half_open` circuit state, quota < 20% warning |
-| Muted | `#a1a1aa` (`--muted-foreground`) | Field label text, `No data` placeholder |
+| Muted | `#a1a1aa` (`--muted-foreground`) | Field label text, `No data yet` placeholder |
 
 Accent reserved for: quota fill bar (when > 20% remaining), provider available+authenticated combined state.
 
@@ -143,7 +146,7 @@ Use existing `StatusBadge` component with inline label mapping:
   - `quotaRemaining >= 0.20`: `--chart-bar-accent` (`#10b981`)
   - `quotaRemaining < 0.20`: `--status-warn` (`#eab308`)
   - `quotaRemaining < 0.05`: `--status-error` (`#ef4444`)
-- Percentage value rendered in `text-xs font-mono tabular-nums` next to bar
+- Percentage value rendered in `text-xs font-medium font-mono tabular-nums` next to bar
 - If `quotaRemaining` is null/missing: omit the bar entirely, do not show 0%
 
 ### Grid Layout
@@ -159,7 +162,7 @@ Source: CONTEXT.md gateway data contract (GET /health response shape), Phase 66 
 | State | What to Show |
 |-------|--------------|
 | Convex query loading | Skeleton — 4 placeholder cards with `animate-pulse` gray blocks, same grid layout |
-| Provider returns no Convex row yet | Show card shell with provider name + gray dot + "No data" in `text-xs text-muted-foreground` |
+| Provider returns no Convex row yet | Show card shell with provider name + gray dot + "No data yet" in `text-xs text-muted-foreground` |
 | All providers have no data | Panel renders with empty cards, not hidden |
 | `available: false` | Show card normally with red dot, do not collapse or hide |
 
@@ -180,7 +183,7 @@ Source: CONTEXT.md gateway data contract (GET /health response shape), Phase 66 
 | Quota field label | `Quota` |
 | Latency field label | `Latency EMA` |
 | Success field label | `Success` |
-| Empty state (no data for provider) | `No data` |
+| Empty state (no data for provider) | `No data yet` |
 | Primary CTA | None — this panel is read-only, no CTAs |
 | Destructive confirmation | None — no destructive actions in this phase |
 | Error state (query fails) | Handled by existing `SectionErrorBoundary` — wraps panel, no custom copy needed |
