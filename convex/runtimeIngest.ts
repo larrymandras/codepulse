@@ -774,6 +774,62 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "gateway.task_completed": {
+          const d = data as any;
+          const provider = d.provider ?? "unknown";
+          const sessionId = d.session_id ?? d.sessionId ?? "unknown";
+          await ctx.runMutation(api.toolExecutions.insert, {
+            sessionId,
+            toolName: `gateway:${provider}`,
+            provider,
+            success: true,
+            durationMs: d.duration_ms ?? d.durationMs,
+            timestamp,
+          });
+          await ctx.runMutation(api.sessions.upsert, {
+            sessionId,
+            provider,
+          });
+          break;
+        }
+        case "gateway.task_failed": {
+          const d = data as any;
+          const provider = d.provider ?? "unknown";
+          const sessionId = d.session_id ?? d.sessionId ?? "unknown";
+          await ctx.runMutation(api.toolExecutions.insert, {
+            sessionId,
+            toolName: `gateway:${provider}`,
+            provider,
+            success: false,
+            errorMessage: d.error ?? "Task failed",
+            timestamp,
+          });
+          break;
+        }
+        case "gateway.task_started": {
+          const d = data as any;
+          const provider = d.provider ?? "unknown";
+          const sessionId = d.session_id ?? d.sessionId ?? "unknown";
+          await ctx.runMutation(api.toolExecutions.insert, {
+            sessionId,
+            toolName: `gateway:${provider}`,
+            provider,
+            success: true,
+            timestamp,
+          });
+          break;
+        }
+        case "gateway.routing_decision": {
+          const d = data as any;
+          const sessionId = d.session_id ?? d.sessionId ?? "unknown";
+          await ctx.runMutation(api.events.ingest, {
+            sessionId,
+            eventType: "gateway.routing_decision",
+            payload: d,
+            timestamp,
+          });
+          break;
+        }
       }
     }
 

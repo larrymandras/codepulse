@@ -179,7 +179,10 @@ async function routeLogRecord(
 
     case "api_request": {
       const model = getAttr(attrs, "model") ?? "unknown";
-      const provider = getAttr(attrs, "provider") ?? "anthropic";
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      if (!getAttr(attrs, "provider")) {
+        console.warn("otelLogs: api_request missing provider attribute — defaulting to unknown", { sessionId });
+      }
       const promptTokens = getNumAttr(attrs, "input_tokens") ?? getNumAttr(attrs, "prompt_tokens") ?? 0;
       const completionTokens = getNumAttr(attrs, "output_tokens") ?? getNumAttr(attrs, "completion_tokens") ?? 0;
       const latencyMs = getNumAttr(attrs, "duration_ms") ?? 0;
@@ -225,6 +228,59 @@ async function routeLogRecord(
         toolName,
         decision,
         decisionSource,
+        timestamp,
+      });
+      break;
+    }
+
+    case "gateway.task_completed": {
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      await ctx.runMutation(api.toolExecutions.insert, {
+        sessionId,
+        toolName: `gateway:${provider}`,
+        provider,
+        success: true,
+        durationMs: getNumAttr(attrs, "duration_ms"),
+        timestamp,
+      });
+      await ctx.runMutation(api.sessions.upsert, {
+        sessionId,
+        provider,
+      });
+      break;
+    }
+
+    case "gateway.task_failed": {
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      await ctx.runMutation(api.toolExecutions.insert, {
+        sessionId,
+        toolName: `gateway:${provider}`,
+        provider,
+        success: false,
+        errorMessage: getAttr(attrs, "error") ?? "Task failed",
+        timestamp,
+      });
+      break;
+    }
+
+    case "gateway.task_started": {
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      await ctx.runMutation(api.toolExecutions.insert, {
+        sessionId,
+        toolName: `gateway:${provider}`,
+        provider,
+        success: true,
+        timestamp,
+      });
+      break;
+    }
+
+    case "gateway.routing_decision": {
+      // Falls to generic events table — Phase 68 adds routingDecisions table
+      await ctx.runMutation(api.events.ingest, {
+        sessionId,
+        eventType: "gateway.routing_decision",
+        payload: attrsToObj(attrs),
         timestamp,
       });
       break;
