@@ -167,7 +167,10 @@ async function routeMetric(
 
     case "claude_code.cost.usage": {
       const model = getAttr(attrs, "model") ?? "unknown";
-      const provider = getAttr(attrs, "provider") ?? "anthropic";
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      if (!getAttr(attrs, "provider")) {
+        console.warn("otelMetrics: claude_code.cost.usage missing provider attribute", { sessionId });
+      }
       await ctx.runMutation(api.llm.recordCall, {
         provider,
         model,
@@ -185,7 +188,10 @@ async function routeMetric(
     case "claude_code.token.usage": {
       const tokenType = getAttr(attrs, "type"); // "input" or "output"
       const model = getAttr(attrs, "model") ?? "unknown";
-      const provider = getAttr(attrs, "provider") ?? "anthropic";
+      const provider = getAttr(attrs, "provider") ?? "unknown";
+      if (!getAttr(attrs, "provider")) {
+        console.warn("otelMetrics: claude_code.token.usage missing provider attribute", { sessionId });
+      }
       await ctx.runMutation(api.llm.recordCall, {
         provider,
         model,
