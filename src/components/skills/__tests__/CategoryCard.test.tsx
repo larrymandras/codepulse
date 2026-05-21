@@ -68,6 +68,6 @@ describe("CategoryCard", () => {
     );
     const card = screen.getByTestId("category-card");
     expect(card.className).toContain("border-dashed");
-    expect(card.className).toContain("border-indigo-400");
+    expect(card.style.borderColor).toBe("rgba(99, 102, 241, 0.5)");
   });
 });

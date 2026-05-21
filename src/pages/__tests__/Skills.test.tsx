@@ -35,6 +35,7 @@ vi.mock("../../../convex/_generated/api", () => ({
       deleteCategory: "mock-deleteCategory",
       bulkAcceptAutoAssigned: "mock-bulkAcceptAutoAssigned",
       seedExistingSkills: "mock-seedExistingSkills",
+      toggleFavorite: "mock-toggleFavorite",
     },
     registry: {
       recordSkillLaunch: "mock-recordSkillLaunch",
@@ -92,6 +93,7 @@ const MOCK_ENRICHED_SKILLS = [
     overrideDescription: null,
     hidden: false,
     isAutoAssigned: false,
+    favorite: false,
     useCount: 5,
     discoveredAt: 1000,
   },
@@ -107,6 +109,7 @@ const MOCK_ENRICHED_SKILLS = [
     overrideDescription: null,
     hidden: false,
     isAutoAssigned: false,
+    favorite: false,
     useCount: 0,
     discoveredAt: 1001,
   },
@@ -122,6 +125,7 @@ const MOCK_ENRICHED_SKILLS = [
     overrideDescription: null,
     hidden: false,
     isAutoAssigned: false,
+    favorite: false,
     useCount: 10,
     discoveredAt: 1002,
   },
@@ -141,6 +145,7 @@ const MOCK_WITH_UNCATEGORIZED = [
     overrideDescription: null,
     hidden: false,
     isAutoAssigned: true,
+    favorite: false,
     useCount: 0,
     discoveredAt: 1003,
   },
@@ -167,7 +172,7 @@ beforeEach(() => {
 describe("Skills page", () => {
   it("renders page title", () => {
     render(<Skills />);
-    expect(screen.getByText("Skills")).toBeInTheDocument();
+    expect(screen.getByText("Skills Database")).toBeInTheDocument();
   });
 
   it("renders category cards on default view", () => {

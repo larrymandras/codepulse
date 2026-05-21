@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, GripVertical, Pencil } from "lucide-react";
+import { ArrowLeft, GripVertical, Pencil, Star } from "lucide-react";
 
 interface SkillEntry {
   name: string;
@@ -8,6 +8,7 @@ interface SkillEntry {
   overrideDescription?: string | null;
   useCount?: number;
   isAutoAssigned: boolean;
+  favorite: boolean;
 }
 
 interface CategoryOption {
@@ -28,6 +29,7 @@ interface SkillsInCategoryProps {
   onLaunch: (skillName: string) => void;
   onEditSkill: (skillName: string) => void;
   onReassignSkill: (skillName: string, newCategoryName: string) => void;
+  onToggleFavorite: (skillName: string) => void;
 }
 
 const COLOR_HEX: Record<string, string> = {
@@ -48,6 +50,7 @@ export function SkillsInCategory({
   onLaunch,
   onEditSkill,
   onReassignSkill,
+  onToggleFavorite,
 }: SkillsInCategoryProps) {
   const hex = COLOR_HEX[categoryColor] ?? COLOR_HEX.gray;
   const otherCategories = categories.filter((c) => c.name !== categoryName);
@@ -199,6 +202,14 @@ export function SkillsInCategory({
                   ))}
                 </select>
               )}
+
+              <button
+                onClick={() => onToggleFavorite(skill.name)}
+                className="relative z-10 p-1.5 rounded transition-colors flex-shrink-0 hover:bg-amber-400/10"
+                aria-label={skill.favorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Star className={`w-3.5 h-3.5 ${skill.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-400"}`} />
+              </button>
 
               <button
                 onClick={() => onEditSkill(skill.name)}

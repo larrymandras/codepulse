@@ -24,7 +24,7 @@ describe("NewSkillsBanner", () => {
     render(
       <NewSkillsBanner count={3} onReview={onReview} onAcceptAll={vi.fn()} />
     );
-    fireEvent.click(screen.getByText("Review"));
+    fireEvent.click(screen.getByText("[ Review ]"));
     expect(onReview).toHaveBeenCalled();
   });
 
@@ -37,7 +37,7 @@ describe("NewSkillsBanner", () => {
         onAcceptAll={onAcceptAll}
       />
     );
-    fireEvent.click(screen.getByText("Accept All"));
+    fireEvent.click(screen.getByText("[ Accept All ]"));
     expect(onAcceptAll).toHaveBeenCalled();
   });
 });

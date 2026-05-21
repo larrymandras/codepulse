@@ -5,6 +5,7 @@ import { api } from "../../convex/_generated/api";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
 import { UncategorizedSkills } from "@/components/skills/UncategorizedSkills";
+import { FavoriteSkills } from "@/components/skills/FavoriteSkills";
 import { FrequentSkills } from "@/components/skills/FrequentSkills";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
@@ -29,6 +30,7 @@ export default function Skills() {
   const updateCat = useMutation(api.skillCategories.updateCategory);
   const createCat = useMutation(api.skillCategories.createCategory);
   const deleteCat = useMutation(api.skillCategories.deleteCategory);
+  const toggleFav = useMutation(api.skillCategories.toggleFavorite);
   const bulkAccept = useMutation(api.skillCategories.bulkAcceptAutoAssigned);
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
 
@@ -93,9 +95,15 @@ export default function Skills() {
     description: string;
     categoryName: string;
     hidden: boolean;
+    favorite: boolean;
   }) => {
     if (!editingSkill) return;
-    await updateOverride({ skillName: editingSkill, ...updates });
+    const { favorite, ...overrideUpdates } = updates;
+    await updateOverride({ skillName: editingSkill, ...overrideUpdates });
+    const currentSkill = enrichedSkills.find((s) => s.name === editingSkill);
+    if (currentSkill && currentSkill.favorite !== favorite) {
+      await toggleFav({ skillName: editingSkill });
+    }
     setEditingSkill(null);
   };
 
@@ -177,6 +185,12 @@ export default function Skills() {
             />
           )}
 
+          <FavoriteSkills
+            skills={enrichedSkills}
+            onLaunch={handleLaunch}
+            onToggleFavorite={(name) => toggleFav({ skillName: name })}
+          />
+
           <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
 
           <div>
@@ -241,6 +255,7 @@ export default function Skills() {
             onLaunch={handleLaunch}
             onEditSkill={setEditingSkill}
             onReassignSkill={handleReassignSkill}
+            onToggleFavorite={(name) => toggleFav({ skillName: name })}
           />
         </div>
       )}
@@ -251,12 +266,11 @@ export default function Skills() {
           <SkillEditPopover
             skillName={editingSkillData.name}
             displayName={editingSkillData.displayName}
-            description={
-              editingSkillData.overrideDescription ??
-              editingSkillData.description ?? ""
-            }
+            originalDescription={editingSkillData.description ?? ""}
+            description={editingSkillData.overrideDescription ?? ""}
             categoryName={editingSkillData.categoryName ?? "uncategorized"}
             hidden={editingSkillData.hidden}
+            favorite={editingSkillData.favorite}
             categories={categories.map((c) => ({
               name: c.name,
               displayName: c.displayName,

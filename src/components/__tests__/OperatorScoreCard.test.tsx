@@ -84,7 +84,7 @@ describe("OperatorScoreCard", () => {
     });
     mockHistory.mockReturnValue([{ score: 82 }, { score: 85 }]);
     render(<OperatorScoreCard />);
-    expect(screen.getByText("Healthy")).toBeTruthy();
+    expect(screen.getByText(/Healthy/)).toBeTruthy();
     expect(screen.getByTestId("animated-number").textContent).toBe("85");
   });
 
@@ -101,7 +101,7 @@ describe("OperatorScoreCard", () => {
     });
     mockHistory.mockReturnValue([]);
     render(<OperatorScoreCard />);
-    expect(screen.getByText("Needs Attention")).toBeTruthy();
+    expect(screen.getByText(/Needs Attention/)).toBeTruthy();
   });
 
   it("renders score with red color for score < 40 (SCORE-02)", () => {
@@ -117,7 +117,7 @@ describe("OperatorScoreCard", () => {
     });
     mockHistory.mockReturnValue([]);
     render(<OperatorScoreCard />);
-    expect(screen.getByText("Critical")).toBeTruthy();
+    expect(screen.getByText(/Critical/)).toBeTruthy();
   });
 
   it("renders sub-score breakdown with correct labels (D-16)", () => {
@@ -133,14 +133,14 @@ describe("OperatorScoreCard", () => {
     });
     mockHistory.mockReturnValue([]);
     render(<OperatorScoreCard />);
-    expect(screen.getByText("Memory Freshness")).toBeTruthy();
-    expect(screen.getByText("Skill ROI")).toBeTruthy();
-    expect(screen.getByText("Activity Level")).toBeTruthy();
-    expect(screen.getByText("Uptime")).toBeTruthy();
-    expect(screen.getByText("25%")).toBeTruthy();
-    expect(screen.getByText("35%")).toBeTruthy();
-    expect(screen.getByText("30%")).toBeTruthy();
-    expect(screen.getByText("10%")).toBeTruthy();
+    expect(screen.getByText(/Memory Freshness/)).toBeTruthy();
+    expect(screen.getByText(/Skill ROI/)).toBeTruthy();
+    expect(screen.getByText(/Activity Level/)).toBeTruthy();
+    expect(screen.getByText(/Uptime/)).toBeTruthy();
+    expect(screen.getByText(/25%/)).toBeTruthy();
+    expect(screen.getByText(/35%/)).toBeTruthy();
+    expect(screen.getByText(/30%/)).toBeTruthy();
+    expect(screen.getByText(/10%/)).toBeTruthy();
   });
 
   it("renders sparkline when history has >= 2 data points", () => {
@@ -195,7 +195,7 @@ describe("OperatorScoreCard", () => {
     mockHistory.mockReturnValue([{ score: 60 }, { score: 72 }]);
     render(<OperatorScoreCard />);
     // Verify trend arrows are rendered (backend-computed values used)
-    expect(screen.getByText(/day/)).toBeTruthy();
-    expect(screen.getByText(/7d/)).toBeTruthy();
+    expect(screen.getByText(/1D/)).toBeTruthy();
+    expect(screen.getByText(/7D/)).toBeTruthy();
   });
 });

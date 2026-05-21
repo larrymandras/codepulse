@@ -13,9 +13,11 @@ describe("SkillEditPopover", () => {
       <SkillEditPopover
         skillName="gsd-plan-phase"
         displayName="Plan Phase"
+        originalDescription="Create detailed phase plans with verification"
         description="Create detailed plans"
         categoryName="gsd"
         hidden={false}
+        favorite={false}
         categories={mockCategories}
         onSave={vi.fn()}
         onCancel={vi.fn()}
@@ -23,6 +25,25 @@ describe("SkillEditPopover", () => {
     );
     expect(screen.getByDisplayValue("Plan Phase")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Create detailed plans")).toBeInTheDocument();
+    expect(screen.getByText("Create detailed phase plans with verification")).toBeInTheDocument();
+  });
+
+  test("shows fallback when no original description", () => {
+    render(
+      <SkillEditPopover
+        skillName="gsd-plan-phase"
+        displayName="Plan Phase"
+        originalDescription=""
+        description=""
+        categoryName="gsd"
+        hidden={false}
+        favorite={false}
+        categories={mockCategories}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByText("No description available from skill registry.")).toBeInTheDocument();
   });
 
   test("calls onSave with updated values", () => {
@@ -31,9 +52,11 @@ describe("SkillEditPopover", () => {
       <SkillEditPopover
         skillName="gsd-plan-phase"
         displayName="Plan Phase"
+        originalDescription=""
         description=""
         categoryName="gsd"
         hidden={false}
+        favorite={false}
         categories={mockCategories}
         onSave={onSave}
         onCancel={vi.fn()}
@@ -53,9 +76,11 @@ describe("SkillEditPopover", () => {
       <SkillEditPopover
         skillName="gsd-plan-phase"
         displayName="Plan Phase"
+        originalDescription=""
         description=""
         categoryName="gsd"
         hidden={false}
+        favorite={false}
         categories={mockCategories}
         onSave={vi.fn()}
         onCancel={onCancel}

@@ -10,6 +10,7 @@ const mockSkills = [
     overrideDescription: null,
     useCount: 12,
     isAutoAssigned: false,
+    favorite: true,
   },
   {
     name: "gsd-execute-phase",
@@ -18,6 +19,7 @@ const mockSkills = [
     overrideDescription: null,
     useCount: 0,
     isAutoAssigned: true,
+    favorite: false,
   },
   {
     name: "gsd-progress",
@@ -26,6 +28,7 @@ const mockSkills = [
     overrideDescription: "Custom progress description",
     useCount: 3,
     isAutoAssigned: false,
+    favorite: false,
   },
 ];
 
@@ -45,6 +48,7 @@ const defaultProps = {
   onLaunch: vi.fn(),
   onEditSkill: vi.fn(),
   onReassignSkill: vi.fn(),
+  onToggleFavorite: vi.fn(),
 };
 
 describe("SkillsInCategory", () => {

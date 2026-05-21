@@ -211,6 +211,7 @@ export default defineSchema({
     description: v.optional(v.string()),
     hidden: v.boolean(),
     isAutoAssigned: v.boolean(),
+    favorite: v.optional(v.boolean()),
   })
     .index("by_skillName", ["skillName"])
     .index("by_categoryName", ["categoryName"]),

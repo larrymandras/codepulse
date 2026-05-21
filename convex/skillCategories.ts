@@ -107,6 +107,7 @@ export const getSkillsWithOverrides = query({
         overrideDescription: override?.description ?? null,
         hidden: override?.hidden ?? false,
         isAutoAssigned: override?.isAutoAssigned ?? true,
+        favorite: override?.favorite ?? false,
       };
     });
   },
@@ -173,6 +174,7 @@ export const updateSkillOverride = mutation({
     categoryName: v.optional(v.string()),
     description: v.optional(v.string()),
     hidden: v.optional(v.boolean()),
+    favorite: v.optional(v.boolean()),
   },
   handler: async (ctx, { skillName, ...updates }) => {
     const existing = await ctx.db
@@ -184,6 +186,18 @@ export const updateSkillOverride = mutation({
       Object.entries(updates).filter(([, val]) => val !== undefined)
     );
     await ctx.db.patch(existing._id, { ...filtered, isAutoAssigned: false });
+  },
+});
+
+export const toggleFavorite = mutation({
+  args: { skillName: v.string() },
+  handler: async (ctx, { skillName }) => {
+    const existing = await ctx.db
+      .query("skillOverrides")
+      .withIndex("by_skillName", (q) => q.eq("skillName", skillName))
+      .first();
+    if (!existing) return;
+    await ctx.db.patch(existing._id, { favorite: !existing.favorite });
   },
 });
 
