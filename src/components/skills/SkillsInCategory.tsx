@@ -57,52 +57,34 @@ export function SkillsInCategory({
   const [hoverTarget, setHoverTarget] = useState<string | null>(null);
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
+    <div className="flex flex-col h-full">
+      {/* Dense Header */}
       <div
-        className="relative overflow-hidden flex items-center gap-4 rounded border px-5 py-4 shadow-lg"
-        style={{ 
-          backgroundColor: hex + "10",
-          borderColor: hex + "40",
-          boxShadow: `0 0 20px ${hex}15, inset 0 0 10px ${hex}10`
-        }}
+        className="relative flex items-center justify-between border-b px-4 py-2 mb-4"
+        style={{ borderColor: `${hex}40` }}
       >
-        <div className="absolute inset-0 pointer-events-none opacity-20">
-          <div className="w-full h-[1px] animate-scanline" style={{ backgroundColor: hex }} />
+        <div className="flex items-center gap-3">
+          <span 
+            className="text-2xl drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]"
+          >{categoryIcon}</span>
+          <h2 className="text-white text-base font-mono font-bold tracking-widest uppercase flex items-center gap-3">
+            {categoryDisplayName}
+            <span 
+              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
+              style={{
+                color: hex,
+                borderColor: `${hex}50`,
+                backgroundColor: `${hex}10`,
+              }}
+            >
+              {skills.length}
+            </span>
+          </h2>
         </div>
         
-        <button
-          onClick={onBack}
-          className="relative z-10 p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-background/80 transition-colors"
-          aria-label="Back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <span 
-          className="relative z-10 text-3xl"
-          style={{ textShadow: `0 0 15px ${hex}80` }}
-        >{categoryIcon}</span>
-        <h2 className="relative z-10 text-white text-lg font-mono font-bold tracking-widest uppercase flex-1">
-          {categoryDisplayName}
-        </h2>
-        <span 
-          className="relative z-10 text-xs font-mono font-bold uppercase tracking-widest rounded px-2.5 py-0.5 border text-white"
-          style={{
-            borderColor: `${hex}50`,
-            backgroundColor: `${hex}30`,
-          }}
-        >
-          {skills.length} {skills.length === 1 ? "skill" : "skills"}
-        </span>
-      </div>
-
-      {/* Drop targets — always visible */}
-      {otherCategories.length > 0 && (
-        <div className="border border-primary/20 rounded p-4 bg-background/50 shadow-[inset_0_0_15px_rgba(16,185,129,0.05)]">
-          <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-3 font-bold">
-            [ Drag a skill here to move it, or use the "Move to" dropdown ]
-          </p>
-          <div className="flex gap-2 flex-wrap">
+        {otherCategories.length > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-mono uppercase text-muted-foreground">Move target:</span>
             {otherCategories.map((cat) => {
               const catHex = COLOR_HEX[cat.color] ?? COLOR_HEX.gray;
               const isHover = hoverTarget === cat.name;
@@ -118,32 +100,32 @@ export function SkillsInCategory({
                     if (skillName) onReassignSkill(skillName, cat.name);
                     setHoverTarget(null);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded border transition-all cursor-default ${
-                    isHover ? "scale-[1.03]" : "hover:scale-[1.02]"
+                  className={`flex items-center justify-center w-6 h-6 rounded border transition-all cursor-crosshair ${
+                    isHover ? "scale-110" : ""
                   }`}
+                  title={`Drop to move to ${cat.displayName}`}
                   style={{ 
                     backgroundColor: catHex + (isHover ? "30" : "10"),
                     borderColor: catHex + (isHover ? "80" : "30"),
-                    boxShadow: isHover ? `0 0 15px ${catHex}40` : "none"
+                    boxShadow: isHover ? `0 0 10px ${catHex}40` : "none"
                   }}
                 >
-                  <span className="text-sm">{cat.icon}</span>
-                  <span className="text-[10px] font-mono uppercase tracking-widest font-bold text-white">{cat.displayName}</span>
+                  <span className="text-[10px]">{cat.icon}</span>
                 </div>
               );
             })}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {skills.length === 0 && (
-        <div className="text-center font-mono text-[11px] tracking-widest text-muted-foreground py-12 border border-dashed border-primary/20 rounded bg-primary/5">
+        <div className="text-center font-mono text-[11px] tracking-widest text-muted-foreground py-8 border border-dashed border-primary/20 rounded bg-primary/5">
           [ NO SKILLS FOUND IN SECTOR ]
         </div>
       )}
 
-      {/* Skill rows */}
-      <div className="space-y-2">
+      {/* Dense Skill Rows */}
+      <div className="flex flex-col divide-y divide-primary/10 border-t border-b border-primary/20 bg-background/30">
         {skills.map((skill) => {
           const desc = skill.overrideDescription ?? skill.description ?? "";
           return (
@@ -155,76 +137,58 @@ export function SkillsInCategory({
                 e.dataTransfer.setData("text/plain", skill.name);
                 e.dataTransfer.effectAllowed = "move";
               }}
-              className="group relative flex items-center gap-4 bg-background/40 border border-primary/20 rounded p-3 hover:bg-primary/5 hover:border-primary/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.1)] transition-all overflow-hidden"
+              className="group relative flex items-center gap-3 px-3 py-2 hover:bg-primary/10 transition-colors"
             >
-              {/* Subtle hover scanline */}
-              <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
-                <div className="w-full h-[1px] animate-scanline bg-primary" />
-              </div>
+              <GripVertical className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary cursor-grab flex-shrink-0" />
 
-              <GripVertical className="w-4 h-4 text-primary/40 group-hover:text-primary cursor-grab flex-shrink-0 transition-colors z-10" />
-
-              <div className="flex-1 min-w-0 relative z-10 flex flex-col">
-                <div className="flex items-center gap-2">
-                  <div className="text-white font-mono font-bold text-sm tracking-wide truncate">
-                    {skill.displayName}
-                  </div>
-                  <span className="text-[9px] font-mono text-muted-foreground/50 border border-muted-foreground/20 rounded px-1.5 py-0.5 shrink-0 bg-background/50">
-                    {skill.name}
-                  </span>
+              <div className="flex items-center w-64 flex-shrink-0 gap-2 pr-4 border-r border-primary/10">
+                <div className="text-white font-mono font-bold text-[11px] tracking-wide truncate">
+                  {skill.displayName}
                 </div>
-                {desc && (
-                  <div className="text-muted-foreground text-xs truncate mt-0.5 leading-relaxed">{desc}</div>
+                {skill.favorite && (
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0 pr-4">
+                {desc ? (
+                  <div className="text-muted-foreground text-[10px] truncate">{desc}</div>
+                ) : (
+                  <div className="text-muted-foreground/30 text-[10px] italic">No description available</div>
                 )}
               </div>
 
-              {(skill.useCount ?? 0) > 0 && (
-                <span className="relative z-10 text-[9px] font-mono uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded px-2 py-0.5 flex-shrink-0 font-bold shadow-[0_0_8px_rgba(16,185,129,0.15)]">
-                  {skill.useCount} uses
-                </span>
-              )}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {(skill.useCount ?? 0) > 0 && (
+                  <span className="text-[9px] font-mono text-primary/60 px-2 w-16 text-right">
+                    {skill.useCount} uses
+                  </span>
+                )}
 
-              {otherCategories.length > 0 && (
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) onReassignSkill(skill.name, e.target.value);
-                  }}
-                  className="relative z-10 bg-background border border-primary/30 rounded text-[10px] font-mono uppercase tracking-wider text-primary/80 px-2 py-1.5 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 flex-shrink-0 cursor-pointer hover:bg-primary/5 transition-colors appearance-none"
-                  title="Move to category"
-                  style={{ backgroundImage: "none" }}
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity gap-1 pr-2 border-r border-primary/10">
+                  <button
+                    onClick={() => onToggleFavorite(skill.name)}
+                    className="p-1 rounded hover:bg-amber-400/20 text-muted-foreground hover:text-amber-400 transition-colors"
+                    title="Toggle Priority"
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onEditSkill(skill.name)}
+                    className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                    title="Edit Metadata"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => onLaunch(skill.name)}
+                  className="text-[9px] font-mono font-bold uppercase tracking-widest text-primary hover:text-primary-foreground border border-primary/30 bg-transparent hover:bg-primary rounded px-3 py-1 transition-all"
                 >
-                  <option value="" className="bg-background text-foreground">Move to...</option>
-                  {otherCategories.map((c) => (
-                    <option key={c.name} value={c.name} className="bg-background text-foreground font-sans normal-case">
-                       {c.displayName}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <button
-                onClick={() => onToggleFavorite(skill.name)}
-                className="relative z-10 p-1.5 rounded transition-colors flex-shrink-0 hover:bg-amber-400/10"
-                aria-label={skill.favorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Star className={`w-3.5 h-3.5 ${skill.favorite ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40 hover:text-amber-400"}`} />
-              </button>
-
-              <button
-                onClick={() => onEditSkill(skill.name)}
-                className="relative z-10 p-1.5 rounded text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-colors flex-shrink-0"
-                aria-label={`Edit ${skill.displayName}`}
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                onClick={() => onLaunch(skill.name)}
-                className="relative z-10 text-[10px] font-mono font-bold uppercase tracking-widest text-primary border border-primary/30 bg-primary/10 hover:bg-primary hover:text-primary-foreground rounded px-4 py-1.5 transition-all flex-shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-              >
-                Launch
-              </button>
+                  Launch
+                </button>
+              </div>
             </div>
           );
         })}

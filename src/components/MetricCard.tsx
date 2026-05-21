@@ -56,17 +56,27 @@ interface MetricCardProps {
   /** When set, uses AnimatedNumber for count-up animation */
   numericValue?: number;
   trend?: "up" | "down" | "neutral";
+  severity?: "critical" | "error" | "warning" | "info" | "default";
   threshold?: ThresholdConfig;
   format?: (v: number) => string;
   onClick?: () => void;
   sparklineData?: number[];
 }
 
+const severityConfig = {
+  critical: { dot: "bg-red-500", shadow: "rgba(239,68,68,0.8)", cardShadow: "rgba(239,68,68,0.2)" },
+  error: { dot: "bg-orange-500", shadow: "rgba(249,115,22,0.8)", cardShadow: "rgba(249,115,22,0.2)" },
+  warning: { dot: "bg-yellow-500", shadow: "rgba(234,179,8,0.8)", cardShadow: "rgba(234,179,8,0.2)" },
+  info: { dot: "bg-blue-500", shadow: "rgba(59,130,246,0.8)", cardShadow: "rgba(59,130,246,0.2)" },
+  default: { dot: "bg-emerald-500", shadow: "rgba(16,185,129,0.8)", cardShadow: "rgba(16,185,129,0.2)" },
+};
+
 function MetricCardInner({
   label,
   value,
   numericValue,
   trend,
+  severity = "default",
   threshold,
   format,
   onClick,
@@ -81,13 +91,27 @@ function MetricCardInner({
       ? thresholdColor(numericValue, threshold)
       : undefined;
 
+  const sevConfig = severityConfig[severity] || severityConfig.default;
+
   return (
     <div 
-      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-colors hover:border-primary/50 hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]" 
+      className="glow-card bg-card/60 backdrop-blur-md p-5 rounded-xl border border-border/50 relative group transition-all duration-300 hover:border-primary/50" 
       onClick={onClick} 
-      style={onClick ? { cursor: "pointer" } : undefined}
+      style={{
+        cursor: onClick ? "pointer" : "default",
+        boxShadow: `0 0 15px rgba(255,255,255,0.02)`,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = `0 0 25px ${sevConfig.cardShadow}`;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = `0 0 15px rgba(255,255,255,0.02)`;
+      }}
     >
-      <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+      <div 
+        className={`absolute top-4 right-4 w-2 h-2 rounded-full ${sevConfig.dot}`}
+        style={{ boxShadow: `0 0 8px ${sevConfig.shadow}` }}
+      ></div>
       
       <p className="text-xs text-muted-foreground uppercase tracking-widest font-mono z-10 relative">{label}</p>
       <div className="mt-2 flex items-baseline gap-2 z-10 relative">

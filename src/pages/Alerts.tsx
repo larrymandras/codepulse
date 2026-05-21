@@ -156,10 +156,10 @@ export default function Alerts() {
 
       {/* Severity Count Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Critical" value={counts.critical} trend={counts.critical > 0 ? "down" : "neutral"} />
-        <MetricCard label="Error" value={counts.error} trend={counts.error > 0 ? "down" : "neutral"} />
-        <MetricCard label="Warning" value={counts.warning} trend={counts.warning > 0 ? "down" : "neutral"} />
-        <MetricCard label="Info" value={counts.info} trend="neutral" />
+        <MetricCard label="Critical" value={counts.critical} numericValue={counts.critical} trend={counts.critical > 0 ? "down" : "neutral"} severity="critical" />
+        <MetricCard label="Error" value={counts.error} numericValue={counts.error} trend={counts.error > 0 ? "down" : "neutral"} severity="error" />
+        <MetricCard label="Warning" value={counts.warning} numericValue={counts.warning} trend={counts.warning > 0 ? "down" : "neutral"} severity="warning" />
+        <MetricCard label="Info" value={counts.info} numericValue={counts.info} trend="neutral" severity="info" />
       </div>
 
       {/* Filter Controls */}
@@ -204,13 +204,20 @@ export default function Alerts() {
 
       {/* Alert List */}
       {filtered.length === 0 ? (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-          <div className="text-3xl mb-2 text-green-400">&#10003;</div>
-          <p className="text-green-400 text-lg mb-1">No active alerts. All monitored thresholds are within normal range.</p>
-          <p className="text-gray-500 text-sm">The system is operating normally</p>
+        <div className="relative overflow-hidden bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20 rounded-2xl p-12 text-center backdrop-blur-sm shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+          <div className="relative z-10 flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+              <span className="text-3xl text-green-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">&#10003;</span>
+            </div>
+            <div>
+              <p className="text-green-400 text-xl font-medium tracking-wide mb-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">No active alerts</p>
+              <p className="text-gray-400 text-sm">All monitored thresholds are within normal range.</p>
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filtered.map((a: any) => (
             <AlertRow key={a._id} a={a} />
           ))}

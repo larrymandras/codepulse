@@ -106,7 +106,7 @@ export const listErrors = query({
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
-    return events.filter((e) => e.eventType === "Error" || e.eventType === "ToolError").slice(0, limit);
+    return events.filter((e) => e.eventType === "Error" || e.eventType === "ToolError" || e.eventType === "PostToolUseFailure").slice(0, limit);
   },
 });
 

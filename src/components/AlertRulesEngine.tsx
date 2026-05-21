@@ -22,10 +22,10 @@ const CATEGORIES: { label: string; value: AlertCategory | "all" }[] = [
 ];
 
 const severityColors: Record<string, string> = {
-  critical: "text-red-400 bg-red-400/10 border-red-400/20",
-  error: "text-orange-400 bg-orange-400/10 border-orange-400/20",
-  warning: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
-  info: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+  critical: "text-red-400 bg-red-400/10 border-red-400/30 shadow-[0_0_10px_rgba(248,113,113,0.2)]",
+  error: "text-orange-400 bg-orange-400/10 border-orange-400/30 shadow-[0_0_10px_rgba(251,146,60,0.2)]",
+  warning: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30 shadow-[0_0_10px_rgba(250,204,21,0.2)]",
+  info: "text-blue-400 bg-blue-400/10 border-blue-400/30 shadow-[0_0_10px_rgba(96,165,250,0.2)]",
 };
 
 // ─── Per-static-rule row with threshold override input + mute toggle ──────────
@@ -72,110 +72,112 @@ function StaticRuleRow({
 
   return (
     <div
-      className={`group flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-        isDisabled ? "opacity-50 bg-gray-900/20" : "bg-gray-900/30 hover:bg-gray-900/50"
+      className={`group relative flex items-center gap-4 px-5 py-4 border-b border-primary/10 transition-colors overflow-hidden ${
+        isDisabled ? "opacity-40 bg-background/20" : "bg-background/40 hover:bg-primary/5 hover:border-primary/30"
       } ${isMuted ? "opacity-50" : ""}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* Subtle hover scanline */}
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
+        <div className="w-full h-[1px] animate-scanline bg-primary" />
+      </div>
+
       {/* Toggle */}
       <button
         onClick={onToggle}
-        className={`w-8 rounded-full relative transition-colors shrink-0 ${
-          isDisabled ? "bg-gray-700" : "bg-indigo-600"
+        className={`relative z-10 w-8 rounded-full transition-all shrink-0 border ${
+          isDisabled ? "bg-background/50 border-muted-foreground/30" : "bg-primary/20 border-primary shadow-[0_0_8px_rgba(16,185,129,0.4)]"
         }`}
-        style={{ minHeight: "18px", minWidth: "32px", height: "18px" }}
+        style={{ minHeight: "16px", minWidth: "30px", height: "16px" }}
       >
         <span
-          className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-            isDisabled ? "left-0.5" : "left-[15px]"
+          className={`absolute top-0.5 w-2.5 h-2.5 rounded-full transition-all ${
+            isDisabled ? "left-0.5 bg-muted-foreground/50" : "left-[17px] bg-primary shadow-[0_0_5px_rgba(16,185,129,1)]"
           }`}
         />
       </button>
 
       {/* Severity badge */}
-      <span className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded border shrink-0 ${sevClass}`}>
+      <span className={`relative z-10 text-xs font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
         {rule.severity}
       </span>
 
       {/* Rule info */}
-      <div className="flex-1 min-w-0">
-        <span className="text-xs text-gray-200 font-medium">{rule.name}</span>
-        <p className="text-[10px] text-gray-500 truncate">{rule.condition}</p>
+      <div className="flex-1 min-w-0 relative z-10 flex flex-col pr-4 border-r border-primary/10">
+        <span className="text-sm text-white font-medium tracking-wide truncate">{rule.name}</span>
+        <p className="text-xs text-muted-foreground truncate mt-0.5">{rule.condition}</p>
       </div>
 
       {/* Threshold override (shown on hover) */}
-      {hovered && (
-        <Input
-          type="number"
-          min={0}
-          step="any"
-          value={thresholdInput}
-          onChange={(e) => setThresholdInput(e.target.value)}
-          onBlur={handleThresholdCommit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleThresholdCommit();
-          }}
-          placeholder={String(rule.id)}
-          className="w-24 h-7 text-xs"
-          title="Threshold override"
-          aria-label="Threshold override"
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
+      <div className="flex items-center gap-2 relative z-10 shrink-0 w-32 justify-end">
+        {hovered ? (
+          <Input
+            type="number"
+            min={0}
+            step="any"
+            value={thresholdInput}
+            onChange={(e) => setThresholdInput(e.target.value)}
+            onBlur={handleThresholdCommit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleThresholdCommit();
+            }}
+            placeholder={String(rule.id)}
+            className="w-24 h-8 text-xs font-mono bg-background border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/50"
+            title="Threshold override"
+            aria-label="Threshold override"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className="text-xs px-2 py-1 rounded bg-primary/5 text-primary/70 border border-primary/20 hidden sm:inline font-mono tracking-wider uppercase">
+            {rule.category}
+          </span>
+        )}
+      </div>
 
-      {/* Mute toggle */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {isMuted ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                onClick={handleUnmute}
-                aria-label="Unmute rule"
-              >
-                <Clock className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            ) : (
-              <span>
-                <MuteDurationPicker
-                  onSelect={handleMuteSelect}
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="shrink-0"
-                      aria-label="Mute rule"
-                    >
-                      <Clock className="w-4 h-4" />
-                    </Button>
-                  }
-                />
-              </span>
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isMuted ? "Unmute rule" : "Mute rule"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <div className="flex items-center gap-1 relative z-10 shrink-0">
+        {/* Mute toggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {isMuted ? (
+                <button
+                  className="p-1 rounded text-muted-foreground hover:bg-background/80 transition-colors"
+                  onClick={handleUnmute}
+                  aria-label="Unmute rule"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <span>
+                  <MuteDurationPicker
+                    onSelect={handleMuteSelect}
+                    trigger={
+                      <button
+                        className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        aria-label="Mute rule"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                    }
+                  />
+                </span>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-[10px] font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
-      {/* Edit button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-xs shrink-0"
-        onClick={onEdit}
-      >
-        Edit
-      </Button>
-
-      {/* Category tag */}
-      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30 shrink-0 hidden sm:inline">
-        {rule.category}
-      </span>
+        {/* Edit button */}
+        <button
+          className="text-xs font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm"
+          onClick={onEdit}
+        >
+          Edit
+        </button>
+      </div>
     </div>
   );
 }
@@ -200,56 +202,64 @@ function CustomRuleRow({
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-900/30 hover:bg-gray-900/50 transition-colors ${
-        isMuted ? "opacity-50" : ""
-      } ${rule.enabled === false ? "opacity-50" : ""}`}
+      className={`group relative flex items-center gap-4 px-5 py-4 border-b border-primary/10 bg-background/40 hover:bg-primary/5 hover:border-primary/30 transition-colors overflow-hidden ${
+        isMuted || rule.enabled === false ? "opacity-50" : ""
+      }`}
     >
-      <span className={`text-[10px] font-medium uppercase px-1.5 py-0.5 rounded border shrink-0 ${sevClass}`}>
-        {rule.severity}
-      </span>
-      <div className="flex-1 min-w-0">
-        <span className="text-xs text-gray-200 font-medium">{rule.name}</span>
-        <p className="text-[10px] text-gray-500 truncate">{rule.conditionLogic} conditions</p>
+      {/* Subtle hover scanline */}
+      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-10 transition-opacity duration-300">
+        <div className="w-full h-[1px] animate-scanline bg-primary" />
       </div>
 
-      {/* Mute toggle */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {isMuted ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                className="shrink-0"
-                onClick={() => void unmuteTarget({ targetType: "rule", targetId: rule._id })}
-                aria-label="Unmute rule"
-              >
-                <Clock className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            ) : (
-              <span>
-                <MuteDurationPicker
-                  onSelect={(duration) =>
-                    void muteTarget({ targetType: "rule", targetId: rule._id, duration, mutedBy: "operator" })
-                  }
-                  trigger={
-                    <Button variant="ghost" size="icon-sm" className="shrink-0" aria-label="Mute rule">
-                      <Clock className="w-4 h-4" />
-                    </Button>
-                  }
-                />
-              </span>
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isMuted ? "Unmute rule" : "Mute rule"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <span className={`relative z-10 text-xs font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
+        {rule.severity}
+      </span>
+      <div className="flex-1 min-w-0 relative z-10 flex flex-col pr-4 border-r border-primary/10">
+        <span className="text-sm text-white font-medium tracking-wide truncate">{rule.name}</span>
+        <p className="text-xs text-muted-foreground truncate mt-0.5">{rule.conditionLogic} conditions</p>
+      </div>
 
-      <Button variant="ghost" size="sm" className="text-xs shrink-0" onClick={onEdit}>
-        Edit
-      </Button>
+      <div className="flex items-center gap-1 relative z-10 shrink-0">
+        {/* Mute toggle */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {isMuted ? (
+                <button
+                  className="p-1 rounded text-muted-foreground hover:bg-background/80 transition-colors"
+                  onClick={() => void unmuteTarget({ targetType: "rule", targetId: rule._id })}
+                  aria-label="Unmute rule"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                </button>
+              ) : (
+                <span>
+                  <MuteDurationPicker
+                    onSelect={(duration) =>
+                      void muteTarget({ targetType: "rule", targetId: rule._id, duration, mutedBy: "operator" })
+                    }
+                    trigger={
+                      <button className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" aria-label="Mute rule">
+                        <Clock className="w-3.5 h-3.5" />
+                      </button>
+                    }
+                  />
+                </span>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <button 
+          className="text-xs font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm" 
+          onClick={onEdit}
+        >
+          Edit
+        </button>
+      </div>
     </div>
   );
 }
@@ -318,61 +328,64 @@ export default function AlertRulesEngine() {
 
   return (
     <>
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-background/40 border border-primary/20 rounded-2xl overflow-hidden shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center justify-between p-5 border-b border-primary/20 bg-primary/5 flex-wrap gap-4">
           <div>
-            <h2 className="text-sm font-semibold text-gray-300">Alert Rules Engine</h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {enabledCount}/{alertRules.length} rules active
-            </p>
+            <h2 className="text-lg font-bold tracking-wide text-white flex items-center gap-3">
+              Alert Rules Engine
+              <span className="text-xs px-2 py-1 rounded-md border text-primary border-primary/50 bg-primary/10 font-mono">
+                {enabledCount}/{alertRules.length} rules active
+              </span>
+            </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              className="text-sm"
+          <div className="flex items-center gap-4">
+            <button
               onClick={openNewCustomRule}
+              className="text-xs font-medium uppercase tracking-wider text-primary border border-primary/30 bg-primary/10 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-2 transition-all shadow-sm"
             >
               + New Custom Rule
-            </Button>
+            </button>
             <button
               onClick={handleEvaluate}
               disabled={evaluating}
-              className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600/80 text-indigo-100 hover:bg-indigo-500/80 transition-colors disabled:opacity-50 border border-indigo-500/30"
+              className="text-xs font-medium uppercase tracking-wider text-primary-foreground border border-primary/30 bg-primary hover:bg-primary/80 hover:border-primary rounded-md px-5 py-2 transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
-              {evaluating ? "Evaluating..." : "Evaluate Now"}
+              {evaluating ? "EVALUATING..." : "EVALUATE NOW"}
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">
-          <div className="flex items-center gap-1 bg-gray-900/50 border border-gray-700/30 rounded-lg p-0.5 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-background/50 border-b border-primary/10">
+          <div className="flex items-center gap-1 flex-wrap">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
-                className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
+                className={`text-xs font-medium tracking-wider uppercase px-4 py-2 rounded-md transition-all border ${
                   category === cat.value
-                    ? "bg-gray-700 text-gray-100"
-                    : "text-gray-400 hover:text-gray-200"
+                    ? "bg-primary/20 border-primary text-primary shadow-[inset_0_0_10px_rgba(16,185,129,0.2)]"
+                    : "bg-transparent border-transparent text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >
                 {cat.label}
               </button>
             ))}
           </div>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search rules..."
-            className="text-xs bg-gray-900/50 border border-gray-700/30 rounded-lg px-2.5 py-1.5 text-gray-200 placeholder-gray-500 outline-none focus:border-gray-600 w-full sm:w-48"
-          />
+          <div className="relative w-full sm:w-64">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search Rules..."
+              className="text-sm bg-background/50 border border-primary/30 rounded-md px-4 py-2 text-white placeholder-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 w-full transition-all"
+            />
+          </div>
         </div>
 
         {/* Static Rules List */}
-        <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
+        <div className="flex flex-col max-h-[500px] overflow-y-auto bg-background/30 custom-scrollbar">
           {filtered.map((rule) => {
             const isDisabled = disabledRules.includes(rule.id);
             return (
@@ -386,17 +399,21 @@ export default function AlertRulesEngine() {
             );
           })}
           {filtered.length === 0 && (
-            <p className="text-gray-500 text-sm text-center py-4">No rules match your filter.</p>
+            <div className="text-center text-sm tracking-wide text-muted-foreground py-12 bg-primary/5">
+              No rules match current filters.
+            </div>
           )}
         </div>
 
         {/* Custom Rules Section */}
         {customRules.length > 0 && (
-          <div className="mt-4">
-            <p className="text-[11px] tracking-wide text-muted-foreground uppercase mb-2">
-              CUSTOM RULES
-            </p>
-            <div className="space-y-1">
+          <div className="border-t border-primary/30 bg-background/50">
+            <div className="px-4 py-2 border-b border-primary/10 bg-primary/5">
+              <p className="text-[10px] font-mono tracking-widest text-primary uppercase font-bold">
+                CUSTOM RULES
+              </p>
+            </div>
+            <div className="flex flex-col bg-background/30">
               {customRules.map((rule: any) => (
                 <CustomRuleRow
                   key={rule._id}

@@ -158,7 +158,14 @@ export const errorRateTrend = query({
       .filter((q) => q.neq(q.field("archived"), true))
       .take(500);
 
-    const allErrors = [...errors, ...toolErrors];
+    const toolUseFailures = await ctx.db
+      .query("events")
+      .withIndex("by_type", (q) => q.eq("eventType", "PostToolUseFailure"))
+      .order("desc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .take(500);
+
+    const allErrors = [...errors, ...toolErrors, ...toolUseFailures];
     const recentErrors = allErrors.filter((e) => e.timestamp >= dayAgo);
 
     // Bucket by hour (0 = oldest, 23 = most recent)

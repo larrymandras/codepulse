@@ -443,6 +443,14 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             filesChanged: d.filesChanged ?? d.files_changed ?? 0,
             timestamp: d.timestamp ?? timestamp,
           });
+          // Bridge to gitActivity table for the GitActivityWidget
+          await ctx.runMutation(api.gitActivity.insert, {
+            sessionId: d.sessionId ?? d.session_id ?? "system:git",
+            type: "commit",
+            linesAdded: d.linesAdded ?? d.lines_added,
+            linesRemoved: d.linesRemoved ?? d.lines_removed,
+            timestamp: d.timestamp ?? timestamp,
+          });
           break;
         }
         case "profile_switch": {
@@ -574,6 +582,17 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               durationMs: d.durationMs ?? d.duration_ms,
               success: execStatus === "completed",
               errorMessage: d.errorMessage ?? d.error_message ?? d.error,
+              timestamp,
+            });
+          }
+          // Populate executionModes for execution depth distribution
+          if (d.roundsDepth ?? d.rounds_depth) {
+            await ctx.runMutation(api.executionModes.insert, {
+              executionId: d.executionId ?? d.execution_id ?? "unknown",
+              mode: d.mode ?? execStatus,
+              roundsDepth: d.roundsDepth ?? d.rounds_depth ?? 1,
+              fillerCount: d.fillerCount ?? d.filler_count,
+              stalledAt: d.stalledAt ?? d.stalled_at,
               timestamp,
             });
           }

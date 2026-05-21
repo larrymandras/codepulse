@@ -75,6 +75,7 @@ import type * as memoryPreflight from "../memoryPreflight.js";
 import type * as memoryQuality from "../memoryQuality.js";
 import type * as memoryTiers from "../memoryTiers.js";
 import type * as metrics from "../metrics.js";
+import type * as migrations from "../migrations.js";
 import type * as missionControl from "../missionControl.js";
 import type * as navCounts from "../navCounts.js";
 import type * as notifications from "../notifications.js";
@@ -190,6 +191,7 @@ declare const fullApi: ApiFromModules<{
   memoryQuality: typeof memoryQuality;
   memoryTiers: typeof memoryTiers;
   metrics: typeof metrics;
+  migrations: typeof migrations;
   missionControl: typeof missionControl;
   navCounts: typeof navCounts;
   notifications: typeof notifications;

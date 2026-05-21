@@ -141,22 +141,45 @@ export const buildIngest = httpAction(async (ctx, request) => {
         toolName: toolName ?? data.tool_name ?? "unknown",
         durationMs: data.duration_ms ?? data.durationMs,
         success: true,
-        decision: data.decision,
-        decisionSource: data.decision_source ?? data.decisionSource,
+        decision: data.decision ?? "accept",
+        decisionSource: data.decision_source ?? data.decisionSource ?? "hook",
+        timestamp,
+      });
+      // Active time: tool usage counts as CLI activity (~5s per tool call)
+      await ctx.runMutation(api.activeTime.insert, {
+        sessionId: sid,
+        type: "cli_usage",
+        durationSeconds: 5,
         timestamp,
       });
     }
 
     // PostToolUseFailure — failed tool execution
     if (eventType === "PostToolUseFailure") {
+      const errorMsg = data.error ?? data.errorMessage ?? data.error_message ?? "";
       await ctx.runMutation(api.toolExecutions.insert, {
         sessionId: sid,
         toolName: toolName ?? data.tool_name ?? "unknown",
         durationMs: data.duration_ms ?? data.durationMs,
         success: false,
-        errorMessage: data.error ?? data.errorMessage ?? data.error_message,
+        decision: data.decision ?? "reject",
+        decisionSource: data.decision_source ?? data.decisionSource ?? "error",
+        errorMessage: errorMsg,
         timestamp,
       });
+      // Derive API errors from tool failures with API-like error patterns
+      const errorStr = String(errorMsg).toLowerCase();
+      if (/\b(429|500|502|503|504|rate.?limit|overloaded|timeout|api.?error|anthropic|openai)\b/.test(errorStr)) {
+        const statusMatch = errorStr.match(/\b(429|500|502|503|504)\b/);
+        await ctx.runMutation(api.apiErrors.insert, {
+          sessionId: sid,
+          model: data.model,
+          errorMessage: String(errorMsg) || "tool failure with API error",
+          statusCode: statusMatch ? statusMatch[1] : undefined,
+          durationMs: data.duration_ms ?? data.durationMs,
+          timestamp,
+        });
+      }
     }
 
     // PermissionRequest / tool_decision
@@ -240,10 +263,19 @@ export const buildIngest = httpAction(async (ctx, request) => {
 
     // UserPromptSubmit / claude_code.user_prompt
     if (eventType === "UserPromptSubmit" || eventType === "claude_code.user_prompt") {
+      const promptText = data.prompt ?? data.message ?? "";
+      const computedLength = typeof promptText === "string" ? promptText.length : 0;
       await ctx.runMutation(api.promptActivity.insert, {
         sessionId: sid,
-        promptLength: data.prompt_length ?? data.promptLength ?? 0,
+        promptLength: data.prompt_length ?? data.promptLength ?? computedLength,
         promptId: data.prompt_id ?? data.promptId,
+        timestamp,
+      });
+      // Active time: each prompt submission counts as an active interaction (~30s)
+      await ctx.runMutation(api.activeTime.insert, {
+        sessionId: sid,
+        type: "user_interaction",
+        durationSeconds: 30,
         timestamp,
       });
     }

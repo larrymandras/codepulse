@@ -71,7 +71,7 @@ export const computeHourly = internalMutation({
 
     // --- Error rate aggregation: count errors by category ---
     const errorRows = eventRows.filter(
-      (e) => e.eventType === "Error" || e.eventType === "ToolError"
+      (e) => e.eventType === "Error" || e.eventType === "ToolError" || e.eventType === "PostToolUseFailure"
     );
     const errorByCategory: Record<string, number> = {};
     for (const e of errorRows) {

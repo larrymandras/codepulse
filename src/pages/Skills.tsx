@@ -148,7 +148,7 @@ export default function Skills() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <h1 className="text-2xl font-mono tracking-widest uppercase font-bold text-primary">
+      <h1 className="text-2xl font-mono tracking-widest uppercase font-bold text-primary mb-6">
         Skills Database
       </h1>
 
@@ -174,89 +174,105 @@ export default function Skills() {
         </div>
       )}
 
-      {/* ── Main view: category grid + uncategorized ── */}
-      {!needsSeed && !selectedCategory && (
-        <>
-          {autoAssignedCount > 0 && (
-            <NewSkillsBanner
-              count={autoAssignedCount}
-              onReview={() => {}}
-              onAcceptAll={() => bulkAccept()}
-            />
-          )}
-
-          <FavoriteSkills
-            skills={enrichedSkills}
-            onLaunch={handleLaunch}
-            onToggleFavorite={(name) => toggleFav({ skillName: name })}
-          />
-
-          <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
-
-          <div>
-            <h2 className="text-[10px] font-mono font-bold text-primary/70 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-              <span className="w-2 h-2 bg-primary rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-              Categories
-            </h2>
-            <CategoryGrid
-              categories={categories}
-              skillCounts={skillCounts}
-              onSelectCategory={setSelectedCategory}
-              onEditCategory={setEditingCategory}
-              onAddCategory={() => setCreatingCategory(true)}
-              dropTargetCategory={dropTarget}
-              onDragOverCategory={(name) => setDropTarget(name)}
-              onDragLeaveCategory={() => setDropTarget(null)}
-              onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
-            />
-          </div>
-
-          {uncategorizedSkills.length > 0 && (
-            <div className="border-t border-gray-700/50 pt-6">
-              <UncategorizedSkills
-                skills={uncategorizedSkills}
-                onLaunch={handleLaunch}
-                onEditSkill={setEditingSkill}
+      {!needsSeed && (
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          {/* Left Sidebar: Categories Navigation */}
+          <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+            <div className="relative mb-2">
+              <input
+                type="text"
+                placeholder="Search all skills..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-xs font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
               />
             </div>
-          )}
-        </>
-      )}
-
-      {/* ── Drill-in: skills in a selected category ── */}
-      {!needsSeed && selectedCategory && selectedCategoryData && (
-        <div>
-          <div className="relative mb-6">
-            <input
-              type="text"
-              placeholder="Search skills..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-background border border-primary/20 rounded px-4 py-2.5 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
-            />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-               <span className="flex h-1.5 w-1.5 rounded-full bg-primary/40 animate-pulse" />
+            
+            <div className="flex flex-col gap-2">
+              <h2 className="text-[10px] font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                Categories
+              </h2>
+              <CategoryGrid
+                categories={categories}
+                skillCounts={skillCounts}
+                onSelectCategory={setSelectedCategory}
+                onEditCategory={setEditingCategory}
+                onAddCategory={() => setCreatingCategory(true)}
+                dropTargetCategory={dropTarget}
+                onDragOverCategory={(name) => setDropTarget(name)}
+                onDragLeaveCategory={() => setDropTarget(null)}
+                onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
+                selectedCategory={selectedCategory}
+              />
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-primary/20">
+              <button
+                onClick={() => setSelectedCategory(null)}
+                className={`w-full text-left px-3 py-2 text-xs font-mono font-bold uppercase tracking-widest rounded transition-all ${
+                  !selectedCategory ? 'bg-primary/20 text-primary border border-primary/50' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent'
+                }`}
+              >
+                Overview / All
+              </button>
             </div>
           </div>
 
-          <SkillsInCategory
-            categoryName={selectedCategoryData.name}
-            categoryDisplayName={selectedCategoryData.displayName}
-            categoryIcon={selectedCategoryData.icon}
-            categoryColor={selectedCategoryData.color}
-            skills={categorySkills}
-            categories={categories.map((c) => ({
-              name: c.name,
-              displayName: c.displayName,
-              icon: c.icon,
-              color: c.color,
-            }))}
-            onBack={() => { setSelectedCategory(null); setSearch(""); }}
-            onLaunch={handleLaunch}
-            onEditSkill={setEditingSkill}
-            onReassignSkill={handleReassignSkill}
-            onToggleFavorite={(name) => toggleFav({ skillName: name })}
-          />
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0 flex flex-col gap-6">
+            {autoAssignedCount > 0 && (
+              <NewSkillsBanner
+                count={autoAssignedCount}
+                onReview={() => {}}
+                onAcceptAll={() => bulkAccept()}
+              />
+            )}
+
+            {/* Always show priority assets unless inside a specific category view that hides them. Actually, keep them visible to act as a top dock. */}
+            {!selectedCategory && (
+              <>
+                <FavoriteSkills
+                  skills={enrichedSkills}
+                  onLaunch={handleLaunch}
+                  onToggleFavorite={(name) => toggleFav({ skillName: name })}
+                />
+                <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
+                
+                {/* Aggregate overview when no category is selected */}
+                {uncategorizedSkills.length > 0 && (
+                  <div className="border-t border-gray-700/50 pt-6">
+                    <UncategorizedSkills
+                      skills={uncategorizedSkills}
+                      onLaunch={handleLaunch}
+                      onEditSkill={setEditingSkill}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {selectedCategory && selectedCategoryData && (
+              <SkillsInCategory
+                categoryName={selectedCategoryData.name}
+                categoryDisplayName={selectedCategoryData.displayName}
+                categoryIcon={selectedCategoryData.icon}
+                categoryColor={selectedCategoryData.color}
+                skills={categorySkills}
+                categories={categories.map((c) => ({
+                  name: c.name,
+                  displayName: c.displayName,
+                  icon: c.icon,
+                  color: c.color,
+                }))}
+                onBack={() => { setSelectedCategory(null); setSearch(""); }}
+                onLaunch={handleLaunch}
+                onEditSkill={setEditingSkill}
+                onReassignSkill={handleReassignSkill}
+                onToggleFavorite={(name) => toggleFav({ skillName: name })}
+              />
+            )}
+          </div>
         </div>
       )}
 

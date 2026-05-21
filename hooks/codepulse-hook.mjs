@@ -57,19 +57,15 @@ async function main() {
 
   const codepulseUrl = resolveUrl();
 
-  // Claude Code sends camelCase fields:
-  //   { sessionId, event: { type, toolName, filePath, hookType } }
-  const sessionId = data.sessionId || "unknown";
-  const event = data.event || {};
-  const eventType = event.type || "unknown";
-  const toolName = event.toolName || undefined;
-  const filePath = event.filePath || undefined;
-  const hookType = event.hookType || undefined;
+  // Claude Code sends flat snake_case fields:
+  //   { session_id, hook_event_name, tool_name, tool_input, cwd, ... }
+  const sessionId = data.session_id || "unknown";
+  const hookEventName = data.hook_event_name || "unknown";
+  const toolName = data.tool_name || undefined;
+  const toolInput = data.tool_input || {};
+  const filePath = toolInput.file_path || undefined;
 
-  // Use hookType as the canonical eventType — the /ingest handler routes on
-  // the original Claude Code hook names (PostToolUse, UserPromptSubmit, etc.)
-  const hType = hookType || event.hookType || "";
-  const resolvedEventType = hType || eventType;
+  const resolvedEventType = hookEventName;
 
   // POST to /ingest
   const ingestBody = {
@@ -77,8 +73,8 @@ async function main() {
     eventType: resolvedEventType,
     toolName,
     filePath,
-    hookType,
-    payload: event,
+    hookType: hookEventName,
+    payload: data,
     timestamp: Math.floor(Date.now() / 1000),
   };
 
@@ -100,10 +96,11 @@ async function main() {
 
   // Detect git commits from Bash PostToolUse and emit to /runtime-ingest
   if (resolvedEventType === "PostToolUse" && toolName === "Bash") {
-    const cmd = event.input?.command || event.command || "";
-    if (/\bgit\s+commit\b/.test(cmd) && event.output && !/nothing to commit/.test(event.output)) {
+    const cmd = toolInput.command || "";
+    const output = data.stdout || data.output || "";
+    if (/\bgit\s+commit\b/.test(cmd) && output && !/nothing to commit/.test(output)) {
       try {
-        const cwd = event.input?.cwd || event.cwd || process.cwd();
+        const cwd = data.cwd || process.cwd();
         const log = execSync("git log -1 --format=%H%n%s%n%an%n%D", { cwd, timeout: 3000, encoding: "utf-8" }).trim();
         const [sha, message, author, refs] = log.split("\n");
         const branch = (refs || "").replace(/.*HEAD -> /, "").split(",")[0].trim() || "unknown";
@@ -129,8 +126,8 @@ async function main() {
     }
   }
 
-  // On SessionStart or Setup, also run the environment scanner
-  if (eventType === "SessionStart" || resolvedEventType === "Setup") {
+  // Run the environment scanner on session start (triggered manually via scanner.mjs)
+  if (resolvedEventType === "SessionStart") {
     try {
       const scannerPath = pathToFileURL(join(__dirname, "scanner.mjs")).href;
       const { runScan } = await import(scannerPath);
