@@ -93,3 +93,16 @@ The URL resolution order is:
 
 **Hooks blocking Claude Code**
 - All hook scripts exit with code 0 regardless of errors. If Claude Code stalls, the issue is elsewhere.
+
+## Gateway Events
+
+The `codepulse-hook.mjs` only captures Claude Code CLI events (normalizes `session_id`, `hook_event_name`). Tasks routed through other gateway providers (Codex CLI, Antigravity CLI, Claude SDK) do NOT fire hooks.
+
+This is by design. Gateway events flow through the Astridr telemetry API (`/runtime-ingest`), not the hook system:
+
+```
+Claude Code CLI events → hooks/codepulse-hook.mjs → /ingest
+Gateway provider events → CLIGatewayTool → t.send() → /runtime-ingest
+```
+
+Both paths end up in the same CodePulse domain tables (`toolExecutions`, `sessions`), but via different ingest endpoints.
