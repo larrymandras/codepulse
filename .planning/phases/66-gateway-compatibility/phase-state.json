@@ -16,9 +16,57 @@
       "missing": [
         "CONTEXT.md"
       ]
+    },
+    {
+      "timestamp": "2026-05-21T22:48:30.667Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
     }
   ],
-  "lastCheck": "2026-05-21T21:00:48.902Z",
+  "lastCheck": "2026-05-21T22:48:30.667Z",
   "isFrontend": false,
-  "artifacts": {}
+  "artifacts": {
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "66-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "66-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "66-01-PLAN.md",
+        "66-02-PLAN.md",
+        "66-03-PLAN.md",
+        "66-04-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "66-01-SUMMARY.md",
+        "66-02-SUMMARY.md",
+        "66-03-SUMMARY.md",
+        "66-04-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "66-VALIDATION.md"
+      ]
+    }
+  }
 }
