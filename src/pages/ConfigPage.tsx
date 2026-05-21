@@ -13,6 +13,9 @@ import HotReloadBar, { type HotReloadStatus } from "@/components/HotReloadBar";
 import DiffView from "@/components/DiffView";
 import { SecurityRulesForm } from "@/components/config/SecurityRulesForm";
 import { AgentTypesForm } from "@/components/config/AgentTypesForm";
+import { ToolsForm } from "@/components/config/ToolsForm";
+import { ProfilesForm } from "@/components/config/ProfilesForm";
+import { PipesForm } from "@/components/config/PipesForm";
 import { YamlSection } from "@/components/config/YamlSection";
 
 const SECTIONS = [
@@ -25,13 +28,7 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
-const FORM_SECTIONS = new Set<SectionId>(["security-rules", "agent-types"]);
-
-const YAML_DESCRIPTIONS: Partial<Record<SectionId, string>> = {
-  tools: "Built-in tools, optional tools, skill/plugin directories, and Claude Code settings.",
-  profiles: "Routing profiles, budget limits, channel mappings, and persona voice configuration.",
-  pipes: "Automation pipelines with triggers, steps, and approval gates.",
-};
+const FORM_SECTIONS = new Set<SectionId>(["security-rules", "agent-types", "tools", "profiles", "pipes"]);
 
 function deepEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -355,19 +352,19 @@ export default function ConfigPage() {
               <>
                 {SECTIONS.map(({ id }) => (
                   <TabsContent key={id} value={id} className="h-full mt-0">
-                    {rawMode && hasForm && id === section ? (
+                    {rawMode && id === section ? (
                       <YamlSection value={yamlOverride ?? originalYaml} onChange={handleYamlChange} />
                     ) : id === "security-rules" ? (
                       <SecurityRulesForm data={currentData} onChange={handleFormChange} />
                     ) : id === "agent-types" ? (
                       <AgentTypesForm data={currentData} onChange={handleFormChange} />
-                    ) : (
-                      <YamlSection
-                        value={id === section ? (yamlOverride ?? currentYaml) : ""}
-                        onChange={handleYamlChange}
-                        description={YAML_DESCRIPTIONS[id]}
-                      />
-                    )}
+                    ) : id === "tools" ? (
+                      <ToolsForm data={currentData} onChange={handleFormChange} />
+                    ) : id === "profiles" ? (
+                      <ProfilesForm data={currentData} onChange={handleFormChange} />
+                    ) : id === "pipes" ? (
+                      <PipesForm data={currentData} onChange={handleFormChange} />
+                    ) : null}
                   </TabsContent>
                 ))}
 
