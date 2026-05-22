@@ -1,5 +1,6 @@
 export const PROVIDER_LOCATIONS: Record<string, { lat: number; lng: number; color: string }> = {
-  anthropic:     { lat: 37.77, lng: -122.42, color: "#FF6B35" },
+  anthropic:          { lat: 37.77, lng: -122.42, color: "#FF6B35" },
+  "anthropic_direct": { lat: 37.77, lng: -122.42, color: "#FF6B35" },
   openai:        { lat: 37.79, lng: -122.40, color: "#10B981" },
   openrouter:    { lat: 37.75, lng: -122.44, color: "#8B5CF6" },
   ollama:        { lat: 0, lng: 0, color: "#67E8F9" },
