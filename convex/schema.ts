@@ -1356,4 +1356,51 @@ export default defineSchema({
   })
     .index("by_agent_timestamp", ["agentId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // GATEWAY OBSERVABILITY (Phase 68)
+  // ============================================================
+
+  gatewayTasks: defineTable({
+    taskId: v.string(),
+    sessionId: v.optional(v.string()),
+    provider: v.string(),
+    billingType: v.optional(v.string()),
+    status: v.string(),
+    durationSeconds: v.optional(v.float64()),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_provider", ["provider", "timestamp"])
+    .index("by_taskId", ["taskId"])
+    .index("by_status", ["status", "timestamp"]),
+
+  gatewayQuotaSnapshots: defineTable({
+    provider: v.string(),
+    billingType: v.string(),
+    usedToday: v.float64(),
+    dailyLimit: v.optional(v.float64()),
+    spendUsd: v.float64(),
+    spendCapUsd: v.optional(v.float64()),
+    remainingPct: v.float64(),
+    timestamp: v.float64(),
+  })
+    .index("by_provider", ["provider", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
+
+  routingDecisions: defineTable({
+    taskId: v.string(),
+    requestedProvider: v.string(),
+    selectedProvider: v.string(),
+    quotaScore: v.optional(v.float64()),
+    latencyScore: v.optional(v.float64()),
+    costScore: v.optional(v.float64()),
+    finalScore: v.optional(v.float64()),
+    fallbackUsed: v.boolean(),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    .index("by_taskId", ["taskId"])
+    .index("by_fallback", ["fallbackUsed", "timestamp"]),
 });
