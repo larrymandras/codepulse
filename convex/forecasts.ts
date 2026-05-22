@@ -1,5 +1,5 @@
 import { query, mutation } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // ---- Pure helper functions (exported for testing) ----
 
@@ -140,6 +140,9 @@ export const getBudgetConfig = query({
 export const setBudgetCap = mutation({
   args: { cap: v.float64() },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new ConvexError("Unauthenticated");
+
     if (!(args.cap > 0 && args.cap < 1_000_000)) {
       throw new Error("Budget cap must be greater than 0 and less than 1,000,000");
     }
