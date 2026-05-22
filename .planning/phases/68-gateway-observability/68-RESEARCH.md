@@ -574,17 +574,17 @@ export function useGatewayTasksPaginated(initialNumItems = 25) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Are OTel routing_decision attribute names confirmed?**
    - What we know: The OTel handler in `otelLogs.ts` uses `getAttr()` to extract fields by name. The gateway Python code (`cli_gateway.py`) emits these attributes.
    - What's unclear: Exact attribute key names for score sub-fields and `task_id` vs `taskId`.
-   - Recommendation: Read `astridr-repo/astridr/tools/cli_gateway.py` and `astridr-repo/gateway/gateway/router.py` before implementing the `routingDecisions.insert` mutation to confirm attribute keys. Add fallback chains for both naming conventions.
+   - **RESOLVED:** Use dual fallback chains (`task_id ?? taskId`) to handle both Python snake_case and JS camelCase naming conventions. The plans implement this pattern throughout all routing_decision attribute extraction.
 
 2. **Does the gateway `/quota` endpoint require authentication?**
    - What we know: `app.py` shows no auth middleware on the `/quota` route; other routes also have no per-route auth.
    - What's unclear: Whether a global FastAPI middleware enforces Bearer auth on all routes.
-   - Recommendation: Use Bearer token in the cron action regardless (consistent with all other Ástríðr API calls). If auth fails, `res.ok` will be false and the cron will skip silently — add error logging.
+   - **RESOLVED:** Send Bearer token unconditionally via `process.env.ASTRIDR_API_KEY` (consistent with all Ástríðr API calls). Cron action checks `res.ok` and skips silently on auth failure with error logging. This is defensive and correct regardless of the gateway's auth configuration.
 
 ---
 
