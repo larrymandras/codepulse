@@ -3,6 +3,7 @@ import {
   computeMovingAverage,
   projectSpend,
   classifyBudgetStatus,
+  filterAPIBilledRows,
 } from "./forecasts";
 
 describe("forecasts", () => {
@@ -53,5 +54,61 @@ describe("forecasts", () => {
   test("classifyBudgetStatus returns 'ok' with no budget cap set (null)", () => {
     expect(classifyBudgetStatus(50, null)).toBe("ok");
     expect(classifyBudgetStatus(9999, null)).toBe("ok");
+  });
+
+  // Phase 67 D-04: budget threshold behavior for $5 cap
+  test("classifyBudgetStatus at 80% threshold ($4 of $5 cap) returns 'warning'", () => {
+    expect(classifyBudgetStatus(4.0, 5.0)).toBe("warning");
+  });
+
+  test("classifyBudgetStatus at 100% ($5 of $5 cap) returns 'exceeded'", () => {
+    expect(classifyBudgetStatus(5.0, 5.0)).toBe("exceeded");
+  });
+
+  test("classifyBudgetStatus below 80% ($3 of $5 cap) returns 'ok'", () => {
+    expect(classifyBudgetStatus(3.0, 5.0)).toBe("ok");
+  });
+});
+
+describe("filterAPIBilledRows", () => {
+  test("includes rows with billingType 'api'", () => {
+    const rows = [
+      { dimensions: { billingType: "api", provider: "claude-sdk" }, value: 1.5, bucket_start: 100 },
+    ];
+    expect(filterAPIBilledRows(rows)).toHaveLength(1);
+  });
+
+  test("excludes rows with billingType 'subscription'", () => {
+    const rows = [
+      { dimensions: { billingType: "subscription", provider: "codex" }, value: 0, bucket_start: 100 },
+    ];
+    expect(filterAPIBilledRows(rows)).toHaveLength(0);
+  });
+
+  test("treats legacy rows (no billingType) as 'api'", () => {
+    const rows = [
+      { dimensions: { provider: "anthropic_direct" }, value: 2.0, bucket_start: 100 },
+    ];
+    expect(filterAPIBilledRows(rows)).toHaveLength(1);
+  });
+
+  test("treats rows with null dimensions as 'api'", () => {
+    const rows = [
+      { dimensions: null, value: 0.5, bucket_start: 100 },
+    ];
+    expect(filterAPIBilledRows(rows)).toHaveLength(1);
+  });
+
+  test("filters mixed rows correctly", () => {
+    const rows = [
+      { dimensions: { billingType: "api", provider: "claude-sdk" }, value: 1.5, bucket_start: 100 },
+      { dimensions: { billingType: "subscription", provider: "codex" }, value: 0, bucket_start: 100 },
+      { dimensions: { billingType: "subscription", provider: "antigravity" }, value: 0, bucket_start: 100 },
+      { dimensions: { provider: "openrouter" }, value: 3.0, bucket_start: 200 },
+    ];
+    const result = filterAPIBilledRows(rows);
+    expect(result).toHaveLength(2);
+    expect(result[0].value).toBe(1.5);
+    expect(result[1].value).toBe(3.0);
   });
 });

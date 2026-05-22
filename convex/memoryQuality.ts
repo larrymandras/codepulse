@@ -212,7 +212,8 @@ export const detectContradictionsAction = internalAction({
     try {
       let responseText: string;
 
-      // Call LLM (OpenAI-compatible or Anthropic)
+      // Phase 67 D-07: LLM dispatch uses config provider (openai/anthropic) to select API endpoint.
+      // Memory data flows into the prompt unfiltered — no provider gating on input data.
       if (primaryConfig.provider === "anthropic") {
         const resp = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",

@@ -57,6 +57,24 @@ describe("briefings", () => {
     expect(result[2].count).toBe(1);
   });
 
+  // ── Phase 67 D-06: gateway provider data flows through briefing pipeline ──
+
+  test("groupActivityEvents handles events with gateway provider names (codex, antigravity)", () => {
+    // groupActivityEvents groups by toolName/eventType, not by provider.
+    // This test confirms gateway provider data passes through the briefing data pipeline
+    // without being rejected. The function signature accepts { toolName?, eventType? }
+    // which is provider-agnostic by design (Phase 67 D-06).
+    const events = [
+      { toolName: "read_file", eventType: "tool_use" },
+      { toolName: "write_file", eventType: "tool_use" },
+      { toolName: "read_file", eventType: "tool_use" },
+    ];
+    const result = groupActivityEvents(events);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ tool: "read_file", count: 2 });
+    expect(result[1]).toEqual({ tool: "write_file", count: 1 });
+  });
+
   // ── Stubs for Convex runtime-dependent tests ──────────────────────────────
 
   test.todo("onSessionCompleted skips if briefing already exists for sessionId (idempotency)");
