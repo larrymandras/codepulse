@@ -195,6 +195,30 @@ export const rollupCosts = internalMutation({
   },
 });
 
+/** Phase 67 D-01: Subscription provider usage (call count + token total).
+ *  Used by Analytics page Subscription Usage MetricCard. */
+export const subscriptionUsage = query({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
+    const all = await ctx.db.query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
+
+    const subRows = all.filter((r) => getBillingType(r.provider) === "subscription");
+
+    let totalCalls = 0;
+    let totalTokens = 0;
+    for (const r of subRows) {
+      totalCalls++;
+      totalTokens += r.totalTokens;
+    }
+
+    return { calls: totalCalls, tokens: totalTokens };
+  },
+});
+
 export const backfillAgentId = internalMutation({
   args: {},
   handler: async (ctx) => {
