@@ -234,53 +234,55 @@ async function routeLogRecord(
     }
 
     case "gateway.task_completed": {
-      const provider = getAttr(attrs, "provider") ?? "unknown";
-      await ctx.runMutation(api.toolExecutions.insert, {
+      await ctx.runMutation(api.gatewayTasks.upsert, {
+        taskId: getAttr(attrs, "task_id") ?? getAttr(attrs, "taskId") ?? sessionId,
         sessionId,
-        toolName: `gateway:${provider}`,
-        provider,
-        success: true,
-        durationMs: getNumAttr(attrs, "duration_ms"),
+        provider: getAttr(attrs, "provider") ?? "unknown",
+        status: "completed",
+        durationSeconds: getNumAttr(attrs, "duration_seconds"),
         timestamp,
       });
+      // Keep session provider attribution (existing behavior)
       await ctx.runMutation(api.sessions.upsert, {
         sessionId,
-        provider,
+        provider: getAttr(attrs, "provider"),
       });
       break;
     }
 
     case "gateway.task_failed": {
-      const provider = getAttr(attrs, "provider") ?? "unknown";
-      await ctx.runMutation(api.toolExecutions.insert, {
+      await ctx.runMutation(api.gatewayTasks.upsert, {
+        taskId: getAttr(attrs, "task_id") ?? getAttr(attrs, "taskId") ?? sessionId,
         sessionId,
-        toolName: `gateway:${provider}`,
-        provider,
-        success: false,
-        errorMessage: getAttr(attrs, "error") ?? "Task failed",
+        provider: getAttr(attrs, "provider") ?? "unknown",
+        status: "failed",
+        error: getAttr(attrs, "error") ?? "Task failed",
         timestamp,
       });
       break;
     }
 
     case "gateway.task_started": {
-      const provider = getAttr(attrs, "provider") ?? "unknown";
-      await ctx.runMutation(api.toolExecutions.insert, {
+      await ctx.runMutation(api.gatewayTasks.upsert, {
+        taskId: getAttr(attrs, "task_id") ?? getAttr(attrs, "taskId") ?? sessionId,
         sessionId,
-        toolName: `gateway:${provider}`,
-        provider,
-        success: true,
+        provider: getAttr(attrs, "provider") ?? "unknown",
+        status: "running",
         timestamp,
       });
       break;
     }
 
     case "gateway.routing_decision": {
-      // Falls to generic events table — Phase 68 adds routingDecisions table
-      await ctx.runMutation(api.events.ingest, {
-        sessionId,
-        eventType: "gateway.routing_decision",
-        payload: attrsToObj(attrs),
+      await ctx.runMutation(api.routingDecisions.insert, {
+        taskId: getAttr(attrs, "task_id") ?? getAttr(attrs, "taskId") ?? sessionId,
+        requestedProvider: getAttr(attrs, "requested_provider") ?? "unknown",
+        selectedProvider: getAttr(attrs, "selected_provider") ?? "unknown",
+        quotaScore: getNumAttr(attrs, "quota_score"),
+        latencyScore: getNumAttr(attrs, "latency_score"),
+        costScore: getNumAttr(attrs, "cost_score"),
+        finalScore: getNumAttr(attrs, "final_score"),
+        fallbackUsed: getAttr(attrs, "fallback_used") === "true",
         timestamp,
       });
       break;

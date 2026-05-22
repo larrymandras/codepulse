@@ -231,6 +231,47 @@ export const costByPeriod = query({
   },
 });
 
+export const costByPeriodByProvider = query({
+  args: {
+    period: v.string(),
+    lookbackHours: v.optional(v.float64()),
+    billingType: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const lookback = (args.lookbackHours ?? 24) * 3600;
+    const cutoff = Date.now() / 1000 - lookback;
+    const rows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "cost").eq("period", args.period).gte("bucket_start", cutoff)
+      )
+      .collect();
+
+    const filtered = args.billingType
+      ? rows.filter((r) => {
+          const bt = (r.dimensions as { billingType?: string } | null)?.billingType ?? "api";
+          return bt === args.billingType;
+        })
+      : rows;
+
+    // Group by bucket_start, then by provider
+    const byBucket: Record<number, Record<string, number>> = {};
+    for (const r of filtered) {
+      const provider = (r.dimensions as { provider?: string } | null)?.provider ?? "unknown";
+      if (!byBucket[r.bucket_start]) byBucket[r.bucket_start] = {};
+      byBucket[r.bucket_start][provider] =
+        (byBucket[r.bucket_start][provider] ?? 0) + r.value;
+    }
+
+    return Object.entries(byBucket)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([bucket_start, byProvider]) => ({
+        bucket_start: Number(bucket_start),
+        byProvider,
+      }));
+  },
+});
+
 export const errorTrendByPeriod = query({
   args: {
     period: v.string(),
