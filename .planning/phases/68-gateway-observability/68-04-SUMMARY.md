@@ -123,3 +123,13 @@ None - no external service configuration required.
 ---
 *Phase: 68-gateway-observability*
 *Completed: 2026-05-22*
+
+## Self-Check: PASSED
+
+- src/hooks/useRoutingDecisions.ts — FOUND
+- src/components/RoutingDecisionsTable.tsx — FOUND
+- src/hooks/useGatewayTasks.ts — FOUND
+- src/components/GatewayTasksPanel.tsx — FOUND
+- .planning/phases/68-gateway-observability/68-04-SUMMARY.md — FOUND
+- Commit 294a4a5 (Task 1) — FOUND
+- Commit 33a5ff3 (Task 2) — FOUND
