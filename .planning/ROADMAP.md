@@ -377,7 +377,7 @@ Plans:
   - Analytics page wiring + rename "Claude Code Telemetry" → "Agent Telemetry"
 **Plans**: 5 plans
 Plans:
-- [ ] 68-01-PLAN.md — Schema tables (gatewayTasks, gatewayQuotaSnapshots, routingDecisions) + cron + backend services + test stubs
+- [x] 68-01-PLAN.md — Schema tables (gatewayTasks, gatewayQuotaSnapshots, routingDecisions) + cron + backend services + test stubs
 - [ ] 68-02-PLAN.md — OTel gateway event redirect + costByPeriodByProvider query + FlexBarChart segments extension
 - [ ] 68-03-PLAN.md — GatewayQuotaPanel + ProviderComparisonChart + useGatewayTasks hook
 - [ ] 68-04-PLAN.md — RoutingDecisionsTable + GatewayTasksPanel + useRoutingDecisions hook
@@ -467,7 +467,7 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 65. GitHub Actions | 0/TBD | Not started | - |
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
-| 68. Gateway Observability | 0/5 | Not started | - |
+| 68. Gateway Observability | 1/5 | In Progress|  |
 | 69. SDK Guard & UX | 0/TBD | Not started | - |
 
 ---

@@ -87,4 +87,11 @@ crons.interval(
   internal.gatewayQuota.pollAndStore
 );
 
+// Supabase health keepalive (every hour)
+crons.interval(
+  "supabase-health-poll",
+  { hours: 1 },
+  internal.supabase.pollHealth
+);
+
 export default crons;
