@@ -350,7 +350,7 @@ Plans:
   - Add providerLocations entries for gateway providers
 **Plans**: 3 plans
 Plans:
-- [ ] 67-01-PLAN.md -- Provider billing registry, model pricing (GPT/Gemini), schema billingType, ingest wiring, model dropdowns, map locations
+- [x] 67-01-PLAN.md -- Provider billing registry, model pricing (GPT/Gemini), schema billingType, ingest wiring, model dropdowns, map locations
 - [ ] 67-02-PLAN.md -- Aggregates billingType dimension, cost forecast API-only filter, intelligence pipeline verification (briefings/memoryQuality)
 - [ ] 67-03-PLAN.md -- TokenWaterfall provider grouping + colors, Analytics split view, SDKSpendCapGauge, CostForecastPanel note
 **UI hint**: yes
@@ -460,7 +460,7 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 64. PagerDuty | 0/TBD | Not started | - |
 | 65. GitHub Actions | 0/TBD | Not started | - |
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
-| 67. Multi-Provider Pricing | 0/3 | Planning complete | - |
+| 67. Multi-Provider Pricing | 1/3 | In Progress|  |
 | 68. Gateway Observability | 0/TBD | Not started | - |
 | 69. SDK Guard & UX | 0/TBD | Not started | - |
 
