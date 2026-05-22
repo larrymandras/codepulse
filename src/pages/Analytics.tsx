@@ -20,6 +20,7 @@ import ActiveTimeChart from "../components/ActiveTimeChart";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
+import SDKSpendCapGauge from "../components/SDKSpendCapGauge";
 import AnomalyBadge from "../components/AnomalyBadge";
 import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
 import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
@@ -38,7 +39,13 @@ import {
 export default function Analytics() {
   const { events } = useRecentEvents(100);
   const { calls: llmCalls } = useLlmMetrics();
-  // Swap 1: costByProvider now reads from pre-computed aggregates (D-11, DP-02)
+  // Phase 67 D-01: Split cost view — API spend (real money) vs Subscription usage (call counts/tokens)
+  const apiCostByProvider = useQuery(api.aggregates.costByPeriod, {
+    period: "daily",
+    billingType: "api",
+  }) ?? {};
+  const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0 };
+  // Keep total cost (all types) for backward compat with existing components
   const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
   // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
   const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" }) ?? [];
@@ -53,6 +60,7 @@ export default function Analytics() {
   const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
   const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
 
+  const totalApiSpend = Object.values(apiCostByProvider).reduce((s, v) => s + (v as number), 0);
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
 
@@ -76,6 +84,13 @@ export default function Analytics() {
         </GlassPanel>
       </SectionErrorBoundary>
 
+      {/* SDK Spend Cap per D-04 */}
+      <SectionErrorBoundary name="SDK Spend Cap">
+        <GlassPanel className="p-4">
+          <SDKSpendCapGauge />
+        </GlassPanel>
+      </SectionErrorBoundary>
+
       {/* Summary row */}
       <GlassPanel className="p-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -93,8 +108,9 @@ export default function Analytics() {
           </div>
           <MetricCard label="LLM Calls" value={llmCalls.length} />
           <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+          {/* Phase 67 D-01: API Spend / Subscription Usage split view */}
           <div className="flex items-start gap-2">
-            <MetricCard label="Total Cost" value={formatCost(totalCost)} />
+            <MetricCard label="API Spend" value={formatCost(totalApiSpend)} />
             {anomalies.cost && (
               <AnomalyBadge
                 severity={anomalies.cost.severity as "warning" | "critical"}
@@ -105,6 +121,10 @@ export default function Analytics() {
               />
             )}
           </div>
+          <MetricCard
+            label="Subscription Usage"
+            value={`${subscriptionUsage.calls.toLocaleString()} calls / ${subscriptionUsage.tokens.toLocaleString()} tokens`}
+          />
         </div>
       </GlassPanel>
 

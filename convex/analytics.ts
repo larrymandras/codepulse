@@ -235,6 +235,7 @@ export const tokenWaterfall = query({
       .map((r) => ({
         timestamp: r.timestamp,
         model: r.model,
+        provider: r.provider,  // Phase 67 — required for D-08 provider grouping
         promptTokens: r.promptTokens,
         completionTokens: r.completionTokens,
       }));

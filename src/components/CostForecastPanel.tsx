@@ -94,6 +94,9 @@ export default function CostForecastPanel() {
         ) : (
           <p className="text-xs text-muted-foreground">No budget cap configured</p>
         )}
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Subscription providers (claude-cli, codex, antigravity) excluded from forecast
+        </p>
       </div>
 
       {/* Trend sparkline: last 7 days */}
