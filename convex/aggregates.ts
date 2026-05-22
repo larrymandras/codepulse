@@ -67,7 +67,23 @@ export const computeHourly = internalMutation({
     for (const e of eventRows) {
       countByType[e.eventType] = (countByType[e.eventType] ?? 0) + 1;
     }
+
+    // Idempotency guard: check existing event rows for this hour
+    const existingEventRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "events").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingEventKeys = new Set(
+      existingEventRows.map((r) => {
+        const dims = r.dimensions as { event_type?: string } | null;
+        return dims?.event_type ?? "unknown";
+      })
+    );
+
     for (const [eventType, value] of Object.entries(countByType)) {
+      if (existingEventKeys.has(eventType)) continue;
       await ctx.db.insert("aggregates", {
         metric_type: "events",
         period: "hourly",
@@ -85,9 +101,24 @@ export const computeHourly = internalMutation({
     for (const e of errorRows) {
       errorByCategory[e.eventType] = (errorByCategory[e.eventType] ?? 0) + 1;
     }
+
+    // Idempotency guard: check existing error rows for this hour
+    const existingErrorRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "errors").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingErrorKeys = new Set(
+      existingErrorRows.map((r) => {
+        const dims = r.dimensions as { error_category?: string } | null;
+        return dims?.error_category ?? "unknown";
+      })
+    );
+
     // Also count total errors as a single aggregate for trend charts
     const totalErrors = errorRows.length;
-    if (totalErrors > 0) {
+    if (totalErrors > 0 && !existingErrorKeys.has("all")) {
       await ctx.db.insert("aggregates", {
         metric_type: "errors",
         period: "hourly",
@@ -97,6 +128,7 @@ export const computeHourly = internalMutation({
       });
     }
     for (const [category, value] of Object.entries(errorByCategory)) {
+      if (existingErrorKeys.has(category)) continue;
       await ctx.db.insert("aggregates", {
         metric_type: "errors",
         period: "hourly",
@@ -134,7 +166,22 @@ export const rollupDaily = internalMutation({
       rollup[key].value += row.value;
     }
 
-    for (const entry of Object.values(rollup)) {
+    // Idempotency guard: check existing daily rows for this day
+    const existingDailyRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_period_bucket", (q) =>
+        q.eq("period", "daily").gte("bucket_start", dayStart).lt("bucket_start", dayStart + 86400)
+      )
+      .collect();
+    const existingDailyKeys = new Set(
+      existingDailyRows.map((r) => {
+        const dimKey = JSON.stringify(r.dimensions ?? {});
+        return `${r.metric_type}::${dimKey}`;
+      })
+    );
+
+    for (const [key, entry] of Object.entries(rollup)) {
+      if (existingDailyKeys.has(key)) continue;
       await ctx.db.insert("aggregates", {
         metric_type: entry.metric_type,
         period: "daily",
