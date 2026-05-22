@@ -30,7 +30,7 @@ Cost estimates, briefings, and intelligence features work correctly for all prov
 - **D-10:** All gateway providers get map locations — claude-cli/claude-sdk → San Francisco (Anthropic), codex → San Francisco (OpenAI), antigravity → Mountain View (Google).
 
 ### Model Pricing
-- **D-11:** Add exactly 4 models to `modelPricing.ts`: GPT-4o ($2.50/$10 per 1M), GPT-4o-mini ($0.15/$0.60), Gemini 2.5 Pro ($1.25/$10), Gemini 2.5 Flash ($0.15/$0.60).
+- **D-11:** Add exactly 4 models to `modelPricing.ts`: GPT-4o ($2.50/$10 per 1M), GPT-4o-mini ($0.15/$0.60), Gemini 2.5 Pro ($1.25/$10), Gemini 2.5 Flash ($0.30/$2.50). *(Flash price corrected 2026-05-22 per official Google pricing — confirmed by Larry.)*
 - **D-12:** Cost estimation skips pricing lookup when billingType = "subscription" — return 0 at call site. `modelPricing.ts` only contains API-billed model rates.
 - **D-13:** Default fallback for unknown API-billed models stays at Claude Sonnet rates ($3/$15 per 1M).
 
