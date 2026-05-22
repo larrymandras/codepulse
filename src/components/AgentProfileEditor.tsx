@@ -12,6 +12,9 @@ const MODELS = [
   "claude-sonnet-4-6",
   "claude-haiku-4-5",
   "gpt-4o",
+  "gpt-4o-mini",
+  "gemini-2.5-pro",
+  "gemini-2.5-flash",
   "other",
 ];
 
