@@ -229,6 +229,9 @@ export const detectContradictionsAction = internalAction({
             messages: [{ role: "user", content: userPrompt }],
           }),
         });
+        if (!resp.ok) {
+          throw new Error(`LLM ${primaryConfig.provider} error ${resp.status}`);
+        }
         const json = await resp.json();
         responseText = json.content?.[0]?.text ?? "{}";
       } else {
@@ -249,6 +252,9 @@ export const detectContradictionsAction = internalAction({
             }),
           }
         );
+        if (!resp.ok) {
+          throw new Error(`LLM ${primaryConfig.provider} error ${resp.status}`);
+        }
         const json = await resp.json();
         responseText = json.choices?.[0]?.message?.content ?? "{}";
       }
