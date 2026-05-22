@@ -1,4 +1,5 @@
 import { describe, test, expect } from "vitest";
+import { getBillingType } from "./lib/providers";
 
 describe("aggregates", () => {
   describe("computeHourly — bucket logic", () => {
@@ -11,20 +12,40 @@ describe("aggregates", () => {
       expect(hourStart + 3600).toBeLessThanOrEqual(Math.floor(now / 3600) * 3600);
     });
 
-    test("cost dimension key groups by provider::model", () => {
+    test("cost dimension key groups by provider::model::billingType", () => {
+      // Phase 67: billingType added to dimension key
       const rows = [
-        { provider: "openai", model: "gpt-4", cost: 0.03 },
-        { provider: "openai", model: "gpt-4", cost: 0.02 },
-        { provider: "anthropic", model: "claude-3", cost: 0.05 },
+        { provider: "openrouter", model: "gpt-4", cost: 0.03, billingType: undefined as string | undefined },
+        { provider: "openrouter", model: "gpt-4", cost: 0.02, billingType: undefined as string | undefined },
+        { provider: "codex", model: "claude-3", cost: 0.00, billingType: undefined as string | undefined },
       ];
       const costByDim: Record<string, number> = {};
       for (const r of rows) {
-        const key = `${r.provider}::${r.model}`;
+        const billingType = r.billingType ?? getBillingType(r.provider);
+        const key = `${r.provider}::${r.model}::${billingType}`;
         costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
       }
-      expect(costByDim["openai::gpt-4"]).toBe(0.05);
-      expect(costByDim["anthropic::claude-3"]).toBe(0.05);
+      expect(costByDim["openrouter::gpt-4::api"]).toBe(0.05);
+      expect(costByDim["codex::claude-3::subscription"]).toBe(0);
       expect(Object.keys(costByDim)).toHaveLength(2);
+    });
+
+    test("idempotency guard uses per-dimension-key check (not simple first())", () => {
+      // Phase 67: With billingType, multiple rows per hour bucket exist.
+      // The idempotency guard must check per dimension key, not just "any row exists."
+      const existingCostRows = [
+        { dimensions: { provider: "openrouter", model: "gpt-4", billingType: "api" } },
+      ];
+      const existingKeys = new Set(
+        existingCostRows.map((r) => {
+          const dims = r.dimensions as { provider?: string; model?: string; billingType?: string };
+          return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}`;
+        })
+      );
+
+      // A new dimension key should NOT be blocked
+      expect(existingKeys.has("openrouter::gpt-4::api")).toBe(true);
+      expect(existingKeys.has("codex::claude-3::subscription")).toBe(false);
     });
 
     test("error aggregation counts by category and includes 'all' total", () => {
@@ -106,6 +127,80 @@ describe("aggregates", () => {
         category: (r.dimensions as { error_category?: string })?.error_category ?? "unknown",
       }));
       expect(result[0]).toEqual({ bucket_start: 1000, errors: 5, category: "Error" });
+    });
+
+    test("costByPeriod with billingType='api' returns only API-billed rows", () => {
+      // Phase 67: billingType filter on costByPeriod
+      const rows = [
+        { value: 10, dimensions: { provider: "openrouter", billingType: "api" } },
+        { value: 5, dimensions: { provider: "codex", billingType: "subscription" } },
+        { value: 20, dimensions: { provider: "claude-sdk", billingType: "api" } },
+      ];
+      const billingTypeFilter = "api";
+      const filtered = rows.filter((r) => {
+        const bt = (r.dimensions as { billingType?: string })?.billingType ?? "api";
+        return bt === billingTypeFilter;
+      });
+      const grouped: Record<string, number> = {};
+      for (const r of filtered) {
+        const provider = (r.dimensions as { provider?: string })?.provider ?? "unknown";
+        grouped[provider] = (grouped[provider] ?? 0) + r.value;
+      }
+      expect(grouped).toEqual({ openrouter: 10, "claude-sdk": 20 });
+    });
+
+    test("costByPeriod with billingType='subscription' returns only subscription rows", () => {
+      const rows = [
+        { value: 10, dimensions: { provider: "openrouter", billingType: "api" } },
+        { value: 5, dimensions: { provider: "codex", billingType: "subscription" } },
+        { value: 3, dimensions: { provider: "antigravity", billingType: "subscription" } },
+      ];
+      const billingTypeFilter = "subscription";
+      const filtered = rows.filter((r) => {
+        const bt = (r.dimensions as { billingType?: string })?.billingType ?? "api";
+        return bt === billingTypeFilter;
+      });
+      const grouped: Record<string, number> = {};
+      for (const r of filtered) {
+        const provider = (r.dimensions as { provider?: string })?.provider ?? "unknown";
+        grouped[provider] = (grouped[provider] ?? 0) + r.value;
+      }
+      expect(grouped).toEqual({ codex: 5, antigravity: 3 });
+    });
+
+    test("costByPeriod without billingType returns all rows (backward compat)", () => {
+      const rows = [
+        { value: 10, dimensions: { provider: "openrouter", billingType: "api" } },
+        { value: 5, dimensions: { provider: "codex", billingType: "subscription" } },
+      ];
+      const billingTypeFilter: string | undefined = undefined;
+      const filtered = billingTypeFilter
+        ? rows.filter((r) => {
+            const bt = (r.dimensions as { billingType?: string })?.billingType ?? "api";
+            return bt === billingTypeFilter;
+          })
+        : rows;
+      const grouped: Record<string, number> = {};
+      for (const r of filtered) {
+        const provider = (r.dimensions as { provider?: string })?.provider ?? "unknown";
+        grouped[provider] = (grouped[provider] ?? 0) + r.value;
+      }
+      expect(grouped).toEqual({ openrouter: 10, codex: 5 });
+    });
+
+    test("legacy rows without billingType dimension are treated as 'api'", () => {
+      // Phase 67: backward compat — legacy rows (no billingType) default to "api"
+      const rows = [
+        { value: 10, dimensions: { provider: "anthropic_direct" } }, // no billingType field
+        { value: 5, dimensions: { provider: "codex", billingType: "subscription" } },
+      ];
+      const billingTypeFilter = "api";
+      const filtered = rows.filter((r) => {
+        const bt = (r.dimensions as { billingType?: string })?.billingType ?? "api";
+        return bt === billingTypeFilter;
+      });
+      expect(filtered).toHaveLength(1);
+      expect((filtered[0].dimensions as { provider?: string })?.provider).toBe("anthropic_direct");
     });
 
     test("eventCountsByPeriod groups by event_type", () => {

@@ -1,5 +1,6 @@
 import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { getBillingType } from "./lib/providers";
 
 // ---- Hourly aggregation (called by cron every hour) ----
 export const computeHourly = internalMutation({
@@ -20,29 +21,36 @@ export const computeHourly = internalMutation({
 
     const costByDim: Record<string, number> = {};
     for (const r of llmRows) {
-      const key = `${r.provider}::${r.model}`;
+      const billingType = (r as any).billingType ?? getBillingType(r.provider);
+      const key = `${r.provider}::${r.model}::${billingType}`;
       costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
     }
-    // Check if this hour has already been aggregated (idempotency guard)
-    const existingCost = await ctx.db
+
+    // Phase 67: Per-dimension-key idempotency guard.
+    // With billingType, multiple rows per hour bucket can exist (api + subscription).
+    // Collect all existing cost rows for this hour and skip already-aggregated dimension keys.
+    const existingCostRows = await ctx.db
       .query("aggregates")
       .withIndex("by_type_period_bucket", (q) =>
         q.eq("metric_type", "cost").eq("period", "hourly").eq("bucket_start", hourStart)
       )
-      .first();
-    if (existingCost) {
-      // Already computed for this hour — skip to avoid double-inserting
-      return;
-    }
+      .collect();
+    const existingKeys = new Set(
+      existingCostRows.map((r) => {
+        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string } | null;
+        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}`;
+      })
+    );
 
     for (const [dim, value] of Object.entries(costByDim)) {
-      const [provider, model] = dim.split("::");
+      if (existingKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [provider, model, billingType] = dim.split("::");
       await ctx.db.insert("aggregates", {
         metric_type: "cost",
         period: "hourly",
         bucket_start: hourStart,
         value,
-        dimensions: { provider, model },
+        dimensions: { provider, model, billingType },
       });
     }
 
@@ -144,6 +152,7 @@ export const costByPeriod = query({
   args: {
     period: v.string(),
     lookbackDays: v.optional(v.float64()),
+    billingType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const lookback = (args.lookbackDays ?? 30) * 86400;
@@ -156,9 +165,18 @@ export const costByPeriod = query({
       )
       .collect();
 
+    // Phase 67: Post-collect filter by billingType if provided.
+    // Legacy rows (no billingType in dimensions) default to "api" (conservative).
+    const filtered = args.billingType
+      ? rows.filter((r) => {
+          const bt = (r.dimensions as { billingType?: string } | null)?.billingType ?? "api";
+          return bt === args.billingType;
+        })
+      : rows;
+
     // Group by provider
     const grouped: Record<string, number> = {};
-    for (const r of rows) {
+    for (const r of filtered) {
       const provider = (r.dimensions as { provider?: string } | null)?.provider ?? "unknown";
       grouped[provider] = (grouped[provider] ?? 0) + r.value;
     }
