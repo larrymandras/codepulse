@@ -43,6 +43,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
   const [showGallery, setShowGallery] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const { create, update, remove } = useAgentProfileMutations();
   const { create: createAvatar, update: updateAvatar, saveImage } = useAvatarMutations();
@@ -82,6 +83,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
+    setSaveError(null);
     try {
       let finalAvatarId = avatarId;
 
@@ -133,6 +135,9 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
         });
       }
       onSave();
+    } catch (err) {
+      console.error("Failed to save profile:", err);
+      setSaveError(err instanceof Error ? err.message : "Failed to save profile");
     } finally {
       setSaving(false);
     }
@@ -306,6 +311,12 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
           ))}
         </select>
       </div>
+
+      {saveError && (
+        <div className="text-sm text-red-400 bg-red-600/10 border border-red-600/30 rounded-lg px-3 py-2">
+          {saveError}
+        </div>
+      )}
 
       <div className="flex gap-2">
         <button
