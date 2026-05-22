@@ -302,6 +302,7 @@ export default defineSchema({
     archived: v.optional(v.boolean()),
     agentId: v.optional(v.string()),    // Phase 59 SCH-02
     toolName: v.optional(v.string()),   // Phase 59 SCH-02
+    billingType: v.optional(v.string()),  // "api" | "subscription" — Phase 67
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])

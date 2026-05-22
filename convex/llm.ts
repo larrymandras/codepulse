@@ -1,6 +1,7 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { getBillingType } from "./lib/providers";
 
 export const recordCall = mutation({
   args: {
@@ -17,6 +18,7 @@ export const recordCall = mutation({
     toolName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const billingType = getBillingType(args.provider);
     await ctx.db.insert("llmMetrics", {
       provider: args.provider,
       model: args.model,
@@ -29,6 +31,7 @@ export const recordCall = mutation({
       timestamp: args.timestamp,
       agentId: args.agentId,
       toolName: args.toolName,
+      billingType,
     });
   },
 });
