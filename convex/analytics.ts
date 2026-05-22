@@ -179,7 +179,7 @@ export const errorRateTrend = query({
 
     return Object.entries(buckets).map(([hour, count]) => ({
       hour: Number(hour),
-      label: `${Number(hour)}h ago`,
+      label: `${24 - Number(hour)}h ago`,
       errors: count,
     }));
   },
@@ -225,19 +225,17 @@ export const tokenWaterfall = query({
     const cutoff = Date.now() / 1000 - 30 * 60; // last 30 minutes
     const all = await ctx.db
       .query("llmMetrics")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .order("asc")
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
-    return all
-      .filter((r) => r.timestamp >= cutoff)
-      .map((r) => ({
-        timestamp: r.timestamp,
-        model: r.model,
-        provider: r.provider,  // Phase 67 — required for D-08 provider grouping
-        promptTokens: r.promptTokens,
-        completionTokens: r.completionTokens,
-      }));
+    return all.map((r) => ({
+      timestamp: r.timestamp,
+      model: r.model,
+      provider: r.provider,  // Phase 67 — required for D-08 provider grouping
+      promptTokens: r.promptTokens,
+      completionTokens: r.completionTokens,
+    }));
   },
 });
