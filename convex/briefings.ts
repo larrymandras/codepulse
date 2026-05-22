@@ -144,6 +144,9 @@ export const getSessionDataInternal = internalQuery({
   },
 });
 
+// Phase 67 D-06: This query is intentionally provider-agnostic.
+// All providers (claude, codex, antigravity, etc.) flow into digest data.
+// Provider filtering only applies to setLLMConfig (which LLM to call for generation).
 export const getDailyDigestDataInternal = internalQuery({
   args: { dayStart: v.float64() },
   handler: async (ctx, { dayStart }) => {

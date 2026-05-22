@@ -3,6 +3,20 @@ import { v } from "convex/values";
 
 // ---- Pure helper functions (exported for testing) ----
 
+/**
+ * Filters aggregate rows to only API-billed entries.
+ * Legacy rows (no billingType in dimensions) are treated as "api" (conservative default).
+ * Phase 67 D-02: subscription rows excluded from cost forecasting.
+ */
+export function filterAPIBilledRows(
+  rows: Array<{ dimensions?: unknown; value: number; bucket_start: number }>
+): Array<{ dimensions?: unknown; value: number; bucket_start: number }> {
+  return rows.filter((r) => {
+    const bt = (r.dimensions as { billingType?: string } | null)?.billingType ?? "api";
+    return bt === "api";
+  });
+}
+
 export function computeMovingAverage(
   dailyValues: number[],
   totalDaysAvailable: number
@@ -49,9 +63,12 @@ export const costForecast = query({
       )
       .collect();
 
+    // Phase 67 D-02: Only project API-billed spend. Subscription usage tracked but not forecasted.
+    const apiRows = filterAPIBilledRows(rows);
+
     // Group by bucket_start (sum values across providers per day)
     const byDay: Record<number, number> = {};
-    for (const row of rows) {
+    for (const row of apiRows) {
       byDay[row.bucket_start] = (byDay[row.bucket_start] ?? 0) + row.value;
     }
 

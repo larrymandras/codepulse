@@ -60,6 +60,32 @@ describe("memoryQuality", () => {
     expect(stale).not.toContain("mem-X");
   });
 
+  // ── Phase 67 D-07: gateway provider data is provider-agnostic ────────────
+
+  test("identifyStaleMemories processes memory events regardless of provider context", () => {
+    const now = Date.now() / 1000;
+    const thirtyOneDaysAgo = now - 31 * 86400;
+    const twoDaysAgo = now - 2 * 86400;
+
+    // Events from sessions using gateway providers (codex, antigravity)
+    // should be processed identically to events from legacy providers.
+    // Phase 67 D-07: memory quality data pipeline is provider-agnostic.
+    const events = [
+      { eventType: "memory_stored", data: { memoryId: "mem-codex-old" }, timestamp: thirtyOneDaysAgo },
+      { eventType: "memory_stored", data: { memoryId: "mem-antigravity-new" }, timestamp: twoDaysAgo },
+    ];
+
+    const stale = identifyStaleMemories(events, 30, now);
+    expect(stale).toContain("mem-codex-old");
+    expect(stale).not.toContain("mem-antigravity-new");
+  });
+
+  test("computeDeduplicationRate is provider-agnostic", () => {
+    // Deduplication rate computation does not depend on provider.
+    // Phase 67 D-07: these pure helpers accept any data.
+    expect(computeDeduplicationRate(50, 10)).toBe(0.2);
+  });
+
   test("identifyStaleMemories uses configurable staleness_days from agentConfigs", () => {
     const now = Date.now() / 1000;
     const sixDaysAgo = now - 6 * 86400;
