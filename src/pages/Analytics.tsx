@@ -21,6 +21,11 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import SDKSpendCapGauge from "../components/SDKSpendCapGauge";
+import GatewayQuotaPanel from "../components/GatewayQuotaPanel";
+import ProviderComparisonChart from "../components/ProviderComparisonChart";
+import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
+import GatewayTasksPanel from "../components/GatewayTasksPanel";
+import LlmProviderPanel from "../components/LlmProviderPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
 import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
 import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
@@ -88,6 +93,13 @@ export default function Analytics() {
       <SectionErrorBoundary name="SDK Spend Cap">
         <GlassPanel className="p-4">
           <SDKSpendCapGauge />
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Phase 68 D-04: Gateway Quota Panel */}
+      <SectionErrorBoundary name="Gateway Quota">
+        <GlassPanel className="p-4">
+          <GatewayQuotaPanel />
         </GlassPanel>
       </SectionErrorBoundary>
 
@@ -181,13 +193,41 @@ export default function Analytics() {
         <TokenWaterfall />
       </GlassPanel>
 
-      {/* Claude Code Telemetry */}
-      <SectionHeader title="Claude Code Telemetry" />
+      {/* Agent Telemetry */}
+      <SectionHeader title="Agent Telemetry" />
 
       {/* Prompt Activity — full width */}
       <SectionErrorBoundary name="Prompt Activity">
         <GlassPanel className="p-4">
           <PromptActivityChart />
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Phase 68: LLM by Provider + Provider Comparison — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SectionErrorBoundary name="LLM by Provider">
+          <GlassPanel className="p-4">
+            <LlmProviderPanel />
+          </GlassPanel>
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="Provider Comparison">
+          <GlassPanel className="p-4">
+            <ProviderComparisonChart />
+          </GlassPanel>
+        </SectionErrorBoundary>
+      </div>
+
+      {/* Phase 68: Routing Decisions — full width */}
+      <SectionErrorBoundary name="Routing Decisions">
+        <GlassPanel className="p-4">
+          <RoutingDecisionsTable />
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Phase 68: Gateway Tasks — full width */}
+      <SectionErrorBoundary name="Gateway Tasks">
+        <GlassPanel className="p-4">
+          <GatewayTasksPanel />
         </GlassPanel>
       </SectionErrorBoundary>
 
