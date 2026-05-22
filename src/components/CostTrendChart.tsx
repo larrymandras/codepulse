@@ -1,34 +1,56 @@
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { FlexBarChart } from "./FlexBarChart";
-import { useCostOverTime } from "../hooks/useAnalytics";
+import { PROVIDER_DISPLAY_NAMES } from "../lib/providers";
 import InfoTooltip from "./InfoTooltip";
 
-export default function CostTrendChart() {
-  const raw = useCostOverTime();
+const PROVIDER_COLORS: Record<string, string> = {
+  "claude-cli": "#10b981",
+  "claude-sdk": "#10b981",
+  "codex": "#22c55e",
+  "antigravity": "#06b6d4",
+  "anthropic_direct": "#f59e0b",
+  "openrouter": "#a855f7",
+  "ollama": "#6b7280",
+};
 
-  // Aggregate cost by time bucket (group by time label)
-  const byTime: Record<string, number> = {};
-  for (const r of raw) {
-    const time = new Date(r.timestamp * 1000).toLocaleTimeString([], {
+export default function CostTrendChart() {
+  const buckets = useQuery(api.aggregates.costByPeriodByProvider, {
+    period: "hourly",
+    lookbackHours: 24,
+    billingType: "api",
+  }) ?? [];
+
+  const data = buckets.map((b) => ({
+    label: new Date(b.bucket_start * 1000).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
-    });
-    byTime[time] = (byTime[time] ?? 0) + r.cost;
-  }
-
-  const data = Object.entries(byTime).map(([label, value]) => ({ label, value }));
+    }),
+    segments: Object.entries(b.byProvider).map(([provider, cost]) => ({
+      value: cost as number,
+      color: PROVIDER_COLORS[provider] ?? "#6b7280",
+      label: PROVIDER_DISPLAY_NAMES[provider] ?? provider,
+    })),
+  }));
 
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Cost Trend<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
-        <p className="text-gray-500 text-sm">No LLM cost data yet.</p>
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+          Cost Trend
+          <InfoTooltip text="Hourly API spend trend broken down by provider over the last 24 hours" />
+        </h2>
+        <p className="text-gray-500 text-sm">No API cost data yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Cost Trend (Cumulative)<InfoTooltip text="Cumulative cost over time broken down by LLM provider" /></h2>
+      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        Cost Trend (Hourly by Provider)
+        <InfoTooltip text="Hourly API spend trend broken down by provider over the last 24 hours" />
+      </h2>
       <FlexBarChart data={data} height={300} />
     </div>
   );
