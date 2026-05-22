@@ -375,7 +375,13 @@ Plans:
   - LlmProviderPanel grouped by provider then model
   - CostBreakdown and CostTrendChart provider dimensions
   - Analytics page wiring + rename "Claude Code Telemetry" → "Agent Telemetry"
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+- [ ] 68-01-PLAN.md — Schema tables (gatewayTasks, gatewayQuotaSnapshots, routingDecisions) + cron + backend services + test stubs
+- [ ] 68-02-PLAN.md — OTel gateway event redirect + costByPeriodByProvider query + FlexBarChart segments extension
+- [ ] 68-03-PLAN.md — GatewayQuotaPanel + ProviderComparisonChart + useGatewayTasks hook
+- [ ] 68-04-PLAN.md — RoutingDecisionsTable + GatewayTasksPanel + useRoutingDecisions hook
+- [ ] 68-05-PLAN.md — CostTrendChart upgrade + LlmProviderPanel + Analytics page wiring + section rename
 **UI hint**: yes
 
 ### Phase 69: SDK Spend Guard & Multi-Provider UX
@@ -461,9 +467,9 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 65. GitHub Actions | 0/TBD | Not started | - |
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
-| 68. Gateway Observability | 0/TBD | Not started | - |
+| 68. Gateway Observability | 0/5 | Not started | - |
 | 69. SDK Guard & UX | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-05-22 — Phase 67 planning complete (3 plans in 3 waves)*
+*Last updated: 2026-05-22 — Phase 68 planning complete (5 plans in 4 waves)*
