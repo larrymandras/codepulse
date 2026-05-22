@@ -80,4 +80,11 @@ crons.interval(
   internal.docker.pollHealth
 );
 
+// Phase 68: Gateway quota polling (every 5 minutes)
+crons.interval(
+  "poll-gateway-quota",
+  { minutes: 5 },
+  internal.gatewayQuota.pollAndStore
+);
+
 export default crons;
