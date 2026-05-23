@@ -33,6 +33,7 @@ export const create = mutation({
       message: args.message,
       details: args.details,
       acknowledged: false,
+      status: "active",
       createdAt: Date.now() / 1000,
     });
   },
@@ -229,6 +230,7 @@ export const evaluate = mutation({
         source: ruleId,
         message,
         acknowledged: false,
+        status: "active",
         createdAt: now,
       });
       activeSourceSet.add(ruleId);
@@ -714,6 +716,7 @@ export const evaluateInternal = internalMutation({
         source: ruleId,
         message,
         acknowledged: false,
+        status: "active",
         createdAt: now,
         webhookStatus: "pending",
       });
@@ -911,6 +914,7 @@ export const evaluateCriticalInternal = internalMutation({
         source: ruleId,
         message,
         acknowledged: false,
+        status: "active",
         createdAt: now,
         webhookStatus: "pending",
       });
