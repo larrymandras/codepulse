@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { useProfileConfigs } from "../hooks/useProfileConfigs";
@@ -144,6 +145,7 @@ function IntelligenceSettings() {
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
       setSaveState("idle");
+      toast.error("Failed to save budget cap. Please try again.");
     }
   };
 
