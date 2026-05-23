@@ -20,7 +20,7 @@ import ActiveTimeChart from "../components/ActiveTimeChart";
 import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
-import SDKSpendCapGauge from "../components/SDKSpendCapGauge";
+import SDKSpendGuard from "../components/SDKSpendGuard";
 import GatewayQuotaPanel from "../components/GatewayQuotaPanel";
 import ProviderComparisonChart from "../components/ProviderComparisonChart";
 import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
@@ -92,7 +92,7 @@ export default function Analytics() {
       {/* SDK Spend Cap per D-04 */}
       <SectionErrorBoundary name="SDK Spend Cap">
         <GlassPanel className="p-4">
-          <SDKSpendCapGauge />
+          <SDKSpendGuard />
         </GlassPanel>
       </SectionErrorBoundary>
 
