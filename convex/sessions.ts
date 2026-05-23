@@ -51,6 +51,8 @@ export const markCompleted = mutation({
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .first();
     if (session) {
+      // No-regression guard: never transition backwards from completed to errored.
+      if (session.status === "completed") return;
       await ctx.db.patch(session._id, {
         status: args.status,
         lastEventAt: Date.now() / 1000,

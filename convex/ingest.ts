@@ -103,7 +103,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
     if (eventType === "session_end" || eventType === "session_stop") {
       await ctx.runMutation(api.sessions.markCompleted, {
         sessionId: sessionId ?? "unknown",
-        status: eventType === "session_end" ? "completed" : "errored",
+        status: "completed",
       });
       await ctx.runMutation(internal.briefings.onSessionCompleted, { sessionId: sessionId ?? "unknown" });
     }
