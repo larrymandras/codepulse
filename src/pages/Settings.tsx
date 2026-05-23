@@ -14,6 +14,7 @@ import InfoTooltip from "../components/InfoTooltip";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { NotificationPreferences } from "../components/NotificationPreferences";
 import LLMProviderConfig from "../components/LLMProviderConfig";
+import ProviderControls from "../components/ProviderControls";
 import type { AgentProfile } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -696,6 +697,13 @@ export default function Settings() {
           <p>CodePulse v0.1.0</p>
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>
         </div>
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Gateway Providers */}
+      <SectionErrorBoundary name="Gateway Providers">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+        <ProviderControls />
       </div>
       </SectionErrorBoundary>
 
