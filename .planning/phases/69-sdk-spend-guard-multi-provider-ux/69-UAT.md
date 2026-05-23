@@ -1,9 +1,9 @@
 ---
-status: complete
+status: diagnosed
 phase: 69-sdk-spend-guard-multi-provider-ux
 source: [69-01-SUMMARY.md, 69-02-SUMMARY.md, 69-03-SUMMARY.md, 69-04-SUMMARY.md]
 started: 2026-05-23T15:15:00Z
-updated: 2026-05-23T15:35:00Z
+updated: 2026-05-23T15:50:00Z
 ---
 
 ## Current Test
@@ -22,9 +22,8 @@ result: pass
 
 ### 3. SDK Spend Guard Loading State
 expected: On initial page load (or hard refresh of Analytics), a loading skeleton (pulsing gray bars) appears briefly in the SDK Daily Cap area before the real data renders. It should NOT flash "$0.00 of $5.00" before data arrives.
-result: issue
-reported: "not sure i see that"
-severity: minor
+result: pass
+note: Diagnosed as NOT A BUG. CR-01 fix correctly applied. Skeleton invisible because CostTrendChart.tsx subscribes to identical Convex query on same page — query dedup makes data available instantly.
 
 ### 4. Day-End Spend Projection
 expected: If there are 2+ hours of spend data today, a projection row appears below the gauge showing the estimated day-end spend (e.g., "Projected: $3.45 by end of day"). If projected spend exceeds the cap, an inline overshoot warning is visible. If fewer than 2 hours of data exist, no projection row is shown.
@@ -77,70 +76,86 @@ result: pass
 ## Summary
 
 total: 12
-passed: 4
-issues: 6
+passed: 5
+issues: 5
 pending: 0
 skipped: 2
 blocked: 0
 
 ## Gaps
 
-- truth: "Loading skeleton (pulsing gray bars) appears briefly before data renders"
-  status: failed
-  reason: "User reported: not sure i see that"
-  severity: minor
-  test: 3
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
-
 - truth: "Drag provider card to new position, order persists on refresh"
   status: failed
   reason: "User reported: no"
   severity: major
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "seedGateway.runSeed never inserts providerConfig rows — UI gates all rendering on configs.length > 0, so provider cards/drag handles never appear"
+  artifacts:
+    - path: "convex/seedGateway.ts"
+      issue: "runSeed schedules seedSDKSpendAlert and seedGatewayProfiles but never seeds providerConfig table"
+    - path: "src/components/ProviderControls.tsx"
+      issue: "Line 231 gates rendering on configs.length > 0 — correct logic but starved of data"
+  missing:
+    - "Add seedProviderConfigs internalMutation to seedGateway.ts"
+    - "Schedule seedProviderConfigs from runSeed alongside existing seeds"
+  debug_session: .planning/debug/provider-controls-cluster.md
 
 - truth: "Toggle provider off/on with visual feedback and toast confirmation"
   status: failed
   reason: "User reported: no"
   severity: major
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as gap 6 — providerConfig rows never seeded, so toggle UI never renders"
+  artifacts:
+    - path: "convex/seedGateway.ts"
+      issue: "No providerConfig seed mutation"
+  missing:
+    - "Same fix as gap 6 — seedProviderConfigs will unblock toggles"
+  debug_session: .planning/debug/provider-controls-cluster.md
 
 - truth: "Seed button disappears and provider cards appear after seeding"
   status: failed
   reason: "User reported: after hitting the button, i see the message but it does not go away"
   severity: major
   test: 8
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Same as gap 6 — runSeed succeeds for alerts+profiles but never creates providerConfig rows, so configs.length stays 0 and seed prompt persists"
+  artifacts:
+    - path: "convex/seedGateway.ts"
+      issue: "runSeed never inserts providerConfig rows"
+  missing:
+    - "Same fix as gap 6 — seedProviderConfigs will populate configs and dismiss seed prompt"
+  debug_session: .planning/debug/provider-controls-cluster.md
 
 - truth: "Tool call events show colored provider badges on session timeline"
   status: failed
   reason: "User reported: no provider badges visible on timeline tool call events"
   severity: major
   test: 9
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "Ingest pipeline (convex/ingest.ts) never writes provider to toolExecution records — PostToolUse handler omits provider arg, hook payload doesn't include it, so toolExecProviderMap is always empty"
+  artifacts:
+    - path: "convex/ingest.ts"
+      issue: "Lines 138-147: toolExecutions.insert omits provider for PostToolUse events"
+    - path: "hooks/codepulse-hook.mjs"
+      issue: "Lines 88-96: ingest body built without provider field"
+  missing:
+    - "Default provider to 'claude-cli' in ingest.ts PostToolUse handler (hook-ingested events are always from Claude Code)"
+    - "Pass provider in session upsert for session-level fallback"
+  debug_session: .planning/debug/timeline-provider-badges.md
 
 - truth: "Sessions without model show muted 'untagged' label instead of 'unknown'"
   status: failed
   reason: "User reported: unknown entries showing — wants muted 'untagged' label"
   severity: cosmetic
   test: 10
-  root_cause: ""
-  artifacts: []
-  missing: []
-  debug_session: ""
+  root_cause: "SessionComparison.tsx line 56 uses session.model ?? 'unknown' with no muted styling. Inconsistent fallbacks across components: ActiveSessions uses 'N/A', SessionHeader uses '—'"
+  artifacts:
+    - path: "src/components/SessionComparison.tsx"
+      issue: "Line 56: session.model ?? 'unknown' — plain text, no muted style"
+    - path: "src/components/ActiveSessions.tsx"
+      issue: "Line 56: uses 'N/A' fallback, unstyled"
+    - path: "src/components/SessionHeader.tsx"
+      issue: "Line 36: uses '—' fallback, unstyled"
+  missing:
+    - "Replace all fallbacks with 'untagged' in muted italic styling (text-muted-foreground italic text-xs)"
+    - "Harmonize across SessionComparison, ActiveSessions, SessionHeader"
+  debug_session: .planning/debug/unknown-label.md
