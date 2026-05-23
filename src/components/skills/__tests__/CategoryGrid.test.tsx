@@ -2,25 +2,6 @@ import { describe, test, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CategoryGrid } from "../CategoryGrid";
 
-vi.mock("../CategoryCard", () => ({
-  CategoryCard: ({
-    category,
-    skillCount,
-    onSelect,
-    onEdit,
-    isDropTarget,
-  }: any) => (
-    <div
-      data-testid={`category-card-${category.name}`}
-      data-skill-count={skillCount}
-      data-is-drop-target={isDropTarget}
-      onClick={onSelect}
-    >
-      {category.displayName} ({skillCount})
-    </div>
-  ),
-}));
-
 const mockCategories = [
   {
     _id: "1" as any,
@@ -56,30 +37,27 @@ describe("CategoryGrid", () => {
   test("renders all category cards with correct skill counts", () => {
     render(<CategoryGrid {...defaultProps} />);
 
-    const gsdCard = screen.getByTestId("category-card-gsd");
-    expect(gsdCard).toBeInTheDocument();
-    expect(gsdCard).toHaveAttribute("data-skill-count", "12");
-    expect(gsdCard).toHaveTextContent("Project Management (12)");
+    const navItems = screen.getAllByTestId("category-nav-item");
+    expect(navItems).toHaveLength(2);
 
-    const legalCard = screen.getByTestId("category-card-legal");
-    expect(legalCard).toBeInTheDocument();
-    expect(legalCard).toHaveAttribute("data-skill-count", "5");
-    expect(legalCard).toHaveTextContent("Legal (5)");
+    expect(screen.getByText("Project Management")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+
+    expect(screen.getByText("Legal")).toBeInTheDocument();
+    expect(screen.getByText("5")).toBeInTheDocument();
   });
 
-  test("renders Add Category card", () => {
+  test("renders Add Category button", () => {
     render(<CategoryGrid {...defaultProps} />);
 
-    const addCard = screen.getByTestId("add-category-card");
-    expect(addCard).toBeInTheDocument();
-    expect(addCard).toHaveTextContent("Add Category");
+    expect(screen.getByText("New Category")).toBeInTheDocument();
   });
 
-  test("calls onAddCategory when Add card is clicked", () => {
+  test("calls onAddCategory when Add button is clicked", () => {
     const onAddCategory = vi.fn();
     render(<CategoryGrid {...defaultProps} onAddCategory={onAddCategory} />);
 
-    fireEvent.click(screen.getByTestId("add-category-card"));
+    fireEvent.click(screen.getByText("New Category"));
     expect(onAddCategory).toHaveBeenCalledTimes(1);
   });
 });

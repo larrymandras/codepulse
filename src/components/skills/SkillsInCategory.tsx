@@ -64,7 +64,14 @@ export function SkillsInCategory({
         style={{ borderColor: `${hex}40` }}
       >
         <div className="flex items-center gap-3">
-          <span 
+          <button
+            onClick={onBack}
+            aria-label="Back"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+          <span
             className="text-2xl drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]"
           >{categoryIcon}</span>
           <h2 className="text-white text-base font-mono font-bold tracking-widest uppercase flex items-center gap-3">

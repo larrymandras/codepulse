@@ -183,13 +183,13 @@ describe("Skills page", () => {
 
   it("shows skill counts on category cards", () => {
     render(<Skills />);
-    expect(screen.getByText("2 skills")).toBeInTheDocument();
-    expect(screen.getByText("1 skill")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 
-  it("shows Add Category card", () => {
+  it("shows New Category button", () => {
     render(<Skills />);
-    expect(screen.getByText("Add Category")).toBeInTheDocument();
+    expect(screen.getByText("New Category")).toBeInTheDocument();
   });
 
   it("shows uncategorized section with separator when uncategorized skills exist", () => {
@@ -218,7 +218,7 @@ describe("Skills page", () => {
     fireEvent.click(screen.getByText("Legal"));
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Back"));
-    expect(screen.getByText("Add Category")).toBeInTheDocument();
+    expect(screen.getByText("New Category")).toBeInTheDocument();
   });
 
   it("shows seed CTA when skills exist but no categories", () => {
@@ -254,7 +254,7 @@ describe("Skills page", () => {
   it("filters skills by search in drill-in view", () => {
     render(<Skills />);
     fireEvent.click(screen.getByText("Legal"));
-    const searchInput = screen.getByPlaceholderText("Search skills...");
+    const searchInput = screen.getByPlaceholderText("Search all skills...");
     fireEvent.change(searchInput, { target: { value: "nda" } });
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     expect(screen.queryByText("Contract Review")).not.toBeInTheDocument();
