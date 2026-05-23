@@ -31,12 +31,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 7: Intelligence Layer** - Cost forecasting, briefings, anomaly detection, memory quality metrics, changelog
 - [x] **Phase 58: Infrastructure Layer** - Command catalog frontend surface on Capabilities page (WebSocket-driven), collapsible sections, dynamic search (completed 2026-04-14)
 - [x] **Phase 59: Schema Foundation** - New tables and field extensions that unblock all v5.0 visualizations and integrations (completed 2026-05-18)
-- [ ] **Phase 60: Context Window Animation** - Real-time animated context window progress bar with area chart and compaction markers
-- [ ] **Phase 61: Token Sunburst** - Two-level ring chart showing per-agent/per-tool token consumption with drill-down
-- [ ] **Phase 62: Email Digest** - Scheduled HTML email delivery of daily/weekly operational summaries via Resend
-- [ ] **Phase 63: Call Graph** - Directed agent/tool dependency graph with dagre layout, node state coloring, and error path highlighting
-- [ ] **Phase 64: PagerDuty** - Incident trigger/resolve lifecycle via PagerDuty Events API v2 with per-rule toggle
-- [ ] **Phase 65: GitHub Actions** - Workflow dispatch trigger from alert rules with configurable repo/PAT and rate limiting
+- [x] **Phase 60: Context Window Animation** - Real-time animated context window progress bar with area chart and compaction markers (completed 2026-05-23)
+- [x] **Phase 61: Token Sunburst** - Two-level ring chart showing per-agent/per-tool token consumption with drill-down (completed 2026-05-23)
+- [x] **Phase 62: Email Digest** - Scheduled HTML email delivery of daily/weekly operational summaries via Resend (schema only — delivery deferred to Phase 70)
+- [x] **Phase 63: Call Graph** - Directed agent/tool dependency graph with dagre layout, node state coloring, and error path highlighting (graph infra only — agent call graph deferred to Phase 70)
+- [x] **Phase 64: PagerDuty** - Incident trigger/resolve lifecycle via PagerDuty Events API v2 with per-rule toggle (schema only — API integration deferred to Phase 70)
+- [x] **Phase 65: GitHub Actions** - Workflow dispatch trigger from alert rules with configurable repo/PAT and rate limiting (completed 2026-05-23)
+- [ ] **Phase 70: External Integrations & Call Graph** - Complete Email Digest (Resend), PagerDuty API integration, and agent/tool Call Graph visualization
 
 ## Phase Details
 
@@ -245,7 +246,7 @@ Plans:
   2. An area chart below the bar plots token count growth over session elapsed time, updating as new LLM events arrive
   3. Compaction events appear as vertical markers on the area chart at the timestamp they occurred
   4. The component renders correctly when no session is active (empty/zero state)
-**Plans**: TBD
+**Plans**: Built outside GSD — ContextGauge.tsx, contextSnapshots.ts, useContextSnapshots.ts, SessionDetail integration
 **UI hint**: yes
 
 ### Phase 61: Token Sunburst
@@ -257,7 +258,7 @@ Plans:
   2. Hovering any arc shows a tooltip with entity name, token count, and percentage of total
   3. Clicking an agent arc zooms the chart to show only that agent's tool breakdown
   4. The center of the chart displays total tokens consumed and estimated cost for the visible selection
-**Plans**: TBD
+**Plans**: Built outside GSD — TokenSunburst.tsx, analytics.ts tokenSunburst query, useAdvancedAnalytics.ts, Analytics page integration
 **UI hint**: yes
 
 ### Phase 62: Email Digest
@@ -269,7 +270,7 @@ Plans:
   2. The email body includes sections for active alerts, token cost, anomaly flags, and the latest briefing narrative
   3. Every send attempt (success or failure) writes a row to `emailDeliveryLog` visible in the Settings page
   4. The operator can configure recipient address and schedule from the Settings page without redeploying
-**Plans**: TBD
+**Plans**: Schema/logging infrastructure built in Phase 59. Core delivery deferred to Phase 70.
 
 ### Phase 63: Call Graph
 **Goal**: Operators can see the live dependency graph of agent/tool integrations, identify which nodes are erroring, and trace how errors propagate
@@ -280,7 +281,7 @@ Plans:
   2. Each node is colored by its current state: healthy (default), errored (red), or pending (muted)
   3. When a node is in an errored state, the edges forming the error propagation path are highlighted
   4. The graph updates in real time as new ingest events arrive without requiring a page reload
-**Plans**: TBD
+**Plans**: ObsidianGraph component and dagre dependency exist. Agent/tool call graph deferred to Phase 70.
 **UI hint**: yes
 
 ### Phase 64: PagerDuty
@@ -292,7 +293,7 @@ Plans:
   2. When the same alert rule resolves, the PagerDuty incident closes using the same stable `dedup_key`
   3. Each trigger and resolve attempt writes a log row to `pagerdutyDeliveryLog` with status and timestamp
   4. The operator can configure the routing key and enable/disable PagerDuty per rule from the alert rule editor
-**Plans**: TBD
+**Plans**: Schema/logging infrastructure built in Phase 59. API integration deferred to Phase 70.
 
 ### Phase 65: GitHub Actions
 **Goal**: Alert rules can automatically dispatch GitHub Actions workflows — enabling auto-remediation without manual intervention
@@ -303,7 +304,7 @@ Plans:
   2. Rate limiting prevents more than one dispatch per rule within the configured window
   3. Each dispatch attempt (success, rate-limited, or failed) writes a row to `githubTriggerLog` visible from the Settings or Alerts page
   4. The operator can configure repo, workflow file, ref, and PAT per rule from the alert rule editor
-**Plans**: TBD
+**Plans**: Built outside GSD — GithubActionsPanel.tsx, githubActions.ts, useGithubActions.ts, Infrastructure page integration
 
 ### Phase 66: Gateway Compatibility Layer
 **Goal**: CodePulse correctly ingests, routes, and attributes telemetry events from the multi-provider CLI Gateway without data loss or misattribution
@@ -415,6 +416,28 @@ Plans:
 - [x] 69-05-PLAN.md -- Gap closure: seed providerConfig rows, ingest provider field, "untagged" model fallback
 **UI hint**: yes
 
+### Phase 70: External Integrations & Call Graph
+**Goal**: Complete the three partially-built features — operators receive email digests, PagerDuty incidents fire from alerts, and the agent/tool call graph visualizes live dependencies
+**Depends on**: Phase 59 (schema), Phase 69 (gateway data for call graph edges)
+**Requirements**: EXT-01, VIZ-01, EXT-02
+**Success Criteria** (what must be TRUE):
+  1. A Convex cron job sends an HTML email via Resend on the configured schedule with active alerts, token cost, anomaly flags, and briefing narrative
+  2. Every email send attempt writes a row to `emailDeliveryLog` visible in Settings
+  3. Operator can configure recipient address and schedule from the Settings page
+  4. An alert rule with PagerDuty enabled triggers a PagerDuty incident via Events API v2 within 60 seconds
+  5. When the alert resolves, the PagerDuty incident closes using the same stable `dedup_key`
+  6. Each PagerDuty trigger/resolve writes to `pagerdutyDeliveryLog`
+  7. Operator can configure routing key and enable/disable PagerDuty per rule from alert rule editor
+  8. The Call Graph page renders a directed graph with dagre layout showing agent and tool nodes with edges
+  9. Nodes are colored by state (healthy/errored/pending) with error propagation path highlighting
+  10. Graph updates in real time as new ingest events arrive
+**Scope**:
+  - **Email Digest**: Resend SDK integration, HTML template generation, digest scheduling cron, Settings UI for recipient/schedule config
+  - **PagerDuty**: Events API v2 client, trigger/resolve lifecycle with `dedup_key`, per-rule routing key config in alert rule editor
+  - **Call Graph**: Agent/tool dependency graph component using dagre + callGraphEdges table, node state coloring, error path highlighting, real-time updates
+**Plans**: TBD
+**UI hint**: yes
+
 ## Execution Order
 
 ```
@@ -452,10 +475,15 @@ Phase 67 (Pricing/Intel)      ░░░░████████████  
 Phase 68 (Observability)      ░░░░░░░░████████████████  After 67 — new tables + widgets
                                   │
 Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░████████████  After 68 — polish
+
+--- Completion (v5.2) ---
+
+Phase 70 (Integrations+Graph)  ░░░░░░░░░░░░░░░░░░░████████████  After 69 — email, PagerDuty, call graph
 ```
 
 **Critical path (v5.0):** Phase 59 (schema) -> Phase 60 (viz pattern) -> Phase 63 (call graph)
 **Critical path (v5.1 gateway):** Phase 66 (compatibility) -> Phase 67 (pricing) -> Phase 68 (observability) -> Phase 69 (UX)
+**Critical path (v5.2 completion):** Phase 70 (email digest + PagerDuty + call graph)
 
 ## Progress
 
@@ -470,17 +498,18 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 7. Intelligence Layer | 5/5 | Complete | - |
 | 58. Infrastructure Layer | 1/1 | Complete | 2026-04-14 |
 | 59. Schema Foundation | 2/2 | Complete    | 2026-05-18 |
-| 60. Context Window Animation | 0/TBD | Not started | - |
-| 61. Token Sunburst | 0/TBD | Not started | - |
-| 62. Email Digest | 0/TBD | Not started | - |
-| 63. Call Graph | 0/TBD | Not started | - |
-| 64. PagerDuty | 0/TBD | Not started | - |
-| 65. GitHub Actions | 0/TBD | Not started | - |
+| 60. Context Window Animation | — | Complete (outside GSD) | 2026-05-23 |
+| 61. Token Sunburst | — | Complete (outside GSD) | 2026-05-23 |
+| 62. Email Digest | — | Schema only (delivery → Phase 70) | — |
+| 63. Call Graph | — | Infra only (viz → Phase 70) | — |
+| 64. PagerDuty | — | Schema only (API → Phase 70) | — |
+| 65. GitHub Actions | — | Complete (outside GSD) | 2026-05-23 |
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
 | 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
+| 70. External Integrations & Call Graph | 0/TBD | Not started | — |
 
 ---
 
-*Last updated: 2026-05-23 — Phase 69 UAT gap closure plan added (69-05)*
+*Last updated: 2026-05-23 — Marked Phases 60, 61, 65 complete (built outside GSD); added Phase 70 for remaining 62/63/64 work*
