@@ -1,5 +1,6 @@
 import { internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { GATEWAY_PROVIDERS } from "./lib/providers";
 
 const DAILY_CAP = 5.00;
 const ALERT_THRESHOLD = 0.8;
@@ -67,6 +68,31 @@ export const seedGatewayProfiles = internalMutation({
   },
 });
 
+/** Seeds providerConfig rows for all gateway providers. Idempotent. */
+export const seedProviderConfigs = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    let count = 0;
+    for (let i = 0; i < GATEWAY_PROVIDERS.length; i++) {
+      const provider = GATEWAY_PROVIDERS[i];
+      const existing = await ctx.db
+        .query("providerConfig")
+        .filter((q) => q.eq(q.field("provider"), provider))
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("providerConfig", {
+        provider,
+        enabled: true,
+        priority: i + 1,
+        updatedAt: now,
+      });
+      count++;
+    }
+    return { seeded: count };
+  },
+});
+
 /** Public mutation callable from the Settings "Seed Gateway Defaults" button.
  *  Schedules both internal seed mutations. Idempotent — safe to run multiple times. */
 export const runSeed = mutation({
@@ -74,6 +100,7 @@ export const runSeed = mutation({
   handler: async (ctx) => {
     await ctx.scheduler.runAfter(0, internal.seedGateway.seedSDKSpendAlert, {});
     await ctx.scheduler.runAfter(0, internal.seedGateway.seedGatewayProfiles, {});
+    await ctx.scheduler.runAfter(0, internal.seedGateway.seedProviderConfigs, {});
     return { scheduled: true };
   },
 });
