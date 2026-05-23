@@ -53,7 +53,7 @@ export default function SessionComparison() {
                       : session.sessionId}
                   </td>
                   <td className="py-2 px-3 text-gray-300 text-xs">
-                    {session.model ?? "unknown"}
+                    {session.model ? session.model : <span className="text-muted-foreground italic text-xs">untagged</span>}
                   </td>
                   <td className="py-2 px-3 text-right text-gray-300">
                     {session.eventCount}

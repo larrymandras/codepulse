@@ -33,7 +33,9 @@ export default function SessionHeader({ session }: SessionHeaderProps) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div>
           <p className="text-xs text-gray-500">Model</p>
-          <p className="text-sm font-mono text-gray-200 mt-0.5">{session.model ?? "—"}</p>
+          <p className="text-sm font-mono text-gray-200 mt-0.5">
+            {session.model ? session.model : <span className="text-muted-foreground italic text-xs">untagged</span>}
+          </p>
         </div>
         <div>
           <p className="text-xs text-gray-500">CWD</p>

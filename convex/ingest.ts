@@ -48,6 +48,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
       sessionId: sessionId ?? "unknown",
       cwd: data.cwd ?? body.cwd,
       model: data.model ?? body.model,
+      provider: data.provider ?? body.provider ?? "claude-cli",
     });
 
     // 3. Route by eventType
@@ -143,6 +144,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
         success: true,
         decision: data.decision ?? "accept",
         decisionSource: data.decision_source ?? data.decisionSource ?? "hook",
+        provider: data.provider ?? "claude-cli",
         timestamp,
       });
       // Active time: tool usage counts as CLI activity (~5s per tool call)
