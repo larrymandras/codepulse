@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useActiveSessions } from "../hooks/useActiveSessions";
 import { formatTimestamp } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
+import { Badge } from "./ui/badge";
+import { PROVIDER_COLORS, PROVIDER_DISPLAY_NAMES } from "../lib/providers";
 
 export default function ActiveSessions() {
   const sessions = useActiveSessions();
@@ -31,6 +33,18 @@ export default function ActiveSessions() {
                 <span className="text-xs font-mono text-foreground truncate tracking-tight">
                   {session.sessionId}
                 </span>
+                {session.provider && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-mono uppercase px-1.5 py-0.5 shrink-0"
+                    style={{
+                      borderColor: PROVIDER_COLORS[session.provider] ?? "#6b7280",
+                      color: PROVIDER_COLORS[session.provider] ?? "#6b7280",
+                    }}
+                  >
+                    {PROVIDER_DISPLAY_NAMES[session.provider] ?? session.provider}
+                  </Badge>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-mono tracking-widest text-muted-foreground">
                 <span className="flex flex-col gap-0.5">
