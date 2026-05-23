@@ -204,19 +204,6 @@ export const buildIngest = httpAction(async (ctx, request) => {
       await ctx.runMutation(internal.briefings.onSessionCompleted, { sessionId: sid });
     }
 
-    // TaskCompleted — agent coordination
-    if (eventType === "TaskCompleted") {
-      await ctx.runMutation(api.events.ingest, {
-        sessionId: sid,
-        eventType: "TaskCompleted",
-        toolName,
-        filePath,
-        payload: data,
-        hookType: "TaskCompleted",
-        timestamp,
-      });
-    }
-
     // InstructionsLoaded — CLAUDE.md files
     if (eventType === "InstructionsLoaded") {
       const files = data.files ?? (data.filePath ? [data.filePath] : []);
