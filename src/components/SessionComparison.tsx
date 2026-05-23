@@ -1,11 +1,23 @@
-import { useSessionList } from "../hooks/useAnalytics";
-import { formatDuration, formatTimestamp } from "../lib/formatters";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { formatDuration } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
+import { useNavigate } from "react-router-dom";
 
 export default function SessionComparison() {
-  const sessions = useSessionList(50);
+  const rawSessions = useQuery(api.sessions.listAll, { limit: 50 });
+  const navigate = useNavigate();
 
-  if (sessions.length === 0) {
+  if (rawSessions === undefined) {
+    return (
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
+        <p className="text-gray-500 text-sm animate-pulse">Loading...</p>
+      </div>
+    );
+  }
+
+  if (rawSessions.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
@@ -14,8 +26,10 @@ export default function SessionComparison() {
     );
   }
 
-  // Find most active session by eventCount
-  const maxEvents = Math.max(...sessions.map((s) => s.eventCount));
+  const sessions = rawSessions;
+
+  // Find most active session by eventCount (use reduce to avoid spread argument-count limit)
+  const maxEvents = sessions.reduce((max, s) => Math.max(max, s.eventCount), 0);
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
@@ -43,9 +57,7 @@ export default function SessionComparison() {
                       ? "bg-blue-900/20 hover:bg-blue-900/30"
                       : "hover:bg-gray-700/20"
                   }`}
-                  onClick={() => {
-                    window.location.href = `/sessions/${session.sessionId}`;
-                  }}
+                  onClick={() => navigate(`/sessions/${session.sessionId}`)}
                 >
                   <td className="py-2 pr-3 text-gray-200 font-mono text-xs">
                     {session.sessionId.length > 12
