@@ -52,7 +52,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
     });
 
     // 3. Route by eventType
-    if (eventType && eventType.includes("SubagentStart")) {
+    if (eventType === "SubagentStart") {
       const data = payload ?? body;
       await ctx.runMutation(api.agents.register, {
         sessionId: sessionId ?? "unknown",
@@ -63,7 +63,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
       });
     }
 
-    if (eventType && eventType.includes("SubagentStop")) {
+    if (eventType === "SubagentStop") {
       const data = payload ?? body;
       await ctx.runMutation(api.agents.updateStatus, {
         agentId: data.agentId ?? data.agent_id ?? "unknown",
