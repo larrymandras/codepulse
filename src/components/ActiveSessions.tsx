@@ -53,7 +53,9 @@ export default function ActiveSessions() {
                 </span>
                 <span className="flex flex-col gap-0.5">
                   <span className="text-primary/70">Model</span>
-                  <span className="text-foreground truncate">{session.model ?? "N/A"}</span>
+                  <span className="text-foreground truncate">
+                    {session.model ? session.model : <span className="text-muted-foreground italic text-xs">untagged</span>}
+                  </span>
                 </span>
                 {session.lastEventAt && (
                   <span className="col-span-2 flex items-center gap-1.5 mt-1 pt-2 border-t border-border/30 text-primary/60">
