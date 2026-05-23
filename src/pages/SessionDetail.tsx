@@ -30,6 +30,10 @@ export default function SessionDetail() {
   const session = useQuery(api.sessions.getById, id ? { sessionId: id } : "skip");
   const events = useQuery(api.events.listBySession, id ? { sessionId: id, limit: 200 } : "skip") ?? [];
   const agents = useQuery(api.agents.topology, id ? { sessionId: id } : "skip") ?? [];
+  const toolExecutions = useQuery(
+    api.toolExecutions.listBySession,
+    id ? { sessionId: id } : "skip"
+  ) ?? [];
   const errors = useQuery(
     api.events.listErrors,
     id && activeTab === "errors" ? { sessionId: id } : "skip"
@@ -134,7 +138,7 @@ export default function SessionDetail() {
             agents={agents}
             sessionStart={session?.startedAt ?? 0}
           />
-          <SessionTimeline events={events} agents={agents} />
+          <SessionTimeline events={events} agents={agents} toolExecutions={toolExecutions} />
         </div>
       )}
 

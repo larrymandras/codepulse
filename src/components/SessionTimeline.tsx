@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { getEventIcon, getEventColor } from "../lib/eventIcons";
 import { formatTimestamp } from "../lib/formatters";
 import { usePrivacyMask } from "../hooks/usePrivacyMask";
+import { Badge } from "./ui/badge";
+import { PROVIDER_COLORS, PROVIDER_DISPLAY_NAMES } from "../lib/providers";
 
 interface SessionTimelineProps {
   events: any[];
   agents: any[];
+  toolExecutions?: any[];
 }
 
 const EVENT_TYPES = [
@@ -23,7 +26,7 @@ const EVENT_TYPES = [
   "UserPrompt",
 ];
 
-export default function SessionTimeline({ events, agents }: SessionTimelineProps) {
+export default function SessionTimeline({ events, agents, toolExecutions }: SessionTimelineProps) {
   const [activeAgents, setActiveAgents] = useState<Set<string>>(new Set());
   const [typeFilter, setTypeFilter] = useState("");
   const { mask, maskFilePath } = usePrivacyMask();
@@ -38,6 +41,23 @@ export default function SessionTimeline({ events, agents }: SessionTimelineProps
       }
       return next;
     });
+  };
+
+  const toolExecProviderMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const te of toolExecutions ?? []) {
+      if (te.provider && te.toolName) {
+        // Key: toolName:roundedTimestamp — matches within same second
+        map.set(`${te.toolName}:${Math.round(te.timestamp)}`, te.provider);
+      }
+    }
+    return map;
+  }, [toolExecutions]);
+
+  const getEventProvider = (e: any): string | null => {
+    if (!e.toolName) return null;
+    const key = `${e.toolName}:${Math.round(e.timestamp)}`;
+    return toolExecProviderMap.get(key) ?? null;
   };
 
   const filtered = events.filter((e) => {
@@ -103,6 +123,22 @@ export default function SessionTimeline({ events, agents }: SessionTimelineProps
                 {e.toolName && (
                   <span className="text-xs text-gray-500 shrink-0">{e.toolName}</span>
                 )}
+                {/* Provider badge per D-09 — always shown when provider is known */}
+                {(() => {
+                  const provider = getEventProvider(e);
+                  return provider ? (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-mono uppercase px-1.5 py-0.5 shrink-0"
+                      style={{
+                        borderColor: PROVIDER_COLORS[provider] ?? "#6b7280",
+                        color: PROVIDER_COLORS[provider] ?? "#6b7280",
+                      }}
+                    >
+                      {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
+                    </Badge>
+                  ) : null;
+                })()}
                 {e.payload && (
                   <span className="text-xs text-gray-600 truncate">
                     {typeof e.payload === "string"
