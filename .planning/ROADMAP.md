@@ -401,7 +401,7 @@ Plans:
   - Session detail provider attribution badges
   - Non-Claude agent profile seed data
   - Hook system documentation update
-**Plans**: 4 plans
+**Plans**: 5 plans
 Plans:
 **Wave 1**
 - [x] 69-01-PLAN.md -- Schema (providerConfig table), PROVIDER_COLORS extraction, seed mutations, toolExecutions.listBySession, Wave 0 test stubs
@@ -410,6 +410,9 @@ Plans:
 - [x] 69-02-PLAN.md -- SDKSpendGuard card (sparkline + projection + overshoot warning), evaluateCondition sdk_spend_usd_today metric
 - [x] 69-03-PLAN.md -- ProviderControls panel (drag-to-reorder + enable/disable + gateway command), Settings page wiring
 - [x] 69-04-PLAN.md -- Session timeline + list provider badges, RoutingDecisionsTable audit upgrade
+
+**Wave 3** *(UAT gap closure)*
+- [ ] 69-05-PLAN.md -- Gap closure: seed providerConfig rows, ingest provider field, "untagged" model fallback
 **UI hint**: yes
 
 ## Execution Order
@@ -476,8 +479,8 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
-| 69. SDK Guard & UX | 4/4 | Complete    | 2026-05-23 |
+| 69. SDK Guard & UX | 4/5 | UAT gap closure | 2026-05-23 |
 
 ---
 
-*Last updated: 2026-05-23 — Phase 69 planning complete (4 plans in 2 waves)*
+*Last updated: 2026-05-23 — Phase 69 UAT gap closure plan added (69-05)*
