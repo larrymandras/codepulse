@@ -47,8 +47,13 @@ export default function SessionTimeline({ events, agents, toolExecutions }: Sess
     const map = new Map<string, string>();
     for (const te of toolExecutions ?? []) {
       if (te.provider && te.toolName) {
-        // Key: toolName:roundedTimestamp — matches within same second
-        map.set(`${te.toolName}:${Math.round(te.timestamp)}`, te.provider);
+        // Use full-precision timestamp to avoid collisions between rapid same-tool calls.
+        // Also store a rounded key as fallback for events with lower-precision timestamps.
+        map.set(`${te.toolName}:${te.timestamp}`, te.provider);
+        const roundedKey = `${te.toolName}:${Math.round(te.timestamp)}`;
+        if (!map.has(roundedKey)) {
+          map.set(roundedKey, te.provider);
+        }
       }
     }
     return map;
@@ -56,8 +61,12 @@ export default function SessionTimeline({ events, agents, toolExecutions }: Sess
 
   const getEventProvider = (e: any): string | null => {
     if (!e.toolName) return null;
-    const key = `${e.toolName}:${Math.round(e.timestamp)}`;
-    return toolExecProviderMap.get(key) ?? null;
+    // Try exact timestamp first, fall back to rounded for cross-precision matching
+    return (
+      toolExecProviderMap.get(`${e.toolName}:${e.timestamp}`) ??
+      toolExecProviderMap.get(`${e.toolName}:${Math.round(e.timestamp)}`) ??
+      null
+    );
   };
 
   const filtered = events.filter((e) => {
