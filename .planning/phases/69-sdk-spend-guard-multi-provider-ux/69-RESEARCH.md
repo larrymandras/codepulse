@@ -17,7 +17,7 @@
 - D-03: Data from existing `costByPeriod` aggregate query (`billingType='api'`, hourly granularity). No new Convex query — projection is client-side extrapolation.
 
 **Provider Controls**
-- D-04: Provider enable/disable sends a real command to Ástríðr's gateway (not just UI filtering).
+- D-04: Provider enable/disable sends a real command to Astridr's gateway (not just UI filtering).
 - D-05: ProviderControls panel on Settings page under "Gateway Providers" section.
 - D-06: Controls include per-provider enable/disable toggles + drag-to-reorder priority list. No force-route.
 - D-07: Provider config (enabled state, priority order) persisted in a Convex table. Gateway reads on startup + responds to live updates.
@@ -57,7 +57,7 @@ None — discussion stayed within phase scope.
 
 ## Summary
 
-Phase 69 is the UX polish capstone for the gateway integration chain (66→67→68→69). It has six distinct workstreams that are largely independent and can be parallelized in planning waves: (1) SDKSpendGuard card upgrade, (2) ProviderControls Settings panel with drag-to-reorder, (3) session timeline and list provider badges, (4) 80% auto-alert rule seeding, (5) gateway agent profile seeding, and (6) RoutingDecisionsTable audit upgrade.
+Phase 69 is the UX polish capstone for the gateway integration chain (66->67->68->69). It has six distinct workstreams that are largely independent and can be parallelized in planning waves: (1) SDKSpendGuard card upgrade, (2) ProviderControls Settings panel with drag-to-reorder, (3) session timeline and list provider badges, (4) 80% auto-alert rule seeding, (5) gateway agent profile seeding, and (6) RoutingDecisionsTable audit upgrade.
 
 All backend data structures needed for this phase already exist from prior phases. The `costByPeriod` query returns hourly API-billed buckets suitable for sparkline and linear projection. The `toolExecutions` table already has a `provider` field. The `alertRuleCustom` table exists with full CRUD. The `agentProfiles` and `seedTeams` patterns are established. The only net-new Convex table required is `providerConfig` for persisting provider enabled state and priority order (D-07).
 
@@ -72,7 +72,7 @@ The primary new complexity is the `sdk_spend_usd_today` metric in the `evaluateC
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
 | SDKSpendGuard card (sparkline + projection) | Frontend | Convex (data) | Projection is client-side math on hourly aggregate buckets |
-| Provider enable/disable command | API/Backend (Ástríðr gateway) | Frontend (optimistic) | D-04 requires real gateway command, not UI-only filtering |
+| Provider enable/disable command | API/Backend (Astridr gateway) | Frontend (optimistic) | D-04 requires real gateway command, not UI-only filtering |
 | Provider config persistence | Database (Convex) | Frontend (read) | D-07: persisted in Convex, gateway reads on startup |
 | Provider priority drag-to-reorder | Frontend | Convex (persist) | @dnd-kit/sortable in browser, mutation to persist order |
 | Session timeline provider badges | Frontend | — | toolExecutions.provider already in event data |
@@ -117,7 +117,8 @@ Settings Page → Gateway Providers section
   └── ProviderControls
         ├── useProviderConfig() → Convex providerConfig table (read)
         ├── Toggle enable/disable → Convex mutation (write) + WebSocket command (gateway)
-        └── @dnd-kit/sortable priority list → Convex mutation (write)
+        ├── @dnd-kit/sortable priority list → Convex mutation (write)
+        └── "Seed Gateway Defaults" button → runSeed mutation (when providerConfig empty)
 
 SessionTimeline (events[].provider via toolExecutions join or payload)
   └── Badge per tool call row → PROVIDER_COLORS from CostTrendChart
@@ -134,6 +135,9 @@ Convex internalMutation: seedSDKSpendAlert()
 
 Convex internalMutation: seedGatewayProfiles()
   └── upsert agentProfiles for claude-cli, codex, antigravity, claude-sdk
+
+Convex mutation: runSeed()
+  └── public wrapper calling seedSDKSpendAlert + seedGatewayProfiles (triggered by Settings button)
 ```
 
 ### Recommended Project Structure (new files only)
@@ -144,6 +148,7 @@ src/components/
   SDKSpendGuard.test.tsx     # Wave 0 stub
   ProviderControls.tsx        # new Settings panel section
   ProviderControls.test.tsx   # Wave 0 stub
+  SessionTimeline.test.tsx    # Wave 0 stub — provider badge rendering
 
 src/hooks/
   useProviderConfig.ts        # reads/writes Convex providerConfig table
@@ -152,7 +157,8 @@ convex/
   providerConfig.ts           # CRUD for provider enabled state + priority order
   schema.ts                   # add providerConfig table
   alerts.ts                   # extend evaluateCondition with sdk_spend_usd_today
-  seedGateway.ts              # internalMutations for alert seed + profile seed
+  alerts.test.ts              # Wave 0 stub — sdk_spend_usd_today metric evaluation
+  seedGateway.ts              # internalMutations for alert seed + profile seed + public runSeed wrapper
 ```
 
 ### Pattern 1: SDKSpendGuard — Hourly Sparkline + Projection
@@ -280,7 +286,7 @@ import { Badge } from "./ui/badge";
 
 Option 1 is most accurate per D-09 intent. Option 3 is simpler but violates "per tool call" requirement. **Recommended approach:** Query `toolExecutions` for the session alongside events, then correlate by toolName + timestamp proximity in the component. [ASSUMED — implementation detail in Claude's discretion]
 
-**Session list (D-10):** `sessions.provider` field already exists on the schema and is populated. `ActiveSessions` component renders session cards from `useActiveSessions()` → `sessions.listActive`. The provider badge can be added inline to each session card using `session.provider`. [VERIFIED: schema.ts sessions table has `provider: v.optional(v.string())`]
+**Session list (D-10):** `sessions.provider` field already exists on the schema and is populated. `ActiveSessions` component renders session cards from `useActiveSessions()` -> `sessions.listActive`. The provider badge can be added inline to each session card using `session.provider`. [VERIFIED: schema.ts sessions table has `provider: v.optional(v.string())`]
 
 ### Pattern 4: 80% Auto-Alert — evaluateCondition Extension
 
@@ -402,7 +408,7 @@ const GATEWAY_PROFILES = [
 
 ### Pitfall 4: ProviderControls Panel Auth vs. Gateway Connectivity
 
-**What goes wrong:** Toggling a provider sends a WebSocket command that requires Ástríðr to be running. If gateway is offline, the command silently fails.
+**What goes wrong:** Toggling a provider sends a WebSocket command that requires Astridr to be running. If gateway is offline, the command silently fails.
 **Why it happens:** `useCommandDispatch` uses `sendCommand` which has no fallback for disconnected state.
 **How to avoid:** Check `isConnected` from `useCommandDispatch` before sending. Still write the Convex mutation regardless (for restart recovery per D-07). Show a warning toast if gateway is disconnected.
 **Warning signs:** Toggle appears to succeed (Convex write works) but gateway never receives the command.
@@ -532,11 +538,11 @@ Phase 69 is code-only (frontend components + Convex backend). No new external to
 
 | Req ID | Behavior | Test Type | Automated Command | File Exists? |
 |--------|----------|-----------|-------------------|--------------|
-| GW-12 | `projectDayEndSpend()` returns correct linear extrapolation | unit | `npm test -- --run src/components/SDKSpendGuard.test.tsx` | ❌ Wave 0 |
-| GW-12 | `classifyCapStatus` still works with same inputs (regression) | unit | `npm test -- --run src/components/SDKSpendCapGauge.test.tsx` | ✅ exists |
-| GW-13 | ProviderControls renders toggle per provider from config | unit | `npm test -- --run src/components/ProviderControls.test.tsx` | ❌ Wave 0 |
-| GW-14 | `evaluateCondition("sdk_spend_usd_today")` fires at 80% of cap | unit | `npm test -- --run convex/alerts.test.ts` (if exists) | ❌ Wave 0 |
-| GW-14 | Provider badge renders on timeline events with provider set | unit | `npm test -- --run src/components/SessionTimeline.test.tsx` | ❌ Wave 0 |
+| GW-12 | `projectDayEndSpend()` returns correct linear extrapolation | unit | `npm test -- --run src/components/SDKSpendGuard.test.tsx` | Wave 0 |
+| GW-12 | `classifyCapStatus` still works with same inputs (regression) | unit | `npm test -- --run src/components/SDKSpendCapGauge.test.tsx` | exists |
+| GW-13 | ProviderControls renders toggle per provider from config | unit | `npm test -- --run src/components/ProviderControls.test.tsx` | Wave 0 |
+| GW-14 | `evaluateCondition("sdk_spend_usd_today")` fires at 80% of cap | unit | `npm test -- --run convex/alerts.test.ts` | Wave 0 |
+| GW-14 | Provider badge renders on timeline events with provider set | unit | `npm test -- --run src/components/SessionTimeline.test.tsx` | Wave 0 |
 
 ### Sampling Rate
 
@@ -575,22 +581,25 @@ No ASVS categories newly triggered by this phase.
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Where does the `providerConfig` seed run?**
    - What we know: Must be an `internalMutation`. Can be triggered by a button in Settings ("Initialize Gateway Defaults") or run automatically on schema deploy.
    - What's unclear: Convex doesn't have a native "run on schema push" hook. Options: (a) one-time Settings button, (b) Convex cron that checks and seeds once, (c) manually triggered via dashboard.
    - Recommendation: Add a "Seed Gateway Defaults" button to the Gateway Providers section in Settings that calls an HTTP action or mutation. Visible only when providerConfig table is empty.
+   - RESOLVED: A public mutation wrapper (`runSeed`) will be added to `convex/seedGateway.ts` that calls both `seedSDKSpendAlert` and `seedGatewayProfiles` internally. The ProviderControls component in Plan 03 will show a "Seed Gateway Defaults" button when the providerConfig table is empty (0 configs returned). The button calls `runSeed` via `useMutation`. This is a one-time operator action, consistent with how the existing seed pattern in `seedTeams.ts` works.
 
 2. **Does the gateway actually expose a provider enable/disable command over WebSocket?**
-   - What we know: D-04 says the command must be real. The WebSocket command sender pattern exists. The gateway-side endpoint would be a new command type in Ástríðr.
-   - What's unclear: Whether the Ástríðr CLI Gateway (feature/cli-gateway branch) already handles `gateway.provider.set_enabled` or whether this requires cross-repo work.
-   - Recommendation: Plan the Convex + frontend side completely. Flag the gateway-side command as requiring Ástríðr cross-repo task (like Phase 66 CLIGatewayTool work). If gateway command not yet implemented, provider disable still persists to Convex for gateway restart recovery.
+   - What we know: D-04 says the command must be real. The WebSocket command sender pattern exists. The gateway-side endpoint would be a new command type in Astridr.
+   - What's unclear: Whether the Astridr CLI Gateway (feature/cli-gateway branch) already handles `gateway.provider.set_enabled` or whether this requires cross-repo work.
+   - Recommendation: Plan the Convex + frontend side completely. Flag the gateway-side command as requiring Astridr cross-repo task (like Phase 66 CLIGatewayTool work). If gateway command not yet implemented, provider disable still persists to Convex for gateway restart recovery.
+   - RESOLVED: The CodePulse side will dispatch `gateway.provider.set_enabled` via `useCommandDispatch`. The gateway-side handler is a cross-repo Astridr task (same pattern as Phase 66 CLIGatewayTool). If the gateway does not yet handle this command type, the command will be sent but not acknowledged -- `useCommandDispatch` already handles ack timeout gracefully. The Convex `providerConfig` write ensures the state persists regardless of gateway connectivity (D-07).
 
 3. **Session timeline provider attribution — toolExecutions join key precision**
    - What we know: `toolExecutions` has `sessionId`, `toolName`, `timestamp`, `provider`. `events` has `sessionId`, `toolName`, `timestamp`.
    - What's unclear: Multiple tool calls to the same tool in the same session will have multiple toolExecution rows. Matching by toolName alone would be ambiguous.
-   - Recommendation: Match by `sessionId + toolName + timestamp` within a ±1 second window. If no match found, fall back to session-level provider. Document this as an approximation.
+   - Recommendation: Match by `sessionId + toolName + timestamp` within a +-1 second window. If no match found, fall back to session-level provider. Document this as an approximation.
+   - RESOLVED: Plan 04 Task 1 uses `sessionId + toolName + Math.round(timestamp)` as a composite key for the provider lookup map. This provides per-second precision which is sufficient for distinguishing sequential tool calls. For the rare case of multiple calls to the same tool within the same second, the first match wins. This is an acceptable approximation documented in the plan.
 
 ---
 
