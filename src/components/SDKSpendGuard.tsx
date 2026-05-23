@@ -42,7 +42,7 @@ export default function SDKSpendGuard() {
     period: "hourly",
     lookbackHours: 24,
     billingType: "api",
-  }) ?? [];
+  });
 
   if (rawBuckets === undefined) {
     return (
@@ -55,11 +55,12 @@ export default function SDKSpendGuard() {
     );
   }
 
+  const buckets = rawBuckets;
   const now = Date.now() / 1000;
   const dayStartEpoch = Math.floor(now / 86400) * 86400;
 
   // Filter to today's buckets only
-  const todayBuckets = rawBuckets.filter(
+  const todayBuckets = buckets.filter(
     (b: { bucket_start: number; byProvider: Record<string, number> }) => b.bucket_start >= dayStartEpoch
   );
 
