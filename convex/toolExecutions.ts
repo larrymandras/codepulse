@@ -92,3 +92,15 @@ export const avgDuration = query({
     }));
   },
 });
+
+/** Returns all tool executions for a session, ordered by timestamp ascending. */
+export const listBySession = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, { sessionId }) => {
+    return await ctx.db
+      .query("toolExecutions")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .order("asc")
+      .collect();
+  },
+});

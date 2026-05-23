@@ -1403,4 +1403,17 @@ export default defineSchema({
     .index("by_timestamp", ["timestamp"])
     .index("by_taskId", ["taskId"])
     .index("by_fallback", ["fallbackUsed", "timestamp"]),
+
+  // ============================================================
+  // GATEWAY PROVIDER CONFIG (Phase 69)
+  // ============================================================
+
+  providerConfig: defineTable({
+    provider: v.string(),       // matches AnyProvider keys from providers.ts
+    enabled: v.boolean(),
+    priority: v.float64(),      // lower number = higher priority
+    updatedAt: v.float64(),
+  })
+    .index("by_provider", ["provider"])
+    .index("by_priority", ["priority"]),
 });
