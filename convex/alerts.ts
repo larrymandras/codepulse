@@ -789,12 +789,12 @@ export const evaluateInternal = internalMutation({
       if (activeSourceSet.has(customRule._id)) continue;
       if (disabledRules.has(customRule._id)) continue;
 
-      const evaluateCondition = (condition: {
+      const evaluateCondition = async (condition: {
         metric: string;
         operator: string;
         threshold: number;
         lookbackWindow: string;
-      }): boolean => {
+      }): Promise<boolean> => {
         const windowSeconds = lookbackToSeconds(condition.lookbackWindow);
         const windowStart = now - windowSeconds;
         const windowEvents = recentEvents.filter((e) => e.timestamp >= windowStart);
@@ -808,6 +808,30 @@ export const evaluateInternal = internalMutation({
           value = windowEvents.length;
         } else if (condition.metric === "error_count") {
           value = windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length;
+        } else if (condition.metric === "sdk_spend_usd_today") {
+          const dayStart = Math.floor(now / 86400) * 86400;
+          // Try daily rollup first
+          const dailyRows = await ctx.db
+            .query("aggregates")
+            .withIndex("by_type_period_bucket", q =>
+              q.eq("metric_type", "cost").eq("period", "daily").gte("bucket_start", dayStart)
+            )
+            .collect();
+          value = dailyRows
+            .filter(r => (r.dimensions as any)?.billingType === "api")
+            .reduce((sum, r) => sum + r.value, 0);
+          // Fallback: daily rollup runs at 01:00 UTC; sum hourly if daily not yet available
+          if (value === 0) {
+            const hourlyRows = await ctx.db
+              .query("aggregates")
+              .withIndex("by_type_period_bucket", q =>
+                q.eq("metric_type", "cost").eq("period", "hourly").gte("bucket_start", dayStart)
+              )
+              .collect();
+            value = hourlyRows
+              .filter(r => (r.dimensions as any)?.billingType === "api")
+              .reduce((sum, r) => sum + r.value, 0);
+          }
         }
 
         switch (condition.operator) {
@@ -825,15 +849,15 @@ export const evaluateInternal = internalMutation({
 
       if (customRule.conditionGroups && customRule.conditionGroups.length > 0) {
         // Evaluate groups
-        const groupResults = customRule.conditionGroups.map((group: { conditions: any[]; logic: string }) => {
-          const condResults = group.conditions.map(evaluateCondition);
+        const groupResults = await Promise.all(customRule.conditionGroups.map(async (group: { conditions: any[]; logic: string }) => {
+          const condResults = await Promise.all(group.conditions.map(evaluateCondition));
           return group.logic === "OR"
             ? condResults.some(Boolean)
             : condResults.every(Boolean);
-        });
+        }));
         triggered = logic === "OR" ? groupResults.some(Boolean) : groupResults.every(Boolean);
       } else {
-        const condResults = customRule.conditions.map(evaluateCondition);
+        const condResults = await Promise.all(customRule.conditions.map(evaluateCondition));
         triggered = logic === "OR" ? condResults.some(Boolean) : condResults.every(Boolean);
       }
 
@@ -940,12 +964,12 @@ export const evaluateCriticalInternal = internalMutation({
       if (activeSourceSet.has(customRule._id)) continue;
       if (disabledRules.has(customRule._id)) continue;
 
-      const evaluateCondition = (condition: {
+      const evaluateCondition = async (condition: {
         metric: string;
         operator: string;
         threshold: number;
         lookbackWindow: string;
-      }): boolean => {
+      }): Promise<boolean> => {
         const windowSeconds = lookbackToSeconds(condition.lookbackWindow);
         const windowStart = now - windowSeconds;
         const windowEvents = recentEvents.filter((e) => e.timestamp >= windowStart);
@@ -959,6 +983,30 @@ export const evaluateCriticalInternal = internalMutation({
           value = windowEvents.length;
         } else if (condition.metric === "error_count") {
           value = windowEvents.filter((e) => e.eventType === "error" || e.eventType === "tool_error").length;
+        } else if (condition.metric === "sdk_spend_usd_today") {
+          const dayStart = Math.floor(now / 86400) * 86400;
+          // Try daily rollup first
+          const dailyRows = await ctx.db
+            .query("aggregates")
+            .withIndex("by_type_period_bucket", q =>
+              q.eq("metric_type", "cost").eq("period", "daily").gte("bucket_start", dayStart)
+            )
+            .collect();
+          value = dailyRows
+            .filter(r => (r.dimensions as any)?.billingType === "api")
+            .reduce((sum, r) => sum + r.value, 0);
+          // Fallback: daily rollup runs at 01:00 UTC; sum hourly if daily not yet available
+          if (value === 0) {
+            const hourlyRows = await ctx.db
+              .query("aggregates")
+              .withIndex("by_type_period_bucket", q =>
+                q.eq("metric_type", "cost").eq("period", "hourly").gte("bucket_start", dayStart)
+              )
+              .collect();
+            value = hourlyRows
+              .filter(r => (r.dimensions as any)?.billingType === "api")
+              .reduce((sum, r) => sum + r.value, 0);
+          }
         }
 
         switch (condition.operator) {
@@ -975,15 +1023,15 @@ export const evaluateCriticalInternal = internalMutation({
       let triggered = false;
 
       if (customRule.conditionGroups && customRule.conditionGroups.length > 0) {
-        const groupResults = customRule.conditionGroups.map((group: { conditions: any[]; logic: string }) => {
-          const condResults = group.conditions.map(evaluateCondition);
+        const groupResults = await Promise.all(customRule.conditionGroups.map(async (group: { conditions: any[]; logic: string }) => {
+          const condResults = await Promise.all(group.conditions.map(evaluateCondition));
           return group.logic === "OR"
             ? condResults.some(Boolean)
             : condResults.every(Boolean);
-        });
+        }));
         triggered = logic === "OR" ? groupResults.some(Boolean) : groupResults.every(Boolean);
       } else {
-        const condResults = customRule.conditions.map(evaluateCondition);
+        const condResults = await Promise.all(customRule.conditions.map(evaluateCondition));
         triggered = logic === "OR" ? condResults.some(Boolean) : condResults.every(Boolean);
       }
 

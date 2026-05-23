@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyCapStatus, DAILY_CAP, ALERT_THRESHOLD } from "./SDKSpendGuard";
+import { classifyCapStatus, DAILY_CAP, ALERT_THRESHOLD, projectDayEndSpend } from "./SDKSpendGuard";
 
 describe("SDKSpendGuard", () => {
   describe("classifyCapStatus (regression)", () => {
@@ -19,8 +19,22 @@ describe("SDKSpendGuard", () => {
   });
 
   describe("projectDayEndSpend", () => {
-    it.todo("returns projected total based on elapsed hours and current spend");
-    it.todo("returns 0 when elapsedHours is 0");
-    it.todo("flags willExceedCap when projected > DAILY_CAP");
+    it("returns projected total based on elapsed hours and current spend", () => {
+      const result = projectDayEndSpend(2.50, 12);
+      expect(result.projectedTotal).toBe(5.00);
+      expect(result.willExceedCap).toBe(false);
+    });
+    it("returns 0 when elapsedHours is 0", () => {
+      const result = projectDayEndSpend(2.50, 0);
+      expect(result.projectedTotal).toBe(0);
+      expect(result.willExceedCap).toBe(false);
+      expect(result.projectedHitTime).toBeNull();
+    });
+    it("flags willExceedCap when projected > DAILY_CAP", () => {
+      const result = projectDayEndSpend(3.00, 8);
+      expect(result.projectedTotal).toBe(9.00);
+      expect(result.willExceedCap).toBe(true);
+      expect(result.projectedHitTime).not.toBeNull();
+    });
   });
 });
