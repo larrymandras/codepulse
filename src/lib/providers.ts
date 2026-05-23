@@ -33,3 +33,14 @@ export const PROVIDER_BILLING: Record<AnyProvider, "api" | "subscription"> = {
 export function getBillingType(provider: string): "api" | "subscription" {
   return (PROVIDER_BILLING as Record<string, "api" | "subscription">)[provider] ?? "api";
 }
+
+/** Provider family colors for badges, charts, and controls. Source: Phase 67 D-09. */
+export const PROVIDER_COLORS: Record<string, string> = {
+  "claude-cli":       "#10b981",   // emerald
+  "claude-sdk":       "#10b981",   // emerald
+  "codex":            "#22c55e",   // green (GPT family)
+  "antigravity":      "#06b6d4",   // cyan
+  "anthropic_direct": "#f59e0b",   // gold/amber
+  "openrouter":       "#a855f7",   // purple (Gemini family)
+  "ollama":           "#6b7280",   // gray
+};

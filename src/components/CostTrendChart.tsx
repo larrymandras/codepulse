@@ -1,18 +1,8 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { FlexBarChart } from "./FlexBarChart";
-import { PROVIDER_DISPLAY_NAMES } from "../lib/providers";
+import { PROVIDER_DISPLAY_NAMES, PROVIDER_COLORS } from "../lib/providers";
 import InfoTooltip from "./InfoTooltip";
-
-const PROVIDER_COLORS: Record<string, string> = {
-  "claude-cli": "#10b981",
-  "claude-sdk": "#10b981",
-  "codex": "#22c55e",
-  "antigravity": "#06b6d4",
-  "anthropic_direct": "#f59e0b",
-  "openrouter": "#a855f7",
-  "ollama": "#6b7280",
-};
 
 export default function CostTrendChart() {
   const buckets = useQuery(api.aggregates.costByPeriodByProvider, {
