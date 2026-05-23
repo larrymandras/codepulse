@@ -412,7 +412,7 @@ Plans:
 - [x] 69-04-PLAN.md -- Session timeline + list provider badges, RoutingDecisionsTable audit upgrade
 
 **Wave 3** *(UAT gap closure)*
-- [ ] 69-05-PLAN.md -- Gap closure: seed providerConfig rows, ingest provider field, "untagged" model fallback
+- [x] 69-05-PLAN.md -- Gap closure: seed providerConfig rows, ingest provider field, "untagged" model fallback
 **UI hint**: yes
 
 ## Execution Order
@@ -479,7 +479,7 @@ Phase 69 (SDK Guard/UX)       ░░░░░░░░░░░░░░░█�
 | 66. Gateway Compatibility | 4/4 | Complete    | 2026-05-21 |
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
-| 69. SDK Guard & UX | 4/5 | UAT gap closure | 2026-05-23 |
+| 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
 
 ---
 
