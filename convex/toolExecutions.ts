@@ -33,13 +33,10 @@ export const successRate = query({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() / 1000 - 86400;
-    const executions = await ctx.db
+    const recent = await ctx.db
       .query("toolExecutions")
-      .withIndex("by_timestamp")
-      .order("desc")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .collect();
-
-    const recent = executions.filter((e) => e.timestamp >= cutoff);
 
     const byTool: Record<string, { success: number; failure: number }> = {};
     for (const exec of recent) {
@@ -66,15 +63,12 @@ export const avgDuration = query({
   args: {},
   handler: async (ctx) => {
     const cutoff = Date.now() / 1000 - 86400;
-    const executions = await ctx.db
+    const allRecent = await ctx.db
       .query("toolExecutions")
-      .withIndex("by_timestamp")
-      .order("desc")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .collect();
 
-    const recent = executions.filter(
-      (e) => e.timestamp >= cutoff && e.durationMs != null
-    );
+    const recent = allRecent.filter((e) => e.durationMs != null);
 
     const byTool: Record<string, { total: number; count: number }> = {};
     for (const exec of recent) {
