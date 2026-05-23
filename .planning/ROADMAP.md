@@ -403,7 +403,10 @@ Plans:
   - Hook system documentation update
 **Plans**: 4 plans
 Plans:
+**Wave 1**
 - [ ] 69-01-PLAN.md -- Schema (providerConfig table), PROVIDER_COLORS extraction, seed mutations, toolExecutions.listBySession, Wave 0 test stubs
+
+**Wave 2** *(blocked on Wave 1 completion)*
 - [ ] 69-02-PLAN.md -- SDKSpendGuard card (sparkline + projection + overshoot warning), evaluateCondition sdk_spend_usd_today metric
 - [ ] 69-03-PLAN.md -- ProviderControls panel (drag-to-reorder + enable/disable + gateway command), Settings page wiring
 - [ ] 69-04-PLAN.md -- Session timeline + list provider badges, RoutingDecisionsTable audit upgrade
