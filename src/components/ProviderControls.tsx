@@ -212,11 +212,15 @@ export default function ProviderControls() {
       if (!over || active.id === over.id) return;
       const oldIndex = orderedProviders.indexOf(String(active.id));
       const newIndex = orderedProviders.indexOf(String(over.id));
-      const reordered = arrayMove(orderedProviders, oldIndex, newIndex);
+      // Filter to only providers with existing config rows to avoid ghost-creating rows
+      const knownProviders = configs.map((c) => c.provider);
+      const reordered = arrayMove(orderedProviders, oldIndex, newIndex).filter(
+        (p) => knownProviders.includes(p)
+      );
       setOrderedProviders(reordered);
       setPriority({ providers: reordered });
     },
-    [orderedProviders, setPriority]
+    [orderedProviders, configs, setPriority]
   );
 
   return (
