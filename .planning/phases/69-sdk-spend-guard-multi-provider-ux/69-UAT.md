@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: complete
 phase: 69-sdk-spend-guard-multi-provider-ux
-source: [69-01-SUMMARY.md, 69-02-SUMMARY.md, 69-03-SUMMARY.md, 69-04-SUMMARY.md]
+source: [69-01-SUMMARY.md, 69-02-SUMMARY.md, 69-03-SUMMARY.md, 69-04-SUMMARY.md, 69-05-SUMMARY.md]
 started: 2026-05-23T15:15:00Z
-updated: 2026-05-23T15:50:00Z
+updated: 2026-05-23T18:30:00Z
 ---
 
 ## Current Test
@@ -36,33 +36,23 @@ result: pass
 
 ### 6. Provider Drag-to-Reorder
 expected: In the Gateway Providers section, drag a provider card by its grip handle to a new position. The card moves to the new position, and the new order persists on page refresh.
-result: issue
-reported: "no"
-severity: major
+result: pass
 
 ### 7. Provider Enable/Disable Toggle
 expected: Toggle a provider off in Settings. The toggle visually shows disabled state and a toast confirms the change. Toggle it back on — it re-enables. If the gateway is offline, a toast warns "Gateway offline — setting saved, will apply on reconnect."
-result: issue
-reported: "no"
-severity: major
+result: pass
 
 ### 8. Seed Gateway Defaults
 expected: If no provider configs exist yet, a "Seed Gateway Defaults" button appears in the Gateway Providers section. Clicking it creates default profiles for all 4 providers. After seeding, the button disappears and the provider cards appear.
-result: issue
-reported: "after hitting the button, i see the message but it does not go away"
-severity: major
+result: pass
 
 ### 9. Provider Badges on Session Timeline
-expected: Open a session detail page. Each tool call event in the timeline shows a colored provider badge (e.g., "claude-sdk" in blue) matching the PROVIDER_COLORS scheme. Non-tool events (like user messages) do NOT show a provider badge.
-result: issue
-reported: "no provider badges visible on timeline tool call events"
-severity: major
+expected: Open a session detail page. Each tool call event in the timeline shows a colored provider badge (e.g., "claude-cli" in blue) matching the PROVIDER_COLORS scheme. Non-tool events (like user messages) do NOT show a provider badge.
+result: pass
 
-### 10. Provider Badge on Active Sessions
-expected: On the main dashboard or sessions list, each session card shows an inline provider badge (e.g., "claude-sdk") next to the session identifier, when the session has a provider field set.
-result: issue
-reported: "unknown entries showing for sessions without model — user wants muted 'untagged' label instead"
-severity: cosmetic
+### 10. Untagged Model Label on Sessions
+expected: On the sessions list and session headers, sessions WITHOUT a model field show a muted italic "untagged" label instead of "unknown", "N/A", or "—". The label uses `text-muted-foreground italic text-xs` styling — visually subdued, not prominent.
+result: pass
 
 ### 11. Routing Decisions Table Upgrades
 expected: On the page showing routing decisions, there are "All" and "Fallback only" filter pill buttons. Clicking "Fallback only" filters to only fallback decisions. A "Score" column is visible showing 3-decimal scores (e.g., "0.847"). The table has 6 columns total.
@@ -76,8 +66,8 @@ result: pass
 ## Summary
 
 total: 12
-passed: 5
-issues: 5
+passed: 10
+issues: 0
 pending: 0
 skipped: 2
 blocked: 0
