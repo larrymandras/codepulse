@@ -40,7 +40,7 @@ export default function SessionHeader({ session }: SessionHeaderProps) {
         <div>
           <p className="text-xs text-gray-500">CWD</p>
           <p className="text-sm font-mono text-gray-200 mt-0.5" title={session.cwd ? maskFilePath(session.cwd) : undefined}>
-            {session.cwd ? maskFilePath(truncatePath(session.cwd)) : "—"}
+            {session.cwd ? truncatePath(maskFilePath(session.cwd)) : "—"}
           </p>
         </div>
         <div>
