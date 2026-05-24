@@ -142,6 +142,7 @@ export const getLatestBriefingNarrative = internalQuery({
   handler: async (ctx) => {
     const briefing = await ctx.db
       .query("briefings")
+      .withIndex("by_type_generated", (q) => q.eq("type", "daily_digest"))
       .order("desc")
       .first();
     return briefing?.narrative ?? "";
