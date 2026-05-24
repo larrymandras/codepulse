@@ -59,9 +59,11 @@ Matches established project patterns from AlertRuleForm, SectionHeader, Notifica
 | Role | Size | Weight | Line Height | Usage |
 |------|------|--------|-------------|-------|
 | Body | 14px (text-sm) | 400 (font-normal) | 1.5 | Form field labels in collapsed state, help text, table cell content |
-| Label | 14px (text-sm) | 500 (font-medium) | 1.4 | Form field labels (active/expanded), collapsible section headers |
+| Label | 14px (text-sm) | 600 (font-semibold) | 1.4 | Form field labels (active/expanded), collapsible section headers — distinguished from Body by weight only; size is the same 14px |
 | Heading | 16px (text-base) | 600 (font-semibold) | 1.3 | Sheet title, panel section headings |
 | Section label | 12px (text-xs) | 600 (font-semibold) | 1.2 | SectionHeader uppercase tracking-wide pattern, delivery log timestamps |
+
+Two weights only: 400 (font-normal) and 600 (font-semibold). Weight 500 (font-medium) is not used in this phase.
 
 All section labels use `uppercase tracking-wide text-muted-foreground` per established `SectionHeader` component pattern.
 
@@ -151,7 +153,7 @@ Dark mode values (primary runtime). Project uses oklch + named CSS variables exc
 | PagerDuty log row — trigger | `Incident triggered — {alertRuleId}` |
 | PagerDuty log row — resolve | `Incident resolved — {alertRuleId}` |
 | PagerDuty log row — failure | `PagerDuty delivery failed — {error reason}` |
-| Error detail expand label | `Details` |
+| Error detail expand label | `View Details` |
 
 ### Call Graph — Infrastructure Page (D-10, D-12)
 
@@ -172,8 +174,8 @@ Dark mode values (primary runtime). Project uses oklch + named CSS variables exc
 
 | Action | Trigger | Confirmation Pattern |
 |--------|---------|----------------------|
-| Delete alert rule | "Delete Rule" button in AlertRuleForm footer | Dialog: "Delete rule?" / "This will permanently remove this rule and all its delivery config." / "Delete" (destructive) + "Cancel" (ghost) — matches existing pattern |
-| Remove PagerDuty config | "Remove" inline link when routing key saved | Inline confirm: "Remove PagerDuty config?" / "Remove" (destructive text) + "Cancel" (muted text) — matches NotificationChannels webhook remove pattern |
+| Delete alert rule | "Delete Rule" button in AlertRuleForm footer | Dialog: "Delete rule?" / "This will permanently remove this rule and all its delivery config." / "Delete" (destructive) + "Keep Rule" (ghost) |
+| Remove PagerDuty config | "Remove" inline link when routing key saved | Inline confirm: "Remove PagerDuty config?" / "Remove" (destructive text) + "Keep Config" (muted text) — matches NotificationChannels webhook remove pattern |
 
 No new destructive actions beyond existing rule deletion. PagerDuty routing key removal is inline (no dialog) per webhook pattern precedent.
 
@@ -208,7 +210,7 @@ All components listed here already exist in the codebase or are available via sh
 
 | Component | Path | Description |
 |-----------|------|-------------|
-| `CallGraphPanel` | `src/components/CallGraphPanel.tsx` | Infrastructure page section: GlassPanel wrapper + SVG call graph + legend + empty state |
+| `CallGraphPanel` | `src/components/CallGraphPanel.tsx` | Infrastructure page section: GlassPanel wrapper + SVG call graph + legend + empty state. Primary visual anchor on the Infrastructure page. |
 | `CallGraphSVG` | `src/components/CallGraphSVG.tsx` | Pure SVG renderer: dagre layout → SVG nodes/edges. No canvas, no React Flow. |
 | `DeliveryHistory` | `src/components/DeliveryHistory.tsx` | Settings tab: email + PagerDuty delivery log table with status badges |
 | `EmailDigestConfig` | `src/components/EmailDigestConfig.tsx` | Settings section: recipient, schedule, enabled toggle, Save button |
@@ -218,6 +220,8 @@ All components listed here already exist in the codebase or are available via sh
 ## Layout Contracts
 
 ### Infrastructure Page — Call Graph Section
+
+`CallGraphPanel` is the primary focal point on the Infrastructure page — the largest new visual element this phase, placed prominently after `ProviderHealthPanel`.
 
 ```
 <SectionErrorBoundary name="Agent Call Graph">
@@ -282,8 +286,10 @@ Delivery History: new `<Tabs>` added to Settings page wrapping the "Notification
 
 | Type | Width | Height | Border Radius | Font |
 |------|-------|--------|---------------|------|
-| Agent node | 120px | 48px | 0px (radius-0) | 12px Geist, weight 500 |
-| Tool node | 96px | 32px | 0px (radius-0) | 11px Geist, weight 400 |
+| Agent node | 120px | 48px | 0px (radius-0) | 12px Geist, weight 600 (font-semibold) |
+| Tool node | 96px | 32px | 0px (radius-0) | 10px Geist, weight 400 (font-normal) |
+
+Agent nodes use weight 600 to match the Label role (active/important elements). Tool nodes use 10px at weight 400 to create clear visual separation from agent nodes — a 2px size difference combined with weight difference ensures both size and contrast distinguish the two tiers.
 
 ### Node States
 
