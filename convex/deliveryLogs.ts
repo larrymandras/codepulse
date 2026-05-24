@@ -7,7 +7,7 @@ import { v } from "convex/values";
 
 export const insertEmailLog = mutation({
   args: {
-    alertId: v.id("alerts"),
+    alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
     attempt: v.float64(),
     status: v.string(),

@@ -963,7 +963,7 @@ export default defineSchema({
     .index("by_timestamp", ["lastCallAt"]),
 
   emailDeliveryLog: defineTable({
-    alertId: v.id("alerts"),
+    alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
     attempt: v.float64(),
     status: v.string(),           // "success" | "failed"
