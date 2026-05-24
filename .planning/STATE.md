@@ -4,14 +4,14 @@ milestone: v5.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 70 UI-SPEC approved
-last_updated: "2026-05-24T17:41:23.108Z"
+last_updated: "2026-05-24T17:45:42.284Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 20
   completed_phases: 5
   total_plans: 23
-  completed_plans: 21
-  percent: 91
+  completed_plans: 22
+  percent: 96
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 70 (external-integrations-call-graph) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
 Last activity: 2026-05-24
 
@@ -91,6 +91,7 @@ See PROJECT.md Key Decisions table for full history.
 - `session_id` sourced from `get_session_context()` context var, falls back to `task_id` when no active session
 - `duration_ms = duration_seconds * 1000` — gateway returns seconds, CodePulse stores ms
 - [Phase ?]: Phase 70 Plan 02
+- [Phase ?]: Prevents stale layout state across renders per RESEARCH.md Pitfall 4
 
 ### Pending Todos
 
@@ -102,6 +103,6 @@ None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-05-24T17:41:15.520Z
+Last session: 2026-05-24T17:45:34.547Z
 Stopped at: Phase 70 UI-SPEC approved
 Next step: `/gsd-plan-phase 60`

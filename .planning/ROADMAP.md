@@ -439,7 +439,7 @@ Plans:
 Plans:
 - [x] 70-01-PLAN.md -- Foundation: npm installs, schema patch (emailDeliveryLog.alertId optional), DigestEmailTemplate, Wave 0 test stubs
 - [x] 70-02-PLAN.md -- Email digest backend (Resend internalAction + cron) + PagerDuty backend (trigger/resolve internalActions + alerts.ts hook)
-- [ ] 70-03-PLAN.md -- Call graph visualization (CallGraphSVG with dagre layout + CallGraphPanel wrapper)
+- [x] 70-03-PLAN.md -- Call graph visualization (CallGraphSVG with dagre layout + CallGraphPanel wrapper)
 - [ ] 70-04-PLAN.md -- UI wiring: EmailDigestConfig + DeliveryHistory on Settings, PagerDuty in AlertRuleForm, CallGraphPanel on Infrastructure
 **UI hint**: yes
 
@@ -513,7 +513,7 @@ Phase 70 (Integrations+Graph)  ░░░░░░░░░░░░░░░░�
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
 | 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
-| 70. External Integrations & Call Graph | 2/4 | In Progress|  |
+| 70. External Integrations & Call Graph | 3/4 | In Progress|  |
 
 ---
 
