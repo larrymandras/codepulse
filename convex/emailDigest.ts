@@ -167,6 +167,9 @@ export const sendEmailDigest = internalAction({
     const sentAt = Date.now() / 1000;
 
     // 1. Guard: API key (D-15) — log and return, do NOT rethrow
+    // Note: attempt is always 1 for cron-fired digests — each cron fire is a
+    // single delivery attempt with no built-in retry. Multiple attempt-1 entries
+    // for the same ruleId on different days are distinct cron fires, not retries.
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       await ctx.runMutation(api.deliveryLogs.insertEmailLog, {
