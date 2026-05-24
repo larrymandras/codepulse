@@ -435,7 +435,12 @@ Plans:
   - **Email Digest**: Resend SDK integration, HTML template generation, digest scheduling cron, Settings UI for recipient/schedule config
   - **PagerDuty**: Events API v2 client, trigger/resolve lifecycle with `dedup_key`, per-rule routing key config in alert rule editor
   - **Call Graph**: Agent/tool dependency graph component using dagre + callGraphEdges table, node state coloring, error path highlighting, real-time updates
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 70-01-PLAN.md -- Foundation: npm installs, schema patch (emailDeliveryLog.alertId optional), DigestEmailTemplate, Wave 0 test stubs
+- [ ] 70-02-PLAN.md -- Email digest backend (Resend internalAction + cron) + PagerDuty backend (trigger/resolve internalActions + alerts.ts hook)
+- [ ] 70-03-PLAN.md -- Call graph visualization (CallGraphSVG with dagre layout + CallGraphPanel wrapper)
+- [ ] 70-04-PLAN.md -- UI wiring: EmailDigestConfig + DeliveryHistory on Settings, PagerDuty in AlertRuleForm, CallGraphPanel on Infrastructure
 **UI hint**: yes
 
 ## Execution Order
@@ -508,8 +513,8 @@ Phase 70 (Integrations+Graph)  ░░░░░░░░░░░░░░░░�
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
 | 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
-| 70. External Integrations & Call Graph | 0/TBD | Not started | — |
+| 70. External Integrations & Call Graph | 0/4 | Planned | — |
 
 ---
 
-*Last updated: 2026-05-23 — Marked Phases 60, 61, 65 complete (built outside GSD); added Phase 70 for remaining 62/63/64 work*
+*Last updated: 2026-05-24 — Phase 70 planned: 4 plans in 3 waves (email digest, PagerDuty, call graph)*
