@@ -410,7 +410,7 @@ export function AlertRuleForm({
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {pdEnabled
-                        ? `On — ...${pdRoutingKey.slice(-6)}`
+                        ? `On — ...${pdRoutingKey.slice(-4)}`
                         : "Off"}
                     </span>
                   </CollapsibleTrigger>
