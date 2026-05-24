@@ -59,6 +59,13 @@ crons.daily(
   internal.briefings.triggerDailyDigest
 );
 
+// Phase 70: Email digest delivery (after daily digest generation, 06:05 UTC)
+crons.daily(
+  "send-email-digest",
+  { hourUTC: 6, minuteUTC: 5 },
+  internal.emailDigest.sendEmailDigest
+);
+
 // Phase 7: Anomaly detection (every 6 hours)
 crons.interval(
   "detect-anomalies",
