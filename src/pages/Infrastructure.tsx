@@ -10,6 +10,7 @@ import GithubActionsPanel from "../components/GithubActionsPanel";
 import CompactionTimeline from "../components/CompactionTimeline";
 import ChannelHealthPanel from "../components/ChannelHealthPanel";
 import ProviderHealthPanel from "../components/ProviderHealthPanel";
+import CallGraphPanel from "../components/CallGraphPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
@@ -92,6 +93,9 @@ export default function Infrastructure() {
       <IntegrationHealth />
       <SectionErrorBoundary name="GitHub Actions">
         <GithubActionsPanel />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="Agent Call Graph">
+        <CallGraphPanel />
       </SectionErrorBoundary>
       <SectionErrorBoundary name="Compaction Timeline">
         <CompactionTimeline />

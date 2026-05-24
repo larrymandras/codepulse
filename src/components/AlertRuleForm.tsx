@@ -42,6 +42,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 import {
   ConditionBuilder,
   type Condition,
@@ -113,6 +121,12 @@ export function AlertRuleForm({
   const [overrideThreshold, setOverrideThreshold] = useState("");
   const [overrideLookback, setOverrideLookback] = useState("15m");
 
+  // PagerDuty config (per D-08, D-13)
+  const [pdEnabled, setPdEnabled] = useState(false);
+  const [pdRoutingKey, setPdRoutingKey] = useState("");
+  const [pdSeverity, setPdSeverity] = useState<string | undefined>(undefined);
+  const [pdOpen, setPdOpen] = useState(false);
+
   // Dirty tracking
   const [dirty, setDirty] = useState(false);
 
@@ -138,6 +152,10 @@ export function AlertRuleForm({
       setConditionLogic("AND");
       setConditionGroups([]);
       setMessageTemplate("");
+      setPdEnabled(false);
+      setPdRoutingKey("");
+      setPdSeverity(undefined);
+      setPdOpen(false);
     }
   }, [open, mode, existingOverride, customRuleId]);
 
@@ -177,6 +195,13 @@ export function AlertRuleForm({
             conditionLogic,
             conditionGroups: conditionGroups.length > 0 ? conditionGroups : undefined,
             messageTemplate: messageTemplate.trim() || undefined,
+            pagerdutyConfig: pdEnabled
+              ? {
+                  enabled: true,
+                  routingKey: pdRoutingKey.trim(),
+                  severity: pdSeverity || undefined,
+                }
+              : undefined,
           });
           toast.success("Rule updated.");
         } else {
@@ -187,6 +212,13 @@ export function AlertRuleForm({
             conditionLogic,
             conditionGroups: conditionGroups.length > 0 ? conditionGroups : undefined,
             messageTemplate: messageTemplate.trim() || undefined,
+            pagerdutyConfig: pdEnabled
+              ? {
+                  enabled: true,
+                  routingKey: pdRoutingKey.trim(),
+                  severity: pdSeverity || undefined,
+                }
+              : undefined,
           });
           toast.success("Custom rule created.");
         }
@@ -366,6 +398,86 @@ export function AlertRuleForm({
                     rows={3}
                   />
                 </div>
+
+                {/* PagerDuty config (per D-08, D-13) */}
+                <Collapsible open={pdOpen} onOpenChange={setPdOpen}>
+                  <CollapsibleTrigger className="flex items-center justify-between w-full border border-gray-700/50 p-3 text-sm font-semibold hover:bg-gray-800/30">
+                    <div className="flex items-center gap-2">
+                      <ChevronRight
+                        className={`w-4 h-4 transition-transform duration-150 ${pdOpen ? "rotate-90" : ""}`}
+                      />
+                      PagerDuty
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {pdEnabled
+                        ? `On — ...${pdRoutingKey.slice(-6)}`
+                        : "Off"}
+                    </span>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border border-t-0 border-gray-700/50 p-3 space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={pdEnabled}
+                        onCheckedChange={(v) => {
+                          setPdEnabled(v);
+                          markDirty();
+                        }}
+                      />
+                      <Label className="text-sm">Send PagerDuty incident</Label>
+                    </div>
+                    {pdEnabled && (
+                      <>
+                        <div>
+                          <Label className="text-sm font-semibold">
+                            Routing Key
+                          </Label>
+                          <Input
+                            type="password"
+                            className="font-mono mt-1"
+                            placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            value={pdRoutingKey}
+                            onChange={(e) => {
+                              setPdRoutingKey(e.target.value);
+                              markDirty();
+                            }}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Events API v2 routing key for this service. Stored
+                            per rule.
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-semibold">
+                            Severity override
+                          </Label>
+                          <Select
+                            value={pdSeverity ?? "auto"}
+                            onValueChange={(v) => {
+                              setPdSeverity(v === "auto" ? undefined : v);
+                              markDirty();
+                            }}
+                          >
+                            <SelectTrigger className="w-[200px] mt-1">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="auto">
+                                Auto (from rule severity)
+                              </SelectItem>
+                              <SelectItem value="critical">Critical</SelectItem>
+                              <SelectItem value="warning">Warning</SelectItem>
+                              <SelectItem value="info">Info</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Auto-mapped from rule severity. Override only if
+                            needed.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
               </>
             )}
           </div>
