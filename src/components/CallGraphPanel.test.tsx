@@ -81,6 +81,16 @@ describe("CallGraphPanel", () => {
       expect(agent.height).toBeGreaterThan(tool.height);
     });
 
+    it("marks shared tool as errored when any agent-tool edge is errored", () => {
+      const edges: GraphEdge[] = [
+        { agentId: "agent-1", toolName: "tool-shared", status: "healthy", callCount: 1, errorCount: 0 },
+        { agentId: "agent-2", toolName: "tool-shared", status: "errored", callCount: 1, errorCount: 1 },
+      ];
+      const result = computeLayout(edges);
+      const toolNode = result.nodes.find((n) => n.id === "tool:tool-shared");
+      expect(toolNode?.status).toBe("errored");
+    });
+
     it("errored edge is marked in layout edges", () => {
       const edges: GraphEdge[] = [
         { agentId: "agent-1", toolName: "tool-1", status: "errored", callCount: 1, errorCount: 1 },
