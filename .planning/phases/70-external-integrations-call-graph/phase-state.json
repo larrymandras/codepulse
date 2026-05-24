@@ -1,0 +1,72 @@
+{
+  "phase": 70,
+  "phaseName": "external-integrations-call-graph",
+  "created": "2026-05-24T19:01:58.402Z",
+  "history": [
+    {
+      "timestamp": "2026-05-24T19:01:58.402Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-05-24T19:01:58.402Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "70-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "70-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "70-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "70-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "70-01-PLAN.md",
+        "70-02-PLAN.md",
+        "70-03-PLAN.md",
+        "70-04-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "70-01-SUMMARY.md",
+        "70-02-SUMMARY.md",
+        "70-03-SUMMARY.md",
+        "70-04-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "70-VALIDATION.md"
+      ]
+    }
+  }
+}

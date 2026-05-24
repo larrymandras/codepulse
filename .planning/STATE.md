@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
-status: verifying
+status: milestone_complete
 stopped_at: Phase 70 UI-SPEC approved
 last_updated: "2026-05-24T17:52:00.147Z"
 last_activity: 2026-05-24
 progress:
   total_phases: 20
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 23
   completed_plans: 23
-  percent: 100
+  percent: 35
 ---
 
 # Project State
@@ -25,9 +25,9 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 ## Current Position
 
-Phase: 70 (external-integrations-call-graph) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
+Phase: 70
+Plan: Not started
+Status: Milestone complete
 Last activity: 2026-05-24
 
 ```
@@ -40,7 +40,7 @@ Phase 63 ░  Phase 64 ░  Phase 65 ░
 
 **Velocity (v4.0 baseline):**
 
-- Total plans completed: 55
+- Total plans completed: 59
 - Phases: 8
 - Timeline: 39 days (2026-03-06 → 2026-04-14)
 

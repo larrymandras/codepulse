@@ -513,7 +513,7 @@ Phase 70 (Integrations+Graph)  ░░░░░░░░░░░░░░░░�
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
 | 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
-| 70. External Integrations & Call Graph | 4/4 | Complete   | 2026-05-24 |
+| 70. External Integrations & Call Graph | 4/4 | Complete    | 2026-05-24 |
 
 ---
 
