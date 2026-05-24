@@ -883,10 +883,15 @@ export const evaluateInternal = internalMutation({
     // If a PD-enabled custom rule had an active alert but did NOT re-trigger this cycle,
     // the condition has cleared — resolve the PagerDuty incident.
     // PagerDuty dedup_key makes duplicate resolves idempotent.
+    // Filter to only truly active alerts — already-resolved alerts (e.g. via age-based
+    // auto-resolve above) must not trigger a duplicate PD resolve event.
+    const resolveEligible = stillActive.filter(
+      (a) => a.status === "active" || a.status == null
+    );
     for (const rule of customRules) {
       if (!rule.pagerdutyConfig?.enabled) continue;
       // Was there an active alert for this rule at evaluation start?
-      const activeAlert = stillActive.find(
+      const activeAlert = resolveEligible.find(
         (a) => a.source === rule._id || a.source === rule.name
       );
       if (!activeAlert) continue;
