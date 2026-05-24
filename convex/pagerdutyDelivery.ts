@@ -12,7 +12,7 @@ const PAGERDUTY_ENDPOINT = "https://events.pagerduty.com/v2/enqueue";
 export const sendPagerdutyAlert = internalAction({
   args: {
     alertId: v.id("alerts"),
-    ruleId: v.string(),
+    ruleId: v.id("alertRuleCustom"),
     attempt: v.float64(),
   },
   handler: async (ctx, args) => {
@@ -98,7 +98,7 @@ export const sendPagerdutyAlert = internalAction({
 export const sendPagerdutyResolve = internalAction({
   args: {
     alertId: v.id("alerts"),
-    ruleId: v.string(),
+    ruleId: v.id("alertRuleCustom"),
   },
   handler: async (ctx, args) => {
     const sentAt = Date.now() / 1000;
@@ -161,15 +161,8 @@ export const getAlertById = internalQuery({
 });
 
 export const getCustomRuleById = internalQuery({
-  args: { id: v.string() },
-  handler: async (ctx, args): Promise<any> => {
-    // Custom rule IDs are Convex document IDs stored as strings
-    // Returns alertRuleCustom document or null
-    try {
-      const doc = await ctx.db.get(args.id as any);
-      return doc ?? null;
-    } catch {
-      return null;
-    }
+  args: { id: v.id("alertRuleCustom") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
   },
 });
