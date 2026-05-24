@@ -186,6 +186,11 @@ export function AlertRuleForm({
           setSaving(false);
           return;
         }
+        if (pdEnabled && !pdRoutingKey.trim()) {
+          toast.error("PagerDuty routing key is required when PagerDuty is enabled.");
+          setSaving(false);
+          return;
+        }
         if (customRuleId) {
           await updateCustomRule({
             id: customRuleId,
