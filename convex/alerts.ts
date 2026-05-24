@@ -708,9 +708,9 @@ export const evaluateInternal = internalMutation({
 
     const created: string[] = [];
 
-    async function createIfNew(ruleId: string, severity: string, source: string, message: string) {
-      if (disabledRules.has(ruleId)) return;
-      if (activeSourceSet.has(ruleId)) return;
+    async function createIfNew(ruleId: string, severity: string, source: string, message: string): Promise<any> {
+      if (disabledRules.has(ruleId)) return null;
+      if (activeSourceSet.has(ruleId)) return null;
       const newAlertId = await ctx.db.insert("alerts", {
         severity,
         source: ruleId,
@@ -727,6 +727,7 @@ export const evaluateInternal = internalMutation({
         alertId: newAlertId,
         attempt: 1,
       });
+      return newAlertId;
     }
 
     // ---- THRESHOLD OVERRIDE HELPER ----
@@ -866,8 +867,36 @@ export const evaluateInternal = internalMutation({
 
       if (triggered) {
         const message = customRule.messageTemplate ?? `Custom alert rule triggered: ${customRule.name}`;
-        await createIfNew(customRule._id, customRule.severity, customRule.name, message);
+        const newAlertId = await createIfNew(customRule._id, customRule.severity, customRule.name, message);
+        // Phase 70: PagerDuty trigger (D-05, D-06) — non-blocking, fire-and-forget
+        if (newAlertId && customRule.pagerdutyConfig?.enabled) {
+          await ctx.scheduler.runAfter(0, internal.pagerdutyDelivery.sendPagerdutyAlert, {
+            alertId: newAlertId,
+            ruleId: customRule._id,
+            attempt: 1,
+          });
+        }
       }
+    }
+
+    // Phase 70: PagerDuty auto-resolve (D-07)
+    // If a PD-enabled custom rule had an active alert but did NOT re-trigger this cycle,
+    // the condition has cleared — resolve the PagerDuty incident.
+    // PagerDuty dedup_key makes duplicate resolves idempotent.
+    for (const rule of customRules) {
+      if (!rule.pagerdutyConfig?.enabled) continue;
+      // Was there an active alert for this rule at evaluation start?
+      const activeAlert = stillActive.find(
+        (a) => a.source === rule._id || a.source === rule.name
+      );
+      if (!activeAlert) continue;
+      // Did this rule trigger a NEW alert this cycle?
+      if (created.includes(rule._id)) continue;
+      // Rule had an active alert but didn't re-trigger — condition cleared, resolve PD
+      await ctx.scheduler.runAfter(0, internal.pagerdutyDelivery.sendPagerdutyResolve, {
+        alertId: activeAlert._id,
+        ruleId: rule._id,
+      });
     }
 
     return { evaluated: alertRules.length + customRules.length, created: created.length, alerts: created };
@@ -906,9 +935,9 @@ export const evaluateCriticalInternal = internalMutation({
 
     const created: string[] = [];
 
-    async function createCriticalIfNew(ruleId: string, severity: string, source: string, message: string) {
-      if (disabledRules.has(ruleId)) return;
-      if (activeSourceSet.has(ruleId)) return;
+    async function createCriticalIfNew(ruleId: string, severity: string, source: string, message: string): Promise<any> {
+      if (disabledRules.has(ruleId)) return null;
+      if (activeSourceSet.has(ruleId)) return null;
       const newAlertId = await ctx.db.insert("alerts", {
         severity,
         source: ruleId,
@@ -924,6 +953,7 @@ export const evaluateCriticalInternal = internalMutation({
         alertId: newAlertId,
         attempt: 1,
       });
+      return newAlertId;
     }
 
     // Only evaluate critical-severity static rules
@@ -1041,7 +1071,15 @@ export const evaluateCriticalInternal = internalMutation({
 
       if (triggered) {
         const message = customRule.messageTemplate ?? `Custom critical alert: ${customRule.name}`;
-        await createCriticalIfNew(customRule._id, customRule.severity, customRule.name, message);
+        const newAlertId = await createCriticalIfNew(customRule._id, customRule.severity, customRule.name, message);
+        // Phase 70: PagerDuty trigger (D-05, D-06) — non-blocking, fire-and-forget
+        if (newAlertId && customRule.pagerdutyConfig?.enabled) {
+          await ctx.scheduler.runAfter(0, internal.pagerdutyDelivery.sendPagerdutyAlert, {
+            alertId: newAlertId,
+            ruleId: customRule._id,
+            attempt: 1,
+          });
+        }
       }
     }
 
