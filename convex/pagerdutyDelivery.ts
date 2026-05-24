@@ -122,7 +122,9 @@ export const sendPagerdutyResolve = internalAction({
         }),
       });
       const status = res.ok ? "resolved" : "failed";
-      const errorMessage = res.ok ? undefined : `HTTP ${res.status}`;
+      const errorMessage = res.ok
+        ? undefined
+        : `HTTP ${res.status}: ${await res.text().catch(() => "unknown")}`;
 
       await ctx.runMutation(api.deliveryLogs.insertPagerdutyLog, {
         alertId: args.alertId,
