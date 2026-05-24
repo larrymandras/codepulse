@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 63: Call Graph** - Directed agent/tool dependency graph with dagre layout, node state coloring, and error path highlighting (graph infra only — agent call graph deferred to Phase 70)
 - [x] **Phase 64: PagerDuty** - Incident trigger/resolve lifecycle via PagerDuty Events API v2 with per-rule toggle (schema only — API integration deferred to Phase 70)
 - [x] **Phase 65: GitHub Actions** - Workflow dispatch trigger from alert rules with configurable repo/PAT and rate limiting (completed 2026-05-23)
-- [ ] **Phase 70: External Integrations & Call Graph** - Complete Email Digest (Resend), PagerDuty API integration, and agent/tool Call Graph visualization
+- [x] **Phase 70: External Integrations & Call Graph** - Complete Email Digest (Resend), PagerDuty API integration, and agent/tool Call Graph visualization (completed 2026-05-24)
 
 ## Phase Details
 
@@ -440,7 +440,7 @@ Plans:
 - [x] 70-01-PLAN.md -- Foundation: npm installs, schema patch (emailDeliveryLog.alertId optional), DigestEmailTemplate, Wave 0 test stubs
 - [x] 70-02-PLAN.md -- Email digest backend (Resend internalAction + cron) + PagerDuty backend (trigger/resolve internalActions + alerts.ts hook)
 - [x] 70-03-PLAN.md -- Call graph visualization (CallGraphSVG with dagre layout + CallGraphPanel wrapper)
-- [ ] 70-04-PLAN.md -- UI wiring: EmailDigestConfig + DeliveryHistory on Settings, PagerDuty in AlertRuleForm, CallGraphPanel on Infrastructure
+- [x] 70-04-PLAN.md -- UI wiring: EmailDigestConfig + DeliveryHistory on Settings, PagerDuty in AlertRuleForm, CallGraphPanel on Infrastructure
 **UI hint**: yes
 
 ## Execution Order
@@ -513,7 +513,7 @@ Phase 70 (Integrations+Graph)  ░░░░░░░░░░░░░░░░�
 | 67. Multi-Provider Pricing | 3/3 | Complete    | 2026-05-22 |
 | 68. Gateway Observability | 5/5 | Complete    | 2026-05-22 |
 | 69. SDK Guard & UX | 5/5 | Complete   | 2026-05-23 |
-| 70. External Integrations & Call Graph | 3/4 | In Progress|  |
+| 70. External Integrations & Call Graph | 4/4 | Complete   | 2026-05-24 |
 
 ---
 
