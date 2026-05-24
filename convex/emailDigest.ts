@@ -186,6 +186,11 @@ export const sendEmailDigest = internalAction({
     const config = await ctx.runQuery(internal.emailDigest.getEmailDigestConfig, {});
     if (!config.enabled) return;
 
+    // 2b. Guard: schedule check — the cron fires daily; honor the user's schedule preference.
+    // "daily" or "both" → deliver every day. "weekly" → deliver only on Mondays (UTC).
+    const dayOfWeek = new Date().getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    if (config.schedule === "weekly" && dayOfWeek !== 1) return;
+
     // 3. Get recipient from profileConfigs.emailAddress
     const recipient = await ctx.runQuery(internal.emailDigest.getRecipientEmail, {});
     if (!recipient) {
