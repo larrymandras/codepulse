@@ -7,14 +7,14 @@
 
 ### Advanced Visualization
 
-- [ ] **VIZ-01**: Call graph displays directed agent/tool dependency graph with node state coloring (healthy/errored/pending), error propagation path highlighting, and dagre top-down auto-layout
+- [x] **VIZ-01**: Call graph displays directed agent/tool dependency graph with node state coloring (healthy/errored/pending), error propagation path highlighting, and dagre top-down auto-layout
 - [ ] **VIZ-02**: Context window displays animated progress bar with 70%/90% color thresholds, area chart of token growth over session time, and compaction event markers
 - [ ] **VIZ-03**: Token sunburst shows two-level ring (agent inner, tool outer) sized by token count with hover tooltip, click-to-zoom subtree, and total tokens + cost estimate at center
 
 ### Extended Integrations
 
-- [ ] **EXT-01**: Email digest delivers scheduled daily/weekly HTML summary (alerts, cost, tokens, anomalies, briefing narrative) to configurable recipient via Resend
-- [ ] **EXT-02**: PagerDuty integration triggers/resolves incidents via Events API v2 with stable dedup_key, per-rule toggle, severity mapping, and routing key configuration
+- [x] **EXT-01**: Email digest delivers scheduled daily/weekly HTML summary (alerts, cost, tokens, anomalies, briefing narrative) to configurable recipient via Resend
+- [x] **EXT-02**: PagerDuty integration triggers/resolves incidents via Events API v2 with stable dedup_key, per-rule toggle, severity mapping, and routing key configuration
 - [ ] **EXT-03**: GitHub Actions trigger fires workflow_dispatch on alert match with configurable repo/workflow/ref/PAT, per-rule toggle, rate limiting, and dispatch result logging
 
 ### Schema Foundation
@@ -99,7 +99,7 @@
 | SCH-04 | Phase 59 | Complete |
 | VIZ-02 | Phase 60 | Pending |
 | VIZ-03 | Phase 61 | Pending |
-| EXT-01 | Phase 62 | Pending |
-| VIZ-01 | Phase 63 | Pending |
-| EXT-02 | Phase 64 | Pending |
+| EXT-01 | Phase 62 | Complete |
+| VIZ-01 | Phase 63 | Complete |
+| EXT-02 | Phase 64 | Complete |
 | EXT-03 | Phase 65 | Pending |

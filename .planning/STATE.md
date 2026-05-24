@@ -4,14 +4,14 @@ milestone: v5.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 70 UI-SPEC approved
-last_updated: "2026-05-24T17:18:17.311Z"
-last_activity: 2026-05-24 -- Phase 70 planning complete
+last_updated: "2026-05-24T17:33:53.152Z"
+last_activity: 2026-05-24
 progress:
   total_phases: 20
   completed_phases: 5
   total_plans: 23
-  completed_plans: 19
-  percent: 83
+  completed_plans: 20
+  percent: 87
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 69 — sdk-spend-guard-multi-provider-ux
+**Current focus:** Phase 70 — external-integrations-call-graph
 
 ## Current Position
 
-Phase: 69 (sdk-spend-guard-multi-provider-ux) — EXECUTING
-Plan: 1 of 5
+Phase: 70 (external-integrations-call-graph) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-05-24 -- Phase 70 planning complete
+Last activity: 2026-05-24
 
 ```
 v5.0 Progress: [                                   ] 0%
@@ -68,6 +68,7 @@ Phase 63 ░  Phase 64 ░  Phase 65 ░
 | 63 | TBD | Not started |
 | 64 | TBD | Not started |
 | 65 | TBD | Not started |
+| Phase 70 P01 | 242 | 3 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,6 @@ None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-05-24T13:48:02.220Z
+Last session: 2026-05-24T17:33:53.144Z
 Stopped at: Phase 70 UI-SPEC approved
 Next step: `/gsd-plan-phase 60`
