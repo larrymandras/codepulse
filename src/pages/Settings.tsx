@@ -14,6 +14,8 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import { NotificationChannels } from "../components/NotificationChannels";
 import { NotificationPreferences } from "../components/NotificationPreferences";
+import { EmailDigestConfig } from "../components/EmailDigestConfig";
+import { DeliveryHistory } from "../components/DeliveryHistory";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
 import type { AgentProfile } from "../types";
@@ -713,6 +715,20 @@ export default function Settings() {
       <SectionErrorBoundary name="Notification Channels">
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
         <NotificationChannels />
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Email Digest Config */}
+      <SectionErrorBoundary name="Email Digest">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-8">
+        <EmailDigestConfig />
+      </div>
+      </SectionErrorBoundary>
+
+      {/* Delivery History */}
+      <SectionErrorBoundary name="Delivery History">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+        <DeliveryHistory />
       </div>
       </SectionErrorBoundary>
 
