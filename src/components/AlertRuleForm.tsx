@@ -107,6 +107,12 @@ export function AlertRuleForm({
     ruleId ? { ruleId } : "skip"
   );
 
+  // ─── Existing custom rule data (custom edit mode) ─────────────────────────
+  const existingCustomRule = useQuery(
+    api.alertRuleCustom.get,
+    mode === "custom" && customRuleId ? { id: customRuleId } : "skip"
+  );
+
   // ─── Form state ────────────────────────────────────────────────────────────
   const [ruleName, setRuleName] = useState("");
   const [severity, setSeverity] = useState<string>("warning");
@@ -143,9 +149,19 @@ export function AlertRuleForm({
       setOverrideThreshold(String(existingOverride.threshold ?? ""));
       setOverrideLookback(existingOverride.lookbackWindow ?? "15m");
     }
-    // For custom mode + edit: would load customRule data here
-    // For custom mode + create: reset to defaults
-    if (mode === "custom" && !customRuleId) {
+    if (mode === "custom" && customRuleId && existingCustomRule) {
+      setRuleName(existingCustomRule.name ?? "");
+      setSeverity(existingCustomRule.severity ?? "warning");
+      setConditions(existingCustomRule.conditions?.length ? existingCustomRule.conditions : [{ ...DEFAULT_CONDITION }]);
+      setConditionLogic((existingCustomRule.conditionLogic as "AND" | "OR") ?? "AND");
+      setConditionGroups((existingCustomRule.conditionGroups ?? []) as ConditionGroup[]);
+      setMessageTemplate(existingCustomRule.messageTemplate ?? "");
+      const pdConfig = existingCustomRule.pagerdutyConfig;
+      setPdEnabled(pdConfig?.enabled ?? false);
+      setPdRoutingKey(pdConfig?.routingKey ?? "");
+      setPdSeverity((pdConfig as any)?.severityOverride ?? (pdConfig as any)?.severity);
+      setPdOpen(pdConfig?.enabled ? true : false);
+    } else if (mode === "custom" && !customRuleId) {
       setRuleName("");
       setSeverity("warning");
       setConditions([{ ...DEFAULT_CONDITION }]);
@@ -157,7 +173,7 @@ export function AlertRuleForm({
       setPdSeverity(undefined);
       setPdOpen(false);
     }
-  }, [open, mode, existingOverride, customRuleId]);
+  }, [open, mode, existingOverride, customRuleId, existingCustomRule]);
 
   function markDirty() {
     if (!dirty) setDirty(true);

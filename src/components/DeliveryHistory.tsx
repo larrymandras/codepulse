@@ -28,6 +28,15 @@ export function DeliveryHistory() {
     </div>
   );
 
+  if (emailLogs === undefined || pagerdutyLogs === undefined) {
+    return (
+      <div className="space-y-4">
+        <SectionHeader title="DELIVERY HISTORY" />
+        <div className="h-32 w-full animate-pulse rounded-md bg-muted" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="DELIVERY HISTORY" />
@@ -39,7 +48,7 @@ export function DeliveryHistory() {
         </TabsList>
 
         <TabsContent value="email">
-          {!emailLogs || emailLogs.length === 0 ? (
+          {emailLogs.length === 0 ? (
             renderEmptyState()
           ) : (
             <Table>
@@ -87,7 +96,7 @@ export function DeliveryHistory() {
         </TabsContent>
 
         <TabsContent value="pagerduty">
-          {!pagerdutyLogs || pagerdutyLogs.length === 0 ? (
+          {pagerdutyLogs.length === 0 ? (
             renderEmptyState()
           ) : (
             <Table>

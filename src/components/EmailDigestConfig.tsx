@@ -55,6 +55,15 @@ export function EmailDigestConfig() {
     }
   };
 
+  if (config === undefined) {
+    return (
+      <div className="space-y-4">
+        <SectionHeader title="EMAIL DIGEST" />
+        <div className="h-24 w-full animate-pulse rounded-md bg-muted" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <SectionHeader title="EMAIL DIGEST" />

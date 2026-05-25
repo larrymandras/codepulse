@@ -7,7 +7,7 @@ import CallGraphSVG from "./CallGraphSVG";
 import type { GraphEdge } from "./CallGraphSVG";
 
 const LEGEND_ITEMS = [
-  { label: "Healthy", color: "#22c55e" },
+  { label: "Healthy", color: "#27272a" },
   { label: "Errored", color: "#ef4444" },
   { label: "Pending", color: "#eab308" },
 ];

@@ -720,7 +720,7 @@ export default function Settings() {
 
       {/* Email Digest Config */}
       <SectionErrorBoundary name="Email Digest">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-8">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
         <EmailDigestConfig />
       </div>
       </SectionErrorBoundary>
