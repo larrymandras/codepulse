@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v5.0
 milestone_name: milestone
 status: milestone_complete
-stopped_at: Phase 70 UI-SPEC approved
-last_updated: "2026-05-24T17:52:00.147Z"
-last_activity: 2026-05-24
+stopped_at: Phase 70 complete — milestone v5.0 all phases done
+last_updated: "2026-05-25T10:40:00Z"
+last_activity: 2026-05-25
 progress:
   total_phases: 20
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 23
   completed_plans: 23
-  percent: 35
+  percent: 40
 ---
 
 # Project State
@@ -21,14 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 70 — external-integrations-call-graph
+**Current focus:** Phase 70 complete — milestone v5.0 finished
+**Last completed:** Phase 70 — external-integrations-call-graph (4/4 plans, UAT passed, security verified)
 
 ## Current Position
 
-Phase: 70
-Plan: Not started
+Phase: 70 (complete)
+Plan: 4/4 complete
 Status: Milestone complete
-Last activity: 2026-05-24
+Last activity: 2026-05-25
 
 ```
 v5.0 Progress: [                                   ] 0%
@@ -40,7 +41,7 @@ Phase 63 ░  Phase 64 ░  Phase 65 ░
 
 **Velocity (v4.0 baseline):**
 
-- Total plans completed: 59
+- Total plans completed: 63
 - Phases: 8
 - Timeline: 39 days (2026-03-06 → 2026-04-14)
 
@@ -68,8 +69,11 @@ Phase 63 ░  Phase 64 ░  Phase 65 ░
 | 63 | TBD | Not started |
 | 64 | TBD | Not started |
 | 65 | TBD | Not started |
-| Phase 70 P01 | 242 | 3 tasks | 9 files |
-| Phase 70 P02 | 15m | 2 tasks | 4 files |
+| 66 | 4 | Complete |
+| 67 | 4 | Complete |
+| 68 | 4 | Complete |
+| 69 | 4 | Complete |
+| 70 | 4 | Complete |
 
 ## Accumulated Context
 
@@ -90,8 +94,9 @@ See PROJECT.md Key Decisions table for full history.
 - Fire-and-forget `try/except Exception: pass` guard: telemetry must never break task execution (T-66-08)
 - `session_id` sourced from `get_session_context()` context var, falls back to `task_id` when no active session
 - `duration_ms = duration_seconds * 1000` — gateway returns seconds, CodePulse stores ms
-- [Phase ?]: Phase 70 Plan 02
-- [Phase ?]: Prevents stale layout state across renders per RESEARCH.md Pitfall 4
+- Phase 70: Resend email digest + PagerDuty trigger/resolve + call graph dagre visualization
+- Phase 70: dagre graph created per-call inside computeLayout (not module scope) for deterministic layout
+- Phase 70: PD routing key validation added (code review fix WR-06), "unknown" agent filtering added post-UAT
 
 ### Pending Todos
 
@@ -103,6 +108,6 @@ None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-05-24T17:52:00.139Z
-Stopped at: Phase 70 UI-SPEC approved
-Next step: `/gsd-plan-phase 60`
+Last session: 2026-05-25
+Stopped at: Phase 70 complete, milestone v5.0 finished
+Resume file: None
