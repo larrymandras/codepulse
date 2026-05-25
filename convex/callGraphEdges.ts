@@ -53,7 +53,12 @@ export const listEdges = query({
       .query("callGraphEdges")
       .withIndex("by_timestamp")
       .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("archived"), true),
+          q.neq(q.field("agentId"), "unknown")
+        )
+      )
       .take(500);
   },
 });

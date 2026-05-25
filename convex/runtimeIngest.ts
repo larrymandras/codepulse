@@ -641,9 +641,10 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             timestamp,
           });
           // Populate callGraphEdges from hive_mind_entry data (D-04, per RESEARCH.md A1 resolution)
-          if (d.tool_name ?? d.toolName) {
+          const hiveMindAgent = d.agent_type ?? d.agentType;
+          if ((d.tool_name ?? d.toolName) && hiveMindAgent) {
             await ctx.runMutation(api.callGraphEdges.upsertEdge, {
-              agentId: d.agent_type ?? d.agentType ?? "unknown",
+              agentId: hiveMindAgent,
               toolName: d.tool_name ?? d.toolName ?? "unknown",
               sessionId: d.session_key ?? d.sessionKey ?? d.sessionId ?? d.session_id ?? "unknown",
               success: d.success ?? true,
@@ -751,13 +752,16 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "tool_execution": {
           const d = data as any;
-          await ctx.runMutation(api.callGraphEdges.upsertEdge, {
-            agentId: d.agentId ?? d.agent_id ?? "unknown",
-            toolName: d.toolName ?? d.tool_name ?? "unknown",
-            sessionId: d.sessionId ?? d.session_id ?? "unknown",
-            success: d.success ?? true,
-            timestamp,
-          });
+          const toolExecAgent = d.agentId ?? d.agent_id;
+          if (toolExecAgent) {
+            await ctx.runMutation(api.callGraphEdges.upsertEdge, {
+              agentId: toolExecAgent,
+              toolName: d.toolName ?? d.tool_name ?? "unknown",
+              sessionId: d.sessionId ?? d.session_id ?? "unknown",
+              success: d.success ?? true,
+              timestamp,
+            });
+          }
           break;
         }
         case "operator_score": {
