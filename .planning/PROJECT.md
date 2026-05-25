@@ -2,38 +2,37 @@
 
 ## What This Is
 
-Real-time operational command center for Ástríðr AI assistant. React 19 + Vite + Convex SPA with 15 dashboard pages, 40+ Convex tables, and 90+ UI components. Features bidirectional WebSocket telemetry, agent chat with generative UI blocks, unified inbox, task Kanban, intelligent alerting with Discord/Slack delivery, cost forecasting, anomaly detection, and LLM-powered session briefings.
+Multi-provider operational command center for Ástríðr AI assistant. React 19 + Vite + Convex SPA with 15 dashboard pages, 50+ Convex tables, and 110+ UI components. Features bidirectional WebSocket telemetry, multi-provider cost intelligence (7 providers), gateway observability with quota/routing/spend controls, agent chat with generative UI blocks, unified inbox, task Kanban, intelligent alerting with Discord/Slack/PagerDuty/Email/GitHub Actions delivery, cost forecasting, anomaly detection, LLM-powered session briefings, and call graph visualization.
 
 ## Core Value
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## Current Milestone: v5.0 Advanced Visualization & Integrations
-
-**Goal:** Extend CodePulse with deep operational visualizations and external delivery channels so operators can see token/dependency flows at a glance and get alerted through their existing tooling.
-
-**Target features:**
-- Call graph visualization showing integration dependencies and error propagation
-- Real-time context window growth/shrink visualization during active sessions
-- Token sunburst showing per-agent/per-tool token consumption breakdown
-- Email digest delivery for daily/weekly summaries
-- PagerDuty integration for critical alert escalation
-- GitHub Actions trigger from alert rules (auto-remediation)
-
 ## Current State
 
-**Shipped:** v4.0 CodePulse Operational Excellence (2026-04-14)
-**Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons
+**Shipped:** v5.0 Advanced Visualization & Integrations (2026-05-25)
+**Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons, D3.js, dagre, Resend, React Email
+**Codebase:** ~66,600 LOC TypeScript (src/ + convex/)
 
-8 phases complete across the v4.0 milestone:
-1. UI Foundation — Paperclip design language across all pages
-2. Bidirectional Telemetry — WebSocket consumer + command sender
-3. Interaction Layer — Inbox, Command Palette, Agent Chat, Live Run, Insights Chat
-4. Task Management — Kanban, Ideation Findings, Config Editor, Cron management
-5. Data Pipeline — Aggregation, retention, pagination, optimized analytics
-6. Alert Routing — Rules, webhooks, lifecycle management, notification preferences
-7. Intelligence Layer — Cost forecasting, briefings, anomaly detection, memory quality
-8. Infrastructure Layer (Phase 58) — Command catalog on Capabilities page
+<details>
+<summary>v4.0 — Operational Excellence (2026-04-14)</summary>
+
+8 phases: UI Foundation, Bidirectional Telemetry, Interaction Layer, Task Management, Data Pipeline, Alert Routing, Intelligence Layer, Infrastructure Layer.
+</details>
+
+v5.0 added 12 phases:
+1. Schema Foundation — 4 new tables, 2 extensions for all v5.0 features
+2. Context Window Animation — real-time progress bar with compaction markers
+3. Token Sunburst — two-level ring chart for per-agent/tool token consumption
+4. Email Digest — scheduled HTML summary via Resend
+5. Call Graph — directed agent/tool dependency graph with dagre layout
+6. PagerDuty — incident trigger/resolve via Events API v2
+7. GitHub Actions — workflow_dispatch from alert rules
+8. Gateway Compatibility — central provider registry, OTel fix, gateway event routing
+9. Multi-Provider Pricing — GPT/Gemini pricing, billingType, subscription vs API split
+10. Gateway Observability — quota gauges, routing decisions, provider comparison
+11. SDK Spend Guard — provider controls, spend cap, session provider badges
+12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
 ## Requirements
 
@@ -68,30 +67,41 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 - ✓ Memory quality metrics (dedup, staleness, contradictions) — v4.0 Phase 7
 - ✓ WebSocket command catalog on Capabilities page — v4.0 Phase 58
 
+### Validated (v5.0)
+
+- ✓ Call graph with dagre layout, node state coloring, error path highlighting — v5.0 Phase 63/70
+- ✓ Context window animated progress bar with compaction markers — v5.0 Phase 60
+- ✓ Token sunburst two-level ring with drill-down — v5.0 Phase 61
+- ✓ Email digest delivery via Resend with configurable schedule — v5.0 Phase 62/70
+- ✓ PagerDuty trigger/resolve via Events API v2 with dedup_key — v5.0 Phase 64/70
+- ✓ GitHub Actions workflow_dispatch from alert rules — v5.0 Phase 65
+- ✓ Central provider registry (7 providers, 3 legacy + 4 gateway) — v5.0 Phase 66
+- ✓ Multi-provider cost intelligence with billingType dimension — v5.0 Phase 67
+- ✓ Gateway observability (quota, routing, tasks, comparison) — v5.0 Phase 68
+- ✓ SDK spend guard with projected daily totals — v5.0 Phase 69
+
 ### Active
 
-- Call graph visualization (VIZ-01)
-- Context window growth visualization (VIZ-02)
-- Token sunburst (VIZ-03)
-- Email digest delivery (EXT-01)
-- PagerDuty integration (EXT-02)
-- GitHub Actions trigger from alerts (EXT-03)
+(Pending v6.0 requirements definition via `/gsd-new-milestone`)
 
 ### Out of Scope
 
 - Mobile app — web-first, responsive layouts sufficient
 - Multi-tenant — single operator dashboard
 - OpenTelemetry collector — Convex handles persistence
-- Historical data migration — new aggregation tables start fresh
 - React Three Fiber / 3D visualizations — not operationally useful
+- Force-directed graph layout — non-deterministic, confusing for operators; dagre preferred
+- Bidirectional PagerDuty sync — inbound webhook complexity disproportionate for single operator
+- Graph history playback — v6.0+ candidate
 
 ## Context
 
-- **Ástríðr repo:** C:\Users\mandr\astridr-repo (WebSocket endpoint lives here)
+- **Ástríðr repo:** C:\Users\mandr\astridr-repo (WebSocket endpoint + CLI Gateway)
 - **CodePulse repo:** C:\Users\mandr\codepulse
 - **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
-- **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow
-- **Tests:** 268+ passing (Vitest), 1 pre-existing failure in Inbox keyboard nav
+- **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow, D3.js, dagre, Resend, React Email
+- **Providers:** 7 total — Anthropic Direct, OpenRouter, Ollama (legacy); Claude CLI, Codex CLI, Antigravity CLI, Claude SDK (gateway)
+- **Codebase:** ~66,600 LOC TypeScript, 50+ Convex tables, 15 dashboard pages, 110+ UI components
 
 ## Constraints
 
@@ -111,6 +121,12 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 | Compound AND/OR alert rules | Flexible alert conditions beyond simple thresholds | ✓ Good — extensible rule engine |
 | Z-score anomaly detection | Statistical approach, no ML dependency | ✓ Good — auto-creates alerts |
 | WebSocket command catalog | Live registry vs static Convex count | ✓ Good — real-time command visibility |
+| Central provider registry | Single source of truth for all 7 providers | ✓ Good — eliminates hardcoded provider arrays |
+| D3 for sunburst/area, dagre for call graph | Recharts insufficient for ring/graph viz | ✓ Good — clean D3/React ownership split |
+| Resend for email digest | Consistent with Convex action pattern | ✓ Good — simple API, reliable delivery |
+| PagerDuty Events API v2 (not REST) | Stable dedup_key for trigger/resolve lifecycle | ✓ Good — clean incident management |
+| billingType dimension on cost aggregation | Subscription vs API-billed cost separation | ✓ Good — accurate cost intelligence |
+| dagre graph per-call (not module scope) | Deterministic layout on each render | ✓ Good — avoids stale layout state |
 
 ## Evolution
 
@@ -130,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 — v5.0 milestone started*
+*Last updated: 2026-05-25 after v5.0 milestone*

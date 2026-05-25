@@ -1,34 +1,33 @@
 ---
 gsd_state_version: 1.0
 milestone: v5.0
-milestone_name: milestone
-status: milestone_complete
-stopped_at: Phase 70 complete — milestone v5.0 all phases done
-last_updated: "2026-05-25T10:40:00Z"
+milestone_name: Advanced Visualization & Integrations
+status: shipped
+stopped_at: milestone complete
+last_updated: "2026-05-25T17:10:55.155Z"
 last_activity: 2026-05-25
 progress:
   total_phases: 20
-  completed_phases: 8
+  completed_phases: 6
   total_plans: 23
   completed_plans: 23
-  percent: 40
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-16)
+See: .planning/PROJECT.md (updated 2026-05-25)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** Phase 70 complete — milestone v5.0 finished
-**Last completed:** Phase 70 — external-integrations-call-graph (4/4 plans, UAT passed, security verified)
+**Current focus:** v5.0 shipped — awaiting v6.0 milestone definition
+**Last completed:** v5.0 milestone archived (2026-05-25)
 
 ## Current Position
 
-Phase: 70 (complete)
-Plan: 4/4 complete
-Status: Milestone complete
+Milestone: v5.0 (shipped)
+Status: Awaiting `/gsd-new-milestone` for v6.0
 Last activity: 2026-05-25
 
 ```
@@ -108,6 +107,6 @@ None. Phase 59 has no dependencies — start immediately.
 
 ## Session Continuity
 
-Last session: 2026-05-25
-Stopped at: Phase 70 complete, milestone v5.0 finished
+Last session: 2026-05-25T16:58:29.885Z
+Stopped at: context exhaustion at 75% (2026-05-25)
 Resume file: None

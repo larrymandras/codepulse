@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Sessions showing 'unknown' instead of muted 'untagged'"
 created: 2026-05-23T00:00:00Z
 updated: 2026-05-23T00:00:00Z
@@ -57,6 +57,6 @@ root_cause: |
   Additionally, ActiveSessions.tsx uses "N/A" and SessionHeader.tsx uses "—" as their own fallbacks —
   these are inconsistent with each other and none use muted/dimmed styling.
 
-fix:
-verification:
-files_changed: []
+fix: Replaced `session.model ?? "unknown"` with ternary rendering muted italic "untagged" span (Phase 69-05 gap closure)
+verification: SessionComparison.tsx line 68 confirmed — no "unknown" string in file
+files_changed: [src/components/SessionComparison.tsx]

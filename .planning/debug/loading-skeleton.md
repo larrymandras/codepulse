@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "SDK Spend Guard loading skeleton — user couldn't confirm pulsing gray bars appear before data renders"
 created: 2026-05-23T00:00:00Z
 updated: 2026-05-23T00:00:00Z

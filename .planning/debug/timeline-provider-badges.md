@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Provider Badges on Session Timeline — tool call events should show colored provider badges on session timeline but no provider badges visible on PostToolUse events"
 created: 2026-05-23T00:00:00Z
 updated: 2026-05-23T00:00:00Z
@@ -73,6 +73,6 @@ started: After Phase 69 Plan 04 was supposed to add this feature
 ## Resolution
 
 root_cause: The build-time ingest path in convex/ingest.ts never passes `provider` to the toolExecutions.insert mutation when handling PostToolUse events (lines 138-147). The hook dispatcher (codepulse-hook.mjs) also does not include provider in its payload because Claude Code hooks do not expose provider information. As a result, all toolExecution records created from PostToolUse events have provider=undefined, causing the toolExecProviderMap in SessionTimeline to be empty, and badges never render. The fix requires TWO changes: (1) determine the provider (likely from session.provider or a default based on the CLI source, e.g. "claude-cli"), and (2) pass it to the toolExecutions.insert call. Additionally, the session.upsert call in ingest.ts (line 47-51) also omits provider, so session-level provider must also be populated.
-fix:
-verification:
-files_changed: []
+fix: Added provider field to toolExecutions.insert call in ingest.ts PostToolUse handler with fallback to "claude-cli" (Phase 69-05 gap closure)
+verification: ingest.ts line 147 confirms provider: data.provider ?? "claude-cli"
+files_changed: [convex/ingest.ts]

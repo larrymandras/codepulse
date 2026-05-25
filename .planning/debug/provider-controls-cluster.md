@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Gaps 6/7/8: drag-to-reorder, enable/disable toggle, seed gateway defaults — all non-functional in ProviderControls"
 created: 2026-05-23T00:00:00Z
 updated: 2026-05-23T00:01:00Z
@@ -78,6 +78,6 @@ root_cause: |
   - Gap 8: Seed succeeds but UI doesn't transition because providerConfig stays empty
   - Gap 6: Drag cards never render (gated on configs.length > 0)
   - Gap 7: Toggle buttons never render (gated on configs.length > 0)
-fix:
-verification:
-files_changed: []
+fix: Added seedProviderConfigs internalMutation to seedGateway.ts, called from runSeed alongside the other two seed mutations (Phase 69-05 gap closure)
+verification: seedGateway.ts line 103 confirms runSeed schedules seedProviderConfigs
+files_changed: [convex/seedGateway.ts]
