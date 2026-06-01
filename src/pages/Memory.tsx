@@ -20,9 +20,12 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { GlassPanel } from "@/components/GlassPanel";
 import { StatusBadge } from "@/components/StatusBadge";
 import MetricCard, { AnimatedNumber } from "@/components/MetricCard";
+import { ObsidianGraph } from "../components/ObsidianGraph";
+import { getStoredVaultDirectory, requestVaultDirectory, parseVault, GraphData } from "../lib/obsidian";
+import { useEffect } from "react";
 
 type TabId = "timeline" | "tiers" | "reflections" | "quality";
-type MemoryTab = "episodic" | "preflight" | "durable" | "imports";
+type MemoryTab = "episodic" | "preflight" | "durable" | "imports" | "obsidian";
 
 function formatTimestamp(ts: number): string {
   return new Date(ts * 1000).toLocaleString();
@@ -52,6 +55,45 @@ export default function Memory() {
   const [activeTab, setActiveTab] = useState<TabId>("timeline");
   const [durableSearch, setDurableSearch] = useState("");
   const [durableCategory, setDurableCategory] = useState("");
+
+  const [obsidianData, setObsidianData] = useState<GraphData | null>(null);
+  const [obsidianError, setObsidianError] = useState<string>("");
+  const [isObsidianLoading, setIsObsidianLoading] = useState(false);
+  const [vaultConnected, setVaultConnected] = useState(false);
+
+  useEffect(() => {
+    async function initObsidian() {
+      try {
+        const handle = await getStoredVaultDirectory();
+        if (handle) {
+          setVaultConnected(true);
+          setIsObsidianLoading(true);
+          const data = await parseVault(handle);
+          setObsidianData(data);
+        }
+      } catch (err: any) {
+        setObsidianError(err.message || "Failed to load stored vault.");
+      } finally {
+        setIsObsidianLoading(false);
+      }
+    }
+    initObsidian();
+  }, []);
+
+  async function handleConnectVault() {
+    try {
+      setObsidianError("");
+      setIsObsidianLoading(true);
+      const handle = await requestVaultDirectory();
+      setVaultConnected(true);
+      const data = await parseVault(handle);
+      setObsidianData(data);
+    } catch (err: any) {
+      setObsidianError(err.message || "Failed to connect vault.");
+    } finally {
+      setIsObsidianLoading(false);
+    }
+  }
 
   // Existing episodic queries
   const overview = useQuery(api.memory.overview);
@@ -111,6 +153,7 @@ export default function Memory() {
           <TabsTrigger value="preflight">Preflight</TabsTrigger>
           <TabsTrigger value="durable">Durable Facts</TabsTrigger>
           <TabsTrigger value="imports">Imports</TabsTrigger>
+          <TabsTrigger value="obsidian">Obsidian</TabsTrigger>
         </TabsList>
 
         {/* === EPISODIC TAB (all existing content) === */}
@@ -285,40 +328,52 @@ export default function Memory() {
                       </p>
                     </div>
                   ) : (
-                    displayEvents.map((event: any) => (
-                      <div
-                        key={event._id}
-                        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-600/20 text-indigo-400">
-                                {event.eventType}
-                              </span>
-                              {event.agentId && (
-                                <span className="text-xs text-gray-500">
-                                  {event.agentId}
+                    <div className="relative max-h-[600px] overflow-y-auto pr-4 custom-scrollbar">
+                      {/* Vertical connector line */}
+                      <div className="absolute left-[11px] top-4 bottom-4 w-px bg-indigo-500/20" />
+                      
+                      <div className="space-y-4">
+                        {displayEvents.map((event: any) => (
+                          <div
+                            key={event._id}
+                            className="relative pl-8 group"
+                          >
+                            {/* Dot on the timeline */}
+                            <div className="absolute left-[11px] top-3.5 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 ring-4 ring-gray-950 group-hover:bg-indigo-400 group-hover:shadow-[0_0_8px_rgba(99,102,241,0.6)] transition-all" />
+                            
+                            <div className="bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/70 hover:border-indigo-500/30 transition-colors rounded-lg p-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-baseline gap-2">
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-600/20 text-indigo-400 uppercase tracking-wider">
+                                      {event.eventType}
+                                    </span>
+                                    {event.agentId && (
+                                      <span className="text-xs text-gray-500 font-mono">
+                                        {event.agentId}
+                                      </span>
+                                    )}
+                                    <span className="text-sm text-gray-200 ml-1">
+                                      {event.summary}
+                                    </span>
+                                  </div>
+                                  {event.detail && (
+                                    <pre className="mt-2 text-[11px] text-gray-400 bg-gray-900/60 rounded p-2 overflow-x-auto font-mono whitespace-pre-wrap max-h-32 custom-scrollbar">
+                                      {typeof event.detail === "string"
+                                        ? event.detail
+                                        : JSON.stringify(event.detail)}
+                                    </pre>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-gray-500 whitespace-nowrap pt-0.5 font-mono">
+                                  {formatTimestamp(event.timestamp)}
                                 </span>
-                              )}
+                              </div>
                             </div>
-                            <p className="text-sm text-gray-200">
-                              {event.summary}
-                            </p>
-                            {event.detail && (
-                              <pre className="mt-2 text-xs text-gray-500 bg-gray-900/50 rounded-lg p-2 overflow-x-auto font-mono">
-                                {typeof event.detail === "string"
-                                  ? event.detail
-                                  : JSON.stringify(event.detail, null, 2)}
-                              </pre>
-                            )}
                           </div>
-                          <span className="text-xs text-gray-600 whitespace-nowrap">
-                            {formatTimestamp(event.timestamp)}
-                          </span>
-                        </div>
+                        ))}
                       </div>
-                    ))
+                    </div>
                   )}
                 </div>
               </>
@@ -750,6 +805,50 @@ export default function Memory() {
                       ))}
                     </TableBody>
                   </Table>
+                </GlassPanel>
+              )}
+            </div>
+          </SectionErrorBoundary>
+        </TabsContent>
+
+        {/* === OBSIDIAN TAB === */}
+        <TabsContent value="obsidian">
+          <SectionErrorBoundary name="Obsidian Graph">
+            <div className="space-y-6 mt-4">
+              {!vaultConnected ? (
+                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-12 text-center flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-gray-200">Connect your Obsidian Vault</h3>
+                    <p className="text-sm text-gray-400 mt-2 max-w-md mx-auto">
+                      Select your local Obsidian vault folder to visualize your notes as a fully interactive network graph directly in CodePulse. Everything stays local.
+                    </p>
+                  </div>
+                  {obsidianError && (
+                    <p className="text-sm text-red-400">{obsidianError}</p>
+                  )}
+                  <Button onClick={handleConnectVault} disabled={isObsidianLoading} className="mt-2">
+                    {isObsidianLoading ? "Connecting..." : "Select Folder"}
+                  </Button>
+                </div>
+              ) : (
+                <GlassPanel className="rounded-xl overflow-hidden p-0 relative">
+                  <div className="absolute top-4 left-4 z-10 flex gap-2">
+                    <Button variant="secondary" size="sm" onClick={handleConnectVault}>
+                      Change Vault
+                    </Button>
+                  </div>
+                  {isObsidianLoading && !obsidianData ? (
+                    <div className="h-[600px] flex items-center justify-center">
+                      <p className="text-gray-400 animate-pulse">Parsing vault files...</p>
+                    </div>
+                  ) : obsidianData ? (
+                    <ObsidianGraph data={obsidianData} />
+                  ) : null}
                 </GlassPanel>
               )}
             </div>
