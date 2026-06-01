@@ -6,7 +6,12 @@ graphify-out/
 
 # Claude Code
 .claude/
+.claire/
 .last-update-check
+
+# Tooling artifacts (ephemeral — brainstorm sessions, temp dumps)
+.superpowers/
+tmp_skills.json
 
 # Test artifacts
 playwright-report/
