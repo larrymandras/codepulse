@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Knowledge Graph Observability & Hardening
-status: planning
-last_updated: "2026-06-01T20:43:11.076Z"
+status: ready
+last_updated: "2026-06-01T00:00:00.000Z"
 last_activity: 2026-06-01
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,18 +17,20 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-25)
+See: .planning/PROJECT.md (updated 2026-06-01)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** v5.0 shipped — awaiting v6.0 milestone definition
+**Current focus:** v6.0 Knowledge Graph Observability & Hardening — roadmap complete, ready to plan Phase 71
 **Last completed:** v5.0 milestone archived (2026-05-25)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 71 — CI & Production Hardening
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-01 — Milestone v6.0 started
+Status: Ready to plan
+Last activity: 2026-06-01 — v6.0 roadmap created (4 phases, 12 requirements mapped)
+
+**Progress bar:** [░░░░░░░░░░] 0% (0/4 phases)
 
 ## Performance Metrics
 
@@ -55,18 +57,27 @@ Last activity: 2026-06-01 — Milestone v6.0 started
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 59 | TBD | Not started |
-| 60 | TBD | Not started |
-| 61 | TBD | Not started |
-| 62 | TBD | Not started |
-| 63 | TBD | Not started |
-| 64 | TBD | Not started |
-| 65 | TBD | Not started |
+| 59 | 2 | Complete |
+| 60 | — | Complete (outside GSD) |
+| 61 | — | Complete (outside GSD) |
+| 62 | — | Schema only (delivery → Phase 70) |
+| 63 | — | Infra only (viz → Phase 70) |
+| 64 | — | Schema only (API → Phase 70) |
+| 65 | — | Complete (outside GSD) |
 | 66 | 4 | Complete |
 | 67 | 4 | Complete |
 | 68 | 4 | Complete |
 | 69 | 4 | Complete |
 | 70 | 4 | Complete |
+
+**v6.0 By Phase:**
+
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 71 | TBD | Not started |
+| 72 | TBD | Not started |
+| 73 | TBD | Not started (ext. blocked) |
+| 74 | TBD | Not started (ext. blocked) |
 
 ## Accumulated Context
 
@@ -91,16 +102,27 @@ See PROJECT.md Key Decisions table for full history.
 - Phase 70: dagre graph created per-call inside computeLayout (not module scope) for deterministic layout
 - Phase 70: PD routing key validation added (code review fix WR-06), "unknown" agent filtering added post-UAT
 
+**v6.0 key decisions:**
+
+- KG phases (73-74) are BLOCKED on Ástríðr Phase 125 (backfill) + Phase 126 (KG HTTP read API + kg_summary emitter). Do not start planning Phase 73 until both ship.
+- ForceGraphCanvas extracted from ObsidianGraph.tsx as shared renderer — ObsidianGraph refactored to use it, keeping its tests green
+- kgApi.ts and kg-graph.ts are separate modules: kgApi is the typed fetch layer, kg-graph is pure transform logic (testable without network)
+- KG graph data is fetch-on-demand from Ástríðr (not mirrored into Convex) — only kgSummary is persisted in Convex for always-on cards
+- Temporal state (asOf) is server-side: the asOf param triggers a re-fetch; client-side deriveView handles type/predicate/agent filtering only
+- Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only
+- Design authority for all KG work: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`
+
 ### Pending Todos
 
-- Run `/gsd-plan-phase 59` to begin Phase 59 planning
+- Run `/gsd-plan-phase 71` to begin Phase 71 planning
+- Monitor Ástríðr repo for Phase 125 (backfill) and Phase 126 (KG read API) completion before starting Phase 73
 
 ### Blockers/Concerns
 
-None. Phase 59 has no dependencies — start immediately.
+- Phases 73 and 74 are externally blocked on Ástríðr Phase 125 + Phase 126. Phases 71 and 72 are unblocked.
 
 ## Session Continuity
 
-Last session: 2026-05-25T18:49:12.612Z
-Stopped at: context exhaustion at 76% (2026-05-25)
+Last session: 2026-06-01
+Stopped at: v6.0 roadmap created
 Resume file: None

@@ -60,4 +60,15 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| (filled by roadmap) | | |
+| KG-01 | Phase 73 | Pending |
+| KG-02 | Phase 73 | Pending |
+| KG-03 | Phase 73 | Pending |
+| KG-04 | Phase 74 | Pending |
+| KG-05 | Phase 74 | Pending |
+| KG-06 | Phase 74 | Pending |
+| KG-07 | Phase 73 | Pending |
+| UI-09 | Phase 72 | Pending |
+| OPS-01 | Phase 71 | Pending |
+| OPS-02 | Phase 71 | Pending |
+| OPS-03 | Phase 71 | Pending |
+| QA-01 | Phase 72 | Pending |
