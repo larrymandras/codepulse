@@ -55,10 +55,10 @@ export async function parseVault(dirHandle: FileSystemDirectoryHandle): Promise<
       if (entry.kind === 'directory') {
         // Skip hidden directories like .obsidian or .git
         if (!entry.name.startsWith('.')) {
-          await readDirectory(entry, `${currentPath}${entry.name}/`);
+          await readDirectory(entry as FileSystemDirectoryHandle, `${currentPath}${entry.name}/`);
         }
       } else if (entry.kind === 'file' && entry.name.endsWith('.md')) {
-        const file = await entry.getFile();
+        const file = await (entry as FileSystemFileHandle).getFile();
         const text = await file.text();
         
         const fileNameWithoutExt = entry.name.replace(/\.md$/, '');

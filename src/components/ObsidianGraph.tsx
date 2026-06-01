@@ -7,7 +7,7 @@ interface ObsidianGraphProps {
 }
 
 export function ObsidianGraph({ data }: ObsidianGraphProps) {
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
   const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
 
   // Vibrant, cyberpunk/neon palette
