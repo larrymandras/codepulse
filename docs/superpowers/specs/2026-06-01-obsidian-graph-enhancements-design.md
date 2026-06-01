@@ -1,7 +1,12 @@
 # Obsidian Graph Enhancements — Design
 
 **Date:** 2026-06-01
-**Status:** Approved (design); ready for implementation planning
+**Status:** DEFERRED (design complete, not scheduled) — 2026-06-01. Obsidian's native Graph
+view already provides folder coloring, filters, search, and local-graph focus, so these
+enhancements would largely duplicate it. The base Obsidian vault graph (merged `50e8e42`)
+stays as a finished personal utility. Enhancement effort redirected to visualizing
+**Ástríðr's temporal knowledge graph** (v16.0 entities/triples) in CodePulse — the
+on-mission, novel observability view. This document is retained as a design record.
 **Component:** CodePulse — Memory page, Obsidian tab
 **Builds on:** the Obsidian vault graph view merged in `50e8e42`
 
