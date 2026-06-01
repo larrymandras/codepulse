@@ -34,6 +34,19 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
+## Current Milestone: v6.0 Knowledge Graph Observability & Hardening
+
+**Goal:** Visualize Ástríðr's temporal knowledge graph inside CodePulse, and close v5.0's quality/deploy gaps.
+
+**Target features:**
+- **Knowledge Graph page** (`/knowledge-graph`) — 4 lenses (ego / overview / temporal / contradiction), always-on summary cards, provenance links into the episodic Memory view, and a shared `<ForceGraphCanvas>` extracted from the Obsidian renderer. Consumes Ástríðr's Phase 126 read API; full scope per `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
+- **REQUIREMENTS traceability reconciliation** — table reflects what actually shipped (v4/v5).
+- **Lucide icon standardization** — complete UI-08 across all dashboard surfaces.
+- **Production CORS config** — set/document `CODEPULSE_ALLOWED_ORIGIN` + deploy checklist.
+- **CI green-up** — resolve Gitleaks secret-scan + Supabase migration-drift failures.
+
+**Sequencing:** the four hardening features are executable immediately and come first; the KG-viz phases are **gated on Ástríðr Phase 126** (read API) and are ordered last.
+
 ## Requirements
 
 ### Validated (v4.0)
@@ -90,9 +103,7 @@ v5.0 added 12 phases:
 - Multi-tenant — single operator dashboard
 - OpenTelemetry collector — Convex handles persistence
 - React Three Fiber / 3D visualizations — not operationally useful
-- Force-directed graph layout — non-deterministic, confusing for operators; dagre preferred
 - Bidirectional PagerDuty sync — inbound webhook complexity disproportionate for single operator
-- Graph history playback — v6.0+ candidate
 
 ## Context
 
@@ -127,6 +138,7 @@ v5.0 added 12 phases:
 | PagerDuty Events API v2 (not REST) | Stable dedup_key for trigger/resolve lifecycle | ✓ Good — clean incident management |
 | billingType dimension on cost aggregation | Subscription vs API-billed cost separation | ✓ Good — accurate cost intelligence |
 | dagre graph per-call (not module scope) | Deterministic layout on each render | ✓ Good — avoids stale layout state |
+| Force-directed (react-force-graph-2d) for relationship graphs (v6.0) | Reverses the v5.0 "force-directed out of scope" call: dagre suits DAGs (call graph), but the Obsidian vault graph and Ástríðr KG are cyclic entity-relationship graphs where force layout is the right fit. Already validated by the merged Obsidian graph. | KG-viz + Obsidian graph use it; dagre retained for the call graph |
 
 ## Evolution
 
@@ -146,4 +158,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after v5.0 milestone*
+*Last updated: 2026-06-01 — started v6.0 Knowledge Graph Observability & Hardening*

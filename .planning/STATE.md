@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: milestone
-status: Awaiting `/gsd-new-milestone` for v6.0
-stopped_at: context exhaustion at 76% (2026-05-25)
-last_updated: "2026-05-25T18:49:12.615Z"
-last_activity: 2026-05-25
+milestone: v6.0
+milestone_name: Knowledge Graph Observability & Hardening
+status: planning
+last_updated: "2026-06-01T20:43:11.076Z"
+last_activity: 2026-06-01
 progress:
   total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,15 +25,10 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 
 ## Current Position
 
-Milestone: v5.0 (shipped)
-Status: Awaiting `/gsd-new-milestone` for v6.0
-Last activity: 2026-05-25
-
-```
-v5.0 Progress: [                                   ] 0%
-Phase 59 ░  Phase 60 ░  Phase 61 ░  Phase 62 ░
-Phase 63 ░  Phase 64 ░  Phase 65 ░
-```
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-01 — Milestone v6.0 started
 
 ## Performance Metrics
 
