@@ -121,6 +121,12 @@ See PROJECT.md Key Decisions table for full history.
 
 - Phases 73 and 74 are externally blocked on Ástríðr Phase 125 + Phase 126. Phases 71 and 72 are unblocked.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260603-or6 | Register Opus 4.8 in cost model + fix 3× Opus over-pricing (opus-4-5/4-6 were Opus-3 $15/$75 → corrected to $5/$25), add opus-4-8 to model dropdown | 2026-06-03 | 92c04e3 | [260603-or6-codepulse-register-opus-4-8-in-cost-mode](./quick/260603-or6-codepulse-register-opus-4-8-in-cost-mode/) |
+
 ## Session Continuity
 
 Last session: 2026-06-01
