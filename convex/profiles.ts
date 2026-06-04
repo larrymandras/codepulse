@@ -223,7 +223,7 @@ export const seedProfiles = mutation({
           { type: "notion", status: "active" },
         ],
         budget: { spent: 87.30, limit: 200, period: "monthly" },
-        modelPreferences: { primary: "claude-opus-4-6", fallback: "claude-sonnet-4-6" },
+        modelPreferences: { primary: "claude-opus-4-8", fallback: "claude-sonnet-4-6" },
       },
       {
         profileId: "consulting",
@@ -235,7 +235,7 @@ export const seedProfiles = mutation({
           { type: "linear", status: "active" },
         ],
         budget: { spent: 156.80, limit: 500, period: "monthly" },
-        modelPreferences: { primary: "claude-opus-4-6", fallback: "claude-sonnet-4-6" },
+        modelPreferences: { primary: "claude-opus-4-8", fallback: "claude-sonnet-4-6" },
       },
     ];
 

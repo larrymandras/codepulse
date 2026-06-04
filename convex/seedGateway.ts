@@ -6,7 +6,7 @@ const DAILY_CAP = 5.00;
 const ALERT_THRESHOLD = 0.8;
 
 const GATEWAY_PROFILES = [
-  { profileId: "claude-cli",  name: "Claude CLI",  model: "claude-opus-4-6",   displayName: "Claude CLI -- Subscription" },
+  { profileId: "claude-cli",  name: "Claude CLI",  model: "claude-opus-4-8",   displayName: "Claude CLI -- Subscription" },
   { profileId: "codex",       name: "Codex CLI",   model: "gpt-4o",            displayName: "Codex CLI -- Subscription" },
   { profileId: "antigravity", name: "Antigravity", model: "gpt-4o",            displayName: "Antigravity CLI -- Subscription" },
   { profileId: "claude-sdk",  name: "Claude SDK",  model: "claude-sonnet-4-6", displayName: "Claude SDK -- API" },
