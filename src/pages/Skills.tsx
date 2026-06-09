@@ -153,8 +153,8 @@ export default function Skills() {
       </h1>
 
       {needsSeed && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-6 text-center">
-          <p className="text-gray-300 mb-3">
+        <div className="bg-card border border-border rounded-lg p-6 text-center">
+          <p className="text-muted-foreground mb-3">
             Skills found but no categories set up yet.
           </p>
           <div className="flex gap-3 justify-center">
@@ -166,7 +166,7 @@ export default function Skills() {
             </button>
             <button
               onClick={() => setCreatingCategory(true)}
-              className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              className="bg-muted text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-colors text-sm"
             >
               Set Up Manually
             </button>
@@ -241,7 +241,7 @@ export default function Skills() {
                 
                 {/* Aggregate overview when no category is selected */}
                 {uncategorizedSkills.length > 0 && (
-                  <div className="border-t border-gray-700/50 pt-6">
+                  <div className="border-t border-border pt-6">
                     <UncategorizedSkills
                       skills={uncategorizedSkills}
                       onLaunch={handleLaunch}

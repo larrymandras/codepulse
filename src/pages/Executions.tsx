@@ -105,33 +105,33 @@ export default function Executions() {
   return (
     <div className="space-y-6">
       {/* Page heading */}
-      <h1 className="text-2xl font-semibold text-gray-100">
+      <h1 className="text-2xl font-semibold text-foreground">
         Execution History
       </h1>
 
       {/* Summary stat bar — PRIMARY VISUAL ANCHOR */}
       <SectionErrorBoundary name="Execution Metrics">
         <div ref={flashRef} className="grid grid-cols-4 gap-4">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Total</p>
-            <p className="text-2xl font-semibold text-gray-100">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Total</p>
+            <p className="text-2xl font-semibold text-foreground">
               {totalDisplay}
             </p>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Running</p>
-            <p className="text-2xl font-semibold text-gray-100">
+          <div className="bg-card border border-border rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Running</p>
+            <p className="text-2xl font-semibold text-foreground">
               {runningDisplay}
             </p>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Failed</p>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Failed</p>
             <p className="text-2xl font-semibold text-red-400">
               {failedDisplay}
             </p>
           </div>
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-            <p className="text-sm font-semibold uppercase tracking-wide text-gray-400">Avg Duration</p>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Avg Duration</p>
             <p className="text-2xl font-semibold text-indigo-400">
               {avgDurationDisplay}
             </p>
@@ -140,7 +140,7 @@ export default function Executions() {
       </SectionErrorBoundary>
 
       {/* Filter bar */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
+      <div className="bg-card border border-border rounded-lg p-4">
         <ExecutionFilterBar
           filters={filters}
           onFilterChange={handleFilterChange}
@@ -149,8 +149,8 @@ export default function Executions() {
       </div>
 
       {/* Execution table */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-lg p-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-3">
+      <div className="bg-card border border-border rounded-lg p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           Command Executions
         </h2>
         <ExecutionTable executions={executions} hasActiveFilters={hasActiveFilters} />

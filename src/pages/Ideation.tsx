@@ -126,7 +126,7 @@ export default function Ideation() {
               Convert Selected ({selectedIds.size})
             </button>
           )}
-          <span className="text-xs text-gray-500">{totalActive} findings</span>
+          <span className="text-xs text-muted-foreground">{totalActive} findings</span>
         </div>
       </div>
 
@@ -144,15 +144,15 @@ export default function Ideation() {
       </SectionErrorBoundary>
 
       {/* Scan type filter */}
-      <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {SCAN_TYPE_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setScanTypeFilter(tab)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               scanTypeFilter === tab
-                ? "bg-gray-700 text-gray-100"
-                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`}
           >
             {tab === "all" ? "All" : tab}
@@ -161,15 +161,15 @@ export default function Ideation() {
       </div>
 
       {/* Severity filter */}
-      <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {SEVERITY_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setSeverityFilter(tab)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
               severityFilter === tab
-                ? "bg-gray-700 text-gray-100"
-                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`}
           >
             {tab}
@@ -178,15 +178,15 @@ export default function Ideation() {
       </div>
 
       {/* Status filter */}
-      <div className="flex gap-1 bg-gray-800/50 border border-gray-700/50 rounded-lg p-1 w-fit">
+      <div className="flex gap-1 bg-card border border-border rounded-lg p-1 w-fit">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab}
             onClick={() => setStatusFilter(tab)}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
               statusFilter === tab
-                ? "bg-gray-700 text-gray-100"
-                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
             }`}
           >
             {tab}
@@ -195,24 +195,24 @@ export default function Ideation() {
       </div>
 
       <SectionErrorBoundary>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4">
           <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
             Ideation Findings
             <InfoTooltip text="Proactive scan findings across code quality, security, performance, documentation, operational, and cost dimensions." />
-            <span className="ml-2 text-xs text-gray-500 font-normal">{filteredFindings.length}</span>
+            <span className="ml-2 text-xs text-muted-foreground font-normal">{filteredFindings.length}</span>
           </h2>
 
           {findings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-gray-400">No findings</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground">No findings</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 Proactive scans run on a daily schedule. Check back after the next scan.
               </p>
             </div>
           ) : filteredFindings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-gray-400">No findings match this filter</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-sm text-muted-foreground">No findings match this filter</p>
+              <p className="text-xs text-muted-foreground mt-1">
                 Try clearing the severity or scan type filter.
               </p>
             </div>

@@ -97,7 +97,7 @@ export default function Dreaming() {
               <div className="space-y-2">
                 <SectionHeader title="Cycle History" />
                 {!cycles || cycles.length === 0 ? (
-                  <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                  <div className="bg-card border border-border rounded-xl p-8 text-center">
                     <p className="text-sm text-muted-foreground">
                       No dreaming cycles recorded yet. Cycles run nightly --
                       check back tomorrow, or trigger a backfill run.
@@ -110,7 +110,7 @@ export default function Dreaming() {
                         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
                           <div className="flex items-center gap-3">
                             <StatusBadge status={cycle.status ?? "idle"} />
-                            <span className="text-sm text-gray-200">
+                            <span className="text-sm text-foreground">
                               {formatTimestamp(cycle.runDate ?? cycle._creationTime / 1000)}
                             </span>
                             {cycle.isBackfill && (
@@ -175,7 +175,7 @@ export default function Dreaming() {
                   <select
                     value={factCategory}
                     onChange={(e) => setFactCategory(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">All Categories</option>
                     {allCategories.map((cat) => (
@@ -188,14 +188,14 @@ export default function Dreaming() {
               </div>
 
               {!facts || facts.length === 0 ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No durable facts extracted yet. Run a dreaming cycle to
                     extract long-term facts from your conversation history.
                   </p>
                 </div>
               ) : filteredFacts.length === 0 ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No facts match your search.
                   </p>
@@ -214,7 +214,7 @@ export default function Dreaming() {
                     <TableBody>
                       {filteredFacts.map((fact: any) => (
                         <TableRow key={fact._id}>
-                          <TableCell className="text-sm text-gray-200 max-w-md">
+                          <TableCell className="text-sm text-foreground max-w-md">
                             {fact.factText}
                           </TableCell>
                           <TableCell>
@@ -279,7 +279,7 @@ export default function Dreaming() {
               <div className="space-y-2">
                 <SectionHeader title="Per-Run Spend" />
                 {!cycles || cycles.length === 0 ? (
-                  <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                  <div className="bg-card border border-border rounded-xl p-8 text-center">
                     <p className="text-sm text-muted-foreground">
                       No cycle data available yet.
                     </p>
@@ -298,7 +298,7 @@ export default function Dreaming() {
                       <TableBody>
                         {cycles.map((cycle: any) => (
                           <TableRow key={cycle._id}>
-                            <TableCell className="text-sm text-gray-200 whitespace-nowrap">
+                            <TableCell className="text-sm text-foreground whitespace-nowrap">
                               {formatTimestamp(
                                 cycle.runDate ?? cycle._creationTime / 1000
                               )}
