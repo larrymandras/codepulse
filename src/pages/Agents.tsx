@@ -74,7 +74,7 @@ function SortableProfileCard({
     <div
       ref={setNodeRef}
       style={style}
-      className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 hover:border-gray-600/50 transition-colors group"
+      className="bg-card border border-border rounded-xl p-4 hover:border-border transition-colors group"
     >
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
@@ -82,7 +82,7 @@ function SortableProfileCard({
         <button
           {...attributes}
           {...listeners}
-          className="mt-1 cursor-grab active:cursor-grabbing text-gray-600 hover:text-gray-400 transition-colors touch-none"
+          className="mt-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-muted-foreground transition-colors touch-none"
           title="Drag to reorder"
         >
           <GripVertical className="h-4 w-4" />
@@ -93,16 +93,16 @@ function SortableProfileCard({
           size="md"
         />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-gray-100 truncate">
+          <h3 className="text-sm font-semibold text-foreground truncate">
             {profile.displayName ?? profile.name}
           </h3>
-          <p className="text-[10px] text-gray-500 font-mono">
+          <p className="text-[10px] text-muted-foreground font-mono">
             {profile.profileId}
           </p>
         </div>
         <button
           onClick={() => onEdit(profile)}
-          className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-300 text-xs transition-opacity"
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground text-xs transition-opacity"
         >
           Edit
         </button>
@@ -111,7 +111,7 @@ function SortableProfileCard({
       {/* Model badge */}
       {profile.model && (
         <div className="mb-3">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-700/50 text-gray-400">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
             {profile.model}
           </span>
         </div>
@@ -119,7 +119,7 @@ function SortableProfileCard({
 
       {/* Avatar description & capabilities */}
       {avatar?.description && (
-        <p className="text-xs text-gray-400 mb-2">{avatar.description}</p>
+        <p className="text-xs text-muted-foreground mb-2">{avatar.description}</p>
       )}
 
       {avatar?.capabilities && avatar.capabilities.length > 0 && (
@@ -127,7 +127,7 @@ function SortableProfileCard({
           {avatar.capabilities.map((cap: string) => (
             <span
               key={cap}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-gray-700/40 text-gray-400"
+              className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
             >
               {cap}
             </span>
@@ -136,7 +136,7 @@ function SortableProfileCard({
       )}
 
       {/* Runtime stats */}
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-700/30 text-[10px] text-gray-500">
+      <div className="flex items-center gap-3 pt-2 border-t border-border text-[10px] text-muted-foreground">
         <span>
           {runtimeCount} instance{runtimeCount !== 1 ? "s" : ""}
         </span>
@@ -310,8 +310,8 @@ export default function Agents() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-100">Agents</h1>
-          <p className="text-xs text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Agents</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Agent registry, runtime instances, and coordination topology
           </p>
         </div>
@@ -339,20 +339,20 @@ export default function Agents() {
       </SectionErrorBoundary>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-gray-700/50 pb-px">
+      <div className="flex items-center gap-1 border-b border-border pb-px">
         {tabs.map((t) => (
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
             className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px ${
               tab === t.value
-                ? "border-indigo-500 text-gray-100"
-                : "border-transparent text-gray-400 hover:text-gray-200"
+                ? "border-indigo-500 text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="ml-1.5 text-[10px] text-gray-500">
+              <span className="ml-1.5 text-[10px] text-muted-foreground">
                 ({t.count})
               </span>
             )}
@@ -383,13 +383,13 @@ export default function Agents() {
             <>
               {seeding && profiles.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     Seeding Astridr build teams...
                   </p>
                 </div>
               ) : profiles.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-gray-500 text-sm">
+                  <p className="text-muted-foreground text-sm">
                     No agent profiles registered yet
                   </p>
                   <button
@@ -455,20 +455,20 @@ export default function Agents() {
       {/* === RUNTIME TAB === */}
       {tab === "runtime" && (
         <SectionErrorBoundary name="Runtime Agents">
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-sm font-semibold text-gray-300">
+            <h2 className="text-sm font-semibold text-muted-foreground">
               Runtime Instances<InfoTooltip text="Live agent instances currently running or recently completed — click to view details" />
             </h2>
-            <div className="flex items-center gap-1 bg-gray-900/50 border border-gray-700/30 rounded-lg p-0.5">
+            <div className="flex items-center gap-1 bg-background border border-border rounded-lg p-0.5">
               {statusFilters.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setFilter(f.value)}
                   className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors ${
                     filter === f.value
-                      ? "bg-gray-700 text-gray-100"
-                      : "text-gray-400 hover:text-gray-200"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {f.dot && (
@@ -477,7 +477,7 @@ export default function Agents() {
                     />
                   )}
                   {f.label}
-                  <span className="text-gray-500 text-[10px]">
+                  <span className="text-muted-foreground text-[10px]">
                     ({f.count})
                   </span>
                 </button>
@@ -487,8 +487,8 @@ export default function Agents() {
 
           {filtered.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-gray-500 text-sm">No agents found</p>
-              <p className="text-gray-600 text-xs mt-1">
+              <p className="text-muted-foreground text-sm">No agents found</p>
+              <p className="text-muted-foreground text-xs mt-1">
                 Agents will appear here once Astridr starts processing
                 sessions
               </p>
@@ -521,7 +521,7 @@ export default function Agents() {
                       className={`w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                         isSelected
                           ? "bg-indigo-600/10 border border-indigo-500/30"
-                          : "bg-gray-900/30 border border-transparent hover:bg-gray-900/60"
+                          : "bg-background border border-transparent hover:bg-accent"
                       }`}
                     >
                       <AgentAvatar
@@ -533,24 +533,24 @@ export default function Agents() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-200 truncate font-medium">
+                          <span className="text-sm text-foreground truncate font-medium">
                             {agent.agentId}
                           </span>
                           <span
                             className={`text-[9px] px-1.5 py-0.5 rounded-full ${
                               STATUS_BADGE[agent.status] ??
-                              "bg-gray-700/50 text-gray-400"
+                              "bg-muted text-muted-foreground"
                             }`}
                           >
                             {agent.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
                           <span>{agent.agentType}</span>
                           {agent.model && (
                             <>
                               <span>&middot;</span>
-                              <span className="text-gray-400">
+                              <span className="text-muted-foreground">
                                 {agent.model}
                               </span>
                             </>
@@ -559,7 +559,7 @@ export default function Agents() {
                           <span>{dur}</span>
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-gray-600 shrink-0" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                     </button>
                   );
                 })}
@@ -590,7 +590,7 @@ export default function Agents() {
       {/* === SECURITY SCAN TAB === */}
       {tab === "security" && (
         <SectionErrorBoundary name="Security Scan">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-card border border-border rounded-xl p-4">
             <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Security Scan Results
               <InfoTooltip text="Active tool scan findings from Ástríðr's proactive ideation scanner. Dismiss findings to clear them (they will reappear if the tool is re-scanned)." />
@@ -598,8 +598,8 @@ export default function Agents() {
 
             {Object.keys(findingsByLocation).length === 0 ? (
               <div className="py-12 text-center">
-                <p className="text-gray-500 text-sm">No active scan findings</p>
-                <p className="text-gray-600 text-xs mt-1">
+                <p className="text-muted-foreground text-sm">No active scan findings</p>
+                <p className="text-muted-foreground text-xs mt-1">
                   Findings appear here when Ástríðr's tool scanner detects security patterns
                 </p>
               </div>
@@ -611,10 +611,10 @@ export default function Agents() {
                   return (
                     <div
                       key={location}
-                      className="bg-gray-900/40 border border-gray-700/40 rounded-lg p-3"
+                      className="bg-background border border-border rounded-lg p-3"
                     >
                       <div className="flex items-center gap-3 mb-1">
-                        <span className="text-sm font-medium text-gray-200 font-mono flex-1 truncate">
+                        <span className="text-sm font-medium text-foreground font-mono flex-1 truncate">
                           {location}
                         </span>
                         <RiskLevelBadge
@@ -631,7 +631,7 @@ export default function Agents() {
                               prev === location ? null : location,
                             )
                           }
-                          className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {isExpanded ? "collapse" : `${findings.length} finding${findings.length !== 1 ? "s" : ""}`}
                         </button>

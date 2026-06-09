@@ -41,9 +41,9 @@ function formatRelative(ts: number): string {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className="text-2xl font-semibold text-gray-100">{value}</p>
+    <div className="bg-card border border-border rounded-xl p-4">
+      <p className="text-xs text-muted-foreground mb-1">{label}</p>
+      <p className="text-2xl font-semibold text-foreground">{value}</p>
     </div>
   );
 }
@@ -216,7 +216,7 @@ export default function Memory() {
             </div>
 
             {/* Tab Navigation (inner episodic tabs) */}
-            <div className="flex gap-1 border-b border-gray-700/50">
+            <div className="flex gap-1 border-b border-border">
               {(
                 ["timeline", "tiers", "reflections", "quality"] as TabId[]
               ).map((tab) => (
@@ -226,7 +226,7 @@ export default function Memory() {
                   className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                     activeTab === tab
                       ? "border-indigo-500 text-indigo-400"
-                      : "border-transparent text-gray-500 hover:text-gray-300"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {tab === "timeline"
@@ -256,12 +256,12 @@ export default function Memory() {
                     placeholder="Search memories..."
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-500 flex-1 min-w-[200px]"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500 flex-1 min-w-[200px]"
                   />
                   <select
                     value={filterAgent}
                     onChange={(e) => setFilterAgent(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">All Agents</option>
                     {agents.map((a) => (
@@ -273,7 +273,7 @@ export default function Memory() {
                   <select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">All Types</option>
                     {eventTypes.map((t) => (
@@ -286,7 +286,7 @@ export default function Memory() {
 
                 {/* Type Breakdown */}
                 {overview && Object.keys(overview.byType).length > 0 && (
-                  <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+                  <div className="bg-card border border-border rounded-xl p-4">
                     <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                       By Type
                     </h2>
@@ -300,11 +300,11 @@ export default function Memory() {
                           className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                             type === filterType
                               ? "bg-indigo-600 text-white"
-                              : "bg-gray-700/50 text-gray-400 hover:bg-gray-700"
+                              : "bg-muted text-muted-foreground hover:bg-accent"
                           }`}
                         >
                           {type}{" "}
-                          <span className="text-gray-500 ml-1">
+                          <span className="text-muted-foreground ml-1">
                             {count as number}
                           </span>
                         </button>
@@ -315,13 +315,13 @@ export default function Memory() {
 
                 {/* Timeline */}
                 <div className="space-y-2">
-                  <h2 className="text-sm font-semibold text-gray-300">
+                  <h2 className="text-sm font-semibold text-muted-foreground">
                     {searchText.length >= 2 ? "Search Results" : "Timeline"}
                     <InfoTooltip text="Chronological log of episodic memory events — context snapshots, learnings, and agent observations" />
                   </h2>
                   {!displayEvents || displayEvents.length === 0 ? (
-                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-                      <p className="text-sm text-gray-500">
+                    <div className="bg-card border border-border rounded-xl p-8 text-center">
+                      <p className="text-sm text-muted-foreground">
                         {searchText.length >= 2
                           ? "No memories match your search."
                           : "No episodic events recorded yet."}
@@ -339,9 +339,9 @@ export default function Memory() {
                             className="relative pl-8 group"
                           >
                             {/* Dot on the timeline */}
-                            <div className="absolute left-[11px] top-3.5 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 ring-4 ring-gray-950 group-hover:bg-indigo-400 group-hover:shadow-[0_0_8px_rgba(99,102,241,0.6)] transition-all" />
+                            <div className="absolute left-[11px] top-3.5 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 ring-4 ring-background group-hover:bg-indigo-400 group-hover:shadow-[0_0_8px_rgba(99,102,241,0.6)] transition-all" />
                             
-                            <div className="bg-gray-800/40 border border-gray-700/50 hover:bg-gray-800/70 hover:border-indigo-500/30 transition-colors rounded-lg p-3">
+                            <div className="bg-card border border-border hover:bg-accent hover:border-indigo-500/30 transition-colors rounded-lg p-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-baseline gap-2">
@@ -349,23 +349,23 @@ export default function Memory() {
                                       {event.eventType}
                                     </span>
                                     {event.agentId && (
-                                      <span className="text-xs text-gray-500 font-mono">
+                                      <span className="text-xs text-muted-foreground font-mono">
                                         {event.agentId}
                                       </span>
                                     )}
-                                    <span className="text-sm text-gray-200 ml-1">
+                                    <span className="text-sm text-foreground ml-1">
                                       {event.summary}
                                     </span>
                                   </div>
                                   {event.detail && (
-                                    <pre className="mt-2 text-[11px] text-gray-400 bg-gray-900/60 rounded p-2 overflow-x-auto font-mono whitespace-pre-wrap max-h-32 custom-scrollbar">
+                                    <pre className="mt-2 text-[11px] text-muted-foreground bg-background rounded p-2 overflow-x-auto font-mono whitespace-pre-wrap max-h-32 custom-scrollbar">
                                       {typeof event.detail === "string"
                                         ? event.detail
                                         : JSON.stringify(event.detail)}
                                     </pre>
                                   )}
                                 </div>
-                                <span className="text-[10px] text-gray-500 whitespace-nowrap pt-0.5 font-mono">
+                                <span className="text-[10px] text-muted-foreground whitespace-nowrap pt-0.5 font-mono">
                                   {formatTimestamp(event.timestamp)}
                                 </span>
                               </div>
@@ -402,12 +402,12 @@ export default function Memory() {
                 </div>
 
                 <div className="space-y-2">
-                  <h2 className="text-sm font-semibold text-gray-300">
+                  <h2 className="text-sm font-semibold text-muted-foreground">
                     Recent Tier Operations
                   </h2>
                   {!tierRecent || tierRecent.length === 0 ? (
-                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-                      <p className="text-sm text-gray-500">
+                    <div className="bg-card border border-border rounded-xl p-8 text-center">
+                      <p className="text-sm text-muted-foreground">
                         No tier stats recorded yet. Memories will show tier data
                         once the summarizer is active.
                       </p>
@@ -416,14 +416,14 @@ export default function Memory() {
                     tierRecent.map((stat: any) => (
                       <div
                         key={stat._id}
-                        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4"
+                        className="bg-card border border-border rounded-xl p-4"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-600/20 text-emerald-400">
                               {stat.tokenSavingsPercent.toFixed(1)}% saved
                             </span>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-muted-foreground">
                               {stat.contentLength} chars → L0: {stat.l0Length} /
                               L1: {stat.l1Length}
                             </span>
@@ -433,7 +433,7 @@ export default function Memory() {
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-600">
+                          <span className="text-xs text-muted-foreground">
                             {formatTimestamp(stat.timestamp)}
                           </span>
                         </div>
@@ -483,7 +483,7 @@ export default function Memory() {
                 {reflectionOverview?.categoryBreakdown &&
                   Object.keys(reflectionOverview.categoryBreakdown).length >
                     0 && (
-                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+                    <div className="bg-card border border-border rounded-xl p-4">
                       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                         Category Breakdown
                       </h2>
@@ -493,10 +493,10 @@ export default function Memory() {
                         ).map(([cat, count]) => (
                           <span
                             key={cat}
-                            className="px-3 py-1.5 rounded-lg text-xs bg-gray-700/50 text-gray-300"
+                            className="px-3 py-1.5 rounded-lg text-xs bg-muted text-muted-foreground"
                           >
                             {cat}{" "}
-                            <span className="text-gray-500 ml-1">
+                            <span className="text-muted-foreground ml-1">
                               {count as number}
                             </span>
                           </span>
@@ -507,12 +507,12 @@ export default function Memory() {
 
                 {/* Recent Reflections */}
                 <div className="space-y-2">
-                  <h2 className="text-sm font-semibold text-gray-300">
+                  <h2 className="text-sm font-semibold text-muted-foreground">
                     Recent Reflections
                   </h2>
                   {!reflectionRecent || reflectionRecent.length === 0 ? (
-                    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-                      <p className="text-sm text-gray-500">
+                    <div className="bg-card border border-border rounded-xl p-8 text-center">
+                      <p className="text-sm text-muted-foreground">
                         No reflections yet. The reflection engine will analyze
                         episodic events to extract durable insights.
                       </p>
@@ -521,7 +521,7 @@ export default function Memory() {
                     reflectionRecent.map((r: any) => (
                       <div
                         key={r._id}
-                        className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4"
+                        className="bg-card border border-border rounded-xl p-4"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1">
@@ -529,11 +529,11 @@ export default function Memory() {
                               <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-600/20 text-amber-400">
                                 {r.agentId}
                               </span>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-muted-foreground">
                                 {r.eventsAnalyzed} events →{" "}
                                 {r.memoriesExtracted} memories
                               </span>
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-muted-foreground">
                                 confidence: {r.avgConfidence.toFixed(2)}
                               </span>
                             </div>
@@ -543,7 +543,7 @@ export default function Memory() {
                                   ([cat, count]) => (
                                     <span
                                       key={cat}
-                                      className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400"
+                                      className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
                                     >
                                       {cat}: {count as number}
                                     </span>
@@ -552,7 +552,7 @@ export default function Memory() {
                               </div>
                             )}
                           </div>
-                          <span className="text-xs text-gray-600 whitespace-nowrap">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatTimestamp(r.timestamp)} ({r.reflectionDurationMs}
                             ms)
                           </span>
@@ -573,7 +573,7 @@ export default function Memory() {
               {!preflightStats ||
               (preflightStats.totalRecords === 0 &&
                 (!preflightData || preflightData.length === 0)) ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No preflight data yet. Preflight activates once Memory
                     Intelligence is enabled and a conversation is processed.
@@ -611,7 +611,7 @@ export default function Memory() {
                   <div className="space-y-2">
                     <SectionHeader title="Top Matched Memories" />
                     {topMemories.length === 0 ? (
-                      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 text-center">
+                      <div className="bg-card border border-border rounded-xl p-6 text-center">
                         <p className="text-sm text-muted-foreground">
                           No memory hit data yet.
                         </p>
@@ -634,7 +634,7 @@ export default function Memory() {
                                 <TableCell className="text-muted-foreground tabular-nums">
                                   {i + 1}
                                 </TableCell>
-                                <TableCell className="font-mono text-xs text-gray-300 truncate max-w-xs">
+                                <TableCell className="font-mono text-xs text-muted-foreground truncate max-w-xs">
                                   {record.memoryId ?? record._id}
                                 </TableCell>
                                 <TableCell className="text-right tabular-nums text-sm">
@@ -668,7 +668,7 @@ export default function Memory() {
                   <select
                     value={durableCategory}
                     onChange={(e) => setDurableCategory(e.target.value)}
-                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-indigo-500"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">All Categories</option>
                     {allDurableCategories.map((cat) => (
@@ -681,14 +681,14 @@ export default function Memory() {
               </div>
 
               {!durableFacts || durableFacts.length === 0 ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No durable facts extracted yet. Run a dreaming cycle to
                     extract long-term facts from your conversation history.
                   </p>
                 </div>
               ) : filteredDurableFacts.length === 0 ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No facts match your search.
                   </p>
@@ -707,7 +707,7 @@ export default function Memory() {
                     <TableBody>
                       {filteredDurableFacts.map((fact: any) => (
                         <TableRow key={fact._id}>
-                          <TableCell className="text-sm text-gray-200 max-w-md">
+                          <TableCell className="text-sm text-foreground max-w-md">
                             {fact.factText}
                           </TableCell>
                           <TableCell>
@@ -750,7 +750,7 @@ export default function Memory() {
               </div>
 
               {!imports || imports.length === 0 ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
+                <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-sm text-muted-foreground">
                     No conversation imports yet. Use Import Conversations to
                     bring in ChatGPT, Claude Code, or markdown exports.
@@ -776,7 +776,7 @@ export default function Memory() {
                     <TableBody>
                       {imports.map((imp: any) => (
                         <TableRow key={imp._id}>
-                          <TableCell className="font-mono text-xs text-gray-300 max-w-[120px] truncate">
+                          <TableCell className="font-mono text-xs text-muted-foreground max-w-[120px] truncate">
                             {imp._id}
                           </TableCell>
                           <TableCell>
@@ -816,15 +816,15 @@ export default function Memory() {
           <SectionErrorBoundary name="Obsidian Graph">
             <div className="space-y-6 mt-4">
               {!vaultConnected ? (
-                <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-12 text-center flex flex-col items-center gap-4">
+                <div className="bg-card border border-border rounded-xl p-12 text-center flex flex-col items-center gap-4">
                   <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
                     <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-gray-200">Connect your Obsidian Vault</h3>
-                    <p className="text-sm text-gray-400 mt-2 max-w-md mx-auto">
+                    <h3 className="text-lg font-medium text-foreground">Connect your Obsidian Vault</h3>
+                    <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
                       Select your local Obsidian vault folder to visualize your notes as a fully interactive network graph directly in CodePulse. Everything stays local.
                     </p>
                   </div>
@@ -844,7 +844,7 @@ export default function Memory() {
                   </div>
                   {isObsidianLoading && !obsidianData ? (
                     <div className="h-[600px] flex items-center justify-center">
-                      <p className="text-gray-400 animate-pulse">Parsing vault files...</p>
+                      <p className="text-muted-foreground animate-pulse">Parsing vault files...</p>
                     </div>
                   ) : obsidianData ? (
                     <ObsidianGraph data={obsidianData} />

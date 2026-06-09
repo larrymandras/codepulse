@@ -37,12 +37,12 @@ function Toggle({
       onClick={onToggle}
       className="flex items-center justify-between w-full py-1.5 group"
     >
-      <span className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
         {label}
       </span>
       <div
         className={`w-9 h-5 rounded-full transition-colors relative ${
-          enabled ? "bg-indigo-600" : "bg-gray-700"
+          enabled ? "bg-indigo-600" : "bg-muted"
         }`}
       >
         <div
@@ -152,7 +152,7 @@ function IntelligenceSettings() {
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+    <div className="bg-card border border-border rounded-xl p-4 mt-12">
       <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-border pb-2">
           <h3 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
@@ -269,25 +269,25 @@ export default function Settings() {
 
       {/* Connection Status */}
       <SectionErrorBoundary name="Connection Status">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Connection Status<InfoTooltip text="Backend connection details and environment configuration" />
         </h2>
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Backend</span>
-            <span className="text-gray-300 text-xs">Convex</span>
+            <span className="text-muted-foreground">Backend</span>
+            <span className="text-muted-foreground text-xs">Convex</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Deployment</span>
-            <span className="text-gray-300 text-xs font-mono">{CONVEX_DEPLOYMENT}</span>
+            <span className="text-muted-foreground">Deployment</span>
+            <span className="text-muted-foreground text-xs font-mono">{CONVEX_DEPLOYMENT}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">URL</span>
-            <span className="text-gray-300 text-xs font-mono truncate max-w-[280px]">{CONVEX_URL || "Not configured"}</span>
+            <span className="text-muted-foreground">URL</span>
+            <span className="text-muted-foreground text-xs font-mono truncate max-w-[280px]">{CONVEX_URL || "Not configured"}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Status</span>
+            <span className="text-muted-foreground">Status</span>
             {CONVEX_URL ? (
               <span className="flex items-center gap-1.5 text-xs text-green-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
@@ -301,8 +301,8 @@ export default function Settings() {
             )}
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-500">Environment</span>
-            <span className="text-gray-300 text-xs">{import.meta.env.MODE}</span>
+            <span className="text-muted-foreground">Environment</span>
+            <span className="text-muted-foreground text-xs">{import.meta.env.MODE}</span>
           </div>
         </div>
       </div>
@@ -310,7 +310,7 @@ export default function Settings() {
 
       {/* Profile Email Addresses */}
       <SectionErrorBoundary name="Profile Emails">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Profile Email Addresses
           <InfoTooltip text="Email addresses used by each profile for briefings and notifications. Changes are synced to the framework on next restart." />
@@ -325,7 +325,7 @@ export default function Settings() {
 
             return (
               <div key={profileId} className="space-y-1">
-                <label className="text-xs text-gray-500 block">{label}</label>
+                <label className="text-xs text-muted-foreground block">{label}</label>
                 <div className="flex gap-2">
                   <input
                     type="email"
@@ -336,7 +336,7 @@ export default function Settings() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && isDirty) handleEmailSave(profileId);
                     }}
-                    className="flex-1 bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-200 font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground font-mono focus:outline-none focus:border-indigo-500 transition-colors"
                     placeholder="email@example.com"
                   />
                   {isDirty && (
@@ -358,7 +358,7 @@ export default function Settings() {
             );
           })}
         </div>
-        <p className="text-[10px] text-gray-600 mt-3">
+        <p className="text-[10px] text-muted-foreground mt-3">
           These addresses determine where briefings and email notifications are delivered per profile.
         </p>
       </div>
@@ -366,9 +366,9 @@ export default function Settings() {
 
       {/* Privacy Masking */}
       <SectionErrorBoundary name="Privacy Masking">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Privacy Masking<InfoTooltip text="Control data masking levels for screenshots and demos — hides sensitive session IDs, file paths, and values" /></h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">Privacy Masking<InfoTooltip text="Control data masking levels for screenshots and demos — hides sensitive session IDs, file paths, and values" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               privacy.level === "demo"
@@ -377,7 +377,7 @@ export default function Settings() {
                   ? "bg-red-600/20 text-red-400"
                   : privacy.enabled
                     ? "bg-indigo-600/20 text-indigo-400"
-                    : "bg-gray-700/50 text-gray-500"
+                    : "bg-muted text-muted-foreground"
             }`}
           >
             {privacy.level === "demo"
@@ -396,7 +396,7 @@ export default function Settings() {
             label="Enable privacy mode"
           />
           {privacy.enabled && (
-            <div className="pl-3 border-l border-gray-700 ml-1 space-y-1 mt-2">
+            <div className="pl-3 border-l border-border ml-1 space-y-1 mt-2">
               <Toggle
                 enabled={privacy.maskPaths}
                 onToggle={() => privacy.setSetting("maskPaths", !privacy.maskPaths)}
@@ -420,11 +420,11 @@ export default function Settings() {
             </div>
           )}
         </div>
-        <p className="text-[10px] text-gray-600 mt-3">
+        <p className="text-[10px] text-muted-foreground mt-3">
           When active, sensitive data is redacted across all dashboard views. Stored data is not modified.
         </p>
-          <div className="mt-3 pt-3 border-t border-gray-700">
-            <span className="text-sm text-gray-400 mb-2 block">Privacy Level</span>
+          <div className="mt-3 pt-3 border-t border-border">
+            <span className="text-sm text-muted-foreground mb-2 block">Privacy Level</span>
             <div className="flex gap-2">
               {(["off", "demo", "screenshot"] as const).map((level) => (
                 <button
@@ -433,7 +433,7 @@ export default function Settings() {
                   className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-colors ${
                     privacy.level === level
                       ? "bg-indigo-600 text-white"
-                      : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                      : "bg-muted text-muted-foreground hover:bg-accent"
                   }`}
                 >
                   {level}
@@ -441,13 +441,13 @@ export default function Settings() {
               ))}
             </div>
             <div className="mt-2 space-y-0.5">
-              <p className={`text-[10px] ${privacy.level === "off" ? "text-gray-400" : "text-gray-600"}`}>
+              <p className={`text-[10px] ${privacy.level === "off" ? "text-muted-foreground" : "text-muted-foreground"}`}>
                 <span className="font-medium">Off:</span> Normal view — all data visible
               </p>
-              <p className={`text-[10px] ${privacy.level === "demo" ? "text-amber-400/80" : "text-gray-600"}`}>
+              <p className={`text-[10px] ${privacy.level === "demo" ? "text-amber-400/80" : "text-muted-foreground"}`}>
                 <span className="font-medium">Demo:</span> Demo mode — sensitive values blurred for presentations
               </p>
-              <p className={`text-[10px] ${privacy.level === "screenshot" ? "text-red-400/80" : "text-gray-600"}`}>
+              <p className={`text-[10px] ${privacy.level === "screenshot" ? "text-red-400/80" : "text-muted-foreground"}`}>
                 <span className="font-medium">Screenshot:</span> Screenshot safe — all data hidden
               </p>
             </div>
@@ -457,14 +457,14 @@ export default function Settings() {
 
       {/* Ambient Audio */}
       <SectionErrorBoundary name="Ambient Audio">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Ambient Audio<InfoTooltip text="Background audio presets for focus and immersion — choose from ambient, lofi, nature, and synth categories" /></h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">Ambient Audio<InfoTooltip text="Background audio presets for focus and immersion — choose from ambient, lofi, nature, and synth categories" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               ambient.enabled
                 ? "bg-emerald-600/20 text-emerald-400"
-                : "bg-gray-700/50 text-gray-500"
+                : "bg-muted text-muted-foreground"
             }`}
           >
             {ambient.enabled ? "PLAYING" : "MUTED"}
@@ -480,7 +480,7 @@ export default function Settings() {
             <div className="space-y-4">
               {/* Preset Selector */}
               <div>
-                <span className="text-sm text-gray-400 mb-2 block">Soundscape</span>
+                <span className="text-sm text-muted-foreground mb-2 block">Soundscape</span>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
@@ -498,7 +498,7 @@ export default function Settings() {
                       className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                         ambient.preset === p.value
                           ? "bg-emerald-600 text-white"
-                          : "bg-gray-700 text-gray-400 hover:bg-gray-600"
+                          : "bg-muted text-muted-foreground hover:bg-accent"
                       }`}
                     >
                       {p.label}
@@ -510,8 +510,8 @@ export default function Settings() {
               {/* Master Volume */}
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">Master Volume</span>
-                  <span className="text-xs text-gray-500 font-mono">
+                  <span className="text-sm text-muted-foreground">Master Volume</span>
+                  <span className="text-xs text-muted-foreground font-mono">
                     {Math.round(ambient.volume * 100)}%
                   </span>
                 </div>
@@ -521,14 +521,14 @@ export default function Settings() {
                   max={100}
                   value={Math.round(ambient.volume * 100)}
                   onChange={(e) => ambient.setVolume(Number(e.target.value) / 100)}
-                  className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
+                  className="w-full h-1 bg-muted rounded-full appearance-none cursor-pointer accent-emerald-500"
                 />
               </div>
 
               {/* Category Volumes */}
               <div>
-                <span className="text-sm text-gray-400 mb-2 block">Channel Volumes</span>
-                <div className="space-y-2 pl-3 border-l border-gray-700 ml-1">
+                <span className="text-sm text-muted-foreground mb-2 block">Channel Volumes</span>
+                <div className="space-y-2 pl-3 border-l border-border ml-1">
                   {(
                     [
                       { cat: "alerts" as Category, label: "Alerts" },
@@ -539,8 +539,8 @@ export default function Settings() {
                   ).map(({ cat, label }) => (
                     <div key={cat}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">{label}</span>
-                        <span className="text-[10px] text-gray-600 font-mono">
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
                           {Math.round(ambient.categoryVolumes[cat] * 100)}%
                         </span>
                       </div>
@@ -552,7 +552,7 @@ export default function Settings() {
                         onChange={(e) =>
                           ambient.setCategoryVolume(cat, Number(e.target.value) / 100)
                         }
-                        className="w-full h-1 bg-gray-700 rounded-full appearance-none cursor-pointer accent-emerald-500"
+                        className="w-full h-1 bg-muted rounded-full appearance-none cursor-pointer accent-emerald-500"
                       />
                     </div>
                   ))}
@@ -561,7 +561,7 @@ export default function Settings() {
             </div>
           )}
         </div>
-        <p className="text-[10px] text-gray-600 mt-3">
+        <p className="text-[10px] text-muted-foreground mt-3">
           Generative soundscape that responds to system health. Green = consonant, Yellow = tense, Red = dissonant.
         </p>
       </div>
@@ -569,14 +569,14 @@ export default function Settings() {
 
       {/* CRT Overlay */}
       <SectionErrorBoundary name="CRT Overlay">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">CRT Overlay<InfoTooltip text="Retro CRT monitor effect with scanlines, glow, and flicker — purely cosmetic" /></h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">CRT Overlay<InfoTooltip text="Retro CRT monitor effect with scanlines, glow, and flicker — purely cosmetic" /></h2>
           <span
             className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
               crtEnabled
                 ? "bg-green-600/20 text-green-400"
-                : "bg-gray-700/50 text-gray-500"
+                : "bg-muted text-muted-foreground"
             }`}
           >
             {crtEnabled ? "ON" : "OFF"}
@@ -599,7 +599,7 @@ export default function Settings() {
           }}
           label="Enable CRT scanline effect"
         />
-        <p className="text-[10px] text-gray-600 mt-3">
+        <p className="text-[10px] text-muted-foreground mt-3">
           Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
       </div>
@@ -607,16 +607,16 @@ export default function Settings() {
 
       {/* Data Retention */}
       <SectionErrorBoundary name="Data Retention">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <RetentionControl />
       </div>
       </SectionErrorBoundary>
 
       {/* Agent Profiles Section */}
       <SectionErrorBoundary name="Agent Profiles">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-300">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
           {!creatingProfile && !editingProfile && (
             <button
               onClick={() => setCreatingProfile(true)}
@@ -645,27 +645,27 @@ export default function Settings() {
         {!creatingProfile && !editingProfile && (
           <div className="space-y-2">
             {profiles.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">
+              <p className="text-sm text-muted-foreground py-4 text-center">
                 No agent profiles yet. Create one to get started.
               </p>
             ) : (
               profiles.map((p) => (
                 <div
                   key={p._id}
-                  className="flex items-center gap-3 bg-gray-900/30 rounded-lg px-3 py-2"
+                  className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
                 >
                   <AgentAvatar avatar={getAvatar(p.avatarId)} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-200 truncate">
+                    <p className="text-sm text-foreground truncate">
                       {p.displayName || p.name}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-muted-foreground truncate">
                       {p.profileId} {p.model ? `/ ${p.model}` : ""}
                     </p>
                   </div>
                   <button
                     onClick={() => setEditingProfile(p)}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1 rounded-lg text-xs"
+                    className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-xs"
                   >
                     Edit
                   </button>
@@ -678,12 +678,12 @@ export default function Settings() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="Hooks">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Hooks</h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted-foreground">
           Configure Claude Code hooks to point to CodePulse for live telemetry.
         </p>
-        <pre className="mt-3 bg-gray-900/50 rounded-lg p-3 text-xs text-gray-400 overflow-x-auto font-mono">{`// .claude/settings.json
+        <pre className="mt-3 bg-background rounded-lg p-3 text-xs text-muted-foreground overflow-x-auto font-mono">{`// .claude/settings.json
 {
   "hooks": {
     "PreToolUse": [{ "command": "node hooks/dispatch.mjs" }],
@@ -695,9 +695,9 @@ export default function Settings() {
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="About">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">About</h2>
-        <div className="space-y-1 text-sm text-gray-500">
+        <div className="space-y-1 text-sm text-muted-foreground">
           <p>CodePulse v0.1.0</p>
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>
         </div>
@@ -706,35 +706,35 @@ export default function Settings() {
 
       {/* Gateway Providers */}
       <SectionErrorBoundary name="Gateway Providers">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <ProviderControls />
       </div>
       </SectionErrorBoundary>
 
       {/* Notification Channels */}
       <SectionErrorBoundary name="Notification Channels">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <NotificationChannels />
       </div>
       </SectionErrorBoundary>
 
       {/* Email Digest Config */}
       <SectionErrorBoundary name="Email Digest">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <EmailDigestConfig />
       </div>
       </SectionErrorBoundary>
 
       {/* Delivery History */}
       <SectionErrorBoundary name="Delivery History">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <DeliveryHistory />
       </div>
       </SectionErrorBoundary>
 
       {/* Notification Preferences */}
       <SectionErrorBoundary name="Notification Preferences">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 mt-12">
+      <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <NotificationPreferences />
       </div>
       </SectionErrorBoundary>
