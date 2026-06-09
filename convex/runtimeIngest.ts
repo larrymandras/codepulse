@@ -653,6 +653,23 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "tool_executed": {
+          // M1.P1: agent↔tool call-graph edge emitted on EVERY tool execution
+          // (success or failure) by Ástríðr's agent loop. Broader source than
+          // hive_mind_entry, which only covered multi-agent coordination calls.
+          const d = data as any;
+          const toolExecutedAgent = d.agentId ?? d.agent_id;
+          if (toolExecutedAgent) {
+            await ctx.runMutation(api.callGraphEdges.upsertEdge, {
+              agentId: toolExecutedAgent,
+              toolName: d.toolName ?? d.tool_name ?? "unknown",
+              sessionId: d.sessionId ?? d.session_id ?? "unknown",
+              success: d.success ?? true,
+              timestamp,
+            });
+          }
+          break;
+        }
         case "channel_health": {
           const d = data as any;
           await ctx.runMutation(api.channelHealth.upsert, {
@@ -748,20 +765,6 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             tags: d.tags,
             timestamp: d.timestamp ?? timestamp,
           });
-          break;
-        }
-        case "tool_execution": {
-          const d = data as any;
-          const toolExecAgent = d.agentId ?? d.agent_id;
-          if (toolExecAgent) {
-            await ctx.runMutation(api.callGraphEdges.upsertEdge, {
-              agentId: toolExecAgent,
-              toolName: d.toolName ?? d.tool_name ?? "unknown",
-              sessionId: d.sessionId ?? d.session_id ?? "unknown",
-              success: d.success ?? true,
-              timestamp,
-            });
-          }
           break;
         }
         case "operator_score": {

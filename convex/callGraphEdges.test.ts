@@ -62,4 +62,65 @@ describe("callGraphEdges", () => {
     it.todo("should upsert via by_agent_tool index lookup (DB round-trip)");
     it.todo("should insert new row when no existing edge found (DB round-trip)");
   });
+
+  describe("tool_executed event → upsertEdge mapping (M1.P1)", () => {
+    // Mirrors the `case "tool_executed"` branch in runtimeIngest.ts: it maps a
+    // tool_executed runtime event to upsertEdge args, accepting camelCase
+    // (emitter shape) or snake_case keys, and skips when agentId is absent.
+    const mapToolExecuted = (d: any, timestamp: number) => {
+      const agentId = d.agentId ?? d.agent_id;
+      if (!agentId) return null;
+      return {
+        agentId,
+        toolName: d.toolName ?? d.tool_name ?? "unknown",
+        sessionId: d.sessionId ?? d.session_id ?? "unknown",
+        success: d.success ?? true,
+        timestamp,
+      };
+    };
+
+    it("maps camelCase emitter fields to upsertEdge args", () => {
+      const args = mapToolExecuted(
+        { agentId: "skuld", toolName: "web_search", sessionId: "sess-1", success: true },
+        1234,
+      );
+      expect(args).toEqual({
+        agentId: "skuld",
+        toolName: "web_search",
+        sessionId: "sess-1",
+        success: true,
+        timestamp: 1234,
+      });
+    });
+
+    it("passes success=false through for the failure path", () => {
+      const args = mapToolExecuted(
+        { agentId: "hildr", toolName: "flaky_tool", sessionId: "sess-2", success: false },
+        2000,
+      );
+      expect(args?.success).toBe(false);
+    });
+
+    it("accepts snake_case fallbacks", () => {
+      const args = mapToolExecuted(
+        { agent_id: "astridr", tool_name: "memory_save", session_id: "sess-3", success: true },
+        3000,
+      );
+      expect(args?.agentId).toBe("astridr");
+      expect(args?.toolName).toBe("memory_save");
+      expect(args?.sessionId).toBe("sess-3");
+    });
+
+    it("defaults missing toolName/sessionId/success", () => {
+      const args = mapToolExecuted({ agentId: "vor" }, 4000);
+      expect(args?.toolName).toBe("unknown");
+      expect(args?.sessionId).toBe("unknown");
+      expect(args?.success).toBe(true);
+    });
+
+    it("skips upsert (returns null) when agentId is absent", () => {
+      const args = mapToolExecuted({ toolName: "web_search", success: true }, 5000);
+      expect(args).toBeNull();
+    });
+  });
 });
