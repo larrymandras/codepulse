@@ -57,14 +57,14 @@ function SkillsPanel({
     : skills;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card border border-border rounded-xl p-4">
       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Skills
-        <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+        <span className="ml-2 text-xs text-muted-foreground font-normal">{filtered.length}</span>
         <InfoTooltip text="Composed multi-step workflows like code generation, PR management, and web search. Click to expand." />
       </h2>
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-sm text-muted-foreground py-6 text-center">
           {filter ? "No skills match your search" : "No skills registered"}
         </p>
       ) : (
@@ -75,10 +75,10 @@ function SkillsPanel({
               <div key={s._id}>
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : s._id)}
-                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center justify-between bg-background rounded-lg px-4 py-2.5 cursor-pointer hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-sm font-mono text-gray-200 truncate">
+                    <span className="text-sm font-mono text-foreground truncate">
                       {s.name}
                     </span>
                     <OriginBadge origin={s.origin} />
@@ -90,38 +90,38 @@ function SkillsPanel({
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                     {s.description && (
-                      <span className="text-xs text-gray-500 truncate max-w-[200px] hidden md:inline">
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px] hidden md:inline">
                         {s.description}
                       </span>
                     )}
-                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-muted-foreground text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-xs">
+                  <div className="ml-5 mt-1 mb-2 bg-background border border-border rounded-lg px-4 py-3 space-y-2 text-xs">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
-                        <span className="text-gray-500">Name</span>
-                        <p className="text-gray-200 font-mono">{s.name}</p>
+                        <span className="text-muted-foreground">Name</span>
+                        <p className="text-foreground font-mono">{s.name}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Source / Category</span>
-                        <p className="text-gray-300">{s.source ?? "N/A"}</p>
+                        <span className="text-muted-foreground">Source / Category</span>
+                        <p className="text-muted-foreground">{s.source ?? "N/A"}</p>
                       </div>
                       {s.description && (
                         <div className="col-span-2">
-                          <span className="text-gray-500">Description</span>
-                          <p className="text-gray-300">{s.description}</p>
+                          <span className="text-muted-foreground">Description</span>
+                          <p className="text-muted-foreground">{s.description}</p>
                         </div>
                       )}
                       <div>
-                        <span className="text-gray-500">Discovered</span>
-                        <p className="text-gray-300 font-mono">{formatTimestamp(s.discoveredAt)}</p>
+                        <span className="text-muted-foreground">Discovered</span>
+                        <p className="text-muted-foreground font-mono">{formatTimestamp(s.discoveredAt)}</p>
                       </div>
                       {s.lastUsedAt && (
                         <div>
-                          <span className="text-gray-500">Last Used</span>
-                          <p className="text-gray-300 font-mono">{formatTimestamp(s.lastUsedAt)}</p>
+                          <span className="text-muted-foreground">Last Used</span>
+                          <p className="text-muted-foreground font-mono">{formatTimestamp(s.lastUsedAt)}</p>
                         </div>
                       )}
                       {s.origin && (
@@ -162,14 +162,14 @@ function HooksPanel({
     : hooks;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card border border-border rounded-xl p-4">
       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Hooks
-        <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+        <span className="ml-2 text-xs text-muted-foreground font-normal">{filtered.length}</span>
         <InfoTooltip text="Event-driven shell hooks that fire before/after tool use, on prompt submit, etc. Click to see full command." />
       </h2>
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-sm text-muted-foreground py-6 text-center">
           {filter ? "No hooks match your search" : "No hooks registered"}
         </p>
       ) : (
@@ -180,46 +180,46 @@ function HooksPanel({
               <div key={h._id}>
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : h._id)}
-                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center justify-between bg-background rounded-lg px-4 py-2.5 cursor-pointer hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-xs font-mono text-purple-400 flex-shrink-0">
                       {h.hookType}
                     </span>
                     <OriginBadge origin={h.origin} />
-                    <span className="text-xs font-mono text-gray-300 truncate">
+                    <span className="text-xs font-mono text-muted-foreground truncate">
                       {h.command}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                     {h.matcher && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                         {h.matcher}
                       </span>
                     )}
-                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-muted-foreground text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-xs">
+                  <div className="ml-5 mt-1 mb-2 bg-background border border-border rounded-lg px-4 py-3 space-y-2 text-xs">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
-                        <span className="text-gray-500">Hook Type</span>
+                        <span className="text-muted-foreground">Hook Type</span>
                         <p className="text-purple-400 font-mono">{h.hookType}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Matcher</span>
-                        <p className="text-gray-300 font-mono">{h.matcher ?? "All (no filter)"}</p>
+                        <span className="text-muted-foreground">Matcher</span>
+                        <p className="text-muted-foreground font-mono">{h.matcher ?? "All (no filter)"}</p>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-gray-500">Command</span>
-                        <pre className="mt-1 text-[11px] text-gray-300 bg-gray-950/50 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+                        <span className="text-muted-foreground">Command</span>
+                        <pre className="mt-1 text-[11px] text-muted-foreground bg-background rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
                           {h.command}
                         </pre>
                       </div>
                       <div>
-                        <span className="text-gray-500">Registered</span>
-                        <p className="text-gray-300 font-mono">{formatTimestamp(h.registeredAt)}</p>
+                        <span className="text-muted-foreground">Registered</span>
+                        <p className="text-muted-foreground font-mono">{formatTimestamp(h.registeredAt)}</p>
                       </div>
                       {h.origin && (
                         <div className="flex items-center gap-2 text-xs">
@@ -259,14 +259,14 @@ function SlashCommandsPanel({
     : commands;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+    <div className="bg-card border border-border rounded-xl p-4">
       <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Slash Commands
-        <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+        <span className="ml-2 text-xs text-muted-foreground font-normal">{filtered.length}</span>
         <InfoTooltip text="Claude Code slash commands discovered from environment snapshots. These are invoked via /command in Claude Code." />
       </h2>
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-sm text-muted-foreground py-6 text-center">
           {filter ? "No slash commands match your search" : "No slash commands discovered"}
         </p>
       ) : (
@@ -277,7 +277,7 @@ function SlashCommandsPanel({
               <div key={c._id}>
                 <div
                   onClick={() => setExpandedId(isExpanded ? null : c._id)}
-                  className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-2.5 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                  className="flex items-center justify-between bg-background rounded-lg px-4 py-2.5 cursor-pointer hover:bg-accent transition-colors"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="text-sm font-mono text-emerald-400">
@@ -291,33 +291,33 @@ function SlashCommandsPanel({
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                     {c.description && (
-                      <span className="text-xs text-gray-500 truncate max-w-[200px] hidden md:inline">
+                      <span className="text-xs text-muted-foreground truncate max-w-[200px] hidden md:inline">
                         {c.description}
                       </span>
                     )}
-                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-muted-foreground text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-xs">
+                  <div className="ml-5 mt-1 mb-2 bg-background border border-border rounded-lg px-4 py-3 space-y-2 text-xs">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
-                        <span className="text-gray-500">Command</span>
+                        <span className="text-muted-foreground">Command</span>
                         <p className="text-emerald-400 font-mono">/{c.name}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Source</span>
-                        <p className="text-gray-300">{c.source ?? "N/A"}</p>
+                        <span className="text-muted-foreground">Source</span>
+                        <p className="text-muted-foreground">{c.source ?? "N/A"}</p>
                       </div>
                       {c.description && (
                         <div className="col-span-2">
-                          <span className="text-gray-500">Description</span>
-                          <p className="text-gray-300">{c.description}</p>
+                          <span className="text-muted-foreground">Description</span>
+                          <p className="text-muted-foreground">{c.description}</p>
                         </div>
                       )}
                       <div>
-                        <span className="text-gray-500">Discovered</span>
-                        <p className="text-gray-300 font-mono">{formatTimestamp(c.discoveredAt)}</p>
+                        <span className="text-muted-foreground">Discovered</span>
+                        <p className="text-muted-foreground font-mono">{formatTimestamp(c.discoveredAt)}</p>
                       </div>
                     </div>
                   </div>
@@ -366,13 +366,13 @@ export default function Capabilities() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search tools, skills, commands..."
-            className="w-full bg-gray-800/80 border border-gray-700/50 rounded-lg px-3 py-1.5 pl-8 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
+            className="w-full bg-card border border-border rounded-lg px-3 py-1.5 pl-8 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
           />
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           {search && (
             <button
               onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 text-xs"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
             >
               &times;
             </button>
@@ -393,13 +393,13 @@ export default function Capabilities() {
       </div>
 
       {/* 2. Config Change Feed */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Configuration Changes
           <InfoTooltip text="Tracks additions, removals, and modifications to your registry — MCP servers, plugins, skills, and hooks." />
         </h2>
         {configChanges.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">
+          <p className="text-sm text-muted-foreground py-6 text-center">
             No configuration changes detected
           </p>
         ) : (
@@ -418,19 +418,19 @@ export default function Capabilities() {
                 <div
                   key={c._id ?? i}
                   className={`flex items-center gap-3 px-3 py-2 rounded text-xs ${
-                    i % 2 === 0 ? "bg-gray-800/30" : ""
+                    i % 2 === 0 ? "bg-card" : ""
                   }`}
                 >
-                  <span className="text-gray-600 font-mono whitespace-nowrap">
+                  <span className="text-muted-foreground font-mono whitespace-nowrap">
                     {formatTimestamp(c.changedAt)}
                   </span>
-                  <span className="text-gray-200 font-mono truncate max-w-[160px]">
+                  <span className="text-foreground font-mono truncate max-w-[160px]">
                     {c.configKey}
                   </span>
                   <span className={`${color} capitalize flex-shrink-0`}>
                     {type}
                   </span>
-                  <span className="text-gray-500 truncate">{truncated}</span>
+                  <span className="text-muted-foreground truncate">{truncated}</span>
                 </div>
               );
             })}
@@ -445,14 +445,14 @@ export default function Capabilities() {
       <PluginPanel plugins={plugins} filter={filter} />
 
       {/* 5. CLI Tools */}
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+      <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           CLI Tools
-          <span className="ml-2 text-xs text-gray-500 font-normal">{cliTools.length}</span>
+          <span className="ml-2 text-xs text-muted-foreground font-normal">{cliTools.length}</span>
           <InfoTooltip text="Host CLI tools available for delegation to Claude Code." />
         </h2>
         {cliTools.length === 0 ? (
-          <p className="text-sm text-gray-500 py-6 text-center">
+          <p className="text-sm text-muted-foreground py-6 text-center">
             No CLI tools registered
           </p>
         ) : (
@@ -467,14 +467,14 @@ export default function Capabilities() {
               .map((c: any) => (
                 <div
                   key={c._id}
-                  className="flex items-center gap-2 bg-gray-900/50 rounded-lg px-3 py-2"
+                  className="flex items-center gap-2 bg-background rounded-lg px-3 py-2"
                 >
-                  <span className="text-sm font-mono text-gray-200">{c.name}</span>
+                  <span className="text-sm font-mono text-foreground">{c.name}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 flex-shrink-0">
                     {c.category}
                   </span>
                   {c.description && (
-                    <span className="text-xs text-gray-500 truncate hidden lg:inline">
+                    <span className="text-xs text-muted-foreground truncate hidden lg:inline">
                       {c.description}
                     </span>
                   )}
@@ -503,7 +503,7 @@ export default function Capabilities() {
       )}
 
       {catalogStatus === "ready" && catalogCommands.length === 0 && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-6 text-center text-sm text-gray-500">
+        <div className="bg-card border border-border rounded-xl px-4 py-6 text-center text-sm text-muted-foreground">
           No commands registered. Connect to Astridr WebSocket to load the command registry.
         </div>
       )}
