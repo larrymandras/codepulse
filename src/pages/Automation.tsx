@@ -136,39 +136,39 @@ export default function Automation() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pipeline Checkpoints */}
         <SectionErrorBoundary name="Pipeline Checkpoints">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-card border border-border rounded-xl p-4">
             <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Pipeline Checkpoints
               <InfoTooltip text="Durable pipeline execution — checkpoint persistence for restart-safe pipelines" />
             </h2>
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
-                <p className="text-lg font-semibold text-gray-100">{checkpointOverview?.totalCheckpoints ?? 0}</p>
-                <p className="text-[10px] text-gray-500">Total</p>
+              <div className="bg-background rounded-lg p-2 text-center">
+                <p className="text-lg font-semibold text-foreground">{checkpointOverview?.totalCheckpoints ?? 0}</p>
+                <p className="text-[10px] text-muted-foreground">Total</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+              <div className="bg-background rounded-lg p-2 text-center">
                 <p className="text-lg font-semibold text-yellow-400">{checkpointOverview?.activeExecutions ?? 0}</p>
-                <p className="text-[10px] text-gray-500">Active</p>
+                <p className="text-[10px] text-muted-foreground">Active</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+              <div className="bg-background rounded-lg p-2 text-center">
                 <p className="text-lg font-semibold text-green-400">{checkpointOverview?.completedExecutions ?? 0}</p>
-                <p className="text-[10px] text-gray-500">Completed</p>
+                <p className="text-[10px] text-muted-foreground">Completed</p>
               </div>
             </div>
             <div className="max-h-64 overflow-y-auto space-y-1">
               {(recentCheckpoints ?? []).map((cp: any, i: number) => (
-                <div key={cp._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-gray-800/30" : ""}`}>
-                  <span className={`w-2 h-2 rounded-full ${cp.status === "completed" ? "bg-green-400" : cp.status === "resumed" ? "bg-blue-400" : cp.status === "saved" ? "bg-yellow-400" : "bg-gray-400"}`} />
-                  <span className="text-gray-400 font-mono w-16 shrink-0">{relTime(cp.timestamp)}</span>
-                  <span className="text-gray-200 truncate">{cp.pipelineName}</span>
-                  <span className="text-gray-500">step {cp.stepIndex}: {cp.stepName}</span>
+                <div key={cp._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-card" : ""}`}>
+                  <span className={`w-2 h-2 rounded-full ${cp.status === "completed" ? "bg-green-400" : cp.status === "resumed" ? "bg-blue-400" : cp.status === "saved" ? "bg-yellow-400" : "bg-muted-foreground"}`} />
+                  <span className="text-muted-foreground font-mono w-16 shrink-0">{relTime(cp.timestamp)}</span>
+                  <span className="text-foreground truncate">{cp.pipelineName}</span>
+                  <span className="text-muted-foreground">step {cp.stepIndex}: {cp.stepName}</span>
                   <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${cp.status === "completed" ? "bg-green-400/10 text-green-400" : cp.status === "resumed" ? "bg-blue-400/10 text-blue-400" : "bg-yellow-400/10 text-yellow-400"}`}>
                     {cp.status}
                   </span>
                 </div>
               ))}
               {(!recentCheckpoints || recentCheckpoints.length === 0) && (
-                <p className="text-xs text-gray-500 text-center py-4">No checkpoint events yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No checkpoint events yet</p>
               )}
             </div>
           </div>
@@ -176,38 +176,38 @@ export default function Automation() {
 
         {/* Integration Calls */}
         <SectionErrorBoundary name="Integration Calls">
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+          <div className="bg-card border border-border rounded-xl p-4">
             <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Integration Calls
               <InfoTooltip text="YAML-defined API integrations — declarative endpoint calls with automatic auth" />
             </h2>
             <div className="grid grid-cols-3 gap-2 mb-3">
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
-                <p className="text-lg font-semibold text-gray-100">{integrationOverview?.totalCalls ?? 0}</p>
-                <p className="text-[10px] text-gray-500">Total Calls</p>
+              <div className="bg-background rounded-lg p-2 text-center">
+                <p className="text-lg font-semibold text-foreground">{integrationOverview?.totalCalls ?? 0}</p>
+                <p className="text-[10px] text-muted-foreground">Total Calls</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+              <div className="bg-background rounded-lg p-2 text-center">
                 <p className="text-lg font-semibold text-red-400">{integrationOverview?.failures ?? 0}</p>
-                <p className="text-[10px] text-gray-500">Failures</p>
+                <p className="text-[10px] text-muted-foreground">Failures</p>
               </div>
-              <div className="bg-gray-900/50 rounded-lg p-2 text-center">
+              <div className="bg-background rounded-lg p-2 text-center">
                 <p className="text-lg font-semibold text-blue-400">{integrationOverview?.avgDurationMs ?? 0}ms</p>
-                <p className="text-[10px] text-gray-500">Avg Latency</p>
+                <p className="text-[10px] text-muted-foreground">Avg Latency</p>
               </div>
             </div>
             <div className="max-h-64 overflow-y-auto space-y-1">
               {(recentIntegrations ?? []).map((call: any, i: number) => (
-                <div key={call._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-gray-800/30" : ""}`}>
+                <div key={call._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-card" : ""}`}>
                   <span className={`w-2 h-2 rounded-full ${call.success ? "bg-green-400" : "bg-red-400"}`} />
-                  <span className="text-gray-400 font-mono w-16 shrink-0">{relTime(call.timestamp)}</span>
-                  <span className="text-gray-200 truncate">{call.integrationName}</span>
-                  <span className="text-gray-500">{call.method} {call.endpointName}</span>
-                  <span className="ml-auto text-gray-400 font-mono">{call.statusCode}</span>
-                  <span className="text-gray-500 font-mono w-12 text-right">{call.durationMs}ms</span>
+                  <span className="text-muted-foreground font-mono w-16 shrink-0">{relTime(call.timestamp)}</span>
+                  <span className="text-foreground truncate">{call.integrationName}</span>
+                  <span className="text-muted-foreground">{call.method} {call.endpointName}</span>
+                  <span className="ml-auto text-muted-foreground font-mono">{call.statusCode}</span>
+                  <span className="text-muted-foreground font-mono w-12 text-right">{call.durationMs}ms</span>
                 </div>
               ))}
               {(!recentIntegrations || recentIntegrations.length === 0) && (
-                <p className="text-xs text-gray-500 text-center py-4">No integration calls yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No integration calls yet</p>
               )}
             </div>
           </div>
