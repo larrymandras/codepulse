@@ -114,13 +114,16 @@ export class AstridrApiError extends Error {
   }
 }
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (ASTRIDR_API_KEY) h["Authorization"] = `Bearer ${ASTRIDR_API_KEY}`;
   return h;
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+/** Base URL for the Ástríðr backend (empty string in tests / when unset). */
+export const astridrApiBase = (): string => ASTRIDR_API_BASE;
+
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${ASTRIDR_API_BASE}${path}`, {
     headers: authHeaders(),
     ...init,
