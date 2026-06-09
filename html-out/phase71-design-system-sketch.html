@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CodePulse — Phase 71 Unified Design System Sketch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     CodePulse — proposed UNIFIED tokens (evolved from live :root/.dark)
+     This file IS the design artifact. All tokens inline, no external deps.
+     ============================================================ */
+  :root {
+    /* neutrals / surfaces (live .dark) */
+    --background:#09090b; --foreground:#ffffff;
+    --card:#141416; --popover:#141416;
+    --muted:#27272a; --muted-foreground:#a1a1aa;
+    --border:#27272a;
+    /* brand — Matrix Emerald (live) */
+    --primary:#10b981; --primary-foreground:#09090b; --ring:#10b981;
+    /* semantic status (live + proposed --info) */
+    --status-ok:#22c55e; --status-warn:#eab308; --status-error:#ef4444;
+    --info:#3b82f6;                 /* [NEW] promoted from MetricCard ad-hoc */
+    /* chart ramp (live) */
+    --chart-1:#10b981; --chart-2:#22c55e; --chart-3:#52525b;
+    --chart-p50:#10b981; --chart-p95:#f59e0b; --chart-p99:#ef4444;
+    /* glass (live) */
+    --glass-bg:rgba(20,20,22,0.75); --glass-border:rgba(39,39,42,0.6); --glass-blur:12px;
+    /* glow scale [NEW — formalizing inline magic strings] */
+    --glow-xs:0 0 8px rgba(16,185,129,0.15);
+    --glow-sm:0 0 15px rgba(16,185,129,0.20);
+    --glow-md:0 0 25px rgba(16,185,129,0.30);
+    --glow-lg:0 0 40px rgba(16,185,129,0.15);
+    /* radius — proposed resolution Q1-A */
+    --radius:0.5rem;
+    --radius-sm:calc(var(--radius)*0.6); --radius-lg:var(--radius); --radius-xl:calc(var(--radius)*1.4);
+    /* type */
+    --font-geist:"Geist",system-ui,sans-serif;
+    --font-mono:"JetBrains Mono",monospace;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--background); color:var(--foreground);
+    font-family:var(--font-geist); -webkit-font-smoothing:antialiased;
+    position:relative; overflow-x:hidden;
+  }
+  /* matrix grid background (live index.css:.matrix-bg) */
+  body::before {
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:0.8;
+    background-image:
+      linear-gradient(rgba(16,185,129,0.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(16,185,129,0.05) 1px,transparent 1px);
+    background-size:30px 30px;
+  }
+  body::after {
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    background:radial-gradient(circle at center,transparent 0%,var(--background) 80%);
+  }
+  .mono { font-family:var(--font-mono); }
+  .label { font-family:var(--font-mono); text-transform:uppercase; letter-spacing:0.18em; font-size:10px; color:rgba(16,185,129,0.6); font-weight:700; }
+  h1,h2,h3 { font-weight:700; letter-spacing:-0.01em; }
+  a { color:inherit; }
+  ::-webkit-scrollbar { width:6px; height:6px; }
+  ::-webkit-scrollbar-track { background:rgba(0,0,0,0.2); border-left:1px solid rgba(16,185,129,0.1); }
+  ::-webkit-scrollbar-thumb { background:rgba(16,185,129,0.3); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background:rgba(16,185,129,0.6); box-shadow:0 0 8px rgba(16,185,129,0.8); }
+
+  /* layout shell */
+  .shell { display:flex; min-height:100vh; }
+  .sidebar {
+    width:240px; flex-shrink:0; background:var(--glass-bg); backdrop-filter:blur(var(--glass-blur));
+    border-right:1px solid var(--border); display:flex; flex-direction:column;
+  }
+  .sb-head { padding:16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+  .sb-logo { width:40px; height:40px; border-radius:var(--radius-sm); border:1.5px solid rgba(16,185,129,0.5);
+    background:rgba(16,185,129,0.1); display:flex; align-items:center; justify-content:center;
+    color:var(--primary); font-family:var(--font-mono); font-weight:700; font-size:11px; letter-spacing:0.15em;
+    box-shadow:var(--glow-xs); }
+  .sb-title { font-family:var(--font-mono); font-size:14px; font-weight:700; letter-spacing:0.08em; text-shadow:0 0 8px rgba(16,185,129,0.5); }
+  .sb-sub { font-family:var(--font-mono); font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:rgba(16,185,129,0.8); margin-top:2px; display:flex; align-items:center; gap:6px; }
+  .dot-live { width:6px; height:6px; border-radius:50%; background:var(--primary); box-shadow:0 0 8px rgba(16,185,129,0.8); animation:pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  nav { flex:1; overflow-y:auto; padding:8px; }
+  .nav-group { margin-bottom:8px; }
+  .nav-group-label { padding:14px 12px 8px; display:flex; align-items:center; gap:8px; }
+  .nav-group-label .gdot { width:4px; height:4px; border-radius:50%; background:rgba(16,185,129,0.5); }
+  .nav-item { display:flex; align-items:center; gap:12px; padding:8px 12px; font-family:var(--font-mono);
+    font-size:12px; letter-spacing:0.08em; color:rgba(161,161,170,0.8); text-decoration:none;
+    border-left:3px solid transparent; transition:all .2s; cursor:pointer; }
+  .nav-item:hover { color:var(--primary); background:rgba(16,185,129,0.05); border-left-color:rgba(16,185,129,0.5); }
+  .nav-item.active { color:var(--primary); background:rgba(16,185,129,0.1); border-left-color:var(--primary);
+    box-shadow:inset 8px 0 15px rgba(16,185,129,0.12); }
+  .nav-item.active .ico, .nav-item:hover .ico { filter:drop-shadow(0 0 6px rgba(16,185,129,0.7)); }
+  .nav-item .new { margin-left:auto; font-size:8px; padding:1px 5px; border:1px solid rgba(16,185,129,0.4); border-radius:3px; color:var(--primary); }
+  .ico { width:16px; height:16px; flex-shrink:0; }
+  .sep { height:1px; background:var(--border); margin:8px 12px; }
+
+  .main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:56px; flex-shrink:0; border-bottom:1px solid var(--border); display:flex; align-items:center;
+    gap:16px; padding:0 24px; background:rgba(9,9,11,0.8); backdrop-filter:blur(8px); }
+  .pill-live { display:flex; align-items:center; gap:8px; padding:6px 12px; border-radius:var(--radius-sm);
+    background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2); box-shadow:var(--glow-xs); }
+  .pill-live span { font-family:var(--font-mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--primary); }
+  .sys { font-family:var(--font-mono); font-size:10px; color:rgba(16,185,129,0.6); padding-left:16px; border-left:1px solid rgba(16,185,129,0.2); }
+  .sys b { color:var(--primary); }
+
+  .content { flex:1; padding:24px; display:flex; flex-direction:column; gap:32px; }
+  .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid var(--border); }
+  .section-head h2 { font-size:14px; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted-foreground); margin:0; }
+
+  /* surfaces / panels */
+  .panel { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-lg); }
+  .glow-panel { background:rgba(20,20,22,0.6); backdrop-filter:blur(12px); border:1px solid rgba(39,39,42,0.6);
+    border-radius:var(--radius-xl); box-shadow:var(--glow-sm); transition:all .3s; position:relative; overflow:hidden; }
+  .glow-panel:hover { border-color:rgba(16,185,129,0.5); box-shadow:var(--glow-md); }
+
+  /* metric cards */
+  .metric-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+  .metric { padding:20px; border-radius:var(--radius-xl); background:rgba(20,20,22,0.6); backdrop-filter:blur(12px);
+    border:1px solid rgba(39,39,42,0.6); position:relative; transition:all .3s; }
+  .metric:hover { border-color:rgba(16,185,129,0.5); box-shadow:var(--glow-md); }
+  .metric .sev { position:absolute; top:16px; right:16px; width:8px; height:8px; border-radius:50%; }
+  .metric .mlabel { font-family:var(--font-mono); font-size:11px; text-transform:uppercase; letter-spacing:0.16em; color:var(--muted-foreground); }
+  .metric .mval { font-size:30px; font-weight:500; letter-spacing:-0.02em; margin-top:8px; font-variant-numeric:tabular-nums; display:flex; align-items:baseline; gap:8px; }
+  .trend-up { color:var(--status-ok); font-size:13px; }
+  .trend-dn { color:var(--status-error); font-size:13px; }
+
+  /* swatches */
+  .swatch-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+  .sw { border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+  .sw .chip { height:56px; }
+  .sw .meta { padding:8px 10px; background:var(--card); }
+  .sw .meta .n { font-size:12px; font-weight:600; }
+  .sw .meta .v { font-family:var(--font-mono); font-size:10px; color:var(--muted-foreground); }
+
+  /* type specimen */
+  .type-row { display:flex; align-items:baseline; gap:16px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .type-row .k { font-family:var(--font-mono); font-size:10px; color:var(--muted-foreground); width:170px; flex-shrink:0; text-transform:uppercase; letter-spacing:0.1em; }
+
+  /* status pills */
+  .pill { display:inline-flex; align-items:center; border-radius:var(--radius-sm); font-size:11px; font-weight:600;
+    padding:3px 10px; font-family:var(--font-mono); letter-spacing:0.05em; }
+  .pill.ok{background:var(--status-ok);color:#06210f}
+  .pill.warn{background:var(--status-warn);color:#241c00}
+  .pill.error{background:var(--status-error);color:#2b0606}
+  .pill.info{background:var(--info);color:#04122b}
+  .pill.idle{background:var(--muted);color:var(--muted-foreground)}
+
+  /* buttons */
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 14px; border-radius:var(--radius-lg);
+    font-size:13px; font-weight:500; border:1px solid transparent; cursor:pointer; transition:all .2s; font-family:var(--font-geist); }
+  .btn-primary{background:var(--primary);color:var(--primary-foreground)} .btn-primary:hover{box-shadow:var(--glow-sm)}
+  .btn-outline{border-color:var(--border);background:transparent;color:var(--foreground)} .btn-outline:hover{background:var(--muted)}
+  .btn-ghost{background:transparent;color:var(--muted-foreground)} .btn-ghost:hover{background:var(--muted);color:var(--foreground)}
+  .btn-destructive{background:rgba(239,68,68,0.15);color:var(--status-error);border-color:rgba(239,68,68,0.3)} .btn-destructive:hover{background:rgba(239,68,68,0.25)}
+
+  /* entity rows */
+  .row { display:flex; align-items:center; gap:12px; padding:10px 12px; border-bottom:1px solid var(--border); transition:background .2s; }
+  .row:last-child{border-bottom:none}
+  .row:hover{background:rgba(39,39,42,0.5);cursor:pointer}
+  .row .ri { width:16px; height:16px; color:var(--muted-foreground); }
+  .row .rp { font-size:14px; font-weight:500; }
+  .row .rs { font-size:12px; color:var(--muted-foreground); }
+  .row .rt { margin-left:auto; font-size:12px; color:var(--muted-foreground); font-family:var(--font-mono); }
+
+  /* flex bar chart */
+  .bars { display:flex; align-items:flex-end; gap:6px; height:90px; padding:12px; }
+  .bar { flex:1; background:linear-gradient(to top,rgba(16,185,129,0.1),rgba(16,185,129,0.6)); border-top:1px solid rgba(16,185,129,0.5); border-radius:2px 2px 0 0; transition:all .3s; }
+  .bar:hover{background:linear-gradient(to top,rgba(16,185,129,0.3),var(--primary));box-shadow:var(--glow-sm)}
+
+  /* graphs landing tiles */
+  .tile-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .tile{padding:20px;border-radius:var(--radius-xl);background:rgba(20,20,22,0.6);backdrop-filter:blur(12px);
+    border:1px solid rgba(39,39,42,0.6);transition:all .3s;position:relative;overflow:hidden}
+  .tile:hover{border-color:rgba(16,185,129,0.5);box-shadow:var(--glow-md);transform:translateY(-2px)}
+  .tile .tico{width:32px;height:32px;color:var(--primary);filter:drop-shadow(0 0 8px rgba(16,185,129,0.5))}
+  .tile h3{font-size:15px;margin:14px 0 6px}
+  .tile p{font-size:12px;color:var(--muted-foreground);margin:0;line-height:1.5}
+  .tile .badge{position:absolute;top:14px;right:14px;font-family:var(--font-mono);font-size:8px;padding:2px 6px;border:1px solid rgba(16,185,129,0.4);border-radius:3px;color:var(--primary)}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .stack{display:flex;flex-direction:column;gap:10px}
+  .flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .doc-note{font-size:11px;color:var(--muted-foreground);font-family:var(--font-mono);margin-top:6px}
+  svg{display:block}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ===== SIDEBAR — proposed IA with new GRAPHS + CONSOLE clusters ===== -->
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">CP</div>
+      <div>
+        <div class="sb-title">CodePulse</div>
+        <div class="sb-sub"><span class="dot-live"></span> Operator: Larry</div>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-group">
+        <div class="nav-group-label"><span class="gdot"></span><span class="label">Command</span></div>
+        <a class="nav-item active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Chat</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Live Run</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>Inbox</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="18"/><rect x="3" y="14" width="7" height="7"/></svg>Tasks</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/></svg>Config</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 4 6 6-9 9H6v-6z"/></svg>Skills</a>
+      </div>
+      <div class="sep"></div>
+      <div class="nav-group">
+        <div class="nav-group-label"><span class="gdot"></span><span class="label">Console</span></div>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>Agent Console<span class="new">ph75</span></a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/></svg>Executions</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m2 12 10 5 10-5"/><path d="m2 7 10 5 10-5-10-5z"/></svg>Build</a>
+      </div>
+      <div class="sep"></div>
+      <div class="nav-group">
+        <div class="nav-group-label"><span class="gdot"></span><span class="label">Graphs</span></div>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Graphs Hub<span class="new">ph76</span></a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg>Tool Galaxy<span class="new">ph72</span></a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3v6"/></svg>KG Explorer<span class="new">ph74</span></a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>Capabilities</a>
+      </div>
+      <div class="sep"></div>
+      <div class="nav-group">
+        <div class="nav-group-label"><span class="gdot"></span><span class="label">Observe</span></div>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>Alerts</a>
+        <a class="nav-item"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Security</a>
+      </div>
+    </nav>
+    <div class="sep" style="margin:0"></div>
+    <div style="padding:14px 16px;display:flex;align-items:center;gap:8px">
+      <span class="dot-live" style="background:var(--status-ok)"></span>
+      <span style="font-size:12px;color:var(--muted-foreground)">Connected to Convex</span>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <div class="topbar">
+      <div class="pill-live"><span class="dot-live"></span><span>Astridr Runtime Telemetry</span></div>
+      <div class="sys">SYS <b>14%</b> &nbsp; LAT <b>12ms</b></div>
+      <div style="margin-left:auto" class="flex">
+        <button class="btn btn-outline">E-STOP</button>
+        <button class="btn btn-ghost">CRT</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <div>
+          <h1 style="font-size:24px;margin:0">Unified Design System — "Agentic OS"</h1>
+          <div class="doc-note">Evolved from the live Matrix-Emerald dark skin (src/index.css:.dark). Primary #10b981 · Geist + JetBrains Mono · Lucide · shadcn/ui New York</div>
+        </div>
+        <span class="pill ok">GROUND TRUTH</span>
+      </div>
+
+      <!-- COLOR SWATCHES -->
+      <section>
+        <div class="section-head"><h2>Color Tokens</h2><span class="label">oklch / hex</span></div>
+        <div class="swatch-grid">
+          <div class="sw"><div class="chip" style="background:#09090b"></div><div class="meta"><div class="n">background</div><div class="v">#09090b</div></div></div>
+          <div class="sw"><div class="chip" style="background:#141416"></div><div class="meta"><div class="n">card</div><div class="v">#141416</div></div></div>
+          <div class="sw"><div class="chip" style="background:#27272a"></div><div class="meta"><div class="n">muted / border</div><div class="v">#27272a</div></div></div>
+          <div class="sw"><div class="chip" style="background:#a1a1aa"></div><div class="meta"><div class="n">muted-fg</div><div class="v">#a1a1aa</div></div></div>
+          <div class="sw"><div class="chip" style="background:#10b981"></div><div class="meta"><div class="n">primary · emerald</div><div class="v">#10b981</div></div></div>
+          <div class="sw"><div class="chip" style="background:#22c55e"></div><div class="meta"><div class="n">success</div><div class="v">#22c55e</div></div></div>
+          <div class="sw"><div class="chip" style="background:#eab308"></div><div class="meta"><div class="n">warn</div><div class="v">#eab308</div></div></div>
+          <div class="sw"><div class="chip" style="background:#ef4444"></div><div class="meta"><div class="n">error</div><div class="v">#ef4444</div></div></div>
+          <div class="sw"><div class="chip" style="background:#3b82f6"></div><div class="meta"><div class="n">info <span style="color:var(--primary)">NEW</span></div><div class="v">#3b82f6</div></div></div>
+        </div>
+      </section>
+
+      <!-- TYPOGRAPHY -->
+      <section>
+        <div class="section-head"><h2>Typography</h2><span class="label">Geist + JetBrains Mono</span></div>
+        <div class="panel" style="padding:8px 18px">
+          <div class="type-row"><span class="k">H1 / page</span><span style="font-size:24px;font-weight:700">Operational Command Center</span></div>
+          <div class="type-row"><span class="k">metric / 3xl</span><span style="font-size:30px;font-weight:500;font-variant-numeric:tabular-nums">1,284</span></div>
+          <div class="type-row"><span class="k">section head</span><span style="font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted-foreground)">Active Sessions</span></div>
+          <div class="type-row"><span class="k">label / mono</span><span class="label" style="font-size:11px">TOKENS · UPTIME · LATENCY</span></div>
+          <div class="type-row"><span class="k">body</span><span style="font-size:14px">Real-time telemetry across the Agentic OS surface substrate.</span></div>
+          <div class="type-row"><span class="k">code / mono</span><span class="mono" style="font-size:13px;color:var(--primary)">$ astridr ws subscribe --topic health</span></div>
+        </div>
+      </section>
+
+      <!-- METRIC CARDS -->
+      <section>
+        <div class="section-head"><h2>MetricCard</h2><span class="label">severity dot → status token</span></div>
+        <div class="metric-grid">
+          <div class="metric"><span class="sev" style="background:var(--primary);box-shadow:0 0 8px rgba(16,185,129,0.8)"></span><div class="mlabel">Active Agents</div><div class="mval">12 <span class="trend-up">▲</span></div></div>
+          <div class="metric"><span class="sev" style="background:var(--status-warn);box-shadow:0 0 8px rgba(234,179,8,0.8)"></span><div class="mlabel">Daily Spend</div><div class="mval">$4.21</div></div>
+          <div class="metric"><span class="sev" style="background:var(--status-error);box-shadow:0 0 8px rgba(239,68,68,0.8)"></span><div class="mlabel">Open Alerts</div><div class="mval">3 <span class="trend-dn">▼</span></div></div>
+          <div class="metric"><span class="sev" style="background:var(--info);box-shadow:0 0 8px rgba(59,130,246,0.8)"></span><div class="mlabel">Avg Latency</div><div class="mval">12ms</div></div>
+        </div>
+      </section>
+
+      <!-- PANELS + ROWS + CHART -->
+      <section>
+        <div class="section-head"><h2>Panel · EntityRow · FlexBarChart</h2><span class="label">primitives</span></div>
+        <div class="grid-2">
+          <div class="glow-panel">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border)" class="label">Recent Sessions</div>
+            <div class="row"><svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33"/></svg><div><div class="rp">skuld · research</div><div class="rs">claude-opus-4-8 · 42s</div></div><span class="rt">DONE</span></div>
+            <div class="row"><svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/></svg><div><div class="rp">hildr · linkedin</div><div class="rs">running · 3 tools</div></div><span class="rt">12s</span></div>
+            <div class="row"><svg class="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/></svg><div><div class="rp">mimir · music</div><div class="rs">queued</div></div><span class="rt">—</span></div>
+          </div>
+          <div class="glow-panel">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border)" class="label">Token Throughput</div>
+            <div class="bars">
+              <div class="bar" style="height:40%"></div><div class="bar" style="height:65%"></div>
+              <div class="bar" style="height:30%"></div><div class="bar" style="height:85%"></div>
+              <div class="bar" style="height:55%"></div><div class="bar" style="height:70%"></div>
+              <div class="bar" style="height:45%"></div><div class="bar" style="height:95%"></div>
+              <div class="bar" style="height:60%"></div><div class="bar" style="height:35%"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATUS PILLS + BUTTONS -->
+      <section>
+        <div class="section-head"><h2>StatusBadge · Button</h2><span class="label">semantic surfaces</span></div>
+        <div class="panel stack" style="padding:18px">
+          <div class="flex" style="margin-bottom:16px">
+            <span class="pill ok">DONE</span><span class="pill warn">RUNNING</span><span class="pill error">FAILED</span>
+            <span class="pill info">INFO</span><span class="pill idle">QUEUED</span>
+            <span class="pill ok">LIVE</span><span class="pill idle">ENDED</span><span class="pill warn">PENDING</span>
+          </div>
+          <div class="flex">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn btn-outline">Outline</button>
+            <button class="btn btn-ghost">Ghost</button>
+            <button class="btn btn-destructive">Destructive</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GRAPHS LANDING TILES -->
+      <section>
+        <div class="section-head"><h2>Graphs Hub — landing tiles</h2><span class="label">new cluster</span></div>
+        <div class="tile-row">
+          <div class="tile"><span class="badge">ph72</span><svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="5" cy="18" r="2"/><circle cx="19" cy="18" r="2"/><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3"/></svg><h3>Tool Galaxy</h3><p>Force graph over tools, MCP servers & kits with usage glow + orphan detection.</p></div>
+          <div class="tile"><span class="badge">ph74</span><svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M9 6h6a3 3 0 0 1 3 3v6"/></svg><h3>KG Explorer</h3><p>Temporal entities, ego graphs, as-of scrubber, contradiction lens, provenance.</p></div>
+          <div class="tile"><span class="badge">ph76</span><svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><h3>Unified Hub</h3><p>graphify + Obsidian + KG + tools, federated into one navigable surface.</p></div>
+          <div class="tile"><span class="badge">live</span><svg class="tico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg><h3>Capabilities</h3><p>Existing tool-governance surface — folds into the Graphs cluster.</p></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

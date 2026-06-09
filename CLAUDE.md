@@ -69,7 +69,7 @@ React 19, Vite 7, TypeScript 5.9, Convex (database + backend), Tailwind CSS 4 (v
 
 ## Styling
 
-Tailwind CSS 4 only — no component library. Dark theme throughout: `bg-gray-800/50` cards, `border-gray-700/50` borders, `text-gray-300` body text, `indigo-600` accents, green/amber/red for status indicators. Fonts: Cinzel (headings), Geist (body), JetBrains Mono (code).
+Tailwind CSS 4 + **shadcn/ui (New York)** — 30 primitives in `src/components/ui/` (Radix-backed); compose these, don't hand-roll. The default shipped skin is a **dark "Matrix Emerald" cyberpunk theme** (`<html class="dark">`): zinc neutrals (`#09090b/#141416/#27272a`), **emerald `#10b981` accent** ("Matrix Emerald", `src/index.css:123`), green/amber/red + blue (`--info`) status colors, plus glow/CRT/matrix-grid effects. The light `:root` is a true-monochrome oklch palette. Effective radius is `0.5rem` (the `--radius:0` token is being corrected in Phase 71). Fonts: **Geist (body + headings), JetBrains Mono (code)** — Cinzel is being retired (Phase 71). Icons: **Lucide only**. Design tokens + conventions are formalized in `.planning/phases/071-unified-design-system/UI-SPEC.md`.
 
 ## Ástríðr API Integration
 
