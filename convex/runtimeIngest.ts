@@ -670,6 +670,25 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "kits_snapshot": {
+          // Phase 72: tool-kit membership snapshot from Ástríðr. Upserts each
+          // kit idempotently by name, replacing its `tools` array wholesale.
+          const d = data as any;
+          if (Array.isArray(d.kits)) {
+            const updatedAt = d.timestamp ?? timestamp;
+            for (const kit of d.kits) {
+              const name = kit?.name;
+              if (!name) continue;
+              await ctx.runMutation(api.kits.upsertKit, {
+                name,
+                description: kit.description,
+                tools: Array.isArray(kit.tools) ? kit.tools : [],
+                updatedAt,
+              });
+            }
+          }
+          break;
+        }
         case "channel_health": {
           const d = data as any;
           await ctx.runMutation(api.channelHealth.upsert, {

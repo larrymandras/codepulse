@@ -7,6 +7,7 @@ import {
   type DiscoveredTool,
   type McpServer,
   type CallGraphEdge,
+  type Kit,
 } from "./tool-galaxy";
 
 // ---- fixtures -------------------------------------------------------------
@@ -44,6 +45,14 @@ const edge = (
   lastCallAt: 1000,
   errorCount: 0,
   status: "healthy",
+  ...extra,
+});
+
+const kit = (name: string, tools: string[], extra: Partial<Kit> = {}): Kit => ({
+  _id: `kit-${name}`,
+  name,
+  tools,
+  updatedAt: 1000,
   ...extra,
 });
 
@@ -327,6 +336,115 @@ describe("deriveAgents / deriveMcpServers", () => {
     expect(
       deriveMcpServers([server("supabase"), server("github")]).map((s) => s.name),
     ).toEqual(["github", "supabase"]);
+  });
+});
+
+// ---- kit nodes (Phase 72 GAP B) -------------------------------------------
+
+describe("buildGalaxy — kit nodes", () => {
+  it("creates a kit node and kit->tool membership links", () => {
+    const g = buildGalaxy(
+      input({
+        tools: [tool("Read"), tool("Write")],
+        kits: [kit("io", ["Read", "Write"])],
+      }),
+    );
+    const kitNode = g.nodes.find((n) => n.id === "kit:io");
+    expect(kitNode).toBeDefined();
+    expect(kitNode?.kind).toBe("kit");
+    const memberLinks = g.links.filter(
+      (l) => l.kind === "kit-tool" && l.source === "kit:io",
+    );
+    expect(memberLinks.map((l) => l.target).sort()).toEqual([
+      "tool:Read",
+      "tool:Write",
+    ]);
+  });
+
+  it("carries the kit description onto the kit node", () => {
+    const g = buildGalaxy(
+      input({
+        tools: [tool("Read")],
+        kits: [kit("io", ["Read"], { description: "file io" })],
+      }),
+    );
+    expect(g.nodes.find((n) => n.id === "kit:io")?.description).toBe("file io");
+  });
+
+  it("counts kits in stats", () => {
+    const g = buildGalaxy(
+      input({
+        tools: [tool("Read"), tool("query")],
+        kits: [kit("io", ["Read"]), kit("db", ["query"])],
+      }),
+    );
+    expect(g.stats.kitCount).toBe(2);
+  });
+
+  it("creates a tool node for a kit member not present in discoveredTools", () => {
+    const g = buildGalaxy(input({ kits: [kit("io", ["PhantomKitTool"])] }));
+    const phantom = g.nodes.find((n) => n.id === "tool:PhantomKitTool");
+    expect(phantom).toBeDefined();
+    expect(phantom?.kind).toBe("tool");
+    expect(phantom?.orphan).toBe(true); // kit membership is not usage
+  });
+
+  it("never flags a kit node as an orphan", () => {
+    const g = buildGalaxy(
+      input({ tools: [tool("Read")], kits: [kit("io", ["Read"])] }),
+    );
+    expect(g.nodes.find((n) => n.kind === "kit")?.orphan).toBe(false);
+  });
+
+  it("dedupes repeated tool membership within a kit", () => {
+    const g = buildGalaxy(
+      input({ tools: [tool("Read")], kits: [kit("io", ["Read", "Read"])] }),
+    );
+    expect(
+      g.links.filter((l) => l.kind === "kit-tool" && l.target === "tool:Read"),
+    ).toHaveLength(1);
+  });
+
+  it("drops a kit node when none of its tools survive a filter", () => {
+    const g = buildGalaxy(
+      input({
+        tools: [tool("Read"), tool("query", { serverName: "supabase" })],
+        mcpServers: [server("supabase")],
+        edges: [edge("skuld", "Read"), edge("hildr", "query")],
+        kits: [kit("io", ["Read"])], // Read belongs only to skuld
+        agentFilter: "hildr",
+      }),
+    );
+    expect(g.nodes.some((n) => n.id === "kit:io")).toBe(false);
+    // and no dangling kit-tool link references a dropped node
+    const ids = new Set(g.nodes.map((n) => n.id));
+    for (const l of g.links) {
+      expect(ids.has(l.source)).toBe(true);
+      expect(ids.has(l.target)).toBe(true);
+    }
+  });
+
+  it("keeps a kit when at least one member tool survives the filter", () => {
+    const g = buildGalaxy(
+      input({
+        tools: [tool("Read"), tool("Write")],
+        edges: [edge("skuld", "Read"), edge("hildr", "Write")],
+        kits: [kit("io", ["Read", "Write"])],
+        agentFilter: "hildr",
+      }),
+    );
+    expect(g.nodes.some((n) => n.id === "kit:io")).toBe(true);
+    // only the surviving member (Write) is linked
+    const targets = g.links
+      .filter((l) => l.kind === "kit-tool")
+      .map((l) => l.target);
+    expect(targets).toEqual(["tool:Write"]);
+  });
+
+  it("emits no kit nodes when no kits are supplied", () => {
+    const g = buildGalaxy(input({ tools: [tool("Read")] }));
+    expect(g.nodes.some((n) => n.kind === "kit")).toBe(false);
+    expect(g.stats.kitCount).toBe(0);
   });
 });
 

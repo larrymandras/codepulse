@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import type {
   CallGraphEdge,
   DiscoveredTool,
+  Kit,
   McpServer,
 } from "../lib/tool-galaxy";
 
@@ -25,6 +26,7 @@ const sources = vi.hoisted(() => ({
   tools: [] as DiscoveredTool[],
   mcpServers: [] as McpServer[],
   edges: [] as CallGraphEdge[],
+  kits: [] as Kit[],
   loading: false,
 }));
 vi.mock("../hooks/useToolGalaxy", () => ({
@@ -58,6 +60,7 @@ beforeEach(() => {
   sources.tools = [];
   sources.mcpServers = [];
   sources.edges = [];
+  sources.kits = [];
   sources.loading = false;
 });
 
@@ -109,5 +112,24 @@ describe("ToolGalaxy page", () => {
     const color = h.props!.nodeColor as (n: any) => string;
     expect(color({ kind: "agent", name: "skuld" })).toBe("#3b82f6");
     expect(color({ kind: "mcpServer", name: "github" })).toBe("#a78bfa");
+  });
+
+  it("renders kit nodes from the kits source and colors them distinctly", () => {
+    sources.tools = [tool("Read")];
+    sources.edges = [edge("skuld", "Read")];
+    sources.kits = [
+      { _id: "k1", name: "io", tools: ["Read"], updatedAt: 1 },
+    ];
+    render(<ToolGalaxy />);
+    expect(h.props).not.toBeNull();
+    const ids = h.props!.graphData.nodes.map((n: any) => n.id);
+    expect(ids).toContain("kit:io");
+    const color = h.props!.nodeColor as (n: any) => string;
+    expect(color({ kind: "kit", name: "io" })).toBe("#f472b6");
+    // kit -> tool membership link is present
+    const hasMembership = h.props!.graphData.links.some(
+      (l: any) => l.kind === "kit-tool",
+    );
+    expect(hasMembership).toBe(true);
   });
 });

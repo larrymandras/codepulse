@@ -24,6 +24,7 @@ const COLORS = {
   toolBase: [16, 185, 129] as const, // --primary emerald
   agent: "#3b82f6", // --status-info
   server: "#a78bfa", // violet-400
+  kit: "#f472b6", // pink-400 — capability bundle
   error: "#ef4444", // --status-error
   orphan: "#eab308", // --status-warn (amber)
 };
@@ -46,6 +47,8 @@ function nodeColor(node: GalaxyNode): string {
       return COLORS.agent;
     case "mcpServer":
       return COLORS.server;
+    case "kit":
+      return COLORS.kit;
     default:
       return toolColor(node);
   }
@@ -58,7 +61,7 @@ function GalaxyCanvas({
   agentFilter: string | null;
   mcpFilter: string | null;
 }) {
-  const { tools, mcpServers, edges, loading } = useToolGalaxySources();
+  const { tools, mcpServers, edges, kits, loading } = useToolGalaxySources();
   const fgRef = useRef<any>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
 
@@ -71,11 +74,12 @@ function GalaxyCanvas({
         tools,
         mcpServers,
         edges,
+        kits,
         agentFilter,
         mcpFilter,
         now: Date.now() / 1000,
       }),
-    [tools, mcpServers, edges, agentFilter, mcpFilter],
+    [tools, mcpServers, edges, kits, agentFilter, mcpFilter],
   );
 
   const nodeById = useMemo(() => {
@@ -91,8 +95,6 @@ function GalaxyCanvas({
       const size = Math.max(n.val, 3);
       const color = nodeColor(n);
 
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
       // GAL-02: glow encodes recency/usage; errored & orphan still legible.
       ctx.shadowColor = color;
       ctx.shadowBlur = isHovered
@@ -101,7 +103,26 @@ function GalaxyCanvas({
           ? 6 + n.recency * 18
           : 10;
       ctx.fillStyle = isHovered ? "#ffffff" : color;
-      ctx.fill();
+      if (n.kind === "kit") {
+        // Kits render as a rounded square so the capability-bundle layer reads
+        // distinctly from the circular tool/agent/server nodes.
+        const r = 2;
+        const x = node.x - size;
+        const y = node.y - size;
+        const s = size * 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + s, y, x + s, y + s, r);
+        ctx.arcTo(x + s, y + s, x, y + s, r);
+        ctx.arcTo(x, y + s, x, y, r);
+        ctx.arcTo(x, y, x + s, y, r);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
 
       // GAL-03: orphan ring — dashed amber outline so unused tools read instantly.
@@ -147,10 +168,11 @@ function GalaxyCanvas({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <MetricCard label="Tools" value={graph.stats.toolCount} />
         <MetricCard label="Agents" value={graph.stats.agentCount} />
         <MetricCard label="MCP Servers" value={graph.stats.serverCount} />
+        <MetricCard label="Kits" value={graph.stats.kitCount} />
         <MetricCard label="Edges" value={graph.stats.edgeCount} />
         <MetricCard label="Orphans" value={graph.stats.orphanCount} />
       </div>
@@ -166,6 +188,7 @@ function GalaxyCanvas({
           <LegendDot color="rgb(16,185,129)" label="Tool (bright = recent)" />
           <LegendDot color={COLORS.agent} label="Agent / persona" />
           <LegendDot color={COLORS.server} label="MCP server" />
+          <LegendDot color={COLORS.kit} label="Kit (bundle)" square />
           <LegendDot color={COLORS.error} label="Errored" />
           <LegendDot color={COLORS.orphan} label="Orphan (unused)" dashed />
         </div>
@@ -201,11 +224,10 @@ function GalaxyCanvas({
             linkColor={(l: any) => {
               const active =
                 l.source?.id === hoverId || l.target?.id === hoverId;
-              const isServer = l.kind === "server-tool";
               if (active) return "rgba(16, 185, 129, 0.9)";
-              return isServer
-                ? "rgba(167, 139, 250, 0.25)"
-                : "rgba(16, 185, 129, 0.18)";
+              if (l.kind === "server-tool") return "rgba(167, 139, 250, 0.25)";
+              if (l.kind === "kit-tool") return "rgba(244, 114, 182, 0.25)";
+              return "rgba(16, 185, 129, 0.18)";
             }}
             linkWidth={(l: any) =>
               l.source?.id === hoverId || l.target?.id === hoverId ? 2 : 0.6
@@ -240,15 +262,17 @@ function LegendDot({
   color,
   label,
   dashed,
+  square,
 }: {
   color: string;
   label: string;
   dashed?: boolean;
+  square?: boolean;
 }) {
   return (
     <span className="flex items-center gap-2 text-muted-foreground">
       <span
-        className="inline-block h-2.5 w-2.5 rounded-full"
+        className={`inline-block h-2.5 w-2.5 ${square ? "rounded-[2px]" : "rounded-full"}`}
         style={{
           backgroundColor: dashed ? "transparent" : color,
           border: dashed ? `1.5px dashed ${color}` : undefined,
@@ -277,7 +301,7 @@ export default function ToolGalaxy() {
             <InfoTooltip text="Force-directed map of every installed tool, MCP server, and the agents that call them. Node brightness = recency, size = usage; dashed amber rings flag installed-but-unused (orphan) tools." />
           </h1>
           <p className="text-xs text-muted-foreground font-mono mt-1">
-            Capability topology from discoveredTools · mcpServers · callGraphEdges
+            Capability topology from discoveredTools · mcpServers · callGraphEdges · kits
           </p>
         </div>
 

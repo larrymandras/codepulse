@@ -1,14 +1,11 @@
 /**
  * Tool / Capability Galaxy — pure data-transform layer (Phase 72, GAL-01..04).
  *
- * Assembles a force-graph {nodes, links} model from three live Convex sources:
+ * Assembles a force-graph {nodes, links} model from four live Convex sources:
  *   - discoveredTools  (installed tools)
  *   - mcpServers       (MCP servers that host tools)
  *   - callGraphEdges   (agent -> tool call edges with usage/recency/health)
- *
- * NOTE: the milestone requirements (GAL-01) also mention `kits`, but there is no
- * `kits`/`toolKits` table in convex/schema.ts. This module is built for the three
- * tables that DO exist; add a `kit` node kind here when/if that table lands.
+ *   - kits             (capability bundles; kit -> tool membership)
  *
  * This file is intentionally framework-free and fully unit-testable: it does no
  * rendering and imports nothing from React or the graph library. The page
@@ -51,9 +48,17 @@ export interface CallGraphEdge {
   status: string; // "healthy" | "errored"
 }
 
+export interface Kit {
+  _id: string;
+  name: string;
+  description?: string;
+  tools: string[];
+  updatedAt: number;
+}
+
 // ---- output model ---------------------------------------------------------
 
-export type NodeKind = "tool" | "mcpServer" | "agent";
+export type NodeKind = "tool" | "mcpServer" | "agent" | "kit";
 
 export interface GalaxyNode {
   id: string; // namespaced: "tool:Read" | "mcp:github" | "agent:skuld"
@@ -79,7 +84,7 @@ export interface GalaxyNode {
 export interface GalaxyLink {
   source: string;
   target: string;
-  kind: "agent-tool" | "server-tool";
+  kind: "agent-tool" | "server-tool" | "kit-tool";
   callCount: number;
 }
 
@@ -87,6 +92,7 @@ export interface GalaxyStats {
   toolCount: number;
   agentCount: number;
   serverCount: number;
+  kitCount: number;
   orphanCount: number;
   edgeCount: number;
 }
@@ -101,6 +107,8 @@ export interface ToolGalaxyInput {
   tools: DiscoveredTool[];
   mcpServers: McpServer[];
   edges: CallGraphEdge[];
+  /** capability bundles; each contributes a kit node + kit->tool edges. */
+  kits?: Kit[];
   /** current epoch (seconds) for recency; defaults to Date.now()/1000. */
   now?: number;
   /** GAL-04: keep only this agent and the tools it calls. */
@@ -113,11 +121,13 @@ export interface ToolGalaxyInput {
 export const toolId = (name: string) => `tool:${name}`;
 export const mcpId = (name: string) => `mcp:${name}`;
 export const agentId = (id: string) => `agent:${id}`;
+export const kitId = (name: string) => `kit:${name}`;
 
 const MIN_TOOL_SIZE = 3;
 const MAX_TOOL_SIZE = 22;
 const AGENT_SIZE = 8;
 const SERVER_SIZE = 10;
+const KIT_SIZE = 11;
 // Recency half-life: ~7 days (in seconds). After one half-life, recency = 0.5.
 const RECENCY_HALFLIFE_S = 7 * 24 * 60 * 60;
 
@@ -183,13 +193,20 @@ export function buildGalaxy(inputArg: ToolGalaxyInput): GalaxyGraph {
 
   const edgeAgg = aggregateEdgesByTool(inputArg.edges);
 
-  // ---- 1. collect the universe of tool names (installed ∪ edge-referenced) --
+  const kits = inputArg.kits ?? [];
+
+  // ---- 1. collect the universe of tool names (installed ∪ edge ∪ kit) ------
   const toolByName = new Map<string, DiscoveredTool | undefined>();
   for (const t of inputArg.tools) {
     if (!toolByName.has(t.name)) toolByName.set(t.name, t);
   }
   for (const name of edgeAgg.keys()) {
     if (!toolByName.has(name)) toolByName.set(name, undefined);
+  }
+  for (const kit of kits) {
+    for (const name of kit.tools) {
+      if (!toolByName.has(name)) toolByName.set(name, undefined);
+    }
   }
 
   // serverName lookup is only meaningful when the server actually exists.
@@ -307,6 +324,27 @@ export function buildGalaxy(inputArg: ToolGalaxyInput): GalaxyGraph {
     });
   }
 
+  // ---- 5b. build kit nodes (only those with a surviving member tool) -------
+  // A kit survives if at least one of its tools passed the agent/mcp filters,
+  // mirroring how agent/server nodes only appear when they touch a kept tool.
+  const keptKits = kits.filter((k) =>
+    k.tools.some((name) => keptToolSet.has(name)),
+  );
+  for (const kit of keptKits) {
+    nodes.push({
+      id: kitId(kit.name),
+      name: kit.name,
+      kind: "kit",
+      val: KIT_SIZE,
+      callCount: 0,
+      errorCount: 0,
+      recency: 0,
+      orphan: false,
+      status: "healthy",
+      description: kit.description,
+    });
+  }
+
   const nodeIds = new Set(nodes.map((n) => n.id));
 
   // ---- 6. links ------------------------------------------------------------
@@ -346,11 +384,25 @@ export function buildGalaxy(inputArg: ToolGalaxyInput): GalaxyGraph {
     links.push({ source: src, target: tgt, kind: "server-tool", callCount: 0 });
   }
 
+  // kit -> tool (membership), only to surviving tools; dedupe per pair
+  for (const kit of keptKits) {
+    const src = kitId(kit.name);
+    if (!nodeIds.has(src)) continue;
+    const seen = new Set<string>();
+    for (const name of kit.tools) {
+      const tgt = toolId(name);
+      if (seen.has(tgt) || !nodeIds.has(tgt)) continue;
+      seen.add(tgt);
+      links.push({ source: src, target: tgt, kind: "kit-tool", callCount: 0 });
+    }
+  }
+
   const toolNodes = nodes.filter((n) => n.kind === "tool");
   const stats: GalaxyStats = {
     toolCount: toolNodes.length,
     agentCount: agentSet.size,
     serverCount: serverSet.size,
+    kitCount: keptKits.length,
     orphanCount: toolNodes.filter((n) => n.orphan).length,
     edgeCount: links.length,
   };
