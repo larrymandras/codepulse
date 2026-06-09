@@ -972,6 +972,19 @@ export default defineSchema({
     updatedAt: v.float64(),
   }).index("by_name", ["name"]),
 
+  // Tool governance flags (Phase 73, MCP-03). One row per tool name carrying a
+  // `disabled` prune flag set by the operator from the MCP Inventory surface.
+  // CodePulse-side governance state only: enforcement (Ástríðr refusing to load
+  // a disabled tool) is a follow-up — this table is the source of truth the
+  // enforcement endpoint would read. Idempotent by `toolName`.
+  toolGovernance: defineTable({
+    toolName: v.string(),
+    disabled: v.boolean(),
+    updatedAt: v.float64(),
+    updatedBy: v.optional(v.string()),
+    note: v.optional(v.string()),
+  }).index("by_toolName", ["toolName"]),
+
   emailDeliveryLog: defineTable({
     alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
