@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
-import { Boxes, AlertTriangle, RefreshCw } from "lucide-react";
+import { Boxes, AlertTriangle, RefreshCw, Info } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import MetricCard from "../components/MetricCard";
@@ -88,6 +88,13 @@ function GalaxyCanvas({
     return m;
   }, [graph.nodes]);
 
+  // "Data-starved" state: tools are installed but no tool call has ever been
+  // recorded (callGraphEdges is empty), so usage sizing, agent links, kit
+  // bundles, and orphan flags are all meaningless. Surface it explicitly rather
+  // than rendering a hairball of "all-orphan" nodes that reads as broken.
+  const noTelemetry =
+    graph.stats.edgeCount === 0 && graph.stats.toolCount > 0;
+
   const paintNode = useCallback(
     (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
       const n = node as GalaxyNode & { x: number; y: number };
@@ -126,7 +133,9 @@ function GalaxyCanvas({
       ctx.shadowBlur = 0;
 
       // GAL-03: orphan ring — dashed amber outline so unused tools read instantly.
-      if (n.orphan) {
+      // Suppressed when there's no telemetry at all: every tool is trivially an
+      // "orphan" then, which is noise rather than signal.
+      if (n.orphan && !noTelemetry) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, size + 2.5, 0, 2 * Math.PI, false);
         ctx.setLineDash([3, 3]);
@@ -150,7 +159,7 @@ function GalaxyCanvas({
         ctx.fillText(label, node.x, node.y + size + 2 + bgH / 2);
       }
     },
-    [hoverId],
+    [hoverId, noTelemetry],
   );
 
   if (loading) {
@@ -176,6 +185,22 @@ function GalaxyCanvas({
         <MetricCard label="Edges" value={graph.stats.edgeCount} />
         <MetricCard label="Orphans" value={graph.stats.orphanCount} />
       </div>
+
+      {noTelemetry && (
+        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-3">
+          <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+          <div className="text-xs font-mono leading-relaxed">
+            <p className="text-foreground">No usage telemetry yet.</p>
+            <p className="text-muted-foreground mt-0.5">
+              {graph.stats.toolCount} tools are installed, but no tool calls have
+              been recorded. Node sizing, agent links, kit bundles, and orphan
+              flags populate once Ástríðr reports tool executions to{" "}
+              <span className="text-primary">callGraphEdges</span> (and{" "}
+              <span className="text-primary">kits_snapshot</span> at bootstrap).
+            </p>
+          </div>
+        </div>
+      )}
 
       <div
         className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
