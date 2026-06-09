@@ -689,6 +689,77 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "graph_snapshot": {
+          // Phase 76 (HUB-01): whole graphify-out / Obsidian-vault graph pushed
+          // by Ástríðr's Phase 137 `graph:snapshot` cron. Idempotent by
+          // `snapshotId` — nodes/links REPLACE the prior row, never accumulate.
+          // Defensive at the wire boundary: accept snake_case fallbacks, drop
+          // un-keyable nodes and dangling links. The pure version of this
+          // mapping is unit-tested in src/lib/graph-snapshot.test.ts.
+          const d = data as any;
+          const snapshotId = d.snapshotId ?? d.snapshot_id ?? d.id;
+          if (snapshotId) {
+            const rawNodes = Array.isArray(d.nodes) ? d.nodes : [];
+            const rawLinks = Array.isArray(d.links)
+              ? d.links
+              : Array.isArray(d.edges)
+                ? d.edges
+                : [];
+
+            const nodes: Array<{
+              id: string;
+              label: string;
+              type: string;
+              community?: number;
+              source: string;
+            }> = [];
+            for (const n of rawNodes) {
+              if (!n || typeof n !== "object") continue;
+              const id = n.id ?? n.node_id ?? n.nodeId;
+              if (!id) continue;
+              const node: {
+                id: string;
+                label: string;
+                type: string;
+                community?: number;
+                source: string;
+              } = {
+                id: String(id),
+                label: String(n.label ?? n.name ?? id),
+                type: String(n.type ?? n.node_type ?? n.nodeType ?? n.group ?? "node"),
+                source: String(n.source ?? n.namespace ?? ""),
+              };
+              if (typeof n.community === "number") node.community = n.community;
+              nodes.push(node);
+            }
+
+            const ids = new Set(nodes.map((n) => n.id));
+            const links: Array<{ source: string; target: string; relation: string }> = [];
+            for (const l of rawLinks) {
+              if (!l || typeof l !== "object") continue;
+              const source = l.source ?? l.from ?? l.src;
+              const target = l.target ?? l.to ?? l.dst;
+              if (!source || !target) continue;
+              const s = String(source);
+              const t = String(target);
+              if (!ids.has(s) || !ids.has(t)) continue;
+              links.push({
+                source: s,
+                target: t,
+                relation: String(l.relation ?? l.rel ?? l.type ?? l.label ?? "links"),
+              });
+            }
+
+            await ctx.runMutation(api.graphSnapshots.upsertSnapshot, {
+              snapshotId: String(snapshotId),
+              nodes,
+              links,
+              snapshotTimestamp: d.timestamp ?? d.snapshotTimestamp ?? timestamp,
+              updatedAt: now,
+            });
+          }
+          break;
+        }
         case "kg_summary": {
           // Phase 135 emitter → Phase 74 KG Explorer summary cards (KG-01).
           // Latest-wins upsert of the single KG summary snapshot. Field names

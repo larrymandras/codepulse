@@ -59,6 +59,7 @@ import type * as gatewayTasks from "../gatewayTasks.js";
 import type * as git from "../git.js";
 import type * as gitActivity from "../gitActivity.js";
 import type * as githubActions from "../githubActions.js";
+import type * as graphSnapshots from "../graphSnapshots.js";
 import type * as health from "../health.js";
 import type * as heroStats from "../heroStats.js";
 import type * as hiveMind from "../hiveMind.js";
@@ -187,6 +188,7 @@ declare const fullApi: ApiFromModules<{
   git: typeof git;
   gitActivity: typeof gitActivity;
   githubActions: typeof githubActions;
+  graphSnapshots: typeof graphSnapshots;
   health: typeof health;
   heroStats: typeof heroStats;
   hiveMind: typeof hiveMind;

@@ -1000,6 +1000,34 @@ export default defineSchema({
     updatedAt: v.float64(),                    // epoch seconds — when CodePulse received it
   }),
 
+  // Graph snapshots — pushed by Ástríðr's `graph_snapshot` telemetry event
+  // (Phase 137 emitter). One row per `snapshotId`, idempotent: the nodes/links
+  // arrays are REPLACED wholesale on each event so a snapshot always reflects
+  // its latest state (no accumulation). Feeds the Unified Graph Hub (Phase 76,
+  // HUB-01): graphify-out repo graphs + the Obsidian vault wikilink graph.
+  // `source` on each node namespaces its origin ("graphify:<repo>:" or "vault:").
+  graphSnapshots: defineTable({
+    snapshotId: v.string(),
+    nodes: v.array(
+      v.object({
+        id: v.string(),
+        label: v.string(),
+        type: v.string(),
+        community: v.optional(v.float64()),
+        source: v.string(), // "graphify:<repo>:" | "vault:"
+      }),
+    ),
+    links: v.array(
+      v.object({
+        source: v.string(),
+        target: v.string(),
+        relation: v.string(),
+      }),
+    ),
+    snapshotTimestamp: v.float64(), // emitter-supplied snapshot time
+    updatedAt: v.float64(),         // epoch seconds — when CodePulse received it
+  }).index("by_snapshotId", ["snapshotId"]),
+
   emailDeliveryLog: defineTable({
     alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
