@@ -689,6 +689,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           }
           break;
         }
+        case "kg_summary": {
+          // Phase 135 emitter → Phase 74 KG Explorer summary cards (KG-01).
+          // Latest-wins upsert of the single KG summary snapshot. Field names
+          // mirror the live emitter (currentTripleCount / historicalTripleCount).
+          const d = data as any;
+          await ctx.runMutation(api.kg.upsertSummary, {
+            entitiesByType: d.entitiesByType ?? d.entities_by_type ?? {},
+            currentTripleCount:
+              d.currentTripleCount ?? d.current_triple_count ?? d.currentTriples ?? 0,
+            historicalTripleCount:
+              d.historicalTripleCount ??
+              d.historical_triple_count ??
+              d.historicalTriples ??
+              0,
+            contradictionCount:
+              d.contradictionCount ?? d.contradiction_count ?? 0,
+            lastExtractionAt: d.lastExtractionAt ?? d.last_extraction_at ?? undefined,
+            updatedAt: d.timestamp ?? timestamp,
+          });
+          break;
+        }
         case "channel_health": {
           const d = data as any;
           await ctx.runMutation(api.channelHealth.upsert, {

@@ -972,6 +972,21 @@ export default defineSchema({
     updatedAt: v.float64(),
   }).index("by_name", ["name"]),
 
+  // Temporal-KG summary snapshot — pushed by Ástríðr's `kg_summary` telemetry
+  // event (Phase 135 emitter). Single latest-snapshot semantics: one row,
+  // upserted on every event, so the KG Explorer summary cards (Phase 74, KG-01)
+  // render even when Ástríðr is offline or before any interactive fetch.
+  // Field names mirror the live emitter (currentTripleCount / historicalTripleCount).
+  kgSummary: defineTable({
+    entitiesByType: v.record(v.string(), v.float64()),
+    totalEntities: v.float64(),
+    currentTripleCount: v.float64(),
+    historicalTripleCount: v.float64(),
+    contradictionCount: v.float64(),
+    lastExtractionAt: v.optional(v.string()),  // ISO ts of last extraction, or undefined
+    updatedAt: v.float64(),                    // epoch seconds — when CodePulse received it
+  }),
+
   emailDeliveryLog: defineTable({
     alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),

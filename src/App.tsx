@@ -51,6 +51,9 @@ const Skills = lazy(() => import("./pages/Skills"));
 // Phase 72: Tool / Capability Galaxy
 const ToolGalaxy = lazy(() => import("./pages/ToolGalaxy"));
 
+// Phase 74: Temporal-KG Explorer
+const KnowledgeGraph = lazy(() => import("./pages/KnowledgeGraph"));
+
 // Phase 74: HR Section stub pages
 const HrRoster = lazy(() => import("./pages/hr/Roster"));
 const HrCatalog = lazy(() => import("./pages/hr/Catalog"));
@@ -101,6 +104,8 @@ export default function App() {
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
               {/* Phase 72: Tool / Capability Galaxy (GRAPHS cluster) */}
               <Route path="/tool-galaxy" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tool Galaxy...</div>}><ToolGalaxy /></Suspense>} />
+              {/* Phase 74: Temporal-KG Explorer (GRAPHS cluster) */}
+              <Route path="/knowledge-graph" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading KG Explorer...</div>}><KnowledgeGraph /></Suspense>} />
               {/* Phase 74: HR Section pages */}
               <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
               <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
