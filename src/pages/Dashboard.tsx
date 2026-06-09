@@ -73,7 +73,7 @@ export default function Dashboard() {
               className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "pulse"
                   ? "text-primary border-primary"
-                  : "text-muted-foreground border-transparent hover:text-gray-200"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
               }`}
             >
               Activity Pulse
@@ -83,7 +83,7 @@ export default function Dashboard() {
               className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "timeline"
                   ? "text-primary border-primary"
-                  : "text-muted-foreground border-transparent hover:text-gray-200"
+                  : "text-muted-foreground border-transparent hover:text-foreground"
               }`}
             >
               Conversation Timeline

@@ -149,7 +149,7 @@ const navGroups: NavGroupConfig[] = [
     group: "GRAPHS",
     items: [
       { label: "Graphs Hub", icon: "network", group: "GRAPHS", placeholder: true },
-      { label: "Tool Galaxy", icon: "boxes", group: "GRAPHS", placeholder: true },
+      { to: "/tool-galaxy", label: "Tool Galaxy", icon: "boxes", group: "GRAPHS" },
       { label: "KG Explorer", icon: "share-2", group: "GRAPHS", placeholder: true },
       { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "GRAPHS" },
     ],

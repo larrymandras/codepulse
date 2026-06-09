@@ -72,9 +72,9 @@ export default function InsightsChat() {
   return (
     <div className="flex flex-col -m-6 h-[calc(100vh-3rem)]">
       {/* Header */}
-      <div className="p-4 border-b border-gray-800">
-        <h1 className="text-base font-semibold text-gray-100">Insights</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
+      <div className="p-4 border-b border-border">
+        <h1 className="text-base font-semibold text-foreground">Insights</h1>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Ask about cost, errors, sessions, agents, or alerts.
         </p>
       </div>
@@ -82,7 +82,7 @@ export default function InsightsChat() {
       {/* Message area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && !loading && (
-          <p className="text-gray-500 text-sm text-center mt-8">
+          <p className="text-muted-foreground text-sm text-center mt-8">
             Ask a question to get started.
           </p>
         )}
@@ -99,7 +99,7 @@ export default function InsightsChat() {
         ))}
 
         {loading && (
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
             Querying your data...
           </div>

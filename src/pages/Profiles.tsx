@@ -83,7 +83,7 @@ export default function Profiles() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Agent Profiles</h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Operational profiles for Personal, Business, and Consulting workstreams
         </p>
       </div>
@@ -98,12 +98,12 @@ export default function Profiles() {
 
       {/* Profile Cards */}
       {seeding ? (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-          <p className="text-gray-400">Setting up profiles...</p>
+        <div className="bg-card border border-border rounded-xl p-8 text-center">
+          <p className="text-muted-foreground">Setting up profiles...</p>
         </div>
       ) : allProfileIds.size === 0 ? (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-8 text-center">
-          <p className="text-gray-500">No profiles configured yet</p>
+        <div className="bg-card border border-border rounded-xl p-8 text-center">
+          <p className="text-muted-foreground">No profiles configured yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -129,25 +129,25 @@ export default function Profiles() {
 
       {/* Profile Activity Timeline */}
       {profileSwitches.length > 0 && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-gray-200 mb-3">
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-foreground mb-3">
             Profile Switch Timeline
           </h2>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {profileSwitches.map((sw: any) => (
               <div
                 key={sw._id}
-                className="flex items-start gap-3 text-xs border-l-2 border-gray-700 pl-3 py-1"
+                className="flex items-start gap-3 text-xs border-l-2 border-border pl-3 py-1"
               >
-                <span className="text-gray-500 whitespace-nowrap shrink-0">
+                <span className="text-muted-foreground whitespace-nowrap shrink-0">
                   {formatTimestamp(sw.timestamp)}
                 </span>
                 <div>
-                  <span className="text-gray-400">{sw.fromProfile}</span>
-                  <span className="text-gray-600 mx-1">&rarr;</span>
-                  <span className="text-gray-200">{sw.toProfile}</span>
+                  <span className="text-muted-foreground">{sw.fromProfile}</span>
+                  <span className="text-muted-foreground mx-1">&rarr;</span>
+                  <span className="text-foreground">{sw.toProfile}</span>
                   {sw.reason && (
-                    <span className="text-gray-500 ml-2">
+                    <span className="text-muted-foreground ml-2">
                       &mdash; {sw.reason}
                     </span>
                   )}
@@ -160,14 +160,14 @@ export default function Profiles() {
 
       {/* Channel Health Summary */}
       {allChannels.length > 0 && (
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-gray-200 mb-3">
+        <div className="bg-card border border-border rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-foreground mb-3">
             Channel Health Summary
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-gray-500 border-b border-gray-700/50">
+                <tr className="text-muted-foreground border-b border-border">
                   <th className="text-left py-1.5 pr-4">Profile</th>
                   <th className="text-left py-1.5 pr-4">Channel</th>
                   <th className="text-left py-1.5">Status</th>
@@ -177,12 +177,12 @@ export default function Profiles() {
                 {allChannels.map((ch, i) => (
                   <tr
                     key={`${ch.profileId}-${ch.type}-${i}`}
-                    className="border-b border-gray-800/50"
+                    className="border-b border-border"
                   >
-                    <td className="py-1.5 pr-4 text-gray-300 font-mono">
+                    <td className="py-1.5 pr-4 text-muted-foreground font-mono">
                       {ch.profileId}
                     </td>
-                    <td className="py-1.5 pr-4 text-gray-300 capitalize">
+                    <td className="py-1.5 pr-4 text-muted-foreground capitalize">
                       {ch.type}
                     </td>
                     <td className="py-1.5">
@@ -193,7 +193,7 @@ export default function Profiles() {
                               ? "bg-green-400"
                               : ch.status === "inactive"
                                 ? "bg-red-400"
-                                : "bg-gray-500"
+                                : "bg-muted-foreground"
                           }`}
                         />
                         <span
@@ -202,7 +202,7 @@ export default function Profiles() {
                               ? "text-green-400"
                               : ch.status === "inactive"
                                 ? "text-red-400"
-                                : "text-gray-500"
+                                : "text-muted-foreground"
                           }
                         >
                           {ch.status}

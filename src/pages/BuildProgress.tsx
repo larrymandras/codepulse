@@ -21,7 +21,7 @@ export default function BuildProgress() {
     <div className="space-y-6">
       {/* Header + summary stats */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-100 mb-4">Build Progress</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-4">Build Progress</h1>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <MetricCard label="Total Components" value={totalComponents} />
           <MetricCard

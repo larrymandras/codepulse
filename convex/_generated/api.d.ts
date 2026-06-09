@@ -72,6 +72,7 @@ import type * as insightsChat from "../insightsChat.js";
 import type * as instructionsLoaded from "../instructionsLoaded.js";
 import type * as integrationCalls from "../integrationCalls.js";
 import type * as integrations from "../integrations.js";
+import type * as kits from "../kits.js";
 import type * as lib_providers from "../lib/providers.js";
 import type * as llm from "../llm.js";
 import type * as meetingBot from "../meetingBot.js";
@@ -197,6 +198,7 @@ declare const fullApi: ApiFromModules<{
   instructionsLoaded: typeof instructionsLoaded;
   integrationCalls: typeof integrationCalls;
   integrations: typeof integrations;
+  kits: typeof kits;
   "lib/providers": typeof lib_providers;
   llm: typeof llm;
   meetingBot: typeof meetingBot;

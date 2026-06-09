@@ -63,7 +63,7 @@ function AlertRow({ a }: { a: any }) {
 
   return (
     <div
-      className={`bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 transition-opacity duration-200 ease-out ${rowOpacity}`}
+      className={`bg-card border border-border rounded-xl px-4 py-3 transition-opacity duration-200 ease-out ${rowOpacity}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -74,7 +74,7 @@ function AlertRow({ a }: { a: any }) {
                 {a.severity}
               </span>
             </span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 border border-gray-600/30">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
               {a.source}
             </span>
             {isAcked && (
@@ -94,15 +94,15 @@ function AlertRow({ a }: { a: any }) {
               </span>
             )}
           </div>
-          <p className={`text-sm text-gray-200 ${isAcked ? "line-through text-gray-500" : ""}`}>
+          <p className={`text-sm text-foreground ${isAcked ? "line-through text-muted-foreground" : ""}`}>
             {a.message}
             {a.groupCount > 1 && (
-              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                 x{a.groupCount}
               </span>
             )}
           </p>
-          <p className="text-xs text-gray-500 mt-1">{relativeTime(a.createdAt)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{relativeTime(a.createdAt)}</p>
           {a.webhookStatus && (
             <div className="mt-1">
               <WebhookStatusBadge
@@ -165,15 +165,15 @@ export default function Alerts() {
       {/* Filter Controls */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         {/* Severity Tabs */}
-        <div className="flex items-center gap-1 bg-gray-800/50 border border-gray-700/50 rounded-xl p-1">
+        <div className="flex items-center gap-1 bg-card border border-border rounded-xl p-1">
           {tabs.map((tab) => (
             <button
               key={tab.value}
               onClick={() => setSeverityFilter(tab.value)}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                 severityFilter === tab.value
-                  ? "bg-gray-700 text-gray-100"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -182,11 +182,11 @@ export default function Alerts() {
         </div>
 
         {/* Active / All Toggle */}
-        <div className="flex items-center gap-2 bg-gray-800/50 border border-gray-700/50 rounded-xl p-1">
+        <div className="flex items-center gap-2 bg-card border border-border rounded-xl p-1">
           <button
             onClick={() => setShowAll(false)}
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-              !showAll ? "bg-gray-700 text-gray-100" : "text-gray-400 hover:text-gray-200"
+              !showAll ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Active
@@ -194,7 +194,7 @@ export default function Alerts() {
           <button
             onClick={() => setShowAll(true)}
             className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-              showAll ? "bg-gray-700 text-gray-100" : "text-gray-400 hover:text-gray-200"
+              showAll ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             All
@@ -212,7 +212,7 @@ export default function Alerts() {
             </div>
             <div>
               <p className="text-green-400 text-xl font-medium tracking-wide mb-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">No active alerts</p>
-              <p className="text-gray-400 text-sm">All monitored thresholds are within normal range.</p>
+              <p className="text-muted-foreground text-sm">All monitored thresholds are within normal range.</p>
             </div>
           </div>
         </div>

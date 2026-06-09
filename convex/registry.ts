@@ -464,6 +464,17 @@ export const listTools = query({
   },
 });
 
+/**
+ * All discovered tools (unbounded vs. listTools' top-50). Used by the Tool
+ * Galaxy (Phase 72) which needs every installed tool to detect orphans.
+ */
+export const listAllTools = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("discoveredTools").collect();
+  },
+});
+
 export const detectAndRegisterTool = mutation({
   args: {
     name: v.string(),

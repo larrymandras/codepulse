@@ -36,7 +36,7 @@ const FALLBACK_AGENTS = [
 ];
 
 export default function MissionControl() {
-  const serverTasks = useQuery(api.missionControl.listTasksByAgent) ?? [];
+  const serverTasks = useQuery(api.missionControl.listTasksByAgent);
   const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
   const avatars = useAvatars();
   const { agents: rosterAgents } = useRosterAgents();
@@ -47,6 +47,12 @@ export default function MissionControl() {
 
   // Sync server tasks to local state (for optimistic updates)
   useEffect(() => {
+    // serverTasks is `undefined` while the Convex query loads. The previous
+    // `?? []` created a NEW array literal every render; as a useEffect dependency
+    // that re-fired this effect → setLocalTasks → re-render → new [] → ... an
+    // infinite "Maximum update depth exceeded" loop. Convex useQuery returns a
+    // stable reference, so depend on it directly and skip the loading state.
+    if (serverTasks === undefined) return;
     setLocalTasks(
       serverTasks.map((t: any) => ({
         ...t,

@@ -962,6 +962,16 @@ export default defineSchema({
     .index("by_session", ["sessionId"])
     .index("by_timestamp", ["lastCallAt"]),
 
+  // Tool kits — capability bundles emitted by Ástríðr via the `kits_snapshot`
+  // runtime event. One row per kit, idempotent by name; `tools` is replaced
+  // wholesale on each snapshot. Feeds the Tool Galaxy kit nodes (Phase 72).
+  kits: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    tools: v.array(v.string()),
+    updatedAt: v.float64(),
+  }).index("by_name", ["name"]),
+
   emailDeliveryLog: defineTable({
     alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
