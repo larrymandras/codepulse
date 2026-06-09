@@ -59,6 +59,8 @@ export interface KgAttribute {
   validTo: string | null;
   contradictionFlag: boolean;
   sourceTripleId: string;
+  /** episodic event id (provenance), when the API serializes it. */
+  sourceEventId?: string | null;
 }
 
 export interface KgLink {
@@ -75,6 +77,8 @@ export interface KgLink {
   validFrom: string | null;
   validTo: string | null;
   agentId: string;
+  /** episodic event id (provenance), when the API serializes it. */
+  sourceEventId?: string | null;
 }
 
 export interface KgGraphData {
@@ -280,6 +284,7 @@ export function toGraphData(payload: KgPayload): KgGraphData {
         validFrom: t.validFrom,
         validTo: t.validTo,
         agentId: t.agentId,
+        sourceEventId: t.sourceEventId ?? null,
       });
       nodeById.get(t.subjectId)!.degree += 1;
       nodeById.get(t.objectId!)!.degree += 1;
@@ -294,6 +299,7 @@ export function toGraphData(payload: KgPayload): KgGraphData {
         validTo: t.validTo,
         contradictionFlag: t.contradictionFlag,
         sourceTripleId: t.id,
+        sourceEventId: t.sourceEventId ?? null,
       });
       attributeCount++;
     }

@@ -39,6 +39,13 @@ export interface KgTriple {
   confidence: number | null;
   agentId: string;
   contradictionFlag: boolean;
+  /**
+   * Episodic-memory event id that taught this fact (provenance deep-link target,
+   * KG-06). NOTE: the live Phase 135 `_serialize_triple` does NOT yet emit this
+   * — it is optional + forward-compatible so the panel links provenance the
+   * moment the Ástríðr API starts serializing `source_event_id`.
+   */
+  sourceEventId?: string | null;
 }
 
 /** `/api/kg/summary` — also pushed as the `kg_summary` telemetry event. */
