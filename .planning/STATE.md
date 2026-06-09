@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
 milestone: v6.0
-milestone_name: Knowledge Graph Observability & Hardening
+milestone_name: Agentic OS Front-End
 status: ready
-last_updated: "2026-06-01T00:00:00.000Z"
-last_activity: 2026-06-01
+last_updated: "2026-06-09T00:00:00.000Z"
+last_activity: 2026-06-09
 progress:
-  total_phases: 4
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,20 +17,28 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-01)
+See: .planning/PROJECT.md (updated 2026-06-09)
 
-**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard.
-**Current focus:** v6.0 Knowledge Graph Observability & Hardening — roadmap complete, ready to plan Phase 71
+**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
+**Current focus:** v6.0 Agentic OS Front-End — milestone reframed 2026-06-09 (absorbed the never-started v6.0 KG/Hardening roadmap). Starting Phase 71 (Unified Design System).
 **Last completed:** v5.0 milestone archived (2026-05-25)
 
 ## Current Position
 
-Phase: 71 — CI & Production Hardening
+Phase: 71 — Unified Design System
 Plan: —
-Status: Ready to plan
-Last activity: 2026-06-01 — v6.0 roadmap created (4 phases, 12 requirements mapped)
+Status: Discovery (design-language audit + UI-SPEC in progress)
+Last activity: 2026-06-09 — milestone renamed v6.0 → "Agentic OS Front-End"; roadmap replaced with the 7-phase Agentic OS Front-End set; M1.P1 callGraphEdges emitter built upstream (Astridr) — unblocks Phase 72 Galaxy
 
-**Progress bar:** [░░░░░░░░░░] 0% (0/4 phases)
+**Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
+
+## Milestone Reframe (2026-06-09)
+
+The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was roadmapped 2026-06-01 but **never executed** (0/4 phases, 0 plans). It is superseded — not deleted — by the broader **"Agentic OS Front-End"** vision (the CodePulse half of the two-milestone Agentic OS plan; companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`). Nothing was orphaned:
+
+- Old **P73 + P74 (KG Wave 1 + 2)** → consolidated into new **Phase 74 — Temporal-KG Explorer** (same feature, same Ástríðr Phase 125/126 gate).
+- Old **P72 (Lucide icon standardization, UI-09) + QA-01 (traceability)** → folded into new **Phase 71 — Unified Design System** (the system supersedes ad-hoc icon polish).
+- Old **P71 (CI & Prod Hardening, OPS-01..03)** → carried forward as new **Phase 77 — CI & Production Hardening**.
 
 ## Performance Metrics
 
@@ -70,14 +78,17 @@ Last activity: 2026-06-01 — v6.0 roadmap created (4 phases, 12 requirements ma
 | 69 | 4 | Complete |
 | 70 | 4 | Complete |
 
-**v6.0 By Phase:**
+**v6.0 "Agentic OS Front-End" By Phase:**
 
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 71 | TBD | Not started |
-| 72 | TBD | Not started |
-| 73 | TBD | Not started (ext. blocked) |
-| 74 | TBD | Not started (ext. blocked) |
+| Phase | Name | Plans | Status | Gate |
+|-------|------|-------|--------|------|
+| 71 | Unified Design System | TBD | Discovery | — (ready) |
+| 72 | Tool / Capability Galaxy | TBD | Not started | M1.P1 emitter ✅ (built) |
+| 73 | MCP Inventory + Health | TBD | Not started | M1.P1 emitter ✅ (built) |
+| 74 | Temporal-KG Explorer | TBD | Not started | ⛔ Ástríðr Phase 125 + 126 |
+| 75 | Agent Console | TBD | Not started | ⛔ Ástríðr M1.P0 + M1.P3 |
+| 76 | Unified Graph Hub | TBD | Not started | Ástríðr M1.P4 + Phase 74 |
+| 77 | CI & Production Hardening | TBD | Not started | — (ready) |
 
 ## Accumulated Context
 
@@ -85,41 +96,32 @@ Last activity: 2026-06-01 — v6.0 roadmap created (4 phases, 12 requirements ma
 
 See PROJECT.md Key Decisions table for full history.
 
-**v5.0 key constraints:**
+**Agentic OS Front-End reframe decisions (2026-06-09):**
 
-- D3.js (or Recharts) for sunburst/area charts — dagre already available from Phase 3 for call graph layout
-- Resend for email delivery (consistent with existing Convex action pattern)
-- PagerDuty Events API v2 (not REST API) — stable dedup_key pattern for trigger/resolve lifecycle
-- GitHub PAT for Actions dispatch — GitHub App auth deferred to future requirement (EXT-03d2)
+- Milestone renamed v6.0 KG/Hardening → "Agentic OS Front-End"; CodePulse is the rendering/control half of the two-milestone Agentic OS plan (Ástríðr "Surface Substrate" = M1 emits/exposes; CodePulse = M2 renders/drives).
+- **Convex is cloud** (`prod:` deployment, `*.convex.cloud`; `npx convex dev` is a code-sync watcher, not a local backend). Consequence: Convex cannot reach localhost agents or stream NDJSON → Agent Console (Phase 75) is **live = local-direct, history = Convex**.
+- Unified design system (Phase 71) is the shared foundation everything else renders against — it must land first.
+- Phase 74 (KG Explorer) keeps the original KG design authority: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
 
-**Phase 66 decisions:**
+**v6.0 KG key decisions (carried into Phase 74):**
 
-- CLIGatewayTool telemetry uses local import pattern (inside branch) to avoid circular deps — matches schedule_wakeup.py analog
-- Fire-and-forget `try/except Exception: pass` guard: telemetry must never break task execution (T-66-08)
-- `session_id` sourced from `get_session_context()` context var, falls back to `task_id` when no active session
-- `duration_ms = duration_seconds * 1000` — gateway returns seconds, CodePulse stores ms
-- Phase 70: Resend email digest + PagerDuty trigger/resolve + call graph dagre visualization
-- Phase 70: dagre graph created per-call inside computeLayout (not module scope) for deterministic layout
-- Phase 70: PD routing key validation added (code review fix WR-06), "unknown" agent filtering added post-UAT
-
-**v6.0 key decisions:**
-
-- KG phases (73-74) are BLOCKED on Ástríðr Phase 125 (backfill) + Phase 126 (KG HTTP read API + kg_summary emitter). Do not start planning Phase 73 until both ship.
-- ForceGraphCanvas extracted from ObsidianGraph.tsx as shared renderer — ObsidianGraph refactored to use it, keeping its tests green
-- kgApi.ts and kg-graph.ts are separate modules: kgApi is the typed fetch layer, kg-graph is pure transform logic (testable without network)
-- KG graph data is fetch-on-demand from Ástríðr (not mirrored into Convex) — only kgSummary is persisted in Convex for always-on cards
-- Temporal state (asOf) is server-side: the asOf param triggers a re-fetch; client-side deriveView handles type/predicate/agent filtering only
-- Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only
-- Design authority for all KG work: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`
+- KG phases BLOCKED on Ástríðr Phase 125 (backfill) + Phase 126 (KG HTTP read API + kg_summary emitter).
+- ForceGraphCanvas extracted from ObsidianGraph.tsx as shared renderer — ObsidianGraph refactored to use it, keeping its tests green.
+- kgApi.ts and kg-graph.ts are separate modules: kgApi is the typed fetch layer, kg-graph is pure transform logic.
+- KG graph data is fetch-on-demand from Ástríðr (not mirrored into Convex) — only kgSummary is persisted in Convex for always-on cards.
+- Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only.
 
 ### Pending Todos
 
-- Run `/gsd-plan-phase 71` to begin Phase 71 planning
-- Monitor Ástríðr repo for Phase 125 (backfill) and Phase 126 (KG read API) completion before starting Phase 73
+- Phase 71: complete design-language audit (read live `index.css`/Tailwind config/components — docs disagree: PROJECT.md says shadcn New York + oklch "Paperclip"; repo CLAUDE.md says Tailwind-only + Cinzel/Geist), then UI-SPEC + visual sketch for Larry's approval before refactoring the 15 pages.
+- Phase 72 (Galaxy) is unblocked now that the M1.P1 `tool_executed` → `callGraphEdges` emitter is built (commit pending in both repos).
+- Monitor Ástríðr Phase 125 (backfill) + 126 (KG read API) before starting Phase 74.
 
 ### Blockers/Concerns
 
-- Phases 73 and 74 are externally blocked on Ástríðr Phase 125 + Phase 126. Phases 71 and 72 are unblocked.
+- Phase 74 (KG Explorer): externally blocked on Ástríðr Phase 125 + 126.
+- Phase 75 (Agent Console): blocked on Ástríðr M1.P0 (access spike) + M1.P3 (file/worktree browse routes).
+- M1.P1 emitter (both repos) is built + tested but **not yet committed** — pending Larry's go + dead `tool_execution` case cleanup in `runtimeIngest.ts:753`.
 
 ### Quick Tasks Completed
 
@@ -129,6 +131,6 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-01
-Stopped at: v6.0 roadmap created
+Last session: 2026-06-09
+Stopped at: milestone reframed to "Agentic OS Front-End"; Phase 71 (design system) discovery dispatched
 Resume file: None

@@ -34,18 +34,22 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
-## Current Milestone: v6.0 Knowledge Graph Observability & Hardening
+## Current Milestone: v6.0 Agentic OS Front-End
 
-**Goal:** Visualize Ástríðr's temporal knowledge graph inside CodePulse, and close v5.0's quality/deploy gaps.
+> **Reframed 2026-06-09** from the never-executed "Knowledge Graph Observability & Hardening" roadmap. CodePulse is the rendering/control half of the two-milestone Agentic OS plan (Ástríðr "Surface Substrate" emits/exposes the data; CodePulse renders it beautifully and drives the coding agents). Companion plan: `C:\Users\mandr\html-out\agentic-os-milestones.md`. All prior v6.0 work was absorbed, not dropped (KG Waves → Phase 74; UI polish → Phase 71; CI hardening → Phase 77).
 
-**Target features:**
-- **Knowledge Graph page** (`/knowledge-graph`) — 4 lenses (ego / overview / temporal / contradiction), always-on summary cards, provenance links into the episodic Memory view, and a shared `<ForceGraphCanvas>` extracted from the Obsidian renderer. Consumes Ástríðr's Phase 126 read API; full scope per `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
-- **REQUIREMENTS traceability reconciliation** — table reflects what actually shipped (v4/v5).
-- **Lucide icon standardization** — complete UI-08 across all dashboard surfaces.
-- **Production CORS config** — set/document `CODEPULSE_ALLOWED_ORIGIN` + deploy checklist.
-- **CI green-up** — resolve Gitleaks secret-scan + Supabase migration-drift failures.
+**Goal:** Show all of Ástríðr's graphs (tools, knowledge, code, vault) beautifully under one cohesive design system, and drive Claude Code + Codex from the dashboard.
 
-**Sequencing:** the four hardening features are executable immediately and come first; the KG-viz phases are **gated on Ástríðr Phase 126** (read API) and are ordered last.
+**Phases (71-77):**
+- **Phase 71 — Unified Design System** *(ready)* — cohesive "Agentic OS" visual language (tokens, primitives, full icon standardization) + IA refactor (Graphs + Agents/Console clusters). The foundation all later UI renders against.
+- **Phase 72 — Tool / Capability Galaxy** *(M1.P1 emitter ✅ built)* — force/R3F graph over tools + MCP servers + kits + callGraphEdges with usage glow + orphan detection.
+- **Phase 73 — MCP Inventory + Health** *(M1.P1 ✅)* — tool-governance surface (status pills + prune chips).
+- **Phase 74 — Temporal-KG Explorer** *(⛔ Ástríðr Phase 125 + 126)* — the showpiece: entities, ego graphs, as-of scrubber, contradiction lens, provenance deep-links. Design authority: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
+- **Phase 75 — Agent Console** *(⛔ Ástríðr M1.P0 + M1.P3)* — drive Claude Code + Codex; live = local-direct WS, history = Convex (Convex is cloud, can't reach localhost).
+- **Phase 76 — Unified Graph Hub** *(dep: Phase 74 + Ástríðr M1.P4)* — graphify + Obsidian + KG + tools in one place.
+- **Phase 77 — CI & Production Hardening** *(ready)* — Gitleaks + Supabase-drift CI green; `CODEPULSE_ALLOWED_ORIGIN` documented (carried from old v6.0 P71).
+
+**Sequencing:** Phase 71 (design system) lands first — it gates every later UI phase. Phases 72/73 follow immediately (M1.P1 emitter already built). Phase 77 (hardening) is runnable any time. Phases 74/75/76 are gated on the Ástríðr Surface Substrate milestone.
 
 ## Requirements
 
@@ -109,7 +113,7 @@ v5.0 added 12 phases:
 
 - **Ástríðr repo:** C:\Users\mandr\astridr-repo (WebSocket endpoint + CLI Gateway)
 - **CodePulse repo:** C:\Users\mandr\codepulse
-- **Design reference:** Paperclip AI — shadcn/ui New York, monochromatic oklch palette, --radius: 0, Lucide icons
+- **Design reference (corrected 2026-06-09):** shadcn/ui New York + Tailwind 4. Default skin is a **dark "Matrix Emerald" cyberpunk theme** (emerald `#10b981` accent, zinc neutrals, glow/CRT effects); light `:root` is monochrome oklch. Geist + JetBrains Mono (Cinzel retired), Lucide icons, effective radius `0.5rem`. Formal system: `.planning/phases/071-unified-design-system/UI-SPEC.md`. *(The old "monochromatic Paperclip / --radius:0" descriptor was inaccurate for the live dark theme.)*
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow, D3.js, dagre, Resend, React Email
 - **Providers:** 7 total — Anthropic Direct, OpenRouter, Ollama (legacy); Claude CLI, Codex CLI, Antigravity CLI, Claude SDK (gateway)
 - **Codebase:** ~66,600 LOC TypeScript, 50+ Convex tables, 15 dashboard pages, 110+ UI components
@@ -158,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-01 — started v6.0 Knowledge Graph Observability & Hardening*
+*Last updated: 2026-06-09 — reframed v6.0 → "Agentic OS Front-End" (7 phases, 71-77); starting Phase 71 Unified Design System*

@@ -4,7 +4,7 @@
 
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
-- 🔄 **v6.0 Knowledge Graph Observability & Hardening** — Phases 71-74 (in progress)
+- 🔄 **v6.0 Agentic OS Front-End** — Phases 71-77 (in progress; reframed 2026-06-09 from the never-started "KG Observability & Hardening" roadmap)
 
 ## Phases
 
@@ -44,82 +44,126 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 </details>
 
-### v6.0 Knowledge Graph Observability & Hardening (Phases 71-74)
+### v6.0 Agentic OS Front-End (Phases 71-77)
 
-- [ ] **Phase 71: CI & Production Hardening** - Green up Gitleaks + Supabase drift CI checks and document CODEPULSE_ALLOWED_ORIGIN for production CORS
-- [ ] **Phase 72: UI Polish & Traceability** - Complete Lucide icon standardization across all dashboard surfaces and reconcile REQUIREMENTS traceability tables
-- [ ] **Phase 73: Knowledge Graph — Wave 1 (Core)** - Ship the /knowledge-graph page with always-on summary cards plus Overview and Entity (ego) lenses, backed by the shared ForceGraphCanvas and the kgApi + kg-graph data layer
-- [ ] **Phase 74: Knowledge Graph — Wave 2 (Depth)** - Add the Temporal (as-of scrubber) and Contradiction lenses plus the KGDetailsPanel with provenance deep-links into the episodic Memory view
+> **Reframed 2026-06-09.** CodePulse is the rendering/control half of the two-milestone Agentic OS plan (companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`; Ástríðr "Surface Substrate" = the data-emitting half). The original v6.0 "KG Observability & Hardening" (old phases 71-74) was never executed; its work is absorbed below — old KG Waves 1+2 → Phase 74; old UI polish → Phase 71; old CI hardening → Phase 77.
+
+- [ ] **Phase 71: Unified Design System** - Formalize a cohesive "Agentic OS" visual language (design tokens, component conventions, full icon standardization) and refactor the information architecture with new *Graphs* and *Agents/Console* nav clusters; the shared foundation every later phase renders against
+- [ ] **Phase 72: Tool / Capability Galaxy** - A force/R3F graph over discoveredTools + mcpServers + kits + callGraphEdges, with usage/recency glow and orphan (installed-but-unused) detection
+- [ ] **Phase 73: MCP Inventory + Health** - A tool-governance surface (server/tool inventory pills + per-tool health and prune chips); not a marketplace clone
+- [ ] **Phase 74: Temporal-KG Explorer** - The differentiated showpiece: browse entities, traverse predicates, ego graphs, an as-of temporal scrubber, a contradiction lens, and a KGDetailsPanel with provenance deep-links into the Memory view (consolidates the original KG Wave 1 + Wave 2)
+- [ ] **Phase 75: Agent Console** - Drive Claude Code + Codex from the dashboard: POST a task to the gateway → live local-direct WS stream → run-reducer viz → persist the run summary to Convex
+- [ ] **Phase 76: Unified Graph Hub** - graphify + Obsidian + KG + tool graphs unified in one navigable place
+- [ ] **Phase 77: CI & Production Hardening** - Green up Gitleaks + Supabase-drift CI on master and document `CODEPULSE_ALLOWED_ORIGIN` for production CORS (carried forward from the original v6.0 P71)
 
 ## Phase Details
 
-### Phase 71: CI & Production Hardening
-**Goal**: The master branch CI pipeline runs clean and production deployments use the correct CORS origin
-**Depends on**: Nothing — no external dependencies
+### Phase 71: Unified Design System
+**Goal**: One cohesive "Agentic OS" visual language exists as a documented, token-backed system, and the dashboard's information architecture is refactored to surface the new Graphs and Agents/Console clusters
+**Depends on**: Nothing — the foundation for all later UI phases
+**Requirements**: DS-01, DS-02, DS-03, DS-04, UI-09, QA-01
+**Success Criteria** (what must be TRUE):
+  1. A documented design-token layer (color/type/spacing/elevation/motion) backs the dashboard, sourced from an audit of the *live* current styling (resolving the PROJECT.md "shadcn New York + oklch" vs CLAUDE.md "Tailwind-only + Cinzel/Geist" doc conflict to a single ground-truth system)
+  2. A documented set of shared primitives/conventions (MetricCard, EntityRow, panels, chart wrappers) covers the patterns repeated across the 15 pages
+  3. The nav/IA is refactored to add a *Graphs* cluster and an *Agents/Console* cluster without breaking existing routes
+  4. Every icon across all dashboard surfaces is a single icon system (completes the old UI-09)
+  5. The active REQUIREMENTS traceability table reflects shipped state and a phase-completion step keeps it current (old QA-01)
+  6. A UI-SPEC + visual sketch is approved by Larry before the 15-page migration begins
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 72: Tool / Capability Galaxy
+**Goal**: Operators see all discovered tools, MCP servers, and kits as a living graph with usage/recency signal and orphan detection
+**Depends on**: Phase 71 (design system); Ástríðr **M1.P1 callGraphEdges emitter** ✅ built (tool_executed → callGraphEdges) — table is no longer sparse
+**Requirements**: GAL-01, GAL-02, GAL-03, GAL-04
+**Success Criteria** (what must be TRUE):
+  1. The graph renders nodes for discoveredTools + mcpServers + kits and edges from callGraphEdges (agent↔tool), laid out as a navigable force/R3F galaxy
+  2. Node glow/size encodes usage frequency and recency from callGraphEdges callCount/errorCount/status
+  3. Installed-but-unused tools (no edges) are visually flagged as orphans
+  4. Filtering by agent/persona and by MCP server works without a full reload
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 73: MCP Inventory + Health
+**Goal**: Operators have a tool-governance surface to inventory MCP servers/tools and act on unhealthy or unused ones
+**Depends on**: Phase 71 (design system); Ástríðr M1.P1 emitter ✅ built
+**Requirements**: MCP-01, MCP-02, MCP-03
+**Success Criteria** (what must be TRUE):
+  1. Every MCP server and its tools are listed with status pills (connected/error/unused)
+  2. Per-tool health (last call, error rate from callGraphEdges) is visible
+  3. A per-tool prune/disable affordance exists (chip), governance-focused — not a marketplace clone
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 74: Temporal-KG Explorer
+**Goal**: Operators browse Ástríðr's temporal knowledge graph — summary cards, overview, entity ego graphs, an as-of temporal scrubber, a contradiction lens, and provenance deep-links into Memory (consolidates the original KG Wave 1 + Wave 2)
+**Depends on**: Phase 71 (design system)
+**External dependency**: Ástríðr **Phase 126** (HTTP KG read API: /api/kg/summary, /overview, /entity, /contradictions + asOf param + kg_summary telemetry emitter) AND **Phase 125** (backfill — graph must contain real data). Implementation is BLOCKED until both ship.
+**Design authority**: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`
+**Requirements**: KG-01, KG-02, KG-03, KG-04, KG-05, KG-06, KG-07
+**Success Criteria** (what must be TRUE):
+  1. Always-on summary cards (entities by type, current vs historical triples, contradiction count, last-extraction time) render from pushed kg_summary telemetry even when Ástríðr is offline
+  2. The Overview lens renders a bounded force-directed top-N graph, filterable by entity type and agent, with a truncation notice when the cap is hit
+  3. The Entity (ego) lens searches by name and renders the ego graph out to a selectable 1–3 hops
+  4. The Temporal lens exposes an as-of date scrubber that re-fetches the graph as of that date, superseded facts dashed/dimmed
+  5. The Contradiction lens renders all contradiction-flagged triples; KGDetailsPanel lists each conflicting pair with subject/predicate/objects/confidence
+  6. Selecting an entity/edge opens KGDetailsPanel (type, facts, confidence, validity window); facts with a sourceEventId deep-link into the Memory view
+  7. Type-colored nodes with legend; entity→entity triples as directed confidence-weighted edges (current solid / superseded dashed-dim); literal-object facts render as attributes, not nodes
+  8. The shared ForceGraphCanvas is extracted from ObsidianGraph.tsx (ObsidianGraph still passes its tests); kgApi.ts (typed fetch) and kg-graph.ts (pure transform) are separate, each tested
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 75: Agent Console
+**Goal**: Operators drive Claude Code + Codex from the dashboard and watch runs live, with run summaries persisted
+**Depends on**: Phase 71 (design system)
+**External dependency**: Ástríðr **M1.P0** (access & auth spike — localhost-direct vs tunnel; scoped token) AND **M1.P3** (read-only gateway file/worktree browse routes). BLOCKED until both ship.
+**Convex note**: Convex is **cloud** — it cannot reach localhost agents or stream NDJSON. Live = local-direct WS to the gateway; only the run summary is persisted to Convex.
+**Requirements**: CON-01, CON-02, CON-03, CON-04
+**Success Criteria** (what must be TRUE):
+  1. A task POSTed from the dashboard reaches the gateway (`POST :8200/tasks`) and starts a Claude Code or Codex run
+  2. The live run streams to the UI over a local-direct WS (not via Convex) into a run-reducer visualization
+  3. A cross-request Stop wires to Ástríðr `estop.py` via a cancellation flag (NOT pid-kill)
+  4. The completed run's summary persists to Convex for history
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 76: Unified Graph Hub
+**Goal**: graphify, Obsidian, KG, and tool graphs are unified in one navigable place
+**Depends on**: Phase 74 (KG Explorer) AND Ástríðr **M1.P4** (graphify + Obsidian graph snapshot uploader → Convex `{nodes,links}`)
+**Requirements**: HUB-01, HUB-02, HUB-03
+**Success Criteria** (what must be TRUE):
+  1. graphify-out and the Obsidian wikilink graph render from Convex-pushed snapshots
+  2. The KG Explorer, Tool Galaxy, and code/vault graphs are reachable from one Graphs hub with consistent interactions
+  3. Cross-graph navigation (e.g. tool → owning agent → KG entity) works where the data supports it
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 77: CI & Production Hardening
+**Goal**: The master CI pipeline runs clean and production deployments use the correct CORS origin (carried forward from the original v6.0 P71)
+**Depends on**: Nothing — no external dependencies; runnable any time
 **Requirements**: OPS-01, OPS-02, OPS-03
 **Success Criteria** (what must be TRUE):
   1. The Gitleaks secret-scan workflow completes green on master with no suppressed findings
   2. The Supabase migration-drift workflow completes green on master, reflecting the current schema state
-  3. `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment environment and a deploy checklist in the repo documents the required value and the procedure to set it
-  4. A local developer following the deploy checklist can correctly configure CORS for a non-local origin without guessing at the correct value
+  3. `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment and a deploy checklist documents the value + procedure
+  4. A developer following the checklist can configure CORS for a non-local origin without guessing
 **Plans**: TBD
-
-### Phase 72: UI Polish & Traceability
-**Goal**: Every dashboard icon is a Lucide icon and the REQUIREMENTS traceability tables accurately reflect what shipped in v4.0 and v5.0
-**Depends on**: Nothing — no external dependencies
-**Requirements**: UI-09, QA-01
-**Success Criteria** (what must be TRUE):
-  1. Every icon rendered across all 15 dashboard pages is a Lucide icon — no other icon libraries visible in any dashboard surface
-  2. The v4.0 and v5.0 archive traceability tables list the correct phase number for every shipped requirement
-  3. The active REQUIREMENTS.md traceability table is populated with phase assignments for all v6.0 requirements
-  4. A phase-completion step is documented so the active traceability table stays current going forward
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 73: Knowledge Graph — Wave 1 (Core)
-**Goal**: Operators can see always-on KG health summary cards and browse Ástríðr's knowledge graph via the Overview and Entity (ego) lenses on the new /knowledge-graph page
-**Depends on**: Phase 72 (sequenced after hardening/polish phases; no functional dependency)
-**External dependency**: Ástríðr Phase 126 (HTTP KG read API: /api/kg/summary, /api/kg/overview, /api/kg/entity + kg_summary telemetry emitter) AND Ástríðr Phase 125 (backfill — graph must contain real data). Implementation is BLOCKED until both ship.
-**Design authority**: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`
-**Requirements**: KG-01, KG-02, KG-03, KG-07
-**Success Criteria** (what must be TRUE):
-  1. The /knowledge-graph page displays always-on summary cards (total entities by type, current vs historical triples, contradiction count, last-extraction time) sourced from the Convex kgSummary table — cards render even when Ástríðr is offline because they come from pushed kg_summary telemetry
-  2. The Overview lens renders a bounded force-directed graph of the top-N entities and their current relationships, filterable by entity type and agent; a truncation notice appears when the node cap is hit
-  3. The Entity (ego) lens accepts an entity name search and renders that entity's ego graph out to a selectable 1–3 hops, showing connected entities and the triples between them
-  4. Entity nodes are colored by type using the 10-color stable palette and sized by degree; a legend maps colors to entity types; entity→entity triples render as directed labeled edges with confidence-proportional width and solid (current) or dashed-dim (superseded) styling; literal-object facts do NOT appear as graph nodes
-  5. The shared ForceGraphCanvas component is extracted from ObsidianGraph.tsx and ObsidianGraph continues to pass all its existing tests after the refactor
-  6. kgApi.ts (typed API fetchers) and kg-graph.ts (pure graph-transform logic) exist as separate modules, each covered by their own test files
-**Plans**: TBD
-**UI hint**: yes
-
-### Phase 74: Knowledge Graph — Wave 2 (Depth)
-**Goal**: Operators can view the knowledge graph as it existed at any past date, review all flagged contradictions as a dedicated lens, and trace any belief back to the episodic memory that created it
-**Depends on**: Phase 73 (Wave 1 — ForceGraphCanvas, kgApi, kg-graph, page skeleton, and summary cards must exist)
-**External dependency**: Ástríðr Phase 126 (HTTP KG read API: /api/kg/contradictions + asOf param on entity/overview endpoints) AND Ástríðr Phase 125 (backfill). Same external gate as Phase 73.
-**Design authority**: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`
-**Requirements**: KG-04, KG-05, KG-06
-**Success Criteria** (what must be TRUE):
-  1. The Temporal lens exposes a date scrubber; moving it re-fetches the graph as of that date, with superseded facts rendered as dashed/dimmed edges visually distinct from solid current edges
-  2. The Contradiction lens renders all contradiction-flagged triples as a dedicated graph view, and the KGDetailsPanel lists each contradicting pair with subject, predicate, conflicting objects, and confidence
-  3. Selecting any entity or edge opens the KGDetailsPanel showing its type, all associated facts (entity-edge triples and literal attributes), confidence, and validity window
-  4. Each fact in the KGDetailsPanel that carries a sourceEventId shows a clickable provenance link that navigates to that event in the existing Memory view
-  5. The always-on contradiction count summary card is styled in alert color (amber/red) when the count is greater than zero
-**Plans**: TBD
-**UI hint**: yes
 
 ## Execution Order
 
 ```
-Phase 71 (CI & Production Hardening)    Execute now — no blockers
-Phase 72 (UI Polish & Traceability)     Execute now — no blockers (parallel-safe with 71)
-                                                 |
-Phase 73 (KG Wave 1 — Core)             BLOCKED on Ástríðr Phase 125 + 126
-                                                 |
-Phase 74 (KG Wave 2 — Depth)            After Phase 73
+Phase 71 (Unified Design System)   Execute now — foundation, no blockers
+        │
+        ├──► Phase 72 (Tool Galaxy)        M1.P1 emitter ✅ built — ready after 71
+        ├──► Phase 73 (MCP Inventory)      M1.P1 emitter ✅ built — ready after 71
+        └──► Phase 74 (KG Explorer)        ⛔ Ástríðr Phase 125 + 126
+Phase 77 (CI & Prod Hardening)     Execute any time — no blockers (parallel-safe)
+Phase 75 (Agent Console)           ⛔ Ástríðr M1.P0 + M1.P3
+Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 ```
 
-**Critical path:** Phase 73 is gated on Ástríðr Phase 125 (backfill) + Phase 126 (KG read API).
-**Immediately executable:** Phases 71 and 72 have no dependencies and can run in either order.
+**Critical path:** Phase 71 (design system) gates all UI phases; Phase 74 is gated on Ástríðr Phase 125 + 126; Phases 75/76 on the Ástríðr Surface Substrate access + snapshot phases.
+**Immediately executable:** Phase 71 (now), then Phases 72/73 (M1.P1 already built), and Phase 77 any time.
 
 ## Progress
 
@@ -127,11 +171,14 @@ Phase 74 (KG Wave 2 — Depth)            After Phase 73
 |-------|-----------|----------------|--------|-----------|
 | 1-7, 58 | v4.0 | 36/36 | Complete | 2026-04-14 |
 | 59-70 | v5.0 | 23/23 | Complete | 2026-05-25 |
-| 71. CI & Production Hardening | v6.0 | 0/TBD | Not started | - |
-| 72. UI Polish & Traceability | v6.0 | 0/TBD | Not started | - |
-| 73. KG Wave 1 — Core | v6.0 | 0/TBD | Not started (ext. blocked) | - |
-| 74. KG Wave 2 — Depth | v6.0 | 0/TBD | Not started (ext. blocked) | - |
+| 71. Unified Design System | v6.0 | 0/TBD | Discovery | - |
+| 72. Tool / Capability Galaxy | v6.0 | 0/TBD | Not started (M1.P1 ✅) | - |
+| 73. MCP Inventory + Health | v6.0 | 0/TBD | Not started (M1.P1 ✅) | - |
+| 74. Temporal-KG Explorer | v6.0 | 0/TBD | Not started (ext. blocked) | - |
+| 75. Agent Console | v6.0 | 0/TBD | Not started (ext. blocked) | - |
+| 76. Unified Graph Hub | v6.0 | 0/TBD | Not started (dep) | - |
+| 77. CI & Production Hardening | v6.0 | 0/TBD | Not started | - |
 
 ---
 
-*Last updated: 2026-06-01 — v6.0 roadmap created: 4 phases (71-74), 12 requirements mapped*
+*Last updated: 2026-06-09 — v6.0 reframed "KG Observability & Hardening" → "Agentic OS Front-End": 7 phases (71-77). Old KG Waves → Phase 74; old UI polish → Phase 71; old CI hardening → Phase 77.*
