@@ -75,7 +75,7 @@ export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarC
             onClick={() => onSegmentClick?.(d.label, d.value ?? 0)}
           >
             <div
-              className="w-full bg-gradient-to-t from-primary/10 to-primary/60 group-hover:from-primary/30 group-hover:to-primary border-t border-primary/50 group-hover:border-primary transition-all shadow-none group-hover:shadow-[0_0_15px_rgba(249,115,22,0.6)] rounded-t-[2px]"
+              className="w-full bg-gradient-to-t from-primary/10 to-primary/60 group-hover:from-primary/30 group-hover:to-primary border-t border-primary/50 group-hover:border-primary transition-all shadow-none group-hover:shadow-[var(--glow-sm)] rounded-t-[2px]"
               style={{ height: `${((d.value ?? 0) / maxVal) * 100}%` }}
             />
             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-primary/50 px-3 py-1.5 rounded text-[10px] font-mono tracking-widest text-primary whitespace-nowrap z-10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">

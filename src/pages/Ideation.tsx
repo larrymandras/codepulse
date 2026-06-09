@@ -116,7 +116,7 @@ export default function Ideation() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold" style={{ fontFamily: "Cinzel, serif" }}>Ideation</h1>
+        <h1 className="text-2xl font-semibold">Ideation</h1>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
             <button

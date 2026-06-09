@@ -105,10 +105,7 @@ export default function Executions() {
   return (
     <div className="space-y-6">
       {/* Page heading */}
-      <h1
-        className="text-2xl font-semibold text-gray-100"
-        style={{ fontFamily: "Cinzel, serif" }}
-      >
+      <h1 className="text-2xl font-semibold text-gray-100">
         Execution History
       </h1>
 
