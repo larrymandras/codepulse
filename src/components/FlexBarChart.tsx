@@ -29,7 +29,7 @@ export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarC
 
   return (
     <div className="flex items-end gap-1 w-full" style={{ height }}>
-      {data.map((d) => {
+      {data.map((d, i) => {
         if (d.segments) {
           // Stacked segment bar
           const totalValue = d.segments.reduce((s, seg) => s + seg.value, 0);
@@ -70,7 +70,7 @@ export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarC
         // Single-value gradient bar (original rendering — backward compatible)
         return (
           <div
-            key={d.label}
+            key={i}
             className="relative flex-1 group cursor-pointer flex flex-col justify-end h-full"
             onClick={() => onSegmentClick?.(d.label, d.value ?? 0)}
           >
