@@ -55,6 +55,10 @@ import {
   UsersRound,
   ChevronsLeft,
   ChevronsRight,
+  Terminal,
+  Network,
+  Boxes,
+  Share2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -94,50 +98,115 @@ const iconComponents: Record<string, React.ElementType> = {
   "book-open": BookOpen,
   "wand-2": Wand2,
   "users-round": UsersRound,
+  // Phase 71 IA refactor — new cluster icons
+  terminal: Terminal,
+  network: Network,
+  boxes: Boxes,
+  "share-2": Share2,
 };
 
-const commandNavItems = [
-  { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
-  { to: "/live-run", label: "Live Run", icon: "activity", group: "COMMAND" },
-  { to: "/inbox", label: "Inbox", icon: "inbox", group: "COMMAND" },
-  { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
-  { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
-  { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+// A nav item is either a real route (has `to`) or a placeholder label for a
+// not-yet-built route (`placeholder: true`, no live `to`). Placeholders render
+// as disabled "soon" entries and are EXCLUDED from the flat navItems export.
+interface NavItem {
+  to?: string;
+  label: string;
+  icon: string;
+  group: string;
+  placeholder?: boolean;
+}
+
+interface NavGroupConfig {
+  group: string;
+  items: NavItem[];
+}
+
+// Phase 71 IA refactor — 6 clusters. No existing `to` path changed; new phase
+// routes are registered as placeholder labels only (Settings stays in the
+// footer UserMenu, not a nav cluster).
+const navGroups: NavGroupConfig[] = [
+  {
+    group: "COMMAND",
+    items: [
+      { to: "/chat", label: "Chat", icon: "message", group: "COMMAND" },
+      { to: "/live-run", label: "Live Run", icon: "activity", group: "COMMAND" },
+      { to: "/inbox", label: "Inbox", icon: "inbox", group: "COMMAND" },
+      { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
+      { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
+      { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+    ],
+  },
+  {
+    group: "CONSOLE",
+    items: [
+      { label: "Agent Console", icon: "terminal", group: "CONSOLE", placeholder: true },
+      { to: "/live-run", label: "Live Run", icon: "activity", group: "CONSOLE" },
+      { to: "/executions", label: "Executions", icon: "list", group: "CONSOLE" },
+      { to: "/build", label: "Build", icon: "hammer", group: "CONSOLE" },
+    ],
+  },
+  {
+    group: "GRAPHS",
+    items: [
+      { label: "Graphs Hub", icon: "network", group: "GRAPHS", placeholder: true },
+      { label: "Tool Galaxy", icon: "boxes", group: "GRAPHS", placeholder: true },
+      { label: "KG Explorer", icon: "share-2", group: "GRAPHS", placeholder: true },
+      { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "GRAPHS" },
+    ],
+  },
+  {
+    group: "AGENTS",
+    items: [
+      { to: "/hr/roster", label: "Roster", icon: "users", group: "AGENTS" },
+      { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "AGENTS" },
+      { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "AGENTS" },
+      { to: "/hr/teams", label: "Teams", icon: "users-round", group: "AGENTS" },
+      { to: "/hr/analytics", label: "Analytics", icon: "chart", group: "AGENTS" },
+    ],
+  },
+  {
+    group: "OBSERVE",
+    items: [
+      { to: "/", label: "Dashboard", icon: "grid", group: "OBSERVE" },
+      { to: "/analytics", label: "Analytics", icon: "chart", group: "OBSERVE" },
+      { to: "/alerts", label: "Alerts", icon: "bell", group: "OBSERVE" },
+      { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OBSERVE" },
+      { to: "/security", label: "Security", icon: "shield", group: "OBSERVE" },
+      { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OBSERVE" },
+      { to: "/memory", label: "Memory", icon: "brain", group: "OBSERVE" },
+      { to: "/insights", label: "Insights", icon: "insights", group: "OBSERVE" },
+      { to: "/mission-control", label: "Mission Control", icon: "layout", group: "OBSERVE" },
+    ],
+  },
+  {
+    group: "ACTIVITY",
+    items: [
+      { to: "/briefings", label: "Briefings", icon: "scroll", group: "ACTIVITY" },
+      { to: "/automation", label: "Automation", icon: "clock", group: "ACTIVITY" },
+      { to: "/ideation", label: "Ideation", icon: "idea", group: "ACTIVITY" },
+      { to: "/dreaming", label: "Dreaming", icon: "moon", group: "ACTIVITY" },
+      { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "ACTIVITY" },
+      { to: "/war-room", label: "War Room", icon: "radio", group: "ACTIVITY" },
+      { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "ACTIVITY" },
+    ],
+  },
 ];
 
-const agentsNavItems = [
-  { to: "/hr/roster", label: "Roster", icon: "users", group: "AGENTS" },
-  { to: "/hr/catalog", label: "Catalog", icon: "book-open", group: "AGENTS" },
-  { to: "/hr/onboarding", label: "Onboarding", icon: "wand-2", group: "AGENTS" },
-  { to: "/hr/teams", label: "Teams", icon: "users-round", group: "AGENTS" },
-  { to: "/hr/analytics", label: "Analytics", icon: "chart", group: "AGENTS" },
-];
-
-const overviewNavItems = [
-  { to: "/", label: "Dashboard", icon: "grid", group: "OVERVIEW" },
-  { to: "/capabilities", label: "Capabilities", icon: "cpu", group: "OVERVIEW" },
-  { to: "/analytics", label: "Analytics", icon: "chart", group: "OVERVIEW" },
-  { to: "/alerts", label: "Alerts", icon: "bell", group: "OVERVIEW" },
-  { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OVERVIEW" },
-  { to: "/security", label: "Security", icon: "shield", group: "OVERVIEW" },
-  { to: "/ideation", label: "Ideation", icon: "idea", group: "OVERVIEW" },
-  { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OVERVIEW" },
-  { to: "/build", label: "Build", icon: "hammer", group: "OVERVIEW" },
-  { to: "/memory", label: "Memory", icon: "brain", group: "OVERVIEW" },
-  { to: "/dreaming", label: "Dreaming", icon: "moon", group: "OVERVIEW" },
-  { to: "/briefings", label: "Briefings", icon: "scroll", group: "OVERVIEW" },
-  { to: "/automation", label: "Automation", icon: "clock", group: "OVERVIEW" },
-  { to: "/executions", label: "Executions", icon: "list", group: "OVERVIEW" },
-  { to: "/settings", label: "Settings", icon: "gear", group: "OVERVIEW" },
-  { to: "/insights", label: "Insights", icon: "insights", group: "OVERVIEW" },
-  { to: "/channels/whatsapp", label: "WhatsApp", icon: "whatsapp", group: "OVERVIEW" },
-  { to: "/war-room", label: "War Room", icon: "radio", group: "OVERVIEW" },
-  { to: "/meeting-bot", label: "Meeting Bot", icon: "video", group: "OVERVIEW" },
-  { to: "/mission-control", label: "Mission Control", icon: "layout", group: "OVERVIEW" },
-];
-
-// Keep navItems for any code that still references it
-const navItems = [...commandNavItems, ...agentsNavItems, ...overviewNavItems];
+// Flat list of REAL routes (placeholders excluded, deduped by `to`) for
+// CommandPalette and any other consumer of the nav registry. Preserved export.
+const navItems = (() => {
+  const seen = new Set<string>();
+  const flat: NavItem[] = [];
+  for (const grp of navGroups) {
+    for (const item of grp.items) {
+      if (item.placeholder || !item.to) continue;
+      if (seen.has(item.to)) continue;
+      seen.add(item.to);
+      flat.push(item);
+    }
+  }
+  return flat;
+})();
 
 function DarkModeToggle() {
   const [dark, setDark] = useState(() =>
@@ -167,7 +236,7 @@ function NavGroup({
   collapsed,
 }: {
   label: string;
-  items: typeof commandNavItems;
+  items: NavItem[];
   onNavClick?: () => void;
   collapsed?: boolean;
 }) {
@@ -185,6 +254,43 @@ function NavGroup({
       <div className="space-y-[1px]">
         {items.map((item) => {
           const IconComponent = iconComponents[item.icon] ?? LayoutDashboard;
+
+          // Placeholder: not-yet-built route. Render as a disabled, non-link
+          // entry with a "SOON" affordance instead of a NavLink (no 404).
+          if (item.placeholder || !item.to) {
+            const placeholderInner = (
+              <div
+                key={`ph-${item.group}-${item.label}`}
+                aria-disabled="true"
+                title={collapsed ? `${item.label} (coming soon)` : undefined}
+                className={`group flex items-center ${
+                  collapsed ? "justify-center px-2" : "gap-3 px-3"
+                } py-2 text-xs font-mono tracking-wider text-muted-foreground/40 cursor-not-allowed select-none`}
+              >
+                <IconComponent className="h-4 w-4 shrink-0" />
+                {!collapsed && (
+                  <span className="flex-1 flex items-center justify-between gap-2">
+                    {item.label}
+                    <span className="text-[8px] uppercase tracking-widest text-primary/40 border border-primary/20 px-1 py-px rounded-sm">
+                      soon
+                    </span>
+                  </span>
+                )}
+              </div>
+            );
+            if (collapsed) {
+              return (
+                <Tooltip key={`ph-${item.group}-${item.label}`}>
+                  <TooltipTrigger asChild>{placeholderInner}</TooltipTrigger>
+                  <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-muted-foreground">
+                    {item.label} — soon
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+            return placeholderInner;
+          }
+
           const link = (
             <NavLink
               key={item.to}
@@ -306,17 +412,49 @@ function SidebarContent({
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation — Phase 71 IA: 6 clusters from navGroups config */}
       <nav className="flex-1 overflow-y-auto py-2 px-2" aria-label="Main navigation">
-        <NavGroup label="COMMAND" items={commandNavItems} onNavClick={onNavClick} collapsed={collapsed} />
-        <Separator className="my-2 mx-3" />
-        <NavGroup label="AGENTS" items={agentsNavItems} onNavClick={onNavClick} collapsed={collapsed} />
-        <Separator className="my-2 mx-3" />
-        <NavGroup label="OVERVIEW" items={overviewNavItems} onNavClick={onNavClick} collapsed={collapsed} />
+        {navGroups.map((grp, i) => (
+          <div key={grp.group}>
+            {i > 0 && <Separator className="my-2 mx-3" />}
+            <NavGroup label={grp.group} items={grp.items} onNavClick={onNavClick} collapsed={collapsed} />
+          </div>
+        ))}
       </nav>
 
-      {/* Collapse Toggle + Connection Status */}
+      {/* Footer-pinned Settings (not a nav cluster) + Collapse Toggle + Status */}
       <div className="border-t border-border">
+        <div className="px-2 pt-2">
+          {(() => {
+            const settingsLink = (
+              <NavLink
+                to="/settings"
+                onClick={onNavClick}
+                aria-label={collapsed ? "Settings" : undefined}
+                className={({ isActive }) =>
+                  `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-xs font-mono tracking-wider transition-all relative overflow-hidden ${
+                    isActive
+                      ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
+                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
+                  }`
+                }
+              >
+                <Settings className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] group-hover:drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                {!collapsed && <span>Settings</span>}
+              </NavLink>
+            );
+            return collapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>{settingsLink}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                  Settings
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              settingsLink
+            );
+          })()}
+        </div>
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
