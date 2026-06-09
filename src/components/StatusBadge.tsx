@@ -10,6 +10,7 @@ const semanticStyles: Record<string, string> = {
   ok: "bg-(--status-ok) text-white",
   error: "bg-(--status-error) text-white",
   warn: "bg-(--status-warn) text-white",
+  info: "bg-(--status-info) text-white",
   idle: "bg-muted text-muted-foreground",
 };
 

@@ -18,7 +18,7 @@ export function GlassPanel({ children, className, animate = true }: GlassPanelPr
       transition={skipMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
       className={cn(
         "bg-card border border-border",
-        "dark:bg-[var(--glass-bg)] dark:border-[var(--glass-border)] dark:backdrop-blur-[12px]",
+        "dark:bg-[var(--glass-bg)] dark:border-[var(--glass-border)] dark:backdrop-blur-[var(--glass-blur)]",
         className
       )}
     >
