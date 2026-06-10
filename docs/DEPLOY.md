@@ -1,66 +1,63 @@
-# CodePulse — Production Deploy Checklist
+# CodePulse — Setup & Convex Environment Checklist
 
-This checklist covers the production-hardening configuration introduced in Phase 77.
-Run through it whenever you deploy CodePulse to a new (or freshly reset) Convex deployment.
+CodePulse runs **locally only** — the frontend is served by Vite at `http://localhost:5173`
+(`npm run dev`) and there is no Vercel/Netlify deployment. The backend, however, is
+**Convex Cloud**, so the browser at `localhost:5173` still makes cross-origin requests to a
+`https://<deployment>.convex.cloud` URL. This checklist covers the environment config that
+hardening in Phase 77 depends on.
 
-## Deploy command
+## Run it
 
 ```bash
-npm run deploy   # = npx convex deploy && npx vite build
+npm run dev          # frontend (Vite) at http://localhost:5173
+npm run dev:backend  # npx convex dev — connects to your Convex Cloud dev deployment
 ```
 
-`npx convex deploy` pushes the Convex functions; `npx vite build` builds the frontend.
-Set the environment variables below **before** the first production deploy so CORS is
-correct on the very first request.
+There is no production deploy in normal use. (`npm run deploy` exists but is unused —
+CodePulse is run locally.)
 
 ---
 
-## 1. CORS allowlist — `CODEPULSE_ALLOWED_ORIGIN` (OPS-01) — REQUIRED in prod
+## 1. CORS allowlist — `CODEPULSE_ALLOWED_ORIGIN` (OPS-01)
 
 CodePulse's ingest endpoints emit CORS headers via `getCorsHeaders(request)` in
-`convex/ingestAuth.ts`. That function parses `CODEPULSE_ALLOWED_ORIGIN` into an
-allowlist and **echoes the request `Origin` only when it matches** (fail-closed).
+`convex/ingestAuth.ts`. That function parses `CODEPULSE_ALLOWED_ORIGIN` into an allowlist
+and **echoes the request `Origin` only when it matches** (fail-closed).
+
+### Why CORS still applies to a local-only app
+
+The frontend is local (`localhost:5173`) but Convex is **cloud**. Your browser POSTs to the
+cloud Convex deployment — a cross-origin request — so CORS is enforced. The allowlist value
+is simply your **local dev origin**, not any deployed host.
 
 ### What to set it to
 
-The deployed frontend origin (your Vercel/Netlify URL) **plus** the localhost dev
-origin, comma-separated, with **NO spaces around the commas**. For example
-(substitute your real deployed origin — do not copy this verbatim):
-
 ```
-https://<your-frontend>.vercel.app,http://localhost:5173
+http://localhost:5173
 ```
 
-> Do **not** hardcode someone else's origin. Use the host CodePulse is actually served from.
+(If you ever serve the dashboard from another local port or `127.0.0.1`, add those too,
+comma-separated with **NO spaces** — e.g. `http://localhost:5173,http://127.0.0.1:5173`.)
 
-### Where to set it
+### Where + how to set it
 
-On the **Convex production deployment's** environment variables — not in source,
-not in `.env`.
-
-### How to set it
+On the **Convex deployment your local app points at** — i.e. the one `npx convex dev` uses.
+Set it there (no `--prod`, since there is no prod deploy):
 
 ```bash
-# Set it (targets the deployment for your CONVEX_DEPLOY_KEY / active prod context):
-npx convex env set CODEPULSE_ALLOWED_ORIGIN 'https://<your-frontend>.vercel.app,http://localhost:5173'
-
-# Explicit prod targeting:
-npx convex env set --prod CODEPULSE_ALLOWED_ORIGIN '<value>'
-
-# Verify it landed:
-npx convex env list   # confirm CODEPULSE_ALLOWED_ORIGIN appears with the expected value
+npx convex env set CODEPULSE_ALLOWED_ORIGIN 'http://localhost:5173'
+npx convex env list   # confirm CODEPULSE_ALLOWED_ORIGIN appears
 ```
 
-Fallback: the **Convex Dashboard → prod deployment → Settings → Environment Variables**
-UI sets the same variable if you prefer not to use the CLI.
+Fallback: **Convex Dashboard → your deployment → Settings → Environment Variables**.
 
-### Why it MUST be set in prod (fail-closed semantics)
+### Why set it at all (fail-closed semantics)
 
-When `CODEPULSE_ALLOWED_ORIGIN` is **unset**, `getCorsHeaders` falls back to a
-permissive `Access-Control-Allow-Origin: "*"`. That fallback is **for local dev only**.
-If you ship prod without setting this variable, every origin is allowed — the exact
-fail-open behavior Phase 77 closed. Setting the variable is what makes the allowlist
-actually closed in production.
+When `CODEPULSE_ALLOWED_ORIGIN` is **unset**, `getCorsHeaders` falls back to a permissive
+`Access-Control-Allow-Origin: "*"` — the fail-open state Phase 77 set out to close. Setting
+it to `http://localhost:5173` makes the allowlist actually closed even for local use. It is
+low-stakes for a single-user local tool (and ingest is independently API-key gated — see
+below), but it's a one-liner and removes the wildcard.
 
 ---
 
@@ -71,26 +68,24 @@ actually closed in production.
 | **CORS allowlist** (`CODEPULSE_ALLOWED_ORIGIN`) | **Browser-initiated** cross-origin requests | `convex/ingestAuth.ts → getCorsHeaders` |
 | **Ingest auth** (`validateIngestAuth`) | **Server-to-server** ingest (e.g. Ástríðr agents POSTing directly) | ingest handlers (separate control, deferred) |
 
-CORS is a **browser** enforcement mechanism. Non-browser callers (the Ástríðr agent
-is a server-side HTTP client) can set the `Origin` header arbitrarily, so CORS does
-**not** gate server-to-server traffic — `validateIngestAuth()` is the control for that.
-Both layers are independent. Setting `CODEPULSE_ALLOWED_ORIGIN` hardens browser access
-only; it is **not** a substitute for ingest API-key auth.
+CORS is a **browser** enforcement mechanism. Non-browser callers (the Ástríðr agent is a
+server-side HTTP client) can set the `Origin` header arbitrarily, so CORS does **not** gate
+server-to-server traffic — `validateIngestAuth()` is the control for that. Both layers are
+independent.
 
 ---
 
 ## 3. Secret scanning (OPS-02)
 
-`.github/workflows/gitleaks-scan.yml` runs Gitleaks on `master` and on PRs and
-**blocks** (exit 1) when a real secret is found. The baseline scan over full history
-is clean (see `.planning/phases/77-ci-production-hardening/77-02-SUMMARY.md`).
-Nothing to configure at deploy time — just keep secrets out of commits. False-positive
-placeholders are allowlisted in `.gitleaks.toml`.
+`.github/workflows/gitleaks-scan.yml` runs Gitleaks on `master` and on PRs and **blocks**
+(exit 1) when a real secret is found. The baseline scan over full history is clean (see
+`.planning/phases/77-ci-production-hardening/77-02-SUMMARY.md`). Nothing to configure — just
+keep secrets out of commits. False-positive placeholders are allowlisted in `.gitleaks.toml`.
 
 ---
 
 ## 4. Supabase migration drift (OPS-03) — N/A for CodePulse
 
-CodePulse has no `supabase/` schema directory, so there is nothing to drift-check.
-The migration-drift CI control lives **upstream in Ástríðr**
+CodePulse has no `supabase/` schema directory, so there is nothing to drift-check. The
+migration-drift CI control lives **upstream in Ástríðr**
 (`astridr-repo/.github/workflows/supabase-migration-check.yml`). No CodePulse action required.
