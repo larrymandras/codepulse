@@ -1,0 +1,3 @@
+THROWAWAY — Phase 77 Gitleaks block proof. Delete this branch.
+FAKE non-functional credential, present only to confirm CI blocks on a secret.
+github_token = ghp_aZ4mK9pX2qW7rT1yB6nC3vF8jL5sH0dG2eU4
