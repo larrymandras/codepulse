@@ -1,7 +1,9 @@
 # Phase 75: Agent Console - Context
 
 **Gathered:** 2026-06-10
-**Status:** Ready for planning (⛔ execution gated — see Gate below)
+**Status:** ⏸️ ON HOLD — do NOT plan yet. Gated on Ástríðr M1.P0 + M1.P3 (see Gate below).
+
+> **Revisit on gate-lift (2026-06-10):** These decisions are **provisional**, not locked — several were made against an upstream `POST /tasks` contract that does not exist yet (runId echo? cancel-ack event? file-change event?). When M1.P0 lands and the real task schema is in front of us, **re-open this CONTEXT** and specifically re-evaluate D-07 (multiple concurrent runs vs a leaner one-active-run v1) before planning. Do not treat this file as settled the way an unblocked phase's CONTEXT is.
 
 <domain>
 ## Phase Boundary
