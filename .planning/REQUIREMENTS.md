@@ -12,37 +12,37 @@
 
 > The unified "Agentic OS" visual language and IA refactor — the foundation every later UI phase renders against. Absorbs the old UI-09 (icon standardization) and QA-01 (traceability).
 
-- [ ] **DS-01**: A documented design-token layer (color, type, spacing, elevation, motion) backs the dashboard, derived from an audit of the *live* current styling — resolving the doc conflict (PROJECT.md "shadcn New York + oklch Paperclip" vs CLAUDE.md "Tailwind-only + Cinzel/Geist") to one ground-truth system
-- [ ] **DS-02**: A documented set of shared primitives/conventions (MetricCard, EntityRow, panels, chart wrappers, status colors) covers the patterns repeated across the 15 pages
-- [ ] **DS-03**: The nav/IA is refactored to add a *Graphs* cluster and an *Agents/Console* cluster without breaking existing routes
-- [ ] **DS-04**: A UI-SPEC + visual sketch of the unified language is approved by Larry before the 15-page migration begins
+- [x] **DS-01**: A documented design-token layer (color, type, spacing, elevation, motion) backs the dashboard, derived from an audit of the *live* current styling — resolving the doc conflict (PROJECT.md "shadcn New York + oklch Paperclip" vs CLAUDE.md "Tailwind-only + Cinzel/Geist") to one ground-truth system
+- [x] **DS-02**: A documented set of shared primitives/conventions (MetricCard, EntityRow, panels, chart wrappers, status colors) covers the patterns repeated across the 15 pages
+- [x] **DS-03**: The nav/IA is refactored to add a *Graphs* cluster and an *Agents/Console* cluster without breaking existing routes
+- [x] **DS-04**: A UI-SPEC + visual sketch of the unified language is approved by Larry before the 15-page migration begins
 
 ### Tool / Capability Galaxy (GAL) — Phase 72
 
 > Depends on the Ástríðr **M1.P1 callGraphEdges emitter** (✅ built — `tool_executed` → `callGraphEdges`), so the table is no longer sparse.
 
-- [ ] **GAL-01**: The graph renders nodes for discoveredTools + mcpServers + kits and agent↔tool edges from callGraphEdges, as a navigable force/R3F galaxy
-- [ ] **GAL-02**: Node glow/size encodes usage frequency + recency from callGraphEdges (callCount/errorCount/status)
-- [ ] **GAL-03**: Installed-but-unused tools (no edges) are visually flagged as orphans
-- [ ] **GAL-04**: Filtering by agent/persona and by MCP server works without a full reload
+- [x] **GAL-01**: The graph renders nodes for discoveredTools + mcpServers + kits and agent↔tool edges from callGraphEdges, as a navigable force/R3F galaxy
+- [x] **GAL-02**: Node glow/size encodes usage frequency + recency from callGraphEdges (callCount/errorCount/status)
+- [x] **GAL-03**: Installed-but-unused tools (no edges) are visually flagged as orphans
+- [x] **GAL-04**: Filtering by agent/persona and by MCP server works without a full reload
 
 ### MCP Inventory + Health (MCP) — Phase 73
 
-- [ ] **MCP-01**: Every MCP server and its tools are listed with status pills (connected / error / unused)
-- [ ] **MCP-02**: Per-tool health (last call, error rate from callGraphEdges) is visible
-- [ ] **MCP-03**: A per-tool prune/disable affordance (chip) exists — governance-focused, not a marketplace clone
+- [x] **MCP-01**: Every MCP server and its tools are listed with status pills (connected / error / unused)
+- [x] **MCP-02**: Per-tool health (last call, error rate from callGraphEdges) is visible
+- [x] **MCP-03**: A per-tool prune/disable affordance (chip) exists — governance-focused, not a marketplace clone
 
 ### Knowledge Graph (KG) — Phase 74
 
 > Visualizes Ástríðr's temporal knowledge graph (consolidates the original KG Wave 1 + Wave 2). **Gated on Ástríðr Phase 125 (backfill) + Phase 126** (the read API these consume). Design authority: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
 
-- [ ] **KG-01**: Operator sees always-on KG summary cards (entities by type, current vs historical triples, contradiction count, last-extraction time), rendered from pushed `kg_summary` telemetry so they show even when Ástríðr is offline
-- [ ] **KG-02**: Operator browses a bounded whole-graph overview of entities + current relationships, filterable by entity type and agent, with truncation explicitly indicated when the cap is hit
-- [ ] **KG-03**: Operator searches an entity by name and explores its ego graph (current facts + related entities) out to a selectable number of hops (1–3)
-- [ ] **KG-04**: Operator scrubs an "as-of" date to view the KG as it was at a past time, with superseded facts rendered visually distinct from current ones
-- [ ] **KG-05**: Operator reviews flagged contradictions (conflicting current beliefs) as a dedicated lens
-- [ ] **KG-06**: Selecting an entity or edge shows its details (type, facts, confidence, validity window) and links each fact back to its source episodic memory in the existing Memory view (provenance)
-- [ ] **KG-07**: Entities render as type-colored nodes with a legend; entity→entity triples render as labeled directed edges (confidence-weighted, current vs superseded styling); literal-object facts render as node attributes, not graph nodes
+- [x] **KG-01**: Operator sees always-on KG summary cards (entities by type, current vs historical triples, contradiction count, last-extraction time), rendered from pushed `kg_summary` telemetry so they show even when Ástríðr is offline
+- [x] **KG-02**: Operator browses a bounded whole-graph overview of entities + current relationships, filterable by entity type and agent, with truncation explicitly indicated when the cap is hit
+- [x] **KG-03**: Operator searches an entity by name and explores its ego graph (current facts + related entities) out to a selectable number of hops (1–3)
+- [x] **KG-04**: Operator scrubs an "as-of" date to view the KG as it was at a past time, with superseded facts rendered visually distinct from current ones
+- [x] **KG-05**: Operator reviews flagged contradictions (conflicting current beliefs) as a dedicated lens
+- [x] **KG-06**: Selecting an entity or edge shows its details (type, facts, confidence, validity window) and links each fact back to its source episodic memory in the existing Memory view (provenance)
+- [x] **KG-07**: Entities render as type-colored nodes with a legend; entity→entity triples render as labeled directed edges (confidence-weighted, current vs superseded styling); literal-object facts render as node attributes, not graph nodes
 
 ### Agent Console (CON) — Phase 75
 
@@ -56,6 +56,7 @@
 ### Unified Graph Hub (HUB) — Phase 76
 
 > **Depends on Phase 74 + Ástríðr M1.P4** (graphify + Obsidian snapshot uploader → Convex `{nodes,links}`).
+> **Status:** Built on `feat/phase-76-unified-hub`; **PR #14 open (not yet merged to master)**.
 
 - [ ] **HUB-01**: graphify-out and the Obsidian wikilink graph render from Convex-pushed snapshots
 - [ ] **HUB-02**: KG Explorer, Tool Galaxy, and code/vault graphs are reachable from one Graphs hub with consistent interactions
@@ -63,17 +64,17 @@
 
 ### UI Polish (UI) — absorbed into Phase 71
 
-- [ ] **UI-09**: All remaining dashboard icons standardized to a single icon system across every dashboard surface (completes partial UI-08; now part of the Phase 71 design system)
+- [x] **UI-09**: All remaining dashboard icons standardized to a single icon system across every dashboard surface (completes partial UI-08; now part of the Phase 71 design system)
 
 ### Production Hardening (OPS) — Phase 77
 
-- [ ] **OPS-01**: `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment and a deploy checklist documents it, so production CORS is correct for a non-local origin
-- [ ] **OPS-02**: The Gitleaks secret-scan CI workflow passes (green) on `master`
+- [x] **OPS-01**: `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment and a deploy checklist documents it, so production CORS is correct for a non-local origin *(set to `http://localhost:5173` on deployment `tidy-whale-981`; local-only usage — see `docs/DEPLOY.md`)*
+- [x] **OPS-02**: The Gitleaks secret-scan CI workflow passes (green) on `master` *(green on master + block proven live: a real secret → `secret_found` → exit 1 / red)*
 - [N/A] **OPS-03**: The Supabase migration-drift CI check passes (green) on `master` — **N/A (satisfied upstream).** CodePulse has no `supabase/` schema directory, so there is nothing to drift-check. The migration-drift control lives in Ástríðr (`astridr-repo/.github/workflows/supabase-migration-check.yml`).
 
 ### Quality / Traceability (QA) — absorbed into Phase 71
 
-- [ ] **QA-01**: The REQUIREMENTS traceability tables (v4.0/v5.0 archives) are reconciled to actual shipped state, and a phase-completion step keeps the active traceability table current going forward
+- [x] **QA-01**: The REQUIREMENTS traceability tables (v4.0/v5.0 archives) are reconciled to actual shipped state, and a phase-completion step keeps the active traceability table current going forward
 
 ---
 
@@ -101,33 +102,33 @@
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| DS-01 | Phase 71 | Pending |
-| DS-02 | Phase 71 | Pending |
-| DS-03 | Phase 71 | Pending |
-| DS-04 | Phase 71 | Pending |
-| UI-09 | Phase 71 | Pending |
-| QA-01 | Phase 71 | Pending |
-| GAL-01 | Phase 72 | Pending |
-| GAL-02 | Phase 72 | Pending |
-| GAL-03 | Phase 72 | Pending |
-| GAL-04 | Phase 72 | Pending |
-| MCP-01 | Phase 73 | Pending |
-| MCP-02 | Phase 73 | Pending |
-| MCP-03 | Phase 73 | Pending |
-| KG-01 | Phase 74 | Pending |
-| KG-02 | Phase 74 | Pending |
-| KG-03 | Phase 74 | Pending |
-| KG-04 | Phase 74 | Pending |
-| KG-05 | Phase 74 | Pending |
-| KG-06 | Phase 74 | Pending |
-| KG-07 | Phase 74 | Pending |
-| CON-01 | Phase 75 | Pending |
-| CON-02 | Phase 75 | Pending |
-| CON-03 | Phase 75 | Pending |
-| CON-04 | Phase 75 | Pending |
-| HUB-01 | Phase 76 | Pending |
-| HUB-02 | Phase 76 | Pending |
-| HUB-03 | Phase 76 | Pending |
-| OPS-01 | Phase 77 | Pending |
-| OPS-02 | Phase 77 | Pending |
+| DS-01 | Phase 71 | Complete (PR #10) |
+| DS-02 | Phase 71 | Complete (PR #10) |
+| DS-03 | Phase 71 | Complete (PR #10) |
+| DS-04 | Phase 71 | Complete (PR #10) |
+| UI-09 | Phase 71 | Complete (PR #10) |
+| QA-01 | Phase 71 | Complete (PR #10) |
+| GAL-01 | Phase 72 | Complete (PR #11) |
+| GAL-02 | Phase 72 | Complete (PR #11) |
+| GAL-03 | Phase 72 | Complete (PR #11) |
+| GAL-04 | Phase 72 | Complete (PR #11) |
+| MCP-01 | Phase 73 | Complete (PR #13) |
+| MCP-02 | Phase 73 | Complete (PR #13) |
+| MCP-03 | Phase 73 | Complete (PR #13) |
+| KG-01 | Phase 74 | Complete (PR #12) |
+| KG-02 | Phase 74 | Complete (PR #12) |
+| KG-03 | Phase 74 | Complete (PR #12) |
+| KG-04 | Phase 74 | Complete (PR #12) |
+| KG-05 | Phase 74 | Complete (PR #12) |
+| KG-06 | Phase 74 | Complete (PR #12) |
+| KG-07 | Phase 74 | Complete (PR #12) |
+| CON-01 | Phase 75 | Not started |
+| CON-02 | Phase 75 | Not started |
+| CON-03 | Phase 75 | Not started |
+| CON-04 | Phase 75 | Not started |
+| HUB-01 | Phase 76 | Built — PR #14 open (unmerged) |
+| HUB-02 | Phase 76 | Built — PR #14 open (unmerged) |
+| HUB-03 | Phase 76 | Built — PR #14 open (unmerged) |
+| OPS-01 | Phase 77 | Complete (PR #15) |
+| OPS-02 | Phase 77 | Complete (PR #15) |
 | OPS-03 | Phase 77 | N/A (upstream — astridr supabase-migration-check.yml) |
