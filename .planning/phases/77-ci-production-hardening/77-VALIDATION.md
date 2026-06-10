@@ -82,3 +82,5 @@ created: 2026-06-10
 - [ ] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
+
+> **Executor note:** `nyquist_compliant` and `wave_0_complete` are intentionally `false` in draft. The substance already satisfies Nyquist (every auto task has an automated verify, no watch-mode, <15s latency). On completing all phase tasks, the executor/verify step flips both frontmatter flags to `true` and checks off the Sign-Off boxes. Do not treat the draft `false` as a coverage failure.

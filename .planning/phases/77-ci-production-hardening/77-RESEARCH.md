@@ -583,22 +583,22 @@ gitleaks git -v --report-path=gitleaks-baseline.json .
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`unauthorizedResponse()` and CORS headers**
    - What we know: it spreads the old static `corsHeaders`; a 401 response
    - What's unclear: does a 401 preflight response need ACAO to be browser-visible, or can it omit it?
-   - Recommendation: add `request: Request` param for consistency; fall back to minimal headers (no ACAO) if simpler. Either is correct since a 401 stops processing.
+   - **RESOLVED:** PATTERNS.md Option A (recommended) — drop ACAO from 401 responses; use minimal fixed headers `{ "Content-Type": "application/json" }`. A 401 does not negotiate CORS. No `request` param added. Locked in 77-01-PLAN.md Task 1.
 
 2. **Exact Convex prod deployment URL**
    - What we know: the ingest URL is `https://tidy-whale-981.convex.site`; the deploy uses `CONVEX_DEPLOY_KEY`
    - What's unclear: the exact value of `CODEPULSE_ALLOWED_ORIGIN` to set (dashboard origin depends on where the frontend is deployed — Vercel? Netlify?)
-   - Recommendation: the deploy checklist should document "set this to your Vercel/Netlify deployment URL" as a fill-in, not hardcode a specific URL in the checklist template.
+   - **RESOLVED:** Per CONTEXT D-08 + Claude's Discretion — the deploy checklist (`docs/DEPLOY.md`, 77-03-PLAN.md) documents this as a fill-in ("set to your deployed frontend origin, e.g. Vercel/Netlify URL + localhost dev"), NOT a hardcoded value. The concrete value is an operator deploy-time input, out of scope for the code.
 
 3. **gitleaks binary on Windows (local baseline scan)**
    - What we know: the binary is available from github.com/gitleaks/gitleaks releases for all platforms
    - What's unclear: whether Larry has it installed locally
-   - Recommendation: document both options (local binary + report-only CI run) in the plan; executor picks based on availability.
+   - **RESOLVED:** 77-02-PLAN.md Task 2 documents both paths — local binary if available, else the report-only first-`master`-run CI fallback. Executor picks based on availability and records the disposition in the SUMMARY.
 
 ---
 
