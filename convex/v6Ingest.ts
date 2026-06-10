@@ -1,6 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
  * POST /preflight-ingest
@@ -8,7 +8,7 @@ import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestA
  */
 export const preflightIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -23,7 +23,7 @@ export const preflightIngest = httpAction(async (ctx, request) => {
     if (!body.profileId) {
       return new Response(
         JSON.stringify({ error: "Missing required field: profileId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -39,12 +39,12 @@ export const preflightIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -55,7 +55,7 @@ export const preflightIngest = httpAction(async (ctx, request) => {
  */
 export const dreamingIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -69,7 +69,7 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
     if (!body.type) {
       return new Response(
         JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -77,7 +77,7 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
       if (!body.runDate || !body.status) {
         return new Response(
           JSON.stringify({ error: "Missing required fields for cycle: runDate, status" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
         );
       }
       await ctx.runMutation(api.v6Mutations.insertDreamingCycle, {
@@ -97,7 +97,7 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
       if (!body.factText || !body.category) {
         return new Response(
           JSON.stringify({ error: "Missing required fields for fact: factText, category" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
         );
       }
       await ctx.runMutation(api.v6Mutations.insertDreamingFact, {
@@ -111,18 +111,18 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
     } else {
       return new Response(
         JSON.stringify({ error: `Unknown type: ${body.type}. Expected "cycle" or "fact".` }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -133,7 +133,7 @@ export const dreamingIngest = httpAction(async (ctx, request) => {
  */
 export const advisorIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -147,7 +147,7 @@ export const advisorIngest = httpAction(async (ctx, request) => {
     if (!body.provider) {
       return new Response(
         JSON.stringify({ error: "Missing required field: provider" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -166,12 +166,12 @@ export const advisorIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -182,7 +182,7 @@ export const advisorIngest = httpAction(async (ctx, request) => {
  */
 export const importIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -196,7 +196,7 @@ export const importIngest = httpAction(async (ctx, request) => {
     if (!body.importId || !body.source || !body.status) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: importId, source, status" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -212,12 +212,12 @@ export const importIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -228,7 +228,7 @@ export const importIngest = httpAction(async (ctx, request) => {
  */
 export const startupIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -242,7 +242,7 @@ export const startupIngest = httpAction(async (ctx, request) => {
     if (!body.phase) {
       return new Response(
         JSON.stringify({ error: "Missing required field: phase" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -257,12 +257,12 @@ export const startupIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -273,7 +273,7 @@ export const startupIngest = httpAction(async (ctx, request) => {
  */
 export const authAliasIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -287,7 +287,7 @@ export const authAliasIngest = httpAction(async (ctx, request) => {
     if (!body.alias || !body.provider || !body.userId) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: alias, provider, userId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -300,12 +300,12 @@ export const authAliasIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });

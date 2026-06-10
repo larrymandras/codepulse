@@ -1,6 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
  * POST /war-room-ingest
@@ -8,7 +8,7 @@ import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestA
  */
 export const warRoomIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   if (!validateIngestAuth(request)) {
@@ -21,7 +21,7 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
     if (!body.type) {
       return new Response(
         JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -50,12 +50,12 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -66,7 +66,7 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
  */
 export const meetingBotIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   if (!validateIngestAuth(request)) {
@@ -79,7 +79,7 @@ export const meetingBotIngest = httpAction(async (ctx, request) => {
     if (!body.type) {
       return new Response(
         JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -115,12 +115,12 @@ export const meetingBotIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -132,7 +132,7 @@ export const meetingBotIngest = httpAction(async (ctx, request) => {
  */
 export const transcriptIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   if (!validateIngestAuth(request)) {
@@ -145,14 +145,14 @@ export const transcriptIngest = httpAction(async (ctx, request) => {
     if (!body.type) {
       return new Response(
         JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
     if (!body.text) {
       return new Response(
         JSON.stringify({ error: "Missing required field: text" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -183,12 +183,12 @@ export const transcriptIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
@@ -199,7 +199,7 @@ export const transcriptIngest = httpAction(async (ctx, request) => {
  */
 export const missionControlIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   if (!validateIngestAuth(request)) {
@@ -212,14 +212,14 @@ export const missionControlIngest = httpAction(async (ctx, request) => {
     if (!body.type) {
       return new Response(
         JSON.stringify({ error: "Missing required field: type" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
     if (!body.taskId) {
       return new Response(
         JSON.stringify({ error: "Missing required field: taskId" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
 
@@ -252,12 +252,12 @@ export const missionControlIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });

@@ -1,6 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /** Helper: extract a string attribute value from an OTel attributes array */
 function getAttr(
@@ -59,7 +59,7 @@ function attrsToObj(attrs: any[] | undefined): Record<string, string | number> {
 export const otelLogsIngest = httpAction(async (ctx, request) => {
   // CORS preflight
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // Reject non-JSON content types (gRPC / protobuf)
@@ -69,7 +69,7 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       JSON.stringify({
         error: "Unsupported content type. This endpoint only accepts application/json. Send OTel data with OTEL_EXPORTER_OTLP_PROTOCOL=http/json.",
       }),
-      { status: 415, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 415, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
     );
   }
 
@@ -124,13 +124,13 @@ export const otelLogsIngest = httpAction(async (ctx, request) => {
       JSON.stringify({ ok: failed === 0, processed, failed, failures }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
       }
     );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });
