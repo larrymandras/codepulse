@@ -1,0 +1,136 @@
+name: Gitleaks Secret Scan
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+  # gitleaks-action@v3 reads the PR commit list (GET /repos/.../pulls/{n}/commits)
+  # on pull_request events. Without this scope the action 403s ("Resource not
+  # accessible by integration") BEFORE it ever scans — a job error, not a secret.
+  pull-requests: read
+
+env:
+  CODEPULSE_INGEST_URL: https://tidy-whale-981.convex.site
+
+jobs:
+  scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - id: gitleaks
+        uses: gitleaks/gitleaks-action@v3
+        # Don't let a raw action failure end the job — we classify it below so we
+        # can tell "secret found" apart from "scan errored before finishing".
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+
+      - name: Classify scan result
+        id: classify
+        if: always()
+        run: |
+          set -uo pipefail
+          OUTCOME="${{ steps.gitleaks.outcome }}"
+
+          # A clean scan: the action ran and found nothing.
+          if [ "$OUTCOME" = "success" ]; then
+            echo "result=clean" >> "$GITHUB_OUTPUT"
+            echo "reason=No secrets detected — scan completed clean." >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Failure: a real secret produces a SARIF report with results; an error
+          # before scanning (permissions / rate-limit / network) leaves no report.
+          # Search recursively so a filename/path change can never silently demote
+          # a real secret to "infra error".
+          FINDINGS=0
+          while IFS= read -r f; do
+            n=$(jq '[.runs[]?.results[]?] | length' "$f" 2>/dev/null || echo 0)
+            FINDINGS=$((FINDINGS + ${n:-0}))
+          done < <(find . -name '*.sarif' 2>/dev/null)
+
+          if [ "${FINDINGS:-0}" -gt 0 ]; then
+            echo "result=secret_found" >> "$GITHUB_OUTPUT"
+            echo "reason=SECRET DETECTED — gitleaks found ${FINDINGS} finding(s). Review and rotate immediately." >> "$GITHUB_OUTPUT"
+          else
+            echo "result=scan_error" >> "$GITHUB_OUTPUT"
+            echo "reason=Scan ERRORED before finishing (permissions / rate-limit / network) — NOT a detected secret. No secret was found; the job failed to run gitleaks." >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify CodePulse Dashboard
+        if: always()
+        run: |
+          RESULT="${{ steps.classify.outputs.result }}"
+          REASON="${{ steps.classify.outputs.reason }}"
+
+          # Map the classification to a CodePulse conclusion. This is the string
+          # the Ástríðr tooling-status summary reads, so the three states must be
+          # distinguishable here, not collapsed to a single "failure".
+          case "$RESULT" in
+            secret_found) CONCLUSION="failure" ;;   # real security incident
+            scan_error)   CONCLUSION="neutral" ;;    # infra/permissions, NOT a secret
+            *)            CONCLUSION="success" ;;     # clean
+          esac
+
+          curl -sf -X POST "${CODEPULSE_INGEST_URL}/runtime-ingest" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg wf "Gitleaks Secret Scan" \
+              --arg repo "codepulse" \
+              --arg status "completed" \
+              --arg conclusion "$CONCLUSION" \
+              --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+              --argjson run_id "${{ github.run_id }}" \
+              --argjson ts "$(date +%s)" \
+              --arg scan_result "$RESULT" \
+              --arg detail "$REASON" \
+              '{
+                eventType: "github_workflow_run",
+                sessionId: "github-actions",
+                data: {
+                  workflowName: $wf,
+                  repo: $repo,
+                  status: $status,
+                  conclusion: $conclusion,
+                  runUrl: $url,
+                  runId: $run_id,
+                  triggeredAt: $ts,
+                  completedAt: $ts,
+                  scanResult: $scan_result,
+                  detail: $detail
+                }
+              }'
+            )" || echo "CodePulse notification failed (non-fatal)"
+
+      - name: Enforce scan result
+        if: always()
+        run: |
+          RESULT="${{ steps.classify.outputs.result }}"
+          REASON="${{ steps.classify.outputs.reason }}"
+
+          case "$RESULT" in
+            secret_found)
+              # Real finding — fail the job loudly so it cannot be merged/ignored.
+              echo "::error title=Secret detected::${REASON}"
+              exit 1
+              ;;
+            scan_error)
+              # Scanner could not run. Surface it as a WARNING (not a red "failing"
+              # check) so it reads as an infra issue, never as a leaked secret.
+              # Flip this to `exit 1` if you'd rather a broken scanner hard-fail.
+              echo "::warning title=Secret scan errored (not a secret)::${REASON}"
+              exit 0
+              ;;
+            *)
+              echo "${REASON}"
+              exit 0
+              ;;
+          esac

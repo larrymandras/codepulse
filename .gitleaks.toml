@@ -1,0 +1,18 @@
+title = "codepulse gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known safe placeholder values in .env.example and test files"
+paths = [
+    '''.env\.example''',
+    '''convex/__tests__/''',
+    '''\.planning/phases/.*/.*-RESEARCH\.md''',
+]
+regexes = [
+    # Populated by baseline scan results only.
+    # Do NOT copy Astridr's regexes -- they are Astridr-specific test fixtures
+    # (Supabase demo JWTs, sk-ant keys, Slack tokens, LiveKit keys, etc.)
+    # that have no counterpart in CodePulse history.
+]
