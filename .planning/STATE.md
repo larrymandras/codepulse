@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Agentic OS Front-End
-status: executing
-stopped_at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
-last_updated: "2026-06-10T20:32:35.531Z"
-last_activity: 2026-06-10 -- Phase 77 execution started
+status: in-progress
+stopped_at: v6.0 tracking reconciled to git ground truth — 71-74 + 77 merged (5/7); Phase 76 built (PR #14 open); Phase 75 not started
+last_updated: "2026-06-10"
+last_activity: 2026-06-10 -- Phase 77 shipped (PR #15; OPS-01/02 green on master, OPS-03 N/A); reconciled v6.0 ROADMAP/REQUIREMENTS/STATE to actual merged state
 progress:
   total_phases: 7
-  completed_phases: 0
+  completed_phases: 5
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 71
 ---
 
 # Project State
@@ -21,17 +21,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 77 — ci-production-hardening
-**Last completed:** v5.0 milestone archived (2026-05-25)
+**Current focus:** v6.0 Agentic OS Front-End — 5/7 phases shipped. Remaining: **Phase 76** (built — merge PR #14) and **Phase 75** Agent Console (now unblocked — Ástríðr M1.P0/M1.P3 shipped in astridr v18.0 on 2026-06-10).
+**Last completed:** Phase 77 — CI & Production Hardening (PR #15, 2026-06-10)
 
 ## Current Position
 
-Phase: 77 (ci-production-hardening) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 77
-Last activity: 2026-06-10 -- Phase 77 execution started
+Phase: 77 (ci-production-hardening) — COMPLETE (merged to master, PR #15)
+Plan: 3 of 3 complete
+Status: v6.0 milestone in progress — 71/72/73/74/77 merged; 76 PR #14 open; 75 not started
+Last activity: 2026-06-10 -- Phase 77 shipped; v6.0 tracking reconciled to git ground truth
 
-**Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
+**Progress bar:** [███████░░░] 71% (5/7 phases)
+
+## v6.0 Phase Status (reconciled 2026-06-10 from git ground truth)
+
+| Phase | Status | Evidence |
+|-------|--------|----------|
+| 71 Unified Design System | ✅ merged | PR #10 |
+| 72 Tool / Capability Galaxy | ✅ merged | PR #11 |
+| 73 MCP Inventory + Health | ✅ merged | PR #13 |
+| 74 Temporal-KG Explorer | ✅ merged | PR #12 |
+| 75 Agent Console | ⛔ not started (now unblocked) | discuss/context only |
+| 76 Unified Graph Hub | 🟡 built, PR #14 open | branch `feat/phase-76-unified-hub` |
+| 77 CI & Production Hardening | ✅ merged | PR #15 |
 
 ## Milestone Reframe (2026-06-09)
 

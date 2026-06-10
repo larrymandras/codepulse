@@ -4,7 +4,7 @@
 
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
-- 🔄 **v6.0 Agentic OS Front-End** — Phases 71-77 (in progress; reframed 2026-06-09 from the never-started "KG Observability & Hardening" roadmap)
+- 🔄 **v6.0 Agentic OS Front-End** — Phases 71-77 (in progress; 5/7 shipped — 71-74 + 77 merged to master 2026-06-09/10; **Phase 76 built but PR #14 open**; **Phase 75 not started**; reframed 2026-06-09 from the never-started "KG Observability & Hardening" roadmap)
 
 ## Phases
 
@@ -48,13 +48,13 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 
 > **Reframed 2026-06-09.** CodePulse is the rendering/control half of the two-milestone Agentic OS plan (companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`; Ástríðr "Surface Substrate" = the data-emitting half). The original v6.0 "KG Observability & Hardening" (old phases 71-74) was never executed; its work is absorbed below — old KG Waves 1+2 → Phase 74; old UI polish → Phase 71; old CI hardening → Phase 77.
 
-- [ ] **Phase 71: Unified Design System** - Formalize a cohesive "Agentic OS" visual language (design tokens, component conventions, full icon standardization) and refactor the information architecture with new *Graphs* and *Agents/Console* nav clusters; the shared foundation every later phase renders against
-- [ ] **Phase 72: Tool / Capability Galaxy** - A force/R3F graph over discoveredTools + mcpServers + kits + callGraphEdges, with usage/recency glow and orphan (installed-but-unused) detection
-- [ ] **Phase 73: MCP Inventory + Health** - A tool-governance surface (server/tool inventory pills + per-tool health and prune chips); not a marketplace clone
-- [ ] **Phase 74: Temporal-KG Explorer** - The differentiated showpiece: browse entities, traverse predicates, ego graphs, an as-of temporal scrubber, a contradiction lens, and a KGDetailsPanel with provenance deep-links into the Memory view (consolidates the original KG Wave 1 + Wave 2)
-- [ ] **Phase 75: Agent Console** - Drive Claude Code + Codex from the dashboard: POST a task to the gateway → live local-direct WS stream → run-reducer viz → persist the run summary to Convex
-- [ ] **Phase 76: Unified Graph Hub** - graphify + Obsidian + KG + tool graphs unified in one navigable place
-- [ ] **Phase 77: CI & Production Hardening** - Green up Gitleaks + Supabase-drift CI on master and document `CODEPULSE_ALLOWED_ORIGIN` for production CORS (carried forward from the original v6.0 P71)
+- [x] **Phase 71: Unified Design System** (merged PR #10, 2026-06-09) - Formalize a cohesive "Agentic OS" visual language (design tokens, component conventions, full icon standardization) and refactor the information architecture with new *Graphs* and *Agents/Console* nav clusters; the shared foundation every later phase renders against
+- [x] **Phase 72: Tool / Capability Galaxy** (merged PR #11, 2026-06-09) - A force/R3F graph over discoveredTools + mcpServers + kits + callGraphEdges, with usage/recency glow and orphan (installed-but-unused) detection
+- [x] **Phase 73: MCP Inventory + Health** (merged PR #13, 2026-06-09) - A tool-governance surface (server/tool inventory pills + per-tool health and prune chips); not a marketplace clone
+- [x] **Phase 74: Temporal-KG Explorer** (merged PR #12, 2026-06-09) - The differentiated showpiece: browse entities, traverse predicates, ego graphs, an as-of temporal scrubber, a contradiction lens, and a KGDetailsPanel with provenance deep-links into the Memory view (consolidates the original KG Wave 1 + Wave 2)
+- [ ] **Phase 75: Agent Console** — *not started* (was gated on Ástríðr M1.P0/M1.P3, which shipped in astridr v18.0 on 2026-06-10 — now unblocked) - Drive Claude Code + Codex from the dashboard: POST a task to the gateway → live local-direct WS stream → run-reducer viz → persist the run summary to Convex
+- [ ] **Phase 76: Unified Graph Hub** — *built on `feat/phase-76-unified-hub`; **PR #14 open, not merged*** - graphify + Obsidian + KG + tool graphs unified in one navigable place
+- [x] **Phase 77: CI & Production Hardening** (merged PR #15, 2026-06-10) - Green up Gitleaks secret-scan CI on master (OPS-02 ✅ green + block proven live) and set/document `CODEPULSE_ALLOWED_ORIGIN` for CORS (OPS-01 ✅, local-only); Supabase-drift N/A (OPS-03 — upstream in Ástríðr)
 
 ## Phase Details
 
