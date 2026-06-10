@@ -149,8 +149,8 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
   4. A developer following the checklist can configure CORS for a non-local origin without guessing
   (Note: success criterion #2 — Supabase migration-drift — is N/A for CodePulse; satisfied upstream in astridr-repo `supabase-migration-check.yml`. OPS-03 marked N/A.)
 **Plans**: 3 plans
-- [ ] 77-01-PLAN.md — Fail-closed CORS allowlist in ingestAuth.ts + 8 handler updates + unit tests (OPS-01)
-- [ ] 77-02-PLAN.md — Gitleaks secret-scan workflow + config (Astridr mirror) + clean full-history baseline (OPS-02)
+- [x] 77-01-PLAN.md — Fail-closed CORS allowlist in ingestAuth.ts + 8 handler updates + unit tests (OPS-01)
+- [x] 77-02-PLAN.md — Gitleaks secret-scan workflow + config (Astridr mirror) + clean full-history baseline (OPS-02)
 - [ ] 77-03-PLAN.md — Deploy checklist + CODEPULSE_ALLOWED_ORIGIN in Convex prod + manual secret-block test + OPS-03 N/A (OPS-01/02/03)
 
 ## Execution Order
@@ -181,7 +181,7 @@ Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 | 74. Temporal-KG Explorer | v6.0 | 0/TBD | Not started (ext. blocked) | - |
 | 75. Agent Console | v6.0 | 0/TBD | Not started (ext. blocked) | - |
 | 76. Unified Graph Hub | v6.0 | 0/TBD | Not started (dep) | - |
-| 77. CI & Production Hardening | v6.0 | 0/3 | Planned | - |
+| 77. CI & Production Hardening | v6.0 | 2/3 | In Progress|  |
 
 ---
 
