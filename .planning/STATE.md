@@ -4,8 +4,8 @@ milestone: v6.0
 milestone_name: Agentic OS Front-End
 status: executing
 stopped_at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
-last_updated: "2026-06-10T20:01:47.683Z"
-last_activity: 2026-06-09 — milestone renamed v6.0 → "Agentic OS Front-End"; roadmap replaced with the 7-phase Agentic OS Front-End set; M1.P1 callGraphEdges emitter built upstream (Astridr) — unblocks Phase 72 Galaxy
+last_updated: "2026-06-10T20:32:35.531Z"
+last_activity: 2026-06-10 -- Phase 77 execution started
 progress:
   total_phases: 7
   completed_phases: 0
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v6.0 Agentic OS Front-End — milestone reframed 2026-06-09 (absorbed the never-started v6.0 KG/Hardening roadmap). Starting Phase 71 (Unified Design System).
+**Current focus:** Phase 77 — ci-production-hardening
 **Last completed:** v5.0 milestone archived (2026-05-25)
 
 ## Current Position
 
-Phase: 71 — Unified Design System
-Plan: —
-Status: Discovery (design-language audit + UI-SPEC in progress)
-Last activity: 2026-06-09 — milestone renamed v6.0 → "Agentic OS Front-End"; roadmap replaced with the 7-phase Agentic OS Front-End set; M1.P1 callGraphEdges emitter built upstream (Astridr) — unblocks Phase 72 Galaxy
+Phase: 77 (ci-production-hardening) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 77
+Last activity: 2026-06-10 -- Phase 77 execution started
 
 **Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
 
