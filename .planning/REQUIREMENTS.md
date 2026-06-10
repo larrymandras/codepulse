@@ -69,7 +69,7 @@
 
 - [ ] **OPS-01**: `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment and a deploy checklist documents it, so production CORS is correct for a non-local origin
 - [ ] **OPS-02**: The Gitleaks secret-scan CI workflow passes (green) on `master`
-- [ ] **OPS-03**: The Supabase migration-drift CI check passes (green) on `master`
+- [N/A] **OPS-03**: The Supabase migration-drift CI check passes (green) on `master` — **N/A (satisfied upstream).** CodePulse has no `supabase/` schema directory, so there is nothing to drift-check. The migration-drift control lives in Ástríðr (`astridr-repo/.github/workflows/supabase-migration-check.yml`).
 
 ### Quality / Traceability (QA) — absorbed into Phase 71
 
@@ -130,4 +130,4 @@
 | HUB-03 | Phase 76 | Pending |
 | OPS-01 | Phase 77 | Pending |
 | OPS-02 | Phase 77 | Pending |
-| OPS-03 | Phase 77 | Pending |
+| OPS-03 | Phase 77 | N/A (upstream — astridr supabase-migration-check.yml) |
