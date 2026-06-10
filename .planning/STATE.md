@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Agentic OS Front-End
 status: executing
-stopped_at: Phase 77 context gathered
-last_updated: "2026-06-10T19:18:57.091Z"
+stopped_at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
+last_updated: "2026-06-10T20:01:47.683Z"
 last_activity: 2026-06-09 — milestone renamed v6.0 → "Agentic OS Front-End"; roadmap replaced with the 7-phase Agentic OS Front-End set; M1.P1 callGraphEdges emitter built upstream (Astridr) — unblocks Phase 72 Galaxy
 progress:
   total_phases: 7
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -132,9 +132,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-10T19:18:57.086Z
-Stopped at: Phase 77 context gathered
+Last session: 2026-06-10T20:01:47.678Z
+Stopped at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
 Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
-Resume file: .planning/phases/77-ci-production-hardening/77-CONTEXT.md
+Resume file: .planning/phases/77-ci-production-hardening/77-01-PLAN.md
 
 > NOTE: frontmatter `0/7 phases / Phase 71` is STALE. Git ground truth: 71/72/73/74/76 shipped (light mode); only 75 + 77 remain. Reconcile during the Phase 75 discuss (trust git, per the Ástríðr v18.0 pattern).
