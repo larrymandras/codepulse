@@ -29,6 +29,7 @@ must_haves:
   truths:
     - "A coordination doc enumerates the two required gateway changes (CORS allow POST+DELETE; model field on TaskRequest) with exact file/line references"
     - "The three new gateway env vars are documented in .env.example with defaults and a note that they are separate from the Ástríðr main-API vars"
+    - "D-04: the documented gateway `model` field is part of the v1 task payload set (engine + workdir + prompt + model + budget + persona)"
   artifacts:
     - path: ".planning/phases/75-agent-console/75-GATEWAY-PREREQ.md"
       provides: "Cross-repo gateway change checklist + verification steps"

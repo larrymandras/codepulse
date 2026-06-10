@@ -669,7 +669,7 @@ This function is already exported from `LiveRun.tsx` and tested. Extract it to a
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **CORS for POST/DELETE on gateway**
    - What we know: `_configure_cors()` currently allows only `GET, OPTIONS` — POST and DELETE from browser will be blocked

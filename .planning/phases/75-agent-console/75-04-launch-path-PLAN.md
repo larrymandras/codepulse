@@ -18,6 +18,9 @@ must_haves:
     - "useTaskStream opens a single WS to gateway /tasks/{id}/stream, dispatches EVENT per frame, dispatches CLOSED on close, and never reconnects"
     - "NewRunModal collects engine/workdir/prompt/model/max-rounds/persona, calls submitTask, and reports the returned task_id to the parent"
     - "WorkdirPicker tries the M1.P3 browse picker and falls back to a free-text absolute-path Input when browse is unavailable"
+    - "D-02: the launch UI is a modal dialog reusing the WarRoomLaunchDialog pattern"
+    - "D-03: workdir is chosen via the M1.P3 browse picker with a validated free-text absolute-path fallback"
+    - "D-06: a launched task is correlated to its WS stream via the task_id returned by POST /tasks"
   artifacts:
     - path: "src/hooks/useTaskStream.ts"
       provides: "useTaskStream(taskId, dispatch) — per-run gateway WS hook"

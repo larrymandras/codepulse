@@ -20,6 +20,8 @@ must_haves:
     - "gateway calls use VITE_GATEWAY_URL/VITE_GATEWAY_API_KEY, never the Ástríðr main-API base/key"
     - "saveRunSummary upserts a run into the agentRuns table idempotently by taskId"
     - "listRecent returns recent agentRuns ordered by startedAt desc"
+    - "D-01: the per-task engine toggle is carried as the provider field on the POST /tasks payload"
+    - "D-08: Stop wires via DELETE /tasks/{id} (gateway cancellation flag), never a direct estop.py call or pid-kill"
   artifacts:
     - path: "src/lib/astridrApi.ts"
       provides: "gatewayRequest, submitTask, cancelTask, gatewayWsBase, TaskRequest, TaskSubmitResponse"

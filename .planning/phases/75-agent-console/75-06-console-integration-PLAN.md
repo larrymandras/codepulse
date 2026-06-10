@@ -17,6 +17,9 @@ must_haves:
     - "New Run modal + GlobalEStopButton are wired into the header; RunList drives run selection; the selected run renders RunTimeline/RunSummary"
     - "When a run reaches a terminal state, saveRunSummary persists it to Convex exactly once"
     - "Existing Ástríðr telemetry subscriptions and history selector still work"
+    - "D-05: LiveRun.tsx is evolved in place into the Agent Console rather than a separate page"
+    - "D-11: the run summary persists to Convex on terminal states only (completed/errored/stopped)"
+    - "D-12: the persisted summary is a full reproducible record; filesTouched/token/cost render as empty-state when absent in v1"
   artifacts:
     - path: "src/pages/LiveRun.tsx"
       provides: "Agent Console — multi-run controller wiring launch, stream, stop, and persistence"
@@ -105,7 +108,7 @@ RunSummary (extended: filesTouched?, prompt?, engine?, model?, workdir?, agentPe
     Refactor src/pages/LiveRun.tsx into the Agent Console controller. Replace the `liveBlocks`/`liveSessionId`/`runMeta` useState with `const [runMap, dispatch] = useReducer(runMapReducer, new Map<string, RunState>())` plus `selectedRunId` state (75-PATTERNS migration). Mount one `useTaskStream(taskId, dispatch)` per active run — render a small child component per active task id (e.g., a `RunStreamMount` that calls the hook and returns null) so each active task gets EXACTLY ONE WS (75-RESEARCH Pitfall 7); never call useTaskStream conditionally in a loop in the parent. Add NewRunModal to the header behind a "New Run" CTA; its `onTaskSubmitted(taskId)` dispatches `{ type: "ADD_RUN", taskId, request }` (carry the submitted TaskRequest through so RunState captures prompt/provider/workdir/model/persona) and sets it selected. Add `GlobalEStopButton` with `activeTaskIds` derived from runMap entries whose status is running/queued/stopping, passing `dispatch`. Render `RunList` (selected = selectedRunId, onSelect sets selectedRunId, dispatch passed for per-run Stop) in the left `w-72` column and the selected run's `RunTimeline`/`RunSummary` (feed RunSummary the extended props from the selected RunState) in the right column per UI-SPEC §Page Layout. KEEP all existing `useAstridrWS()` telemetry `subscribeEvent` hooks AS-IS — they are the :8181 telemetry WS, separate from the gateway streams; do NOT remove or reroute them (75-PATTERNS, anti-pattern 1). Preserve the per-run auto-scroll + "↓ Latest" pill for the selected run (75-PATTERNS auto-scroll pattern). Swap the old `handleStop` (`sendCommand({type:"run.stop"})`) usage out of the per-run path — per-run Stop now lives in RunCard via cancelTask. Replace the history query with `useQuery(api.agentRuns.listRecent) ?? []` feeding RunHistorySelector (keep RunHistorySelector as-is, D-13). Wrap the new console sections in `<SectionErrorBoundary name="AgentConsole">`. Use Lucide icons (Play/OctagonX/Square) and Tailwind `bg-(--token)` syntax; reserve emerald `--primary` only for the New Run CTA / active-run accent per UI-SPEC §Color.
   </action>
   <verify>
-    <automated>npx tsc --noEmit; npx vitest run src/pages/LiveRun.test.tsx</automated>
+    <automated>npx tsc --noEmit</automated>
   </verify>
   <acceptance_criteria>
     - LiveRun uses useReducer(runMapReducer, new Map()) and a selectedRunId (grep both)

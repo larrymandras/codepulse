@@ -20,6 +20,8 @@ must_haves:
     - "Clicking Stop dispatches SET_STOPPING and calls cancelTask; the label becomes 'Stopping…' and the button disables"
     - "GlobalEStopButton confirms via AlertDialog then iterates DELETE over all active task IDs"
     - "RunSummary renders a Run Config section and a Files Touched section with a graceful empty-state when data is absent"
+    - "D-10: per-run Stop is one-click no-confirm; the global e-stop confirms via AlertDialog"
+    - "D-13: RunHistorySelector and RunSummary are reused as-is, RunSummary extended for the files-touched field"
   artifacts:
     - path: "src/components/console/RunCard.tsx"
       provides: "Single concurrent-run entry with per-run Stop"

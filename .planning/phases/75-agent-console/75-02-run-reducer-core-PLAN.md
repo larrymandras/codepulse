@@ -19,6 +19,8 @@ must_haves:
     - "runMapReducer folds gateway TaskEvents onto a Map<taskId, RunState> without mutating in place"
     - "A run in 'stopping' transitions to 'stopped' on WS close (CLOSED action), not on a cancel event"
     - "A run in 'running'/'queued' transitions to 'completed' on WS close"
+    - "D-07: run state is keyed by runId in a Map<taskId, RunState> to support multiple concurrent runs"
+    - "D-09: a stopping run stays in the 'Stopping…' pending state until the WS closes — never optimistically marked stopped"
   artifacts:
     - path: "src/lib/runUtils.ts"
       provides: "appendBlocksWithDedup, BLOCK_CAP, Block type — extracted from LiveRun.tsx"
