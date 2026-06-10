@@ -116,7 +116,7 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 ### Phase 75: Agent Console
 **Goal**: Operators drive Claude Code + Codex from the dashboard and watch runs live, with run summaries persisted
 **Depends on**: Phase 71 (design system)
-**External dependency**: Ástríðr **M1.P0** (access & auth spike — localhost-direct vs tunnel; scoped token) AND **M1.P3** (read-only gateway file/worktree browse routes). BLOCKED until both ship.
+**External dependency**: Ástríðr **M1.P0** (access & auth spike) AND **M1.P3** (read-only gateway file/worktree browse) — ✅ gate LIFTED 2026-06-10 (Ástríðr v18.0 shipped both). One paired Ástríðr change remains (gateway CORS → allow POST+DELETE; add `model` to `TaskRequest`), documented in `75-GATEWAY-PREREQ.md` (Plan 75-01); required only for the live integration pass, not for unit tests.
 **Convex note**: Convex is **cloud** — it cannot reach localhost agents or stream NDJSON. Live = local-direct WS to the gateway; only the run summary is persisted to Convex.
 **Requirements**: CON-01, CON-02, CON-03, CON-04
 **Success Criteria** (what must be TRUE):
@@ -124,7 +124,13 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
   2. The live run streams to the UI over a local-direct WS (not via Convex) into a run-reducer visualization
   3. A cross-request Stop wires to Ástríðr `estop.py` via a cancellation flag (NOT pid-kill)
   4. The completed run's summary persists to Convex for history
-**Plans**: TBD
+**Plans**: 6 plans
+- [ ] 75-01-gateway-prerequisite-PLAN.md — Cross-repo gateway prereq doc (CORS + model field) + .env.example gateway vars (CON-01, CON-03) [wave 0, non-autonomous]
+- [ ] 75-02-run-reducer-core-PLAN.md — Extract runUtils + Map-keyed runMapReducer (stopping→stopped on WS close) (CON-02, CON-03) [wave 1]
+- [ ] 75-03-gateway-api-and-persistence-PLAN.md — Gateway submitTask/cancelTask + Convex agentRuns table/saveRunSummary/listRecent (CON-01, CON-04) [wave 1]
+- [ ] 75-04-launch-path-PLAN.md — useTaskStream hook + NewRunModal + WorkdirPicker + browse helpers (CON-01, CON-02) [wave 2]
+- [ ] 75-05-run-display-and-stop-PLAN.md — RunCard + RunList + GlobalEStopButton + RunSummary extension (CON-03, CON-04) [wave 2]
+- [ ] 75-06-console-integration-PLAN.md — Evolve LiveRun → AgentConsole: reducer Map, per-run streams, launch/stop/e-stop, terminal persistence (CON-01..04) [wave 3]
 **UI hint**: yes
 
 ### Phase 76: Unified Graph Hub
@@ -162,12 +168,12 @@ Phase 71 (Unified Design System)   Execute now — foundation, no blockers
         ├──► Phase 73 (MCP Inventory)      M1.P1 emitter ✅ built — ready after 71
         └──► Phase 74 (KG Explorer)        ⛔ Ástríðr Phase 125 + 126
 Phase 77 (CI & Prod Hardening)     Execute any time — no blockers (parallel-safe)
-Phase 75 (Agent Console)           ⛔ Ástríðr M1.P0 + M1.P3
+Phase 75 (Agent Console)           ✅ gate lifted (Ástríðr v18.0) — planned, ready to execute
 Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 ```
 
-**Critical path:** Phase 71 (design system) gates all UI phases; Phase 74 is gated on Ástríðr Phase 125 + 126; Phases 75/76 on the Ástríðr Surface Substrate access + snapshot phases.
-**Immediately executable:** Phase 71 (now), then Phases 72/73 (M1.P1 already built), and Phase 77 any time.
+**Critical path:** Phase 71 (design system) gates all UI phases; Phase 74 is gated on Ástríðr Phase 125 + 126; Phase 76 on Phase 74 + Ástríðr M1.P4.
+**Immediately executable:** Phase 71 (now), then Phases 72/73 (M1.P1 already built), Phase 75 (gate lifted), and Phase 77 any time.
 
 ## Progress
 
@@ -179,10 +185,10 @@ Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 | 72. Tool / Capability Galaxy | v6.0 | 0/TBD | Not started (M1.P1 ✅) | - |
 | 73. MCP Inventory + Health | v6.0 | 0/TBD | Not started (M1.P1 ✅) | - |
 | 74. Temporal-KG Explorer | v6.0 | 0/TBD | Not started (ext. blocked) | - |
-| 75. Agent Console | v6.0 | 0/TBD | Not started (ext. blocked) | - |
+| 75. Agent Console | v6.0 | 0/6 | Planned (gate lifted) | - |
 | 76. Unified Graph Hub | v6.0 | 0/TBD | Not started (dep) | - |
 | 77. CI & Production Hardening | v6.0 | 2/3 | In Progress|  |
 
 ---
 
-*Last updated: 2026-06-09 — v6.0 reframed "KG Observability & Hardening" → "Agentic OS Front-End": 7 phases (71-77). Old KG Waves → Phase 74; old UI polish → Phase 71; old CI hardening → Phase 77.*
+*Last updated: 2026-06-10 — Phase 75 (Agent Console) planned: 6 plans across 4 waves; external gate lifted (Ástríðr v18.0). v6.0 reframe (2026-06-09): "KG Observability & Hardening" → "Agentic OS Front-End", 7 phases (71-77).*
