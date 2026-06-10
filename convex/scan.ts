@@ -1,6 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
  * HTTP action: POST /scan
@@ -10,7 +10,7 @@ import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestA
  */
 export const scanEndpoint = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   // CPHLTH-02: Require Bearer token auth on all ingest endpoints.
@@ -24,12 +24,12 @@ export const scanEndpoint = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });

@@ -1,6 +1,6 @@
 import { httpAction } from "./_generated/server";
 import { api } from "./_generated/api";
-import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /**
  * Phase 80: Config Versioning ingest endpoint.
@@ -10,7 +10,7 @@ import { corsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestA
  */
 export const configVersionIngest = httpAction(async (ctx, request) => {
   if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
   }
 
   if (!validateIngestAuth(request)) {
@@ -30,7 +30,7 @@ export const configVersionIngest = httpAction(async (ctx, request) => {
     if (!agentId || !config) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: agentId, config" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } },
       );
     }
 
@@ -45,12 +45,12 @@ export const configVersionIngest = httpAction(async (ctx, request) => {
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 400,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
     });
   }
 });

@@ -1,0 +1,26 @@
+title = "codepulse gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known safe placeholder values in .env.example, test files, and planning docs"
+paths = [
+    '''.env\.example''',
+    # All vitest test files in convex/ (both __tests__/ subdir and root-level *.test.ts)
+    '''convex/__tests__/''',
+    '''convex/.*\.test\.ts''',
+    # Planning documents (PLAN.md, RESEARCH.md, etc.) may contain example tokens/keys
+    '''\.planning/phases/.*''',
+    # Historical Briefings page contained subreddit strings misidentified as API keys
+    '''src/pages/Briefings\.tsx''',
+]
+regexes = [
+    # Baseline scan confirmed false positives (not real secrets):
+    # 1. PagerDuty routing key test fixture: R0123456789ABCDEF
+    #    (appears in alertRuleCustom.test.ts and 59-01-PLAN.md as an example value)
+    '''R0123456789ABCDEF''',
+    # 2. Reddit subreddit string misidentified as an API key
+    #    (appeared in historical Briefings.tsx as a data source reference)
+    '''r/waterfowlhunting''',
+]
