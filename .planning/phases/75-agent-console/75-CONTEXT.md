@@ -1,9 +1,29 @@
 # Phase 75: Agent Console - Context
 
 **Gathered:** 2026-06-10
-**Status:** ⏸️ ON HOLD — do NOT plan yet. Gated on Ástríðr M1.P0 + M1.P3 (see Gate below).
+**Reconciled:** 2026-06-10 (gate-lift — see section below)
+**Status:** ✅ READY TO PLAN. Gate lifted (Ástríðr v18.0 shipped M1.P0 + M1.P3); the assumed gateway `/tasks` drive surface is confirmed to exist in code. One small paired Ástríðr change remains (add `model` to gateway `TaskRequest`) — see reconciliation.
 
-> **Revisit on gate-lift (2026-06-10):** These decisions are **provisional**, not locked — several were made against an upstream `POST /tasks` contract that does not exist yet (runId echo? cancel-ack event? file-change event?). When M1.P0 lands and the real task schema is in front of us, **re-open this CONTEXT** and specifically re-evaluate D-07 (multiple concurrent runs vs a leaner one-active-run v1) before planning. Do not treat this file as settled the way an unblocked phase's CONTEXT is.
+## Gate-Lift Reconciliation (2026-06-10) — supersedes provisional assumptions
+
+The original capture was provisional against an unbuilt `POST /tasks` contract. Verified against Ástríðr ground truth (`C:\Users\mandr\astridr-repo\gateway/gateway/`), the drive surface **already exists** — the discuss-seed's "no `POST /tasks`" claim was stale. **Phase 75 is CodePulse-only** (no paired Ástríðr phase) **except one small field add.**
+
+**Confirmed gateway contract (`gateway/gateway/app.py` + `models.py`):**
+- `POST /tasks` (Bearer `require_gateway_key`) → `{task_id}`. `TaskRequest` = `prompt · provider · working_dir · max_turns · timeout_seconds · context_brief · system_prompt_append · allowed_tools · sdk_capabilities · resume_session_id`.
+- `GET /tasks/{task_id}` → `TaskResponse` (status, output, duration, events).
+- `DELETE /tasks/{task_id}` (Bearer) → `task_manager.cancel()` → `TaskStatus.CANCELLED`. **A real per-run cancel route.**
+- `WS /tasks/{task_id}/stream` → streams `TaskEvent` JSON (`task_id`, `event_type`, `provider`, `data`) until a `None` sentinel.
+- `Provider` enum: `auto · claude-cli · claude-sdk · codex · antigravity`. Auth: `gateway/gateway/auth.py` (Bearer, SEC-01) + Ástríðr Phase 133 scoped token for browser-direct.
+
+**Decision updates from this reconciliation (override the provisional D-* below where they conflict):**
+- **D-04 (REVISED — "keep persona + model pickers"):** v1 launch fields = **engine (`provider`) + workdir (`working_dir`) + prompt + rounds (`max_turns`) + timeout + model + agent/persona**. `model` is **NOT** a gateway field today → **PAIRED ÁSTRÍÐR CHANGE: add `model` to `TaskRequest` + thread it through the claude/codex adapters** (small). Agent/persona → injected as `system_prompt_append` (no gateway change). `fetchAgents()` already feeds the persona selector.
+- **D-06 (CONFIRMED):** `task_id` returned by `POST /tasks` IS the runId; subscribe `WS /tasks/{task_id}/stream` filtered to it. Replaces LiveRun's latest-active-session heuristic.
+- **D-07 (CONFIRMED — "multiple concurrent runs" for v1):** gateway supports many `task_id`s concurrently → run-reducer keyed `Map<task_id, RunState>`, per-run tabs/list, WS demux, global e-stop. Full command-center scope in v1.
+- **D-08 (REVISED):** per-run Stop = **`DELETE /tasks/{task_id}`** (the gateway cancel route), NOT a direct `estop.py` poke. Global e-stop = iterate `DELETE` over all active `task_id`s (optionally also trip `estop.py` for a hard kill). Confirm.
+- **D-09 (NARROWED):** terminal `TaskStatus.CANCELLED` + stream `None` sentinel make `Stopping… → Stopped` feasible; planner must confirm the exact cancel-ack `event_type` in the adapters.
+- **D-12 (NARROWED — "research adapter events first"):** `TaskEvent.data` is a generic dict; no first-class files/diff field. Planner/researcher reads `gateway/gateway/adapters/{claude_cli,codex_cli}.py` to see if any event carries diff data; if not, derive post-run via the M1.P3 `/browse` routes or drop from the v1 summary.
+
+**Still-open research flags for the planner:** exact WS `event_type` taxonomy (incl. cancel-ack + any file/diff event) from the adapters; precise token/scope for browser-direct `POST`/`DELETE` (`require_gateway_key` Bearer vs Phase 133 scoped write token).
 
 <domain>
 ## Phase Boundary
@@ -12,11 +32,12 @@ Drive Claude Code + Codex coding runs from the CodePulse dashboard: an operator 
 
 **Net-new work** is the *drive/launch* path and concurrency — the *watch-a-run* half largely already exists in `src/pages/LiveRun.tsx` (v4.0 Phase 3). This phase evolves LiveRun into a multi-run Agent Console.
 
-### ⛔ Gate — execution BLOCKED until upstream Ástríðr work ships
-- **M1.P0** — access & auth spike (localhost-direct vs tunnel; scoped token). Defines how CodePulse reaches the gateway and the `POST /tasks` contract.
-- **M1.P3** — read-only gateway file/worktree browse routes. Required by the chosen workdir picker.
+### ✅ Gate — LIFTED 2026-06-10 (Ástríðr v18.0 shipped)
+- **M1.P0** — access & auth spike → shipped (Ástríðr Phase 133: scoped token `POST /api/access/token`, `gateway:read` HMAC). ✅
+- **M1.P3** — read-only gateway file/worktree browse → shipped (Ástríðr Phase 136: `:8200` `/browse/{repos,tree,file}`, `.env`-blocked, path-contained). ✅
+- **Drive surface** — `POST/GET/DELETE /tasks` + `WS /tasks/{id}/stream` confirmed present in `gateway/gateway/app.py`. ✅
 
-Context is captured now so planning is ready the moment the gate lifts. Do NOT execute before both ship.
+Planning may proceed. **One small paired Ástríðr change remains:** add a `model` field to the gateway `TaskRequest` (D-04). Not a blocker for starting plan-phase — it can be sequenced as the phase's first paired step.
 
 ### In scope
 - Launch modal that POSTs a task to the gateway (engine toggle, workdir, prompt, model, budget, agent/persona)
@@ -75,6 +96,11 @@ Context is captured now so planning is ready the moment the gate lifts. Do NOT e
 ### Companion / upstream plan (Ástríðr side — the gate)
 - `C:\Users\mandr\html-out\agentic-os-milestones.md` — the companion Agentic OS milestone plan defining M1.P0 (access/auth spike), M1.P3 (read-only file/worktree browse), and the gateway task model. **Read before planning** — it defines the `POST /tasks` contract, the auth model, and `estop.py` cancellation semantics this phase depends on.
 - Ástríðr repo: `C:\Users\mandr\astridr-repo` — WebSocket endpoint, CLI gateway, and `estop.py` live here. The gateway task POST + WS event shapes are the upstream contract.
+- **`C:\Users\mandr\astridr-repo\gateway\gateway\app.py`** — the live gateway routes: `POST /tasks`, `GET /tasks/{id}`, `DELETE /tasks/{id}` (cancel), `WS /tasks/{id}/stream`. **The authoritative drive contract — read before planning.**
+- **`C:\Users\mandr\astridr-repo\gateway\gateway\models.py`** — `TaskRequest`, `TaskResponse`, `TaskEvent`, `TaskStatus`, `Provider` enum. The exact request/response/event shapes.
+- **`C:\Users\mandr\astridr-repo\gateway\gateway\adapters\claude_cli.py` + `codex_cli.py`** — what `event_type`s each engine emits over the stream (D-09 cancel-ack, D-12 files/diff research flags).
+- **`C:\Users\mandr\astridr-repo\gateway\gateway\auth.py`** — `require_gateway_key` Bearer auth + Phase 133 scoped-token model for browser-direct calls.
+- `C:\Users\mandr\astridr-repo\gateway\gateway\task_manager.py` — submit/cancel/subscribe lifecycle backing the routes.
 
 ### Design system (Phase 71)
 - `.planning/phases/071-unified-design-system/UI-SPEC.md` — the formal design system (Matrix Emerald dark theme, tokens, primitives) the console must render against; also the Agents/Console IA cluster this page lives under
