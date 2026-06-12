@@ -175,6 +175,37 @@ Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 **Critical path:** Phase 71 (design system) gates all UI phases; Phase 74 is gated on Ástríðr Phase 125 + 126; Phase 76 on Phase 74 + Ástríðr M1.P4.
 **Immediately executable:** Phase 71 (now), then Phases 72/73 (M1.P1 already built), Phase 75 (gate lifted), and Phase 77 any time.
 
+## Backlog
+
+### Phase 999.1: Forge Integration — Surface Substrate fold-in (BACKLOG)
+
+**Goal:** Make Forge a first-class CodePulse module so all work happens in one application.
+**Requirements:** TBD
+**Plans:** 0 plans
+
+**Captured 2026-06-12.** Candidate v6.x milestone phase (Agentic OS Front-End line). Aligns with the Agentic OS Expansion Plan (CodePulse = Agentic OS Front-End, Ástríðr = Surface Substrate).
+
+**Core constraint — Forge's engine must stay LOCAL.** Forge spawns local CLIs, manages local processes, reads local workspace files/artifacts, builds VS Code deep links, and tails local log files. Convex (cloud) cannot do any of that. So this is a **cloud-frontend ↔ local-backend bridge**, not a UI port.
+
+**Shape (the Surface Substrate pattern — matches our existing `/ingest` data flow):**
+- Keep Forge's Fastify job engine running as a **local daemon** = a Surface Substrate emitter (same role Ástríðr plays today: agent → HTTP POST `/ingest` → Convex httpAction → tables → `useQuery` → UI).
+- Daemon syncs job/log/workspace/artifact state **UP** to new Convex tables (`forgeJobs`, `forgeLogs`, `forgeWorkspaces`, `forgeArtifacts`).
+- CodePulse sends launch/stop commands **DOWN** to the daemon via a Convex command queue the daemon polls/long-pulls (mirrors the Phase 2 bidirectional telemetry + command-sender).
+- Gate behind Clerk auth.
+
+**UI is nearly free.** Forge's components are React 19 + Vite + shadcn (New York) + Tailwind 4 + react-router 7 — identical to CodePulse. StatusBadge / NewJobModal / JobList / LogViewer / JobDetail / FileBrowser / ArtifactPreview / App-shell port ~1:1 from `forge/web/src`. New page = `src/pages/ForgePage.tsx` + route + `navItems` entry; hooks rewrite from Forge's fetch-wrapper to `useQuery(api.forge.*)`.
+
+**Effort:** ~1.5–3 weeks (milestone-scale).
+
+**Hardest/riskiest part:** live log tailing over Convex (cost + latency for high-frequency tail). Design deliberately — likely a **non-Convex streaming path** (direct daemon→browser SSE/WebSocket for the live tail) or chunked cursor sync, with Convex holding only durable/replay state. Do NOT naively push every log line through Convex mutations.
+
+**Explicitly REJECTED alternative:** "Forge tab that calls `localhost` directly from the cloud SPA" — dead-ends on browser `https→http://localhost` mixed-content blocking. Do not pursue.
+
+**Prerequisite / trigger:** Forge **Phase 5 (standalone local-ui)** ships first — its components are the reuse source. Promote this item once Forge Phase 5 is verified-complete.
+
+Plans:
+- [ ] TBD (promote with /gsd-review-backlog when ready)
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
