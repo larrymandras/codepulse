@@ -5,6 +5,7 @@
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
 - 🔄 **v6.0 Agentic OS Front-End** — Phases 71-77 (in progress; reframed 2026-06-09 from the never-started "KG Observability & Hardening" roadmap)
+- 📋 **v7.0 Forge Integration** — Phases 78-82 (planning; Forge→CodePulse Surface-Substrate fold-in, 2026-06-13; prerequisite Forge Phase 5 shipped)
 
 ## Phases
 
@@ -205,6 +206,41 @@ Phase 76 (Unified Graph Hub)       After Phase 74 + Ástríðr M1.P4
 
 Plans:
 - [ ] TBD (promote with /gsd-review-backlog when ready)
+
+## v7.0 Forge Integration (planning — 2026-06-13)
+
+**Milestone goal:** Make Forge a first-class CodePulse module so all coding-agent work happens in one application — without moving Forge's execution engine off the local machine.
+
+**Core constraint:** Forge's engine must stay LOCAL (spawns local CLIs, manages local processes, reads local workspace files/artifacts, tails local logs — Convex cloud cannot). So this is a **cloud-frontend ↔ local-backend bridge** via the Surface-Substrate pattern: Forge runs as a local daemon emitting state UP via an `/ingest`-style httpAction (same role Ástríðr plays), and CodePulse sends commands DOWN via a Convex command queue the daemon polls. Clerk-gated. **Rejected:** a cloud tab calling `http://localhost` directly (mixed-content blocked).
+
+Phases are sequenced so each ships independently and the riskiest unknown (live-log streaming) is isolated late:
+
+### Phase 78: Forge Emitter + Convex Schema (read-only foundation)
+**Goal**: A local Forge daemon emits job/workspace state UP to Convex; CodePulse stores and can query it. No UI, commands, or logs yet.
+**Requirements**: FI-01 (forge schema), FI-02 (emitter + `/forge-ingest`), FI-03 (read query API)
+**Depends on**: Forge Phase 5 (shipped)
+**Plans**: planned — see `phases/078-forge-emitter-convex-schema/078-PLAN.md` (CONTEXT + PLAN written 2026-06-13)
+**Cross-repo**: pairs with Forge's own roadmap Phase 6 "Event Emitter" (the emitter half lands in the `forge` repo)
+
+### Phase 79: Forge UI Tab (read-only render)
+**Goal**: A `/forge` route + nav entry rendering jobs/status/detail from `useQuery(api.forge.*)`, porting StatusBadge/JobList/JobDetail ~1:1 from `forge/web/src`. View-only.
+**Requirements**: FI-04 (forge page + route), FI-05 (component port)
+**Depends on**: Phase 78
+
+### Phase 80: Command Bridge (launch + stop)
+**Goal**: A Convex `forgeCommands` queue the daemon long-polls; launch/stop → command → daemon executes → status reflects back. Port NewJobModal. Clerk-gated mutations.
+**Requirements**: FI-06 (command queue + daemon poll), FI-07 (launch/stop UI), FI-08 (auth gating)
+**Depends on**: Phase 79
+
+### Phase 81: Live Log Streaming (risk-isolated)
+**Goal**: Live log tail WITHOUT pushing every line through Convex — a **direct daemon→browser stream** (SSE/WebSocket), Convex holding only durable cursor/replay. Port LogViewer.
+**Requirements**: FI-09 (transport spike), FI-10 (LogViewer integration), FI-11 (durable replay)
+**Depends on**: Phase 80 · **Risk**: HIGH — gate on a transport spike before committing the design
+
+### Phase 82: Files + Artifact Preview + Hardening
+**Goal**: Port FileBrowser/ArtifactPreview; solve artifact-origin reachability from the cloud UI (daemon tunnel or local-https, NOT direct localhost); end-to-end Clerk gating; polish.
+**Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
+**Depends on**: Phase 81
 
 ## Progress
 
