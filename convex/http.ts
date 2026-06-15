@@ -21,6 +21,7 @@ import {
 } from "./warRoomIngest";
 import { hrIngest } from "./hrIngest";
 import { configVersionIngest } from "./configVersionIngest";
+import { forgeIngest } from "./forgeIngest";
 
 const http = httpRouter();
 
@@ -66,5 +67,9 @@ http.route({ path: "/hr-ingest", method: "OPTIONS", handler: hrIngest });
 // Phase 80: Config Versioning ingest endpoint
 http.route({ path: "/api/ingest/agent-config-version", method: "POST", handler: configVersionIngest });
 http.route({ path: "/api/ingest/agent-config-version", method: "OPTIONS", handler: configVersionIngest });
+
+// Phase 78: Forge integration ingest endpoint
+http.route({ path: "/forge-ingest", method: "POST", handler: forgeIngest });
+http.route({ path: "/forge-ingest", method: "OPTIONS", handler: forgeIngest });
 
 export default http;

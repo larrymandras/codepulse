@@ -77,6 +77,20 @@ export function validateIngestAuth(request: Request): boolean {
 }
 
 /**
+ * Validate the Bearer token on a Forge ingest request.
+ * Mirrors validateIngestAuth() but checks FORGE_INGEST_API_KEY instead of
+ * ASTRIDR_INGEST_API_KEY.
+ * Returns true if auth passes (or if no key is configured — dev mode).
+ * Returns false if a key is configured but the request does not provide it.
+ */
+export function validateForgeIngestAuth(request: Request): boolean {
+  const expectedKey = _env.FORGE_INGEST_API_KEY;
+  if (!expectedKey) return true; // Skip auth in dev when no key configured
+  const authHeader = request.headers.get("Authorization") ?? "";
+  return authHeader === `Bearer ${expectedKey}`;
+}
+
+/**
  * Return a 401 Unauthorized response.
  * Uses minimal fixed headers only — a 401 rejection does not negotiate CORS.
  */
