@@ -124,7 +124,7 @@ All components are ported from `forge/web/src` or composed from existing CodePul
 | `ForgeStatusBadge` | `forge/StatusBadge.tsx` | Port + re-skin colors to CodePulse tokens (table above) | None (standalone span) |
 | `ForgeJobList` | `forge/JobList.tsx` | Port structure; strip delete-X, Clear-failed, `handleDelete`, `handleClearFailed`, `onChanged`, `apiFetch`, `deleting`/`clearing` state | `ScrollArea`, `Skeleton`, `ForgeStatusBadge` |
 | `ForgeJobDetail` | `forge/JobDetail.tsx` | Port header only; strip Stop Job, Tabs, LogsPanel, FilesPanel, `useJobLog`, `useWorkspaceFiles`, `useWorkspaces`, `apiFetch`, `isStopping` state | `ForgeStatusBadge` |
-| `ForgeMetadataPanel` | NEW | Metadata-only fields panel (D-02): renders 12 persisted fields below the job header | None (CSS grid layout) |
+| `ForgeMetadataPanel` | NEW | Metadata-only fields panel (D-02): renders 13 persisted fields below the job header | None (CSS grid layout) |
 | `ForgeHostBadge` | NEW | Small inline chip showing host name on each job card (D-03) | `Badge` variant="outline" |
 | `ForgePage` | NEW | Page container: master-detail layout, `SectionErrorBoundary` wrapping, page header | `SectionErrorBoundary`, `GlassPanel`, `SectionHeader` |
 | `useForge` | NEW | Hook: wraps `useQuery(api.forge.listJobs) ?? []`, `useQuery(api.forge.getJob)` | convex/react |
@@ -325,7 +325,7 @@ No third-party registries. No new shadcn components are installed in this phase 
 | Decision | Source |
 |----------|--------|
 | D-01 — no action controls | 79-CONTEXT.md |
-| D-02 — metadata-only detail pane, 12 fields | 79-CONTEXT.md |
+| D-02 — metadata-only detail pane, 13 fields | 79-CONTEXT.md |
 | D-03 — merged list + host badge | 79-CONTEXT.md |
 | D-04 — empty state copy (drop launch line) | 79-CONTEXT.md |
 | D-05 — `/forge` route, CONSOLE group | 79-CONTEXT.md |
