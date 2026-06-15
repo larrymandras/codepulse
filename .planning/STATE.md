@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Agentic OS Front-End
 status: executing
-stopped_at: Phase 79 context gathered
-last_updated: "2026-06-15T18:26:22.766Z"
+stopped_at: Phase 79 UI-SPEC approved
+last_updated: "2026-06-15T18:52:45.613Z"
 last_activity: 2026-06-10 -- Phase 75 planning complete
 progress:
   total_phases: 8
@@ -132,9 +132,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-15T18:26:22.761Z
-Stopped at: Phase 79 context gathered
+Last session: 2026-06-15T18:52:45.607Z
+Stopped at: Phase 79 UI-SPEC approved
 Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
-Resume file: .planning/phases/79-forge-ui-tab-read-only-render/79-CONTEXT.md
+Resume file: .planning/phases/79-forge-ui-tab-read-only-render/79-UI-SPEC.md
 
 > NOTE: frontmatter `0/7 phases / Phase 71` is STALE. Git ground truth: 71/72/73/74/76 shipped (light mode); only 75 + 77 remain. Reconcile during the Phase 75 discuss (trust git, per the Ástríðr v18.0 pattern).
