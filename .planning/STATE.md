@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Agentic OS Front-End
-status: executing
-stopped_at: Completed 79-02-PLAN.md
-last_updated: "2026-06-15T19:46:05.015Z"
+status: verifying
+stopped_at: Completed 79-03-PLAN.md
+last_updated: "2026-06-15T19:56:35.843Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 50
 ---
 
 # Project State
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Phase: 79 (forge-ui-tab-read-only-render) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-15
 
 **Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
@@ -92,6 +92,7 @@ The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was
 | 77 | CI & Production Hardening | TBD | Not started | — (ready) |
 | Phase 79 P01 | 275 | 3 tasks | 4 files |
 | Phase 79 P02 | 8m | 3 tasks | 3 files |
+| Phase 79 P03 | 12m | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase ?]: JobStatus/JobMode inline in useForge.ts for path isolation
 - [Phase ?]: ForgeStatusBadge uses Tailwind tokens; SC#4 amber!=red preserved
 - [Phase ?]: ForgeJobList card is single button (delete-X stripped per D-01)
+- [Phase ?]: ForgePage derives isLoading from useForgeJobsRaw() === undefined; detail renders from loaded list row — no getJob round-trip
+- [Phase ?]: Flame icon chosen for Forge CONSOLE nav entry (lucide-react ^1.8.0; no collision with hammer per D-06)
 
 ### Pending Todos
 
@@ -137,8 +140,8 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-15T19:46:05.010Z
-Stopped at: Completed 79-02-PLAN.md
+Last session: 2026-06-15T19:56:35.838Z
+Stopped at: Completed 79-03-PLAN.md
 Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
 Resume file: None
 
