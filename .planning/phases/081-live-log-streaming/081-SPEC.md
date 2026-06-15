@@ -43,9 +43,11 @@ read-only Forge UI tab built in Phase 79.
      hostId:     v.string(),
      forgeJobId: v.string(),
      lines:      v.array(v.string()),   // already scrubbed by Forge (T-3-BYPASS upstream)
-     seq:        v.optional(v.number()), // monotonic per (host,job) — ordering + dedup
+     seq:        v.number(),            // D-1: monotonic per (host,job) — ordering + dedup (REQUIRED)
      sentAt:     v.optional(v.string()), // client flush time (ISO)
-   }).index("by_host_job", ["hostId", "forgeJobId"]),
+   })
+     .index("by_host_job",     ["hostId", "forgeJobId"])          // listJobLogs / retention sweep
+     .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check
    ```
 
 3. **`appendLogChunk` is an `internalMutation`** (httpActions have no Clerk identity —
@@ -59,29 +61,30 @@ read-only Forge UI tab built in Phase 79.
    delivery is best-effort with NO retry and lossy-under-pressure (Forge drops, never
    blocks). CodePulse must treat gaps as normal, never assume completeness.
 
-## Open decisions — resolve at `/gsd-discuss-phase 081` (do NOT silently pick)
+## Resolved decisions (locked 2026-06-15)
 
-- **D-1 Ordering/dedup field.** Recommend Forge stamp a monotonic per-job `seq` at flush
-  (cheap counter on the forwarder) so ordering is deterministic even if best-effort
-  batches land out of order, and `appendLogChunk` can skip an insert when
-  `(hostId, forgeJobId, seq)` already exists (idempotency despite no client retry).
-  Trade-off: a small Forge-side change vs. relying on server `_creationTime` ordering
-  only. **Recommend: add `seq`.**
-- **D-2 Retention.** The table grows unbounded. Pick one (or both): TTL cron (delete
-  chunks older than N days) and/or per-job cap (keep last K chunks / M bytes). Forge
-  already bounds client-side; this bounds storage. **Recommend: 7-day TTL cron + per-job
-  byte cap.** Must be a phase deliverable, not deferred.
-- **D-3 Auth key separation.** Reuse `FORGE_INGEST_API_KEY` (simplest, matches Forge's
-  shared-key assumption) vs. a distinct `FORGE_LOG_INGEST_API_KEY`. **Recommend: reuse.**
+- **D-1 Ordering/idempotency → ADD `seq`.** Forge stamps a monotonic per-job `seq` at flush
+  (cheap counter on the forwarder). `appendLogChunk` skips the insert when
+  `(hostId, forgeJobId, seq)` already exists → deterministic ordering + idempotency despite
+  Forge's no-retry, best-effort delivery. `seq` is therefore **required** on the envelope
+  (not optional). `listJobLogs` orders by `seq` (falling back to `_creationTime`).
+- **D-2 Retention → 7-day TTL cron + per-job byte cap.** A scheduled mutation deletes chunks
+  older than 7 days, AND each job retains at most a byte/chunk cap (drop-oldest). Bounds both
+  total storage and any single runaway job. This is a phase **deliverable with a test**, not
+  deferred. (Cap thresholds to be set at plan time; suggest ~1 MB / job.)
+- **D-3 Auth key → REUSE `FORGE_INGEST_API_KEY`.** Same bearer as job-state ingest
+  (`validateForgeIngestAuth`), matching Forge's shared-key model (D-03: separate URL gate,
+  shared key). No new secret to provision or rotate.
 
 ## Success criteria (draft)
 
-1. `POST /forge-log-ingest` with `{type:"log", hostId, forgeJobId, lines}` + valid bearer
-   appends a `forgeLogChunks` doc; bad/missing fields → 400; bad/no bearer → 401; OPTIONS
-   preflight → CORS. (Mirror `convex/forgeIngest.test.ts`.)
-2. `forge.listJobLogs({hostId, forgeJobId})` returns the job's chunks in order; the Phase 79
-   Forge UI tab renders them and **updates live** as new chunks arrive.
-3. Retention (D-2) bounds `forgeLogChunks` growth — verified by a cron/cleanup test.
+1. `POST /forge-log-ingest` with `{type:"log", hostId, forgeJobId, lines, seq}` + valid bearer
+   appends a `forgeLogChunks` doc; a repeat `(hostId,forgeJobId,seq)` is a no-op (D-1 idempotent);
+   bad/missing fields → 400; bad/no bearer → 401; OPTIONS preflight → CORS. (Mirror `convex/forgeIngest.test.ts`.)
+2. `forge.listJobLogs({hostId, forgeJobId})` returns the job's chunks ordered by `seq`; the
+   Phase 79 Forge UI tab renders them and **updates live** as new chunks arrive.
+3. Retention (D-2): a scheduled sweep enforces the 7-day TTL **and** per-job byte cap —
+   verified by a cron/cleanup test.
 4. **Cross-repo handoff (Forge side, ~1 task):** replace `makeLogSink`'s no-op with the real
    `fetch` to `/forge-log-ingest` matching this envelope; set `FORGE_LOG_INGEST_URL`; run the
    live round-trip → closes Forge `08-HUMAN-UAT.md` (the one externally-gated item).
