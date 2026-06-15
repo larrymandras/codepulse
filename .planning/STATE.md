@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: milestone
-status: completed
+status: "Phase 79 shipped — PR #20"
 stopped_at: Completed 79-03-PLAN.md
-last_updated: "2026-06-15T20:02:22.046Z"
-last_activity: 2026-06-15 -- Phase 79 marked complete
+last_updated: "2026-06-15T22:22:22.482Z"
+last_activity: "2026-06-15 -- Forge Integration shipped (PR #20)"
 progress:
   total_phases: 1
   completed_phases: 1
@@ -28,8 +28,8 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 
 Phase: 79 — COMPLETE
 Plan: 3 of 3
-Status: Phase 79 complete
-Last activity: 2026-06-15 -- Phase 79 marked complete
+Status: Phase 79 shipped — PR #20
+Last activity: 2026-06-15 -- Forge Integration shipped (PR #20)
 
 **Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
 
