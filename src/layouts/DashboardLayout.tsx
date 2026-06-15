@@ -59,6 +59,7 @@ import {
   Network,
   Boxes,
   Share2,
+  Flame,
 } from "lucide-react";
 import {
   Tooltip,
@@ -103,6 +104,7 @@ const iconComponents: Record<string, React.ElementType> = {
   network: Network,
   boxes: Boxes,
   "share-2": Share2,
+  flame: Flame,
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -143,6 +145,7 @@ const navGroups: NavGroupConfig[] = [
       { to: "/live-run", label: "Live Run", icon: "activity", group: "CONSOLE" },
       { to: "/executions", label: "Executions", icon: "list", group: "CONSOLE" },
       { to: "/build", label: "Build", icon: "hammer", group: "CONSOLE" },
+      { to: "/forge", label: "Forge", icon: "flame", group: "CONSOLE" },
     ],
   },
   {
