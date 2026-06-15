@@ -4,13 +4,13 @@ milestone: v6.0
 milestone_name: Agentic OS Front-End
 status: executing
 stopped_at: Phase 79 UI-SPEC approved
-last_updated: "2026-06-15T19:26:05.742Z"
-last_activity: 2026-06-15 -- Phase 79 planning complete
+last_updated: "2026-06-15T19:38:51.822Z"
+last_activity: 2026-06-15
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-09)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 77 — ci-production-hardening
+**Current focus:** Phase 79 — forge-ui-tab-read-only-render
 **Last completed:** v5.0 milestone archived (2026-05-25)
 
 ## Current Position
 
-Phase: 77 (ci-production-hardening) — EXECUTING
-Plan: 1 of 3
+Phase: 79 (forge-ui-tab-read-only-render) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-06-15 -- Phase 79 planning complete
+Last activity: 2026-06-15
 
 **Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
 
@@ -90,6 +90,7 @@ The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was
 | 75 | Agent Console | TBD | Not started | ⛔ Ástríðr M1.P0 + M1.P3 |
 | 76 | Unified Graph Hub | TBD | Not started | Ástríðr M1.P4 + Phase 74 |
 | 77 | CI & Production Hardening | TBD | Not started | — (ready) |
+| Phase 79 P01 | 275 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -111,6 +112,8 @@ See PROJECT.md Key Decisions table for full history.
 - kgApi.ts and kg-graph.ts are separate modules: kgApi is the typed fetch layer, kg-graph is pure transform logic.
 - KG graph data is fetch-on-demand from Ástríðr (not mirrored into Convex) — only kgSummary is persisted in Convex for always-on cards.
 - Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only.
+- [Phase ?]: JobStatus/JobMode inline in useForge.ts for path isolation
+- [Phase ?]: ForgeStatusBadge uses Tailwind tokens; SC#4 amber!=red preserved
 
 ### Pending Todos
 
@@ -132,9 +135,9 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-15T18:52:45.607Z
+Last session: 2026-06-15T19:38:51.817Z
 Stopped at: Phase 79 UI-SPEC approved
 Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
-Resume file: .planning/phases/79-forge-ui-tab-read-only-render/79-UI-SPEC.md
+Resume file: None
 
 > NOTE: frontmatter `0/7 phases / Phase 71` is STALE. Git ground truth: 71/72/73/74/76 shipped (light mode); only 75 + 77 remain. Reconcile during the Phase 75 discuss (trust git, per the Ástríðr v18.0 pattern).
