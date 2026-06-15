@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Agentic OS Front-End
 status: executing
-stopped_at: Phase 79 UI-SPEC approved
-last_updated: "2026-06-15T19:38:51.822Z"
+stopped_at: Completed 79-02-PLAN.md
+last_updated: "2026-06-15T19:46:05.015Z"
 last_activity: 2026-06-15
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-09)
 ## Current Position
 
 Phase: 79 (forge-ui-tab-read-only-render) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-06-15
 
@@ -91,6 +91,7 @@ The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was
 | 76 | Unified Graph Hub | TBD | Not started | Ástríðr M1.P4 + Phase 74 |
 | 77 | CI & Production Hardening | TBD | Not started | — (ready) |
 | Phase 79 P01 | 275 | 3 tasks | 4 files |
+| Phase 79 P02 | 8m | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ See PROJECT.md Key Decisions table for full history.
 - Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only.
 - [Phase ?]: JobStatus/JobMode inline in useForge.ts for path isolation
 - [Phase ?]: ForgeStatusBadge uses Tailwind tokens; SC#4 amber!=red preserved
+- [Phase ?]: ForgeJobList card is single button (delete-X stripped per D-01)
 
 ### Pending Todos
 
@@ -135,8 +137,8 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-15T19:38:51.817Z
-Stopped at: Phase 79 UI-SPEC approved
+Last session: 2026-06-15T19:46:05.010Z
+Stopped at: Completed 79-02-PLAN.md
 Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
 Resume file: None
 
