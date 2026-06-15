@@ -41,7 +41,7 @@ Standard CodePulse 4-point rhythm. Source: Phase 71 UI-SPEC §2.8 de-facto audit
 | Token | Value | Tailwind | Usage in Phase 79 |
 |-------|-------|----------|-------------------|
 | xs | 4px | `gap-1 / p-1` | Icon-to-label gap inside StatusBadge, host badge gap |
-| sm | 8px | `gap-2 / p-2` | Card inner item gap (agent icon → content column) |
+| sm | 8px | `gap-2 / p-2` | Card inner item gap (agent icon → content column), skeleton row gap |
 | md | 16px | `px-4 / py-4` | JobDetail header horizontal padding, detail panel field row padding |
 | lg | 24px | `p-6 / py-6` | Empty state vertical padding (`py-8` = 32px is acceptable per below) |
 | xl | 32px | `p-8` | Empty state padding block (matches forge's `py-8` — falls between lg/xl, allowed exception) |
@@ -52,7 +52,13 @@ Standard CodePulse 4-point rhythm. Source: Phase 71 UI-SPEC §2.8 de-facto audit
 
 **JobList panel width:** `w-[280px]` fixed, matching forge D-11 (~280px). This is a layout constant, not a spacing exception.
 
-Exceptions: Empty state vertical padding 32px (xl) instead of the lg 24px stop. No other exceptions.
+**shadcn-internal component padding (exempt from the 4-point grid rule):** The stock shadcn `Badge` primitive (`src/components/ui/badge.tsx`) ships internal padding of `px-2 py-0.5`, and `ForgeStatusBadge` matches Forge's badge shape with `px-2.5 py-0.5`. These half-step values (`py-0.5` = 2px, `px-2.5` = 10px) are **component-internal padding inherited verbatim from the installed Badge primitive** — they are not layout/grid spacing tokens. They are consistent codebase-wide (every badge across all 15 CodePulse pages renders this exact padding), so diverging would break visual consistency with the entire app. They are therefore **out of scope for the 4-point grid rule** and exempt by design. All *layout* spacing in this phase (panel padding, card gaps, skeleton gaps, host-badge padding) snaps to the 4px grid.
+
+Exceptions:
+- Empty state vertical padding 32px (xl) instead of the lg 24px stop.
+- Badge internal padding (`px-2.5 py-0.5` on `ForgeStatusBadge`; `px-2 py-0.5` on stock `Badge`) — exempt per the shadcn-internal padding note above (component-internal, not layout spacing).
+
+No other exceptions.
 
 ---
 
@@ -103,7 +109,7 @@ All 6 `JobStatus` values re-skinned from Forge's hardcoded hex to CodePulse toke
 | `stopped` | `bg-zinc-800/40` | `text-zinc-500` | `--muted` / zinc-500 | `Square` (Lucide) | "Stopped" | No |
 | `auth_failed` | `bg-amber-900/60` | `text-[var(--status-warn)]` = `#eab308` | `--status-warn` | `KeyRound` (Lucide) | "Auth Failed" | No |
 
-**Implementation note:** Use `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold` as the badge base class (matching Forge's shape), substituting the Tailwind token classes above for Forge's inline `style={{ backgroundColor, color }}`. Attach `data-status={status}` and `data-color-scheme={colorScheme}` attributes (preserved from Forge) so existing tests that key on these attributes continue to pass.
+**Implementation note:** Use `inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold` as the badge base class (matching Forge's shape — note `px-2.5 py-0.5` is component-internal badge padding, exempt from the grid rule per the Spacing section), substituting the Tailwind token classes above for Forge's inline `style={{ backgroundColor, color }}`. Attach `data-status={status}` and `data-color-scheme={colorScheme}` attributes (preserved from Forge) so existing tests that key on these attributes continue to pass.
 
 `colorScheme` mapping: `queued→slate`, `running→blue`, `completed→green`, `failed→red`, `stopped→stone`, `auth_failed→amber` — unchanged from Forge.
 
@@ -169,7 +175,7 @@ Rendered as a two-column CSS grid (`grid-cols-[auto_1fr]` or `grid-cols-2`) insi
 
 **Field key typography:** `text-[10px] font-mono uppercase tracking-widest text-muted-foreground` (CodePulse operational chrome style per DashboardLayout.tsx:179).
 **Field value typography:** `text-xs text-foreground` for scalars; `text-xs font-mono text-muted-foreground` for the capabilities block.
-**Row padding:** `py-2` between rows. Section group dividers: a 1px `border-t border-border` with a `text-[10px] font-mono uppercase tracking-widest text-muted-foreground` group label above each group (matches SectionHeader convention, lighter weight).
+**Row padding:** `py-2` (8px) between rows. Section group dividers: a 1px `border-t border-border` with a `text-[10px] font-mono uppercase tracking-widest text-muted-foreground` group label above each group (matches SectionHeader convention, lighter weight).
 
 ---
 
@@ -177,7 +183,7 @@ Rendered as a two-column CSS grid (`grid-cols-[auto_1fr]` or `grid-cols-2`) insi
 
 A small chip rendered inside each job card alongside the StatusBadge to identify which machine the job came from.
 
-- **Component:** shadcn `Badge` variant="outline" with `text-[10px] font-mono uppercase tracking-wider px-1.5 py-0` (smaller than the status badge; host is secondary information).
+- **Component:** shadcn `Badge` variant="outline" with `text-[10px] font-mono uppercase tracking-wider px-2 py-0` (8px horizontal / 0 vertical — grid-aligned; smaller footprint than the status badge since host is secondary information).
 - **Values:** Display the raw `hostId` value as-is (e.g. "desktop", "laptop"). If hostId is longer than 10 chars, truncate to 8 + "…".
 - **Color:** Inherits `variant="outline"` — `border-border text-foreground` (no color semantics; host is not a status).
 - **Position:** Inline after StatusBadge, on the same `flex items-center gap-2 flex-wrap` row at the top of the card content column.
@@ -234,7 +240,7 @@ All decisions pre-populated from D-04 (CONTEXT.md) and Forge source analysis.
   - Row 1: `Skeleton h-4 w-2/3` (badge + agent name area)
   - Row 2: `Skeleton h-3 w-1/2` (prompt preview)
   - Row 3: `Skeleton h-3 w-1/3` (timestamp)
-  - Padding: `p-3 rounded-md flex flex-col gap-1.5`
+  - Padding: `p-3 rounded-md flex flex-col gap-2` (12px row padding, 8px gap — both grid-aligned)
 - `ForgeMetadataPanel` loading: not applicable — detail renders from the already-loaded `listJobs` row; no second round-trip, no second loading state.
 
 ### Relative Timestamps
@@ -333,6 +339,6 @@ No third-party registries. No new shadcn components are installed in this phase 
 | timestamps in metadata: `toLocaleString()` (full), not relative | Claude's Discretion |
 | Loading skeletons: reuse CodePulse `Skeleton` component pattern | Claude's Discretion |
 | relativeTime: use `src/lib/formatters.ts` version | Claude's Discretion |
-| Host badge: `Badge variant="outline"` 10px mono uppercase | Claude's Discretion |
+| Host badge: `Badge variant="outline"` 10px mono uppercase, `px-2 py-0` | Claude's Discretion |
 | Token scale, surface colors, glow scale | Phase 71 UI-SPEC (authoritative per D-10) |
 | Status token values | `src/index.css:160–163` (.dark `--status-*`) |
