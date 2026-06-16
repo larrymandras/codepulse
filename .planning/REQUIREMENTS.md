@@ -24,9 +24,9 @@
 
 ### Command Bridge (FI) — Phase 80
 
-- [ ] **FI-06**: A Convex `forgeCommands` queue that the local daemon long-polls; an enqueued launch/stop command is delivered exactly once and its execution status reflects back into `forgeJobs`
-- [ ] **FI-07**: Operator can launch a new Forge job (port NewJobModal) and stop a running job from the `/forge` UI, with the action round-tripping through the command queue to the daemon
-- [ ] **FI-08**: Command-issuing mutations are Clerk-gated (no unauthenticated launch/stop); the bridge never exposes a write path that bypasses auth
+- [x] **FI-06**: A Convex `forgeCommands` queue that the local daemon long-polls; an enqueued launch/stop command is delivered exactly once and its execution status reflects back into `forgeJobs`
+- [x] **FI-07**: Operator can launch a new Forge job (port NewJobModal) and stop a running job from the `/forge` UI, with the action round-tripping through the command queue to the daemon — *launch path shipped in 80-03; stop path shipped in 80-04 (ForgeStopConfirmDialog + ForgeJobDetail wiring)*
+- [x] **FI-08**: Command-issuing mutations are Clerk-gated (no unauthenticated launch/stop); the bridge never exposes a write path that bypasses auth
 
 ### Live Log Streaming (FI) — Phase 81 *(design locked in `081-SPEC.md`, 2026-06-15 — supersedes the original SSE/WebSocket-spike approach)*
 
@@ -172,9 +172,9 @@
 | FI-03 | Phase 78 | ✅ Shipped |
 | FI-04 | Phase 79 | ✅ Shipped (PR #20) |
 | FI-05 | Phase 79 | ✅ Shipped (PR #20) |
-| FI-06 | Phase 80 | Pending |
-| FI-07 | Phase 80 | Pending |
-| FI-08 | Phase 80 | Pending |
+| FI-06 | Phase 80 | Complete |
+| FI-07 | Phase 80 | Complete (launch 80-03 + stop 80-04) |
+| FI-08 | Phase 80 | Complete |
 | FI-09 | Phase 81 | Pending |
 | FI-10 | Phase 81 | Pending |
 | FI-11 | Phase 81 | Pending |

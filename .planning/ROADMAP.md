@@ -5,7 +5,7 @@
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
 - ⏸️ **v6.0 Agentic OS Front-End** — Phases 71-77 (**parked** 2026-06-16; 71/72/73/74/76 shipped, **75 + 77 pending** on Ástríðr Surface-Substrate gates)
-- 🔄 **v7.0 Forge Integration** — Phases 78-82 (**active**; 78/79 shipped, 80/81/82 in planning) — Forge→CodePulse Surface-Substrate fold-in
+- 🔄 **v7.0 Forge Integration** — Phases 78-82 (**active**; 78/79/80 shipped, 81/82 in planning) — Forge→CodePulse Surface-Substrate fold-in
 
 ## Phases
 
@@ -88,7 +88,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 **Plans**: 3/3 complete (3 waves) — see `phases/79-forge-ui-tab-read-only-render/`
 
 ### Phase 80: Command Bridge (launch + stop)
-**Status**: 📋 ACTIVE (next)
+**Status**: ✅ COMPLETE (4/4 plans, 3 waves) — verified live 2026-06-16 (bridge launch + stop round-trip)
 **Goal**: A Convex `forgeCommands` queue the daemon long-polls; launch/stop → command → daemon executes → status reflects back. Port NewJobModal. Clerk-gated mutations.
 **Requirements**: FI-06 (command queue + daemon poll), FI-07 (launch/stop UI), FI-08 (auth gating)
 **Depends on**: Phase 79 (shipped)
@@ -96,7 +96,11 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   1. An enqueued launch/stop command in `forgeCommands` is delivered to the daemon exactly once via long-poll, and its execution status reflects back into `forgeJobs`
   2. Operator launches a new Forge job (ported NewJobModal) and stops a running job from `/forge`, round-tripping through the queue
   3. Command-issuing mutations are Clerk-gated — no unauthenticated write path to launch/stop
-**Plans**: TBD (run `/gsd-discuss-phase 80` → `/gsd-plan-phase 80`)
+**Plans**: 4 plans (2 waves)
+  - [x] 80-01-PLAN.md — Convex backend: forgeCommands/forgeHosts schema, Clerk fail-closed enqueue mutations, daemon claim/ack httpActions, TTL cron, tests (FI-06, FI-08)
+  - [x] 80-02-PLAN.md — Cross-repo Forge daemon CommandPoller: poll → claim → execute (launch/stop) → ack; reflect-back via existing emitter (FI-06)
+  - [x] 80-03-PLAN.md — Launch UI: useForge hooks, ForgeStatusBadge variants, trimmed ForgeLaunchModal + host picker, Clerk-gated Launch button + optimistic pending rows (FI-07, FI-08)
+  - [x] 80-04-PLAN.md — Stop UI: ForgeStopConfirmDialog (work-discard warning) + ForgeJobDetail Stop wiring with honest Stopping… async (FI-07, FI-08)
 
 ### Phase 81: Live Log Streaming
 **Status**: 📋 ACTIVE (design locked in 081-SPEC)
@@ -153,7 +157,7 @@ Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polis
 | 77. CI & Prod Hardening | v6.0 | 2/3 | ⏸️ Parked | — |
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
-| 80. Command Bridge | v7.0 | 0/TBD | 📋 Active (next) | — |
+| 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
 | 81. Live Log Streaming | v7.0 | 0/TBD | 📋 Active (SPEC locked) | — |
 | 82. Files + Preview + Hardening | v7.0 | 0/TBD | 📋 Active | — |
 
