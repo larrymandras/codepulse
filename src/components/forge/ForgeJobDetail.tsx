@@ -25,6 +25,7 @@ import { api } from "../../../convex/_generated/api";
 import { ForgeStatusBadge } from "./ForgeStatusBadge";
 import { ForgeMetadataPanel } from "./ForgeMetadataPanel";
 import { ForgeStopConfirmDialog } from "./ForgeStopConfirmDialog";
+import { ForgeLogPane } from "./ForgeLogPane";
 import type { ForgeJobRow, JobStatus } from "@/hooks/useForge";
 
 // ---------------------------------------------------------------------------
@@ -44,6 +45,10 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
   // does NOT change optimistically. It stays "Stopping…" until the reactive
   // listJobs query delivers a terminal status (stopped / failed / completed).
   const [isStoppingLocal, setIsStoppingLocal] = useState(false);
+
+  // Details/Logs tab — default to "details" so existing behavior is preserved.
+  type DetailTab = "details" | "logs";
+  const [activeTab, setActiveTab] = useState<DetailTab>("details");
 
   const enqueueStop = useMutation(api.forge.enqueueStop);
 
@@ -144,9 +149,39 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
         )}
       </div>
 
-      {/* Metadata panel — scrollable below the header */}
-      <div className="flex-1 overflow-y-auto">
-        <ForgeMetadataPanel job={job} />
+      {/* Details / Logs tab strip */}
+      <div className="flex gap-0 border-b border-border shrink-0 px-4">
+        <button
+          onClick={() => setActiveTab("details")}
+          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === "details"
+              ? "border-emerald-500 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Details
+        </button>
+        <button
+          onClick={() => setActiveTab("logs")}
+          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === "logs"
+              ? "border-emerald-500 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Logs
+        </button>
+      </div>
+
+      {/* Tab body — Details keeps ForgeMetadataPanel; Logs mounts ForgeLogPane */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === "details" ? (
+          <div className="h-full overflow-y-auto">
+            <ForgeMetadataPanel job={job} />
+          </div>
+        ) : (
+          <ForgeLogPane hostId={job.hostId} forgeJobId={job.id} />
+        )}
       </div>
     </div>
   );
