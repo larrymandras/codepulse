@@ -46,8 +46,16 @@ describe("forgeIngest auth — validateForgeIngestAuth (SC#1)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("skips auth when no FORGE_INGEST_API_KEY configured (dev mode)", () => {
+  it("fails closed when no FORGE_INGEST_API_KEY configured and no anon opt-in", () => {
     vi.stubEnv("FORGE_INGEST_API_KEY", "");
+    const req = new Request("http://localhost/forge-ingest", { method: "POST" });
+    expect(validateForgeIngestAuth(req)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("allows unauthenticated ingest only with explicit FORGE_INGEST_ALLOW_ANON=true", () => {
+    vi.stubEnv("FORGE_INGEST_API_KEY", "");
+    vi.stubEnv("FORGE_INGEST_ALLOW_ANON", "true");
     const req = new Request("http://localhost/forge-ingest", { method: "POST" });
     expect(validateForgeIngestAuth(req)).toBe(true);
     vi.unstubAllEnvs();
@@ -64,14 +72,15 @@ describe("forgeIngest auth — validateForgeIngestAuth (SC#1)", () => {
   });
 
   it("does not share its gate with the Astridr key", () => {
-    // ASTRIDR key set, FORGE key absent → forge auth should pass (dev mode)
+    // ASTRIDR key set, FORGE key absent, no anon opt-in → forge auth must NOT
+    // borrow the Astridr key; it fails closed on its own gate.
     vi.stubEnv("ASTRIDR_INGEST_API_KEY", "astridr-key");
     vi.stubEnv("FORGE_INGEST_API_KEY", "");
     const req = new Request("http://localhost/forge-ingest", {
       method: "POST",
       // No Authorization header
     });
-    expect(validateForgeIngestAuth(req)).toBe(true);
+    expect(validateForgeIngestAuth(req)).toBe(false);
     vi.unstubAllEnvs();
   });
 });

@@ -1479,9 +1479,10 @@ export default defineSchema({
     createdAt:     v.string(),
     updatedAt:     v.string(),
   })
-    .index("by_forgeJobId",   ["hostId", "forgeJobId"])
-    .index("by_host_status",  ["hostId", "status", "updatedAt"])
-    .index("by_updatedAt",    ["updatedAt"]),
+    .index("by_forgeJobId",     ["hostId", "forgeJobId"])
+    .index("by_host_status",    ["hostId", "status", "updatedAt"])
+    .index("by_host_updatedAt", ["hostId", "updatedAt"])
+    .index("by_updatedAt",      ["updatedAt"]),
 
   // Periodic workspace sync from Forge host (D-06). Full replace per host.
   forgeWorkspaces: defineTable({

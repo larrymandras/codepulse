@@ -132,21 +132,29 @@ export const upsertWorkspaces = internalMutation({
 // Read queries — consumer contract for P79 (D-07)
 // ---------------------------------------------------------------------------
 
+// Newest-first cap for the job list. forgeJobs is append-only telemetry, so an
+// unbounded .collect() would grow without limit; surface the most recent N.
+const JOB_LIST_LIMIT = 1000;
+
 export const listJobs = query({
   args: {
     hostId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const all = await ctx.db
+    const hostId = args.hostId;
+    if (hostId) {
+      // Index-scoped to the host, newest-first — no full-table scan + JS filter.
+      return await ctx.db
+        .query("forgeJobs")
+        .withIndex("by_host_updatedAt", (q) => q.eq("hostId", hostId))
+        .order("desc")
+        .take(JOB_LIST_LIMIT);
+    }
+    return await ctx.db
       .query("forgeJobs")
       .withIndex("by_updatedAt")
       .order("desc")
-      .collect();
-
-    if (args.hostId) {
-      return all.filter((j) => j.hostId === args.hostId);
-    }
-    return all;
+      .take(JOB_LIST_LIMIT);
   },
 });
 
@@ -170,13 +178,14 @@ export const listWorkspaces = query({
     hostId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const all = await ctx.db
-      .query("forgeWorkspaces")
-      .collect();
-
-    if (args.hostId) {
-      return all.filter((w) => w.hostId === args.hostId);
+    const hostId = args.hostId;
+    if (hostId) {
+      // Index-scoped prefix scan — reads only this host's workspaces.
+      return await ctx.db
+        .query("forgeWorkspaces")
+        .withIndex("by_host_workspaceId", (q) => q.eq("hostId", hostId))
+        .collect();
     }
-    return all;
+    return await ctx.db.query("forgeWorkspaces").collect();
   },
 });

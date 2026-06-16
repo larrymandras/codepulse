@@ -78,14 +78,20 @@ export function validateIngestAuth(request: Request): boolean {
 
 /**
  * Validate the Bearer token on a Forge ingest request.
- * Mirrors validateIngestAuth() but checks FORGE_INGEST_API_KEY instead of
- * ASTRIDR_INGEST_API_KEY.
- * Returns true if auth passes (or if no key is configured — dev mode).
- * Returns false if a key is configured but the request does not provide it.
+ * Checks FORGE_INGEST_API_KEY. Unlike validateIngestAuth(), /forge-ingest
+ * accepts external writes, so it FAILS CLOSED: a missing key does not silently
+ * allow anonymous ingest. To run the unauthenticated dev path, set
+ * FORGE_INGEST_ALLOW_ANON=true explicitly.
+ * Returns true only if a configured key matches the request's Bearer token, or
+ * if no key is set AND FORGE_INGEST_ALLOW_ANON is explicitly "true".
  */
 export function validateForgeIngestAuth(request: Request): boolean {
   const expectedKey = _env.FORGE_INGEST_API_KEY;
-  if (!expectedKey) return true; // Skip auth in dev when no key configured
+  if (!expectedKey) {
+    // Fail closed: a missing key must not silently open /forge-ingest to the
+    // public internet. Require an explicit opt-in for the dev/anon path.
+    return _env.FORGE_INGEST_ALLOW_ANON === "true";
+  }
   const authHeader = request.headers.get("Authorization") ?? "";
   return authHeader === `Bearer ${expectedKey}`;
 }
