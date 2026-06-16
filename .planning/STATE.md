@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
-status: ready_to_plan
-stopped_at: Phase 80 complete (4/4) — ready to discuss Phase 081
-last_updated: 2026-06-16T17:25:40.356Z
+status: planning
+stopped_at: Phase 81 context gathered
+last_updated: "2026-06-16T20:45:25.040Z"
 last_activity: 2026-06-16
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 3
   total_plans: 8
   completed_plans: 8
-  percent: 60
+  percent: 50
 ---
 
 # Project State
@@ -91,7 +91,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-16T15:24:20.062Z
-Stopped at: Phase 80 COMPLETE — all 4 plans executed + code-review findings fixed (CR-01/02, WR-01/02) + live bridge round-trip verified (launch + stop). Caught/fixed a real daemon auth bug (forge 737845e). SDK phase.complete miscounted; STATE/ROADMAP counters reconciled to git ground truth by hand.
+Last session: 2026-06-16T20:45:25.031Z
+Stopped at: Phase 81 context gathered
 Next action: `/gsd-discuss-phase 81` (or `/gsd-plan-phase 81` — 081-SPEC.md is the locked authoritative scope). Phase 80 work lives on `forge-command-bridge` (CodePulse, unmerged) + `feat/command-bridge-daemon` (Forge repo, unpushed) — both need PRs/merge.
-Resume file: None
+Resume file: .planning/phases/81-live-log-streaming/81-CONTEXT.md
