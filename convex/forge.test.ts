@@ -382,6 +382,7 @@ describe("forge mutations — DB round-trip (integration)", () => {
 import {
   stripDangerousCapability,
   shouldExpireCommand,
+  isTerminalCommandStatus,
   buildLaunchRow,
 } from "./forge";
 
@@ -459,6 +460,28 @@ describe("forge.shouldExpireCommand — TTL expiry logic (D-12)", () => {
 
   it("returns false for already-expired command (idempotent)", () => {
     expect(shouldExpireCommand("expired", PAST, NOW)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isTerminalCommandStatus — ack idempotency guard (CR-01)
+// ---------------------------------------------------------------------------
+
+describe("forge.isTerminalCommandStatus — ack never overwrites terminal state (CR-01)", () => {
+  it("treats done / failed / expired as terminal", () => {
+    expect(isTerminalCommandStatus("done")).toBe(true);
+    expect(isTerminalCommandStatus("failed")).toBe(true);
+    expect(isTerminalCommandStatus("expired")).toBe(true);
+  });
+
+  it("treats queued / executing as non-terminal (ackable)", () => {
+    expect(isTerminalCommandStatus("queued")).toBe(false);
+    expect(isTerminalCommandStatus("executing")).toBe(false);
+  });
+
+  it("treats an unknown status as non-terminal", () => {
+    expect(isTerminalCommandStatus("")).toBe(false);
+    expect(isTerminalCommandStatus("bogus")).toBe(false);
   });
 });
 

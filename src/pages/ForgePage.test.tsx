@@ -86,6 +86,7 @@ vi.mock("@/hooks/useForge", () => ({
   // with stable inert defaults so the page renders without Convex.
   useForgeCommands: () => stableEmpty,
   useForgeHosts: () => stableEmpty.hosts,
+  useForgeHostsRaw: () => stableEmpty.hosts,
 }));
 
 // ---------------------------------------------------------------------------

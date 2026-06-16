@@ -211,16 +211,31 @@ export function useForgeCommands(hostId: string | null): {
 }
 
 /**
+ * Returns the forgeHosts liveness rows (newest-seen first), or `undefined`
+ * while the query is still loading. Distinguishes "still loading" from
+ * "no hosts have ever polled" so the UI can show a skeleton vs. an empty state
+ * (WR-01). Referentially stable across renders via useMemo.
+ */
+export function useForgeHostsRaw(): ForgeHostRow[] | undefined {
+  const raw = useQuery(api.forge.listHosts, {});
+  return useMemo(() => {
+    if (raw === undefined) return undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return raw.map((doc: any) => ({
+      hostId: doc.hostId,
+      lastSeenAt: doc.lastSeenAt,
+      hostname: doc.hostname ?? null,
+    }));
+  }, [raw]);
+}
+
+/**
  * Returns the forgeHosts liveness rows (newest-seen first), [] during load.
- * Drives the launch modal host picker (D-08).
+ * Drives the launch modal host picker (D-08). Use useForgeHostsRaw when you
+ * need to distinguish the loading state from the genuinely-empty state.
  */
 export function useForgeHosts(): ForgeHostRow[] {
-  const raw = useQuery(api.forge.listHosts, {});
-  if (raw === undefined) return [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return raw.map((doc: any) => ({
-    hostId: doc.hostId,
-    lastSeenAt: doc.lastSeenAt,
-    hostname: doc.hostname ?? null,
-  }));
+  return useForgeHostsRaw() ?? EMPTY_HOSTS;
 }
+
+const EMPTY_HOSTS: ForgeHostRow[] = [];

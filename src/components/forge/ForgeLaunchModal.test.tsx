@@ -27,7 +27,8 @@ vi.mock("@/hooks/useForge", async () => {
   );
   return {
     ...actual,
-    useForgeHosts: vi.fn(() => [
+    // The modal consumes useForgeHostsRaw (undefined = loading, [] = no hosts).
+    useForgeHostsRaw: vi.fn(() => [
       { hostId: "desktop", lastSeenAt: Date.now(), hostname: "Desktop" },
     ]),
   };

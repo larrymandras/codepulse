@@ -50,6 +50,15 @@ export function shouldExpireCommand(status: string, expiresAt: number, now: numb
   return status === "queued" && expiresAt < now;
 }
 
+/**
+ * Terminal command statuses. An ack must never overwrite one of these — a
+ * late/duplicate ack (at-least-once delivery) arriving after a command has
+ * already reached done/failed/expired would otherwise corrupt the audit trail.
+ */
+export function isTerminalCommandStatus(status: string): boolean {
+  return status === "done" || status === "failed" || status === "expired";
+}
+
 interface LaunchRowArgs {
   hostId: string;
   commandId: string;
@@ -433,7 +442,10 @@ export const ackCommand = internalMutation({
       .query("forgeCommands")
       .withIndex("by_commandId", (q) => q.eq("commandId", args.commandId))
       .unique();
-    if (!cmd) return;  // idempotent: already acked or expired
+    if (!cmd) return;  // idempotent: already acked or hard-deleted
+    // Idempotent on a terminal row too — never overwrite done/failed/expired
+    // with a late or duplicate ack (CR-01).
+    if (isTerminalCommandStatus(cmd.status)) return;
     await ctx.db.patch(cmd._id, {
       status:             args.status,
       resolvedForgeJobId: args.resolvedForgeJobId,
@@ -479,10 +491,11 @@ export const listForgeCommands = query({
         .order("desc")
         .take(JOB_LIST_LIMIT);
     }
-    // No hostId — return all commands sorted by createdAt descending
+    // No hostId — return all commands sorted by createdAt descending (CR-02:
+    // by_expires reordered by TTL, not insertion time; by_createdAt is correct).
     return await ctx.db
       .query("forgeCommands")
-      .withIndex("by_expires")
+      .withIndex("by_createdAt")
       .order("desc")
       .take(JOB_LIST_LIMIT);
   },

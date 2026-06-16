@@ -44,10 +44,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2 } from "lucide-react";
-import { useForgeHosts } from "@/hooks/useForge";
-import type { ForgeCommandRow, JobMode } from "@/hooks/useForge";
+import { useForgeHostsRaw } from "@/hooks/useForge";
+import type { ForgeCommandRow, ForgeHostRow, JobMode } from "@/hooks/useForge";
 
 type Agent = "codex" | "claude" | "agy";
+
+/** Stable empty fallback so the host list keeps a constant identity across renders. */
+const EMPTY_HOSTS: ForgeHostRow[] = [];
 
 /**
  * Current Claude models offered for the Claude Code agent (id → label).
@@ -92,12 +95,14 @@ export function ForgeLaunchModal({
   const [maxTurns, setMaxTurns] = useState("50");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Convex data + mutation (plain — B2, no Convex optimistic write)
   const launch = useMutation(api.forge.enqueueLaunch);
-  const hosts = useForgeHosts();
-  const hostsLoading = hosts.length === 0;
+  // Distinguish "still loading" (undefined) from "no hosts have polled" ([]) so
+  // a fresh deployment shows an empty state instead of an eternal skeleton (WR-01).
+  const hostsRaw = useForgeHostsRaw();
+  const hostsLoading = hostsRaw === undefined;
+  const hosts = hostsRaw ?? EMPTY_HOSTS;
   const workspacesRaw = useQuery(
     api.forge.listWorkspaces,
     hostId ? { hostId } : "skip"
@@ -114,7 +119,6 @@ export function ForgeLaunchModal({
       setModel("gpt-5.5");
       setMaxTurns("50");
       setAdvancedOpen(false);
-      setSubmitError(null);
       setSubmitting(false);
       setHostId("");
     }
@@ -154,7 +158,6 @@ export function ForgeLaunchModal({
   const handleSubmit = async () => {
     if (!submitEnabled) return;
     setSubmitting(true);
-    setSubmitError(null);
 
     // Build capabilities WITHOUT dangerous. D-06: dangerous is NEVER included in
     // the cloud launch surface (the server also strips it — defense in depth).
@@ -201,8 +204,9 @@ export function ForgeLaunchModal({
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       // D-11: flip the matching local pending row to "failed" with the reason.
+      // The modal is already closed by this point; the failure surfaces on the
+      // optimistic row in the job list (no dead inline error state — WR-02).
       onLaunchFailed(commandId, message);
-      setSubmitError(`Failed to launch job: ${message}`);
     } finally {
       setSubmitting(false);
     }
@@ -232,6 +236,10 @@ export function ForgeLaunchModal({
             </label>
             {hostsLoading ? (
               <Skeleton className="h-9 w-full" />
+            ) : hosts.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">
+                No hosts online — start the Forge daemon to launch jobs.
+              </p>
             ) : (
               <Select value={hostId} onValueChange={setHostId}>
                 <SelectTrigger id="host-select" aria-label="Host">
@@ -429,12 +437,6 @@ export function ForgeLaunchModal({
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Submit error (inline, accessible) */}
-          {submitError && (
-            <p className="text-sm text-destructive" role="alert">
-              {submitError}
-            </p>
-          )}
         </div>
 
         <DialogFooter>
