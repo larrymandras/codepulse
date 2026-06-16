@@ -101,4 +101,11 @@ crons.interval(
   internal.supabase.pollHealth
 );
 
+// Phase 80: Forge command bridge — expire unclaimed commands past their TTL (D-12)
+crons.interval(
+  "expire-stale-forge-commands",
+  { minutes: 1 },
+  internal.forge.expireStaleCommands,
+);
+
 export default crons;
