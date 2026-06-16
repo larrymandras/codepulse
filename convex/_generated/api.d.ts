@@ -57,6 +57,7 @@ import type * as forecasts from "../forecasts.js";
 import type * as forge from "../forge.js";
 import type * as forgeCommands from "../forgeCommands.js";
 import type * as forgeIngest from "../forgeIngest.js";
+import type * as forgeLogIngest from "../forgeLogIngest.js";
 import type * as gatewayQuota from "../gatewayQuota.js";
 import type * as gatewayTasks from "../gatewayTasks.js";
 import type * as git from "../git.js";
@@ -188,6 +189,7 @@ declare const fullApi: ApiFromModules<{
   forge: typeof forge;
   forgeCommands: typeof forgeCommands;
   forgeIngest: typeof forgeIngest;
+  forgeLogIngest: typeof forgeLogIngest;
   gatewayQuota: typeof gatewayQuota;
   gatewayTasks: typeof gatewayTasks;
   git: typeof git;

@@ -108,4 +108,11 @@ crons.interval(
   internal.forge.expireStaleCommands,
 );
 
+// Phase 81: Forge log retention (D-2)
+crons.daily(
+  "sweep-forge-log-chunks",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.forge.sweepForgeLogChunks,
+);
+
 export default crons;

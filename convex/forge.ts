@@ -517,6 +517,106 @@ export const listHosts = query({
 });
 
 // ---------------------------------------------------------------------------
+// Phase 81: Retention sweep constants + pure helpers (FI-11 / D-2)
+//
+// Pure helpers are exported so forgeLogIngest.test.ts can exercise the
+// deletion-decision logic without a live Convex DB (plan 02 TDD pattern).
+// ---------------------------------------------------------------------------
+
+/** 7-day TTL for log chunks (D-2). */
+export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Per-job log byte cap (~1 MB, D-01 / D-2). Drop-oldest when exceeded. */
+export const LOG_BYTE_CAP_PER_JOB = 1_000_000;
+
+/**
+ * Returns the total byte size of a chunk by summing the character length of
+ * every line. Used by the retention sweep for per-job byte accounting.
+ */
+export function chunkByteSize(chunk: { lines: string[] }): number {
+  let total = 0;
+  for (const line of chunk.lines) {
+    total += line.length;
+  }
+  return total;
+}
+
+/**
+ * Given an array of chunks, returns those whose _creationTime is strictly
+ * older than the TTL boundary (now - SEVEN_DAYS_MS). At-boundary chunks survive.
+ */
+export function selectTtlDeletes<T extends { _id: any; _creationTime: number; lines: string[] }>(
+  chunks: T[],
+  now: number
+): T[] {
+  const cutoff = now - SEVEN_DAYS_MS;
+  return chunks.filter((c) => c._creationTime < cutoff);
+}
+
+/**
+ * Given an array of surviving chunks for a SINGLE job (ordered by seq ascending,
+ * oldest first), returns the oldest chunks that must be deleted to bring the
+ * total byte count at or below `capBytes`. Newest chunks always survive.
+ */
+export function selectCapDeletes<T extends { _id: any; seq: number; lines: string[] }>(
+  chunks: T[],
+  capBytes: number
+): T[] {
+  // Sum total bytes across all surviving chunks.
+  let total = chunks.reduce((acc, c) => acc + chunkByteSize(c), 0);
+  if (total <= capBytes) return [];
+
+  // Drop oldest first (ascending seq = chunks[0] is oldest).
+  const toDelete: T[] = [];
+  for (const chunk of chunks) {
+    if (total <= capBytes) break;
+    toDelete.push(chunk);
+    total -= chunkByteSize(chunk);
+  }
+  return toDelete;
+}
+
+export const sweepForgeLogChunks = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // -------------------------------------------------------------------------
+    // Pass 1: TTL — collect all chunks older than 7 days and delete them.
+    // -------------------------------------------------------------------------
+    const allChunks = await ctx.db.query("forgeLogChunks").collect();
+    const ttlDeletes = selectTtlDeletes(allChunks, now);
+    for (const chunk of ttlDeletes) {
+      await ctx.db.delete(chunk._id);
+    }
+
+    // -------------------------------------------------------------------------
+    // Pass 2: Per-job byte cap — group surviving chunks by (hostId, forgeJobId),
+    // compute total bytes, and drop oldest-first for any job over the cap.
+    // -------------------------------------------------------------------------
+    const ttlDeletedIds = new Set(ttlDeletes.map((c) => c._id));
+    const surviving = allChunks.filter((c) => !ttlDeletedIds.has(c._id));
+
+    // Group by job key.
+    const byJob = new Map<string, typeof surviving>();
+    for (const chunk of surviving) {
+      const key = `${chunk.hostId}::${chunk.forgeJobId}`;
+      if (!byJob.has(key)) byJob.set(key, []);
+      byJob.get(key)!.push(chunk);
+    }
+
+    // For each job, sort ascending by seq then apply the cap.
+    for (const chunks of byJob.values()) {
+      chunks.sort((a, b) => a.seq - b.seq);
+      const capDeletes = selectCapDeletes(chunks, LOG_BYTE_CAP_PER_JOB);
+      for (const chunk of capDeletes) {
+        await ctx.db.delete(chunk._id);
+      }
+    }
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Phase 81: Log ingest + reactive read (FI-09)
 // ---------------------------------------------------------------------------
 
