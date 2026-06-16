@@ -34,22 +34,24 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
-## Current Milestone: v6.0 Agentic OS Front-End
+## Current Milestone: v7.0 Forge Integration
 
-> **Reframed 2026-06-09** from the never-executed "Knowledge Graph Observability & Hardening" roadmap. CodePulse is the rendering/control half of the two-milestone Agentic OS plan (Ástríðr "Surface Substrate" emits/exposes the data; CodePulse renders it beautifully and drives the coding agents). Companion plan: `C:\Users\mandr\html-out\agentic-os-milestones.md`. All prior v6.0 work was absorbed, not dropped (KG Waves → Phase 74; UI polish → Phase 71; CI hardening → Phase 77).
+> **Activated 2026-06-16** (promoted 2026-06-13 from backlog 999.1). Makes Forge — the local coding-agent runner — a first-class CodePulse module so all coding-agent work happens in one application, without moving Forge's execution engine off the local machine. Same Surface-Substrate pattern Ástríðr uses: Forge runs as a local daemon emitting state UP via an `/ingest`-style httpAction; CodePulse sends commands DOWN via a Convex command queue the daemon polls. Clerk-gated. **Rejected:** a cloud tab calling `http://localhost` directly (mixed-content blocked).
 
-**Goal:** Show all of Ástríðr's graphs (tools, knowledge, code, vault) beautifully under one cohesive design system, and drive Claude Code + Codex from the dashboard.
+**Goal:** Operators launch, watch (live logs), stop, and inspect Forge coding-agent jobs and their artifacts from the CodePulse dashboard — one application for all agent work.
 
-**Phases (71-77):**
-- **Phase 71 — Unified Design System** *(ready)* — cohesive "Agentic OS" visual language (tokens, primitives, full icon standardization) + IA refactor (Graphs + Agents/Console clusters). The foundation all later UI renders against.
-- **Phase 72 — Tool / Capability Galaxy** *(M1.P1 emitter ✅ built)* — force/R3F graph over tools + MCP servers + kits + callGraphEdges with usage glow + orphan detection.
-- **Phase 73 — MCP Inventory + Health** *(M1.P1 ✅)* — tool-governance surface (status pills + prune chips).
-- **Phase 74 — Temporal-KG Explorer** *(⛔ Ástríðr Phase 125 + 126)* — the showpiece: entities, ego graphs, as-of scrubber, contradiction lens, provenance deep-links. Design authority: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
-- **Phase 75 — Agent Console** *(⛔ Ástríðr M1.P0 + M1.P3)* — drive Claude Code + Codex; live = local-direct WS, history = Convex (Convex is cloud, can't reach localhost).
-- **Phase 76 — Unified Graph Hub** *(dep: Phase 74 + Ástríðr M1.P4)* — graphify + Obsidian + KG + tools in one place.
-- **Phase 77 — CI & Production Hardening** *(ready)* — Gitleaks + Supabase-drift CI green; `CODEPULSE_ALLOWED_ORIGIN` documented (carried from old v6.0 P71).
+**Phases (78-82):**
+- **Phase 78 — Forge Emitter + Convex Schema** *(✅ shipped)* — read-only foundation: `forgeJobs`/`forgeWorkspaces` tables + bearer-authed `/forge-ingest` httpAction + read query API + Forge-side emitter. (FI-01..03)
+- **Phase 79 — Forge UI Tab (read-only)** *(✅ shipped, PR #20)* — `/forge` route + CONSOLE nav entry rendering jobs/status/detail from `useQuery(api.forge.*)`. (FI-04, FI-05)
+- **Phase 80 — Command Bridge** *(📋 active, next)* — Convex `forgeCommands` queue the daemon long-polls; launch/stop UI (port NewJobModal); Clerk-gated mutations. (FI-06..08)
+- **Phase 81 — Live Log Streaming** *(📋 active, design locked in 081-SPEC)* — `POST /forge-log-ingest` → append-only `forgeLogChunks` (with `seq` idempotency) → reactive `listJobLogs`; Convex reactivity IS the live stream (no SSE/WS). 7-day TTL + per-job cap. (FI-09..11)
+- **Phase 82 — Files + Artifact Preview + Hardening** *(📋 active)* — port FileBrowser/ArtifactPreview; artifact reachability without direct-localhost; e2e Clerk gating + polish. (FI-12..14)
 
-**Sequencing:** Phase 71 (design system) lands first — it gates every later UI phase. Phases 72/73 follow immediately (M1.P1 emitter already built). Phase 77 (hardening) is runnable any time. Phases 74/75/76 are gated on the Ástríðr Surface Substrate milestone.
+**Sequencing:** Strictly sequential 80 → 81 → 82 — each builds on the prior Forge surface. Phase 81's original HIGH-risk SSE/WebSocket spike was retired by the locked 081-SPEC (Convex-reactive path, LOW risk). Cross-repo: Forge-side counterparts land in the `forge` repo (emitter ✅; command-poll daemon for 80; `makeLogSink` finalization for 81).
+
+## Parked Milestone: v6.0 Agentic OS Front-End
+
+> **Parked 2026-06-16** in favor of v7.0 Forge Integration. CodePulse is the rendering/control half of the two-milestone Agentic OS plan (companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`). Phases **71/72/73/74/76 shipped** (light-mode execution). **Phase 75 (Agent Console)** is blocked on Ástríðr M1.P0 + M1.P3; **Phase 77 (CI & Production Hardening)** is 2/3 plans complete (77-03 deploy checklist + `CODEPULSE_ALLOWED_ORIGIN` remaining). Both re-activate after Forge Integration and/or once the Ástríðr Surface-Substrate gates clear. All DS/GAL/MCP/KG/CON/HUB/OPS requirements retained in REQUIREMENTS.md — nothing dropped.
 
 ## Requirements
 
@@ -97,9 +99,15 @@ v5.0 added 12 phases:
 - ✓ Gateway observability (quota, routing, tasks, comparison) — v5.0 Phase 68
 - ✓ SDK spend guard with projected daily totals — v5.0 Phase 69
 
-### Active
+### Active (v7.0 Forge Integration)
 
-(Pending v6.0 requirements definition via `/gsd-new-milestone`)
+- ✓ FI-01/02/03 — Forge schema + emitter/`/forge-ingest` + read query API — Phase 78 (shipped)
+- ✓ FI-04/05 — `/forge` route + nav + ported read-only components — Phase 79 (shipped, PR #20)
+- [ ] FI-06/07/08 — Command Bridge: `forgeCommands` queue + launch/stop UI + Clerk gating — Phase 80
+- [ ] FI-09/10/11 — Live Log Streaming: `/forge-log-ingest` + `forgeLogChunks` + reactive tail + retention — Phase 81
+- [ ] FI-12/13/14 — Files/artifact preview + reachability + e2e hardening — Phase 82
+
+Full definitions + traceability: `.planning/REQUIREMENTS.md`. Parked v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained there as well.
 
 ### Out of Scope
 
@@ -162,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-09 — reframed v6.0 → "Agentic OS Front-End" (7 phases, 71-77); starting Phase 71 Unified Design System*
+*Last updated: 2026-06-16 — activated v7.0 Forge Integration (Phases 78-82); 78/79 shipped, 80/81/82 in the active roadmap; v6.0 parked (75 + 77 pending). Next: `/gsd-discuss-phase 80`.*
