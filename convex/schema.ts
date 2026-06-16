@@ -1484,6 +1484,18 @@ export default defineSchema({
     .index("by_host_updatedAt", ["hostId", "updatedAt"])
     .index("by_updatedAt",      ["updatedAt"]),
 
+  // Append-only log chunks from Forge daemon. Lines arrive pre-scrubbed (T-3-BYPASS upstream).
+  // Retention enforced by sweep cron: 7-day TTL + ~1 MB per-job cap (D-2). Phase 81.
+  forgeLogChunks: defineTable({
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    lines:      v.array(v.string()),    // already scrubbed by Forge (T-3-BYPASS upstream)
+    seq:        v.number(),             // D-1: monotonic per (host,job) — ordering + dedup (REQUIRED)
+    sentAt:     v.optional(v.string()), // client flush time (ISO)
+  })
+    .index("by_host_job",     ["hostId", "forgeJobId"])          // listJobLogs / retention sweep
+    .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check
+
   // Periodic workspace sync from Forge host (D-06). Full replace per host.
   forgeWorkspaces: defineTable({
     hostId:      v.string(),
