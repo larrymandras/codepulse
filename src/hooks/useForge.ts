@@ -246,3 +246,56 @@ export function useForgeHosts(): ForgeHostRow[] {
 }
 
 const EMPTY_HOSTS: ForgeHostRow[] = [];
+
+// ---------------------------------------------------------------------------
+// ForgeLogChunk: Convex forgeLogChunks doc adapted for the log pane.
+// ---------------------------------------------------------------------------
+
+export interface ForgeLogChunk {
+  /** doc._id */
+  id: string;
+  seq: number;
+  lines: string[];
+  sentAt: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Adapter: Convex forgeLogChunks doc → ForgeLogChunk
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function adaptLogChunk(doc: any): ForgeLogChunk {
+  return {
+    id: doc._id,
+    seq: doc.seq,
+    lines: doc.lines,
+    sentAt: doc.sentAt ?? null,
+  };
+}
+
+/**
+ * Returns log chunks for a specific job, ordered by seq asc.
+ * Returns [] during load (undefined → []) or when either arg is null.
+ *
+ * Skip-query pattern: passes "skip" when either hostId or forgeJobId is null
+ * (idiomatic Convex conditional-query pattern, mirrors useForgeJob).
+ *
+ * Phase 80 memoization rule: raw.map(...) allocates a fresh array every render.
+ * Without useMemo, a reactive query delivering live log updates would cause
+ * referential instability, breaking any useEffect with this array as a
+ * dependency and looping into "Maximum update depth exceeded" under live data.
+ * Always wrap .map() output in useMemo([raw]).
+ */
+export function useForgeJobLogs(
+  hostId: string | null,
+  forgeJobId: string | null
+): ForgeLogChunk[] {
+  const raw = useQuery(
+    api.forge.listJobLogs,
+    hostId && forgeJobId ? { hostId, forgeJobId } : "skip"
+  );
+  return useMemo(
+    () => (raw === undefined ? [] : raw.map(adaptLogChunk)),
+    [raw]
+  );
+}
