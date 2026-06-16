@@ -65,9 +65,27 @@ const hookState = vi.hoisted(() => {
   return state;
 });
 
+// Stable empty references — ForgePage's reconcile effect depends on the
+// commands array identity (deps: [jobs, serverCommands]). Returning a fresh
+// [] each render would churn the effect into an infinite setState loop; the
+// real useQuery-backed hook is referentially stable, so the mock must be too.
+const stableEmpty = vi.hoisted(() => ({ commands: [] as never[], hosts: [] as never[] }));
+
+// ForgePage renders ForgeLaunchModal + ForgeJobDetail, which call Convex
+// useQuery/useMutation at render time; mock the bindings so the page renders
+// without a ConvexProvider (matches the forge component tests).
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => stableEmpty.hosts),
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
 vi.mock("@/hooks/useForge", () => ({
   useForgeJobsRaw: () => hookState.raw,
   useForgeJobs: () => hookState.raw ?? [],
+  // Phase 80-03 added command-bridge hooks consumed by ForgePage; mock them
+  // with stable inert defaults so the page renders without Convex.
+  useForgeCommands: () => stableEmpty,
+  useForgeHosts: () => stableEmpty.hosts,
 }));
 
 // ---------------------------------------------------------------------------

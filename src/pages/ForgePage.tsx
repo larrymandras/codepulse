@@ -18,7 +18,7 @@
  *   (mirrors AuthGuard's VITE_CLERK_PUBLISHABLE_KEY gate).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@clerk/clerk-react";
 import {
   useForgeJobsRaw,
@@ -82,7 +82,9 @@ function isReconciled(
 export default function ForgePage() {
   // Raw value distinguishes loading (undefined) from empty ([])
   const raw = useForgeJobsRaw();
-  const jobs = raw ?? [];
+  // Stable identity: `raw ?? []` allocates a fresh [] while loading, which would
+  // churn the reconcile effect (deps [jobs, serverCommands]) into an infinite loop.
+  const jobs = useMemo(() => raw ?? [], [raw]);
   const isLoading = raw === undefined;
 
   // Server-side command rows (all hosts — cache key {})

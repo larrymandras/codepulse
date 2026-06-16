@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
@@ -198,7 +199,14 @@ export function useForgeCommands(hostId: string | null): {
     api.forge.listForgeCommands,
     hostId ? { hostId } : {}
   );
-  const commands = raw === undefined ? [] : raw.map(adaptCommand);
+  // Memoize so the returned array is referentially stable across renders.
+  // `raw.map(...)` allocates a fresh array every render; consumers (e.g.
+  // ForgePage's reconcile effect, deps [jobs, serverCommands]) would otherwise
+  // see a new identity each render and loop into "Maximum update depth exceeded".
+  const commands = useMemo(
+    () => (raw === undefined ? [] : raw.map(adaptCommand)),
+    [raw]
+  );
   return { commands };
 }
 
