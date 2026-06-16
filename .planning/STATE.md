@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
 status: executing
-stopped_at: Phase 81 Plan 1 complete — /forge-log-ingest + forgeLogChunks + appendLogChunk + listJobLogs
-last_updated: "2026-06-16T22:06:04.563Z"
+stopped_at: Phase 81 Plan 2 complete — sweepForgeLogChunks + daily cron + retention test (FI-11 / D-2 done)
+last_updated: "2026-06-16T22:12:10.426Z"
 last_activity: 2026-06-16
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 12
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 ## Current Position
 
 Phase: 81 (live-log-streaming) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-06-16
 
@@ -42,7 +42,7 @@ Last activity: 2026-06-16
 | 78 | Forge Emitter + Convex Schema | ✅ Shipped (2026-06-13) |
 | 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
 | 80 | Command Bridge (launch + stop) | ✅ Complete (4/4, verified live 2026-06-16) — FI-06/07/08 |
-| 81 | Live Log Streaming | 🔄 Executing (1/4 complete) — FI-09 done, FI-10/11 remain |
+| 81 | Live Log Streaming | 🔄 Executing (2/4 complete) — FI-09 + FI-11 done, FI-10 remains |
 | 82 | Files + Artifact Preview + Hardening | 📋 Active — FI-12/13/14 |
 
 **v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **75 (Agent Console)** blocked on Ástríðr M1.P0 + M1.P3; **77 (CI & Prod Hardening)** is 2/3 plans (77-03 remaining). Re-activates after Forge Integration / once Ástríðr Surface-Substrate gates clear. Requirements retained in REQUIREMENTS.md.
@@ -68,6 +68,14 @@ See PROJECT.md Key Decisions table for full history.
 - `listJobLogs` orders `.order("asc")` — oldest chunk first (terminal top-to-bottom display), unlike `listJobs` desc.
 - `LOG_CHUNK_LIMIT = 5000` placed near `JOB_LIST_LIMIT = 1000` per file convention (D-03: retention bounds real set to ~1 MB/job).
 
+**Phase 81 Plan 02 implementation notes (2026-06-16):**
+
+- `sweepForgeLogChunks` is `internalMutation` (same rule — cron scheduler, no Clerk identity). Two-pass: TTL first, then per-job byte cap.
+- Pure helpers exported from `forge.ts` (`chunkByteSize`, `selectTtlDeletes`, `selectCapDeletes`) so the retention test can exercise deletion logic without a Convex runtime — mirrors the `simulateForgeLogIngestDispatch` pattern from plan 01.
+- `LOG_BYTE_CAP_PER_JOB = 1_000_000` (~1 MB, D-01 discretion) and `SEVEN_DAYS_MS` defined as module-level consts in the Phase 81 section.
+- `selectCapDeletes` iterates chunks in ascending seq order (oldest first) and accumulates deletes until `total <= capBytes` — newest chunks always survive by construction.
+- `crons.daily` at `hourUTC:3 minuteUTC:30` — 30 min offset from `evaluate-memory-quality` (03:00) to avoid scheduler contention.
+
 **Phase 79 implementation notes (carried):**
 
 - JobStatus/JobMode inline in useForge.ts for path isolation.
@@ -89,8 +97,8 @@ See PROJECT.md Key Decisions table for full history.
 ### Pending Todos
 
 - **Phase 80 (verify):** all 4 plans executed (80-01 backend, 80-02 daemon, 80-03 launch UI, 80-04 stop UI). Run phase verification / `gsd-phase-complete 80` (cross-check the SDK counters against git ground truth — known double-count issue). FI-06/07/08 implementation complete.
-- **Phase 81 Plan 02 (next):** Retention sweep — `sweepForgeLogChunks` internalMutation (7-day TTL + ~1 MB per-job cap, drop-oldest) + daily cron entry in `crons.ts` + retention test (D-2 / SC#3).
-- **Phase 81 Plan 03:** Log viewer UI — `useForgeJobLogs` hook + `ForgeJobDetail` log pane with auto-follow tail + JumpToLatestPill (FI-10).
+- **Phase 81 Plan 02:** COMPLETE — `sweepForgeLogChunks` + daily cron + 14 retention tests (FI-11 / D-2). Commits: bd0221c (RED), 68a6a58 (GREEN).
+- **Phase 81 Plan 03 (next):** Log viewer UI — `useForgeJobLogs` hook + `ForgeJobDetail` log pane with auto-follow tail + JumpToLatestPill (FI-10).
 - **Phase 81 Plan 04:** Cross-repo Forge `makeLogSink` finalization + live round-trip verification (FI-11 / closes Forge 08-HUMAN-UAT.md).
 - **Cross-repo (Phase 81):** the Forge-side log sink (`src/emit/log-forwarder.ts makeLogSink`) is a dormant `TODO(P81)` no-op gated on `FORGE_LOG_INGEST_URL` — lit up in Plan 04.
 
@@ -101,7 +109,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-16T18:25:00Z
-Stopped at: Phase 81 Plan 1 complete — /forge-log-ingest + forgeLogChunks + appendLogChunk + listJobLogs (FI-09 done)
-Next action: Execute Phase 81 Plan 02 — retention sweep (sweepForgeLogChunks + daily cron + retention test, D-2 / SC#3)
-Resume file: .planning/phases/81-live-log-streaming/81-01-SUMMARY.md
+Last session: 2026-06-16T18:11:00Z
+Stopped at: Phase 81 Plan 2 complete — sweepForgeLogChunks + daily cron + 14 retention tests (FI-11 / D-2 done)
+Next action: Execute Phase 81 Plan 03 — log viewer UI (useForgeJobLogs hook + ForgeJobDetail log pane, FI-10)
+Resume file: .planning/phases/81-live-log-streaming/81-02-SUMMARY.md

@@ -32,7 +32,7 @@
 
 - [x] **FI-09**: A bearer-authed `POST /forge-log-ingest` appends scrubbed log lines to an append-only `forgeLogChunks` table; a monotonic per-job `seq` makes re-delivery idempotent (`(hostId, forgeJobId, seq)` unique), 400 on bad body / 401 on bad bearer / CORS preflight (reuses `FORGE_INGEST_API_KEY`, D-3)
 - [ ] **FI-10**: The Phase 79 Forge UI tab renders a per-job log pane from a reactive `forge.listJobLogs` query ordered by `seq` and **updates live** as chunks land — no SSE/WebSocket transport to build (Convex reactivity is the stream)
-- [ ] **FI-11**: A scheduled retention sweep enforces a 7-day TTL **and** a per-job byte/chunk cap (drop-oldest), bounding both total storage and any single runaway job — verified by a cron/cleanup test (D-2)
+- [x] **FI-11**: A scheduled retention sweep enforces a 7-day TTL **and** a per-job byte/chunk cap (drop-oldest), bounding both total storage and any single runaway job — verified by a cron/cleanup test (D-2)
 
 ### Files + Artifact Preview + Hardening (FI) — Phase 82
 
@@ -177,7 +177,7 @@
 | FI-08 | Phase 80 | Complete |
 | FI-09 | Phase 81 | Complete |
 | FI-10 | Phase 81 | Pending |
-| FI-11 | Phase 81 | Pending |
+| FI-11 | Phase 81 | Complete |
 | FI-12 | Phase 82 | Pending |
 | FI-13 | Phase 82 | Pending |
 | FI-14 | Phase 82 | Pending |
