@@ -116,7 +116,11 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   2. `forge.listJobLogs({hostId, forgeJobId})` returns chunks ordered by `seq`; the Forge UI tab renders them and updates live as chunks arrive
   3. A scheduled sweep enforces the 7-day TTL AND per-job byte cap — verified by a cron/cleanup test
   4. **Cross-repo handoff** (Forge side, ~1 task): `makeLogSink` no-op → real `fetch` to `/forge-log-ingest`; set `FORGE_LOG_INGEST_URL`; live round-trip closes Forge `08-HUMAN-UAT.md`
-**Plans**: TBD (SPEC ready → `/gsd-discuss-phase 81` → `/gsd-plan-phase 81`)
+**Plans**: 4 plans (3 waves)
+  - [ ] 81-01-PLAN.md — Receiver: forgeLogChunks schema + /forge-log-ingest httpAction + appendLogChunk (seq-idempotent) + listJobLogs + contract test (FI-09)
+  - [ ] 81-02-PLAN.md — Retention: sweepForgeLogChunks (7-day TTL + per-job ~1 MB cap, drop-oldest) + daily cron + cleanup test (FI-11)
+  - [ ] 81-03-PLAN.md — UI: useForgeJobLogs hook + ForgeLogPane (auto-follow tail / pause / jump-to-latest) behind a Details/Logs tab in ForgeJobDetail (FI-10)
+  - [ ] 81-04-PLAN.md — Cross-repo: finalize Forge makeLogSink (real fetch + seq, T-6-KEYLEAK) + live round-trip, closes Forge 08-HUMAN-UAT (FI-09/10/11)
 
 ### Phase 82: Files + Artifact Preview + Hardening
 **Status**: 📋 ACTIVE
@@ -158,9 +162,9 @@ Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polis
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
-| 81. Live Log Streaming | v7.0 | 0/TBD | 📋 Active (SPEC locked) | — |
+| 81. Live Log Streaming | v7.0 | 0/4 | 📋 Active (planned, 4 plans / 3 waves) | — |
 | 82. Files + Preview + Hardening | v7.0 | 0/TBD | 📋 Active | — |
 
 ---
 
-*Last updated: 2026-06-16 — activated v7.0 Forge Integration (Phases 78-82); 78/79 shipped, 80/81/82 brought into the active roadmap; v6.0 parked (75 + 77 pending). 081 design locked to the Convex-reactive log-ingest path per 081-SPEC.*
+*Last updated: 2026-06-16 — planned Phase 81 (Live Log Streaming): 4 plans across 3 waves (FI-09 receiver → FI-11 retention + FI-10 UI in parallel → cross-repo Forge round-trip). 78/79/80 shipped; v6.0 parked (75 + 77 pending).*
