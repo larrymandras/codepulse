@@ -55,6 +55,7 @@ import type * as executionModes from "../executionModes.js";
 import type * as fileOps from "../fileOps.js";
 import type * as forecasts from "../forecasts.js";
 import type * as forge from "../forge.js";
+import type * as forgeCommands from "../forgeCommands.js";
 import type * as forgeIngest from "../forgeIngest.js";
 import type * as gatewayQuota from "../gatewayQuota.js";
 import type * as gatewayTasks from "../gatewayTasks.js";
@@ -185,6 +186,7 @@ declare const fullApi: ApiFromModules<{
   fileOps: typeof fileOps;
   forecasts: typeof forecasts;
   forge: typeof forge;
+  forgeCommands: typeof forgeCommands;
   forgeIngest: typeof forgeIngest;
   gatewayQuota: typeof gatewayQuota;
   gatewayTasks: typeof gatewayTasks;
