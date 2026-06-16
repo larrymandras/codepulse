@@ -1,8 +1,44 @@
 # CodePulse — Requirements
 
-**Current milestone:** v6.0 Agentic OS Front-End *(reframed 2026-06-09 from "KG Observability & Hardening")*
+**Current milestone:** v7.0 Forge Integration *(activated 2026-06-16; promoted 2026-06-13 from backlog 999.1)*
+**Parked milestone:** v6.0 Agentic OS Front-End — phases 71/72/73/74/76 shipped; **75 (Agent Console) + 77 (CI/Prod Hardening, 2/3 plans) parked** pending Ástríðr Surface-Substrate gates. Requirements retained below, re-activate later.
 **Prior milestones:** v4.0 (`.planning/milestones/v4.0-REQUIREMENTS.md`), v5.0 (`.planning/milestones/v5.0-REQUIREMENTS.md`)
 **Companion plan:** `C:\Users\mandr\html-out\agentic-os-milestones.md` (the two-milestone Agentic OS plan; CodePulse = the rendering/control half)
+
+---
+
+## v7.0 Forge Integration Requirements
+
+> **Goal:** Make Forge (the local coding-agent runner) a first-class CodePulse module so all coding-agent work happens in one application — without moving Forge's execution engine off the local machine. Forge runs as a local daemon emitting state UP via an `/ingest`-style httpAction (the Surface-Substrate pattern Ástríðr already uses); CodePulse sends commands DOWN via a Convex command queue the daemon polls. Clerk-gated. *(Rejected: a cloud tab calling `http://localhost` directly — mixed-content blocked.)*
+
+### Forge Foundation (FI) — Phase 78 ✅ shipped
+
+- [x] **FI-01**: New Convex `forgeJobs` + `forgeWorkspaces` tables mirror the Forge job/workspace model (host-scoped, idempotent upsert keyed by `(hostId, forgeJobId)`) — Phase 78
+- [x] **FI-02**: A local Forge emitter POSTs job state-change + periodic workspace sync to a bearer-authed `/forge-ingest` httpAction (server-to-server `FORGE_INGEST_API_KEY`; 401 on bad key, 400 on malformed body) — Phase 78
+- [x] **FI-03**: Read query API (`listJobs`, `getJob`, `listWorkspaces`) returns persisted Forge state in the shape the UI consumes — Phase 78
+
+### Forge UI Tab (FI) — Phase 79 ✅ shipped
+
+- [x] **FI-04**: A `/forge` route + CONSOLE nav entry (Flame icon) renders jobs/status/detail from `useQuery(api.forge.*)`, view-only — Phase 79
+- [x] **FI-05**: StatusBadge / JobList / JobDetail / MetadataPanel ported ~1:1 from `forge/web/src`, re-skinned to CodePulse tokens, action controls stripped (read-only) — Phase 79
+
+### Command Bridge (FI) — Phase 80
+
+- [ ] **FI-06**: A Convex `forgeCommands` queue that the local daemon long-polls; an enqueued launch/stop command is delivered exactly once and its execution status reflects back into `forgeJobs`
+- [ ] **FI-07**: Operator can launch a new Forge job (port NewJobModal) and stop a running job from the `/forge` UI, with the action round-tripping through the command queue to the daemon
+- [ ] **FI-08**: Command-issuing mutations are Clerk-gated (no unauthenticated launch/stop); the bridge never exposes a write path that bypasses auth
+
+### Live Log Streaming (FI) — Phase 81 *(design locked in `081-SPEC.md`, 2026-06-15 — supersedes the original SSE/WebSocket-spike approach)*
+
+- [ ] **FI-09**: A bearer-authed `POST /forge-log-ingest` appends scrubbed log lines to an append-only `forgeLogChunks` table; a monotonic per-job `seq` makes re-delivery idempotent (`(hostId, forgeJobId, seq)` unique), 400 on bad body / 401 on bad bearer / CORS preflight (reuses `FORGE_INGEST_API_KEY`, D-3)
+- [ ] **FI-10**: The Phase 79 Forge UI tab renders a per-job log pane from a reactive `forge.listJobLogs` query ordered by `seq` and **updates live** as chunks land — no SSE/WebSocket transport to build (Convex reactivity is the stream)
+- [ ] **FI-11**: A scheduled retention sweep enforces a 7-day TTL **and** a per-job byte/chunk cap (drop-oldest), bounding both total storage and any single runaway job — verified by a cron/cleanup test (D-2)
+
+### Files + Artifact Preview + Hardening (FI) — Phase 82
+
+- [ ] **FI-12**: Operator can browse a job's workspace files and preview artifacts in the `/forge` UI (port FileBrowser / ArtifactPreview)
+- [ ] **FI-13**: Artifact/file content is reachable from the cloud UI without direct-localhost access (daemon tunnel or local-https path — not mixed-content `http://localhost`)
+- [ ] **FI-14**: End-to-end Clerk gating across the Forge surface + polish; the full launch→run→logs→artifacts path is auth-correct and production-ready
 
 ---
 
@@ -131,3 +167,17 @@
 | OPS-01 | Phase 77 | Pending |
 | OPS-02 | Phase 77 | Pending |
 | OPS-03 | Phase 77 | N/A (upstream — astridr supabase-migration-check.yml) |
+| FI-01 | Phase 78 | ✅ Shipped |
+| FI-02 | Phase 78 | ✅ Shipped |
+| FI-03 | Phase 78 | ✅ Shipped |
+| FI-04 | Phase 79 | ✅ Shipped (PR #20) |
+| FI-05 | Phase 79 | ✅ Shipped (PR #20) |
+| FI-06 | Phase 80 | Pending |
+| FI-07 | Phase 80 | Pending |
+| FI-08 | Phase 80 | Pending |
+| FI-09 | Phase 81 | Pending |
+| FI-10 | Phase 81 | Pending |
+| FI-11 | Phase 81 | Pending |
+| FI-12 | Phase 82 | Pending |
+| FI-13 | Phase 82 | Pending |
+| FI-14 | Phase 82 | Pending |

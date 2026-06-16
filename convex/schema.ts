@@ -1454,4 +1454,44 @@ export default defineSchema({
   })
     .index("by_provider", ["provider"])
     .index("by_priority", ["priority"]),
+
+  // ============================================================
+  // FORGE INTEGRATION (Phase 78)
+  // ============================================================
+
+  // Mirrors the Forge Job model (D-04). hostId disambiguates Desktop vs laptop.
+  // upserted idempotently by (hostId, forgeJobId) — last-writer-wins on updatedAt.
+  forgeJobs: defineTable({
+    forgeJobId:    v.string(),
+    hostId:        v.string(),
+    agent:         v.string(),
+    mode:          v.string(),
+    prompt:        v.union(v.string(), v.null()),
+    workspaceId:   v.string(),
+    status:        v.string(),
+    pid:           v.union(v.number(), v.null()),
+    exitCode:      v.union(v.number(), v.null()),
+    startedAt:     v.union(v.string(), v.null()),
+    finishedAt:    v.union(v.string(), v.null()),
+    artifactCount: v.number(),
+    model:         v.union(v.string(), v.null()),
+    capabilities:  v.string(),  // JSON string — passed through from Forge as-is
+    createdAt:     v.string(),
+    updatedAt:     v.string(),
+  })
+    .index("by_forgeJobId",     ["hostId", "forgeJobId"])
+    .index("by_host_status",    ["hostId", "status", "updatedAt"])
+    .index("by_host_updatedAt", ["hostId", "updatedAt"])
+    .index("by_updatedAt",      ["updatedAt"]),
+
+  // Periodic workspace sync from Forge host (D-06). Full replace per host.
+  forgeWorkspaces: defineTable({
+    hostId:      v.string(),
+    workspaceId: v.string(),
+    class:       v.string(),  // "synced" | "local-only"
+    name:        v.string(),
+    rootPath:    v.string(),
+    updatedAt:   v.string(),
+  })
+    .index("by_host_workspaceId", ["hostId", "workspaceId"]),
 });

@@ -1,95 +1,51 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Agentic OS Front-End
-status: executing
-stopped_at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
-last_updated: "2026-06-10T20:32:35.531Z"
-last_activity: 2026-06-10 -- Phase 77 execution started
+milestone: v7.0
+milestone_name: Forge Integration
+status: v7.0 active; 78/79 shipped, 80/81/82 in the active roadmap (81 design locked in 081-SPEC)
+stopped_at: v7.0 Forge Integration activated; PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md reconciled.
+last_updated: "2026-06-16T12:28:24.315Z"
+last_activity: "2026-06-16 -- Phase 79 shipped (PR #20); code-review fixes applied (auth fail-closed, bounded queries, badge/timestamp guards); deploy gate verified"
 progress:
-  total_phases: 7
-  completed_phases: 0
-  total_plans: 3
-  completed_plans: 0
-  percent: 0
+  total_phases: 5
+  completed_phases: 2
+  total_plans: 4
+  completed_plans: 4
+  percent: 40
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-09)
+See: .planning/PROJECT.md (updated 2026-06-16)
 
-**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 77 — ci-production-hardening
-**Last completed:** v5.0 milestone archived (2026-05-25)
+**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v7.0 extends "drive its coding agents" to **Forge** — one application for all coding-agent work.
+**Current focus:** v7.0 Forge Integration — Phase 80 (Command Bridge) is next.
+**Last completed:** Phase 79 — Forge UI Tab (read-only render), shipped PR #20 (2026-06-15).
 
 ## Current Position
 
-Phase: 77 (ci-production-hardening) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 77
-Last activity: 2026-06-10 -- Phase 77 execution started
+Phase: 80 — Command Bridge (not started)
+Plan: —
+Status: v7.0 active; 78/79 shipped, 80/81/82 in the active roadmap (81 design locked in 081-SPEC)
+Last activity: 2026-06-16 -- Phase 79 shipped (PR #20); code-review fixes applied (auth fail-closed, bounded queries, badge/timestamp guards); deploy gate verified
 
-**Progress bar:** [░░░░░░░░░░] 0% (0/7 phases)
+**Progress bar:** [████░░░░░░] 40% (2/5 phases)
 
-## Milestone Reframe (2026-06-09)
+## Milestone Status (2026-06-16)
 
-The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was roadmapped 2026-06-01 but **never executed** (0/4 phases, 0 plans). It is superseded — not deleted — by the broader **"Agentic OS Front-End"** vision (the CodePulse half of the two-milestone Agentic OS plan; companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`). Nothing was orphaned:
+**v7.0 Forge Integration — ACTIVE.** Promoted 2026-06-13 from backlog 999.1, activated 2026-06-16. 5 phases (78-82), Surface-Substrate fold-in of Forge into CodePulse. Forge engine stays LOCAL; cloud-frontend ↔ local-daemon bridge via Convex ingest (up) + command queue (down).
 
-- Old **P73 + P74 (KG Wave 1 + 2)** → consolidated into new **Phase 74 — Temporal-KG Explorer** (same feature, same Ástríðr Phase 125/126 gate).
-- Old **P72 (Lucide icon standardization, UI-09) + QA-01 (traceability)** → folded into new **Phase 71 — Unified Design System** (the system supersedes ad-hoc icon polish).
-- Old **P71 (CI & Prod Hardening, OPS-01..03)** → carried forward as new **Phase 77 — CI & Production Hardening**.
+| Phase | Name | Status |
+|-------|------|--------|
+| 78 | Forge Emitter + Convex Schema | ✅ Shipped (2026-06-13) |
+| 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
+| 80 | Command Bridge (launch + stop) | 📋 Active (next) — FI-06/07/08 |
+| 81 | Live Log Streaming | 📋 Active — design locked, 081-SPEC.md — FI-09/10/11 |
+| 82 | Files + Artifact Preview + Hardening | 📋 Active — FI-12/13/14 |
 
-## Performance Metrics
-
-**Velocity (v4.0 baseline):**
-
-- Total plans completed: 63
-- Phases: 8
-- Timeline: 39 days (2026-03-06 → 2026-04-14)
-
-**v4.0 By Phase:**
-
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 01 | 4 | Complete |
-| 02 | 4 | Complete |
-| 03 | 6 | Complete |
-| 04 | 6 | Complete |
-| 05 | 5 | Complete |
-| 06 | 5 | Complete |
-| 07 | 5 | Complete |
-| 58 | 1 | Complete |
-
-**v5.0 By Phase:**
-
-| Phase | Plans | Status |
-|-------|-------|--------|
-| 59 | 2 | Complete |
-| 60 | — | Complete (outside GSD) |
-| 61 | — | Complete (outside GSD) |
-| 62 | — | Schema only (delivery → Phase 70) |
-| 63 | — | Infra only (viz → Phase 70) |
-| 64 | — | Schema only (API → Phase 70) |
-| 65 | — | Complete (outside GSD) |
-| 66 | 4 | Complete |
-| 67 | 4 | Complete |
-| 68 | 4 | Complete |
-| 69 | 4 | Complete |
-| 70 | 4 | Complete |
-
-**v6.0 "Agentic OS Front-End" By Phase:**
-
-| Phase | Name | Plans | Status | Gate |
-|-------|------|-------|--------|------|
-| 71 | Unified Design System | TBD | Discovery | — (ready) |
-| 72 | Tool / Capability Galaxy | TBD | Not started | M1.P1 emitter ✅ (built) |
-| 73 | MCP Inventory + Health | TBD | Not started | M1.P1 emitter ✅ (built) |
-| 74 | Temporal-KG Explorer | TBD | Not started | ⛔ Ástríðr Phase 125 + 126 |
-| 75 | Agent Console | TBD | Not started | ⛔ Ástríðr M1.P0 + M1.P3 |
-| 76 | Unified Graph Hub | TBD | Not started | Ástríðr M1.P4 + Phase 74 |
-| 77 | CI & Production Hardening | TBD | Not started | — (ready) |
+**v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **75 (Agent Console)** blocked on Ástríðr M1.P0 + M1.P3; **77 (CI & Prod Hardening)** is 2/3 plans (77-03 remaining). Re-activates after Forge Integration / once Ástríðr Surface-Substrate gates clear. Requirements retained in REQUIREMENTS.md.
 
 ## Accumulated Context
 
@@ -97,44 +53,35 @@ The original v6.0 "Knowledge Graph Observability & Hardening" (phases 71-74) was
 
 See PROJECT.md Key Decisions table for full history.
 
-**Agentic OS Front-End reframe decisions (2026-06-09):**
+**v7.0 Forge Integration decisions:**
 
-- Milestone renamed v6.0 KG/Hardening → "Agentic OS Front-End"; CodePulse is the rendering/control half of the two-milestone Agentic OS plan (Ástríðr "Surface Substrate" = M1 emits/exposes; CodePulse = M2 renders/drives).
-- **Convex is cloud** (`prod:` deployment, `*.convex.cloud`; `npx convex dev` is a code-sync watcher, not a local backend). Consequence: Convex cannot reach localhost agents or stream NDJSON → Agent Console (Phase 75) is **live = local-direct, history = Convex**.
-- Unified design system (Phase 71) is the shared foundation everything else renders against — it must land first.
-- Phase 74 (KG Explorer) keeps the original KG design authority: `docs/superpowers/specs/2026-06-01-astridr-kg-visualization-design.md`.
+- **Surface-Substrate bridge** — Forge runs as a local daemon; state goes UP via `/forge-ingest` httpAction, commands come DOWN via a Convex `forgeCommands` queue the daemon long-polls. Rejected: a cloud tab calling `http://localhost` directly (mixed-content blocked).
+- **Read-only, one-way until Phase 80** — Forge is source of truth for job state; Convex is a replica. Idempotent upserts keyed by `(hostId, forgeJobId)`, last-writer-wins on `updatedAt` (D-05, Phase 78).
+- **Shared bearer auth** — `FORGE_INGEST_API_KEY`, server-to-server only, never in the browser (D-03, Phase 78). Phase 81 log-ingest reuses the same key (081-SPEC D-3).
+- **Phase 81 design locked (081-SPEC, 2026-06-15)** — supersedes the original HIGH-risk SSE/WebSocket spike. Logs: `POST /forge-log-ingest` → append-only `forgeLogChunks` (monotonic per-job `seq` for ordering + idempotency, D-1) → reactive `forge.listJobLogs` query. Convex reactivity IS the live tail (no transport to build). Retention: 7-day TTL cron + per-job byte cap, drop-oldest, with a test (D-2). Risk: HIGH → LOW.
 
-**v6.0 KG key decisions (carried into Phase 74):**
+**Phase 79 implementation notes (carried):**
 
-- KG phases BLOCKED on Ástríðr Phase 125 (backfill) + Phase 126 (KG HTTP read API + kg_summary emitter).
-- ForceGraphCanvas extracted from ObsidianGraph.tsx as shared renderer — ObsidianGraph refactored to use it, keeping its tests green.
-- kgApi.ts and kg-graph.ts are separate modules: kgApi is the typed fetch layer, kg-graph is pure transform logic.
-- KG graph data is fetch-on-demand from Ástríðr (not mirrored into Convex) — only kgSummary is persisted in Convex for always-on cards.
-- Literal-object triples are NOT graph nodes — they render as attributes in KGDetailsPanel only.
+- JobStatus/JobMode inline in useForge.ts for path isolation.
+- ForgeStatusBadge uses Tailwind tokens; SC#4 amber≠red preserved.
+- ForgeJobList card is a single button (delete-X stripped per D-01).
+- ForgePage derives isLoading from `useForgeJobsRaw() === undefined`; detail renders from the loaded list row — no getJob round-trip.
+- Flame icon for the Forge CONSOLE nav entry (no collision with hammer, D-06).
 
 ### Pending Todos
 
-- Phase 71: complete design-language audit (read live `index.css`/Tailwind config/components — docs disagree: PROJECT.md says shadcn New York + oklch "Paperclip"; repo CLAUDE.md says Tailwind-only + Cinzel/Geist), then UI-SPEC + visual sketch for Larry's approval before refactoring the 15 pages.
-- Phase 72 (Galaxy) is unblocked now that the M1.P1 `tool_executed` → `callGraphEdges` emitter is built (commit pending in both repos).
-- Monitor Ástríðr Phase 125 (backfill) + 126 (KG read API) before starting Phase 74.
+- **Phase 80 (next):** `/gsd-discuss-phase 80` — design the `forgeCommands` queue + daemon long-poll contract and the launch/stop UI (port NewJobModal). Pairs with a Forge-repo command-poll daemon.
+- **Phase 81:** `/gsd-discuss-phase 81` — 081-SPEC.md is the authoritative scope; formalize the Convex log-ingest receiver + retention test, then the cross-repo `makeLogSink` finalization (closes Forge `08-HUMAN-UAT.md`).
+- **Cross-repo:** the Forge-side log sink (`src/emit/log-forwarder.ts makeLogSink`) is a dormant `TODO(P81)` no-op gated on `FORGE_LOG_INGEST_URL` — lit up in Phase 81.
 
 ### Blockers/Concerns
 
-- Phase 74 (KG Explorer): externally blocked on Ástríðr Phase 125 + 126.
-- Phase 75 (Agent Console): blocked on Ástríðr M1.P0 (access spike) + M1.P3 (file/worktree browse routes).
-- M1.P1 emitter (both repos) is built + tested but **not yet committed** — pending Larry's go + dead `tool_execution` case cleanup in `runtimeIngest.ts:753`.
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260603-or6 | Register Opus 4.8 in cost model + fix 3× Opus over-pricing (opus-4-5/4-6 were Opus-3 $15/$75 → corrected to $5/$25), add opus-4-8 to model dropdown | 2026-06-03 | 92c04e3 | [260603-or6-codepulse-register-opus-4-8-in-cost-mode](./quick/260603-or6-codepulse-register-opus-4-8-in-cost-mode/) |
+- **v6.0 parked phases** — 75 (Agent Console) blocked on Ástríðr M1.P0 + M1.P3; 77 (CI/Prod Hardening) 2/3 plans, 77-03 remaining. Not blockers for v7.0.
+- **v6.0 traceability** is stale (71-76 marked Pending in REQUIREMENTS.md though shipped light-mode) — reconcile under the parked QA-01 when v6.0 resumes; out of scope for v7.0.
 
 ## Session Continuity
 
-Last session: 2026-06-10T20:01:47.678Z
-Stopped at: Phase 77 planned — 3 plans, 2 waves, plan-checker PASSED (iter 2)
-Next action: **`/gsd-discuss-phase 75`** — read the seed first: `.planning/phases/075-agent-console/075-DISCUSS-SEED.md` (authoritative scope, the open agent-driving design question, and the STATE-stale/branch housekeeping notes).
-Resume file: .planning/phases/77-ci-production-hardening/77-01-PLAN.md
-
-> NOTE: frontmatter `0/7 phases / Phase 71` is STALE. Git ground truth: 71/72/73/74/76 shipped (light mode); only 75 + 77 remain. Reconcile during the Phase 75 discuss (trust git, per the Ástríðr v18.0 pattern).
+Last session: 2026-06-16
+Stopped at: v7.0 Forge Integration activated; PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md reconciled.
+Next action: **`/gsd-discuss-phase 80`** — Command Bridge (launch + stop). Phase 81 has a locked SPEC ready when 80 lands.
+Resume file: None

@@ -11,6 +11,10 @@ const PRICING: Record<string, { input: number; output: number }> = {
   "gpt-4o-mini":           { input:  0.15 / 1_000_000, output:  0.60 / 1_000_000 },
   "gemini-2.5-pro":        { input:  1.25 / 1_000_000, output: 10.00 / 1_000_000 },
   "gemini-2.5-flash":      { input:  0.30 / 1_000_000, output:  2.50 / 1_000_000 },
+  // Phase 141 — Gemini 3.x pricing (published rates, ai.google.dev/pricing, 2026-06-15)
+  "gemini-3.5-flash":         { input:  1.50 / 1_000_000, output:  9.00 / 1_000_000 },
+  "gemini-3.1-pro-preview":   { input:  2.00 / 1_000_000, output: 12.00 / 1_000_000 },
+  "gemini-3.1-flash-lite":    { input:  0.25 / 1_000_000, output:  1.50 / 1_000_000 },
   "default":               { input:  3.00 / 1_000_000, output: 15.00 / 1_000_000 },
 };
 

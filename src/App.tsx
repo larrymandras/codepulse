@@ -64,6 +64,9 @@ const HrOnboarding = lazy(() => import("./pages/hr/Onboarding"));
 const HrTeams = lazy(() => import("./pages/hr/Teams"));
 const HrAgentAnalytics = lazy(() => import("./pages/hr/AgentAnalytics"));
 
+// Phase 79: Forge UI
+const ForgePage = lazy(() => import("./pages/ForgePage"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -83,6 +86,8 @@ export default function App() {
               <Route path="/ideation" element={<Ideation />} />
               <Route path="/self-healing" element={<SelfHealing />} />
               <Route path="/build" element={<BuildProgress />} />
+              {/* Phase 79: Forge job viewer */}
+              <Route path="/forge" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Forge...</div>}><ForgePage /></Suspense>} />
               <Route path="/memory" element={<Memory />} />
               <Route path="/briefings" element={<Briefings />} />
               <Route path="/automation" element={<Automation />} />

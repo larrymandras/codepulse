@@ -141,3 +141,17 @@
 - Filterable runs history table (reuse existing components for v1).
 - Mid-run summary checkpointing for crashed/disconnected runs.
 - Writable worktree editing (browse is read-only per M1.P3).
+
+---
+
+## Session 2 — Gate-lift reconciliation (2026-06-10)
+
+Re-opened on gate-lift (Ástríðr v18.0 shipped M1.P0/M1.P3). Verified the gateway drive surface against astridr ground truth — the discuss-seed's "no POST /tasks" claim was stale; `gateway/gateway/app.py` already exposes `POST/GET/DELETE /tasks` + `WS /tasks/{id}/stream`.
+
+Decisions resolved:
+- **Launch fields (D-04):** keep persona + model pickers. Persona → `system_prompt_append`. `model` → small **paired Ástríðr change** (add to gateway `TaskRequest` + adapters).
+- **Concurrency (D-07):** multiple concurrent runs in v1 (confirmed feasible — gateway is multi-task_id).
+- **Summary diff (D-12):** research adapter events first (`claude_cli`/`codex_cli`) before deciding files/diff source.
+- **Stop (D-08):** per-run = `DELETE /tasks/{id}`; global e-stop iterates (+ optional `estop.py`).
+
+Outcome: gate LIFTED, status → READY TO PLAN. Phase is CodePulse-only except the one `model`-field gateway add.
