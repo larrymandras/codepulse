@@ -59,6 +59,8 @@ export const listActive = query({
     return await ctx.db
       .query("alerts")
       .withIndex("by_acknowledged", (q) => q.eq("acknowledged", false))
+      // Exclude auto-resolved alerts that were never acknowledged (status is canonical).
+      .filter((q) => q.neq(q.field("status"), "resolved"))
       .order("desc")
       .take(50);
   },
@@ -113,6 +115,9 @@ export const countBySeverity = query({
       .collect();
     const counts = { info: 0, warning: 0, error: 0, critical: 0 };
     for (const a of active) {
+      // An auto-resolved alert can still be unacknowledged — exclude it so the
+      // banner/counts reflect genuinely-active alerts only (status is canonical).
+      if (a.status === "resolved") continue;
       const sev = a.severity as keyof typeof counts;
       if (sev in counts) counts[sev]++;
     }
