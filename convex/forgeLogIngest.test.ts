@@ -289,5 +289,166 @@ describe("forgeLogIngest — DB round-trip (integration)", () => {
   it.todo("bad/missing key → 401 (SC#1)");
   it.todo("missing fields → 400 (SC#1)");
   it.todo("repeat (hostId, forgeJobId, seq) → no-op / 200 (D-1 idempotent) (SC#1)");
-  it.todo("valid retention sweep: chunks > 7 days old deleted; per-job cap enforced (SC#3)");
+});
+
+// ---------------------------------------------------------------------------
+// Retention sweep — pure decision logic (SC#3, D-2)
+//
+// sweepForgeLogChunks enforces:
+//   (1) TTL: delete chunks with _creationTime < Date.now() - SEVEN_DAYS_MS
+//   (2) Per-job byte cap: after TTL, drop oldest chunks (ascending seq) for any
+//       job whose total line bytes exceed LOG_BYTE_CAP_PER_JOB (~1 MB).
+//
+// These tests exercise the pure helper functions exported from forge.ts so we
+// can verify the decision logic without a live Convex DB.
+// ---------------------------------------------------------------------------
+
+import {
+  chunkByteSize,
+  selectTtlDeletes,
+  selectCapDeletes,
+} from "./forge";
+
+describe("retention sweep — pure helpers (SC#3 / D-2)", () => {
+  // -------------------------------------------------------------------------
+  // chunkByteSize — byte accounting (sum of line.length across chunk.lines)
+  // -------------------------------------------------------------------------
+
+  describe("chunkByteSize", () => {
+    it("returns 0 for empty lines array", () => {
+      expect(chunkByteSize({ lines: [] })).toBe(0);
+    });
+
+    it("returns total character count across all lines", () => {
+      expect(chunkByteSize({ lines: ["abc", "de"] })).toBe(5); // 3 + 2
+    });
+
+    it("handles a single line", () => {
+      expect(chunkByteSize({ lines: ["hello world"] })).toBe(11);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // selectTtlDeletes — TTL pass
+  // -------------------------------------------------------------------------
+
+  describe("selectTtlDeletes", () => {
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = 1_700_000_000_000;
+
+    const oldChunk = {
+      _id: "id-old" as any,
+      _creationTime: now - SEVEN_DAYS_MS - 1,  // 1ms past the TTL boundary
+      lines: ["old line"],
+    };
+    const borderChunk = {
+      _id: "id-border" as any,
+      _creationTime: now - SEVEN_DAYS_MS,       // exactly at the boundary — survives
+      lines: ["border line"],
+    };
+    const newChunk = {
+      _id: "id-new" as any,
+      _creationTime: now - 1_000,               // 1 second ago — clearly survives
+      lines: ["new line"],
+    };
+
+    it("selects chunks older than 7 days for deletion", () => {
+      const toDelete = selectTtlDeletes([oldChunk, borderChunk, newChunk], now);
+      expect(toDelete.map((c) => c._id)).toEqual(["id-old"]);
+    });
+
+    it("does not select chunks exactly at the TTL boundary", () => {
+      const toDelete = selectTtlDeletes([borderChunk], now);
+      expect(toDelete).toHaveLength(0);
+    });
+
+    it("does not select recent chunks", () => {
+      const toDelete = selectTtlDeletes([newChunk], now);
+      expect(toDelete).toHaveLength(0);
+    });
+
+    it("returns empty array for empty input", () => {
+      expect(selectTtlDeletes([], now)).toEqual([]);
+    });
+
+    it("selects all chunks when all are past TTL", () => {
+      const chunks = [
+        { _id: "a" as any, _creationTime: now - SEVEN_DAYS_MS - 100, lines: ["x"] },
+        { _id: "b" as any, _creationTime: now - SEVEN_DAYS_MS - 200, lines: ["y"] },
+      ];
+      const toDelete = selectTtlDeletes(chunks, now);
+      expect(toDelete).toHaveLength(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // selectCapDeletes — per-job byte-cap pass (drop-oldest)
+  // -------------------------------------------------------------------------
+
+  describe("selectCapDeletes", () => {
+    // Chunks ordered by seq ascending (oldest first) — as returned by listJobLogs
+    const makeChunk = (id: string, seq: number, lineBytes: number) => ({
+      _id: id as any,
+      seq,
+      lines: ["x".repeat(lineBytes)],
+    });
+
+    it("returns empty array when total bytes are at or below the cap", () => {
+      const cap = 1_000_000;
+      const chunks = [makeChunk("a", 0, 400_000), makeChunk("b", 1, 400_000)];
+      expect(selectCapDeletes(chunks, cap)).toEqual([]);
+    });
+
+    it("drops oldest chunks first until total is at or below the cap", () => {
+      const cap = 500;
+      // Total: 300 + 300 + 300 = 900 > 500 → must drop oldest first
+      // Drop chunk at seq=0 (300 bytes) → remaining: 600 > 500 → drop seq=1 (300 bytes)
+      // → remaining: 300 ≤ 500 → stop
+      const chunks = [
+        makeChunk("seq0", 0, 300),
+        makeChunk("seq1", 1, 300),
+        makeChunk("seq2", 2, 300),
+      ];
+      const toDelete = selectCapDeletes(chunks, cap);
+      expect(toDelete.map((c) => c._id)).toEqual(["seq0", "seq1"]);
+    });
+
+    it("always preserves the newest chunks (highest seq) when cap is tight", () => {
+      const cap = 10;
+      // Even if only one chunk fits, the newest (seq=5) must survive
+      const chunks = [
+        makeChunk("a", 0, 8),
+        makeChunk("b", 5, 8),
+      ];
+      const toDelete = selectCapDeletes(chunks, cap);
+      // total = 16 > 10; drop oldest (seq=0, 8 bytes) → remaining 8 ≤ 10 → stop
+      // seq=5 chunk MUST survive
+      expect(toDelete.map((c) => c._id)).toEqual(["a"]);
+      expect(toDelete.find((c) => c._id === "b")).toBeUndefined();
+    });
+
+    it("an under-cap job loses nothing (no-op)", () => {
+      const cap = 1_000_000;
+      const chunks = [makeChunk("only", 0, 500)];
+      expect(selectCapDeletes(chunks, cap)).toEqual([]);
+    });
+
+    it("returns empty for empty input", () => {
+      expect(selectCapDeletes([], 1_000_000)).toEqual([]);
+    });
+
+    it("per-job cap is independent — one job's overflow does not evict another job's chunks", () => {
+      // Simulate two jobs: job-A is over cap, job-B is under. We call selectCapDeletes
+      // separately per job — job-B chunks array should return no deletes.
+      const cap = 100;
+      const jobAChunks = [makeChunk("a1", 0, 80), makeChunk("a2", 1, 80)];  // 160 > 100
+      const jobBChunks = [makeChunk("b1", 0, 60)];                          // 60 ≤ 100
+
+      const jobADeletes = selectCapDeletes(jobAChunks, cap);
+      const jobBDeletes = selectCapDeletes(jobBChunks, cap);
+
+      expect(jobADeletes).toHaveLength(1);  // drop oldest a1
+      expect(jobBDeletes).toHaveLength(0);  // no eviction from job B
+    });
+  });
 });
