@@ -22,6 +22,7 @@ import {
 import { hrIngest } from "./hrIngest";
 import { configVersionIngest } from "./configVersionIngest";
 import { forgeIngest } from "./forgeIngest";
+import { forgeLogIngest } from "./forgeLogIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 
 const http = httpRouter();
@@ -72,6 +73,10 @@ http.route({ path: "/api/ingest/agent-config-version", method: "OPTIONS", handle
 // Phase 78: Forge integration ingest endpoint
 http.route({ path: "/forge-ingest", method: "POST", handler: forgeIngest });
 http.route({ path: "/forge-ingest", method: "OPTIONS", handler: forgeIngest });
+
+// Phase 81: Forge log ingest endpoint
+http.route({ path: "/forge-log-ingest", method: "POST",    handler: forgeLogIngest });
+http.route({ path: "/forge-log-ingest", method: "OPTIONS", handler: forgeLogIngest });
 
 // Phase 80: Forge command bridge — claim + ack (daemon-facing, bearer-authed, D-14)
 http.route({ path: "/forge-commands-claim", method: "POST",    handler: forgeCommandsClaim });

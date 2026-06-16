@@ -256,6 +256,10 @@ export const upsertWorkspaces = internalMutation({
 // unbounded .collect() would grow without limit; surface the most recent N.
 const JOB_LIST_LIMIT = 1000;
 
+// Oldest-first cap for log chunks. Retention sweep (D-2) already bounds the real set
+// to ~1 MB per job, so 5 000 chunks is a ceiling that will rarely be hit in practice.
+const LOG_CHUNK_LIMIT = 5000;
+
 export const listJobs = query({
   args: {
     hostId: v.optional(v.string()),
@@ -509,5 +513,57 @@ export const listHosts = query({
       .withIndex("by_lastSeenAt")
       .order("desc")
       .collect();
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Phase 81: Log ingest + reactive read (FI-09)
+// ---------------------------------------------------------------------------
+
+export const appendLogChunk = internalMutation({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    lines:      v.array(v.string()),
+    seq:        v.number(),
+    sentAt:     v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // D-1 idempotency: skip insert if (hostId, forgeJobId, seq) already exists.
+    // Append-only — no patch branch (unlike upsertJob's last-writer-wins patch).
+    const existing = await ctx.db
+      .query("forgeLogChunks")
+      .withIndex("by_host_job_seq", (q) =>
+        q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId).eq("seq", args.seq)
+      )
+      .unique();
+
+    if (existing) return;  // Idempotent no-op (D-1)
+
+    await ctx.db.insert("forgeLogChunks", {
+      hostId:     args.hostId,
+      forgeJobId: args.forgeJobId,
+      lines:      args.lines,
+      seq:        args.seq,
+      sentAt:     args.sentAt,
+    });
+  },
+});
+
+export const listJobLogs = query({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Oldest chunk first — terminal display reads top-to-bottom.
+    // LOG_CHUNK_LIMIT is the ceiling; D-2 retention sweep keeps the real set small.
+    return await ctx.db
+      .query("forgeLogChunks")
+      .withIndex("by_host_job", (q) =>
+        q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId)
+      )
+      .order("asc")
+      .take(LOG_CHUNK_LIMIT);
   },
 });
