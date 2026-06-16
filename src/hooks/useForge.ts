@@ -158,8 +158,15 @@ function adaptCommand(doc: any): ForgeCommandRow {
  */
 export function useForgeJobsRaw(): ForgeJobRow[] | undefined {
   const raw = useQuery(api.forge.listJobs, {});
-  if (raw === undefined) return undefined;
-  return raw.map(adaptJob);
+  // Memoize so the adapted array is referentially stable across renders.
+  // `raw.map(...)` allocates a fresh array every render; ForgePage feeds this
+  // into a reconcile effect (deps [jobs, serverCommands]) that would otherwise
+  // loop into "Maximum update depth exceeded" with live data (the test mock
+  // returns a stable array, so only the live app surfaces it).
+  return useMemo(
+    () => (raw === undefined ? undefined : raw.map(adaptJob)),
+    [raw]
+  );
 }
 
 /**
