@@ -85,6 +85,46 @@ describe("ForgeStatusBadge", () => {
     });
   });
 
+  describe("Phase 80 new statuses (pending / stopping_pending / expired)", () => {
+    const newStatusLabels: Array<{ status: JobStatus; label: string }> = [
+      { status: "pending", label: "Queued…" },
+      { status: "stopping_pending", label: "Stopping…" },
+      { status: "expired", label: "Expired" },
+    ];
+
+    newStatusLabels.forEach(({ status, label }) => {
+      it(`renders label "${label}" for status "${status}"`, () => {
+        render(<ForgeStatusBadge status={status} />);
+        expect(screen.getByText(label)).toBeInTheDocument();
+      });
+    });
+
+    it("pending uses emerald (text-primary) and animates", () => {
+      const { container } = render(<ForgeStatusBadge status="pending" />);
+      const badge = container.firstChild as HTMLElement;
+      expect(badge.outerHTML).toMatch(/text-primary/);
+      const icon = container.querySelector("svg");
+      expect(icon?.getAttribute("class")).toContain("animate-spin");
+    });
+
+    it("stopping_pending uses amber and animates", () => {
+      const { container } = render(<ForgeStatusBadge status="stopping_pending" />);
+      const badge = container.firstChild as HTMLElement;
+      expect(badge.outerHTML).toMatch(/amber/i);
+      expect(badge.getAttribute("data-color-scheme")).toBe("amber");
+      const icon = container.querySelector("svg");
+      expect(icon?.getAttribute("class")).toContain("animate-spin");
+    });
+
+    it("expired uses a non-animated Clock and stone color-scheme", () => {
+      const { container } = render(<ForgeStatusBadge status="expired" />);
+      const badge = container.firstChild as HTMLElement;
+      expect(badge.getAttribute("data-color-scheme")).toBe("stone");
+      const icon = container.querySelector("svg");
+      expect(icon?.getAttribute("class")).not.toContain("animate-spin");
+    });
+  });
+
   describe("accessibility", () => {
     it("includes aria-label with the status text", () => {
       const { container } = render(<ForgeStatusBadge status="running" />);

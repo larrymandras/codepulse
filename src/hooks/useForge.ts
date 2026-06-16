@@ -11,9 +11,45 @@ export type JobStatus =
   | "completed"
   | "failed"
   | "stopped"
-  | "auth_failed";
+  | "auth_failed"
+  | "pending" // optimistic cloud-initiated state (Phase 80, D-10)
+  | "stopping_pending" // D-04: async stop, waiting for daemon
+  | "expired"; // D-12: TTL-expired command
 
 export type JobMode = "chat" | "goal";
+
+// ---------------------------------------------------------------------------
+// ForgeCommandRow: Convex forgeCommands doc adapted to CodePulse's component
+// contract. Used for optimistic "Queued" pending rows (D-10) and their
+// Failed / Expired flip (D-11). Sourced from useForgeCommands() (server rows)
+// and ForgePage-local pendingLocal state (optimistic rows, B2).
+// ---------------------------------------------------------------------------
+
+export interface ForgeCommandRow {
+  /** Stable client-generated id used for optimistic reconciliation. */
+  commandId: string;
+  commandType: "launch" | "stop";
+  /** "pending" | "queued" | "executing" | "done" | "failed" | "expired" */
+  status: JobStatus;
+  agent: string | null;
+  mode: JobMode | null;
+  prompt: string | null;
+  hostId: string;
+  /** Set by the daemon ack once a real forgeJobs row exists (reconciliation). */
+  resolvedForgeJobId: string | null;
+  error: string | null;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// ForgeHostRow: Convex forgeHosts doc — liveness record for the host picker.
+// ---------------------------------------------------------------------------
+
+export interface ForgeHostRow {
+  hostId: string;
+  lastSeenAt: number;
+  hostname: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // ForgeJobRow: Convex forgeJobs doc adapted to CodePulse's component contract.
@@ -69,6 +105,49 @@ function adaptJob(doc: any): ForgeJobRow {
 }
 
 // ---------------------------------------------------------------------------
+// Adapter: Convex forgeCommands doc → ForgeCommandRow
+//
+// The backend status state-machine is queued → executing → done | failed |
+// expired. For the optimistic-row UX (D-10/D-11) we surface:
+//   queued | executing → "pending"  (shows ForgeStatusBadge "Queued…")
+//   failed             → "failed"
+//   expired            → "expired"
+//   done               → "pending"  (reconciled away by ForgePage once the
+//                                     real forgeJobs row appears)
+// ---------------------------------------------------------------------------
+
+function mapCommandStatus(raw: string): JobStatus {
+  switch (raw) {
+    case "failed":
+      return "failed";
+    case "expired":
+      return "expired";
+    case "queued":
+    case "executing":
+    case "done":
+    default:
+      return "pending";
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function adaptCommand(doc: any): ForgeCommandRow {
+  const launch = doc.launchPayload ?? null;
+  return {
+    commandId: doc.commandId,
+    commandType: doc.commandType,
+    status: mapCommandStatus(doc.status),
+    agent: launch?.agent ?? null,
+    mode: (launch?.mode as JobMode | undefined) ?? null,
+    prompt: launch?.prompt ?? null,
+    hostId: doc.hostId,
+    resolvedForgeJobId: doc.resolvedForgeJobId ?? null,
+    error: doc.error ?? null,
+    createdAt: doc.createdAt,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Hooks
 // ---------------------------------------------------------------------------
 
@@ -104,4 +183,36 @@ export function useForgeJob(
     api.forge.getJob,
     hostId && forgeJobId ? { hostId, forgeJobId } : "skip"
   );
+}
+
+/**
+ * Returns the server-side forgeCommands rows (optionally scoped to one host).
+ * Passing `null` lists all hosts ({}). Returns { commands } as an adapted,
+ * coalesced array ([] during load). Used by ForgePage to merge with its local
+ * optimistic pendingLocal state (B2).
+ */
+export function useForgeCommands(hostId: string | null): {
+  commands: ForgeCommandRow[];
+} {
+  const raw = useQuery(
+    api.forge.listForgeCommands,
+    hostId ? { hostId } : {}
+  );
+  const commands = raw === undefined ? [] : raw.map(adaptCommand);
+  return { commands };
+}
+
+/**
+ * Returns the forgeHosts liveness rows (newest-seen first), [] during load.
+ * Drives the launch modal host picker (D-08).
+ */
+export function useForgeHosts(): ForgeHostRow[] {
+  const raw = useQuery(api.forge.listHosts, {});
+  if (raw === undefined) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return raw.map((doc: any) => ({
+    hostId: doc.hostId,
+    lastSeenAt: doc.lastSeenAt,
+    hostname: doc.hostname ?? null,
+  }));
 }

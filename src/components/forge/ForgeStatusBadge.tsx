@@ -50,6 +50,22 @@ const STATUS_MAP: Record<JobStatus, StatusConfig> = {
     className: "bg-amber-900/60 text-[var(--status-warn)]",
     Icon: KeyRound,
   },
+  // Phase 80 — cloud command-bridge states (UI-SPEC §Color status ramp)
+  pending: {
+    label: "Queued…",
+    className: "bg-zinc-800/60 text-primary",
+    Icon: Loader2,
+  },
+  stopping_pending: {
+    label: "Stopping…",
+    className: "bg-amber-900/40 text-[var(--status-warn)]",
+    Icon: Loader2,
+  },
+  expired: {
+    label: "Expired",
+    className: "bg-zinc-800/30 text-zinc-600",
+    Icon: Clock,
+  },
 };
 
 interface ForgeStatusBadgeProps {
@@ -72,7 +88,7 @@ export function ForgeStatusBadge({ status }: ForgeStatusBadgeProps) {
   const colorScheme =
     status === "failed"
       ? "red"
-      : status === "auth_failed"
+      : status === "auth_failed" || status === "stopping_pending"
         ? "amber"
         : status === "running"
           ? "blue"
@@ -80,7 +96,9 @@ export function ForgeStatusBadge({ status }: ForgeStatusBadgeProps) {
             ? "green"
             : status === "queued"
               ? "slate"
-              : "stone";
+              : status === "pending"
+                ? "emerald"
+                : "stone";
 
   return (
     <span
@@ -90,7 +108,13 @@ export function ForgeStatusBadge({ status }: ForgeStatusBadgeProps) {
       className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${config.className}`}
     >
       <config.Icon
-        className={`h-3 w-3${status === "running" ? " animate-spin" : ""}`}
+        className={`h-3 w-3${
+          status === "running" ||
+          status === "pending" ||
+          status === "stopping_pending"
+            ? " animate-spin"
+            : ""
+        }`}
       />
       {config.label}
     </span>
