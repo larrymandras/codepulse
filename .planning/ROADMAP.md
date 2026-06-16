@@ -72,20 +72,23 @@ See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md
 
 Phases are sequenced so each ships independently and the riskiest unknown (live-log streaming) is isolated late.
 
-### Phase 78: Forge Emitter + Convex Schema (read-only foundation) — ✅ SHIPPED
+### Phase 78: Forge Emitter + Convex Schema
+**Status**: ✅ SHIPPED (read-only foundation)
 **Goal**: A local Forge daemon emits job/workspace state UP to Convex; CodePulse stores and can query it. No UI, commands, or logs yet.
 **Requirements**: FI-01 (forge schema), FI-02 (emitter + `/forge-ingest`), FI-03 (read query API)
 **Depends on**: Forge Phase 5 (shipped)
 **Cross-repo**: paired with Forge's own roadmap Phase 6 "Event Emitter" (emitter half lands in the `forge` repo)
 **Artifacts**: `phases/078-forge-emitter-convex-schema/` (CONTEXT + PLAN + SUMMARY)
 
-### Phase 79: Forge UI Tab (read-only render) — ✅ SHIPPED (PR #20)
+### Phase 79: Forge UI Tab (read-only render)
+**Status**: ✅ SHIPPED (PR #20)
 **Goal**: A `/forge` route + nav entry rendering jobs/status/detail from `useQuery(api.forge.*)`, porting StatusBadge/JobList/JobDetail ~1:1 from `forge/web/src`. View-only.
 **Requirements**: FI-04 (forge page + route), FI-05 (component port)
 **Depends on**: Phase 78
 **Plans**: 3/3 complete (3 waves) — see `phases/79-forge-ui-tab-read-only-render/`
 
-### Phase 80: Command Bridge (launch + stop) — 📋 ACTIVE (next)
+### Phase 80: Command Bridge (launch + stop)
+**Status**: 📋 ACTIVE (next)
 **Goal**: A Convex `forgeCommands` queue the daemon long-polls; launch/stop → command → daemon executes → status reflects back. Port NewJobModal. Clerk-gated mutations.
 **Requirements**: FI-06 (command queue + daemon poll), FI-07 (launch/stop UI), FI-08 (auth gating)
 **Depends on**: Phase 79 (shipped)
@@ -95,7 +98,8 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   3. Command-issuing mutations are Clerk-gated — no unauthenticated write path to launch/stop
 **Plans**: TBD (run `/gsd-discuss-phase 80` → `/gsd-plan-phase 80`)
 
-### Phase 81: Live Log Streaming — 📋 ACTIVE (design locked)
+### Phase 81: Live Log Streaming
+**Status**: 📋 ACTIVE (design locked in 081-SPEC)
 **Goal**: Stream live job logs into the read-only Forge UI tab. **Design locked in `phases/081-live-log-streaming/081-SPEC.md` (2026-06-15)** — supersedes the original "HIGH-risk direct daemon→browser SSE/WebSocket spike." Logs flow Forge → `POST /forge-log-ingest` → append-only `forgeLogChunks` table → reactive `forge.listJobLogs` query; **Convex reactivity IS the live stream** (no SSE/WS to build). Risk dropped from HIGH to LOW.
 **Requirements**: FI-09 (log-ingest endpoint + append-only `forgeLogChunks` + `seq` idempotency), FI-10 (LogViewer renders live tail via reactive `listJobLogs`), FI-11 (retention: 7-day TTL cron + per-job byte cap)
 **Depends on**: Phase 80
@@ -110,7 +114,8 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   4. **Cross-repo handoff** (Forge side, ~1 task): `makeLogSink` no-op → real `fetch` to `/forge-log-ingest`; set `FORGE_LOG_INGEST_URL`; live round-trip closes Forge `08-HUMAN-UAT.md`
 **Plans**: TBD (SPEC ready → `/gsd-discuss-phase 81` → `/gsd-plan-phase 81`)
 
-### Phase 82: Files + Artifact Preview + Hardening — 📋 ACTIVE
+### Phase 82: Files + Artifact Preview + Hardening
+**Status**: 📋 ACTIVE
 **Goal**: Port FileBrowser/ArtifactPreview; solve artifact-origin reachability from the cloud UI (daemon tunnel or local-https, NOT direct localhost); end-to-end Clerk gating; polish.
 **Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
 **Depends on**: Phase 81

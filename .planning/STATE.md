@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
-status: "v7.0 active — 78/79 shipped; 80/81/82 in active roadmap"
-stopped_at: "Milestone v7.0 activated; phases 80/81/82 brought into the active roadmap"
-last_updated: "2026-06-16T00:00:00.000Z"
-last_activity: "2026-06-16 -- v7.0 Forge Integration activated (78/79 shipped, 80/81/82 planning)"
+status: v7.0 active; 78/79 shipped, 80/81/82 in the active roadmap (81 design locked in 081-SPEC)
+stopped_at: v7.0 Forge Integration activated; PROJECT.md / REQUIREMENTS.md / ROADMAP.md / STATE.md reconciled.
+last_updated: "2026-06-16T12:28:24.315Z"
+last_activity: "2026-06-16 -- Phase 79 shipped (PR #20); code-review fixes applied (auth fail-closed, bounded queries, badge/timestamp guards); deploy gate verified"
 progress:
   total_phases: 5
   completed_phases: 2
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 Phase: 80 — Command Bridge (not started)
 Plan: —
 Status: v7.0 active; 78/79 shipped, 80/81/82 in the active roadmap (81 design locked in 081-SPEC)
-Last activity: 2026-06-16 -- v7.0 Forge Integration activated
+Last activity: 2026-06-16 -- Phase 79 shipped (PR #20); code-review fixes applied (auth fail-closed, bounded queries, badge/timestamp guards); deploy gate verified
 
 **Progress bar:** [████░░░░░░] 40% (2/5 phases)
 
