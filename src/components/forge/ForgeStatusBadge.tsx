@@ -9,7 +9,7 @@
  * Tailwind token classes per UI-SPEC Status Color Table (D-09).
  */
 
-import { Clock, Loader2, CheckCircle, XCircle, Square, KeyRound } from "lucide-react";
+import { Clock, Loader2, CheckCircle, XCircle, Square, KeyRound, Circle } from "lucide-react";
 import type { JobStatus } from "@/hooks/useForge";
 
 interface StatusConfig {
@@ -57,7 +57,16 @@ interface ForgeStatusBadgeProps {
 }
 
 export function ForgeStatusBadge({ status }: ForgeStatusBadgeProps) {
-  const config = STATUS_MAP[status];
+  // `status` is typed JobStatus, but it originates from a v.string() column
+  // adapted via an unchecked cast — the daemon can emit a value outside the
+  // union. Fall back to a neutral chip showing the raw status instead of
+  // dereferencing an undefined config and crashing the list region.
+  const config: StatusConfig =
+    (STATUS_MAP[status] as StatusConfig | undefined) ?? {
+      label: status || "Unknown",
+      className: "bg-zinc-800/60 text-zinc-400",
+      Icon: Circle,
+    };
 
   // data-color-scheme mapping — preserved from forge for test compatibility
   const colorScheme =

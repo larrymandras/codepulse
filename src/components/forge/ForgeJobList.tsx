@@ -22,6 +22,16 @@ import { ForgeHostBadge } from "./ForgeHostBadge";
 import { relativeTime } from "@/lib/formatters";
 import type { ForgeJobRow } from "@/hooks/useForge";
 
+/**
+ * relativeTime against an ISO createdAt, guarding malformed/empty values.
+ * A bad ingest payload (e.g. createdAt="") would otherwise yield NaN epoch
+ * seconds and render "NaNd ago"; show an em dash instead.
+ */
+function safeRelativeTime(iso: string): string {
+  const ms = new Date(iso).getTime();
+  return Number.isFinite(ms) ? relativeTime(ms / 1000) : "—";
+}
+
 // ---------------------------------------------------------------------------
 // AgentIcon — ported from forge JobList.tsx; unchanged
 // ---------------------------------------------------------------------------
@@ -139,7 +149,7 @@ export function ForgeJobList({
 
                   {/* Relative timestamp — epoch seconds (CodePulse relativeTime contract) */}
                   <p className="text-xs text-muted-foreground">
-                    {relativeTime(new Date(job.createdAt).getTime() / 1000)}
+                    {safeRelativeTime(job.createdAt)}
                   </p>
                 </div>
               </button>

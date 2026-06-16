@@ -135,4 +135,26 @@ describe("ForgeStatusBadge", () => {
       expect(icon?.getAttribute("class")).not.toContain("animate-spin");
     });
   });
+
+  describe("unknown status — graceful fallback (no crash)", () => {
+    // status is typed JobStatus, but the daemon can emit a value outside the
+    // union (it lands as a v.string() and is cast unchecked). The badge must
+    // degrade to a neutral chip showing the raw value, not throw.
+    it("renders the raw status text instead of crashing", () => {
+      const unknown = "paused" as JobStatus;
+      expect(() =>
+        render(<ForgeStatusBadge status={unknown} />)
+      ).not.toThrow();
+      expect(screen.getByText("paused")).toBeInTheDocument();
+    });
+
+    it("still renders an icon and the data-status attribute for an unknown status", () => {
+      const unknown = "timeout" as JobStatus;
+      const { container } = render(<ForgeStatusBadge status={unknown} />);
+      expect(container.querySelector("svg")).not.toBeNull();
+      expect(
+        container.querySelector('[data-status="timeout"]')
+      ).not.toBeNull();
+    });
+  });
 });
