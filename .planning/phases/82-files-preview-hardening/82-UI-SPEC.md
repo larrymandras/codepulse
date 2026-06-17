@@ -64,7 +64,7 @@ ForgeLogPane.tsx, and Phase 71 UI-SPEC §2.7.
 
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
-| File tab label | 12px (text-xs) | 500 (font-medium) | 1.5 | Geist | "Details" / "Logs" / "Files" tab buttons — matches existing ForgeJobDetail.tsx:158 |
+| File tab label | 12px (text-xs) | inherited — ForgeJobDetail.tsx tab strip, not re-declared | 1.5 | Geist | "Details" / "Logs" / "Files" tab buttons — extends existing ForgeJobDetail.tsx:158 verbatim |
 | File row filename | 14px (text-sm) | 400 (font-normal) | 1.5 | Geist | Filename text node in each file row |
 | Kind group header | 10px (text-[10px]) | 600 (font-semibold) | 1.5 | JetBrains Mono | "TEXT" / "IMAGES" / "VIDEO" / "AUDIO" / "PDF" / "BINARY" section headers — uppercase tracking-widest |
 | Metadata label | 10px (text-[10px]) | 400 (font-normal) | 1.5 | JetBrains Mono | Size annotation (e.g. "1.2 MB") and VS Code link label |
@@ -72,8 +72,13 @@ ForgeLogPane.tsx, and Phase 71 UI-SPEC §2.7.
 | Empty/state copy | 14px (text-sm) | 400 (font-normal) | 1.5 | Geist | Loading, empty, error state copy |
 | Not-previewable fallback | 13px (text-[13px]) | 400 (font-normal) | 1.5 | Geist | Fallback card message + local path |
 
-Note: Only 2 font weights are introduced in new surfaces: 400 (regular) and 600 (semibold).
-Medium (500) appears only on tab labels to match the existing tab strip — no new weight.
+Note: This contract declares 2 font weights (400, 600). The tab label's 500/font-medium is
+inherited from the existing ForgeJobDetail tab strip and is not re-declared.
+
+Note: The 12/13/14px size proximity is intentional Forge-port fidelity. 13px is load-bearing
+for source-pre parity with the Forge ArtifactPreview (`<pre>` source view, ArtifactPreview.tsx:155);
+it is kept distinct from 12px/14px so escaped-source rendering matches the original verbatim. No
+fourth size is introduced.
 
 ---
 
@@ -281,7 +286,8 @@ interface ArtifactPreviewProps {
 |-----------|----------|
 | `kind === 'text'` AND `sizeBytes <= 1_048_576` AND `textContent` present | Sandboxed iframe (Preview) + `<pre>` source (Source) — toggle |
 | `kind === 'image'` AND `sizeBytes <= 1_048_576` AND `imageUrl` present | `<img src={imageUrl} alt={filePath} />` |
-| `sizeBytes > 1_048_576` OR `kind` is `video`/`audio`/`pdf`/`binary` OR content absent | Not-previewable fallback card |
+| `kind === 'text'` AND `sizeBytes <= 1_048_576` AND `textContent` ABSENT | Preview-failure card (see Empty/Loading/Error States) |
+| `sizeBytes > 1_048_576` OR `kind` is `video`/`audio`/`pdf`/`binary` | Not-previewable fallback card |
 | No file selected | No-selection placeholder |
 
 ### Preview/Source toggle (text/HTML)
@@ -290,9 +296,15 @@ Control: Two `<Button>` primitives from `src/components/ui/button` (shadcn).
 - `variant="default"` on active mode (emerald-filled)
 - `variant="outline"` on inactive mode
 
-Toggle bar: `flex gap-1 px-4 py-2 border-b border-border bg-card shrink-0`
+Toggle bar: `flex gap-1 px-4 py-2 border-b border-border bg-card shrink-0`,
+`role="group" aria-label="Preview mode"`.
 
 Default mode: `'preview'` (iframe loads immediately).
+
+Label rationale: the single-word labels "Preview" and "Source" are intentional (not generic
+CTAs). The noun is supplied by the wrapping `role="group" aria-label="Preview mode"`, so each
+toggle button reads as "Preview, Preview mode" / "Source, Preview mode" to assistive tech —
+the context noun is on the group, not repeated per button.
 
 SECURITY INVARIANT (carry verbatim):
 - iframe `sandbox="allow-scripts"` — MUST NOT include `allow-same-origin` (ever)
@@ -336,7 +348,7 @@ not a third-party origin. No auth header is set (image tags cannot carry auth he
 
 ### Not-previewable fallback card
 
-Condition: `sizeBytes > 1_048_576` OR `kind` in `{ video, audio, pdf, binary }` OR no content.
+Condition: `sizeBytes > 1_048_576` OR `kind` in `{ video, audio, pdf, binary }`.
 
 Layout: `flex flex-col gap-3 p-4`
 
@@ -387,7 +399,7 @@ When `filePath` is empty / no file selected:
 | Loading | `listJobFiles` query returns `undefined` | `ForgeFilesPane` | See "Loading" copy below |
 | Zero files (terminal) | Query resolved, `files.length === 0` | `FileBrowser` empty state | See "Zero files" copy below |
 | No file selected | File list shown, no row selected | `ArtifactPreview` | "Select a file to preview" |
-| Preview failure | `textContent` missing for text file | `ArtifactPreview` | See "Preview failure" copy below |
+| Preview failure | `textContent` missing for a previewable text file | `ArtifactPreview` | See "Preview failure" copy below |
 | Surface error | Uncaught render error | `SectionErrorBoundary name="Files"` | Generic SectionErrorBoundary UI |
 
 ### Loading state
@@ -425,11 +437,26 @@ No icon needed — keep it minimal. This copy mirrors the Forge FileBrowser sour
 
 ### Preview failure (text file selected, textContent absent)
 
+A previewable text file may be listed (metadata row exists) but its bytes were not ingested
+(retention pruned the artifact, ingest dropped it, or the byte push was incomplete). The user
+must still have an action path — so this card carries the SAME best-effort "Open in VS Code"
+deep link + local rootPath label as the not-previewable fallback.
+
 ```tsx
-<div className="flex flex-col gap-2 p-4">
+<div className="flex flex-col gap-3 p-4">
   <p className="text-sm text-muted-foreground">Preview unavailable.</p>
   <p className="text-[12px] font-mono text-muted-foreground break-all">
     Local path: {rootPath}/{filePath}
+  </p>
+  <a
+    href={vsCodeHref}
+    className="inline-flex items-center gap-1 text-[12px] text-blue-500"
+    title="Best-effort — same machine only"
+  >
+    Open in VS Code <ExternalLink className="h-3 w-3" aria-hidden />
+  </a>
+  <p className="text-[10px] text-muted-foreground">
+    VS Code link is best-effort (same machine only)
   </p>
 </div>
 ```
@@ -455,10 +482,17 @@ must not cascade to Details or Logs tabs (Req 11). Import from `src/components/S
 | Not previewable — local path label | "Local path: {rootPath}/{filePath}" |
 | Not previewable — VS Code link label | "Open in VS Code" |
 | Not previewable — VS Code disclaimer | "VS Code link is best-effort (same machine only)" |
-| Preview unavailable — fallback | "Preview unavailable." |
+| Preview unavailable — fallback heading | "Preview unavailable." |
+| Preview unavailable — local path label | "Local path: {rootPath}/{filePath}" |
+| Preview unavailable — VS Code link label | "Open in VS Code" |
+| Preview unavailable — VS Code disclaimer | "VS Code link is best-effort (same machine only)" |
 | Preview toggle — Preview mode | "Preview" |
 | Preview toggle — Source mode | "Source" |
 | No job selected (inherited) | "Select a job to view details" (unchanged ForgeJobDetail.tsx:90) |
+
+Note on toggle labels: "Preview" / "Source" are single-word by design. The clarifying noun
+is carried by the wrapping `role="group" aria-label="Preview mode"`, so these are not generic
+CTAs — they are mode toggles within a labeled group.
 
 ### Destructive actions
 None. This surface is read-only (SPEC boundary: no editing, writing, or deleting files).
@@ -476,7 +510,7 @@ No confirmation dialogs required.
 
 ### Preview/Source toggle
 - Each `<Button>` carries `aria-pressed={mode === 'preview'}` / `aria-pressed={mode === 'source'}` (boolean).
-- Toggle bar `role="group"` with `aria-label="Preview mode"`.
+- Toggle bar `role="group"` with `aria-label="Preview mode"` — supplies the context noun so the single-word "Preview" / "Source" labels are unambiguous to assistive tech.
 
 ### iframe
 - `title="Artifact preview"` attribute on the sandboxed iframe (screen reader context).
@@ -538,7 +572,7 @@ All already present in `src/components/ui/`:
 | Icon | Used In | Already in codebase? |
 |------|---------|----------------------|
 | `Loader2` | Loading state spinner | Yes — ForgeLaunchModal, ForgeStopConfirmDialog |
-| `ExternalLink` | VS Code deep link icon | No — new import (available from lucide-react, zero install) |
+| `ExternalLink` | VS Code deep link icon (fallback + preview-failure cards) | No — new import (available from lucide-react, zero install) |
 | `FolderOpen` | Files tab icon (optional) | No — new import if tab icons are added |
 
 `ExternalLink` and `FolderOpen` are standard Lucide icons available from the already-installed
@@ -567,6 +601,7 @@ All already present in `src/components/ui/`:
 | Fonts (Geist + JetBrains Mono) | components.json / src/index.css — pre-populated |
 | shadcn primitive set | components.json / src/components/ui/ — pre-populated |
 | Tab strip pattern | ForgeJobDetail.tsx:153-174 — pre-populated (extend verbatim) |
+| Tab label weight (500/font-medium) | ForgeJobDetail.tsx:158 — INHERITED, not re-declared in this contract |
 | Pane structure pattern | ForgeLogPane.tsx — pre-populated (mirror) |
 | Kind-group ordering | SPEC Req 4 + Forge FileBrowser.tsx:41-48 — locked |
 | Preview/Source toggle | Forge ArtifactPreview.tsx:115-132 — ported |
@@ -577,7 +612,7 @@ All already present in `src/components/ui/`:
 | Files tab label | SPEC Req 6 — "Files" (exact label per spec) |
 | Files tab icon (`FolderOpen`) | [NEW DECISION] — grep confirmed no collision |
 | Layout (vertical stack) | [NEW DECISION] — geometry analysis of ForgeJobDetail narrow panel |
-| VS Code link scope (all kinds) | CONTEXT.md D-04a — "always show the local-path fallback" |
+| VS Code link scope (all kinds + preview-failure) | CONTEXT.md D-04a — "always show the local-path fallback" |
 | Destructive actions (none) | SPEC boundary — read-only surface |
 
 ---
