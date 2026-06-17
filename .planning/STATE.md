@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
-status: executing
-stopped_at: Phase 82 complete (4/4) — files/listing bridge verified live; preview-bytes blocked by codex-sandbox ACLs (Forge follow-up)
-last_updated: "2026-06-17T22:25:00Z"
+status: milestone-complete
+stopped_at: Milestone v7.0 Forge Integration — all 5 phases (78-82) complete + verified live. Ready to close (/gsd-complete-milestone).
+last_updated: "2026-06-17T23:10:00Z"
 last_activity: 2026-06-17
 progress:
-  total_phases: 6
-  completed_phases: 4
+  total_phases: 5
+  completed_phases: 5
   total_plans: 16
   completed_plans: 16
-  percent: 67
+  percent: 100
 ---
 
 # Project State
@@ -21,29 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v7.0 extends "drive its coding agents" to **Forge** — one application for all coding-agent work.
-**Current focus:** Phase 82 — files-preview-hardening
-**Last completed:** Phase 80 — Command Bridge (launch + stop), 4/4 plans, verified live 2026-06-16 (bridge round-trip: launch + stop). Code on `forge-command-bridge` (CodePulse) + `feat/command-bridge-daemon` (Forge repo).
+**Current focus:** Milestone v7.0 COMPLETE — ready to close (`/gsd-complete-milestone`).
+**Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, verified live 2026-06-17. Listing bridge verified live; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task.
 
 ## Current Position
 
-Phase: 82 (files-preview-hardening) — COMPLETE (4/4)
-Plan: 4 of 4 done
-Status: File/listing bridge verified live 2026-06-17 (forge fix a31dca4: enumerate realpath-EPERM fallback). Preview-byte rendering blocked only by codex-sandbox ACLs on agent-written files — a Forge follow-up, not a Phase 82 defect.
+Milestone: v7.0 Forge Integration — COMPLETE (5/5 phases: 78-82)
+Status: All phases shipped + verified. Phase 82 files/artifact-preview bridge working end-to-end (listing live; preview bytes fixed via forge dbfad91 ACL grant). Ready to close the milestone.
 Last activity: 2026-06-17
 
-**Progress bar:** [██████░░░░] 60% (3/5 phases shipped; 80 verified live)
+**Progress bar:** [██████████] 100% (5/5 phases shipped; 80/81/82 verified live)
 
 ## Milestone Status (2026-06-16)
 
-**v7.0 Forge Integration — ACTIVE.** Promoted 2026-06-13 from backlog 999.1, activated 2026-06-16. 5 phases (78-82), Surface-Substrate fold-in of Forge into CodePulse. Forge engine stays LOCAL; cloud-frontend ↔ local-daemon bridge via Convex ingest (up) + command queue (down).
+**v7.0 Forge Integration — COMPLETE (2026-06-17).** Promoted 2026-06-13 from backlog 999.1, activated 2026-06-16, all 5 phases (78-82) shipped + verified by 2026-06-17. Surface-Substrate fold-in of Forge into CodePulse. Forge engine stays LOCAL; cloud-frontend ↔ local-daemon bridge via Convex ingest (up) + command queue (down). Ready to close via `/gsd-complete-milestone`.
 
 | Phase | Name | Status |
 |-------|------|--------|
 | 78 | Forge Emitter + Convex Schema | ✅ Shipped (2026-06-13) |
 | 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
 | 80 | Command Bridge (launch + stop) | ✅ Complete (4/4, verified live 2026-06-16) — FI-06/07/08 |
-| 81 | Live Log Streaming | 🔄 Executing (3/4 complete) — FI-09 + FI-10 + FI-11 done, Plan 04 remains |
-| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4) — FI-12/13/14; listing bridge verified live (forge a31dca4); preview-bytes pending Forge codex-sandbox ACL follow-up |
+| 81 | Live Log Streaming | ✅ Complete (4/4, verified live 2026-06-17) — FI-09/10/11 |
+| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, verified live 2026-06-17) — FI-12/13/14; listing bridge live + preview-bytes fixed (forge a31dca4 + dbfad91); ingest key rotated; daemon auto-started |
 
 **v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **75 (Agent Console)** blocked on Ástríðr M1.P0 + M1.P3; **77 (CI & Prod Hardening)** is 2/3 plans (77-03 remaining). Re-activates after Forge Integration / once Ástríðr Surface-Substrate gates clear. Requirements retained in REQUIREMENTS.md.
 
