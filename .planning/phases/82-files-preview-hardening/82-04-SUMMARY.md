@@ -181,10 +181,11 @@ Operator-driven live round-trip performed against deployment `tidy-whale-981` wi
 
 ### Known limitation — artifact preview bytes (NOT a Phase 82 defect)
 - `forgeArtifacts` did NOT populate for the live job: reading the file **bytes** (`readFileSync`) also EPERMs, because **codex's sandbox** (`--sandbox workspace-write`, restricted Windows token) writes output files with ACLs granting access only to an ephemeral restricted SID — unreadable by the daemon **and even by the interactive user** (`Get-Content` → Access Denied; ACL shows a single unresolved `S-1-5-21-…` SID).
-- The preview **code is correct** (receiver persists `textContent`; `enumerate` reads bytes whenever permitted — proven against readable files). The gap is purely that codex-sandboxed files are physically unreadable. This affects any Forge feature that reads codex output, not just this bridge.
-- **Follow-up (Forge, out of Phase 82 scope):** to make previews work for codex jobs, run codex with relaxed file ACLs (e.g. Dangerous mode / `danger-full-access`) or have promotion re-own/re-ACL promoted files to the daemon's token. Non-sandboxed agents (Claude Code) already write daemon-readable files.
+- The preview **code is correct** (receiver persists `textContent`; `enumerate` reads bytes whenever permitted — proven against readable files). The gap was purely that codex-sandboxed files were physically unreadable.
 
-**Checkpoint disposition:** Gate SET path verified for the listing (the FI-12/FI-13 deliverable); preview-byte rendering is blocked only by the external codex-sandbox ACL issue above, not by Phase 82 code. 82-04 considered complete; preview-with-codex tracked as a Forge follow-up.
+**RESOLVED (Forge commit `dbfad91`):** `promoteWorkspace` now runs a best-effort `icacls <dest> /grant <USERNAME>:(OI)(CI)F /T` after a successful promotion, restoring the daemon's read access to codex output. Validated link-by-link without a new codex job: grant → `logo.png` readable → `enumerateWorkspace` returns `artifacts=2` (`index.html` textContent + `logo.png` imageBase64) → receiver persists artifacts (proven earlier) → 82-03 UI renders them. Full end-to-end preview render in the CodePulse Files tab will confirm on the next codex job.
+
+**Checkpoint disposition:** Listing bridge verified live (FI-12/FI-13). Preview-byte path fixed (Forge `a31dca4` enumerate fallback + `dbfad91` promotion ACL grant) and validated. 82-04 complete.
 
 ## Issues Encountered
 
