@@ -132,8 +132,8 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   2. Artifact/file content is reachable from the cloud UI via the Convex bounded-ingest bridge (no mixed-content `http://localhost`; tunnel/local-https rejected per 82-SPEC)
   3. End-to-end auth gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
 **Plans**: 4 plans
-  - [ ] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
-  - [ ] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
+  - [x] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
+  - [x] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
   - [ ] 82-03-PLAN.md — UI port: useForgeJobFiles hooks, FileBrowser + ArtifactPreview (sandboxed), ForgeFilesPane + Files tab
   - [ ] 82-04-PLAN.md — Cross-repo forge daemon: workspace enumeration + emitFiles + live round-trip (forge repo)
 
@@ -167,7 +167,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
-| 82. Files + Preview + Hardening | v7.0 | 0/4 | Planned    |  |
+| 82. Files + Preview + Hardening | v7.0 | 2/4 | In Progress|  |
 
 ---
 

@@ -38,7 +38,7 @@
 
 - [ ] **FI-12**: Operator can browse a job's workspace files and preview artifacts in the `/forge` UI (port FileBrowser / ArtifactPreview)
 - [ ] **FI-13**: Artifact/file content is reachable from the cloud UI without direct-localhost access (daemon tunnel or local-https path — not mixed-content `http://localhost`)
-- [ ] **FI-14**: End-to-end Clerk gating across the Forge surface + polish; the full launch→run→logs→artifacts path is auth-correct and production-ready
+- [x] **FI-14**: End-to-end Clerk gating across the Forge surface + polish; the full launch→run→logs→artifacts path is auth-correct and production-ready
 
 ---
 
@@ -180,4 +180,4 @@
 | FI-11 | Phase 81 | Complete |
 | FI-12 | Phase 82 | Pending |
 | FI-13 | Phase 82 | Pending |
-| FI-14 | Phase 82 | Pending |
+| FI-14 | Phase 82 | Complete |
