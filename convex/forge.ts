@@ -667,3 +667,280 @@ export const listJobLogs = query({
       .take(LOG_CHUNK_LIMIT);
   },
 });
+
+// ---------------------------------------------------------------------------
+// Phase 82: File/artifact ingest + reactive read + retention sweep (FI-12 / FI-13 / D-05)
+//
+// Pure helpers are exported so forgeFileIngest.test.ts can exercise the
+// deletion-decision logic without a live Convex DB (same pattern as Phase 81).
+// ---------------------------------------------------------------------------
+
+/** Max rows returned per listJobFiles call (discretionary, D-03). */
+export const FILE_LIST_LIMIT = 1000;
+
+/** Total artifact byte cap per job (~10 MB). Drop-oldest when exceeded. */
+export const ARTIFACT_BYTE_CAP_PER_JOB = 10_000_000;
+
+/** Per-file/artifact byte cap (1 MB — matches Convex per-doc value limit ceiling). */
+export const PER_FILE_BYTE_CAP = 1_000_000;
+
+/**
+ * Returns the effective byte size of an artifact:
+ * - textContent.length when content is present (text/HTML stored as string)
+ * - sizeBytes otherwise (image artifacts counted by file size, not blob overhead)
+ */
+export function artifactByteSize(artifact: { textContent?: string; sizeBytes: number }): number {
+  return artifact.textContent !== undefined ? artifact.textContent.length : artifact.sizeBytes;
+}
+
+/**
+ * Given an array of file/artifact records, returns those whose `createdAt` ISO
+ * string is strictly older than the TTL boundary (now - SEVEN_DAYS_MS).
+ * At-boundary records survive.
+ *
+ * Keyed on the explicit `createdAt` ISO field (not `_creationTime`) — matches
+ * the forgeFiles / forgeArtifacts schema convention.
+ */
+export function selectFileTtlDeletes<T extends { _id: any; createdAt: string }>(
+  records: T[],
+  now: number
+): T[] {
+  const cutoff = now - SEVEN_DAYS_MS;
+  return records.filter((r) => Date.parse(r.createdAt) < cutoff);
+}
+
+/**
+ * Given an array of surviving artifact records for a SINGLE job (sorted by
+ * createdAt ascending, oldest first), returns the oldest records that must be
+ * deleted to bring the total artifact byte count at or below `capBytes`.
+ * Newest records always survive by construction.
+ */
+export function selectFileCapDeletes<
+  T extends { _id: any; createdAt: string; sizeBytes: number; textContent?: string }
+>(records: T[], capBytes: number): T[] {
+  // Sort ascending by createdAt (oldest first) — caller may not guarantee order.
+  const sorted = [...records].sort(
+    (a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt)
+  );
+  let total = sorted.reduce((acc, r) => acc + artifactByteSize(r), 0);
+  if (total <= capBytes) return [];
+
+  const toDelete: T[] = [];
+  for (const record of sorted) {
+    if (total <= capBytes) break;
+    toDelete.push(record);
+    total -= artifactByteSize(record);
+  }
+  return toDelete;
+}
+
+/**
+ * Idempotent upsert of file metadata rows for a given job.
+ * Idempotency key: (hostId, forgeJobId, path) via by_host_job_path index.
+ * Last-writer-wins patch (unlike append-only log chunks) — file size may change on re-push.
+ */
+export const upsertFileEntries = internalMutation({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    files: v.array(v.object({
+      path:      v.string(),
+      kind:      v.string(),
+      sizeBytes: v.number(),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    for (const file of args.files) {
+      const existing = await ctx.db
+        .query("forgeFiles")
+        .withIndex("by_host_job_path", (q) =>
+          q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId).eq("path", file.path)
+        )
+        .unique();
+
+      if (existing) {
+        // Last-writer-wins: patch sizeBytes/kind in case they changed on re-push.
+        await ctx.db.patch(existing._id, { kind: file.kind, sizeBytes: file.sizeBytes });
+      } else {
+        await ctx.db.insert("forgeFiles", {
+          hostId:     args.hostId,
+          forgeJobId: args.forgeJobId,
+          path:       file.path,
+          kind:       file.kind,
+          sizeBytes:  file.sizeBytes,
+          createdAt:  now,
+        });
+      }
+    }
+  },
+});
+
+/**
+ * Idempotent upsert of artifact content rows for a given job.
+ * Idempotency key: (hostId, forgeJobId, path) via by_host_job_path index.
+ *
+ * D-05: If an existing image artifact is being overwritten (new storageId differs),
+ * call ctx.storage.delete(existing.storageId) BEFORE patch to prevent blob leak.
+ *
+ * Coerce absent textContent/storageId → undefined (never null), per Phase 81 sentAt rule.
+ */
+export const upsertArtifacts = internalMutation({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    artifacts: v.array(v.object({
+      path:        v.string(),
+      kind:        v.string(),
+      sizeBytes:   v.number(),
+      textContent: v.optional(v.string()),
+      storageId:   v.optional(v.id("_storage")),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const now = new Date().toISOString();
+    for (const artifact of args.artifacts) {
+      const existing = await ctx.db
+        .query("forgeArtifacts")
+        .withIndex("by_host_job_path", (q) =>
+          q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId).eq("path", artifact.path)
+        )
+        .unique();
+
+      if (existing) {
+        // D-05: Delete old blob BEFORE patch to prevent leak on image overwrite.
+        if (existing.storageId && existing.storageId !== artifact.storageId) {
+          await ctx.storage.delete(existing.storageId);
+        }
+        await ctx.db.patch(existing._id, {
+          kind:        artifact.kind,
+          sizeBytes:   artifact.sizeBytes,
+          textContent: artifact.textContent ?? undefined,
+          storageId:   artifact.storageId ?? undefined,
+        });
+      } else {
+        await ctx.db.insert("forgeArtifacts", {
+          hostId:      args.hostId,
+          forgeJobId:  args.forgeJobId,
+          path:        artifact.path,
+          kind:        artifact.kind,
+          sizeBytes:   artifact.sizeBytes,
+          textContent: artifact.textContent ?? undefined,
+          storageId:   artifact.storageId ?? undefined,
+          createdAt:   now,
+        });
+      }
+    }
+  },
+});
+
+/**
+ * Public reactive query — returns all file metadata rows for a given job.
+ * D-04: public graceful-skip (no Clerk auth), consistent with listJobs / listJobLogs.
+ */
+export const listJobFiles = query({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("forgeFiles")
+      .withIndex("by_host_job", (q) =>
+        q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId)
+      )
+      .order("asc")
+      .take(FILE_LIST_LIMIT);
+  },
+});
+
+/**
+ * Public reactive query — returns a single artifact record plus resolved imageUrl.
+ * D-04: public graceful-skip; ctx.storage.getUrl available on QueryCtx per Convex docs.
+ */
+export const getJobArtifact = query({
+  args: {
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    path:       v.string(),
+  },
+  handler: async (ctx, args) => {
+    const artifact = await ctx.db
+      .query("forgeArtifacts")
+      .withIndex("by_host_job_path", (q) =>
+        q.eq("hostId", args.hostId).eq("forgeJobId", args.forgeJobId).eq("path", args.path)
+      )
+      .unique();
+
+    if (!artifact) return null;
+
+    // Resolve storageId → URL for images (D-02: images via Convex File Storage).
+    // getUrl is available on QueryCtx per Convex docs (serve-files).
+    let imageUrl: string | null = null;
+    if (artifact.storageId) {
+      imageUrl = await ctx.storage.getUrl(artifact.storageId);
+    }
+
+    return { ...artifact, imageUrl };
+  },
+});
+
+/**
+ * Retention sweep for file/artifact records (D-05).
+ * Called by the daily cron at 04:00 UTC (offset from 03:30 log sweep).
+ *
+ * Two passes:
+ *   1. TTL: delete forgeArtifacts + forgeFiles with createdAt > 7 days ago.
+ *      CRITICAL: for image artifacts, ctx.storage.delete(storageId) BEFORE ctx.db.delete.
+ *   2. Per-job byte cap: drop oldest artifacts for any job exceeding ARTIFACT_BYTE_CAP_PER_JOB.
+ */
+export const sweepForgeFileRecords = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // -------------------------------------------------------------------------
+    // Pass 1: TTL — collect artifact records older than 7 days and delete them.
+    // CRITICAL D-05: storage.delete(storageId) BEFORE db.delete to prevent blob leak.
+    // -------------------------------------------------------------------------
+    const allArtifacts = await ctx.db.query("forgeArtifacts").collect();
+    const artifactTtlDeletes = selectFileTtlDeletes(allArtifacts, now);
+    for (const artifact of artifactTtlDeletes) {
+      if (artifact.storageId) {
+        await ctx.storage.delete(artifact.storageId); // blob FIRST (D-05)
+      }
+      await ctx.db.delete(artifact._id);              // then doc row
+    }
+
+    // TTL pass for file metadata rows.
+    const allFiles = await ctx.db.query("forgeFiles").collect();
+    const fileTtlDeletes = selectFileTtlDeletes(allFiles, now);
+    for (const file of fileTtlDeletes) {
+      await ctx.db.delete(file._id);
+    }
+
+    // -------------------------------------------------------------------------
+    // Pass 2: Per-job artifact byte cap — group surviving artifacts by job,
+    // then drop oldest-first for any job over ARTIFACT_BYTE_CAP_PER_JOB.
+    // -------------------------------------------------------------------------
+    const artifactTtlDeletedIds = new Set(artifactTtlDeletes.map((a) => a._id));
+    const survivingArtifacts = allArtifacts.filter((a) => !artifactTtlDeletedIds.has(a._id));
+
+    const byJob = new Map<string, typeof survivingArtifacts>();
+    for (const artifact of survivingArtifacts) {
+      const key = `${artifact.hostId}::${artifact.forgeJobId}`;
+      if (!byJob.has(key)) byJob.set(key, []);
+      byJob.get(key)!.push(artifact);
+    }
+
+    for (const artifacts of byJob.values()) {
+      const capDeletes = selectFileCapDeletes(artifacts, ARTIFACT_BYTE_CAP_PER_JOB);
+      for (const artifact of capDeletes) {
+        if (artifact.storageId) {
+          await ctx.storage.delete(artifact.storageId); // blob FIRST (D-05)
+        }
+        await ctx.db.delete(artifact._id);
+      }
+    }
+  },
+});
