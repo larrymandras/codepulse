@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
 status: executing
-stopped_at: Phase 82 UI-SPEC approved
-last_updated: "2026-06-17T16:32:11.161Z"
+stopped_at: Phase 82 Plan 04 — code-complete, awaiting live round-trip operator verification
+last_updated: "2026-06-17T12:50:00Z"
 last_activity: 2026-06-17
 progress:
   total_phases: 6
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 Phase: 82 (files-preview-hardening) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Code-complete — awaiting live round-trip operator verification (checkpoint:human-verify gate open)
 Last activity: 2026-06-17
 
 **Progress bar:** [██████░░░░] 60% (3/5 phases shipped; 80 verified live)
@@ -93,6 +93,15 @@ See PROJECT.md Key Decisions table for full history.
 - httpAction (`forgeFileIngest`) decodes base64 image bytes via `atob` (Buffer.from fallback), `new Blob([bytes.buffer as ArrayBuffer])` (tsc requires ArrayBuffer not Uint8Array for BlobPart), `ctx.storage.store(blob)` in ActionCtx — `imageBase64` is stripped from the dispatched artifact, never persisted (Pitfall 3 / T-82-06).
 - Pure helpers (`artifactByteSize`, `selectFileTtlDeletes`, `selectFileCapDeletes`) exported from forge.ts so retention tests run without a Convex runtime. `sweepForgeFileRecords` two-pass (TTL + per-job cap), storage.delete BEFORE db.delete in both passes (D-05). Cron registration deferred to 82-02.
 
+**Phase 82 Plan 04 implementation notes (2026-06-17):**
+
+- `enumerateWorkspace` in `forge/src/workspace/enumerate.ts` applies two layers of guard before any byte read: (1) `guardPath` (lexical, T-82-14) catches `..`-style traversal via PathTraversalError; (2) `fs.realpathSync.native` containment check (physical, T-82-15) catches symlink/junction escapes that pass lexical check.
+- `FORGE_FILE_INGEST_URL` stores the FULL endpoint URL including `/forge-file-ingest` path. `emitFiles` passes it directly as the POST target — no path appended (Pitfall 5). Mirrors FORGE_LOG_INGEST_URL convention from log-forwarder.ts.
+- `FullEmitCfg = EmitCfg & { fileIngestUrl?: string }` exported from `config.ts`. Widened through `createGoalJob`, `handleChatJob`, `registerJobRoutes`, `createApiServer` via intersection type — no breaking change to existing EmitCfg consumers.
+- `void emitFiles(...)` wired AFTER `promoteWorkspace` in both terminal paths (chat: `handleChatJob` in jobs.ts; goal: `createGoalJob` exit handler in manager.ts). Output files land in `workspace.rootPath` only after promotion — placing the call before promotion would enumerate zero files.
+- ESM-sealed `fs.readdirSync` (non-configurable module namespace): spy-based synthetic dirent injection not possible. Tests use real temp dirs + direct guardPath assertion (Test B) and `fs.realpathSync.native` sub-property spy (Test C, which IS configurable as a function property).
+- Live round-trip: PENDING OPERATOR VERIFICATION. See 82-04-SUMMARY.md § CHECKPOINT.
+
 **Phase 82 Plan 03 implementation notes (2026-06-17):**
 
 - `useForgeJobFilesRaw` returns `undefined | ForgeFileRow[]` (mirrors `useForgeJobsRaw` pattern) so `ForgeFilesPane` can distinguish loading from genuinely-empty terminal result and show the spinner. `useForgeJobFiles` coalesces `undefined → []` for callers that don't need the distinction.
@@ -135,7 +144,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-17T16:32:11.153Z
-Stopped at: Phase 82 UI-SPEC approved
-Next action: Execute Phase 81 Plan 04 — cross-repo Forge makeLogSink finalization + live round-trip verification
-Resume file: None
+Last session: 2026-06-17T12:50:00Z
+Stopped at: Phase 82 Plan 04 — Forge daemon file emission code-complete (3 forge commits: 2558cc9, fa61feb, d8e468d); live round-trip checkpoint OPEN (FORGE_FILE_INGEST_URL gate not yet verified live)
+Next action: Operator performs live round-trip verification per 82-04-SUMMARY.md § CHECKPOINT steps, then types "approved" to close Task 3 gate and mark Phase 82 complete
+Resume file: .planning/phases/82-files-preview-hardening/82-04-SUMMARY.md
