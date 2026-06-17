@@ -167,7 +167,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
-| 82. Files + Preview + Hardening | v7.0 | 0/TBD | 📋 Active | — |
+| 82. Files + Preview + Hardening | v7.0 | 0/4 | Planned    |  |
 
 ---
 

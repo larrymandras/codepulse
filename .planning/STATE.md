@@ -4,8 +4,8 @@ milestone: v7.0
 milestone_name: Forge Integration
 status: executing
 stopped_at: Phase 82 UI-SPEC approved
-last_updated: "2026-06-17T15:13:55.236Z"
-last_activity: 2026-06-17 -- Phase 82 planning complete
+last_updated: "2026-06-17T16:01:23.831Z"
+last_activity: 2026-06-17 -- Phase 82 execution started
 progress:
   total_phases: 6
   completed_phases: 4
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v7.0 extends "drive its coding agents" to **Forge** — one application for all coding-agent work.
-**Current focus:** Phase 81 — live-log-streaming
+**Current focus:** Phase 82 — files-preview-hardening
 **Last completed:** Phase 80 — Command Bridge (launch + stop), 4/4 plans, verified live 2026-06-16 (bridge round-trip: launch + stop). Code on `forge-command-bridge` (CodePulse) + `feat/command-bridge-daemon` (Forge repo).
 
 ## Current Position
 
-Phase: 81 (live-log-streaming) — EXECUTING
-Plan: 4 of 4
-Status: Ready to execute
-Last activity: 2026-06-17 -- Phase 82 planning complete
+Phase: 82 (files-preview-hardening) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 82 (82-01 complete — Convex bridge backend)
+Last activity: 2026-06-17 -- Phase 82 Plan 01 complete (file/artifact ingest bridge)
 
 **Progress bar:** [██████░░░░] 60% (3/5 phases shipped; 80 verified live)
 
@@ -83,6 +83,15 @@ See PROJECT.md Key Decisions table for full history.
 - Scroll viewport is a plain `<div data-testid="forge-log-viewport" onScroll={handleScroll}>` — owned directly, not via ScrollArea, for jsdom testability and to match TranscriptPanel pattern.
 - Tab strip uses local `useState<'details'|'logs'>` (not shadcn Tabs) — simpler two-state switch; default `'details'` preserves Phase 79/80 ForgeMetadataPanel behavior.
 - `ForgeLogPane.test.tsx` simulates scroll via `Object.defineProperty` on `scrollHeight`/`clientHeight`/`scrollTop` — jsdom does not lay out, so real scrolling must be manually constructed.
+
+**Phase 82 Plan 01 implementation notes (2026-06-17):**
+
+- New tables `forgeFiles` + `forgeArtifacts` inserted between `forgeLogChunks` and `forgeWorkspaces` in schema.ts. NO `seq` field — idempotency key is `(hostId, forgeJobId, path)` via `by_host_job_path` index (Pitfall 6). `createdAt` is an explicit ISO string for TTL (not `_creationTime`).
+- `upsertFileEntries` is last-writer-wins PATCH on re-push (file size may change), unlike append-only `appendLogChunk` no-op. `upsertArtifacts` calls `ctx.storage.delete(existing.storageId)` BEFORE patch when overwriting an image with a different storageId (D-05 blob leak prevention).
+- `artifactByteSize` checks `textContent !== undefined` (NOT truthiness) — empty-string textContent must count as 0 bytes, not fall through to sizeBytes. Caught by a RED test.
+- `getJobArtifact` resolves `ctx.storage.getUrl(storageId)` inside the QueryCtx (available per Convex serve-files docs) and returns `{...artifact, imageUrl}`; text artifacts return `imageUrl: null`.
+- httpAction (`forgeFileIngest`) decodes base64 image bytes via `atob` (Buffer.from fallback), `new Blob([bytes.buffer as ArrayBuffer])` (tsc requires ArrayBuffer not Uint8Array for BlobPart), `ctx.storage.store(blob)` in ActionCtx — `imageBase64` is stripped from the dispatched artifact, never persisted (Pitfall 3 / T-82-06).
+- Pure helpers (`artifactByteSize`, `selectFileTtlDeletes`, `selectFileCapDeletes`) exported from forge.ts so retention tests run without a Convex runtime. `sweepForgeFileRecords` two-pass (TTL + per-job cap), storage.delete BEFORE db.delete in both passes (D-05). Cron registration deferred to 82-02.
 
 **Phase 79 implementation notes (carried):**
 
