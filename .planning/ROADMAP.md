@@ -5,7 +5,7 @@
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
 - ⏸️ **v6.0 Agentic OS Front-End** — Phases 71-77 (**parked** 2026-06-16; 71/72/73/74/76 shipped, **75 + 77 pending** on Ástríðr Surface-Substrate gates)
-- 🔄 **v7.0 Forge Integration** — Phases 78-82 (**active**; 78/79/80 shipped, 81/82 in planning) — Forge→CodePulse Surface-Substrate fold-in
+- ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 
 ## Phases
 
@@ -64,7 +64,12 @@ See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md
 
 ---
 
-## v7.0 Forge Integration (ACTIVE — activated 2026-06-16)
+## v7.0 Forge Integration — ✅ SHIPPED (2026-06-17)
+
+**All 5 phases (78–82) complete + verified live.** Forge folded into CodePulse via the Surface-Substrate bridge (state UP via httpActions, commands DOWN via a Convex queue). Full archive + stats: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) · requirements: [milestones/v7.0-REQUIREMENTS.md](milestones/v7.0-REQUIREMENTS.md).
+
+<details>
+<summary>v7.0 phase detail (archived 2026-06-17)</summary>
 
 **Milestone goal:** Make Forge a first-class CodePulse module so all coding-agent work happens in one application — without moving Forge's execution engine off the local machine.
 
@@ -154,6 +159,8 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Critical path:** 80 → 81 → 82, strictly sequential (each builds on the prior surface). Phase 81's risk was retired by the locked SPEC.
 **Cross-repo:** Forge-side counterparts land in the `forge` repo (emitter ✅ Phase 6; log sink `makeLogSink` finalization in Phase 81; command-poll daemon for Phase 80).
 
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -167,8 +174,8 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
-| 82. Files + Preview + Hardening | v7.0 | 3/4 | In Progress|  |
+| 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 
 ---
 
-*Last updated: 2026-06-16 — planned Phase 81 (Live Log Streaming): 4 plans across 3 waves (FI-09 receiver → FI-11 retention + FI-10 UI in parallel → cross-repo Forge round-trip). 78/79/80 shipped; v6.0 parked (75 + 77 pending).*
+*Last updated: 2026-06-17 — **Milestone v7.0 Forge Integration SHIPPED** (all 5 phases 78-82 complete + verified live; archived to milestones/v7.0-*). v6.0 remains parked (75 + 77 pending on Ástríðr gates). Next: new milestone or resume v6.0.*

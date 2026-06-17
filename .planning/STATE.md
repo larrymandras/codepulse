@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
-status: milestone-complete
-stopped_at: Milestone v7.0 Forge Integration — all 5 phases (78-82) complete + verified live. Ready to close (/gsd-complete-milestone).
+status: between-milestones
+stopped_at: Milestone v7.0 Forge Integration CLOSED 2026-06-17 — archived (milestones/v7.0-*) + tagged v7.0. Next: new milestone or resume parked v6.0 (75 Agent Console / 77 CI hardening).
 last_updated: "2026-06-17T23:10:00Z"
 last_activity: 2026-06-17
 progress:
