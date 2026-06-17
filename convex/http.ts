@@ -23,6 +23,7 @@ import { hrIngest } from "./hrIngest";
 import { configVersionIngest } from "./configVersionIngest";
 import { forgeIngest } from "./forgeIngest";
 import { forgeLogIngest } from "./forgeLogIngest";
+import { forgeFileIngest } from "./forgeFileIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 
 const http = httpRouter();
@@ -77,6 +78,10 @@ http.route({ path: "/forge-ingest", method: "OPTIONS", handler: forgeIngest });
 // Phase 81: Forge log ingest endpoint
 http.route({ path: "/forge-log-ingest", method: "POST",    handler: forgeLogIngest });
 http.route({ path: "/forge-log-ingest", method: "OPTIONS", handler: forgeLogIngest });
+
+// Phase 82: Forge file/artifact ingest endpoint
+http.route({ path: "/forge-file-ingest", method: "POST",    handler: forgeFileIngest });
+http.route({ path: "/forge-file-ingest", method: "OPTIONS", handler: forgeFileIngest });
 
 // Phase 80: Forge command bridge — claim + ack (daemon-facing, bearer-authed, D-14)
 http.route({ path: "/forge-commands-claim", method: "POST",    handler: forgeCommandsClaim });
