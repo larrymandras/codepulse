@@ -124,14 +124,18 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 
 ### Phase 82: Files + Artifact Preview + Hardening
 **Status**: 📋 ACTIVE
-**Goal**: Port FileBrowser/ArtifactPreview; solve artifact-origin reachability from the cloud UI (daemon tunnel or local-https, NOT direct localhost); end-to-end Clerk gating; polish.
+**Goal**: Browse a terminal job's workspace files and preview text/code/HTML + image artifacts in the cloud `/forge` UI, with metadata + capped bytes flowing daemon → Convex → cloud (the Surface-Substrate bridge used for logs in Phase 81 — NOT a tunnel/local-https/localhost path); plus end-to-end auth correctness, OPS-01 production CORS + deploy checklist, and empty/loading/error polish.
 **Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
 **Depends on**: Phase 81
 **Success Criteria** (what must be TRUE):
   1. Operator browses a job's workspace files and previews artifacts in `/forge` (ported FileBrowser / ArtifactPreview)
-  2. Artifact/file content is reachable from the cloud UI without mixed-content `http://localhost` (daemon tunnel or local-https path)
-  3. End-to-end Clerk gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
-**Plans**: TBD
+  2. Artifact/file content is reachable from the cloud UI via the Convex bounded-ingest bridge (no mixed-content `http://localhost`; tunnel/local-https rejected per 82-SPEC)
+  3. End-to-end auth gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
+**Plans**: 4 plans
+  - [ ] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
+  - [ ] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
+  - [ ] 82-03-PLAN.md — UI port: useForgeJobFiles hooks, FileBrowser + ArtifactPreview (sandboxed), ForgeFilesPane + Files tab
+  - [ ] 82-04-PLAN.md — Cross-repo forge daemon: workspace enumeration + emitFiles + live round-trip (forge repo)
 
 ## Execution Order
 
@@ -144,7 +148,7 @@ Phase 80 (Command Bridge)          ◀── NEXT — launch/stop queue + Clerk 
         │
 Phase 81 (Live Log Streaming)      design LOCKED (081-SPEC) — Convex-reactive, LOW risk
         │
-Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polish
+Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth + OPS-01 + polish
 ```
 
 **Critical path:** 80 → 81 → 82, strictly sequential (each builds on the prior surface). Phase 81's risk was retired by the locked SPEC.
