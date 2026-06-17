@@ -26,6 +26,8 @@ import { ForgeStatusBadge } from "./ForgeStatusBadge";
 import { ForgeMetadataPanel } from "./ForgeMetadataPanel";
 import { ForgeStopConfirmDialog } from "./ForgeStopConfirmDialog";
 import { ForgeLogPane } from "./ForgeLogPane";
+import { ForgeFilesPane } from "./ForgeFilesPane";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import type { ForgeJobRow, JobStatus } from "@/hooks/useForge";
 
 // ---------------------------------------------------------------------------
@@ -46,8 +48,8 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
   // listJobs query delivers a terminal status (stopped / failed / completed).
   const [isStoppingLocal, setIsStoppingLocal] = useState(false);
 
-  // Details/Logs tab — default to "details" so existing behavior is preserved.
-  type DetailTab = "details" | "logs";
+  // Details/Logs/Files tab — default to "details" so existing behavior is preserved.
+  type DetailTab = "details" | "logs" | "files";
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
 
   const enqueueStop = useMutation(api.forge.enqueueStop);
@@ -171,16 +173,36 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
         >
           Logs
         </button>
+        <button
+          onClick={() => setActiveTab("files")}
+          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+            activeTab === "files"
+              ? "border-emerald-500 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Files
+        </button>
       </div>
 
-      {/* Tab body — Details keeps ForgeMetadataPanel; Logs mounts ForgeLogPane */}
+      {/* Tab body — Details: ForgeMetadataPanel; Logs: ForgeLogPane; Files: ForgeFilesPane */}
       <div className="flex-1 overflow-hidden">
         {activeTab === "details" ? (
           <div className="h-full overflow-y-auto">
             <ForgeMetadataPanel job={job} />
           </div>
-        ) : (
+        ) : activeTab === "logs" ? (
           <ForgeLogPane hostId={job.hostId} forgeJobId={job.id} />
+        ) : (
+          <SectionErrorBoundary name="Files">
+            <ForgeFilesPane
+              hostId={job.hostId}
+              forgeJobId={job.id}
+              jobStatus={job.status}
+              workspace={{ rootPath: "" }}
+              workspaceId={job.workspaceId}
+            />
+          </SectionErrorBoundary>
         )}
       </div>
     </div>
