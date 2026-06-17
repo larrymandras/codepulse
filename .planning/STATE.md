@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
 status: executing
-stopped_at: Phase 82 Plan 04 — code-complete, awaiting live round-trip operator verification
-last_updated: "2026-06-17T12:50:00Z"
+stopped_at: Phase 82 complete (4/4) — files/listing bridge verified live; preview-bytes blocked by codex-sandbox ACLs (Forge follow-up)
+last_updated: "2026-06-17T22:25:00Z"
 last_activity: 2026-06-17
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 16
-  completed_plans: 15
+  completed_plans: 16
   percent: 67
 ---
 
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 ## Current Position
 
-Phase: 82 (files-preview-hardening) — EXECUTING
-Plan: 4 of 4
-Status: Code-complete — awaiting live round-trip operator verification (checkpoint:human-verify gate open)
+Phase: 82 (files-preview-hardening) — COMPLETE (4/4)
+Plan: 4 of 4 done
+Status: File/listing bridge verified live 2026-06-17 (forge fix a31dca4: enumerate realpath-EPERM fallback). Preview-byte rendering blocked only by codex-sandbox ACLs on agent-written files — a Forge follow-up, not a Phase 82 defect.
 Last activity: 2026-06-17
 
 **Progress bar:** [██████░░░░] 60% (3/5 phases shipped; 80 verified live)
@@ -43,7 +43,7 @@ Last activity: 2026-06-17
 | 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
 | 80 | Command Bridge (launch + stop) | ✅ Complete (4/4, verified live 2026-06-16) — FI-06/07/08 |
 | 81 | Live Log Streaming | 🔄 Executing (3/4 complete) — FI-09 + FI-10 + FI-11 done, Plan 04 remains |
-| 82 | Files + Artifact Preview + Hardening | 📋 Active — FI-12/13/14 |
+| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4) — FI-12/13/14; listing bridge verified live (forge a31dca4); preview-bytes pending Forge codex-sandbox ACL follow-up |
 
 **v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **75 (Agent Console)** blocked on Ástríðr M1.P0 + M1.P3; **77 (CI & Prod Hardening)** is 2/3 plans (77-03 remaining). Re-activates after Forge Integration / once Ástríðr Surface-Substrate gates clear. Requirements retained in REQUIREMENTS.md.
 

@@ -165,6 +165,27 @@ Task 3 is a `checkpoint:human-verify gate="blocking"`. The code wiring is comple
 
 **Resume signal:** Type "approved" once both round-trips are confirmed, or describe what failed.
 
+## Live Round-Trip Verification — COMPLETED 2026-06-17 (evening)
+
+Operator-driven live round-trip performed against deployment `tidy-whale-981` with the forge daemon running (host `lmofficenew`). Result: **the file-listing bridge is verified working end-to-end**, and the round-trip caught a real producer-side bug that is now fixed.
+
+### Verified working (live)
+- **Receiver (82-01):** direct POST to `/forge-file-ingest` persists rows in `forgeFiles` + `forgeArtifacts` (incl. `textContent`/`imageBase64`). Bearer auth via `FORGE_INGEST_API_KEY` enforced (401 on mismatch, 200 on match).
+- **Job-state bridge (`emitJob`):** completed jobs appear in `forgeJobs`.
+- **File listing bridge (FI-12/FI-13):** after the fix below, a completed job's full workspace listing crossed live — 9 files in `forgeFiles` with correct kinds (`text` / `image` / `binary`, including a >1 MB `big.bin` classified `binary`). `emitFiles` gate (`fileIngestUrl=SET`), payload shape, and URL all confirmed correct.
+
+### Bug found + fixed (forge commit `a31dca4`)
+- **Symptom:** `emitFiles` POSTed an empty listing (`files=0`) for every job → nothing in CodePulse Files tab, despite files on disk.
+- **Root cause:** `enumerateWorkspace` treated ANY `fs.realpathSync.native` error as "skip this file". On this Windows box `realpath` throws **EPERM** for the workspace files, so the symlink-escape guard silently dropped **every** file.
+- **Fix:** unresolvable `realpath` now falls back to an `lstat` symlink check (`guardPath` already blocked lexical traversal, so a regular non-symlink file is safely included; an unvettable symlink is still skipped — T-82-15 preserved). Regression test `C2` added. Full forge suite **562 passing**, tsc clean.
+
+### Known limitation — artifact preview bytes (NOT a Phase 82 defect)
+- `forgeArtifacts` did NOT populate for the live job: reading the file **bytes** (`readFileSync`) also EPERMs, because **codex's sandbox** (`--sandbox workspace-write`, restricted Windows token) writes output files with ACLs granting access only to an ephemeral restricted SID — unreadable by the daemon **and even by the interactive user** (`Get-Content` → Access Denied; ACL shows a single unresolved `S-1-5-21-…` SID).
+- The preview **code is correct** (receiver persists `textContent`; `enumerate` reads bytes whenever permitted — proven against readable files). The gap is purely that codex-sandboxed files are physically unreadable. This affects any Forge feature that reads codex output, not just this bridge.
+- **Follow-up (Forge, out of Phase 82 scope):** to make previews work for codex jobs, run codex with relaxed file ACLs (e.g. Dangerous mode / `danger-full-access`) or have promotion re-own/re-ACL promoted files to the daemon's token. Non-sandboxed agents (Claude Code) already write daemon-readable files.
+
+**Checkpoint disposition:** Gate SET path verified for the listing (the FI-12/FI-13 deliverable); preview-byte rendering is blocked only by the external codex-sandbox ACL issue above, not by Phase 82 code. 82-04 considered complete; preview-with-codex tracked as a Forge follow-up.
+
 ## Issues Encountered
 
 None beyond the ESM spy limitation documented as deviation above.
@@ -196,4 +217,4 @@ Verified:
 *Phase: 82-files-preview-hardening*
 *Plan: 04*
 *Completed (code): 2026-06-17*
-*Live round-trip: PENDING OPERATOR VERIFICATION*
+*Live round-trip: VERIFIED 2026-06-17 — listing bridge live (fix `a31dca4`); preview bytes blocked by codex-sandbox ACLs (Forge follow-up, not a Phase 82 defect)*
