@@ -299,3 +299,137 @@ export function useForgeJobLogs(
     [raw]
   );
 }
+
+// ---------------------------------------------------------------------------
+// Phase 82: Workspace lookup hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the rootPath for a specific workspace, or null while loading / not found.
+ * Used by ForgeFilesPane to resolve rootPath for VS Code deep links (A7).
+ * Calls listWorkspaces scoped to hostId; finds the matching workspaceId entry.
+ */
+export function useForgeWorkspace(
+  hostId: string | null,
+  workspaceId: string | null
+): { rootPath: string } | null | undefined {
+  const raw = useQuery(
+    api.forge.listWorkspaces,
+    hostId ? { hostId } : "skip"
+  );
+  return useMemo(() => {
+    if (raw === undefined) return undefined; // loading
+    if (!workspaceId) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ws = (raw as any[]).find((w: any) => w.workspaceId === workspaceId);
+    if (!ws) return null;
+    return { rootPath: ws.rootPath as string };
+  }, [raw, workspaceId]);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 82: File browser types + hooks (FI-12 / FI-14)
+// ---------------------------------------------------------------------------
+
+/**
+ * ForgeFileRow: Convex forgeFiles doc adapted for the FileBrowser component.
+ * Sourced from listJobFiles query (82-01 backend).
+ */
+export interface ForgeFileRow {
+  /** doc._id */
+  id: string;
+  /** Relative path within workspace (e.g. "output/report.html") */
+  path: string;
+  /** Kind tag: "text" | "image" | "video" | "audio" | "pdf" | "binary" */
+  kind: string;
+  sizeBytes: number;
+}
+
+/**
+ * ForgeArtifactRow: Convex forgeArtifacts doc adapted for ArtifactPreview.
+ * Returned by getJobArtifact (82-01 backend), which resolves imageUrl server-side.
+ */
+export interface ForgeArtifactRow {
+  path: string;
+  kind: string;
+  sizeBytes: number;
+  /** Text/HTML content for previewable text artifacts (≤ 1 MB). */
+  textContent?: string;
+  /** Convex File Storage URL for image artifacts (resolved by ctx.storage.getUrl). */
+  imageUrl?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Adapter: Convex forgeFiles doc → ForgeFileRow
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function adaptFileEntry(doc: any): ForgeFileRow {
+  return {
+    id: doc._id,
+    path: doc.path,
+    kind: doc.kind,
+    sizeBytes: doc.sizeBytes,
+  };
+}
+
+/**
+ * Returns file rows for a specific job, ordered asc by path.
+ * Returns undefined while the query is loading, [] when empty or args are null.
+ *
+ * Skip-query pattern: passes "skip" when either hostId or forgeJobId is null
+ * (idiomatic Convex conditional-query pattern, mirrors useForgeJobLogs).
+ *
+ * Phase 80 memoization rule: raw.map(...) allocates a fresh array every render.
+ * Without useMemo, a reactive query delivering live file updates would cause
+ * referential instability and "Maximum update depth exceeded" under live data.
+ * Always wrap .map() output in useMemo([raw]).
+ *
+ * Note: returns undefined (loading) vs [] (empty or skipped) to allow callers
+ * to distinguish the loading state from the genuinely-empty state (mirrors
+ * useForgeJobsRaw pattern). Use useForgeJobFiles() for [] coalescing.
+ */
+export function useForgeJobFilesRaw(
+  hostId: string | null,
+  forgeJobId: string | null
+): ForgeFileRow[] | undefined {
+  const raw = useQuery(
+    api.forge.listJobFiles,
+    hostId && forgeJobId ? { hostId, forgeJobId } : "skip"
+  );
+  return useMemo(
+    () => (raw === undefined ? undefined : raw.map(adaptFileEntry)),
+    [raw]
+  );
+}
+
+/**
+ * Returns file rows for a specific job, [] during load (undefined → []).
+ * Convenience wrapper over useForgeJobFilesRaw for callers that don't
+ * need to distinguish loading from empty.
+ */
+export function useForgeJobFiles(
+  hostId: string | null,
+  forgeJobId: string | null
+): ForgeFileRow[] {
+  return useForgeJobFilesRaw(hostId, forgeJobId) ?? [];
+}
+
+/**
+ * Returns the artifact for a specific file path within a job.
+ * Returns undefined while loading, null if not found, or the artifact row.
+ *
+ * No useMemo needed — returns a single object (not an array), so referential
+ * stability is not a concern for render-loop prevention.
+ * Passes "skip" when any of hostId / forgeJobId / path is null/undefined.
+ */
+export function useForgeJobArtifact(
+  hostId: string | null,
+  forgeJobId: string | null,
+  path: string | null
+): ForgeArtifactRow | null | undefined {
+  return useQuery(
+    api.forge.getJobArtifact,
+    hostId && forgeJobId && path ? { hostId, forgeJobId, path } : "skip"
+  );
+}
