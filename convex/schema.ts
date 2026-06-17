@@ -1496,6 +1496,35 @@ export default defineSchema({
     .index("by_host_job",     ["hostId", "forgeJobId"])          // listJobLogs / retention sweep
     .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check
 
+  // Phase 82: Per-job file metadata from Forge daemon. Idempotent per (hostId, forgeJobId, path).
+  // Retention: 7-day TTL + per-job cap enforced by sweepForgeFileRecords cron. (FI-12 / D-05)
+  forgeFiles: defineTable({
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    path:       v.string(),     // relative path within workspace
+    kind:       v.string(),     // "text"|"image"|"video"|"audio"|"pdf"|"binary"
+    sizeBytes:  v.number(),
+    createdAt:  v.string(),     // ISO timestamp — for TTL retention (not _creationTime)
+  })
+    .index("by_host_job",      ["hostId", "forgeJobId"])           // listJobFiles / sweep
+    .index("by_host_job_path", ["hostId", "forgeJobId", "path"]),  // idempotency + upsert
+
+  // Phase 82: Per-job artifact bytes from Forge daemon. Idempotent per (hostId, forgeJobId, path).
+  // textContent for text/HTML (≤ ~1 MB string); storageId for image blobs (Convex File Storage).
+  // Retention: same sweep as forgeFiles; image blobs deleted via ctx.storage.delete BEFORE doc row (D-05).
+  forgeArtifacts: defineTable({
+    hostId:      v.string(),
+    forgeJobId:  v.string(),
+    path:        v.string(),
+    kind:        v.string(),                    // "text"|"image"
+    sizeBytes:   v.number(),
+    textContent: v.optional(v.string()),        // text/HTML bytes (≤ ~1 MB)
+    storageId:   v.optional(v.id("_storage")), // image bytes (Convex File Storage)
+    createdAt:   v.string(),
+  })
+    .index("by_host_job",      ["hostId", "forgeJobId"])
+    .index("by_host_job_path", ["hostId", "forgeJobId", "path"]),  // idempotency + artifact lookup
+
   // Periodic workspace sync from Forge host (D-06). Full replace per host.
   forgeWorkspaces: defineTable({
     hostId:      v.string(),
