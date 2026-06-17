@@ -115,4 +115,12 @@ crons.daily(
   internal.forge.sweepForgeLogChunks,
 );
 
+// Phase 82: Forge file/artifact retention (D-05)
+// Offset from the 03:30 log sweep to avoid scheduler contention.
+crons.daily(
+  "sweep-forge-file-records",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.forge.sweepForgeFileRecords,
+);
+
 export default crons;
