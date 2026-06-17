@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
 status: executing
-stopped_at: Phase 81 Plan 2 complete — sweepForgeLogChunks + daily cron + 14 retention tests (FI-11 / D-2 done)
-last_updated: "2026-06-16T22:20:37.244Z"
-last_activity: 2026-06-16
+stopped_at: Phase 82 UI-SPEC approved
+last_updated: "2026-06-17T15:13:55.236Z"
+last_activity: 2026-06-17 -- Phase 82 planning complete
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 12
-  completed_plans: 11
-  percent: 50
+  completed_phases: 4
+  total_plans: 16
+  completed_plans: 12
+  percent: 67
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 Phase: 81 (live-log-streaming) — EXECUTING
 Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-06-16
+Last activity: 2026-06-17 -- Phase 82 planning complete
 
 **Progress bar:** [██████░░░░] 60% (3/5 phases shipped; 80 verified live)
 
@@ -117,7 +117,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-16T18:20:00Z
-Stopped at: Phase 81 Plan 03 complete — useForgeJobLogs + ForgeLogPane tail pane + Details/Logs tab (FI-10 done)
+Last session: 2026-06-17T14:31:51.201Z
+Stopped at: Phase 82 UI-SPEC approved
 Next action: Execute Phase 81 Plan 04 — cross-repo Forge makeLogSink finalization + live round-trip verification
-Resume file: .planning/phases/81-live-log-streaming/81-03-SUMMARY.md
+Resume file: .planning/phases/82-files-preview-hardening/82-UI-SPEC.md

@@ -882,7 +882,13 @@ One exception: **`forgeJobs.artifactCount`** — this display-only counter (set 
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+**Resolution (2026-06-17, at plan time):** All four resolved into the Phase 82 plans.
+- Q1 — **RESOLVED with execution checkpoint:** plans store via `ctx.storage.store` in the httpAction (ActionCtx) with a documented `internalAction` fallback (82-01). The `[ASSUMED: A1]` ActionCtx-storage API surface is confirmed by Convex docs but should get a 1-minute `npx convex dev` smoke test BEFORE 82-01 Task 3 is committed green.
+- Q2 — **RESOLVED:** per-file 1,000,000 B, per-job total 10 MB, file-count cap 500 (Claude's Discretion per D-03/D-05; set as constants in 82-01/82-04).
+- Q3 — **RESOLVED:** `FORGE_FILE_INGEST_URL` (parallel to `FORGE_LOG_INGEST_URL`).
+- Q4 — **RESOLVED:** `docs/forge-deploy-checklist.md` (82-02).
 
 1. **httpAction vs internalAction for ctx.storage.store()**
    - What we know: `ctx.storage.store()` needs ActionCtx or MutationCtx; httpActions ARE ActionCtx.
