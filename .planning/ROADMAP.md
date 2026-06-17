@@ -120,7 +120,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   - [x] 81-01-PLAN.md — Receiver: forgeLogChunks schema + /forge-log-ingest httpAction + appendLogChunk (seq-idempotent) + listJobLogs + contract test (FI-09)
   - [x] 81-02-PLAN.md — Retention: sweepForgeLogChunks (7-day TTL + per-job ~1 MB cap, drop-oldest) + daily cron + cleanup test (FI-11)
   - [x] 81-03-PLAN.md — UI: useForgeJobLogs hook + ForgeLogPane (auto-follow tail / pause / jump-to-latest) behind a Details/Logs tab in ForgeJobDetail (FI-10)
-  - [ ] 81-04-PLAN.md — Cross-repo: finalize Forge makeLogSink (real fetch + seq, T-6-KEYLEAK) + live round-trip, closes Forge 08-HUMAN-UAT (FI-09/10/11)
+  - [x] 81-04-PLAN.md — Cross-repo: finalize Forge makeLogSink (real fetch + seq, T-6-KEYLEAK) + live round-trip, closes Forge 08-HUMAN-UAT (FI-09/10/11)
 
 ### Phase 82: Files + Artifact Preview + Hardening
 **Status**: 📋 ACTIVE
@@ -162,7 +162,7 @@ Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polis
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
-| 81. Live Log Streaming | v7.0 | 3/4 | In Progress|  |
+| 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
 | 82. Files + Preview + Hardening | v7.0 | 0/TBD | 📋 Active | — |
 
 ---
