@@ -901,6 +901,7 @@ export const importSkills = mutation({
           description: item.description,
           source: item.source ?? args.importSource,
           discoveredAt: now,
+          origin: "catalog",
         });
         await ctx.runMutation(api.skillCategories.autoSeedSkill, {
           skillName: item.name,
@@ -1020,6 +1021,7 @@ export const repairSkillsFromOverrides = mutation({
         await ctx.db.insert("skills", {
           name: override.skillName,
           discoveredAt: now,
+          origin: "unknown",
         });
         repaired++;
       }
