@@ -130,7 +130,7 @@ All 14 requirements (FI-01 … FI-14) satisfied and verified live. Archived to [
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GH-01 | Phase 83 | Pending — not started |
+| GH-01 | Phase 83 | Complete — verified (live round-trip, 2026-06-18) |
 | GH-02 | Phase 84 | Pending — not started |
 | GH-03 | Phase 84 | Pending — not started |
 | GH-04 | Phase 85 | Pending — not started |
