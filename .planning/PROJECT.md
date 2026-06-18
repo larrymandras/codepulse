@@ -35,24 +35,23 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
-## Current Milestone: v7.0 Forge Integration
+## Current Milestone: v8.0 Graph/KG Consolidation
 
-> **Activated 2026-06-16** (promoted 2026-06-13 from backlog 999.1). Makes Forge — the local coding-agent runner — a first-class CodePulse module so all coding-agent work happens in one application, without moving Forge's execution engine off the local machine. Same Surface-Substrate pattern Ástríðr uses: Forge runs as a local daemon emitting state UP via an `/ingest`-style httpAction; CodePulse sends commands DOWN via a Convex command queue the daemon polls. Clerk-gated. **Rejected:** a cloud tab calling `http://localhost` directly (mixed-content blocked).
+> **Started 2026-06-18.** Completes the Unified Graph Hub that Phase 76 (v6.0) never shipped, and deepens the KG Explorer (Phase 74). Net-new work is almost entirely CodePulse-side: Ástríðr's `graph_snapshot` uploader (graphify code graph + Obsidian vault wikilinks → `{nodes,links}` pushed to Convex `/runtime-ingest`, nightly cron) **already ships** (Ástríðr Phase 137 / M1.P4, 2026-06-09) — but CodePulse has **no receiver**, so those snapshots are currently dropped on the floor. v8.0 builds the receiver, the `/graphs` hub, cross-graph navigation, and four KG depth features.
 
-**Goal:** Operators launch, watch (live logs), stop, and inspect Forge coding-agent jobs and their artifacts from the CodePulse dashboard — one application for all agent work.
+**Goal:** Operators explore all of Ástríðr's graphs — KG, tool galaxy, MCP, and the code/vault dependency graph — from one unified Graphs hub, with deeper KG search, clustering, saved views, and temporal diff.
 
-**Phases (78-82):**
-- **Phase 78 — Forge Emitter + Convex Schema** *(✅ shipped)* — read-only foundation: `forgeJobs`/`forgeWorkspaces` tables + bearer-authed `/forge-ingest` httpAction + read query API + Forge-side emitter. (FI-01..03)
-- **Phase 79 — Forge UI Tab (read-only)** *(✅ shipped, PR #20)* — `/forge` route + CONSOLE nav entry rendering jobs/status/detail from `useQuery(api.forge.*)`. (FI-04, FI-05)
-- **Phase 80 — Command Bridge** *(📋 active, next)* — Convex `forgeCommands` queue the daemon long-polls; launch/stop UI (port NewJobModal); Clerk-gated mutations. (FI-06..08)
-- **Phase 81 — Live Log Streaming** *(📋 active, design locked in 081-SPEC)* — `POST /forge-log-ingest` → append-only `forgeLogChunks` (with `seq` idempotency) → reactive `listJobLogs`; Convex reactivity IS the live stream (no SSE/WS). 7-day TTL + per-job cap. (FI-09..11)
-- **Phase 82 — Files + Artifact Preview + Hardening** *(📋 active)* — port FileBrowser/ArtifactPreview; artifact reachability without direct-localhost; e2e Clerk gating + polish. (FI-12..14)
+**Requirements:**
+- **GH-01..04** — graph-snapshot receiver (Convex table + `runtimeIngest` dispatch; fixes the dropped-events bug), `/graphs` landing rendering the pushed code+vault graph, unified hub IA, cross-graph navigation
+- **KG-08..11** — full-text fact search (+ Ástríðr `/api/kg/search` endpoint), clustering/community-detection layout (leverages the `community` field already in the snapshot payload), named/saved + shareable views, temporal diff/animation
 
-**Sequencing:** Strictly sequential 80 → 81 → 82 — each builds on the prior Forge surface. Phase 81's original HIGH-risk SSE/WebSocket spike was retired by the locked 081-SPEC (Convex-reactive path, LOW risk). Cross-repo: Forge-side counterparts land in the `forge` repo (emitter ✅; command-poll daemon for 80; `makeLogSink` finalization for 81).
+**Phases (83+):** set by the roadmap — this section updates when the roadmap lands. Reuses in-house patterns: the v7.0 Forge receiver (for GH-01), `ForceGraphCanvas` / `kg-graph.ts` / `ObsidianGraph` (render), and the existing KG Explorer (Phase 74) for the depth features.
 
-## Parked Milestone: v6.0 Agentic OS Front-End
+**Cross-repo:** mostly CodePulse-side. The one likely Ástríðr delta is a `/api/kg/search` endpoint for full-text fact search (KG-08); the snapshot uploader (GH-01's producer) is already done.
 
-> **Parked 2026-06-16** in favor of v7.0 Forge Integration. CodePulse is the rendering/control half of the two-milestone Agentic OS plan (companion: `C:\Users\mandr\html-out\agentic-os-milestones.md`). Phases **71/72/73/74/76 shipped** (light-mode execution). **Phase 75 (Agent Console)** is blocked on Ástríðr M1.P0 + M1.P3; **Phase 77 (CI & Production Hardening)** is 2/3 plans complete (77-03 deploy checklist + `CODEPULSE_ALLOWED_ORIGIN` remaining). Both re-activate after Forge Integration and/or once the Ástríðr Surface-Substrate gates clear. All DS/GAL/MCP/KG/CON/HUB/OPS requirements retained in REQUIREMENTS.md — nothing dropped.
+## Closed Milestone: v6.0 Agentic OS Front-End
+
+> **Closed 2026-06-18** (reconciled against live code). Phases **71/72/73/74 shipped** (light-mode); **75 (Agent Console) superseded** by v7.0 Forge; **77 (CI & Production Hardening) complete** (3/3). **76 (Unified Graph Hub) was NOT shipped** — only the 3 standalone graph pages exist; its HUB-01/02/03 requirements are **absorbed into v8.0** (GH-01..04). All DS/GAL/MCP/KG/CON/HUB/OPS requirements retained in REQUIREMENTS.md — nothing dropped.
 
 ## Requirements
 
@@ -100,15 +99,22 @@ v5.0 added 12 phases:
 - ✓ Gateway observability (quota, routing, tasks, comparison) — v5.0 Phase 68
 - ✓ SDK spend guard with projected daily totals — v5.0 Phase 69
 
-### Active (v7.0 Forge Integration)
+### Validated (v7.0 Forge Integration)
 
-- ✓ FI-01/02/03 — Forge schema + emitter/`/forge-ingest` + read query API — Phase 78 (shipped)
-- ✓ FI-04/05 — `/forge` route + nav + ported read-only components — Phase 79 (shipped, PR #20)
-- [ ] FI-06/07/08 — Command Bridge: `forgeCommands` queue + launch/stop UI + Clerk gating — Phase 80
-- [ ] FI-09/10/11 — Live Log Streaming: `/forge-log-ingest` + `forgeLogChunks` + reactive tail + retention — Phase 81
-- [ ] FI-12/13/14 — Files/artifact preview + reachability + e2e hardening — Phase 82
+- ✓ FI-01 … FI-14 — Forge folded into CodePulse (schema/emitter, read UI, command bridge, live logs, files/preview, hardening) — Phases 78-82 (shipped 2026-06-17)
 
-Full definitions + traceability: `.planning/REQUIREMENTS.md`. Parked v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained there as well.
+### Active (v8.0 Graph/KG Consolidation)
+
+- [ ] GH-01 — Graph-snapshot receiver: `graphSnapshots` table + `runtimeIngest` dispatch for `graph_snapshot` (idempotent on `snapshotId`) + read query API; stops dropping Ástríðr's nightly snapshots
+- [ ] GH-02 — `/graphs` landing renders the pushed code (graphify) + vault (Obsidian) graph from Convex, reusing `ForceGraphCanvas`, with truncation indicated
+- [ ] GH-03 — Unified Graphs hub: KG Explorer, Tool Galaxy, MCP Inventory, code/vault graph reachable from one hub with consistent interactions
+- [ ] GH-04 — Cross-graph navigation: deep-link tool → owning agent → KG entity across graph surfaces where data supports it
+- [ ] KG-08 — Full-text fact search across fact text/values + relationship labels (backed by an Ástríðr `/api/kg/search` endpoint)
+- [ ] KG-09 — Clustering / community-detection layout for large graphs (leverages the `community` field in the snapshot payload)
+- [ ] KG-10 — Named, saved, and shareable graph views (beyond last-state idb persistence)
+- [ ] KG-11 — Temporal diff / animation: compare the KG between two as-of points and/or animate evolution
+
+Full definitions + traceability: `.planning/REQUIREMENTS.md`. Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained there as well.
 
 ### Out of Scope
 
@@ -171,4 +177,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-16 — activated v7.0 Forge Integration (Phases 78-82); 78/79 shipped, 80/81/82 in the active roadmap; v6.0 parked (75 + 77 pending). Next: `/gsd-discuss-phase 80`.*
+*Last updated: 2026-06-18 — started v8.0 Graph/KG Consolidation (phases 83+). v7.0 Forge shipped; v6.0 closed (76 absorbed into v8.0). Requirements GH-01..04 + KG-08..11 defined; roadmap next.*

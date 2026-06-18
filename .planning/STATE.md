@@ -1,36 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: Forge Integration
-status: between-milestones
-stopped_at: Milestone v7.0 Forge Integration CLOSED 2026-06-17 — archived (milestones/v7.0-*) + tagged v7.0. v6.0 now fully resolved (77 complete 2026-06-18; 75 Agent Console SUPERSEDED by v7.0 Forge 2026-06-18). Next: new milestone.
-last_updated: "2026-06-17T23:10:00Z"
-last_activity: 2026-06-17
+milestone: v8.0
+milestone_name: Graph/KG Consolidation
+status: planning
+last_updated: "2026-06-18T14:35:14.835Z"
+last_activity: 2026-06-18
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-16)
+See: .planning/PROJECT.md (updated 2026-06-18)
 
-**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v7.0 extends "drive its coding agents" to **Forge** — one application for all coding-agent work.
-**Current focus:** Milestone v7.0 COMPLETE — ready to close (`/gsd-complete-milestone`).
+**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
+**Current focus:** Milestone v8.0 Graph/KG Consolidation — defining requirements + roadmap (phases 83+).
 **Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, 2026-06-17. **File LISTING bridge verified live**; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task. **Artifact PREVIEW-bytes path: ACL fix applied (dbfad91) but the end-to-end live preview round-trip is still PENDING OPERATOR VERIFICATION** (82-04-SUMMARY § CHECKPOINT).
 
 ## Current Position
 
-Milestone: v7.0 Forge Integration — COMPLETE (5/5 phases: 78-82)
-Status: All 5 phases shipped. Phase 82 file LISTING bridge verified live end-to-end; preview-bytes ACL fix applied (forge dbfad91) but live preview round-trip pending operator verification. Ready to close the milestone.
-Last activity: 2026-06-17
-
-**Progress bar:** [██████████] 100% (5/5 phases shipped; 80/81/82 verified live)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-18 — Milestone v8.0 started
 
 ## Milestone Status (2026-06-16)
 
