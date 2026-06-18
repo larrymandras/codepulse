@@ -20,6 +20,7 @@ export default function Skills() {
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [originFilter, setOriginFilter] = useState<string>("all");
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
@@ -34,9 +35,19 @@ export default function Skills() {
   const bulkAccept = useMutation(api.skillCategories.bulkAcceptAutoAssigned);
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
 
-  const visibleSkills = useMemo(() => {
-    return enrichedSkills.filter((s) => !s.hidden);
+  const allOrigins = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of enrichedSkills) for (const o of (s.origins ?? [])) set.add(o);
+    return [...set].sort();
   }, [enrichedSkills]);
+
+  const visibleSkills = useMemo(() => {
+    return enrichedSkills.filter(
+      (s) =>
+        !s.hidden &&
+        (originFilter === "all" || (s.origins ?? []).includes(originFilter))
+    );
+  }, [enrichedSkills, originFilter]);
 
   const skillCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -187,6 +198,19 @@ export default function Skills() {
                 className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-xs font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
               />
             </div>
+            <select
+              value={originFilter}
+              onChange={(e) => setOriginFilter(e.target.value)}
+              className="bg-card border border-border rounded-lg px-2 py-1.5 text-sm text-foreground"
+              aria-label="Filter by origin"
+            >
+              <option value="all">All origins</option>
+              {allOrigins.map((o) => (
+                <option key={o} value={o}>
+                  {o.startsWith("claude-code:project:") ? "Project" : o}
+                </option>
+              ))}
+            </select>
             
             <div className="flex flex-col gap-2">
               <h2 className="text-[10px] font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">

@@ -195,7 +195,9 @@ export default defineSchema({
     discoveredAt: v.float64(),
     origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
     useCount: v.optional(v.float64()),
-  }).index("by_name", ["name"]),
+  })
+    .index("by_name", ["name"])
+    .index("by_name_origin", ["name", "origin"]),
 
   skillCategories: defineTable({
     name: v.string(),
