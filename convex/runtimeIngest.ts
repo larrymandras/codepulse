@@ -877,6 +877,24 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "graph_snapshot": {
+          // Phase 83 (GH-01): Graph snapshot receiver — persists Ástríðr's nightly
+          // graphify + vault snapshot instead of dropping it. Row-based storage to
+          // avoid Convex array-element (8192) and doc-size (~1 MiB) limits.
+          // internalMutation (not api.*) — httpAction has no Clerk identity (Pitfall 1).
+          const d = data as any;
+          await ctx.runMutation(internal.graphSnapshots.upsertGraphSnapshot, {
+            snapshotId:  d.snapshotId ?? "astridr-project-graph",
+            nodes:       Array.isArray(d.nodes) ? d.nodes : [],
+            links:       Array.isArray(d.links) ? d.links : [],
+            sources:     Array.isArray(d.sources) ? d.sources : [],
+            nodeCount:   d.nodeCount ?? 0,
+            linkCount:   d.linkCount ?? 0,
+            generatedAt: d.generatedAt ?? timestamp,
+            receivedAt:  timestamp,
+          });
+          break;
+        }
       }
     }
 

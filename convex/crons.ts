@@ -123,4 +123,12 @@ crons.daily(
   internal.forge.sweepForgeFileRecords,
 );
 
+// Phase 83: Graph snapshot version retention (D-03)
+// Offset from the 04:00 file sweep to avoid scheduler contention.
+crons.daily(
+  "sweep-graph-snapshot-versions",
+  { hourUTC: 4, minuteUTC: 30 },
+  internal.graphSnapshots.sweepGraphSnapshotVersions,
+);
+
 export default crons;
