@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { groupSkillRowsByName } from "./skillSync";
 
 export const DEFAULT_ICONS: Record<string, string> = {
   gsd: "📋",
@@ -85,20 +86,20 @@ export const countAutoAssigned = query({
 export const getSkillsWithOverrides = query({
   args: {},
   handler: async (ctx) => {
-    const skills = await ctx.db.query("skills").collect();
+    const rows = await ctx.db.query("skills").collect();
+    const grouped = groupSkillRowsByName(rows);
     const overrides = await ctx.db.query("skillOverrides").collect();
     const categories = await ctx.db.query("skillCategories").collect();
 
     const overrideMap = new Map(overrides.map((o) => [o.skillName, o]));
     const categoryMap = new Map(categories.map((c) => [c.name, c]));
 
-    return skills.map((skill) => {
+    return grouped.map((skill) => {
       const override = overrideMap.get(skill.name);
-      const category = override
-        ? categoryMap.get(override.categoryName)
-        : null;
+      const category = override ? categoryMap.get(override.categoryName) : null;
       return {
         ...skill,
+        origin: skill.origins[0], // backward-compat: first origin
         displayName: override?.displayName ?? skill.name,
         categoryName: override?.categoryName ?? null,
         categoryDisplayName: category?.displayName ?? null,

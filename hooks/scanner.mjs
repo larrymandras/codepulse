@@ -8,6 +8,7 @@ import { join, dirname } from "path";
 import { homedir, cpus, totalmem, freemem } from "os";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
+import { collectClaudeCodeSkills } from "./skillScan.mjs";
 
 /**
  * Run a full environment scan and POST results to CodePulse /scan endpoint.
@@ -15,7 +16,7 @@ import { fileURLToPath } from "url";
  * @param {string} sessionId - The Claude Code session ID
  * @param {string} codepulseUrl - The CodePulse Convex site URL (e.g. https://....convex.site)
  */
-export async function runScan(sessionId, codepulseUrl) {
+export async function runScan(sessionId, codepulseUrl, ingestKey) {
   const home = homedir();
   const globalClaudeDir = join(home, ".claude");
   const cwd = process.cwd();
@@ -69,6 +70,13 @@ export async function runScan(sessionId, codepulseUrl) {
     } catch {
       // ignore parse errors
     }
+  }
+
+  // ── Claude Code skills (personal + plugin cache + per-repo project) ──
+  try {
+    snapshot.skills.push(...collectClaudeCodeSkills({ home, cwd }));
+  } catch (err) {
+    console.error(`[codepulse-scanner] skill scan failed: ${err.message}`);
   }
 
   // ── Project agents (.claude/agents/ in cwd) ─────────────────────────
@@ -181,9 +189,12 @@ export async function runScan(sessionId, codepulseUrl) {
   const timeout = setTimeout(() => controller.abort(), 3000);
 
   try {
+    const headers = { "Content-Type": "application/json" };
+    if (ingestKey) headers["Authorization"] = `Bearer ${ingestKey}`;
+    else console.warn("[codepulse-scanner] no ASTRIDR_INGEST_API_KEY set — posting unauthenticated (server may reject)");
     const resp = await fetch(`${codepulseUrl}/scan`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(snapshot),
       signal: controller.signal,
     });
@@ -239,6 +250,7 @@ const isDirectRun = process.argv[1] && process.argv[1].replace(/\\/g, "/").inclu
 
 if (isDirectRun) {
   const sessionId = process.argv[2] || "manual-scan";
+  const dryRun = process.argv.includes("--dry-run");
 
   // Inline URL resolution (same logic as codepulse-hook.mjs)
   let url = process.env.CODEPULSE_URL || "";
@@ -254,11 +266,30 @@ if (isDirectRun) {
   }
   if (!url) url = "https://ideal-sandpiper-297.convex.site";
 
-  runScan(sessionId, url).then(() => {
-    console.log("[codepulse-scanner] Scan complete.");
+  // Resolve the ingest key (env first, then .env.local)
+  let key = process.env.ASTRIDR_INGEST_API_KEY || "";
+  if (!key) {
+    const envPath = join(__scanner_dirname, "..", ".env.local");
+    if (existsSync(envPath)) {
+      try {
+        const content = readFileSync(envPath, "utf-8");
+        const m = content.match(/^ASTRIDR_INGEST_API_KEY\s*=\s*(.+)$/m);
+        if (m) key = m[1].trim();
+      } catch {}
+    }
+  }
+
+  if (dryRun) {
+    const { homedir } = await import("node:os");
+    const { collectClaudeCodeSkills } = await import("./skillScan.mjs");
+    const skills = collectClaudeCodeSkills({ home: homedir(), cwd: process.cwd() });
+    console.log(JSON.stringify(skills, null, 2));
+    console.log(`[codepulse-scanner] DRY RUN — ${skills.length} skills would be posted.`);
     process.exit(0);
-  }).catch(err => {
-    console.error(`[codepulse-scanner] ${err.message}`);
+  }
+
+  runScan(sessionId, url, key).then(() => {
+    console.log("[codepulse-scanner] Scan complete.");
     process.exit(0);
   });
 }
