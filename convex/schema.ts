@@ -1605,4 +1605,60 @@ export default defineSchema({
   })
     .index("by_hostId",     ["hostId"])
     .index("by_lastSeenAt", ["lastSeenAt"]),
+
+  // ============================================================
+  // GRAPH SNAPSHOT RECEIVER (Phase 83, GH-01)
+  // ============================================================
+  //
+  // Row-based storage (D-01): a single-blob document would exceed Convex's
+  // 8,192-element array-field limit (~9,000 links worst case) and the ~1 MiB
+  // document-size limit. Three tables with versioned entity rows avoid both limits.
+  //
+  // Versioning (D-02): each ingest increments activeVersion; old version rows are
+  // swept by the retention cron (D-03, keeps last N≈7 versions).
+  //
+  // Ingest auth: reuses validateIngestAuth / getCorsHeaders from /runtime-ingest
+  // (no new auth surface). Producer: Ástríðr `graph:snapshot` nightly cron.
+
+  // One meta row per snapshotId. Holds the activeVersion pointer and aggregate counts.
+  graphSnapshots: defineTable({
+    snapshotId:       v.string(),      // stable id e.g. "astridr-project-graph"
+    activeVersion:    v.number(),      // monotonic int — incremented on each ingest (A1)
+    sources:          v.array(v.object({
+      source:             v.string(),
+      kind:               v.string(),
+      nodeCount:          v.float64(),
+      linkCount:          v.float64(),
+      emittedNodeCount:   v.float64(),
+      emittedLinkCount:   v.float64(),
+      truncated:          v.boolean(),
+    })),                               // persisted verbatim from producer (D-05)
+    nodeCount:        v.float64(),     // producer's total merged nodeCount
+    linkCount:        v.float64(),     // producer's total merged linkCount
+    storedNodeCount:  v.float64(),     // receiver-side: how many nodes actually persisted
+    storedLinkCount:  v.float64(),     // receiver-side: after dangling-link drop
+    generatedAt:      v.float64(),     // epoch seconds — producer's time.time() float (Pitfall 6)
+    updatedAt:        v.float64(),     // epoch seconds — when CodePulse stored this version
+  }).index("by_snapshotId", ["snapshotId"]),
+
+  // Entity rows for graph nodes, keyed by (snapshotId, version).
+  // community is optional float64 — vault nodes emit community: null (Pitfall 4 / T-83-04).
+  graphSnapshotNodes: defineTable({
+    snapshotId: v.string(),
+    version:    v.number(),
+    nodeId:     v.string(),                  // pre-namespaced producer id — do NOT re-namespace
+    label:      v.string(),
+    type:       v.string(),
+    community:  v.optional(v.float64()),     // nullable: vault nodes carry community: null
+    source:     v.string(),
+  }).index("by_snapshot_version", ["snapshotId", "version"]),
+
+  // Entity rows for graph links, keyed by (snapshotId, version).
+  graphSnapshotLinks: defineTable({
+    snapshotId: v.string(),
+    version:    v.number(),
+    source:     v.string(),   // namespaced node id (source node)
+    target:     v.string(),   // namespaced node id (target node)
+    relation:   v.string(),
+  }).index("by_snapshot_version", ["snapshotId", "version"]),
 });
