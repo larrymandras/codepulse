@@ -187,9 +187,12 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Success Criteria** (what must be TRUE):
   1. A `graph_snapshot` POST to `/runtime-ingest` populates a `graphSnapshots` Convex table — operator can verify by querying the table after Ástríðr's next nightly run
   2. Re-posting the same `snapshotId` is a no-op (idempotent full-replacement) — no duplicate rows accumulate over repeated runs
-  3. `api.graphs.listSnapshots` and `api.graphs.getSnapshot` queries return stored snapshot metadata and `{nodes,links}` payload respectively
+  3. `api.graphSnapshots.listSnapshots` and `api.graphSnapshots.getProjectGraph` queries return stored snapshot metadata and the active version's `{nodes,links}` payload respectively (final names reconciled in 83-RESEARCH Pattern 5)
   4. No existing `/runtime-ingest` dispatch paths are broken — all other event types continue routing correctly
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 83-01-PLAN.md — Schema: graphSnapshots + graphSnapshotNodes + graphSnapshotLinks tables (row-based storage, D-01)
+- [ ] 83-02-PLAN.md — Receiver module (upsertGraphSnapshot versioned swap, getProjectGraph/listSnapshots, retention sweep) + dispatch case + cron + unit tests
+- [ ] 83-03-PLAN.md — Fixture-POST live round-trip verification (operator checkpoint)
 
 ### Phase 84: Graphs Hub + Code/Vault Render
 **Goal**: The code and vault graph from Convex is visible in the UI, and all graph surfaces are reachable from one unified hub
