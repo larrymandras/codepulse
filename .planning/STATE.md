@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v7.0
 milestone_name: Forge Integration
 status: between-milestones
-stopped_at: Milestone v7.0 Forge Integration CLOSED 2026-06-17 — archived (milestones/v7.0-*) + tagged v7.0. Next: new milestone or resume parked v6.0 (75 Agent Console / 77 CI hardening).
+stopped_at: Milestone v7.0 Forge Integration CLOSED 2026-06-17 — archived (milestones/v7.0-*) + tagged v7.0. v6.0 now fully resolved (77 complete 2026-06-18; 75 Agent Console SUPERSEDED by v7.0 Forge 2026-06-18). Next: new milestone.
 last_updated: "2026-06-17T23:10:00Z"
 last_activity: 2026-06-17
 progress:
@@ -44,7 +44,7 @@ Last activity: 2026-06-17
 | 81 | Live Log Streaming | ✅ Complete (4/4, verified live 2026-06-17) — FI-09/10/11 |
 | 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, verified live 2026-06-17) — FI-12/13/14; listing bridge live + preview-bytes fixed (forge a31dca4 + dbfad91); ingest key rotated; daemon auto-started |
 
-**v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **77 (CI & Prod Hardening) ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** Only **75 (Agent Console)** remains — blocked on Ástríðr M1.P0 + M1.P3. Re-activates once those gates clear. Requirements retained in REQUIREMENTS.md.
+**v6.0 Agentic OS Front-End — RESOLVED (closed 2026-06-18).** 71/72/73/74/76 shipped (light-mode); **77 (CI & Prod Hardening) ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **75 (Agent Console) SUPERSEDED by v7.0 Forge (2026-06-18):** its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the launch/stop + live-logs + file-preview capability was delivered through the Forge daemon + Convex bridge (v7.0 phases 80-82) instead of browser-direct-to-`:8200`. The two remaining cross-repo gateway deltas (CORS POST/DELETE + `TaskRequest.model`) are no longer needed. 6 planned Phase 75 plans retired — see `phases/75-agent-console/75-SUPERSEDED.md`. Requirements retained in REQUIREMENTS.md.
 
 ## Accumulated Context
 
@@ -138,7 +138,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ### Blockers/Concerns
 
-- **v6.0 parked phases** — 75 (Agent Console) blocked on Ástríðr M1.P0 + M1.P3; 77 (CI/Prod Hardening) 2/3 plans, 77-03 remaining. Not blockers for v7.0.
+- **v6.0 phases (resolved 2026-06-18)** — 75 (Agent Console) SUPERSEDED by v7.0 Forge (gates M1.P0+M1.P3 cleared 2026-06-10; capability delivered via Forge bridge); 77 (CI/Prod Hardening) ✅ complete (3/3). Neither was a blocker for v7.0.
 - **v6.0 traceability** is stale (71-76 marked Pending in REQUIREMENTS.md though shipped light-mode) — reconcile under the parked QA-01 when v6.0 resumes; out of scope for v7.0.
 
 ## Session Continuity
