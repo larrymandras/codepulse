@@ -1051,3 +1051,23 @@ export const summary = query({
     };
   },
 });
+
+/**
+ * One-time: backfill origin="unknown" on pre-existing skill rows that were
+ * inserted before composite (name, origin) identity. Run once after deploy:
+ *   npx convex run registry:normalizeLegacySkillOrigins
+ */
+export const normalizeLegacySkillOrigins = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("skills").collect();
+    let fixed = 0;
+    for (const r of rows) {
+      if (!r.origin || r.origin.trim() === "") {
+        await ctx.db.patch(r._id, { origin: "unknown" });
+        fixed++;
+      }
+    }
+    return { fixed, total: rows.length };
+  },
+});
