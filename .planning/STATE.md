@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: executing
-stopped_at: Phase 83 context gathered
-last_updated: "2026-06-18T18:39:13.708Z"
-last_activity: 2026-06-18 -- Phase 83 execution started
+status: between-phases
+stopped_at: Phase 83 complete + verified (GH-01)
+last_updated: "2026-06-18T17:00:00.000Z"
+last_activity: 2026-06-18 -- Phase 83 (GH-01 Graph Snapshot Receiver) shipped + live-verified
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 20
 ---
 
 # Project State
@@ -21,23 +21,23 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 83 — graph-snapshot-receiver
-**Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, 2026-06-17. **File LISTING bridge verified live**; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task. **Artifact PREVIEW-bytes path: ACL fix applied (dbfad91) but the end-to-end live preview round-trip is still PENDING OPERATOR VERIFICATION** (82-04-SUMMARY § CHECKPOINT).
+**Current focus:** Phase 84 — Graphs Hub + Code/Vault Render (next in v8.0)
+**Last completed:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 83 (graph-snapshot-receiver) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 83
-Last activity: 2026-06-18 -- Phase 83 execution started
+Phase: 83 (graph-snapshot-receiver) — ✅ COMPLETE + VERIFIED
+Next: Phase 84 (Graphs Hub + Code/Vault Render) — `/gsd-discuss-phase 84`
+Status: Between phases (v8.0, 1/5 complete)
+Last activity: 2026-06-18 -- Phase 83 (GH-01) shipped + live-verified
 
-Progress bar: `░░░░░░░░░░` 0% (0/5 phases)
+Progress bar: `██░░░░░░░░` 20% (1/5 phases)
 
 ## Milestone v8.0 Roadmap (2026-06-18)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 83 | Graph Snapshot Receiver | GH-01 | Not started |
+| 83 | Graph Snapshot Receiver | GH-01 | ✅ Complete + verified (2026-06-18) |
 | 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | Not started |
 | 85 | Cross-Graph Navigation | GH-04 | Not started |
 | 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | Not started |
@@ -144,7 +144,7 @@ See PROJECT.md Key Decisions table for full history.
 ### Pending Todos
 
 - **Phase 82 preview round-trip:** PENDING OPERATOR VERIFICATION — see 82-04-SUMMARY.md § CHECKPOINT. Forge daemon preview-bytes ACL fix (dbfad91) applied but live verification not yet confirmed.
-- **v8.0 Phase 83 (next):** Plan Phase 83 — Graph Snapshot Receiver (GH-01). Run `/gsd-plan-phase 83`.
+- **v8.0 Phase 84 (next):** Discuss + plan + execute Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), consuming Phase 83's `getProjectGraph`. Run `/gsd-discuss-phase 84`.
 
 ### Blockers/Concerns
 
@@ -153,7 +153,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-18T17:02:42.346Z
-Stopped at: Phase 83 context gathered
-Next action: Run `/gsd-plan-phase 83` to begin Phase 83 — Graph Snapshot Receiver (GH-01)
-Resume file: .planning/phases/83-graph-snapshot-receiver/83-CONTEXT.md
+Last session: 2026-06-18T17:00:00.000Z
+Stopped at: Phase 83 complete + live-verified (GH-01); ready for Phase 84
+Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
+Resume file: .planning/phases/84-* (to be created) — Phase 83 artifacts at .planning/phases/83-graph-snapshot-receiver/
