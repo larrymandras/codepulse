@@ -62,6 +62,7 @@ import type * as forgeLogIngest from "../forgeLogIngest.js";
 import type * as gatewayQuota from "../gatewayQuota.js";
 import type * as gatewayTasks from "../gatewayTasks.js";
 import type * as git from "../git.js";
+import type * as graphSnapshots from "../graphSnapshots.js";
 import type * as gitActivity from "../gitActivity.js";
 import type * as githubActions from "../githubActions.js";
 import type * as health from "../health.js";
@@ -196,6 +197,7 @@ declare const fullApi: ApiFromModules<{
   gatewayTasks: typeof gatewayTasks;
   git: typeof git;
   gitActivity: typeof gitActivity;
+  graphSnapshots: typeof graphSnapshots;
   githubActions: typeof githubActions;
   health: typeof health;
   heroStats: typeof heroStats;
