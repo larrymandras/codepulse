@@ -116,16 +116,17 @@ export const syncInventory = mutation({
       }
     }
 
-    // --- Skills: upsert + drift detection ---
+    // --- Skills: upsert by (name, origin) identity ---
     const existingSkills = await ctx.db.query("skills").collect();
-    const incomingSkillNames = new Set<string>();
 
     if (Array.isArray(snap.skills)) {
       for (const skill of snap.skills) {
-        incomingSkillNames.add(skill.name);
+        const origin = normalizeOrigin(skill.origin);
         const existing = await ctx.db
           .query("skills")
-          .withIndex("by_name", (q) => q.eq("name", skill.name))
+          .withIndex("by_name_origin", (q) =>
+            q.eq("name", skill.name).eq("origin", origin)
+          )
           .first();
         if (!existing) {
           await ctx.db.insert("skills", {
@@ -133,11 +134,11 @@ export const syncInventory = mutation({
             description: skill.description,
             source: skill.source,
             discoveredAt: now,
+            origin,
           });
           await ctx.runMutation(api.skillCategories.autoSeedSkill, {
             skillName: skill.name,
           });
-          // Log addition
           await ctx.db.insert("configChanges", {
             configKey: `skill:${skill.name}`,
             oldValue: undefined,
@@ -145,18 +146,22 @@ export const syncInventory = mutation({
             changedBy: "scanner",
             changedAt: now,
           });
+        } else {
+          await ctx.db.patch(existing._id, {
+            description: skill.description ?? existing.description,
+            source: skill.source ?? existing.source,
+            origin,
+          });
         }
       }
-    }
 
-    // Detect removed skills (only when snapshot included non-empty skills)
-    if (incomingSkillNames.size > 0) {
-      for (const existing of existingSkills) {
-        if (!incomingSkillNames.has(existing.name)) {
-          await ctx.db.delete(existing._id);
+      // Per-origin pruning (only when snapshot included non-empty skills)
+      if (snap.skills.length > 0) {
+        for (const row of computeSkillPrunes(existingSkills, snap.skills)) {
+          await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
-            configKey: `skill:${existing.name}`,
-            oldValue: existing,
+            configKey: `skill:${row.name}`,
+            oldValue: row,
             newValue: null,
             changedBy: "scanner",
             changedAt: now,
