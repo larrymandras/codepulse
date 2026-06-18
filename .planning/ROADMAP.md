@@ -6,6 +6,7 @@
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
 - ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74 shipped light; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18; **76 Unified Graph Hub NOT shipped → deferred to v8.0** per 2026-06-18 reconciliation)
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
+- 🟦 **v8.0 Graph/KG Consolidation** — Phases 83-87 (**started 2026-06-18**) — unified Graphs hub + KG depth features
 
 ## Phases
 
@@ -161,6 +162,85 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 </details>
 
+---
+
+## v8.0 Graph/KG Consolidation
+
+**Milestone goal:** Operators explore all of Ástríðr's graphs — KG, tool galaxy, MCP, and the code/vault dependency graph — from one unified Graphs hub, with deeper KG search, clustering, saved views, and temporal diff.
+
+**Context:** Ástríðr already pushes a `graph_snapshot` event (graphify code graph + Obsidian vault wikilinks → `{nodes,links}`) nightly to Convex `/runtime-ingest` (Phase 137, shipped 2026-06-09). CodePulse has no receiver, so those snapshots are currently dropped. v8.0 builds the receiver, the `/graphs` hub, cross-graph navigation, and four KG depth features.
+
+### Phase Summary
+
+- [ ] **Phase 83: Graph Snapshot Receiver** — Convex table + ingest dispatch for `graph_snapshot`; stops dropping Ástríðr's nightly snapshots
+- [ ] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub
+- [ ] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
+- [ ] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
+- [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
+
+## Phase Details
+
+### Phase 83: Graph Snapshot Receiver
+**Goal**: Ástríðr's nightly `graph_snapshot` events are stored in Convex instead of dropped, with a query API ready for downstream rendering
+**Depends on**: Nothing (Ástríðr-side producer already ships)
+**Requirements**: GH-01
+**Success Criteria** (what must be TRUE):
+  1. A `graph_snapshot` POST to `/runtime-ingest` populates a `graphSnapshots` Convex table — operator can verify by querying the table after Ástríðr's next nightly run
+  2. Re-posting the same `snapshotId` is a no-op (idempotent full-replacement) — no duplicate rows accumulate over repeated runs
+  3. `api.graphs.listSnapshots` and `api.graphs.getSnapshot` queries return stored snapshot metadata and `{nodes,links}` payload respectively
+  4. No existing `/runtime-ingest` dispatch paths are broken — all other event types continue routing correctly
+**Plans**: TBD
+
+### Phase 84: Graphs Hub + Code/Vault Render
+**Goal**: The code and vault graph from Convex is visible in the UI, and all graph surfaces are reachable from one unified hub
+**Depends on**: Phase 83
+**Requirements**: GH-02, GH-03
+**Success Criteria** (what must be TRUE):
+  1. Navigating to `/graphs` shows the most recent code+vault snapshot rendered as a force-directed graph via `ForceGraphCanvas`, with a visible truncation indicator when the node cap is hit
+  2. The "Graphs Hub" nav entry is no longer a `placeholder:true` stub — it routes to `/graphs` and renders real content
+  3. KG Explorer, Tool Galaxy, MCP Inventory, and the code/vault graph are all reachable from `/graphs` as tabs or sections with consistent interaction patterns (zoom, pan, node selection)
+  4. The hub renders gracefully when no snapshot has been stored yet (empty state) or when Ástríðr is offline
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 85: Cross-Graph Navigation
+**Goal**: Selecting a node in one graph surface can navigate to the corresponding entity in another surface where the data supports the link
+**Depends on**: Phase 84
+**Requirements**: GH-04
+**Success Criteria** (what must be TRUE):
+  1. Selecting a tool node in Tool Galaxy navigates to (or highlights) its owning agent in the code/vault graph where a matching node exists
+  2. Selecting an agent node navigates to related KG entities where a `{agent}` relationship exists in the KG
+  3. Cross-graph links that have no data backing are silently absent — no broken nav or dead links appear
+  4. Navigation preserves the originating graph's state so the operator can return to their prior context
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 86: KG Full-Text Search + Clustering Layout
+**Goal**: Operators can search across KG fact text and relationships (not just entity names), and large graphs render with legible community-cluster layout
+**Depends on**: Phase 84
+**Requirements**: KG-08, KG-09
+**Success Criteria** (what must be TRUE):
+  1. Typing a term in the KG search box returns fact-text and relationship-label matches, not just entity-name matches — results are distinct from the existing entity-name search
+  2. The search is backed by the Ástríðr `/api/kg/search` endpoint; the cross-repo dependency is called out and gated appropriately in the plan
+  3. Graphs with a `community` field on nodes render with co-community nodes visually clustered together (color-coded or spatially grouped), making large graphs scannable at a glance
+  4. Graphs without the `community` field continue to render with the existing force-directed layout — no regression
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 87: Saved Views + Temporal Diff
+**Goal**: Operators can save and share named graph views, and can compare or animate the KG between two points in time
+**Depends on**: Phase 84
+**Requirements**: KG-10, KG-11
+**Success Criteria** (what must be TRUE):
+  1. Operator saves the current graph state (lens + filters + focus + hops) as a named view and retrieves it by name in a later session — beyond the existing last-state idb auto-persist
+  2. A saved view can be shared via a URL or link that restores the same lens/filter/focus/hops configuration when opened
+  3. Operator selects two as-of dates and sees nodes/edges that were added, removed, or changed between those dates rendered with distinct visual treatment (added/removed/changed)
+  4. Operator can animate the KG forward through time, observing how the graph evolves — or step through manually
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -176,7 +256,12 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
+| 83. Graph Snapshot Receiver | v8.0 | 0/? | Not started | — |
+| 84. Graphs Hub + Code/Vault Render | v8.0 | 0/? | Not started | — |
+| 85. Cross-Graph Navigation | v8.0 | 0/? | Not started | — |
+| 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
+| 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 
 ---
 
-*Last updated: 2026-06-17 — **Milestone v7.0 Forge Integration SHIPPED** (all 5 phases 78-82 complete + verified live; archived to milestones/v7.0-*). v6.0 remains parked (75 + 77 pending on Ástríðr gates). Next: new milestone or resume v6.0.*
+*Last updated: 2026-06-18 — **Milestone v8.0 Graph/KG Consolidation roadmap created** (phases 83-87, 8 requirements mapped). v7.0 Forge shipped 2026-06-17. Next: `/gsd-plan-phase 83`.*

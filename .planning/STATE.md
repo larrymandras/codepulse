@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: planning
-last_updated: "2026-06-18T14:35:14.835Z"
+status: active
+last_updated: "2026-06-18T00:00:00.000Z"
 last_activity: 2026-06-18
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,17 +20,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Milestone v8.0 Graph/KG Consolidation — defining requirements + roadmap (phases 83+).
+**Current focus:** Milestone v8.0 Graph/KG Consolidation — roadmap set (phases 83-87), ready to plan Phase 83.
 **Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, 2026-06-17. **File LISTING bridge verified live**; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task. **Artifact PREVIEW-bytes path: ACL fix applied (dbfad91) but the end-to-end live preview round-trip is still PENDING OPERATOR VERIFICATION** (82-04-SUMMARY § CHECKPOINT).
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 83 — Graph Snapshot Receiver (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-18 — Milestone v8.0 started
+Status: Roadmap set; ready for `/gsd-plan-phase 83`
+Last activity: 2026-06-18 — v8.0 roadmap created (phases 83-87)
 
-## Milestone Status (2026-06-16)
+Progress bar: `░░░░░░░░░░` 0% (0/5 phases)
+
+## Milestone v8.0 Roadmap (2026-06-18)
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 83 | Graph Snapshot Receiver | GH-01 | Not started |
+| 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | Not started |
+| 85 | Cross-Graph Navigation | GH-04 | Not started |
+| 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | Not started |
+| 87 | Saved Views + Temporal Diff | KG-10, KG-11 | Not started |
+
+**Key sequencing constraint:** Phase 83 (receiver) must land before any rendering phase. Phase 86 (full-text search) carries a cross-repo dependency on a net-new Ástríðr `/api/kg/search` endpoint — flag at plan time.
+
+## Milestone Status (2026-06-18)
 
 **v7.0 Forge Integration — COMPLETE (2026-06-17).** Promoted 2026-06-13 from backlog 999.1, activated 2026-06-16, all 5 phases (78-82) shipped + verified by 2026-06-17. Surface-Substrate fold-in of Forge into CodePulse. Forge engine stays LOCAL; cloud-frontend ↔ local-daemon bridge via Convex ingest (up) + command queue (down). Ready to close via `/gsd-complete-milestone`.
 
@@ -128,20 +142,17 @@ See PROJECT.md Key Decisions table for full history.
 
 ### Pending Todos
 
-- **Phase 80 (verify):** all 4 plans executed (80-01 backend, 80-02 daemon, 80-03 launch UI, 80-04 stop UI). Run phase verification / `gsd-phase-complete 80` (cross-check the SDK counters against git ground truth — known double-count issue). FI-06/07/08 implementation complete.
-- **Phase 81 Plan 02:** COMPLETE — `sweepForgeLogChunks` + daily cron + 14 retention tests (FI-11 / D-2). Commits: bd0221c (RED), 68a6a58 (GREEN).
-- **Phase 81 Plan 03:** COMPLETE — `useForgeJobLogs` hook + `ForgeLogPane` tail pane + Details/Logs tab in `ForgeJobDetail` + 6 tests (FI-10). Commits: c30a0c9 (hook), 82ba3e3 (component + test + integration).
-- **Phase 81 Plan 04 (next):** Cross-repo Forge `makeLogSink` finalization + live round-trip verification (FI-11 / closes Forge 08-HUMAN-UAT.md).
-- **Cross-repo (Phase 81):** the Forge-side log sink (`src/emit/log-forwarder.ts makeLogSink`) is a dormant `TODO(P81)` no-op gated on `FORGE_LOG_INGEST_URL` — lit up in Plan 04.
+- **Phase 82 preview round-trip:** PENDING OPERATOR VERIFICATION — see 82-04-SUMMARY.md § CHECKPOINT. Forge daemon preview-bytes ACL fix (dbfad91) applied but live verification not yet confirmed.
+- **v8.0 Phase 83 (next):** Plan Phase 83 — Graph Snapshot Receiver (GH-01). Run `/gsd-plan-phase 83`.
 
 ### Blockers/Concerns
 
-- **v6.0 phases (resolved 2026-06-18)** — 75 (Agent Console) SUPERSEDED by v7.0 Forge (gates M1.P0+M1.P3 cleared 2026-06-10; capability delivered via Forge bridge); 77 (CI/Prod Hardening) ✅ complete (3/3). Neither was a blocker for v7.0.
-- **v6.0 traceability** — ✅ RECONCILED 2026-06-18 (zero-false-positive surface audit, file:line-evidenced). 71/72/73/74 confirmed shipped (light); 75 superseded; **76 (Unified Graph Hub) found NOT shipped → deferred to v8.0 candidate** (only the 3 standalone graph pages exist; no unified hub / graphify-Obsidian ingestion / cross-graph nav). REQUIREMENTS.md traceability table + checkboxes updated.
+- **KG-08 cross-repo dependency:** Phase 86 requires a net-new Ástríðr `/api/kg/search` endpoint for full-text fact search. This is the one confirmed Ástríðr-side delta in v8.0. Must be flagged and coordinated at plan time.
+- **Phase 82 preview verification (open):** Live end-to-end preview round-trip not yet confirmed by operator (per 82-04-SUMMARY § CHECKPOINT). Not a blocker for v8.0 but should close before declaring v7.0 fully done.
 
 ## Session Continuity
 
-Last session: 2026-06-17T12:50:00Z
-Stopped at: Phase 82 Plan 04 — Forge daemon file emission code-complete (3 forge commits: 2558cc9, fa61feb, d8e468d); live round-trip checkpoint OPEN (FORGE_FILE_INGEST_URL gate not yet verified live)
-Next action: Operator performs live round-trip verification per 82-04-SUMMARY.md § CHECKPOINT steps, then types "approved" to close Task 3 gate and mark Phase 82 complete
-Resume file: .planning/phases/82-files-preview-hardening/82-04-SUMMARY.md
+Last session: 2026-06-18
+Stopped at: v8.0 roadmap created (phases 83-87, 8 requirements mapped, files written)
+Next action: Run `/gsd-plan-phase 83` to begin Phase 83 — Graph Snapshot Receiver (GH-01)
+Resume file: .planning/ROADMAP.md (v8.0 section)

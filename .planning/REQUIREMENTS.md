@@ -130,14 +130,14 @@ All 14 requirements (FI-01 … FI-14) satisfied and verified live. Archived to [
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GH-01 | v8.0 (Phase TBD) | Pending — roadmap |
-| GH-02 | v8.0 (Phase TBD) | Pending — roadmap |
-| GH-03 | v8.0 (Phase TBD) | Pending — roadmap |
-| GH-04 | v8.0 (Phase TBD) | Pending — roadmap |
-| KG-08 | v8.0 (Phase TBD) | Pending — roadmap |
-| KG-09 | v8.0 (Phase TBD) | Pending — roadmap |
-| KG-10 | v8.0 (Phase TBD) | Pending — roadmap |
-| KG-11 | v8.0 (Phase TBD) | Pending — roadmap |
+| GH-01 | Phase 83 | Pending — not started |
+| GH-02 | Phase 84 | Pending — not started |
+| GH-03 | Phase 84 | Pending — not started |
+| GH-04 | Phase 85 | Pending — not started |
+| KG-08 | Phase 86 | Pending — not started |
+| KG-09 | Phase 86 | Pending — not started |
+| KG-10 | Phase 87 | Pending — not started |
+| KG-11 | Phase 87 | Pending — not started |
 | DS-01 | Phase 71 | ✅ Shipped (light) — `index.css` token layer |
 | DS-02 | Phase 71 | ✅ Shipped (light) — MetricCard/EntityRow/StatusBadge/GlassPanel/SectionHeader |
 | DS-03 | Phase 71 | ✅ Shipped (light) — GRAPHS+CONSOLE nav clusters (`DashboardLayout.tsx`) |
