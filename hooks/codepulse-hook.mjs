@@ -54,6 +54,22 @@ function resolveIngestKey() {
   return null;
 }
 
+function resolveScanKey() {
+  if (process.env.ASTRIDR_INGEST_API_KEY) return process.env.ASTRIDR_INGEST_API_KEY;
+
+  const envPath = join(__dirname, "..", ".env.local");
+  if (existsSync(envPath)) {
+    try {
+      const envContent = readFileSync(envPath, "utf-8");
+      const keyMatch = envContent.match(/^ASTRIDR_INGEST_API_KEY\s*=\s*(.+)$/m);
+      if (keyMatch) return keyMatch[1].trim();
+    } catch {
+      // ignore read errors
+    }
+  }
+  return null;
+}
+
 async function main() {
   let input;
   try {
@@ -153,7 +169,7 @@ async function main() {
     try {
       const scannerPath = pathToFileURL(join(__dirname, "scanner.mjs")).href;
       const { runScan } = await import(scannerPath);
-      await runScan(sessionId, codepulseUrl);
+      await runScan(sessionId, codepulseUrl, resolveScanKey());
     } catch (err) {
       console.error(`[codepulse-hook] scanner failed: ${err.message}`);
     }
