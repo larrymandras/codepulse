@@ -74,8 +74,8 @@ All 14 requirements (FI-01 … FI-14) satisfied and verified live. Archived to [
 
 ### Production Hardening (OPS) — Phase 77
 
-- [ ] **OPS-01**: `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex cloud deployment and a deploy checklist documents it, so production CORS is correct for a non-local origin
-- [ ] **OPS-02**: The Gitleaks secret-scan CI workflow passes (green) on `master`
+- [x] **OPS-01**: `CODEPULSE_ALLOWED_ORIGIN` is set in the Convex deployment and a deploy checklist documents it — `docs/DEPLOY.md` (reframed local-only: value `http://localhost:5173`, set on `tidy-whale-981`, verified via `convex env get` 2026-06-18)
+- [x] **OPS-02**: The Gitleaks secret-scan CI workflow passes (green) on `master` — `gitleaks-scan.yml` merged via 77-02; green on every master push, incl. the v7.0 milestone push (run 27758746893, 2026-06-18)
 - [N/A] **OPS-03**: The Supabase migration-drift CI check passes (green) on `master` — **N/A (satisfied upstream).** CodePulse has no `supabase/` schema directory, so there is nothing to drift-check. The migration-drift control lives in Ástríðr (`astridr-repo/.github/workflows/supabase-migration-check.yml`).
 
 ### Quality / Traceability (QA) — absorbed into Phase 71
@@ -135,7 +135,7 @@ All 14 requirements (FI-01 … FI-14) satisfied and verified live. Archived to [
 | HUB-01 | Phase 76 | Pending |
 | HUB-02 | Phase 76 | Pending |
 | HUB-03 | Phase 76 | Pending |
-| OPS-01 | Phase 77 | Pending |
-| OPS-02 | Phase 77 | Pending |
+| OPS-01 | Phase 77 | ✅ Complete |
+| OPS-02 | Phase 77 | ✅ Complete |
 | OPS-03 | Phase 77 | N/A (upstream — astridr supabase-migration-check.yml) |
 | FI-01 … FI-14 | 78–82 | ✅ Shipped 2026-06-17 (v7.0 complete) — see `milestones/v7.0-REQUIREMENTS.md` |

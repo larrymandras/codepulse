@@ -48,7 +48,7 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 <details>
 <summary>⏸️ v6.0 Agentic OS Front-End (Phases 71-77) — PARKED 2026-06-16 (75 + 77 pending)</summary>
 
-> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74/76 shipped (light-mode execution); **Phase 75 (Agent Console)** is blocked on Ástríðr M1.P0 + M1.P3 and **Phase 77 (CI & Prod Hardening)** is 2/3 plans complete. Both re-activate once Forge Integration ships and/or the Ástríðr Surface-Substrate gates clear. Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) are retained in REQUIREMENTS.md — nothing dropped.
+> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74/76 shipped (light-mode execution); **Phase 77 (CI & Prod Hardening) is ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** Only **Phase 75 (Agent Console)** remains — blocked on Ástríðr M1.P0 + M1.P3; it re-activates once those gates clear. Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) are retained in REQUIREMENTS.md — nothing dropped.
 
 - [x] Phase 71: Unified Design System — shipped (light)
 - [x] Phase 72: Tool / Capability Galaxy — shipped (light)
@@ -56,7 +56,7 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 - [x] Phase 74: Temporal-KG Explorer — shipped (light)
 - [ ] **Phase 75: Agent Console** — ⛔ parked (Ástríðr M1.P0 + M1.P3)
 - [x] Phase 76: Unified Graph Hub — shipped (light)
-- [ ] **Phase 77: CI & Production Hardening** — ⏸️ parked (2/3 plans; 77-03 deploy checklist + CODEPULSE_ALLOWED_ORIGIN remaining)
+- [x] **Phase 77: CI & Production Hardening** — ✅ complete (3/3; OPS-01 `CODEPULSE_ALLOWED_ORIGIN` + `docs/DEPLOY.md`, OPS-02 gitleaks green on master, OPS-03 N/A) — verified 2026-06-18
 
 See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md`) and `.planning/REQUIREMENTS.md`.
 
@@ -169,7 +169,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 59-70 | v5.0 | 23/23 | Complete | 2026-05-25 |
 | 71-74, 76 | v6.0 | shipped (light) | Complete | — |
 | 75. Agent Console | v6.0 | 0/TBD | ⛔ Parked (ext. blocked) | — |
-| 77. CI & Prod Hardening | v6.0 | 2/3 | ⏸️ Parked | — |
+| 77. CI & Prod Hardening | v6.0 | 3/3 | ✅ Complete | 2026-06-18 |
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
 | 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |

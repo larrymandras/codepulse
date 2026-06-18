@@ -44,7 +44,7 @@ Last activity: 2026-06-17
 | 81 | Live Log Streaming | ✅ Complete (4/4, verified live 2026-06-17) — FI-09/10/11 |
 | 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, verified live 2026-06-17) — FI-12/13/14; listing bridge live + preview-bytes fixed (forge a31dca4 + dbfad91); ingest key rotated; daemon auto-started |
 
-**v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **75 (Agent Console)** blocked on Ástríðr M1.P0 + M1.P3; **77 (CI & Prod Hardening)** is 2/3 plans (77-03 remaining). Re-activates after Forge Integration / once Ástríðr Surface-Substrate gates clear. Requirements retained in REQUIREMENTS.md.
+**v6.0 Agentic OS Front-End — PARKED.** 71/72/73/74/76 shipped (light-mode); **77 (CI & Prod Hardening) ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** Only **75 (Agent Console)** remains — blocked on Ástríðr M1.P0 + M1.P3. Re-activates once those gates clear. Requirements retained in REQUIREMENTS.md.
 
 ## Accumulated Context
 
