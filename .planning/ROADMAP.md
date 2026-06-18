@@ -4,7 +4,7 @@
 
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
-- ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74/76 shipped; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18 — gates cleared, capability delivered via the Forge bridge)
+- ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74 shipped light; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18; **76 Unified Graph Hub NOT shipped → deferred to v8.0** per 2026-06-18 reconciliation)
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 
 ## Phases
@@ -48,14 +48,14 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 <details>
 <summary>✅ v6.0 Agentic OS Front-End (Phases 71-77) — CLOSED 2026-06-18 (75 superseded by Forge)</summary>
 
-> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74/76 shipped (light-mode execution); **Phase 77 (CI & Prod Hardening) is ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **Phase 75 (Agent Console) is SUPERSEDED by v7.0 Forge (decided 2026-06-18).** Its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the Agent Console capability (launch/stop + live logs + file preview) was instead delivered through the **Forge daemon + Convex bridge** (v7.0, phases 80-82), a more robust transport than browser-direct-to-localhost. The 6 planned-but-unexecuted Phase 75 plans are retired (see `phases/75-agent-console/75-SUPERSEDED.md`). Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in REQUIREMENTS.md — nothing dropped.
+> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74 shipped (light-mode execution); **Phase 76 (Unified Graph Hub) was NOT shipped — reconciliation 2026-06-18 found only the 3 standalone graph pages exist; HUB-01/02/03 deferred to v8.0.** **Phase 77 (CI & Prod Hardening) is ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **Phase 75 (Agent Console) is SUPERSEDED by v7.0 Forge (decided 2026-06-18).** Its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the Agent Console capability (launch/stop + live logs + file preview) was instead delivered through the **Forge daemon + Convex bridge** (v7.0, phases 80-82), a more robust transport than browser-direct-to-localhost. The 6 planned-but-unexecuted Phase 75 plans are retired (see `phases/75-agent-console/75-SUPERSEDED.md`). Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in REQUIREMENTS.md — nothing dropped.
 
 - [x] Phase 71: Unified Design System — shipped (light)
 - [x] Phase 72: Tool / Capability Galaxy — shipped (light)
 - [x] Phase 73: MCP Inventory + Health — shipped (light)
 - [x] Phase 74: Temporal-KG Explorer — shipped (light)
 - [~] **Phase 75: Agent Console** — 🔁 superseded by v7.0 Forge (2026-06-18); gates M1.P0+M1.P3 cleared, capability delivered via Forge bridge
-- [x] Phase 76: Unified Graph Hub — shipped (light)
+- [ ] Phase 76: Unified Graph Hub — ❌ NOT shipped (only the 3 standalone graph pages exist); HUB-01/02/03 deferred to v8.0 (reconciled 2026-06-18)
 - [x] **Phase 77: CI & Production Hardening** — ✅ complete (3/3; OPS-01 `CODEPULSE_ALLOWED_ORIGIN` + `docs/DEPLOY.md`, OPS-02 gitleaks green on master, OPS-03 N/A) — verified 2026-06-18
 
 See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md`) and `.planning/REQUIREMENTS.md`.
@@ -140,7 +140,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   - [x] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
   - [x] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
   - [x] 82-03-PLAN.md — UI port: useForgeJobFiles hooks, FileBrowser + ArtifactPreview (sandboxed), ForgeFilesPane + Files tab
-  - [x] 82-04-PLAN.md — Cross-repo forge daemon: workspace enumeration + emitFiles + live round-trip (forge repo) — listing bridge verified live (forge fix a31dca4); preview bytes blocked by codex-sandbox ACLs (Forge follow-up)
+  - [x] 82-04-PLAN.md — Cross-repo forge daemon: workspace enumeration + emitFiles + live round-trip (forge repo) — listing bridge verified live (forge fix a31dca4); preview-bytes codex-sandbox ACL block **fixed in forge `dbfad91`** (icacls grant on promoteWorkspace) — **live end-to-end preview round-trip still pending operator verification** (per 82-04-SUMMARY § CHECKPOINT)
 
 ## Execution Order
 
@@ -167,8 +167,9 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 |-------|-----------|----------------|--------|-----------|
 | 1-7, 58 | v4.0 | 36/36 | Complete | 2026-04-14 |
 | 59-70 | v5.0 | 23/23 | Complete | 2026-05-25 |
-| 71-74, 76 | v6.0 | shipped (light) | Complete | — |
+| 71-74 | v6.0 | shipped (light) | Complete | — |
 | 75. Agent Console | v6.0 | — | 🔁 Superseded by v7.0 Forge | 2026-06-18 |
+| 76. Unified Graph Hub | v6.0 | 0/3 | ❌ Not shipped → deferred to v8.0 | 2026-06-18 |
 | 77. CI & Prod Hardening | v6.0 | 3/3 | ✅ Complete | 2026-06-18 |
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |

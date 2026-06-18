@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-06-16)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v7.0 extends "drive its coding agents" to **Forge** — one application for all coding-agent work.
 **Current focus:** Milestone v7.0 COMPLETE — ready to close (`/gsd-complete-milestone`).
-**Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, verified live 2026-06-17. Listing bridge verified live; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task.
+**Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, 2026-06-17. **File LISTING bridge verified live**; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task. **Artifact PREVIEW-bytes path: ACL fix applied (dbfad91) but the end-to-end live preview round-trip is still PENDING OPERATOR VERIFICATION** (82-04-SUMMARY § CHECKPOINT).
 
 ## Current Position
 
 Milestone: v7.0 Forge Integration — COMPLETE (5/5 phases: 78-82)
-Status: All phases shipped + verified. Phase 82 files/artifact-preview bridge working end-to-end (listing live; preview bytes fixed via forge dbfad91 ACL grant). Ready to close the milestone.
+Status: All 5 phases shipped. Phase 82 file LISTING bridge verified live end-to-end; preview-bytes ACL fix applied (forge dbfad91) but live preview round-trip pending operator verification. Ready to close the milestone.
 Last activity: 2026-06-17
 
 **Progress bar:** [██████████] 100% (5/5 phases shipped; 80/81/82 verified live)
@@ -42,7 +42,7 @@ Last activity: 2026-06-17
 | 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
 | 80 | Command Bridge (launch + stop) | ✅ Complete (4/4, verified live 2026-06-16) — FI-06/07/08 |
 | 81 | Live Log Streaming | ✅ Complete (4/4, verified live 2026-06-17) — FI-09/10/11 |
-| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, verified live 2026-06-17) — FI-12/13/14; listing bridge live + preview-bytes fixed (forge a31dca4 + dbfad91); ingest key rotated; daemon auto-started |
+| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, 2026-06-17) — FI-12/13/14; listing bridge verified live; preview-bytes ACL fix applied (forge a31dca4 + dbfad91) but live preview round-trip pending operator verify; ingest key rotated; daemon auto-started |
 
 **v6.0 Agentic OS Front-End — RESOLVED (closed 2026-06-18).** 71/72/73/74/76 shipped (light-mode); **77 (CI & Prod Hardening) ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **75 (Agent Console) SUPERSEDED by v7.0 Forge (2026-06-18):** its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the launch/stop + live-logs + file-preview capability was delivered through the Forge daemon + Convex bridge (v7.0 phases 80-82) instead of browser-direct-to-`:8200`. The two remaining cross-repo gateway deltas (CORS POST/DELETE + `TaskRequest.model`) are no longer needed. 6 planned Phase 75 plans retired — see `phases/75-agent-console/75-SUPERSEDED.md`. Requirements retained in REQUIREMENTS.md.
 
@@ -139,7 +139,7 @@ See PROJECT.md Key Decisions table for full history.
 ### Blockers/Concerns
 
 - **v6.0 phases (resolved 2026-06-18)** — 75 (Agent Console) SUPERSEDED by v7.0 Forge (gates M1.P0+M1.P3 cleared 2026-06-10; capability delivered via Forge bridge); 77 (CI/Prod Hardening) ✅ complete (3/3). Neither was a blocker for v7.0.
-- **v6.0 traceability** is stale (71-76 marked Pending in REQUIREMENTS.md though shipped light-mode) — reconcile under the parked QA-01 when v6.0 resumes; out of scope for v7.0.
+- **v6.0 traceability** — ✅ RECONCILED 2026-06-18 (zero-false-positive surface audit, file:line-evidenced). 71/72/73/74 confirmed shipped (light); 75 superseded; **76 (Unified Graph Hub) found NOT shipped → deferred to v8.0 candidate** (only the 3 standalone graph pages exist; no unified hub / graphify-Obsidian ingestion / cross-graph nav). REQUIREMENTS.md traceability table + checkboxes updated.
 
 ## Session Continuity
 
