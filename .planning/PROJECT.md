@@ -10,7 +10,8 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**Shipped:** v5.0 Advanced Visualization & Integrations (2026-05-25)
+**Shipped:** v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse as a first-class module via the Surface-Substrate bridge: a local Forge daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Read render → launch/stop → live log streaming → files + artifact preview, all Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`.
+**Prior shipped:** v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End partial — phases 71-74/76 shipped (light); 75 (Agent Console) + 77 (CI hardening) parked on Ástríðr gates.
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons, D3.js, dagre, Resend, React Email
 **Codebase:** ~66,600 LOC TypeScript (src/ + convex/)
 

@@ -101,4 +101,26 @@ crons.interval(
   internal.supabase.pollHealth
 );
 
+// Phase 80: Forge command bridge — expire unclaimed commands past their TTL (D-12)
+crons.interval(
+  "expire-stale-forge-commands",
+  { minutes: 1 },
+  internal.forge.expireStaleCommands,
+);
+
+// Phase 81: Forge log retention (D-2)
+crons.daily(
+  "sweep-forge-log-chunks",
+  { hourUTC: 3, minuteUTC: 30 },
+  internal.forge.sweepForgeLogChunks,
+);
+
+// Phase 82: Forge file/artifact retention (D-05)
+// Offset from the 03:30 log sweep to avoid scheduler contention.
+crons.daily(
+  "sweep-forge-file-records",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.forge.sweepForgeFileRecords,
+);
+
 export default crons;

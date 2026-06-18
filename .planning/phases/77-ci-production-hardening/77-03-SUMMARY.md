@@ -2,7 +2,9 @@
 
 **Phase:** 77 — CI & Production Hardening
 **Plan:** 03 (wave 2)
-**Status:** Tasks 1 & 2 complete; Task 3 detection proven locally, live-CI run deferred to a workflow-scope push (see below)
+**Status:** ✅ COMPLETE (all 3 tasks). Tasks 1 & 2 done in-session; Task 3's deferred live-CI item is now RESOLVED — `gitleaks-scan.yml` is on `master` (merged via 77-02) and the Gitleaks Secret Scan runs **green on every master push**, incl. the v7.0 milestone push 2026-06-18 (run 27758746893, success). OPS-02 "green on master" satisfied. *(Original 2026-06-10 status retained below for history.)*
+
+**Status (original 2026-06-10):** Tasks 1 & 2 complete; Task 3 detection proven locally, live-CI run deferred to a workflow-scope push (see below)
 **Requirements:** OPS-01, OPS-02, OPS-03
 
 ## What was built / done

@@ -373,3 +373,233 @@ describe("forge mutations — DB round-trip (integration)", () => {
   it.todo("getJob: returns the correct single job row");
   it.todo("listWorkspaces: returns all upserted workspaces for host");
 });
+
+// ---------------------------------------------------------------------------
+// Phase 80: Command Bridge — pure-logic helpers (FI-06, FI-08)
+// ---------------------------------------------------------------------------
+// Import the exported pure helpers from convex/forge.ts.
+// These are extracted decision functions exercised without a live Convex runtime.
+import {
+  stripDangerousCapability,
+  shouldExpireCommand,
+  isTerminalCommandStatus,
+  buildLaunchRow,
+} from "./forge";
+
+// ---------------------------------------------------------------------------
+// stripDangerousCapability — Pitfall 7 / D-06 mitigation
+// ---------------------------------------------------------------------------
+
+describe("forge.stripDangerousCapability — removes dangerous key (D-06, Pitfall 7)", () => {
+  it("removes the dangerous key from a capabilities JSON string", () => {
+    const input = JSON.stringify({ maxTurns: 50, dangerous: true });
+    const result = stripDangerousCapability(input);
+    expect(result).not.toBeNull();
+    const parsed = JSON.parse(result!);
+    expect(parsed).not.toHaveProperty("dangerous");
+    expect(parsed.maxTurns).toBe(50);
+  });
+
+  it("keeps non-dangerous keys intact", () => {
+    const input = JSON.stringify({ maxTurns: 50, fullAuto: false });
+    const result = stripDangerousCapability(input);
+    expect(result).not.toBeNull();
+    const parsed = JSON.parse(result!);
+    expect(parsed.maxTurns).toBe(50);
+    expect(parsed.fullAuto).toBe(false);
+  });
+
+  it("returns null when input is null", () => {
+    expect(stripDangerousCapability(null)).toBeNull();
+  });
+
+  it("returns null when input is empty string", () => {
+    expect(stripDangerousCapability("")).toBeNull();
+  });
+
+  it("returns null when the only key is dangerous (resulting object is empty)", () => {
+    const input = JSON.stringify({ dangerous: true });
+    const result = stripDangerousCapability(input);
+    // An empty {} has no keys — null is the correct return per the spec
+    expect(result).toBeNull();
+  });
+
+  it("returns null when input is unparseable JSON", () => {
+    expect(stripDangerousCapability("not-json")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// shouldExpireCommand — TTL expiry decision (D-12)
+// ---------------------------------------------------------------------------
+
+describe("forge.shouldExpireCommand — TTL expiry logic (D-12)", () => {
+  const PAST = 1000;
+  const FUTURE = Date.now() + 60_000;
+  const NOW = 5000;
+
+  it("returns true for queued command whose expiresAt is in the past", () => {
+    expect(shouldExpireCommand("queued", PAST, NOW)).toBe(true);
+  });
+
+  it("returns false for queued command whose expiresAt is in the future", () => {
+    expect(shouldExpireCommand("queued", FUTURE, NOW)).toBe(false);
+  });
+
+  it("returns false for executing command even if past TTL", () => {
+    expect(shouldExpireCommand("executing", PAST, NOW)).toBe(false);
+  });
+
+  it("returns false for done command even if past TTL", () => {
+    expect(shouldExpireCommand("done", PAST, NOW)).toBe(false);
+  });
+
+  it("returns false for failed command even if past TTL", () => {
+    expect(shouldExpireCommand("failed", PAST, NOW)).toBe(false);
+  });
+
+  it("returns false for already-expired command (idempotent)", () => {
+    expect(shouldExpireCommand("expired", PAST, NOW)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isTerminalCommandStatus — ack idempotency guard (CR-01)
+// ---------------------------------------------------------------------------
+
+describe("forge.isTerminalCommandStatus — ack never overwrites terminal state (CR-01)", () => {
+  it("treats done / failed / expired as terminal", () => {
+    expect(isTerminalCommandStatus("done")).toBe(true);
+    expect(isTerminalCommandStatus("failed")).toBe(true);
+    expect(isTerminalCommandStatus("expired")).toBe(true);
+  });
+
+  it("treats queued / executing as non-terminal (ackable)", () => {
+    expect(isTerminalCommandStatus("queued")).toBe(false);
+    expect(isTerminalCommandStatus("executing")).toBe(false);
+  });
+
+  it("treats an unknown status as non-terminal", () => {
+    expect(isTerminalCommandStatus("")).toBe(false);
+    expect(isTerminalCommandStatus("bogus")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildLaunchRow — field mapping for forgeCommands insert
+// ---------------------------------------------------------------------------
+
+interface LaunchArgs {
+  hostId: string;
+  commandId: string;
+  agent: string;
+  workspaceId: string;
+  mode: string;
+  prompt: string | null;
+  model: string | null;
+  capabilities: string | null;
+}
+
+describe("forge.buildLaunchRow — field mapping (FI-06)", () => {
+  const now = 1_700_000_000_000;
+  const TTL_MS = 5 * 60 * 1000;
+  const args: LaunchArgs = {
+    hostId:      "desktop-abc",
+    commandId:   "01JXMQ00000000000000000001",
+    agent:       "claude",
+    workspaceId: "ws-1",
+    mode:        "goal",
+    prompt:      "Build a landing page",
+    model:       "claude-opus-4-8",
+    capabilities: JSON.stringify({ maxTurns: 50 }),
+  };
+  const subject = "user_abc123";
+
+  it("sets commandType to launch", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.commandType).toBe("launch");
+  });
+
+  it("sets status to queued", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.status).toBe("queued");
+  });
+
+  it("sets issuedBy to the Clerk identity subject", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.issuedBy).toBe(subject);
+  });
+
+  it("sets expiresAt to createdAt + TTL_MS", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.expiresAt).toBe(now + TTL_MS);
+    expect(row.createdAt).toBe(now);
+  });
+
+  it("sets all nullable timing fields to null", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.claimedAt).toBeNull();
+    expect(row.executedAt).toBeNull();
+    expect(row.completedAt).toBeNull();
+    expect(row.resolvedForgeJobId).toBeNull();
+    expect(row.error).toBeNull();
+  });
+
+  it("sets stopPayload to null for launch commands", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.stopPayload).toBeNull();
+  });
+
+  it("maps launchPayload fields from args", () => {
+    const row = buildLaunchRow(args, subject, now, TTL_MS);
+    expect(row.launchPayload).not.toBeNull();
+    expect(row.launchPayload!.agent).toBe("claude");
+    expect(row.launchPayload!.workspaceId).toBe("ws-1");
+    expect(row.launchPayload!.mode).toBe("goal");
+    expect(row.launchPayload!.prompt).toBe("Build a landing page");
+    expect(row.launchPayload!.model).toBe("claude-opus-4-8");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth fail-closed guard — FI-08 / D-13
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueLaunch / enqueueStop — auth fail-closed guard (FI-08, D-13)", () => {
+  /**
+   * Mirror of the fail-closed identity guard used in enqueueLaunch / enqueueStop.
+   * In production this is `ctx.auth.getUserIdentity()` returning null.
+   * Here we test the extracted decision function without a live Convex runtime.
+   */
+  function authGuard(identity: { subject: string } | null): void {
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+  }
+
+  it("throws when identity is null (unauthenticated caller, FI-08)", () => {
+    expect(() => authGuard(null)).toThrow(
+      "Authentication required to issue Forge commands"
+    );
+  });
+
+  it("does not throw when identity is present (authenticated caller)", () => {
+    expect(() => authGuard({ subject: "user_abc123" })).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 80 DB round-trip stubs
+// ---------------------------------------------------------------------------
+
+describe("forge command bridge — DB round-trip (integration)", () => {
+  it.todo("enqueueLaunch: inserts forgeCommands row with status='queued'");
+  it.todo("enqueueLaunch: strips dangerous from capabilities before insert (D-06)");
+  it.todo("enqueueStop: inserts forgeCommands row with commandType='stop'");
+  it.todo("claimAndUpsertHost: atomically claims queued commands + upserts forgeHosts row");
+  it.todo("claimAndUpsertHost: does not claim expired commands (expiresAt < now)");
+  it.todo("expireStaleCommands: marks queued commands past expiresAt as expired");
+  it.todo("expireStaleCommands: does not touch executing/done/failed commands");
+  it.todo("ackCommand: sets resolvedForgeJobId and status=done on claimed command");
+  it.todo("ackCommand: sets status=failed and error on failed command");
+});

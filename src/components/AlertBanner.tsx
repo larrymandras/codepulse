@@ -1,12 +1,16 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAlertCounts } from "../hooks/useAlerts";
 
 export default function AlertBanner() {
   const counts = useAlertCounts();
   const navigate = useNavigate();
+  const location = useLocation();
   const urgentCount = counts.critical + counts.error;
 
   if (urgentCount === 0) return null;
+  // Redundant on the alerts page itself — clicking it would just re-navigate
+  // here (felt like a no-op). Hide it when already viewing /alerts.
+  if (location.pathname.startsWith("/alerts")) return null;
 
   return (
     <button

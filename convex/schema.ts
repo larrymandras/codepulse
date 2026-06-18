@@ -1486,6 +1486,47 @@ export default defineSchema({
     .index("by_host_updatedAt", ["hostId", "updatedAt"])
     .index("by_updatedAt",      ["updatedAt"]),
 
+  // Append-only log chunks from Forge daemon. Lines arrive pre-scrubbed (T-3-BYPASS upstream).
+  // Retention enforced by sweep cron: 7-day TTL + ~1 MB per-job cap (D-2). Phase 81.
+  forgeLogChunks: defineTable({
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    lines:      v.array(v.string()),    // already scrubbed by Forge (T-3-BYPASS upstream)
+    seq:        v.number(),             // D-1: monotonic per (host,job) — ordering + dedup (REQUIRED)
+    sentAt:     v.optional(v.string()), // client flush time (ISO)
+  })
+    .index("by_host_job",     ["hostId", "forgeJobId"])          // listJobLogs / retention sweep
+    .index("by_host_job_seq", ["hostId", "forgeJobId", "seq"]),  // D-1 idempotency unique-check
+
+  // Phase 82: Per-job file metadata from Forge daemon. Idempotent per (hostId, forgeJobId, path).
+  // Retention: 7-day TTL + per-job cap enforced by sweepForgeFileRecords cron. (FI-12 / D-05)
+  forgeFiles: defineTable({
+    hostId:     v.string(),
+    forgeJobId: v.string(),
+    path:       v.string(),     // relative path within workspace
+    kind:       v.string(),     // "text"|"image"|"video"|"audio"|"pdf"|"binary"
+    sizeBytes:  v.number(),
+    createdAt:  v.string(),     // ISO timestamp — for TTL retention (not _creationTime)
+  })
+    .index("by_host_job",      ["hostId", "forgeJobId"])           // listJobFiles / sweep
+    .index("by_host_job_path", ["hostId", "forgeJobId", "path"]),  // idempotency + upsert
+
+  // Phase 82: Per-job artifact bytes from Forge daemon. Idempotent per (hostId, forgeJobId, path).
+  // textContent for text/HTML (≤ ~1 MB string); storageId for image blobs (Convex File Storage).
+  // Retention: same sweep as forgeFiles; image blobs deleted via ctx.storage.delete BEFORE doc row (D-05).
+  forgeArtifacts: defineTable({
+    hostId:      v.string(),
+    forgeJobId:  v.string(),
+    path:        v.string(),
+    kind:        v.string(),                    // "text"|"image"
+    sizeBytes:   v.number(),
+    textContent: v.optional(v.string()),        // text/HTML bytes (≤ ~1 MB)
+    storageId:   v.optional(v.id("_storage")), // image bytes (Convex File Storage)
+    createdAt:   v.string(),
+  })
+    .index("by_host_job",      ["hostId", "forgeJobId"])
+    .index("by_host_job_path", ["hostId", "forgeJobId", "path"]),  // idempotency + artifact lookup
+
   // Periodic workspace sync from Forge host (D-06). Full replace per host.
   forgeWorkspaces: defineTable({
     hostId:      v.string(),
@@ -1496,4 +1537,72 @@ export default defineSchema({
     updatedAt:   v.string(),
   })
     .index("by_host_workspaceId", ["hostId", "workspaceId"]),
+
+  // ============================================================
+  // FORGE COMMAND BRIDGE (Phase 80)
+  // ============================================================
+
+  // Operator-issued commands (launch/stop) enqueued in Convex; the local Forge
+  // daemon polls, claims, and executes them. Status state machine:
+  //   queued → executing → done | failed
+  //   queued (unclaimed past TTL) → expired   (via expireStaleCommands cron, D-12)
+  // commandId is a client-generated ULID for optimistic pending-row reconciliation (D-10).
+  // capabilities is a JSON string with dangerous stripped (D-06, Pitfall 7).
+  forgeCommands: defineTable({
+    hostId:      v.string(),
+    commandId:   v.string(),  // client-generated ULID for optimistic reconciliation
+    commandType: v.union(v.literal("launch"), v.literal("stop")),
+
+    // Launch payload (null for stop commands)
+    launchPayload: v.union(
+      v.object({
+        agent:        v.string(),
+        workspaceId:  v.string(),
+        mode:         v.string(),
+        prompt:       v.union(v.string(), v.null()),
+        model:        v.union(v.string(), v.null()),
+        capabilities: v.union(v.string(), v.null()),  // JSON string; dangerous key stripped (D-06)
+      }),
+      v.null()
+    ),
+
+    // Stop payload (null for launch commands)
+    stopPayload: v.union(
+      v.object({
+        forgeJobId: v.string(),  // the job to stop
+      }),
+      v.null()
+    ),
+
+    // State machine value: queued | executing | done | failed | expired
+    status:    v.string(),
+
+    // Clerk provenance (D-13 fail-closed)
+    issuedBy:  v.string(),   // identity.subject from getUserIdentity()
+
+    // Timing + TTL (D-12)
+    createdAt:   v.number(),
+    expiresAt:   v.number(),  // createdAt + FORGE_COMMAND_TTL_MS; cron marks past this as expired
+    claimedAt:   v.union(v.number(), v.null()),
+    executedAt:  v.union(v.number(), v.null()),
+    completedAt: v.union(v.number(), v.null()),
+
+    // Ack fields
+    resolvedForgeJobId: v.union(v.string(), v.null()),  // daemon sets on done (D-10 reconciliation)
+    error:              v.union(v.string(), v.null()),
+  })
+    .index("by_host_status_created", ["hostId", "status", "createdAt"])  // claim query
+    .index("by_commandId",           ["commandId"])                        // optimistic reconciliation
+    .index("by_expires",             ["expiresAt"])                        // TTL cron sweep
+    .index("by_createdAt",           ["createdAt"]),                       // all-hosts list, newest-first
+
+  // Lightweight host liveness record — upserted on every daemon claim poll (D-09).
+  // The UI derives "online" from lastSeenAt > Date.now() - ONLINE_THRESHOLD_MS (30s).
+  forgeHosts: defineTable({
+    hostId:     v.string(),
+    lastSeenAt: v.number(),           // Date.now() ms, updated on each claim poll
+    hostname:   v.optional(v.string()),
+  })
+    .index("by_hostId",     ["hostId"])
+    .index("by_lastSeenAt", ["lastSeenAt"]),
 });

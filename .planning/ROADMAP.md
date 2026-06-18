@@ -4,8 +4,8 @@
 
 - ✅ **v4.0 Operational Excellence** — Phases 1-7, 58 (shipped 2026-04-14)
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
-- ⏸️ **v6.0 Agentic OS Front-End** — Phases 71-77 (**parked** 2026-06-16; 71/72/73/74/76 shipped, **75 + 77 pending** on Ástríðr Surface-Substrate gates)
-- 🔄 **v7.0 Forge Integration** — Phases 78-82 (**active**; 78/79 shipped, 80/81/82 in planning) — Forge→CodePulse Surface-Substrate fold-in
+- ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74/76 shipped; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18 — gates cleared, capability delivered via the Forge bridge)
+- ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 
 ## Phases
 
@@ -46,17 +46,17 @@ See: [milestones/v5.0-ROADMAP.md](milestones/v5.0-ROADMAP.md)
 </details>
 
 <details>
-<summary>⏸️ v6.0 Agentic OS Front-End (Phases 71-77) — PARKED 2026-06-16 (75 + 77 pending)</summary>
+<summary>✅ v6.0 Agentic OS Front-End (Phases 71-77) — CLOSED 2026-06-18 (75 superseded by Forge)</summary>
 
-> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74/76 shipped (light-mode execution); **Phase 75 (Agent Console)** is blocked on Ástríðr M1.P0 + M1.P3 and **Phase 77 (CI & Prod Hardening)** is 2/3 plans complete. Both re-activate once Forge Integration ships and/or the Ástríðr Surface-Substrate gates clear. Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) are retained in REQUIREMENTS.md — nothing dropped.
+> **Reframed 2026-06-09**, **parked 2026-06-16** in favor of the active v7.0 Forge Integration milestone. Phases 71/72/73/74/76 shipped (light-mode execution); **Phase 77 (CI & Prod Hardening) is ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **Phase 75 (Agent Console) is SUPERSEDED by v7.0 Forge (decided 2026-06-18).** Its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the Agent Console capability (launch/stop + live logs + file preview) was instead delivered through the **Forge daemon + Convex bridge** (v7.0, phases 80-82), a more robust transport than browser-direct-to-localhost. The 6 planned-but-unexecuted Phase 75 plans are retired (see `phases/75-agent-console/75-SUPERSEDED.md`). Requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in REQUIREMENTS.md — nothing dropped.
 
 - [x] Phase 71: Unified Design System — shipped (light)
 - [x] Phase 72: Tool / Capability Galaxy — shipped (light)
 - [x] Phase 73: MCP Inventory + Health — shipped (light)
 - [x] Phase 74: Temporal-KG Explorer — shipped (light)
-- [ ] **Phase 75: Agent Console** — ⛔ parked (Ástríðr M1.P0 + M1.P3)
+- [~] **Phase 75: Agent Console** — 🔁 superseded by v7.0 Forge (2026-06-18); gates M1.P0+M1.P3 cleared, capability delivered via Forge bridge
 - [x] Phase 76: Unified Graph Hub — shipped (light)
-- [ ] **Phase 77: CI & Production Hardening** — ⏸️ parked (2/3 plans; 77-03 deploy checklist + CODEPULSE_ALLOWED_ORIGIN remaining)
+- [x] **Phase 77: CI & Production Hardening** — ✅ complete (3/3; OPS-01 `CODEPULSE_ALLOWED_ORIGIN` + `docs/DEPLOY.md`, OPS-02 gitleaks green on master, OPS-03 N/A) — verified 2026-06-18
 
 See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md`) and `.planning/REQUIREMENTS.md`.
 
@@ -64,7 +64,12 @@ See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md
 
 ---
 
-## v7.0 Forge Integration (ACTIVE — activated 2026-06-16)
+## v7.0 Forge Integration — ✅ SHIPPED (2026-06-17)
+
+**All 5 phases (78–82) complete + verified live.** Forge folded into CodePulse via the Surface-Substrate bridge (state UP via httpActions, commands DOWN via a Convex queue). Full archive + stats: [milestones/v7.0-ROADMAP.md](milestones/v7.0-ROADMAP.md) · requirements: [milestones/v7.0-REQUIREMENTS.md](milestones/v7.0-REQUIREMENTS.md).
+
+<details>
+<summary>v7.0 phase detail (archived 2026-06-17)</summary>
 
 **Milestone goal:** Make Forge a first-class CodePulse module so all coding-agent work happens in one application — without moving Forge's execution engine off the local machine.
 
@@ -88,7 +93,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 **Plans**: 3/3 complete (3 waves) — see `phases/79-forge-ui-tab-read-only-render/`
 
 ### Phase 80: Command Bridge (launch + stop)
-**Status**: 📋 ACTIVE (next)
+**Status**: ✅ COMPLETE (4/4 plans, 3 waves) — verified live 2026-06-16 (bridge launch + stop round-trip)
 **Goal**: A Convex `forgeCommands` queue the daemon long-polls; launch/stop → command → daemon executes → status reflects back. Port NewJobModal. Clerk-gated mutations.
 **Requirements**: FI-06 (command queue + daemon poll), FI-07 (launch/stop UI), FI-08 (auth gating)
 **Depends on**: Phase 79 (shipped)
@@ -96,10 +101,14 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   1. An enqueued launch/stop command in `forgeCommands` is delivered to the daemon exactly once via long-poll, and its execution status reflects back into `forgeJobs`
   2. Operator launches a new Forge job (ported NewJobModal) and stops a running job from `/forge`, round-tripping through the queue
   3. Command-issuing mutations are Clerk-gated — no unauthenticated write path to launch/stop
-**Plans**: TBD (run `/gsd-discuss-phase 80` → `/gsd-plan-phase 80`)
+**Plans**: 4 plans (2 waves)
+  - [x] 80-01-PLAN.md — Convex backend: forgeCommands/forgeHosts schema, Clerk fail-closed enqueue mutations, daemon claim/ack httpActions, TTL cron, tests (FI-06, FI-08)
+  - [x] 80-02-PLAN.md — Cross-repo Forge daemon CommandPoller: poll → claim → execute (launch/stop) → ack; reflect-back via existing emitter (FI-06)
+  - [x] 80-03-PLAN.md — Launch UI: useForge hooks, ForgeStatusBadge variants, trimmed ForgeLaunchModal + host picker, Clerk-gated Launch button + optimistic pending rows (FI-07, FI-08)
+  - [x] 80-04-PLAN.md — Stop UI: ForgeStopConfirmDialog (work-discard warning) + ForgeJobDetail Stop wiring with honest Stopping… async (FI-07, FI-08)
 
 ### Phase 81: Live Log Streaming
-**Status**: 📋 ACTIVE (design locked in 081-SPEC)
+**Status**: ✅ COMPLETE (4/4 plans, 3 waves) — verified live 2026-06-17 (Forge→CodePulse log round-trip; closes Forge 08-HUMAN-UAT). VERIFICATION: passed (4/4 criteria).
 **Goal**: Stream live job logs into the read-only Forge UI tab. **Design locked in `phases/081-live-log-streaming/081-SPEC.md` (2026-06-15)** — supersedes the original "HIGH-risk direct daemon→browser SSE/WebSocket spike." Logs flow Forge → `POST /forge-log-ingest` → append-only `forgeLogChunks` table → reactive `forge.listJobLogs` query; **Convex reactivity IS the live stream** (no SSE/WS to build). Risk dropped from HIGH to LOW.
 **Requirements**: FI-09 (log-ingest endpoint + append-only `forgeLogChunks` + `seq` idempotency), FI-10 (LogViewer renders live tail via reactive `listJobLogs`), FI-11 (retention: 7-day TTL cron + per-job byte cap)
 **Depends on**: Phase 80
@@ -112,18 +121,26 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
   2. `forge.listJobLogs({hostId, forgeJobId})` returns chunks ordered by `seq`; the Forge UI tab renders them and updates live as chunks arrive
   3. A scheduled sweep enforces the 7-day TTL AND per-job byte cap — verified by a cron/cleanup test
   4. **Cross-repo handoff** (Forge side, ~1 task): `makeLogSink` no-op → real `fetch` to `/forge-log-ingest`; set `FORGE_LOG_INGEST_URL`; live round-trip closes Forge `08-HUMAN-UAT.md`
-**Plans**: TBD (SPEC ready → `/gsd-discuss-phase 81` → `/gsd-plan-phase 81`)
+**Plans**: 4 plans (3 waves)
+  - [x] 81-01-PLAN.md — Receiver: forgeLogChunks schema + /forge-log-ingest httpAction + appendLogChunk (seq-idempotent) + listJobLogs + contract test (FI-09)
+  - [x] 81-02-PLAN.md — Retention: sweepForgeLogChunks (7-day TTL + per-job ~1 MB cap, drop-oldest) + daily cron + cleanup test (FI-11)
+  - [x] 81-03-PLAN.md — UI: useForgeJobLogs hook + ForgeLogPane (auto-follow tail / pause / jump-to-latest) behind a Details/Logs tab in ForgeJobDetail (FI-10)
+  - [x] 81-04-PLAN.md — Cross-repo: finalize Forge makeLogSink (real fetch + seq, T-6-KEYLEAK) + live round-trip, closes Forge 08-HUMAN-UAT (FI-09/10/11)
 
 ### Phase 82: Files + Artifact Preview + Hardening
 **Status**: 📋 ACTIVE
-**Goal**: Port FileBrowser/ArtifactPreview; solve artifact-origin reachability from the cloud UI (daemon tunnel or local-https, NOT direct localhost); end-to-end Clerk gating; polish.
+**Goal**: Browse a terminal job's workspace files and preview text/code/HTML + image artifacts in the cloud `/forge` UI, with metadata + capped bytes flowing daemon → Convex → cloud (the Surface-Substrate bridge used for logs in Phase 81 — NOT a tunnel/local-https/localhost path); plus end-to-end auth correctness, OPS-01 production CORS + deploy checklist, and empty/loading/error polish.
 **Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
 **Depends on**: Phase 81
 **Success Criteria** (what must be TRUE):
   1. Operator browses a job's workspace files and previews artifacts in `/forge` (ported FileBrowser / ArtifactPreview)
-  2. Artifact/file content is reachable from the cloud UI without mixed-content `http://localhost` (daemon tunnel or local-https path)
-  3. End-to-end Clerk gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
-**Plans**: TBD
+  2. Artifact/file content is reachable from the cloud UI via the Convex bounded-ingest bridge (no mixed-content `http://localhost`; tunnel/local-https rejected per 82-SPEC)
+  3. End-to-end auth gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
+**Plans**: 4 plans
+  - [x] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
+  - [x] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
+  - [x] 82-03-PLAN.md — UI port: useForgeJobFiles hooks, FileBrowser + ArtifactPreview (sandboxed), ForgeFilesPane + Files tab
+  - [x] 82-04-PLAN.md — Cross-repo forge daemon: workspace enumeration + emitFiles + live round-trip (forge repo) — listing bridge verified live (forge fix a31dca4); preview bytes blocked by codex-sandbox ACLs (Forge follow-up)
 
 ## Execution Order
 
@@ -136,11 +153,13 @@ Phase 80 (Command Bridge)          ◀── NEXT — launch/stop queue + Clerk 
         │
 Phase 81 (Live Log Streaming)      design LOCKED (081-SPEC) — Convex-reactive, LOW risk
         │
-Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polish
+Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth + OPS-01 + polish
 ```
 
 **Critical path:** 80 → 81 → 82, strictly sequential (each builds on the prior surface). Phase 81's risk was retired by the locked SPEC.
 **Cross-repo:** Forge-side counterparts land in the `forge` repo (emitter ✅ Phase 6; log sink `makeLogSink` finalization in Phase 81; command-poll daemon for Phase 80).
+
+</details>
 
 ## Progress
 
@@ -149,14 +168,14 @@ Phase 82 (Files + Preview + Hardening)  artifact reachability + e2e auth + polis
 | 1-7, 58 | v4.0 | 36/36 | Complete | 2026-04-14 |
 | 59-70 | v5.0 | 23/23 | Complete | 2026-05-25 |
 | 71-74, 76 | v6.0 | shipped (light) | Complete | — |
-| 75. Agent Console | v6.0 | 0/TBD | ⛔ Parked (ext. blocked) | — |
-| 77. CI & Prod Hardening | v6.0 | 2/3 | ⏸️ Parked | — |
+| 75. Agent Console | v6.0 | — | 🔁 Superseded by v7.0 Forge | 2026-06-18 |
+| 77. CI & Prod Hardening | v6.0 | 3/3 | ✅ Complete | 2026-06-18 |
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
-| 80. Command Bridge | v7.0 | 0/TBD | 📋 Active (next) | — |
-| 81. Live Log Streaming | v7.0 | 0/TBD | 📋 Active (SPEC locked) | — |
-| 82. Files + Preview + Hardening | v7.0 | 0/TBD | 📋 Active | — |
+| 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
+| 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
+| 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 
 ---
 
-*Last updated: 2026-06-16 — activated v7.0 Forge Integration (Phases 78-82); 78/79 shipped, 80/81/82 brought into the active roadmap; v6.0 parked (75 + 77 pending). 081 design locked to the Convex-reactive log-ingest path per 081-SPEC.*
+*Last updated: 2026-06-17 — **Milestone v7.0 Forge Integration SHIPPED** (all 5 phases 78-82 complete + verified live; archived to milestones/v7.0-*). v6.0 remains parked (75 + 77 pending on Ástríðr gates). Next: new milestone or resume v6.0.*
