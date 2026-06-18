@@ -199,7 +199,7 @@ export async function runScan(sessionId, codepulseUrl, ingestKey) {
       signal: controller.signal,
     });
     if (!resp.ok) {
-      console.error(`[codepulse-scanner] /scan responded ${resp.status}`);
+      console.error(`[codepulse-scanner] /scan responded ${resp.status}: ${await resp.text()}`);
     }
   } catch (err) {
     console.error(`[codepulse-scanner] /scan failed: ${err.message}`);
@@ -259,8 +259,13 @@ if (isDirectRun) {
     if (existsSync(envPath)) {
       try {
         const content = readFileSync(envPath, "utf-8");
-        const m = content.match(/^CONVEX_SITE_URL\s*=\s*(.+)$/m);
-        if (m) url = m[1].trim();
+        const siteMatch = content.match(/^CONVEX_SITE_URL\s*=\s*(.+)$/m);
+        if (siteMatch) url = siteMatch[1].trim();
+        else {
+          // Fall back to VITE_CONVEX_URL but swap .cloud -> .site (same as codepulse-hook.mjs)
+          const viteMatch = content.match(/^VITE_CONVEX_URL\s*=\s*(.+)$/m);
+          if (viteMatch) url = viteMatch[1].trim().replace(".convex.cloud", ".convex.site");
+        }
       } catch {}
     }
   }

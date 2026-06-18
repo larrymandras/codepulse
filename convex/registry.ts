@@ -173,6 +173,10 @@ export const syncInventory = mutation({
     // --- Hooks: upsert ---
     if (Array.isArray(snap.hooks)) {
       for (const hook of snap.hooks) {
+        // Skip malformed/settings-shaped hooks (no string `command`) — inserting
+        // one would fail registeredHooks schema validation and roll back the
+        // entire sync (skills included). Be robust to bad input on one row.
+        if (typeof hook.command !== "string" || !hook.command) continue;
         const existing = await ctx.db
           .query("registeredHooks")
           .withIndex("by_hookType", (q) => q.eq("hookType", hook.hookType))
