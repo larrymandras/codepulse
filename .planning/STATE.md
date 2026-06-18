@@ -4,8 +4,8 @@ milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
 stopped_at: Phase 83 context gathered
-last_updated: "2026-06-18T18:30:09.998Z"
-last_activity: 2026-06-18 -- Phase 83 planning complete
+last_updated: "2026-06-18T18:39:13.708Z"
+last_activity: 2026-06-18 -- Phase 83 execution started
 progress:
   total_phases: 5
   completed_phases: 0
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Milestone v8.0 Graph/KG Consolidation — roadmap set (phases 83-87), ready to plan Phase 83.
+**Current focus:** Phase 83 — graph-snapshot-receiver
 **Last completed:** Phase 82 — Files + Artifact Preview + Hardening, 4/4 plans, 2026-06-17. **File LISTING bridge verified live**; two Forge daemon bugs fixed (a31dca4 realpath-EPERM fallback, dbfad91 codex-sandbox ACL grant); ingest key rotated; daemon auto-started via Windows scheduled task. **Artifact PREVIEW-bytes path: ACL fix applied (dbfad91) but the end-to-end live preview round-trip is still PENDING OPERATOR VERIFICATION** (82-04-SUMMARY § CHECKPOINT).
 
 ## Current Position
 
-Phase: 83 — Graph Snapshot Receiver (not started)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-06-18 -- Phase 83 planning complete
+Phase: 83 (graph-snapshot-receiver) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 83
+Last activity: 2026-06-18 -- Phase 83 execution started
 
 Progress bar: `░░░░░░░░░░` 0% (0/5 phases)
 
