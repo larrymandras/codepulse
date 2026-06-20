@@ -61,6 +61,10 @@ Progress bar: `██░░░░░░░░` 20% (1/5 phases)
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 88 added (2026-06-20): Analytics Rollup Table — durable fix for the Convex 16 MiB/exec read-limit hit by `analytics.ts` aggregation queries. Standalone observability hardening, independent of v8.0. Prod-impacting quick unblock (lowered `.take()` caps) shipped same day; this phase replaces it with ingest-time rollups.
+
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.

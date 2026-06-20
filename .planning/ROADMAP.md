@@ -265,6 +265,26 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 
+### Phase 88: Analytics Rollup Table — durable fix for Convex 16 MiB read-limit in analytics aggregation queries
+
+**Goal:** Eliminate the Convex per-execution read-limit risk in `convex/analytics.ts` by reading pre-aggregated rollups instead of scanning raw `events` rows. The analytics queries (`activityHeatmap`, `toolFlowSankey`, `errorRateTrend`, `tokenSunburst`, `tokenWaterfall`) currently read full `events` documents whose `payload: v.any()` blobs are fat (~9 KB/row), just to aggregate `timestamp`/`eventType`. `activityHeatmap` hit the 16 MiB/exec read limit in prod (`tidy-whale-981`) and was quick-patched 2026-06-20 by lowering `.take()` caps (heatmap 5000→1000, sankey 2000→1000, errorRateTrend 500→300×3, llmMetrics `.collect()`→`.take(30000)`). That patch is fragile and count-caps fidelity — it regresses as payload sizes grow.
+
+**Context:** Convex always reads whole documents (no column projection) and `.filter()` runs post-index-scan, so every analytics read pays the full `payload` byte cost. Quick unblock shipped to dev; this phase is the durable replacement.
+
+**Approach (to refine in planning):** Maintain slim pre-aggregated rollup table(s) updated at ingest time (`convex/ingest.ts` / `runtimeIngest.ts`) — e.g. day-hour activity buckets, error-type counts per hour, llm token/cost totals per provider/model. Analytics queries then read O(buckets) instead of O(events). Once rollups are authoritative, restore full-fidelity analytics and remove the `.take()` caps.
+
+**Acceptance:**
+- All analytics queries read well under 16 MiB regardless of total event volume (verify via `npx convex run` byte WARN absence at scale).
+- Heatmap / sankey / error-trend fidelity no longer bounded by `.take()` count caps.
+- Rollups stay correct under ingest, archival, and backfill.
+
+**Requirements**: TBD
+**Depends on:** None — standalone observability hardening, independent of the v8.0 Graph/KG milestone (83–87).
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 88 to break down)
+
 ---
 
 *Last updated: 2026-06-18 — **Milestone v8.0 Graph/KG Consolidation roadmap created** (phases 83-87, 8 requirements mapped). v7.0 Forge shipped 2026-06-17. Next: `/gsd-plan-phase 83`.*
