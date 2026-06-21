@@ -44,7 +44,7 @@ const MODEL_COLORS: Record<string, string> = {
   gemini: "bg-blue-500/20 text-blue-300",
 };
 
-function modelBadgeClass(model?: string): string {
+export function modelBadgeClass(model?: string): string {
   if (!model) return "bg-gray-700/50 text-gray-400";
   const lower = model.toLowerCase();
   for (const [key, cls] of Object.entries(MODEL_COLORS)) {
