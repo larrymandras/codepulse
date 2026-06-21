@@ -26,7 +26,9 @@ export const upsert = mutation({
     timestamp: v.float64(),
   },
   handler: async (ctx, args) => {
-    const now = args.timestamp ?? Date.now() / 1000;
+    // Use ms epoch throughout. args.timestamp is already ms (normalized in runtimeIngest).
+    // Fallback to Date.now() (ms) so updatedAt/createdAt stay in the same unit.
+    const now = args.timestamp ?? Date.now();
 
     // --- swarmTasks: query-then-insert-or-patch ---------------------------------
     const existing = await ctx.db

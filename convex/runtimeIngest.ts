@@ -72,9 +72,13 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // Phase 149 PULSE-01 — route Ástríðr swarm lifecycle events to swarmTasks.
           // Inherits the validateIngestAuth Bearer-token gate above (T-149-01).
           // Normalizes "completed" → "done" (UI vocabulary per RESEARCH L603-617).
+          // Timestamp normalization: Ástríðr emits Python time.time() (seconds,
+          // ~1.78e9). Store as ms (< 1e12 → multiply by 1000) so BlackboardPanel's
+          // formatElapsed and Date.now() comparisons are in consistent units (gap-149).
           const d = data as any;
           const rawState: string = d.state ?? "pending";
           const state = rawState === "completed" ? "done" : rawState;
+          const tsMs = timestamp < 1e12 ? timestamp * 1000 : timestamp;
           await ctx.runMutation(api.swarmTasks.upsert, {
             goalId: d.goal_id ?? d.goalId ?? "unknown",
             subtaskId: d.subtask_id ?? d.subtaskId ?? "unknown",
@@ -84,7 +88,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             claimedBy: d.claimed_by ?? d.claimedBy,
             model: d.model,
             agentId: d.agent_id ?? d.agentId,
-            timestamp,
+            timestamp: tsMs,
           });
           break;
         }

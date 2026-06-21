@@ -180,4 +180,21 @@ describe("SwarmGraph", () => {
     render(<SwarmGraph goalId="goal-1" />);
     expect(screen.getByTestId("mock-flow")).toBeInTheDocument();
   });
+
+  // ── Height fix: ReactFlow wrapper must have an explicit height (gap-149 #1) ──
+  // h-full (height:100%) resolves to 0 when the parent has no explicit height
+  // (only min-height). The wrapper must own its height with h-[400px] or similar.
+
+  it("ReactFlow wrapper does NOT use h-full — has an explicit height class", () => {
+    mockRows = [makeTask("a")];
+    const { container } = render(<SwarmGraph goalId="goal-1" />);
+    // The wrapper div is the one with tabIndex=0 that directly wraps the ReactFlow mock.
+    const wrapper = container.querySelector("[tabIndex='0']");
+    expect(wrapper).not.toBeNull();
+    const cls = wrapper!.className;
+    // Must not rely on h-full (which resolves to 0 against a min-height parent)
+    expect(cls).not.toMatch(/\bh-full\b/);
+    // Must have an explicit height (e.g. h-[400px])
+    expect(cls).toMatch(/\bh-\[/);
+  });
 });

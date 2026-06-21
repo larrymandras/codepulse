@@ -179,7 +179,7 @@ export default function SwarmGraph({ goalId }: SwarmGraphProps) {
   // ── Render React Flow DAG ──────────────────────────────────────────────────
   return (
     <div
-      className="w-full h-full min-h-[400px] rounded-xl overflow-hidden
+      className="w-full h-[400px] rounded-xl overflow-hidden
                  border border-border/30 bg-background/30
                  focus:outline-none focus:ring-1 focus:ring-primary/40"
       tabIndex={0}

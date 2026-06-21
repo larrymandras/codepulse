@@ -38,6 +38,8 @@ function processSwarmTaskEvent(
   const rawState: string = d.state ?? "pending";
   // Normalize Ástríðr "completed" → "done" (UI vocabulary, RESEARCH L603-617)
   const state = rawState === "completed" ? "done" : rawState;
+  // Normalize seconds-epoch to ms (gap-149): Python time.time() < 1e12; Date.now() > 1e12
+  const tsMs = timestamp < 1e12 ? timestamp * 1000 : timestamp;
   return {
     goalId: d.goal_id ?? d.goalId ?? "unknown",
     subtaskId: d.subtask_id ?? d.subtaskId ?? "unknown",
@@ -47,7 +49,7 @@ function processSwarmTaskEvent(
     claimedBy: d.claimed_by ?? d.claimedBy,
     model: d.model,
     agentId: d.agent_id ?? d.agentId,
-    timestamp,
+    timestamp: tsMs,
   };
 }
 
@@ -66,6 +68,8 @@ function extractLlmCallGoalId(data: Record<string, any>): string | undefined {
 describe("runtimeIngest — swarm_task case", () => {
   describe("(a) routing: swarm_task produces a swarmTasks upsert call", () => {
     it("produces valid upsert args with the correct goalId and subtaskId", () => {
+      // Use a real ms-epoch timestamp so the normalization sentinel (1e12) does not apply.
+      const msTimestamp = 1_750_000_000_000; // a plausible Date.now() value
       const args = processSwarmTaskEvent(
         {
           goalId: "goal-xyz",
@@ -74,14 +78,14 @@ describe("runtimeIngest — swarm_task case", () => {
           subtask: "research Nordic pop",
           dependsOn: [],
         },
-        1000
+        msTimestamp
       );
       expect(args.goalId).toBe("goal-xyz");
       expect(args.subtaskId).toBe("sub-abc");
       expect(args.state).toBe("pending");
       expect(args.subtask).toBe("research Nordic pop");
       expect(args.dependsOn).toEqual([]);
-      expect(args.timestamp).toBe(1000);
+      expect(args.timestamp).toBe(msTimestamp);
     });
   });
 
@@ -157,6 +161,42 @@ describe("runtimeIngest — swarm_task case", () => {
         4000
       );
       expect(args.goalId).toBe("from-snake");
+    });
+  });
+
+  describe("(b2) timestamp normalization: seconds-epoch → ms (gap-149 #3)", () => {
+    it("multiplies seconds-epoch timestamp by 1000 to produce ms", () => {
+      // Python time.time() ≈ 1.78e9 (seconds, < 1e12).
+      // Should be stored as ms so Date.now() comparisons work in the panel.
+      const secondsEpoch = 1_750_000_000; // a plausible Python time.time() value
+      const args = processSwarmTaskEvent(
+        { goal_id: "goal-1", subtask_id: "sub-1", state: "running", subtask: "t", depends_on: [] },
+        secondsEpoch
+      );
+      expect(args.timestamp).toBe(secondsEpoch * 1000);
+    });
+
+    it("leaves ms-epoch timestamps unchanged (already > 1e12)", () => {
+      const msEpoch = 1_750_000_000_000; // a plausible Date.now() value (already ms)
+      const args = processSwarmTaskEvent(
+        { goal_id: "goal-1", subtask_id: "sub-1", state: "running", subtask: "t", depends_on: [] },
+        msEpoch
+      );
+      expect(args.timestamp).toBe(msEpoch);
+    });
+
+    it("seconds-epoch timestamp stored as ms is within expected range of Date.now()", () => {
+      // Validate the sentinel value 1e12 doesn't fall in an ambiguous zone.
+      // Any real seconds-epoch is ~1.78e9; any real ms-epoch is ~1.78e12.
+      // 1e12 is safely between them.
+      const secondsNow = Math.floor(Date.now() / 1000);
+      const args = processSwarmTaskEvent(
+        { goal_id: "goal-1", subtask_id: "sub-1", state: "pending", subtask: "t", depends_on: [] },
+        secondsNow
+      );
+      const diffMs = Date.now() - args.timestamp;
+      // Diff should be small (< 5000 ms), not hundreds of thousands of hours
+      expect(Math.abs(diffMs)).toBeLessThan(5000);
     });
   });
 

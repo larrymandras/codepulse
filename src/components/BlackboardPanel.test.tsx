@@ -119,4 +119,56 @@ describe("BlackboardPanel", () => {
 
     expect(screen.getByText("No tasks found for this goal.")).toBeInTheDocument();
   });
+
+  // ── Timestamp normalization: seconds-epoch from Ástríðr (gap-149 #3) ──────
+  // Python time.time() ≈ 1.78e9 (seconds). Date.now() ≈ 1.78e12 (ms).
+  // Without normalization the diff is ~1.78e12 ms ≈ 494000h.
+  // With normalization a task started 300s ago should show "5m".
+
+  it("renders '5m' elapsed for a seconds-epoch timestamp 300s ago", () => {
+    const secondsEpochTimestamp = Math.floor(Date.now() / 1000) - 300; // 300 seconds ago, in seconds
+    mockRows = [
+      {
+        goalId: "goal-1",
+        subtaskId: "ts-test",
+        state: "running",
+        subtask: "Test elapsed normalization",
+        dependsOn: [],
+        claimedBy: "agent-1",
+        timestamp: secondsEpochTimestamp,
+        updatedAt: undefined,
+      },
+    ];
+    mockUseSwarmGraph.mockReturnValue(mockRows as ReturnType<typeof useSwarmGraph>);
+
+    render(<BlackboardPanel goalId="goal-1" />);
+
+    // Should render "5m", not a 4+ digit hours value like "494524h"
+    expect(screen.getByText("5m")).toBeInTheDocument();
+  });
+
+  it("does NOT render a 4+ digit hours value for a seconds-epoch timestamp", () => {
+    const secondsEpochTimestamp = Math.floor(Date.now() / 1000) - 60; // 1 min ago, in seconds
+    mockRows = [
+      {
+        goalId: "goal-1",
+        subtaskId: "ts-test-2",
+        state: "running",
+        subtask: "Test no bogus hours",
+        dependsOn: [],
+        claimedBy: "agent-1",
+        timestamp: secondsEpochTimestamp,
+        updatedAt: undefined,
+      },
+    ];
+    mockUseSwarmGraph.mockReturnValue(mockRows as ReturnType<typeof useSwarmGraph>);
+
+    const { container } = render(<BlackboardPanel goalId="goal-1" />);
+
+    // No elapsed value should have 4+ digits followed by 'h'
+    const elapsed = container.querySelector(".font-mono.text-muted-foreground");
+    if (elapsed) {
+      expect(elapsed.textContent).not.toMatch(/\d{4,}h/);
+    }
+  });
 });

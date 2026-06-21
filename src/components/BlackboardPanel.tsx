@@ -32,12 +32,17 @@ const stateIcon: Record<string, React.ReactNode> = {
   verify_rejected: <ShieldX className="h-3.5 w-3.5 text-[#ef4444]" />,
 };
 
-// Format elapsed time from a timestamp (ms epoch) to a short string
+// Format elapsed time from a timestamp to a short string.
+// Normalizes seconds-epoch values (< 1e12) to ms before computing the diff
+// so both already-stored seconds rows and new ms rows render correctly.
 function formatElapsed(timestamp: number | undefined, updatedAt?: number): string {
   const now = Date.now();
   const ref = updatedAt ?? timestamp;
   if (!ref) return "";
-  const diffMs = now - ref;
+  // Normalize: Ástríðr sends Python time.time() (seconds, ~1.78e9).
+  // Date.now() is ~1.78e12. Values < 1e12 are seconds-epoch; convert to ms.
+  const refMs = ref < 1e12 ? ref * 1000 : ref;
+  const diffMs = now - refMs;
   const s = Math.floor(diffMs / 1000);
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
