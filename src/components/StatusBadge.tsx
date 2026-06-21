@@ -36,6 +36,11 @@ const legacyMap: Record<string, { semantic: string; label: string }> = {
   pending: { semantic: "warn", label: "PENDING" },
   idle: { semantic: "idle", label: "IDLE" },
   deregistered: { semantic: "error", label: "REMOVED" },
+  // Swarm task states (Phase 149)
+  claimed: { semantic: "warn", label: "CLAIMED" },
+  verifying: { semantic: "ok", label: "VERIFYING" },
+  done: { semantic: "ok", label: "DONE" },
+  verify_rejected: { semantic: "error", label: "REJECTED" },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {
