@@ -384,6 +384,17 @@ code, pre, .font-mono {
   background: radial-gradient(circle at center, transparent 0%, var(--background) 80%);
 }
 
+/* Phase 149-03 — PULSE-03 swarm edge particle flow animation */
+/* Used by SwarmEdgeParticle.tsx via CSS offsetPath/offsetDistance */
+@keyframes particle-flow {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
 /* Phase 63 — prefers-reduced-motion: disable all animations */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
