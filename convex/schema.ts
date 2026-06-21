@@ -29,6 +29,7 @@ export default defineSchema({
     payload: v.any(),
     hookType: v.optional(v.string()),
     timestamp: v.float64(),
+    goalId: v.optional(v.string()),    // Phase 149 PULSE-01
     archived: v.optional(v.boolean()),
   })
     .index("by_session", ["sessionId", "timestamp"])
@@ -305,12 +306,14 @@ export default defineSchema({
     agentId: v.optional(v.string()),    // Phase 59 SCH-02
     toolName: v.optional(v.string()),   // Phase 59 SCH-02
     billingType: v.optional(v.string()),  // "api" | "subscription" — Phase 67
+    goalId: v.optional(v.string()),     // Phase 149 PULSE-01 — swarm cost join
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])
     .index("by_session", ["sessionId", "timestamp"])
     .index("by_timestamp", ["timestamp"])
-    .index("by_agent", ["agentId", "timestamp"]),
+    .index("by_agent", ["agentId", "timestamp"])
+    .index("by_goal", ["goalId", "timestamp"]),
 
   securityEvents: defineTable({
     eventType: v.string(),
@@ -866,6 +869,7 @@ export default defineSchema({
     findingId: v.optional(v.id("ideationFindings")),
     alertId: v.optional(v.id("alerts")),
     createdAt: v.number(),
+    goalId: v.optional(v.string()),     // Phase 149 PULSE-01
   })
     .index("by_column", ["column", "createdAt"])
     .index("by_findingId", ["findingId"])
@@ -885,6 +889,35 @@ export default defineSchema({
   })
     .index("by_type_period_bucket", ["metric_type", "period", "bucket_start"])
     .index("by_period_bucket", ["period", "bucket_start"]),
+
+  // ============================================================
+  // SWARM OBSERVABILITY (Phase 149 PULSE-01)
+  // ============================================================
+
+  swarmTasks: defineTable({
+    goalId: v.string(),
+    subtaskId: v.string(),
+    state: v.string(),        // "pending"|"claimed"|"running"|"verifying"|"done"|"failed"|"verify_rejected"
+    subtask: v.string(),
+    dependsOn: v.array(v.string()),
+    claimedBy: v.optional(v.string()),
+    model: v.optional(v.string()),
+    agentId: v.optional(v.string()),
+    timestamp: v.float64(),
+    updatedAt: v.optional(v.float64()),
+  })
+    .index("by_goal", ["goalId", "timestamp"])
+    .index("by_subtask", ["subtaskId"])
+    .index("by_state", ["state", "goalId"]),
+
+  swarmGoals: defineTable({
+    goalId: v.string(),
+    firstSubtask: v.string(),
+    latestState: v.string(),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_created", ["createdAt"]),
 
   // ============================================================
   // ALERT ROUTING (Phase 6)
