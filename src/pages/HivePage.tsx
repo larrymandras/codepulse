@@ -1,0 +1,63 @@
+/**
+ * HivePage — Swarm observability page.
+ *
+ * Phase 149-05 — PULSE-03 + PULSE-04 composition.
+ * Composes SwarmGraph + BlackboardPanel + CostBreakdown + GoalPicker, each
+ * region wrapped in SectionErrorBoundary + GlassPanel, sharing one goalId
+ * state that auto-follows the newest goal from useGoalList() (D-08).
+ */
+
+import { useState, useEffect } from "react";
+import SwarmGraph from "../components/SwarmGraph";
+import BlackboardPanel from "../components/BlackboardPanel";
+import CostBreakdown from "../components/CostBreakdown";
+import GoalPicker from "../components/GoalPicker";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { GlassPanel } from "../components/GlassPanel";
+import { useGoalList } from "../hooks/useSwarmGraph";
+
+export default function HivePage() {
+  const [goalId, setGoalId] = useState<string | null>(null);
+  const goals = useGoalList();
+
+  // D-08: auto-follow the most-recent goal when none is selected yet
+  useEffect(() => {
+    if (goalId === null && goals.length > 0) {
+      setGoalId(goals[0].goalId);
+    }
+  }, [goalId, goals]);
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Page header: HIVE MIND label + live-pulse dot + GoalPicker right */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          HIVE MIND
+        </h1>
+        <GoalPicker selectedGoalId={goalId} onSelect={setGoalId} />
+      </div>
+
+      {/* Region 1: Swarm Graph hero */}
+      <SectionErrorBoundary name="Swarm Graph">
+        <GlassPanel className="rounded-xl p-5 min-h-[400px]">
+          <SwarmGraph goalId={goalId} />
+        </GlassPanel>
+      </SectionErrorBoundary>
+
+      {/* Regions 2 + 3: Blackboard + Cost — side-by-side on ≥1280px, stacked below */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <SectionErrorBoundary name="Blackboard">
+          <GlassPanel className="rounded-xl p-5">
+            <BlackboardPanel goalId={goalId} />
+          </GlassPanel>
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="Cost">
+          <GlassPanel className="rounded-xl p-5">
+            <CostBreakdown goalId={goalId} />
+          </GlassPanel>
+        </SectionErrorBoundary>
+      </div>
+    </div>
+  );
+}

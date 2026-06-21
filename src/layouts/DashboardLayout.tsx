@@ -60,6 +60,7 @@ import {
   Boxes,
   Share2,
   Flame,
+  Hexagon,
 } from "lucide-react";
 import {
   Tooltip,
@@ -105,6 +106,7 @@ const iconComponents: Record<string, React.ElementType> = {
   boxes: Boxes,
   "share-2": Share2,
   flame: Flame,
+  hexagon: Hexagon,   // Phase 149 — Hive page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -172,6 +174,7 @@ const navGroups: NavGroupConfig[] = [
     group: "OBSERVE",
     items: [
       { to: "/", label: "Dashboard", icon: "grid", group: "OBSERVE" },
+      { to: "/hive", label: "Hive", icon: "hexagon", group: "OBSERVE" },
       { to: "/analytics", label: "Analytics", icon: "chart", group: "OBSERVE" },
       { to: "/alerts", label: "Alerts", icon: "bell", group: "OBSERVE" },
       { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OBSERVE" },

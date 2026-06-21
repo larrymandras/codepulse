@@ -67,6 +67,9 @@ const HrAgentAnalytics = lazy(() => import("./pages/hr/AgentAnalytics"));
 // Phase 79: Forge UI
 const ForgePage = lazy(() => import("./pages/ForgePage"));
 
+// Phase 149: Hive swarm observability
+const HivePage = lazy(() => import("./pages/HivePage"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -88,6 +91,8 @@ export default function App() {
               <Route path="/build" element={<BuildProgress />} />
               {/* Phase 79: Forge job viewer */}
               <Route path="/forge" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Forge...</div>}><ForgePage /></Suspense>} />
+              {/* Phase 149: Hive swarm observability */}
+              <Route path="/hive" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Hive...</div>}><HivePage /></Suspense>} />
               <Route path="/memory" element={<Memory />} />
               <Route path="/briefings" element={<Briefings />} />
               <Route path="/automation" element={<Automation />} />
