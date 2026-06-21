@@ -22,12 +22,14 @@ export const computeHourly = internalMutation({
     const costByDim: Record<string, number> = {};
     for (const r of llmRows) {
       const billingType = (r as any).billingType ?? getBillingType(r.provider);
-      const key = `${r.provider}::${r.model}::${billingType}`;
+      // PULSE-02: extend key with goalId (4th segment) so hourly aggregates are goal-scoped.
+      // goalId is "" for non-swarm rows — that is a valid bucket, not a missing value.
+      const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
       costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
     }
 
-    // Phase 67: Per-dimension-key idempotency guard.
-    // With billingType, multiple rows per hour bucket can exist (api + subscription).
+    // PULSE-02 / Phase 67: Per-dimension-key idempotency guard.
+    // With billingType + goalId, multiple rows per hour bucket can exist.
     // Collect all existing cost rows for this hour and skip already-aggregated dimension keys.
     const existingCostRows = await ctx.db
       .query("aggregates")
@@ -37,20 +39,21 @@ export const computeHourly = internalMutation({
       .collect();
     const existingKeys = new Set(
       existingCostRows.map((r) => {
-        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string } | null;
-        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}`;
+        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+        // Must reconstruct the identical 4-segment key — goalId defaults to "" (Pitfall 3)
+        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
       })
     );
 
     for (const [dim, value] of Object.entries(costByDim)) {
       if (existingKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
-      const [provider, model, billingType] = dim.split("::");
+      const [provider, model, billingType, goalId] = dim.split("::");
       await ctx.db.insert("aggregates", {
         metric_type: "cost",
         period: "hourly",
         bucket_start: hourStart,
         value,
-        dimensions: { provider, model, billingType },
+        dimensions: { provider, model, billingType, goalId },
       });
     }
 

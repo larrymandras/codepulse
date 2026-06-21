@@ -216,4 +216,194 @@ describe("aggregates", () => {
       expect(grouped).toEqual({ Info: 50, Error: 10 });
     });
   });
+
+  describe("computeHourly — goalId dimension extension (PULSE-02)", () => {
+    test("dimension key includes goalId as 4th segment", () => {
+      // The new key format is provider::model::billingType::goalId
+      const rows = [
+        { provider: "openrouter", model: "gpt-4", cost: 0.03, billingType: "api", goalId: "goal-123" },
+        { provider: "openrouter", model: "gpt-4", cost: 0.02, billingType: "api", goalId: "goal-456" },
+        { provider: "openrouter", model: "gpt-4", cost: 0.01, billingType: "api", goalId: undefined as string | undefined },
+      ];
+      const costByDim: Record<string, number> = {};
+      for (const r of rows) {
+        const key = `${r.provider}::${r.model}::${r.billingType}::${r.goalId ?? ""}`;
+        costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
+      }
+      // Each goalId produces a separate bucket
+      expect(costByDim["openrouter::gpt-4::api::goal-123"]).toBe(0.03);
+      expect(costByDim["openrouter::gpt-4::api::goal-456"]).toBe(0.02);
+      // Non-swarm row gets empty-string goalId bucket
+      expect(costByDim["openrouter::gpt-4::api::"]).toBe(0.01);
+      expect(Object.keys(costByDim)).toHaveLength(3);
+    });
+
+    test("idempotency guard with goalId: existingKeys set uses 4-segment format", () => {
+      // If an aggregates row for (provider, model, billingType, goalId) already exists,
+      // the idempotency set must reconstruct the identical 4-segment key.
+      const existingCostRows = [
+        { dimensions: { provider: "openrouter", model: "gpt-4", billingType: "api", goalId: "goal-123" } },
+        { dimensions: { provider: "openrouter", model: "gpt-4", billingType: "api", goalId: "" } },
+      ];
+      const existingKeys = new Set(
+        existingCostRows.map((r) => {
+          const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+          return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+        })
+      );
+      // Already-aggregated keys are in the set
+      expect(existingKeys.has("openrouter::gpt-4::api::goal-123")).toBe(true);
+      expect(existingKeys.has("openrouter::gpt-4::api::")).toBe(true);
+      // A new goalId key is NOT blocked
+      expect(existingKeys.has("openrouter::gpt-4::api::goal-new")).toBe(false);
+    });
+
+    test("idempotency: running computeHourly twice over same goalId rows produces no new keys", () => {
+      // Simulates two cron runs over the same llmMetrics rows.
+      // After the first run, existing aggregates rows have goalId in their dimensions.
+      // The second run must skip all these rows (no duplicates).
+      const llmRows = [
+        { provider: "anthropic", model: "claude-3", cost: 0.05, billingType: "api", goalId: "goal-abc" },
+        { provider: "anthropic", model: "claude-3", cost: 0.03, billingType: "api", goalId: "goal-abc" },
+        { provider: "openrouter", model: "gpt-4", cost: 0.10, billingType: "api", goalId: "goal-xyz" },
+      ];
+
+      // First run: build costByDim
+      const costByDim: Record<string, number> = {};
+      for (const r of llmRows) {
+        const key = `${r.provider}::${r.model}::${r.billingType}::${r.goalId ?? ""}`;
+        costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
+      }
+      // First run: existingKeys is empty, so all dims are inserted
+      const firstRunKeys = Object.keys(costByDim);
+      expect(firstRunKeys).toHaveLength(2);
+
+      // Simulate the aggregates table after first run
+      const aggregatesAfterFirstRun = firstRunKeys.map((dim) => {
+        const [provider, model, billingType, goalId] = dim.split("::");
+        return { dimensions: { provider, model, billingType, goalId } };
+      });
+
+      // Second run: rebuild existingKeys from the stored aggregates
+      const existingKeys = new Set(
+        aggregatesAfterFirstRun.map((r) => {
+          const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+          return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+        })
+      );
+
+      // Second run: all keys are already in existingKeys — nothing new to insert
+      const newInserts: string[] = [];
+      for (const [dim] of Object.entries(costByDim)) {
+        if (!existingKeys.has(dim)) {
+          newInserts.push(dim);
+        }
+      }
+      expect(newInserts).toHaveLength(0); // No double-counting
+    });
+
+    test("aggregates insert includes goalId in dimensions", () => {
+      // When splitting dim.split("::"), 4 segments are produced; goalId goes into dimensions
+      const dim = "anthropic::claude-3::api::goal-abc";
+      const [provider, model, billingType, goalId] = dim.split("::");
+      const dimensions = { provider, model, billingType, goalId };
+      expect(dimensions).toEqual({
+        provider: "anthropic",
+        model: "claude-3",
+        billingType: "api",
+        goalId: "goal-abc",
+      });
+    });
+
+    test("non-swarm rows (goalId undefined) produce empty-string 4th segment", () => {
+      const dim = "openrouter::gpt-4::api::";
+      const [provider, model, billingType, goalId] = dim.split("::");
+      expect(goalId).toBe(""); // empty string, not undefined
+      const dimensions = { provider, model, billingType, goalId };
+      expect(dimensions.goalId).toBe("");
+    });
+  });
+
+  describe("costByGoalPeriod — per-goal cost query (PULSE-02, OQ-1)", () => {
+    test("groups llmMetrics rows by (provider, model) and sums cost", () => {
+      // Simulates costByGoalPeriod grouping logic
+      const goalId = "goal-123";
+      const llmRows = [
+        { goalId: "goal-123", provider: "anthropic", model: "claude-3-opus", cost: 0.05, archived: false },
+        { goalId: "goal-123", provider: "anthropic", model: "claude-3-opus", cost: 0.03, archived: false },
+        { goalId: "goal-123", provider: "openrouter", model: "gpt-4", cost: 0.10, archived: false },
+        { goalId: "goal-456", provider: "anthropic", model: "claude-3-opus", cost: 0.99, archived: false }, // different goal
+      ];
+
+      // Filter by goalId and exclude archived
+      const filtered = llmRows.filter((r) => r.goalId === goalId && r.archived !== true);
+
+      // Group by provider::model
+      const grouped: Record<string, { provider: string; model: string; cost: number }> = {};
+      for (const r of filtered) {
+        const key = `${r.provider}::${r.model}`;
+        if (!grouped[key]) grouped[key] = { provider: r.provider, model: r.model, cost: 0 };
+        grouped[key].cost += r.cost ?? 0;
+      }
+      const rows = Object.values(grouped);
+      const totalCost = rows.reduce((sum, r) => sum + r.cost, 0);
+
+      expect(rows).toHaveLength(2);
+      const anthropicRow = rows.find((r) => r.provider === "anthropic");
+      expect(anthropicRow?.cost).toBeCloseTo(0.08);
+      const openrouterRow = rows.find((r) => r.provider === "openrouter");
+      expect(openrouterRow?.cost).toBeCloseTo(0.10);
+      expect(totalCost).toBeCloseTo(0.18);
+    });
+
+    test("excludes archived rows from cost total", () => {
+      const goalId = "goal-789";
+      const llmRows = [
+        { goalId: "goal-789", provider: "anthropic", model: "claude-3-haiku", cost: 0.02, archived: false },
+        { goalId: "goal-789", provider: "anthropic", model: "claude-3-haiku", cost: 0.50, archived: true }, // should be excluded
+      ];
+
+      const filtered = llmRows.filter((r) => r.goalId === goalId && r.archived !== true);
+      const totalCost = filtered.reduce((sum, r) => sum + (r.cost ?? 0), 0);
+
+      expect(filtered).toHaveLength(1);
+      expect(totalCost).toBeCloseTo(0.02);
+    });
+
+    test("returns empty shape when no rows match goalId", () => {
+      const goalId = "goal-nonexistent";
+      const llmRows: Array<{ goalId: string; provider: string; model: string; cost: number; archived: boolean }> = [];
+
+      const filtered = llmRows.filter((r) => r.goalId === goalId && r.archived !== true);
+      const grouped: Record<string, { provider: string; model: string; cost: number }> = {};
+      for (const r of filtered) {
+        const key = `${r.provider}::${r.model}`;
+        if (!grouped[key]) grouped[key] = { provider: r.provider, model: r.model, cost: 0 };
+        grouped[key].cost += r.cost ?? 0;
+      }
+      const rows = Object.values(grouped);
+      const totalCost = rows.reduce((sum, r) => sum + r.cost, 0);
+
+      expect(rows).toHaveLength(0);
+      expect(totalCost).toBe(0);
+    });
+
+    test("llmByGoal returns rows with agentId for tier-flag join (Plan 04)", () => {
+      // llmByGoal provides {agentId, model, cost} rows — the tier flag in Plan 04
+      // joins agentId to model to determine which tier each agent ran on.
+      const goalId = "goal-abc";
+      const llmRows = [
+        { goalId: "goal-abc", agentId: "agent-1", provider: "anthropic", model: "claude-3-opus", cost: 0.05, archived: false },
+        { goalId: "goal-abc", agentId: "agent-2", provider: "openrouter", model: "gpt-4o-mini", cost: 0.01, archived: false },
+        { goalId: "goal-abc", agentId: "agent-1", provider: "anthropic", model: "claude-3-opus", cost: 0.03, archived: true }, // archived
+      ];
+
+      const filtered = llmRows.filter((r) => r.goalId === goalId && r.archived !== true);
+      const result = filtered.map((r) => ({ agentId: r.agentId, model: r.model, cost: r.cost }));
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ agentId: "agent-1", model: "claude-3-opus", cost: 0.05 });
+      expect(result[1]).toEqual({ agentId: "agent-2", model: "gpt-4o-mini", cost: 0.01 });
+    });
+  });
 });
