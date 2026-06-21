@@ -299,6 +299,61 @@ export const errorTrendByPeriod = query({
   },
 });
 
+// ---- PULSE-02: Per-goal cost query (OQ-1: direct llmMetrics by_goal scan) ----
+// Reads llmMetrics directly via the by_goal index (added in Plan 149-01).
+// This single query covers both live goals (cost before next cron tick) and
+// completed goals — no aggregates-vs-llmMetrics branching needed (~100 rows/run max).
+export const costByGoalPeriod = query({
+  args: {
+    goalId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
+
+    // Group by provider::model, summing cost
+    const grouped: Record<string, { provider: string; model: string; cost: number }> = {};
+    for (const r of rows) {
+      const key = `${r.provider}::${r.model}`;
+      if (!grouped[key]) {
+        grouped[key] = { provider: r.provider, model: r.model, cost: 0 };
+      }
+      grouped[key].cost += r.cost ?? 0;
+    }
+
+    const resultRows = Object.values(grouped);
+    const totalCost = resultRows.reduce((sum, r) => sum + r.cost, 0);
+
+    return { rows: resultRows, totalCost };
+  },
+});
+
+// ---- PULSE-02: Per-goal raw LLM rows for tier-flag join (Plan 04 CostBreakdown) ----
+// Returns {agentId, model, cost} rows for a goalId so Plan 04 can join agentId → model tier.
+// Separate from costByGoalPeriod to avoid overloading the grouped shape with raw row data.
+export const llmByGoal = query({
+  args: {
+    goalId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_goal", (q) => q.eq("goalId", args.goalId))
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
+
+    return rows.map((r) => ({
+      agentId: (r as any).agentId as string | undefined,
+      model: r.model,
+      provider: r.provider,
+      cost: r.cost ?? 0,
+    }));
+  },
+});
+
 export const eventCountsByPeriod = query({
   args: {
     period: v.string(),
