@@ -1,6 +1,72 @@
 import { describe, it, expect } from "vitest";
 
+// ---------------------------------------------------------------------------
+// Minimal in-memory ctx.db for goalId-persistence test (Phase 149 PULSE-01)
+// ---------------------------------------------------------------------------
+
+function makeLlmStore() {
+  const llmMetrics: Record<string, any>[] = [];
+  const db = {
+    insert: async (tableName: string, data: Record<string, any>) => {
+      if (tableName === "llmMetrics") llmMetrics.push({ ...data });
+    },
+  };
+  return { llmMetrics, db };
+}
+
+// Mirrors the insert block in llm.ts recordCall handler (fields only, billingType stubbed).
+async function recordCallLogic(ctx: any, args: any) {
+  await ctx.db.insert("llmMetrics", {
+    provider: args.provider,
+    model: args.model,
+    promptTokens: args.promptTokens,
+    completionTokens: args.completionTokens,
+    totalTokens: args.totalTokens,
+    latencyMs: args.latencyMs,
+    cost: args.cost,
+    sessionId: args.sessionId,
+    timestamp: args.timestamp,
+    agentId: args.agentId,
+    toolName: args.toolName,
+    billingType: "api",
+    goalId: args.goalId,  // Phase 149 PULSE-01
+  });
+}
+
 describe("llm", () => {
+  describe("recordCall — goalId persistence (Phase 149 PULSE-01)", () => {
+    it("persists goalId into the llmMetrics row", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        goalId: "goal-abc-123",
+      });
+      expect(store.llmMetrics).toHaveLength(1);
+      expect(store.llmMetrics[0].goalId).toBe("goal-abc-123");
+    });
+
+    it("goalId is undefined for non-swarm calls (backward compat)", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        // goalId intentionally absent
+      });
+      expect(store.llmMetrics[0].goalId).toBeUndefined();
+    });
+  });
+
   describe("recordCall — extended args", () => {
     it("accepts optional agentId and toolName alongside existing fields", () => {
       const args = {

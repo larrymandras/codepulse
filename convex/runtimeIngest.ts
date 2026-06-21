@@ -64,6 +64,27 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             timestamp,
             agentId: d.agentId ?? d.agent_id,
             toolName: d.toolName ?? d.tool_name,
+            goalId: d.goalId ?? d.goal_id,            // Phase 149 PULSE-01 — cost-by-goal join
+          });
+          break;
+        }
+        case "swarm_task": {
+          // Phase 149 PULSE-01 — route Ástríðr swarm lifecycle events to swarmTasks.
+          // Inherits the validateIngestAuth Bearer-token gate above (T-149-01).
+          // Normalizes "completed" → "done" (UI vocabulary per RESEARCH L603-617).
+          const d = data as any;
+          const rawState: string = d.state ?? "pending";
+          const state = rawState === "completed" ? "done" : rawState;
+          await ctx.runMutation(api.swarmTasks.upsert, {
+            goalId: d.goal_id ?? d.goalId ?? "unknown",
+            subtaskId: d.subtask_id ?? d.subtaskId ?? "unknown",
+            state,
+            subtask: d.subtask ?? "",
+            dependsOn: d.depends_on ?? d.dependsOn ?? [],
+            claimedBy: d.claimed_by ?? d.claimedBy,
+            model: d.model,
+            agentId: d.agent_id ?? d.agentId,
+            timestamp,
           });
           break;
         }

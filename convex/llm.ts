@@ -16,6 +16,7 @@ export const recordCall = mutation({
     timestamp: v.float64(),
     agentId: v.optional(v.string()),
     toolName: v.optional(v.string()),
+    goalId: v.optional(v.string()),   // Phase 149 PULSE-01 — swarm cost join
   },
   handler: async (ctx, args) => {
     const billingType = getBillingType(args.provider);
@@ -32,6 +33,7 @@ export const recordCall = mutation({
       agentId: args.agentId,
       toolName: args.toolName,
       billingType,
+      goalId: args.goalId,
     });
   },
 });
