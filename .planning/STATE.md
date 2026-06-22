@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: verifying
-stopped_at: "Phase 85 Plan 04 complete — KnowledgeGraph cross-graph nav destination wired"
-last_updated: "2026-06-22T19:17:19.727Z"
+status: ready_to_plan
+stopped_at: Phase 85 complete (4/4) — ready to discuss Phase 88
+last_updated: 2026-06-22T21:13:53.172Z
 last_activity: 2026-06-22
 progress:
   total_phases: 6
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 85 — cross-graph-navigation
+**Current focus:** Phase 88 — analytics rollup table durable fix for convex 16 mib read li
 **Last completed:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. CodeVaultGraph dual-palette hero + GraphsHub page + `/graphs` route + nav flip; 5 UAT-found fixes (tooltip provider, zoom-fit, vault id-prefix discriminator, amber integrity banner) + amber D-08; 7/7 must-haves + human UAT passed via Playwright on real Convex data. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 85 (cross-graph-navigation) — COMPLETE (all 4 plans executed)
-Plan: 4 of 4 — DONE
+Phase: 88
+Plan: Not started
 Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09) OR Phase 88 (Analytics Rollup Table — prod-impacting quick unblock). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
-Status: Phase complete — ready for verification
+Status: Ready to plan
 Last activity: 2026-06-22
 
 Progress bar: `████░░░░░░` 40% (2/5 v8.0 phases: 83, 84 complete)

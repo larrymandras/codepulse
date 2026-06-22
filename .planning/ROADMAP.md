@@ -268,7 +268,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
-| 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete   | 2026-06-22 |
+| 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
