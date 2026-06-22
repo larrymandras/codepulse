@@ -349,10 +349,13 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
         </div>
       </div>
 
-      {/* ── Integrity warning (D-08) — gated, never unconditional ──────────── */}
+      {/* ── Integrity warning (D-08) — gated, never unconditional ───────────
+          Amber, not red: D-08 is a "subtle data-quality signal, not normal-
+          state info" — matches the sibling `stale`/`truncated` amber badges.
+          Dropped dangling links are an expected condition, not an error. */}
       {hasIntegrityWarning && (
-        <div className="flex items-start gap-3 mx-4 mb-2 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+        <div className="flex items-start gap-3 mx-4 mb-2 rounded-[var(--radius)] border border-amber-400/30 bg-amber-500/5 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
           <p className="text-xs font-mono text-muted-foreground">
             {integrityParts.join(" and ")} dropped during ingest (stored{" "}
             {snapshot.storedNodeCount}/{snapshot.nodeCount} nodes,{" "}
