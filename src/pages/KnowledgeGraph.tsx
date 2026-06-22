@@ -1,5 +1,6 @@
-import { useCallback, useMemo, useRef } from "react";
-import { Share2, AlertTriangle, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import {
@@ -10,6 +11,7 @@ import KGSummaryCards from "../components/kg/KGSummaryCards";
 import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
+import { useFocusParam } from "../hooks/useFocusParam";
 import {
   ENTITY_TYPE_COLORS,
   type KgNode,
@@ -33,9 +35,19 @@ function linkLineDashFn(l: any): number[] | null {
   return (l as KgLink).current ? null : [4, 3];
 }
 
+/** Derive origin surface label from the decoded from-param path. */
+function originLabel(fromPath: string): string {
+  const segment = fromPath.split("?")[0];
+  if (segment === "/tool-galaxy") return "Tool Galaxy";
+  if (segment === "/graphs") return "Code/Vault Graph";
+  if (segment === "/knowledge-graph") return "KG Explorer";
+  return "previous graph";
+}
+
 export default function KnowledgeGraph() {
   const kg = useKnowledgeGraph();
   const fgRef = useRef<ForceGraphHandle>(null);
+  const navigate = useNavigate();
 
   const {
     lens,
@@ -55,6 +67,61 @@ export default function KnowledgeGraph() {
     predicates,
     entityTypes,
   } = kg;
+
+  // ── Inbound entity-lens focus params ────────────────────────────────────────
+  const [searchParams] = useSearchParams();
+  const focusEntity = searchParams.get("focus");
+  const lensParam = searchParams.get("lens");
+  const hopsParam = searchParams.get("hops");
+
+  // Track the first time loading becomes false (idb hydration complete).
+  // The saved-state restore runs inside useKnowledgeGraph before the first
+  // fetch; once loading transitions to false the first time, hydration is done.
+  const hydratedRef = useRef(false);
+  // One-shot guard: apply the inbound override exactly once.
+  const appliedFocusRef = useRef(false);
+
+  useEffect(() => {
+    // Record when idb hydration has settled at least once.
+    if (!loading && !hydratedRef.current) {
+      hydratedRef.current = true;
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    // No focus entity → nothing to override.
+    if (!focusEntity) return;
+    // Already applied → stay no-op.
+    if (appliedFocusRef.current) return;
+    // idb hydration not yet complete → wait.
+    if (!hydratedRef.current) return;
+
+    // Apply the entity-lens override AFTER hydration so saved-state restore
+    // cannot clobber it.
+    appliedFocusRef.current = true;
+    if (lensParam === "entity") setLens("entity");
+    setFilter("entityName", focusEntity);
+    setFilter("hops", hopsParam ? (Number(hopsParam) || 1) : 1);
+  }, [focusEntity, lensParam, hopsParam, loading, setLens, setFilter]);
+
+  // ── Center the focused entity once it resolves ───────────────────────────────
+  // useFocusParam matches on node.name (KG focus is name-based, D-02).
+  // Silent no-op when the entity is not found (SC#3).
+  const { fromParam } = useFocusParam({
+    nodes: focusEntity ? kg.graph.nodes : undefined,
+    getId: (n: KgNode) => n.name,
+    onFocus: (node: KgNode) => {
+      kg.selectNode(node.id);
+      const n = node as KgNode & { x?: number; y?: number };
+      if (n.x != null && n.y != null) {
+        fgRef.current?.centerAt(n.x, n.y, 800);
+        fgRef.current?.zoom(3, 800);
+      }
+    },
+  });
+
+  // Derive the return chip label from the decoded from-param.
+  const returnLabel = fromParam ? originLabel(fromParam) : null;
 
   // KG-07 node paint: type color, degree size, focus dim, label on zoom/hover.
   const paintNode = useCallback(
@@ -267,6 +334,9 @@ export default function KnowledgeGraph() {
               selectEdge(null);
             }}
             onSelectNode={selectNode}
+            returnTo={fromParam}
+            returnLabel={returnLabel}
+            onReturnNav={(url) => navigate(url)}
           />
         </div>
       </SectionErrorBoundary>
