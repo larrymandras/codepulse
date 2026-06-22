@@ -38,6 +38,7 @@ import { Button } from "../ui/button";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
@@ -312,26 +313,30 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             </button>
           </div>
 
-          {/* Fullscreen toggle (D-03) */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={fullscreen ? "Exit fullscreen" : "Expand graph"}
-                onClick={() => setFullscreen((f) => !f)}
-              >
-                {fullscreen ? (
-                  <Minimize2 className="h-4 w-4" />
-                ) : (
-                  <Maximize2 className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {fullscreen ? "Exit fullscreen" : "Expand graph"}
-            </TooltipContent>
-          </Tooltip>
+          {/* Fullscreen toggle (D-03) — local TooltipProvider: routed pages
+              render outside DashboardLayout's provider (its Outlet is outside
+              the provider subtree), matching AnomalyBadge/AlertRulesEngine. */}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={fullscreen ? "Exit fullscreen" : "Expand graph"}
+                  onClick={() => setFullscreen((f) => !f)}
+                >
+                  {fullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {fullscreen ? "Exit fullscreen" : "Expand graph"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 

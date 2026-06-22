@@ -62,8 +62,11 @@ vi.mock("@/components/graph/ForceGraphCanvas", () => ({
   },
 }));
 
-// Mock shadcn Tooltip (not relevant to behavior assertions)
+// Mock shadcn Tooltip (not relevant to behavior assertions).
+// Must export TooltipProvider — the component supplies its own local provider
+// (the missing-provider runtime crash is covered by CodeVaultGraph.tooltip.test.tsx).
 vi.mock("@/components/ui/tooltip", () => ({
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
     asChild ? <>{children}</> : <div>{children}</div>,
