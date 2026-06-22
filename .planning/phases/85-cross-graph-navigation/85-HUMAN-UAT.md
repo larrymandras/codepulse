@@ -4,53 +4,57 @@ phase: 85-cross-graph-navigation
 source: [85-VERIFICATION.md]
 started: 2026-06-22T00:00:00Z
 updated: 2026-06-22T00:00:00Z
+method: playwright-automated (no-Clerk dev instance on :5180 against live Convex; KG API :8181 CORS-blocked from dev origin)
 ---
 
 ## Current Test
 
-[awaiting human testing]
+[automated pass complete — 2 PASS, 2 PARTIAL (return-chip side passes), 4 BLOCKED by environment]
 
 ## Tests
 
 ### 1. Tool node with backing code/vault agent shows 'Owning agent' link
-expected: Selecting a tool node whose owning agent matches a code/vault snapshot label renders "Owning agent: {label} →" in the RELATED ACROSS GRAPHS section. A tool with no match shows nothing.
-result: [pending]
+expected: Selecting a tool node whose owning agent matches a code/vault snapshot label renders "Owning agent: {label} →"; a tool with no match shows nothing.
+result: BLOCKED (data) — focus-select works (panel opens for Read/Write/Edit/Bash/Grep/Glob/WebFetch/WebSearch) but every tool reports CALLS=0 and there are no agent→tool call edges in this Convex deployment, so no owning agent can resolve. Link mechanism verified by code review; positive case needs real call-graph data.
 
 ### 2. Tool→agent navigation preserves Tool Galaxy state in ?from
-expected: Clicking the "Owning agent" link navigates to /graphs?focus=<nodeId>&from=%2Ftool-galaxy%3Ffocus%3D<tool-id>. The "Back to Tool Galaxy" return chip renders on /graphs and returns to Tool Galaxy with the tool still selected.
-result: [pending]
+expected: Clicking "Owning agent" navigates to /graphs?focus=<nodeId>&from=<encoded Galaxy URL>; "Back to Tool Galaxy" chip renders on /graphs and returns with the tool still selected.
+result: PARTIAL — return chip side PASSES: arriving at /graphs?from=<tool-url> renders "Back to Tool Galaxy" (aria "Return to Tool Galaxy"). Forward click not exercisable (no owning-agent link to click, see #1).
 
 ### 3. Agent node with KG relationships shows 'N KG entities' link
-expected: Selecting a code/vault node whose agentId-scoped useKnowledgeGraph returns ≥1 entity shows "N KG entities →" in RELATED ACROSS GRAPHS. A node with zero KG entities shows nothing.
-result: [pending]
+expected: Selecting a code/vault node with ≥1 KG entity shows "N KG entities →"; zero entities shows nothing.
+result: BLOCKED (env) — Ástríðr KG API (http://localhost:8181/api/kg/overview) is CORS-blocked from the dev origin ("No Access-Control-Allow-Origin"), so useKnowledgeGraph returns no entities. Cannot exercise the positive link here.
 
 ### 4. Agent→KG navigation and KG return chip
-expected: Clicking "N KG entities →" navigates to /knowledge-graph?focus=<entityName>&lens=entity&hops=1&from=%2Fgraphs%3Ffocus%3D<nodeId>. KG switches to entity lens, fetches the entity, selects+centers it. "Back to Code/Vault Graph" chip renders and returns to /graphs.
-result: [pending]
+expected: Clicking "N KG entities →" navigates to /knowledge-graph?focus=<entity>&lens=entity&hops=1&from=...; KG selects+centers; "Back to Code/Vault Graph" chip returns to /graphs.
+result: PARTIAL — KG return chip PASSES: arriving at /knowledge-graph?...&from=<graphs-url> renders "Back to Code/Vault Graph" (aria "Return to Code/Vault Graph"). Forward nav blocked by KG CORS (see #3).
 
 ### 5. KG inbound focus: idb saved-state does not clobber the inbound override
-expected: Arriving at /knowledge-graph?focus=<entity>&lens=entity&hops=1 from a fresh session AND from a session with prior saved idb state both end with the entity lens active and the focused entity selected — saved-state restore never wins over the inbound override.
-result: [pending]
+expected: Arriving with ?focus&lens=entity from fresh and from saved-idb sessions both end on the entity lens with the focused entity.
+result: BLOCKED (env) — KG cannot load data (CORS, see #3), so the entity-lens hydration path cannot be observed end-to-end.
 
 ### 6. WR-02 (deferred): focus centering may fire before force layout assigns x/y
-expected: On first arrival via ?focus, the node is selected (panel opens) even when centering does not fire because x/y are not yet set. The panel opens correctly regardless of whether the node visibly centers.
-result: [pending]
+expected: On first arrival via ?focus, the node is selected (panel opens) even when centering does not fire.
+result: PASS — ?focus=tool:<name> reliably opens the detail panel (selection-only degrade confirmed); no NaN/crash. Visual "does it visibly recenter" is the only remaining eyeball check.
 
 ### 7. WR-04 (deferred): KG inbound-focus effect ordering
-expected: The entity-lens override effect and the useFocusParam center-on-resolve effect interact correctly — setLens/setFilter fires before useFocusParam matches node names, so the entity is present in kg.graph.nodes when matching occurs.
-result: [pending]
+expected: setLens/setFilter fires before useFocusParam matches, so the entity is present when matching occurs.
+result: BLOCKED (env) — KG cannot load data (CORS, see #3); effect ordering not observable end-to-end here.
 
 ### 8. SC#3 zero-false-positive: no broken nav appears anywhere
-expected: Navigating to any surface with a ?focus that matches no node shows no error, no broken link, no dead button — just the default surface view. Test /tool-galaxy?focus=tool:NonExistent, /graphs?focus=graphify:codepulse:NonExistent, /knowledge-graph?focus=NonExistent&lens=entity&hops=1.
-result: [pending]
+expected: ?focus values matching no node show no error, no broken link, no dead button — just the default surface view.
+result: PASS — /tool-galaxy?focus=tool:NonExistent_ZZZ, /graphs?focus=graphify:codepulse:NonExistent_ZZZ, /knowledge-graph?focus=NonExistent_ZZZ, and unknown tools (Task, TodoWrite) all render the default view with no crash, no console errors (except the env KG CORS), no link section.
 
 ## Summary
 
 total: 8
-passed: 0
+passed: 2
+partial: 2
 issues: 0
-pending: 8
-skipped: 0
-blocked: 0
+pending: 0
+blocked: 4
+note: 0 defects found. All non-passing items are blocked by environment (no agent→tool call-graph edges in Convex; KG API CORS from dev origin), not by Phase 85 code. Re-run on the authenticated prod-origin app with the KG API allowing the origin to close the 4 blocked + 2 partial items.
 
 ## Gaps
+
+(none — no Phase 85 defects surfaced. Environmental blockers: KG API CORS for the dev origin; absent agent→tool call edges in the current snapshot.)
