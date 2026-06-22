@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
-stopped_at: Phase 85 UI-SPEC approved
-last_updated: "2026-06-22T19:02:46.700Z"
+stopped_at: "Phase 85 Plan 03 complete — CodeVaultGraph cross-graph nav wired"
+last_updated: "2026-06-22T19:10:44.713Z"
 last_activity: 2026-06-22
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 33
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 ## Current Position
 
 Phase: 85 (cross-graph-navigation) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Next: choose next phase — Phase 85 Cross-Graph Navigation (v8.0 roadmap sequence; no dir yet → `/gsd-discuss-phase 85`) OR Phase 88 Analytics Rollup Table (already scaffolded, prod-impacting → `/gsd-discuss-phase 88`). `phase.complete` auto-pointed focus at 88 because 85 has no dir yet; sequence order is 85.
 Status: Ready to execute
 Last activity: 2026-06-22
@@ -158,7 +158,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-22T19:02:46.689Z
+Last session: 2026-06-22T19:10:44.704Z
 Stopped at: Phase 85 UI-SPEC approved
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
 Resume file: None
