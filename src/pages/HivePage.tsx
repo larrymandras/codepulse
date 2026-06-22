@@ -14,10 +14,12 @@ import CostBreakdown from "../components/CostBreakdown";
 import GoalPicker from "../components/GoalPicker";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { GlassPanel } from "../components/GlassPanel";
+import SwarmTaskDetail, { type SwarmTaskDetailData } from "../components/SwarmTaskDetail";
 import { useGoalList } from "../hooks/useSwarmGraph";
 
 export default function HivePage() {
   const [goalId, setGoalId] = useState<string | null>(null);
+  const [selectedTask, setSelectedTask] = useState<SwarmTaskDetailData | null>(null);
   const goals = useGoalList();
 
   // D-08: auto-follow the most-recent goal when none is selected yet
@@ -40,8 +42,8 @@ export default function HivePage() {
 
       {/* Region 1: Swarm Graph hero */}
       <SectionErrorBoundary name="Swarm Graph">
-        <GlassPanel className="rounded-xl p-5 min-h-[400px]">
-          <SwarmGraph goalId={goalId} />
+        <GlassPanel className="rounded-xl p-5 min-h-[520px]">
+          <SwarmGraph goalId={goalId} onSelectTask={setSelectedTask} />
         </GlassPanel>
       </SectionErrorBoundary>
 
@@ -49,7 +51,7 @@ export default function HivePage() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <SectionErrorBoundary name="Blackboard">
           <GlassPanel className="rounded-xl p-5">
-            <BlackboardPanel goalId={goalId} />
+            <BlackboardPanel goalId={goalId} onSelectTask={setSelectedTask} />
           </GlassPanel>
         </SectionErrorBoundary>
         <SectionErrorBoundary name="Cost">
@@ -58,6 +60,9 @@ export default function HivePage() {
           </GlassPanel>
         </SectionErrorBoundary>
       </div>
+
+      {/* Click-to-read detail panel — opened by graph node or blackboard row */}
+      <SwarmTaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
     </div>
   );
 }

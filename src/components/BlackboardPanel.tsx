@@ -54,9 +54,11 @@ interface BlackboardPanelProps {
   goalId: string | null | undefined;
   /** If true, shows the "No tasks found for this goal." empty state instead of "Waiting for tasks" */
   completedGoal?: boolean;
+  /** Called when a row is clicked, with the task for the detail panel. */
+  onSelectTask?: (task: ReturnType<typeof useSwarmGraph>[number]) => void;
 }
 
-export default function BlackboardPanel({ goalId, completedGoal = false }: BlackboardPanelProps) {
+export default function BlackboardPanel({ goalId, completedGoal = false, onSelectTask }: BlackboardPanelProps) {
   const tasks = useSwarmGraph(goalId);
   const taskCount = tasks.length;
 
@@ -87,12 +89,14 @@ export default function BlackboardPanel({ goalId, completedGoal = false }: Black
           )}
         </div>
       ) : (
-        <div className="overflow-y-auto max-h-[160px]">
+        <div className="overflow-y-auto max-h-[280px]">
           {tasks.map((task) => {
             const elapsed = formatElapsed(task.timestamp, task.updatedAt);
             return (
               <EntityRow
                 key={task.subtaskId}
+                wrapPrimary
+                onClick={onSelectTask ? () => onSelectTask(task) : undefined}
                 icon={stateIcon[task.state] ?? <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />}
                 primary={task.subtask}
                 secondary={task.claimedBy}

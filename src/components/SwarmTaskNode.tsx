@@ -141,8 +141,9 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
   return (
     <div
       className={[
-        "relative bg-card/80 backdrop-blur border rounded-xl px-2.5 py-2",
-        "w-[172px] h-[88px] flex flex-col justify-between overflow-hidden",
+        "relative bg-card/80 backdrop-blur border rounded-xl px-3 py-2.5",
+        "w-[260px] min-h-[108px] flex flex-col justify-between gap-1.5 overflow-hidden",
+        "cursor-pointer hover:ring-1 hover:ring-primary/40",
         "transition-all duration-300 ease-in-out",
         stateBorder[state] ?? "border-border/50",
         stateGlow[state] ?? "",
@@ -165,7 +166,7 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
         <div className="shrink-0 mt-0.5">
           <StateIcon state={state} />
         </div>
-        <p className="text-[11px] font-semibold text-foreground truncate leading-[1.4] flex-1 min-w-0">
+        <p className="text-[12px] font-semibold text-foreground line-clamp-2 leading-[1.35] flex-1 min-w-0">
           {data.subtask}
         </p>
       </div>

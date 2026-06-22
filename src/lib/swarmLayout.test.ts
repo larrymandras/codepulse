@@ -58,13 +58,14 @@ describe("computeSwarmLayout", () => {
     // A has no deps (depth 0), B depends on A (depth 1), C depends on B (depth 2)
     const tasks = [task("a", []), task("b", ["a"]), task("c", ["b"])];
     const { nodes } = computeSwarmLayout("goal-1", tasks);
-    const V_GAP = 48;
+    // Row pitch = NODE_H (120) + V_GAP (48); rows must clear each other.
+    const ROW_PITCH = 120 + 48;
     const nodeA = nodes.find((n) => n.id === "a")!;
     const nodeB = nodes.find((n) => n.id === "b")!;
     const nodeC = nodes.find((n) => n.id === "c")!;
     expect(nodeA.position.y).toBe(0);
-    expect(nodeB.position.y).toBe(V_GAP);
-    expect(nodeC.position.y).toBe(V_GAP * 2);
+    expect(nodeB.position.y).toBe(ROW_PITCH);
+    expect(nodeC.position.y).toBe(ROW_PITCH * 2);
   });
 
   it("spreads peers at the same depth left-to-right with H_GAP", () => {
@@ -74,9 +75,9 @@ describe("computeSwarmLayout", () => {
     const nodeB = nodes.find((n) => n.id === "b")!;
     // They're at the same depth; x positions should differ
     expect(nodeA.position.x).not.toBe(nodeB.position.x);
-    // Gap between right edge of A and left edge of B should be H_GAP=20
-    const NODE_W = 172;
-    const H_GAP = 20;
+    // Gap between right edge of A and left edge of B should be H_GAP=32
+    const NODE_W = 260;
+    const H_GAP = 32;
     const rightA = nodeA.position.x + NODE_W;
     const leftB = nodeB.position.x;
     expect(leftB - rightA).toBe(H_GAP);

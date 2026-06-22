@@ -59,6 +59,35 @@ describe("SwarmTaskNode — cancelled state", () => {
   });
 });
 
+describe("SwarmTaskNode — legibility (readable-hive redesign)", () => {
+  const LONG =
+    "Research and write Deliverable 1 — Competitive Analysis of the top 5 AI coding assistants including features, pricing, and differentiators";
+
+  it("renders the full subtask text in the DOM (line-clamp is visual only, not truncated away)", () => {
+    render(<SwarmTaskNode data={makeData({ subtask: LONG })} />);
+    // The visible title paragraph's text content is the full subtask (exact match
+    // excludes the sr-only aria span, whose text is a superset).
+    expect(screen.getByText(LONG)).toBeInTheDocument();
+  });
+
+  it("node is clickable (cursor-pointer) so it can open the detail panel", () => {
+    const { container } = render(<SwarmTaskNode data={makeData()} />);
+    expect((container.firstChild as HTMLElement).className).toMatch(/cursor-pointer/);
+  });
+
+  it("title wraps via line-clamp-2, not single-line truncate", () => {
+    render(<SwarmTaskNode data={makeData({ subtask: LONG })} />);
+    const titleEl = screen.getByText(LONG);
+    expect(titleEl.className).toMatch(/line-clamp-2/);
+    expect(titleEl.className).not.toMatch(/\btruncate\b/);
+  });
+
+  it("node uses the wider 260px box", () => {
+    const { container } = render(<SwarmTaskNode data={makeData()} />);
+    expect((container.firstChild as HTMLElement).className).toMatch(/w-\[260px\]/);
+  });
+});
+
 describe("SwarmTaskNode — regression: existing states unchanged", () => {
   it("state='done' renders the 'Done' label", () => {
     render(<SwarmTaskNode data={makeData({ state: "done" })} />);

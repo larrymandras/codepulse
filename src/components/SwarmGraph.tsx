@@ -9,7 +9,7 @@
  * goalId set but no tasks yet → "Waiting for decomposition" empty state.
  */
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   ReactFlow,
   Background,
@@ -17,10 +17,12 @@ import {
   EdgeLabelRenderer,
   type Node,
   type Edge,
+  type NodeMouseHandler,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
-import SwarmTaskNode from "./SwarmTaskNode";
+import SwarmTaskNode, { type SwarmTaskNodeData } from "./SwarmTaskNode";
+import type { SwarmTaskDetailData } from "./SwarmTaskDetail";
 import QueenNode from "./QueenNode";
 import SwarmEdgeParticle from "./SwarmEdgeParticle";
 import { useSwarmGraph } from "../hooks/useSwarmGraph";
@@ -95,10 +97,21 @@ function WaitingForDecomposition() {
 
 interface SwarmGraphProps {
   goalId: string | null | undefined;
+  /** Called when a subtask node is clicked, with its full data for the detail panel. */
+  onSelectTask?: (task: SwarmTaskDetailData) => void;
 }
 
-export default function SwarmGraph({ goalId }: SwarmGraphProps) {
+export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
   const taskRows = useSwarmGraph(goalId);
+
+  // Click a subtask node → open the detail panel. Queen node has no detail.
+  const handleNodeClick: NodeMouseHandler = useCallback(
+    (_event, node) => {
+      if (node.type === "queen") return;
+      onSelectTask?.(node.data as SwarmTaskNodeData);
+    },
+    [onSelectTask]
+  );
 
   // Build a lookup for target-node state (for edge coloring)
   const stateById = useMemo(() => {
@@ -179,7 +192,7 @@ export default function SwarmGraph({ goalId }: SwarmGraphProps) {
   // ── Render React Flow DAG ──────────────────────────────────────────────────
   return (
     <div
-      className="w-full h-[400px] rounded-xl overflow-hidden
+      className="w-full h-[min(64vh,620px)] rounded-xl overflow-hidden
                  border border-border/30 bg-background/30
                  focus:outline-none focus:ring-1 focus:ring-primary/40"
       tabIndex={0}
@@ -188,7 +201,10 @@ export default function SwarmGraph({ goalId }: SwarmGraphProps) {
         nodes={layoutNodes as Node[]}
         edges={enrichedEdges}
         nodeTypes={nodeTypes}
+        onNodeClick={handleNodeClick}
+        nodesDraggable={false}
         fitView
+        fitViewOptions={{ padding: 0.18 }}
         proOptions={{ hideAttribution: true }}
         minZoom={0.3}
         maxZoom={2}
@@ -212,8 +228,8 @@ export default function SwarmGraph({ goalId }: SwarmGraphProps) {
             const tgtPos = nodePositionById.get(edge.target);
             if (!srcPos || !tgtPos) return null;
             // Synthetic path: straight line from source bottom-center to target top-center
-            const NODE_W = 172;
-            const NODE_H = 88;
+            const NODE_W = 260;
+            const NODE_H = 120;
             const x1 = srcPos.x + NODE_W / 2;
             const y1 = srcPos.y + NODE_H;
             const x2 = tgtPos.x + NODE_W / 2;

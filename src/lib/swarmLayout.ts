@@ -42,10 +42,12 @@ export interface SwarmLayoutResult {
   edges: SwarmEdge[];
 }
 
-// Layout constants from UI-SPEC
-const NODE_W = 172;
-const NODE_H = 88;
-const H_GAP = 20;
+// Layout constants. Node box is 260×~108 (min-height; 2-line clamped title keeps
+// rows uniform). V_GAP is the GAP between rows, so the row pitch is NODE_H + V_GAP
+// (same pitch used to place the Queen one level above depth 0).
+const NODE_W = 260;
+const NODE_H = 120;
+const H_GAP = 32;
 const V_GAP = 48;
 
 /**
@@ -186,7 +188,10 @@ export function computeSwarmLayout(
     const startX = depth0OriginX + depth0Width / 2 - totalW / 2;
     level.forEach((task, i) => {
       const x = startX + i * (NODE_W + H_GAP);
-      const y = depth * V_GAP;
+      // Row pitch = node height + gap, so dependent rows clear the row above
+      // (previously `depth * V_GAP` placed rows 48px apart while nodes were
+      // taller, overlapping them).
+      const y = depth * (NODE_H + V_GAP);
       posMap.set(task.subtaskId, { x, y });
       nodes.push({
         id: task.subtaskId,

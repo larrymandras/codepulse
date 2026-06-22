@@ -6,20 +6,23 @@ interface EntityRowProps {
   secondary?: string;
   trailing?: React.ReactNode;
   onClick?: () => void;
+  /** When true, the primary text wraps to 2 lines (line-clamp) instead of single-line truncate. */
+  wrapPrimary?: boolean;
 }
 
-export function EntityRow({ icon, primary, secondary, trailing, onClick }: EntityRowProps) {
+export function EntityRow({ icon, primary, secondary, trailing, onClick, wrapPrimary }: EntityRowProps) {
   return (
     <div
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 border-b border-border last:border-b-0 transition-colors",
+        "flex gap-3 px-3 py-2.5 border-b border-border last:border-b-0 transition-colors",
+        wrapPrimary ? "items-start" : "items-center",
         onClick && "cursor-pointer hover:bg-accent/50"
       )}
     >
-      <div className="w-4 h-4 shrink-0 text-muted-foreground">{icon}</div>
+      <div className={cn("w-4 h-4 shrink-0 text-muted-foreground", wrapPrimary && "mt-0.5")}>{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{primary}</p>
+        <p title={wrapPrimary ? undefined : primary} className={cn("text-sm font-medium", wrapPrimary ? "line-clamp-2" : "truncate")}>{primary}</p>
         {secondary && <p className="text-xs text-muted-foreground truncate">{secondary}</p>}
       </div>
       {trailing && <div className="shrink-0 text-xs text-muted-foreground">{trailing}</div>}

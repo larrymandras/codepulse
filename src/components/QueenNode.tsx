@@ -4,7 +4,7 @@
  * Phase 149-03 — PULSE-03.
  * Amber border + glow (distinct from emerald worker glow).
  * Bottom-only source Handle (Queen has no incoming dependency edges).
- * Fixed 172×88px matching SwarmTaskNode dimensions.
+ * 260px wide, min-h-108px — matches SwarmTaskNode dimensions.
  */
 
 import { Handle, Position } from "@xyflow/react";
@@ -24,7 +24,7 @@ export default function QueenNode({ data }: { data: QueenNodeData }) {
         "relative bg-card/80 backdrop-blur",
         "border border-amber-500/60 rounded-xl px-2.5 py-2",
         "shadow-[0_0_20px_rgba(245,158,11,0.25)]",
-        "w-[172px] h-[88px] flex flex-col justify-between overflow-hidden",
+        "w-[260px] min-h-[108px] flex flex-col justify-between overflow-hidden",
         "transition-all duration-300 ease-in-out",
       ].join(" ")}
     >
