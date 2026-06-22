@@ -70,6 +70,9 @@ const ForgePage = lazy(() => import("./pages/ForgePage"));
 // Phase 149: Hive swarm observability
 const HivePage = lazy(() => import("./pages/HivePage"));
 
+// Phase 84: Graphs Hub
+const GraphsHub = lazy(() => import("./pages/GraphsHub"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -115,6 +118,8 @@ export default function App() {
               <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
               <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
+              {/* Phase 84: Graphs Hub (GRAPHS cluster — hub first) */}
+              <Route path="/graphs" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Graphs Hub...</div>}><GraphsHub /></Suspense>} />
               {/* Phase 72: Tool / Capability Galaxy (GRAPHS cluster) */}
               <Route path="/tool-galaxy" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tool Galaxy...</div>}><ToolGalaxy /></Suspense>} />
               {/* Phase 73: MCP Inventory + Health (GRAPHS cluster) */}

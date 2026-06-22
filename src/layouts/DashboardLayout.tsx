@@ -153,7 +153,7 @@ const navGroups: NavGroupConfig[] = [
   {
     group: "GRAPHS",
     items: [
-      { label: "Graphs Hub", icon: "network", group: "GRAPHS", placeholder: true },
+      { to: "/graphs", label: "Graphs Hub", icon: "network", group: "GRAPHS" },
       { to: "/tool-galaxy", label: "Tool Galaxy", icon: "boxes", group: "GRAPHS" },
       { to: "/mcp-inventory", label: "MCP Inventory", icon: "server", group: "GRAPHS" },
       { to: "/knowledge-graph", label: "KG Explorer", icon: "share-2", group: "GRAPHS" },
