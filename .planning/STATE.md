@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: executing
-stopped_at: "Phase 85 Plan 03 complete — CodeVaultGraph cross-graph nav wired"
-last_updated: "2026-06-22T19:10:44.713Z"
+status: verifying
+stopped_at: "Phase 85 Plan 04 complete — KnowledgeGraph cross-graph nav destination wired"
+last_updated: "2026-06-22T19:17:19.727Z"
 last_activity: 2026-06-22
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
-  percent: 33
+  completed_plans: 10
+  percent: 50
 ---
 
 # Project State
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 85 (cross-graph-navigation) — EXECUTING
-Plan: 4 of 4
-Next: choose next phase — Phase 85 Cross-Graph Navigation (v8.0 roadmap sequence; no dir yet → `/gsd-discuss-phase 85`) OR Phase 88 Analytics Rollup Table (already scaffolded, prod-impacting → `/gsd-discuss-phase 88`). `phase.complete` auto-pointed focus at 88 because 85 has no dir yet; sequence order is 85.
-Status: Ready to execute
+Phase: 85 (cross-graph-navigation) — COMPLETE (all 4 plans executed)
+Plan: 4 of 4 — DONE
+Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09) OR Phase 88 (Analytics Rollup Table — prod-impacting quick unblock). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
+Status: Phase complete — ready for verification
 Last activity: 2026-06-22
 
 Progress bar: `████░░░░░░` 40% (2/5 v8.0 phases: 83, 84 complete)
@@ -40,7 +40,7 @@ Progress bar: `████░░░░░░` 40% (2/5 v8.0 phases: 83, 84 comp
 |-------|------|--------------|--------|
 | 83 | Graph Snapshot Receiver | GH-01 | ✅ Complete + verified (2026-06-18) |
 | 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | ✅ Complete + UAT passed (2026-06-22) |
-| 85 | Cross-Graph Navigation | GH-04 | Not started |
+| 85 | Cross-Graph Navigation | GH-04 | ✅ Complete (4/4, 2026-06-22) |
 | 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | Not started |
 | 87 | Saved Views + Temporal Diff | KG-10, KG-11 | Not started |
 
@@ -158,7 +158,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-22T19:10:44.704Z
+Last session: 2026-06-22T19:17:19.715Z
 Stopped at: Phase 85 UI-SPEC approved
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
 Resume file: None
