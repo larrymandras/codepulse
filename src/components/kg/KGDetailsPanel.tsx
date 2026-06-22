@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, ExternalLink, AlertTriangle, X } from "lucide-react";
+import { ArrowRight, ExternalLink, AlertTriangle, X, ChevronLeft } from "lucide-react";
 import { entityTypeColor } from "../../lib/kg-graph";
 import type { KgGraphData, KgNode, KgLink, KgAttribute } from "../../lib/kg-graph";
+import SectionErrorBoundary from "../SectionErrorBoundary";
 
 export interface KGDetailsPanelProps {
   graph: KgGraphData;
@@ -10,6 +11,12 @@ export interface KGDetailsPanelProps {
   onClose: () => void;
   /** click a related entity id → re-select it. */
   onSelectNode: (id: string) => void;
+  /** Same-origin-guarded return-nav target from ?from param (null = no chip). */
+  returnTo?: string | null;
+  /** Display label for the origin surface ("Tool Galaxy", "Code/Vault Graph", etc.). */
+  returnLabel?: string | null;
+  /** Navigate handler injected by the page (avoids importing useNavigate in a presentational panel). */
+  onReturnNav?: (url: string) => void;
 }
 
 /** Deep-link into the episodic Memory view for a fact's source event (KG-06). */
@@ -118,15 +125,35 @@ function PanelShell({
   title,
   subtitle,
   onClose,
+  returnTo,
+  returnLabel,
+  onReturnNav,
   children,
 }: {
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   onClose: () => void;
+  returnTo?: string | null;
+  returnLabel?: string | null;
+  onReturnNav?: (url: string) => void;
   children: React.ReactNode;
 }) {
+  const label = returnLabel ?? "previous graph";
   return (
     <div className="rounded-[var(--radius)] border border-primary/20 bg-card/70 backdrop-blur p-4 space-y-3 h-full overflow-y-auto custom-scrollbar">
+      {/* Return chip — top of panel, above the title row */}
+      {returnTo && onReturnNav && (
+        <SectionErrorBoundary name="Return navigation">
+          <button
+            aria-label={`Return to ${label}`}
+            onClick={() => onReturnNav(returnTo)}
+            className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            {`Back to ${label}`}
+          </button>
+        </SectionErrorBoundary>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-foreground break-words">{title}</h3>
@@ -153,6 +180,10 @@ function PanelShell({
  * Details for the current selection (KG-06). Entity → type/agent/aliases +
  * facts list (entity-edges + literal attributes); edge → triple details. Each
  * fact links its source episodic memory (provenance) when the API serializes it.
+ *
+ * When returnTo is present, renders a "Back to {Surface}" return chip at the
+ * top of the panel so the user can return to the originating graph even when
+ * the focused entity does not resolve (SC#3 / not-found arrival state).
  */
 export default function KGDetailsPanel({
   graph,
@@ -160,8 +191,35 @@ export default function KGDetailsPanel({
   selectedEdgeId,
   onClose,
   onSelectNode,
+  returnTo,
+  returnLabel,
+  onReturnNav,
 }: KGDetailsPanelProps) {
   if (!selectedNodeId && !selectedEdgeId) {
+    // No selection — show placeholder. If ?from is present keep the return chip
+    // visible so arriving with a non-resolving entity still has a way back.
+    if (returnTo && onReturnNav) {
+      const label = returnLabel ?? "previous graph";
+      return (
+        <div className="rounded-[var(--radius)] border border-primary/20 bg-card/70 backdrop-blur p-4 h-full flex flex-col gap-3">
+          <SectionErrorBoundary name="Return navigation">
+            <button
+              aria-label={`Return to ${label}`}
+              onClick={() => onReturnNav(returnTo)}
+              className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              {`Back to ${label}`}
+            </button>
+          </SectionErrorBoundary>
+          <div className="flex-1 flex items-center justify-center text-center">
+            <p className="text-xs text-muted-foreground font-mono">
+              Select an entity or edge to inspect its facts and provenance.
+            </p>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="rounded-[var(--radius)] border border-dashed border-border bg-card/30 p-4 h-full flex items-center justify-center text-center">
         <p className="text-xs text-muted-foreground font-mono">
@@ -177,7 +235,13 @@ export default function KGDetailsPanel({
     const node = nodeById.get(selectedNodeId) as KgNode | undefined;
     if (!node) {
       return (
-        <PanelShell title="Entity not in view" onClose={onClose}>
+        <PanelShell
+          title="Entity not in view"
+          onClose={onClose}
+          returnTo={returnTo}
+          returnLabel={returnLabel}
+          onReturnNav={onReturnNav}
+        >
           <p className="text-xs text-muted-foreground">
             This entity is filtered out of the current view.
           </p>
@@ -198,6 +262,9 @@ export default function KGDetailsPanel({
         }
         subtitle={`${node.entityType}${node.agentId ? ` · agent: ${node.agentId}` : " · shared"} · degree ${node.degree}`}
         onClose={onClose}
+        returnTo={returnTo}
+        returnLabel={returnLabel}
+        onReturnNav={onReturnNav}
       >
         {/* Literal attributes */}
         {node.attributes.length > 0 && (
@@ -241,7 +308,13 @@ export default function KGDetailsPanel({
     | undefined;
   if (!link) {
     return (
-      <PanelShell title="Edge not in view" onClose={onClose}>
+      <PanelShell
+        title="Edge not in view"
+        onClose={onClose}
+        returnTo={returnTo}
+        returnLabel={returnLabel}
+        onReturnNav={onReturnNav}
+      >
         <p className="text-xs text-muted-foreground">
           This relationship is filtered out of the current view.
         </p>
@@ -272,6 +345,9 @@ export default function KGDetailsPanel({
       }
       subtitle={`${link.current ? "current" : "superseded"}${link.contradictionFlag ? " · contradiction" : ""}${link.agentId ? ` · agent: ${link.agentId}` : " · shared"}`}
       onClose={onClose}
+      returnTo={returnTo}
+      returnLabel={returnLabel}
+      onReturnNav={onReturnNav}
     >
       <div className="space-y-1 text-[11px] font-mono">
         <Row label="Confidence" value={fmtConfidence(link.confidence)} />
