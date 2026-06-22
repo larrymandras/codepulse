@@ -378,8 +378,12 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             </span>
           </div>
 
-          {/* ForceGraphCanvas — explicit className prop (Pitfall 6) */}
+          {/* ForceGraphCanvas — explicit className prop (Pitfall 6).
+              ref + onEngineStop frame the graph to the viewport once the
+              simulation settles (and after filter/fullscreen reheats) so a
+              small node set never strands in a corner (IN-01). */}
           <ForceGraphCanvas
+            ref={fgRef}
             data={filteredData}
             colorFn={colorFn}
             labelFn={labelFn}
@@ -387,6 +391,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             linkColorFn={linkColorFn}
             onNodeClick={(node: any) => setSelectedNodeId(node.id)}
             onBackgroundClick={() => setSelectedNodeId(null)}
+            onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
             className={canvasClass}
           />
         </div>

@@ -54,6 +54,9 @@ export interface ForceGraphCanvasProps {
   onNodeClick?: (node: any) => void;
   onNodeHover?: (node: any | null) => void;
   onBackgroundClick?: () => void;
+  /** fired once the force simulation settles (cooldown reached). Use to
+      zoomToFit on initial layout / after data changes. */
+  onEngineStop?: () => void;
   /** nodeRelSize passthrough (default 1). */
   nodeRelSize?: number;
   /** Tailwind classes for the outer container (sizing/border). */
@@ -81,6 +84,7 @@ export const ForceGraphCanvas = forwardRef<
     onNodeClick,
     onNodeHover,
     onBackgroundClick,
+    onEngineStop,
     nodeRelSize = 1,
     className,
     backdrop = true,
@@ -186,6 +190,7 @@ export const ForceGraphCanvas = forwardRef<
           onNodeClick?.(n);
         }}
         onBackgroundClick={() => onBackgroundClick?.()}
+        onEngineStop={() => onEngineStop?.()}
         cooldownTicks={120}
         d3VelocityDecay={0.3}
         backgroundColor="transparent"
