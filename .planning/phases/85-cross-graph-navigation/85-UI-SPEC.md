@@ -1,10 +1,11 @@
 ---
 phase: 85
 slug: cross-graph-navigation
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "New York (dark Matrix-Emerald cyberpunk skin — established Phase 71)"
 created: 2026-06-22
+reviewed_at: 2026-06-22
 ---
 
 # Phase 85 — UI Design Contract: Cross-Graph Navigation
