@@ -140,8 +140,10 @@ describe("useFocusParam", () => {
       { wrapper: makeWrapper(url) },
     );
 
-    // decodeFromParam runs decodeURIComponent, so %3A → :
-    expect(result.current.fromParam).toBe("/tool-galaxy?focus=tool:Read");
+    // The router decodes the outer ?from layer once; decodeFromParam validates
+    // without decoding again (CR-01), so the inner focus stays percent-encoded —
+    // the destination decodes it once when it reads ?focus.
+    expect(result.current.fromParam).toBe("/tool-galaxy?focus=tool%3ARead");
   });
 
   it("returns fromParam as null when ?from is absent", () => {

@@ -66,7 +66,15 @@ export function encodeFromParam(originUrl: string): string {
 }
 
 /**
- * Decode and validate a raw from-param value.
+ * Validate a from-param value for safe in-app return navigation.
+ *
+ * IMPORTANT (CR-01): the value passed here is already once-decoded. The sole
+ * production caller (useFocusParam) reads it via react-router's
+ * `useSearchParams().get("from")`, which applies one `decodeURIComponent`. This
+ * guard MUST NOT decode again — a second decode would over-decode the inner
+ * `?focus` value and corrupt ids containing `&`, `=`, `#`, or `%`. So the inner
+ * focus stays percent-encoded in the returned path (correct: the return chip
+ * navigates to it, and the destination decodes it once when reading `focus`).
  *
  * T-85-01 open-redirect / XSS guard: the return chip navigates to this value,
  * so it MUST be constrained to same-origin in-app paths. Returns null for any
@@ -74,30 +82,31 @@ export function encodeFromParam(originUrl: string): string {
  *   - null / empty → null
  *   - does not start with single `/` → null
  *   - starts with `//` (protocol-relative) → null
+ *   - contains a backslash `\` (browsers normalize `\` to `/`) → null
  *   - contains `://` (absolute URL) → null
  *   - matches any URI scheme (`javascript:`, `http:`, etc.) → null
  */
 export function decodeFromParam(raw: string | null): string | null {
   if (!raw) return null;
 
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    return null;
-  }
+  // Already once-decoded by the router — do NOT decode again (CR-01).
+  const path = raw;
 
   // Must start with a single `/`
-  if (!decoded.startsWith("/")) return null;
+  if (!path.startsWith("/")) return null;
 
   // Must NOT be protocol-relative (e.g. //evil.com)
-  if (decoded.startsWith("//")) return null;
+  if (path.startsWith("//")) return null;
+
+  // Must NOT contain a backslash — browsers treat `\` like `/`, so `/\evil.com`
+  // and `\\evil.com` are protocol-relative escapes (WR-01 defense-in-depth).
+  if (path.includes("\\")) return null;
 
   // Must NOT contain a scheme separator (e.g. https://evil.com)
-  if (decoded.includes("://")) return null;
+  if (path.includes("://")) return null;
 
   // Must NOT match any URI scheme like javascript:, data:, etc.
-  if (/^[a-z][a-z0-9+.-]*:/i.test(decoded)) return null;
+  if (/^[a-z][a-z0-9+.-]*:/i.test(path)) return null;
 
-  return decoded;
+  return path;
 }

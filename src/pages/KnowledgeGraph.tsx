@@ -101,7 +101,10 @@ export default function KnowledgeGraph() {
     appliedFocusRef.current = true;
     if (lensParam === "entity") setLens("entity");
     setFilter("entityName", focusEntity);
-    setFilter("hops", hopsParam ? (Number(hopsParam) || 1) : 1);
+    // Clamp ?hops to a sane integer range — a crafted URL could supply a
+    // negative or huge value that would otherwise reach the backend (WR-03).
+    const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
+    setFilter("hops", parsedHops);
   }, [focusEntity, lensParam, hopsParam, loading, setLens, setFilter]);
 
   // ── Center the focused entity once it resolves ───────────────────────────────

@@ -107,15 +107,19 @@ describe("focusKeysMatch", () => {
 // encodeFromParam / decodeFromParam round-trip
 // ---------------------------------------------------------------------------
 
-describe("encodeFromParam / decodeFromParam round-trip", () => {
-  it("round-trips an in-app path through encode→decode", () => {
+describe("encodeFromParam / decodeFromParam", () => {
+  it("encodeFromParam URL-encodes the origin URL for embedding in a query param", () => {
     const original = "/graphs?focus=x";
-    expect(decodeFromParam(encodeFromParam(original))).toBe(original);
+    expect(encodeFromParam(original)).toBe(encodeURIComponent(original));
   });
 
-  it("round-trips a complex focus URL", () => {
+  // The router (useSearchParams().get) applies the matching single decode at
+  // read time, so the embed→read pair round-trips; decodeFromParam itself only
+  // validates the already-decoded path (CR-01 — no second decode).
+  it("encode→router-decode→validate round-trips an in-app path", () => {
     const original = "/tool-galaxy?focus=tool%3ARead";
-    expect(decodeFromParam(encodeFromParam(original))).toBe(original);
+    const routerDecoded = decodeURIComponent(encodeFromParam(original));
+    expect(decodeFromParam(routerDecoded)).toBe(original);
   });
 });
 
@@ -123,26 +127,39 @@ describe("encodeFromParam / decodeFromParam round-trip", () => {
 // decodeFromParam — same-origin guard (T-85-01)
 // ---------------------------------------------------------------------------
 
+// Inputs here are already once-decoded (as the router delivers them via
+// useSearchParams().get) — decodeFromParam validates without decoding again.
 describe("decodeFromParam — same-origin guard", () => {
-  it("returns the decoded path for a valid in-app path", () => {
-    const result = decodeFromParam(encodeURIComponent("/tool-galaxy?focus=tool%3ARead"));
+  it("returns a valid in-app path unchanged (inner focus stays encoded)", () => {
+    const result = decodeFromParam("/tool-galaxy?focus=tool%3ARead");
     expect(result).toBe("/tool-galaxy?focus=tool%3ARead");
   });
 
+  it("preserves an inner focus value containing & without corruption (CR-01)", () => {
+    // The inner focus is percent-encoded; a second decode would split on the
+    // literal & and corrupt the value. Validate-only keeps it intact.
+    const result = decodeFromParam("/tool-galaxy?focus=tool%3Aa%26b");
+    expect(result).toBe("/tool-galaxy?focus=tool%3Aa%26b");
+  });
+
   it("returns null for an absolute https URL", () => {
-    expect(decodeFromParam(encodeURIComponent("https://evil.com"))).toBeNull();
+    expect(decodeFromParam("https://evil.com")).toBeNull();
   });
 
   it("returns null for a protocol-relative URL (//evil.com)", () => {
-    expect(decodeFromParam(encodeURIComponent("//evil.com"))).toBeNull();
+    expect(decodeFromParam("//evil.com")).toBeNull();
+  });
+
+  it("returns null for a backslash protocol-relative escape (/\\evil.com)", () => {
+    expect(decodeFromParam("/\\evil.com")).toBeNull();
   });
 
   it("returns null for a javascript: scheme URL", () => {
-    expect(decodeFromParam(encodeURIComponent("javascript:alert(1)"))).toBeNull();
+    expect(decodeFromParam("javascript:alert(1)")).toBeNull();
   });
 
   it("returns null for a data: scheme URL", () => {
-    expect(decodeFromParam(encodeURIComponent("data:text/html,<h1>x</h1>"))).toBeNull();
+    expect(decodeFromParam("data:text/html,<h1>x</h1>")).toBeNull();
   });
 
   it("returns null for null input", () => {
@@ -154,6 +171,6 @@ describe("decodeFromParam — same-origin guard", () => {
   });
 
   it("returns null for a relative path without leading slash", () => {
-    expect(decodeFromParam(encodeURIComponent("tool-galaxy"))).toBeNull();
+    expect(decodeFromParam("tool-galaxy")).toBeNull();
   });
 });
