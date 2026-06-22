@@ -173,7 +173,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ### Phase Summary
 
 - [x] **Phase 83: Graph Snapshot Receiver** — Convex table + ingest dispatch for `graph_snapshot`; stops dropping Ástríðr's nightly snapshots (completed 2026-06-18)
-- [ ] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub
+- [x] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub (completed 2026-06-22)
 - [ ] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
 - [ ] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
 - [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
@@ -206,7 +206,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans**: 3 plans (3 waves)
 - [x] 84-01-PLAN.md — useProjectGraph hook + Wave 0 test scaffolding (fixture/mock + three test files) (GH-02, GH-03)
 - [x] 84-02-PLAN.md — CodeVaultGraph: dual-palette render, source filter, truncation/freshness/integrity, detail panel, fullscreen (GH-02)
-- [ ] 84-03-PLAN.md — GraphsHub page (live tiles + hero) + /graphs lazy route + nav placeholder flip (GH-03)
+- [x] 84-03-PLAN.md — GraphsHub page (live tiles + hero) + /graphs lazy route + nav placeholder flip (GH-03)
 **UI hint**: yes
 
 ### Phase 85: Cross-Graph Navigation
@@ -263,7 +263,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
-| 84. Graphs Hub + Code/Vault Render | v8.0 | 2/3 | In Progress|  |
+| 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete   | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 0/? | Not started | — |
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
