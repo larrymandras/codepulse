@@ -21,8 +21,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
+  ArrowRight,
+  ChevronLeft,
+  ExternalLink,
   Maximize2,
   Minimize2,
   Network,
@@ -33,8 +37,13 @@ import {
   type ForceGraphHandle,
 } from "./ForceGraphCanvas";
 import { useProjectGraph, type ProjectGraphData } from "../../hooks/useProjectGraph";
+import { useKnowledgeGraph } from "../../hooks/useKnowledgeGraph";
+import { useFocusParam } from "../../hooks/useFocusParam";
+import { buildFocusUrl, normalizeFocusKey } from "../../lib/focus-url";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Separator } from "../ui/separator";
+import { Skeleton } from "../ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -42,6 +51,7 @@ import {
   TooltipTrigger,
 } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
+import SectionErrorBoundary from "../SectionErrorBoundary";
 
 // ── Palette constants (D-04 / D-05) ─────────────────────────────────────────
 
@@ -122,9 +132,73 @@ function linkColorFn(link: any): string {
 
 function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   const fgRef = useRef<ForceGraphHandle>(null);
+  const navigate = useNavigate();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("both");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // ── Inbound focus param (Plan 01 hook — one-shot, SC#3-safe) ─────────────
+  // snapshotNodes is already the full node list; pass as-is so the hook can
+  // wait for data (snapshot is non-null here, so nodes are already resolved).
+  const { fromParam } = useFocusParam({
+    nodes: snapshot.nodes,
+    getId: (n) => n.id,
+    onFocus: (node) => {
+      setSelectedNodeId(node.id);
+      if ((node as any).x != null && (node as any).y != null) {
+        fgRef.current?.centerAt((node as any).x, (node as any).y, 800);
+        fgRef.current?.zoom(3, 800);
+      }
+    },
+  });
+
+  // ── Eager agent→KG resolution (existing hook — no new Convex query) ──────
+  // useKnowledgeGraph already exists; we scope it to the selected node name.
+  const kg = useKnowledgeGraph();
+
+  // When a node is selected, scope the KG overview to that node's bare name
+  // (agentId join). When deselected, clear the filter so we don't hold stale state.
+  useEffect(() => {
+    if (selectedNodeId) {
+      const node = snapshot.nodes.find((n) => n.id === selectedNodeId);
+      if (node) {
+        kg.setLens("overview");
+        kg.setFilter("agentId", normalizeFocusKey(node.label));
+      }
+    } else {
+      // Clear agentId scope when nothing is selected
+      kg.setFilter("agentId", null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedNodeId]);
+
+  // Derive related KG entities: nodes returned by the agentId-scoped overview.
+  // Only trust the result when not loading and not errored (SC#3 degrade).
+  const kgEntities = useMemo(
+    () => (kg.loading || kg.error ? [] : kg.graph.nodes),
+    [kg.loading, kg.error, kg.graph.nodes]
+  );
+
+  // Sort by normalized name and pick the first as the jump target (UI-SPEC).
+  const sortedKgEntities = useMemo(
+    () =>
+      [...kgEntities].sort((a, b) =>
+        normalizeFocusKey(a.name).localeCompare(normalizeFocusKey(b.name))
+      ),
+    [kgEntities]
+  );
+  const kgCount = sortedKgEntities.length;
+  const firstKgEntity = kgCount > 0 ? sortedKgEntities[0] : null;
+
+  // ── Derive friendly origin label from fromParam ───────────────────────────
+  const returnLabel = useMemo(() => {
+    if (!fromParam) return null;
+    const path = fromParam.split("?")[0];
+    if (path.startsWith("/tool-galaxy")) return "Tool Galaxy";
+    if (path.startsWith("/knowledge-graph")) return "KG Explorer";
+    if (path.startsWith("/graphs")) return "Code/Vault Graph";
+    return "previous graph";
+  }, [fromParam]);
 
   // ── ESC to exit fullscreen (Pitfall 5 — let both handlers fire; no stopPropagation)
   useEffect(() => {
@@ -367,7 +441,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
       {/* ── Graph + detail panel grid ─────────────────────────────────────── */}
       <div
         className={`grid gap-4 px-4 pb-4 ${
-          selectedNodeId ? "grid-cols-1 lg:grid-cols-[1fr_320px]" : "grid-cols-1"
+          selectedNodeId || fromParam ? "grid-cols-1 lg:grid-cols-[1fr_320px]" : "grid-cols-1"
         }`}
       >
         {/* Graph region */}
@@ -408,17 +482,33 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
           />
         </div>
 
-        {/* Detail panel (D-10) */}
-        {selectedNodeId && (
+        {/* Detail panel (D-10) — also renders with just the return chip when
+            ?from is present but no node is focused (e.g. focus target absent) */}
+        {(selectedNodeId || fromParam) && (
           <div
             aria-label="Node details"
             className="rounded-[var(--radius)] border border-primary/20 bg-card/70 backdrop-blur p-4 h-full overflow-y-auto"
           >
             {/* Panel header */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-                Node Details
-              </span>
+              <div className="flex items-center gap-2 min-w-0">
+                {/* Return chip — only when ?from is present (D-06 / SC#4) */}
+                {fromParam && returnLabel && (
+                  <SectionErrorBoundary name="Return navigation">
+                    <button
+                      aria-label={`Return to ${returnLabel}`}
+                      onClick={() => navigate(fromParam)}
+                      className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200 shrink-0"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      {`Back to ${returnLabel}`}
+                    </button>
+                  </SectionErrorBoundary>
+                )}
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  Node Details
+                </span>
+              </div>
               <button
                 aria-label="Close node details"
                 onClick={() => setSelectedNodeId(null)}
@@ -515,7 +605,48 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                     </div>
                   )}
                 </div>
+
+                {/* 7. Related across graphs — agent→KG link (SC#2 / D-04 / D-05) */}
+                {/* Renders ONLY when ≥1 KG entity is eagerly confirmed. SC#3: silently
+                    absent when zero entities or KG unavailable/loading/errored. */}
+                {firstKgEntity && kgCount > 0 && (
+                  <>
+                    <Separator className="mt-6 mb-4" />
+                    <div aria-label="Related across graphs navigation links">
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+                        RELATED ACROSS GRAPHS
+                      </p>
+                      <SectionErrorBoundary name="Cross-graph links">
+                        <button
+                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                          onClick={() =>
+                            navigate(
+                              buildFocusUrl(
+                                {
+                                  surface: "knowledge-graph",
+                                  entityName: firstKgEntity.name,
+                                  hops: 1,
+                                },
+                                `/graphs?focus=${encodeURIComponent(selectedNodeId ?? "")}`
+                              )
+                            )
+                          }
+                        >
+                          <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                          <span className="text-xs text-muted-foreground">
+                            {kgCount === 1 ? "1 KG entity" : `${kgCount} KG entities`}
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+                        </button>
+                      </SectionErrorBoundary>
+                    </div>
+                  </>
+                )}
               </div>
+            ) : fromParam ? (
+              // Panel open due to ?from but no node resolved — show skeleton
+              // (loading arrival state; also shown when focus target is absent)
+              <Skeleton className="h-32 w-full rounded-[var(--radius)]" />
             ) : (
               <p className="text-xs font-mono text-muted-foreground text-center mt-8">
                 Select a node to inspect
