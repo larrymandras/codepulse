@@ -1,9 +1,20 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
-import { Boxes, AlertTriangle, RefreshCw, Info } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Boxes,
+  AlertTriangle,
+  RefreshCw,
+  Info,
+  ArrowRight,
+  ExternalLink,
+  ChevronLeft,
+  X,
+} from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
 import MetricCard from "../components/MetricCard";
+import { Separator } from "../components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -18,6 +29,9 @@ import {
   deriveMcpServers,
   type GalaxyNode,
 } from "../lib/tool-galaxy";
+import { buildFocusUrl, focusKeysMatch } from "../lib/focus-url";
+import { useProjectGraph } from "../hooks/useProjectGraph";
+import { useFocusParam } from "../hooks/useFocusParam";
 
 // Phase 71 token-aligned palette (emerald primary, info blue, violet).
 const COLORS = {
@@ -54,6 +68,15 @@ function nodeColor(node: GalaxyNode): string {
   }
 }
 
+/** Derive a friendly surface label from a decoded from-param URL path. */
+function surfaceLabel(fromUrl: string): string {
+  const path = fromUrl.split("?")[0];
+  if (path.startsWith("/graphs")) return "Code/Vault Graph";
+  if (path.startsWith("/knowledge-graph")) return "KG Explorer";
+  if (path.startsWith("/tool-galaxy")) return "Tool Galaxy";
+  return "previous graph";
+}
+
 function GalaxyCanvas({
   agentFilter,
   mcpFilter,
@@ -64,6 +87,8 @@ function GalaxyCanvas({
   const { tools, mcpServers, edges, kits, loading } = useToolGalaxySources();
   const fgRef = useRef<any>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const agents = useMemo(() => deriveAgents(edges), [edges]);
   const servers = useMemo(() => deriveMcpServers(mcpServers), [mcpServers]);
@@ -87,6 +112,53 @@ function GalaxyCanvas({
     for (const n of graph.nodes) m.set(n.id, n);
     return m;
   }, [graph.nodes]);
+
+  // Derive selected node from selectedNodeId
+  const selectedNode = useMemo(
+    () => graph.nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [graph.nodes, selectedNodeId],
+  );
+
+  // Load code/vault nodes for eager owning-agent match (D-04)
+  const projectGraph = useProjectGraph();
+  const codeVaultNodes = projectGraph?.nodes ?? [];
+
+  // Compute owning agent for a selected tool node:
+  // find the agent-tool link whose target === selected tool id,
+  // then resolve the agent node to get its bare name.
+  const owningAgentName = useMemo(() => {
+    if (!selectedNode || selectedNode.kind !== "tool") return null;
+    const agentLink = graph.links.find(
+      (l) => l.kind === "agent-tool" && l.target === selectedNode.id,
+    );
+    if (!agentLink) return null;
+    const agentNode = graph.nodes.find((n) => n.id === agentLink.source);
+    return agentNode?.name ?? null; // bare name (no "agent:" prefix)
+  }, [selectedNode, graph.links, graph.nodes]);
+
+  // Eager match: confirm the owning agent exists in code/vault snapshot (SC#3/D-04).
+  // Pass bare agent name (owningAgentName), NOT the agent: prefixed id.
+  const ownerMatch = useMemo(() => {
+    if (!owningAgentName) return null;
+    return (
+      codeVaultNodes.find((cv) => focusKeysMatch(owningAgentName, cv.label)) ??
+      null
+    );
+  }, [owningAgentName, codeVaultNodes]);
+
+  // Inbound focus param handling (Task 2) — one-shot on mount
+  const { fromParam } = useFocusParam({
+    nodes: loading ? undefined : graph.nodes,
+    getId: (n) => n.id,
+    onFocus: (node) => {
+      setSelectedNodeId(node.id);
+      const typedNode = node as GalaxyNode & { x?: number; y?: number };
+      if (typedNode.x != null && typedNode.y != null) {
+        fgRef.current?.centerAt(typedNode.x, typedNode.y, 800);
+        fgRef.current?.zoom(3, 800);
+      }
+    },
+  });
 
   // "Data-starved" state: tools are installed but no tool call has ever been
   // recorded (callGraphEdges is empty), so usage sizing, agent links, kit
@@ -202,75 +274,196 @@ function GalaxyCanvas({
         </div>
       )}
 
-      <div
-        className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
-        style={{ boxShadow: "var(--glow-lg)" }}
-      >
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
+      {/* Return chip — rendered top-left when ?from is present (D-06 / T-85-01) */}
+      {fromParam && (
+        <SectionErrorBoundary name="Return navigation">
+          <button
+            aria-label={"Return to " + surfaceLabel(fromParam)}
+            onClick={() => navigate(fromParam)}
+            className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+          >
+            <ChevronLeft className="h-3 w-3" />
+            {"Back to " + surfaceLabel(fromParam)}
+          </button>
+        </SectionErrorBoundary>
+      )}
 
-        {/* Legend */}
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-[10px] font-mono">
-          <LegendDot color="rgb(16,185,129)" label="Tool (bright = recent)" />
-          <LegendDot color={COLORS.agent} label="Agent / persona" />
-          <LegendDot color={COLORS.server} label="MCP server" />
-          <LegendDot color={COLORS.kit} label="Kit (bundle)" square />
-          <LegendDot color={COLORS.error} label="Errored" />
-          <LegendDot color={COLORS.orphan} label="Orphan (unused)" dashed />
+      {/* Canvas + optional detail panel side-by-side when a node is selected */}
+      <div className={selectedNodeId ? "grid grid-cols-[1fr_280px] gap-4 items-start" : ""}>
+        <div
+          className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
+          style={{ boxShadow: "var(--glow-lg)" }}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
+
+          {/* Legend */}
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-[10px] font-mono">
+            <LegendDot color="rgb(16,185,129)" label="Tool (bright = recent)" />
+            <LegendDot color={COLORS.agent} label="Agent / persona" />
+            <LegendDot color={COLORS.server} label="MCP server" />
+            <LegendDot color={COLORS.kit} label="Kit (bundle)" square />
+            <LegendDot color={COLORS.error} label="Errored" />
+            <LegendDot color={COLORS.orphan} label="Orphan (unused)" dashed />
+          </div>
+
+          {isEmpty ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
+              <AlertTriangle className="h-6 w-6 text-primary/50" />
+              <p className="text-sm text-muted-foreground font-mono">
+                No capabilities match the current filters.
+              </p>
+              <p className="text-xs text-muted-foreground/60">
+                Tools, MCP servers, and agent call edges will appear here once
+                Ástríðr telemetry arrives.
+              </p>
+            </div>
+          ) : (
+            <ForceGraph2D
+              ref={fgRef}
+              graphData={graph}
+              nodeId="id"
+              nodeLabel={(n: any) => {
+                const node = n as GalaxyNode;
+                if (node.kind === "tool") {
+                  return `${node.name} — ${node.callCount} calls${
+                    node.orphan ? " (orphan)" : ""
+                  }${node.errorCount ? ` · ${node.errorCount} errors` : ""}`;
+                }
+                return `${node.kind}: ${node.name}`;
+              }}
+              nodeColor={(n: any) => nodeColor(n as GalaxyNode)}
+              nodeRelSize={1}
+              nodeCanvasObject={paintNode}
+              linkColor={(l: any) => {
+                const active =
+                  l.source?.id === hoverId || l.target?.id === hoverId;
+                if (active) return "rgba(16, 185, 129, 0.9)";
+                if (l.kind === "server-tool") return "rgba(167, 139, 250, 0.25)";
+                if (l.kind === "kit-tool") return "rgba(244, 114, 182, 0.25)";
+                return "rgba(16, 185, 129, 0.18)";
+              }}
+              linkWidth={(l: any) =>
+                l.source?.id === hoverId || l.target?.id === hoverId ? 2 : 0.6
+              }
+              linkDirectionalParticles={(l: any) =>
+                l.kind === "agent-tool" ? 2 : 0
+              }
+              linkDirectionalParticleWidth={1.5}
+              linkDirectionalParticleSpeed={0.006}
+              onNodeHover={(n: any) => setHoverId(n?.id ?? null)}
+              onNodeClick={(n: any) => {
+                setSelectedNodeId(n.id);
+                fgRef.current?.centerAt(n.x, n.y, 800);
+                fgRef.current?.zoom(3, 800);
+              }}
+              cooldownTicks={120}
+              d3VelocityDecay={0.3}
+              backgroundColor="transparent"
+            />
+          )}
         </div>
 
-        {isEmpty ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
-            <AlertTriangle className="h-6 w-6 text-primary/50" />
-            <p className="text-sm text-muted-foreground font-mono">
-              No capabilities match the current filters.
-            </p>
-            <p className="text-xs text-muted-foreground/60">
-              Tools, MCP servers, and agent call edges will appear here once
-              Ástríðr telemetry arrives.
-            </p>
+        {/* Detail panel — rendered when a node is selected */}
+        {selectedNodeId && (
+          <div
+            aria-label="Node details"
+            className="rounded-[var(--radius)] border border-primary/20 bg-card/70 backdrop-blur p-4 h-[600px] overflow-y-auto"
+          >
+            {/* Panel header */}
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                Node Details
+              </span>
+              <button
+                aria-label="Close node details"
+                onClick={() => setSelectedNodeId(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {selectedNode ? (
+              <div className="space-y-3">
+                {/* Name */}
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                    name
+                  </p>
+                  <p className="font-bold text-sm text-foreground">
+                    {selectedNode.name}
+                  </p>
+                </div>
+
+                {/* Kind */}
+                <div>
+                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                    kind
+                  </p>
+                  <p className="text-xs font-mono text-muted-foreground">
+                    {selectedNode.kind}
+                  </p>
+                </div>
+
+                {/* Call count (tools only) */}
+                {selectedNode.kind === "tool" && (
+                  <div>
+                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                      calls
+                    </p>
+                    <p className="text-xs font-mono text-muted-foreground">
+                      {selectedNode.callCount}
+                      {selectedNode.errorCount > 0 &&
+                        ` · ${selectedNode.errorCount} errors`}
+                    </p>
+                  </div>
+                )}
+
+                {/* RELATED ACROSS GRAPHS section — only when ownerMatch resolves (SC#3/D-04) */}
+                {ownerMatch && (
+                  <>
+                    <Separator className="mt-6 mb-4" />
+                    <div
+                      aria-label="Related across graphs navigation links"
+                    >
+                      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+                        RELATED ACROSS GRAPHS
+                      </p>
+                      <SectionErrorBoundary name="Cross-graph links">
+                        <button
+                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                          onClick={() => {
+                            const fromGalaxyUrl =
+                              "/tool-galaxy?focus=" +
+                              encodeURIComponent(selectedNode.id);
+                            navigate(
+                              buildFocusUrl(
+                                { surface: "graphs", nodeId: ownerMatch.id },
+                                fromGalaxyUrl,
+                              ),
+                            );
+                          }}
+                        >
+                          <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                          <span className="text-xs text-muted-foreground">
+                            Owning agent:
+                          </span>
+                          <span className="text-xs font-semibold text-foreground truncate">
+                            {ownerMatch.label}
+                          </span>
+                          <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+                        </button>
+                      </SectionErrorBoundary>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs font-mono text-muted-foreground text-center mt-8">
+                Select a node to inspect
+              </p>
+            )}
           </div>
-        ) : (
-          <ForceGraph2D
-            ref={fgRef}
-            graphData={graph}
-            nodeId="id"
-            nodeLabel={(n: any) => {
-              const node = n as GalaxyNode;
-              if (node.kind === "tool") {
-                return `${node.name} — ${node.callCount} calls${
-                  node.orphan ? " (orphan)" : ""
-                }${node.errorCount ? ` · ${node.errorCount} errors` : ""}`;
-              }
-              return `${node.kind}: ${node.name}`;
-            }}
-            nodeColor={(n: any) => nodeColor(n as GalaxyNode)}
-            nodeRelSize={1}
-            nodeCanvasObject={paintNode}
-            linkColor={(l: any) => {
-              const active =
-                l.source?.id === hoverId || l.target?.id === hoverId;
-              if (active) return "rgba(16, 185, 129, 0.9)";
-              if (l.kind === "server-tool") return "rgba(167, 139, 250, 0.25)";
-              if (l.kind === "kit-tool") return "rgba(244, 114, 182, 0.25)";
-              return "rgba(16, 185, 129, 0.18)";
-            }}
-            linkWidth={(l: any) =>
-              l.source?.id === hoverId || l.target?.id === hoverId ? 2 : 0.6
-            }
-            linkDirectionalParticles={(l: any) =>
-              l.kind === "agent-tool" ? 2 : 0
-            }
-            linkDirectionalParticleWidth={1.5}
-            linkDirectionalParticleSpeed={0.006}
-            onNodeHover={(n: any) => setHoverId(n?.id ?? null)}
-            onNodeClick={(n: any) => {
-              fgRef.current?.centerAt(n.x, n.y, 800);
-              fgRef.current?.zoom(3, 800);
-            }}
-            cooldownTicks={120}
-            d3VelocityDecay={0.3}
-            backgroundColor="transparent"
-          />
         )}
       </div>
 
