@@ -545,14 +545,14 @@ const { summary } = useKgSummary();
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `buildGalaxy()` be called for the Tool Galaxy tile, or derive counts from raw arrays?**
+1. **RESOLVED (call `buildGalaxy()`): Should `buildGalaxy()` be called for the Tool Galaxy tile, or derive counts from raw arrays?**
    - What we know: `buildGalaxy()` returns authoritative `stats.toolCount` and `stats.orphanCount`. Raw derivation is simpler but approximates orphanCount.
    - What's unclear: Whether calling `buildGalaxy()` in a `useMemo` on the hub page (when the full ToolGalaxy page also does it) causes any duplicate work concern.
    - Recommendation: Call `buildGalaxy()` for correctness; the computation is fast (array operations, no I/O). Alternatively derive `toolCount = tools.length` and `orphanCount = tools.filter(t => !edgeToolNames.has(t.name)).length` for simplicity. Both are fine — planner chooses.
 
-2. **`MetricCard` `value` prop is `string | number` — can it accept a multi-metric string?**
+2. **RESOLVED (use `value` string per UI-SPEC; resolve overflow at build time): `MetricCard` `value` prop is `string | number` — can it accept a multi-metric string?**
    - What we know: `MetricCard` renders `value` as a string in a `text-3xl font-medium` span (MetricCard.tsx:131). A string like `"12 tools · 3 orphans"` will render but may overflow the card at large text size.
    - What's unclear: Whether the UI-SPEC intends the full metric string as the large `value` or as a subtitle.
    - Recommendation: Use `value` for the primary count (e.g., toolCount) and a `label` or subtitle for the secondary metric — OR adjust the tile layout to use a custom composition rather than MetricCard directly. The UI-SPEC shows MetricCard; this is a layout detail for the implementer to resolve at build time.
