@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import type {
   CallGraphEdge,
   DiscoveredTool,
@@ -33,7 +35,17 @@ vi.mock("../hooks/useToolGalaxy", () => ({
   useToolGalaxySources: () => sources,
 }));
 
+// useProjectGraph (added in Phase 85) calls Convex useQuery — stub it so the
+// test doesn't need a ConvexProvider. null → no code/vault nodes, so the
+// cross-graph owning-agent link simply doesn't resolve (SC#3-safe degrade).
+vi.mock("../hooks/useProjectGraph", () => ({
+  useProjectGraph: () => null,
+}));
+
 import ToolGalaxy from "./ToolGalaxy";
+
+// Render inside a Router so router hooks (useNavigate/useSearchParams) resolve.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 const tool = (name: string, extra: Partial<DiscoveredTool> = {}): DiscoveredTool => ({
   _id: `t-${name}`,

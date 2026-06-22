@@ -11,7 +11,9 @@
  */
 
 import { describe, it, vi, beforeEach, afterEach, expect } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render as rtlRender, screen, cleanup } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import {
   makeProjectGraphFixture,
   mockGetProjectGraph,
@@ -35,7 +37,22 @@ vi.mock("@/components/graph/ForceGraphCanvas", () => ({
   ForceGraphCanvas: () => <div data-testid="force-graph-canvas" />,
 }));
 
+// useKnowledgeGraph (added in Phase 85) persists via idb-keyval — IndexedDB is
+// absent in jsdom. Stub it so rendering doesn't touch IndexedDB.
+vi.mock("../../hooks/useKnowledgeGraph", () => ({
+  useKnowledgeGraph: () => ({
+    setLens: vi.fn(),
+    setFilter: vi.fn(),
+    loading: false,
+    error: null,
+    graph: { nodes: [], links: [] },
+  }),
+}));
+
 import { CodeVaultGraph } from "./CodeVaultGraph";
+
+// Render inside a Router so router hooks (useNavigate/useSearchParams) resolve.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 describe("CodeVaultGraph — TooltipProvider", () => {
   beforeEach(() => {

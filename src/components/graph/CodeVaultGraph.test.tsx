@@ -18,7 +18,9 @@
  */
 
 import { describe, it, vi, beforeEach, expect, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
 import {
   makeProjectGraphFixture,
   mockGetProjectGraph,
@@ -39,6 +41,19 @@ vi.mock("../../convex/_generated/api", () => ({
       getProjectGraph: "graphSnapshots:getProjectGraph",
     },
   },
+}));
+
+// useKnowledgeGraph (added in Phase 85) persists via idb-keyval — IndexedDB is
+// absent in jsdom. Stub it so the cross-graph KG link gate sees zero entities
+// (no link section renders — SC#3-safe degrade) without touching IndexedDB.
+vi.mock("../../hooks/useKnowledgeGraph", () => ({
+  useKnowledgeGraph: () => ({
+    setLens: vi.fn(),
+    setFilter: vi.fn(),
+    loading: false,
+    error: null,
+    graph: { nodes: [], links: [] },
+  }),
 }));
 
 // Capture last props passed to ForceGraphCanvas for colorFn assertions
@@ -80,6 +95,9 @@ vi.mock("@/components/ui/tooltip", () => ({
 // ---------------------------------------------------------------------------
 
 import { CodeVaultGraph } from "./CodeVaultGraph";
+
+// Render inside a Router so router hooks (useNavigate/useSearchParams) resolve.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 // ---------------------------------------------------------------------------
 // Tests
