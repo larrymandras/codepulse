@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: between-phases
-stopped_at: Phase 83 complete + verified (GH-01)
-last_updated: "2026-06-18T17:00:00.000Z"
-last_activity: 2026-06-18 -- Phase 83 (GH-01 Graph Snapshot Receiver) shipped + live-verified
+status: completed
+stopped_at: Phase 84 context gathered
+last_updated: "2026-06-22T13:16:22.642Z"
+last_activity: 2026-06-18 -- Phase 83 (GH-01) shipped + live-verified
 progress:
-  total_phases: 5
+  total_phases: 6
   completed_phases: 1
   total_plans: 3
   completed_plans: 3
-  percent: 20
+  percent: 17
 ---
 
 # Project State
@@ -157,7 +157,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-18T17:00:00.000Z
-Stopped at: Phase 83 complete + live-verified (GH-01); ready for Phase 84
+Last session: 2026-06-22T13:16:22.632Z
+Stopped at: Phase 84 context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
-Resume file: .planning/phases/84-* (to be created) — Phase 83 artifacts at .planning/phases/83-graph-snapshot-receiver/
+Resume file: .planning/phases/84-graphs-hub-code-vault-render/84-CONTEXT.md
