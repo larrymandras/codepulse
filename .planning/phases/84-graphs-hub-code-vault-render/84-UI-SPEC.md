@@ -1,10 +1,11 @@
 ---
 phase: 84
 slug: graphs-hub-code-vault-render
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york
 created: 2026-06-22
+reviewed_at: 2026-06-22
 ---
 
 # Phase 84 — UI Design Contract
