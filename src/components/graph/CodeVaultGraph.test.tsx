@@ -179,7 +179,7 @@ describe("CodeVaultGraph", () => {
   // ── Test 5: truncation header ─────────────────────────────────────────────
 
   it("truncation header shows 'X of Y nodes' when sources[].truncated is true or emittedNodeCount > nodeCount", () => {
-    // truncated=true → the graphify source entry has emittedNodeCount=5, nodeCount=2, truncated=true
+    // truncated=true → the graphify source entry has emittedNodeCount=2, nodeCount=5, truncated=true
     const fixture = makeProjectGraphFixture({ truncated: true });
     mockGetProjectGraph(fixture);
 
@@ -188,9 +188,9 @@ describe("CodeVaultGraph", () => {
     // "X of Y nodes" summary line (X = filteredData.nodes.length = 3, Y = nodeCount = 3)
     expect(screen.getByText(/Showing \d+ of \d+ nodes/)).toBeDefined();
 
-    // Per-source chip shows emittedNodeCount / nodeCount
-    // For the graphify source (truncated): emittedNodeCount=5, nodeCount=2 → "codepulse: 5 / 2"
-    expect(screen.getByText(/codepulse:\s*5\s*\/\s*2/)).toBeDefined();
+    // Per-source chip shows emittedNodeCount / nodeCount ("emitted / total").
+    // For the graphify source (truncated): emittedNodeCount=2, nodeCount=5 → "codepulse: 2 / 5"
+    expect(screen.getByText(/codepulse:\s*2\s*\/\s*5/)).toBeDefined();
 
     // "truncated" badge appears
     expect(screen.getAllByText("truncated").length).toBeGreaterThan(0);
@@ -230,8 +230,21 @@ describe("CodeVaultGraph", () => {
 
     const { unmount } = render(<CodeVaultGraph />);
 
-    // The dangling-drop warning banner renders
-    expect(screen.getByText(/links dropped as dangling/)).toBeDefined();
+    // Nodes-only discrepancy must report nodes — not a misleading "links" message (WR-01).
+    // storedNodeCount=2, nodeCount=3 → "1 node dropped during ingest"
+    expect(screen.getByText(/1 node dropped during ingest/)).toBeDefined();
+    expect(screen.queryByText(/link[s]? dropped/)).toBeNull();
+    unmount();
+  });
+
+  it("integrity warning reports links when only links were dropped (WR-01)", () => {
+    // storedLinkCountOverride=0, linkCount=2 → links-only discrepancy
+    const linkFixture = makeProjectGraphFixture({ storedLinkCountOverride: 0 });
+    mockGetProjectGraph(linkFixture);
+
+    const { unmount } = render(<CodeVaultGraph />);
+    expect(screen.getByText(/2 links dropped during ingest/)).toBeDefined();
+    expect(screen.queryByText(/node[s]? dropped/)).toBeNull();
     unmount();
   });
 
@@ -241,7 +254,7 @@ describe("CodeVaultGraph", () => {
     mockGetProjectGraph(cleanFixture);
 
     const { unmount } = render(<CodeVaultGraph />);
-    expect(screen.queryByText(/links dropped as dangling/)).toBeNull();
+    expect(screen.queryByText(/dropped during ingest/)).toBeNull();
     unmount();
   });
 

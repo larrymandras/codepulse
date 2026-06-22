@@ -147,27 +147,36 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   const ageStr = relativeTime(ageMs);
 
   // ── Integrity (D-08) ─────────────────────────────────────────────────────
-  const hasIntegrityWarning =
-    snapshot.storedNodeCount < snapshot.nodeCount ||
-    snapshot.storedLinkCount < snapshot.linkCount;
+  const droppedNodeCount = snapshot.nodeCount - snapshot.storedNodeCount;
+  const droppedLinkCount = snapshot.linkCount - snapshot.storedLinkCount;
+  const hasIntegrityWarning = droppedNodeCount > 0 || droppedLinkCount > 0;
+  // Report only the dimension(s) that actually triggered — a nodes-only
+  // discrepancy must not render a "0 links dropped" message (WR-01).
+  const integrityParts: string[] = [];
+  if (droppedNodeCount > 0)
+    integrityParts.push(`${droppedNodeCount} node${droppedNodeCount === 1 ? "" : "s"}`);
+  if (droppedLinkCount > 0)
+    integrityParts.push(`${droppedLinkCount} link${droppedLinkCount === 1 ? "" : "s"}`);
 
   // ── Detail panel data ────────────────────────────────────────────────────
+  // Derive from filteredData so the panel never crosses the active source
+  // filter boundary (WR-02) — a hidden node must not appear as a neighbor.
   const selectedNode = useMemo(
-    () => snapshot.nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [snapshot.nodes, selectedNodeId]
+    () => filteredData.nodes.find((n) => n.id === selectedNodeId) ?? null,
+    [filteredData.nodes, selectedNodeId]
   );
 
   const neighborNodes = useMemo(() => {
     if (!selectedNodeId) return [];
     const neighborIds = new Set<string>();
-    snapshot.links.forEach((l) => {
+    filteredData.links.forEach((l) => {
       const srcId = typeof l.source === "string" ? l.source : (l.source as any)?.id;
       const tgtId = typeof l.target === "string" ? l.target : (l.target as any)?.id;
       if (srcId === selectedNodeId && tgtId) neighborIds.add(tgtId);
       if (tgtId === selectedNodeId && srcId) neighborIds.add(srcId);
     });
-    return snapshot.nodes.filter((n) => neighborIds.has(n.id));
-  }, [snapshot.nodes, snapshot.links, selectedNodeId]);
+    return filteredData.nodes.filter((n) => neighborIds.has(n.id));
+  }, [filteredData, selectedNodeId]);
 
   // ── paintNode — selection ring (KnowledgeGraph L59-103 pattern) ──────────
   const paintNode = useCallback(
@@ -331,8 +340,9 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
         <div className="flex items-start gap-3 mx-4 mb-2 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
           <p className="text-xs font-mono text-muted-foreground">
-            {snapshot.linkCount - snapshot.storedLinkCount} links dropped as dangling
-            (source emitted {snapshot.linkCount}, stored {snapshot.storedLinkCount})
+            {integrityParts.join(" and ")} dropped during ingest (stored{" "}
+            {snapshot.storedNodeCount}/{snapshot.nodeCount} nodes,{" "}
+            {snapshot.storedLinkCount}/{snapshot.linkCount} links)
           </p>
         </div>
       )}

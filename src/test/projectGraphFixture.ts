@@ -113,10 +113,13 @@ export function makeProjectGraphFixture(
     {
       source: "graphify:codepulse:",
       kind: "graphify",
-      nodeCount: 2,
-      linkCount: 1,
-      emittedNodeCount: truncated ? 5 : 2,
-      emittedLinkCount: truncated ? 3 : 1,
+      // Truncation means the source held MORE than was emitted/stored, so the
+      // total (nodeCount/linkCount) is the larger number — the chip renders
+      // "emitted / total" and must read "2 / 5", never the inverted "5 / 2" (WR-03).
+      nodeCount: truncated ? 5 : 2,
+      linkCount: truncated ? 3 : 1,
+      emittedNodeCount: 2,
+      emittedLinkCount: 1,
       truncated,
     },
     {

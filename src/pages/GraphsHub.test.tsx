@@ -9,7 +9,6 @@
 import { describe, it, vi, beforeEach, afterEach, expect } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import React from "react";
-import { makeProjectGraphFixture } from "@/test/projectGraphFixture";
 
 // ---------------------------------------------------------------------------
 // Module mocks — declared before component import
@@ -69,13 +68,6 @@ vi.mock("@/components/graph/ForceGraphCanvas", () => ({
     <div data-testid="force-graph-canvas-stub" />
   ),
 }));
-
-// ---------------------------------------------------------------------------
-// Fixture
-// ---------------------------------------------------------------------------
-
-const _defaultFixture = makeProjectGraphFixture();
-void _defaultFixture;
 
 // ---------------------------------------------------------------------------
 // Import the component under test (after mocks)
