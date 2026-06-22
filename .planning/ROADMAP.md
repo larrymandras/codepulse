@@ -205,7 +205,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   4. The hub renders gracefully when no snapshot has been stored yet (empty state) or when Ástríðr is offline
 **Plans**: 3 plans (3 waves)
 - [x] 84-01-PLAN.md — useProjectGraph hook + Wave 0 test scaffolding (fixture/mock + three test files) (GH-02, GH-03)
-- [ ] 84-02-PLAN.md — CodeVaultGraph: dual-palette render, source filter, truncation/freshness/integrity, detail panel, fullscreen (GH-02)
+- [x] 84-02-PLAN.md — CodeVaultGraph: dual-palette render, source filter, truncation/freshness/integrity, detail panel, fullscreen (GH-02)
 - [ ] 84-03-PLAN.md — GraphsHub page (live tiles + hero) + /graphs lazy route + nav placeholder flip (GH-03)
 **UI hint**: yes
 
@@ -263,7 +263,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
-| 84. Graphs Hub + Code/Vault Render | v8.0 | 1/3 | In Progress|  |
+| 84. Graphs Hub + Code/Vault Render | v8.0 | 2/3 | In Progress|  |
 | 85. Cross-Graph Navigation | v8.0 | 0/? | Not started | — |
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
