@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: ready_to_plan
-stopped_at: Phase 85 complete (4/4) — ready to discuss Phase 88
-last_updated: 2026-06-22T21:13:53.172Z
+status: planning
+stopped_at: Phase 86 context gathered
+last_updated: "2026-06-22T22:50:13.451Z"
 last_activity: 2026-06-22
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 3
   total_plans: 10
   completed_plans: 10
-  percent: 50
+  percent: 43
 ---
 
 # Project State
@@ -158,7 +158,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-22T19:17:19.715Z
-Stopped at: Phase 85 UI-SPEC approved
+Last session: 2026-06-22T22:50:13.441Z
+Stopped at: Phase 86 context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
-Resume file: None
+Resume file: .planning/phases/86-kg-full-text-search-clustering-layout/86-CONTEXT.md
