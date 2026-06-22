@@ -14,8 +14,8 @@
 ### Graph Hub (GH)
 
 - [ ] **GH-01**: A `graphSnapshots` Convex table + `runtimeIngest` dispatch for the `graph_snapshot` event (idempotent on `snapshotId`, full-replacement) + a read query API — so Ástríðr's nightly code/vault snapshots are stored instead of dropped. *(Fixes the current dropped-events bug; mirrors the v7.0 Forge receiver pattern.)*
-- [ ] **GH-02**: A `/graphs` landing route renders the pushed code (graphify) + vault (Obsidian) graph from Convex via `useQuery`, reusing `ForceGraphCanvas`, with truncation explicitly indicated when caps are hit
-- [ ] **GH-03**: KG Explorer, Tool Galaxy, MCP Inventory, and the code/vault graph are all reachable from one unified Graphs hub with consistent interactions (replaces the `placeholder:true` "Graphs Hub" nav stub)
+- [x] **GH-02**: A `/graphs` landing route renders the pushed code (graphify) + vault (Obsidian) graph from Convex via `useQuery`, reusing `ForceGraphCanvas`, with truncation explicitly indicated when caps are hit
+- [x] **GH-03**: KG Explorer, Tool Galaxy, MCP Inventory, and the code/vault graph are all reachable from one unified Graphs hub with consistent interactions (replaces the `placeholder:true` "Graphs Hub" nav stub)
 - [ ] **GH-04**: Cross-graph navigation — selecting a tool → its owning agent → a related KG entity deep-links across the graph surfaces where the data supports it
 
 ### Knowledge Graph — Depth (KG, continued from KG-01..07)

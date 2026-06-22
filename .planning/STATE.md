@@ -4,13 +4,13 @@ milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
 stopped_at: Phase 84 UI-SPEC approved
-last_updated: "2026-06-22T14:09:42.424Z"
-last_activity: 2026-06-22 -- Phase 84 planning complete
+last_updated: "2026-06-22T14:29:24.069Z"
+last_activity: 2026-06-22
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 3
+  completed_plans: 4
   percent: 17
 ---
 
@@ -21,15 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 84 — Graphs Hub + Code/Vault Render (next in v8.0)
+**Current focus:** Phase 84 — graphs-hub-code-vault-render
 **Last completed:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 83 (graph-snapshot-receiver) — ✅ COMPLETE + VERIFIED
+Phase: 84 (graphs-hub-code-vault-render) — EXECUTING
+Plan: 2 of 3
 Next: Phase 84 (Graphs Hub + Code/Vault Render) — `/gsd-discuss-phase 84`
 Status: Ready to execute
-Last activity: 2026-06-22 -- Phase 84 planning complete
+Last activity: 2026-06-22
 
 Progress bar: `██░░░░░░░░` 20% (1/5 phases)
 
@@ -157,7 +158,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-22T13:35:19.769Z
+Last session: 2026-06-22T14:29:24.059Z
 Stopped at: Phase 84 UI-SPEC approved
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
-Resume file: .planning/phases/84-graphs-hub-code-vault-render/84-UI-SPEC.md
+Resume file: None
