@@ -1,16 +1,14 @@
 /**
  * GraphsHub tests (Phase 84, plan 03, GH-03)
  *
- * Wave 0 scaffold — all behaviors enumerated per 84-VALIDATION.md.
- * Implemented assertions arrive in plan 03. This file runs clean (exit 0)
- * in Wave 0; todos are pending, not failing.
- *
- * Behaviors under test (2 rows from 84-VALIDATION.md):
+ * Behaviors under test:
  *   1. Three MetricCard summary tiles render (KG Explorer, Tool Galaxy, MCP Inventory)
  *   2. Clicking each tile navigates to its route (/knowledge-graph, /tool-galaxy, /mcp-inventory)
  */
 
-import { describe, it, vi, beforeEach } from "vitest";
+import { describe, it, vi, beforeEach, afterEach, expect } from "vitest";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import React from "react";
 import { makeProjectGraphFixture } from "@/test/projectGraphFixture";
 
 // ---------------------------------------------------------------------------
@@ -30,24 +28,37 @@ vi.mock("../../convex/_generated/api", () => ({
     kg: {
       latestSummary: "kg:latestSummary",
     },
-    toolGalaxy: {
-      galaxySources: "toolGalaxy:galaxySources",
+    registry: {
+      listAllTools: "registry:listAllTools",
+      listMcpServers: "registry:listMcpServers",
     },
-    mcpHealth: {
-      healthSources: "mcpHealth:healthSources",
+    callGraphEdges: {
+      listEdges: "callGraphEdges:listEdges",
+    },
+    kits: {
+      listKits: "kits:listKits",
+    },
+    toolGovernance: {
+      listGovernance: "toolGovernance:listGovernance",
     },
   },
 }));
 
+// Capture the navigate mock so we can assert calls
+const mockNavigate = vi.fn();
+
 // Mock react-router-dom navigate — GraphsHub tiles call useNavigate on click
 vi.mock("react-router-dom", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock CodeVaultGraph — plan 02 implements it; plan 03 tests hub around it
 vi.mock("@/components/graph/CodeVaultGraph", () => ({
   CodeVaultGraph: () => (
+    <div data-testid="code-vault-graph-stub" />
+  ),
+  default: () => (
     <div data-testid="code-vault-graph-stub" />
   ),
 }));
@@ -67,27 +78,63 @@ const _defaultFixture = makeProjectGraphFixture();
 void _defaultFixture;
 
 // ---------------------------------------------------------------------------
+// Import the component under test (after mocks)
+// ---------------------------------------------------------------------------
+
+import GraphsHub from "./GraphsHub";
+import { useQuery } from "convex/react";
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
 describe("GraphsHub", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // By default: useQuery returns undefined (loading) for all hooks
+    vi.mocked(useQuery).mockReturnValue(undefined);
   });
 
-  it.todo(
-    "renders three MetricCard summary tiles: KG Explorer, Tool Galaxy, MCP Inventory"
-  );
+  afterEach(() => {
+    cleanup();
+  });
 
-  it.todo(
-    "clicking the KG Explorer tile navigates to /knowledge-graph"
-  );
+  it("renders three MetricCard summary tiles: KG Explorer, Tool Galaxy, MCP Inventory", () => {
+    render(<GraphsHub />);
 
-  it.todo(
-    "clicking the Tool Galaxy tile navigates to /tool-galaxy"
-  );
+    // All three tile labels must appear (MetricCard renders label as uppercase text)
+    expect(screen.getByText("TOOL GALAXY")).toBeTruthy();
+    expect(screen.getByText("MCP INVENTORY")).toBeTruthy();
+    expect(screen.getByText("KG EXPLORER")).toBeTruthy();
+  });
 
-  it.todo(
-    "clicking the MCP Inventory tile navigates to /mcp-inventory"
-  );
+  it("clicking the Tool Galaxy tile navigates to /tool-galaxy", () => {
+    render(<GraphsHub />);
+
+    // MetricCard renders label in a <p> with onClick on parent div
+    // Click the card element containing the "TOOL GALAXY" label
+    const labelEl = screen.getByText("TOOL GALAXY");
+    // Walk up to the clickable card container (the glow-card div)
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/tool-galaxy");
+  });
+
+  it("clicking the MCP Inventory tile navigates to /mcp-inventory", () => {
+    render(<GraphsHub />);
+
+    const labelEl = screen.getByText("MCP INVENTORY");
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/mcp-inventory");
+  });
+
+  it("clicking the KG Explorer tile navigates to /knowledge-graph", () => {
+    render(<GraphsHub />);
+
+    const labelEl = screen.getByText("KG EXPLORER");
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/knowledge-graph");
+  });
 });
