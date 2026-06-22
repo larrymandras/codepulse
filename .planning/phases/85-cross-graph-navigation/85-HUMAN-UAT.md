@@ -57,4 +57,26 @@ note: 0 defects found. All non-passing items are blocked by environment (no agen
 
 ## Gaps
 
-(none — no Phase 85 defects surfaced. Environmental blockers: KG API CORS for the dev origin; absent agent→tool call edges in the current snapshot.)
+(none — no Phase 85 defects surfaced.)
+
+### Definitive root cause for the un-demonstrable forward links (data, not code)
+Confirmed by direct Convex query on the live deployment (2026-06-22):
+- `graphSnapshots:listSnapshots` returns exactly ONE project-graph snapshot,
+  `astridr-project-graph`, with **nodeCount 3**: `graphSnapshots.ts`,
+  `runtimeIngest.ts`, `Graph Snapshot Receiver`. (The full astridr-repo graph,
+  ~4200 nodes per the snapshot's `sources`, was truncated to this seed.)
+- `callGraphEdges:listEdges` has 69 edges across 6 agents:
+  `astridr, urdhr, hildr, hervor, skuld, gondul`.
+- **None of those 6 agent names appear among the 3 code/vault node labels.**
+
+Therefore:
+- **SC#1** (Tool Galaxy "Owning agent →"): a tool owned by e.g. `skuld` finds no
+  code/vault node matching `skuld` → no link. Correct per SC#3 (no link without a
+  real match) — the gate is firing as designed.
+- **SC#2** (Code/Vault "N KG entities →"): none of the 3 code/vault nodes is an
+  agent name, so scoping the KG by those labels returns 0 entities → no link.
+
+To DEMONSTRATE the positive links, ingest a project-graph snapshot whose node
+labels include agent names (e.g. a vault note "Skuld"/"Ástríðr", or the full
+astridr-repo graphify graph) via the Phase 83 ingest receiver. This is a
+data-coverage task, independent of the GH-04 wiring (which is verified correct).
