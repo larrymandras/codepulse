@@ -1,24 +1,28 @@
 /**
  * CodeVaultGraph tests (Phase 84, plan 02, GH-02)
  *
- * Wave 0 scaffold — all behaviors enumerated per 84-VALIDATION.md.
- * Implemented assertions arrive in plan 02. This file runs clean (exit 0)
- * in Wave 0; todos are pending, not failing.
+ * All 9 behaviors from 84-VALIDATION.md are asserted here.
+ * The fullscreen ESC/viewport-fill and simulation warmup behaviors are MANUAL-ONLY
+ * per 84-VALIDATION.md — not asserted in jsdom.
  *
  * Behaviors under test (9 rows from 84-VALIDATION.md):
- *   1. Render with data — nodes painted, legend visible
+ *   1. Render with data — canvas region present, legend visible
  *   2. Loading state on undefined (Convex resolving)
  *   3. Empty state on null (no snapshot ingested, D-12)
  *   4. Source filter drops vault nodes + dangling links when "code" selected
- *   5. Truncation header "X of Y nodes" from nodeCount vs storedNodeCount
+ *   5. Truncation header "X of Y nodes" + truncated badge
  *   6. Stale badge when generatedAt*1000 > 36 h ago
  *   7. Integrity warning when storedNodeCount < nodeCount
  *   8. Detail panel on node click (id/label/type/source/community/neighbors)
  *   9. colorFn → #10b981 for code-source nodes, #8b5cf6 for vault-source nodes
  */
 
-import { describe, it, vi, beforeEach } from "vitest";
-import { makeProjectGraphFixture } from "@/test/projectGraphFixture";
+import { describe, it, vi, beforeEach, expect, afterEach } from "vitest";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import {
+  makeProjectGraphFixture,
+  mockGetProjectGraph,
+} from "@/test/projectGraphFixture";
 
 // ---------------------------------------------------------------------------
 // Module mocks — declared before component import
@@ -37,26 +41,42 @@ vi.mock("../../convex/_generated/api", () => ({
   },
 }));
 
-// Mock ForceGraphCanvas — heavy canvas dep not available in jsdom
+// Capture last props passed to ForceGraphCanvas for colorFn assertions
+let lastForceGraphProps: Record<string, any> = {};
+
+// Mock ForceGraphCanvas — heavy canvas dep not available in jsdom.
+// Captures props for colorFn/labelFn/onNodeClick assertions.
 vi.mock("@/components/graph/ForceGraphCanvas", () => ({
-  ForceGraphCanvas: ({
-    "data-testid": testId,
-  }: {
-    "data-testid"?: string;
-  }) => (
-    <div data-testid={testId ?? "force-graph-canvas"} />
+  ForceGraphCanvas: (props: Record<string, any>) => {
+    lastForceGraphProps = props;
+    return (
+      <div
+        data-testid="force-graph-canvas"
+        data-node-count={props.data?.nodes?.length ?? 0}
+        onClick={() => {
+          // Allow tests to simulate a node click by firing the canvas click
+          // with a synthetic node (tests can also call onNodeClick directly)
+        }}
+      />
+    );
+  },
+}));
+
+// Mock shadcn Tooltip (not relevant to behavior assertions)
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipTrigger: ({ children, asChild }: { children: React.ReactNode; asChild?: boolean }) =>
+    asChild ? <>{children}</> : <div>{children}</div>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="tooltip-content">{children}</div>
   ),
 }));
 
 // ---------------------------------------------------------------------------
-// Fixture
+// Import after mocks
 // ---------------------------------------------------------------------------
 
-// Keep a reference to re-use across tests; individual tests override as needed
-const _defaultFixture = makeProjectGraphFixture();
-
-// Suppress unused warning — fixture will be used when todos are implemented
-void _defaultFixture;
+import { CodeVaultGraph } from "./CodeVaultGraph";
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -65,41 +85,231 @@ void _defaultFixture;
 describe("CodeVaultGraph", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lastForceGraphProps = {};
   });
 
-  it.todo(
-    "renders nodes and legend when snapshot data is available (render-with-data)"
-  );
+  afterEach(() => {
+    cleanup();
+  });
 
-  it.todo(
-    "shows loading pulse when useQuery returns undefined (loading state)"
-  );
+  // ── Test 1: render with data ─────────────────────────────────────────────
 
-  it.todo(
-    "shows empty/explainer state when useQuery returns null (no snapshot, D-12)"
-  );
+  it("renders nodes and legend when snapshot data is available (render-with-data)", () => {
+    const fixture = makeProjectGraphFixture();
+    mockGetProjectGraph(fixture);
 
-  it.todo(
-    "source filter 'code' drops vault nodes and removes dangling links from data passed to ForceGraphCanvas"
-  );
+    render(<CodeVaultGraph />);
 
-  it.todo(
-    "truncation header shows 'X of Y nodes' when sources[].truncated is true or emittedNodeCount > nodeCount"
-  );
+    // Canvas region present
+    expect(screen.getByTestId("force-graph-canvas")).toBeDefined();
 
-  it.todo(
-    "stale freshness badge renders when generatedAt*1000 is more than 36 hours ago"
-  );
+    // Legend entries visible
+    expect(screen.getByText("Code (graphify)")).toBeDefined();
+    expect(screen.getByText("Vault (Obsidian)")).toBeDefined();
 
-  it.todo(
-    "integrity warning renders when storedNodeCount < nodeCount or storedLinkCount < linkCount (D-08)"
-  );
+    // "Showing X of Y nodes" header
+    expect(screen.getByText(/Showing \d+ of \d+ nodes/)).toBeDefined();
+  });
 
-  it.todo(
-    "clicking a node opens the detail panel showing id, label, type, source, community, and neighbors"
-  );
+  // ── Test 2: loading state ────────────────────────────────────────────────
 
-  it.todo(
-    "colorFn returns #10b981 for graphify/code-source nodes and #8b5cf6 for vault-source nodes"
-  );
+  it("shows loading pulse when useQuery returns undefined (loading state)", () => {
+    mockGetProjectGraph(undefined);
+
+    render(<CodeVaultGraph />);
+
+    // Loading pulse text present
+    expect(screen.getByText("Loading graph snapshot…")).toBeDefined();
+
+    // No canvas in loading state
+    expect(screen.queryByTestId("force-graph-canvas")).toBeNull();
+  });
+
+  // ── Test 3: empty/explainer state ────────────────────────────────────────
+
+  it("shows empty/explainer state when useQuery returns null (no snapshot, D-12)", () => {
+    mockGetProjectGraph(null);
+
+    render(<CodeVaultGraph />);
+
+    // D-12 explainer heading
+    expect(screen.getByText("No graph snapshot received yet")).toBeDefined();
+
+    // D-12 explainer body mentions the cron
+    expect(screen.getByText(/nightly graph_snapshot cron/)).toBeDefined();
+
+    // No canvas in empty state
+    expect(screen.queryByTestId("force-graph-canvas")).toBeNull();
+  });
+
+  // ── Test 4: source filter drops vault nodes + dangling links ─────────────
+
+  it("source filter 'code' drops vault nodes and removes dangling links from data passed to ForceGraphCanvas", () => {
+    // Fixture has 2 graphify nodes + 1 vault node + a cross-source link (a.ts → Note.md)
+    const fixture = makeProjectGraphFixture();
+    mockGetProjectGraph(fixture);
+
+    render(<CodeVaultGraph />);
+
+    // Initially "Both" — all 3 nodes passed to canvas
+    const canvasBefore = screen.getByTestId("force-graph-canvas");
+    expect(canvasBefore.getAttribute("data-node-count")).toBe("3");
+
+    // Click the "Code" filter chip
+    const codeChip = screen.getByRole("button", { name: "Code" });
+    fireEvent.click(codeChip);
+
+    // After filter: only 2 graphify nodes; vault node and cross-source link dropped
+    const canvasAfter = screen.getByTestId("force-graph-canvas");
+    expect(canvasAfter.getAttribute("data-node-count")).toBe("2");
+
+    // Verify no vault node in the filtered data
+    const filteredNodes: any[] = lastForceGraphProps.data?.nodes ?? [];
+    expect(filteredNodes.every((n: any) => !n.source.startsWith("vault:"))).toBe(true);
+
+    // Verify no dangling link (the cross-source link source=a.ts target=Note.md should be gone)
+    const filteredLinks: any[] = lastForceGraphProps.data?.links ?? [];
+    const keptIds = new Set(filteredNodes.map((n: any) => n.id));
+    const hasDangling = filteredLinks.some(
+      (l: any) => !keptIds.has(l.source) || !keptIds.has(l.target)
+    );
+    expect(hasDangling).toBe(false);
+  });
+
+  // ── Test 5: truncation header ─────────────────────────────────────────────
+
+  it("truncation header shows 'X of Y nodes' when sources[].truncated is true or emittedNodeCount > nodeCount", () => {
+    // truncated=true → the graphify source entry has emittedNodeCount=5, nodeCount=2, truncated=true
+    const fixture = makeProjectGraphFixture({ truncated: true });
+    mockGetProjectGraph(fixture);
+
+    render(<CodeVaultGraph />);
+
+    // "X of Y nodes" summary line (X = filteredData.nodes.length = 3, Y = nodeCount = 3)
+    expect(screen.getByText(/Showing \d+ of \d+ nodes/)).toBeDefined();
+
+    // Per-source chip shows emittedNodeCount / nodeCount
+    // For the graphify source (truncated): emittedNodeCount=5, nodeCount=2 → "codepulse: 5 / 2"
+    expect(screen.getByText(/codepulse:\s*5\s*\/\s*2/)).toBeDefined();
+
+    // "truncated" badge appears
+    expect(screen.getAllByText("truncated").length).toBeGreaterThan(0);
+  });
+
+  // ── Test 6: freshness / stale badge ──────────────────────────────────────
+
+  it("stale freshness badge renders when generatedAt*1000 is more than 36 hours ago", () => {
+    // staleGeneratedAt: 48 hours ago in Unix seconds
+    const staleTs = (Date.now() - 48 * 60 * 60 * 1000) / 1000;
+    const staleFixture = makeProjectGraphFixture({ staleGeneratedAt: staleTs });
+    mockGetProjectGraph(staleFixture);
+
+    const { unmount } = render(<CodeVaultGraph />);
+
+    // "stale" badge renders
+    expect(screen.getByText("stale")).toBeDefined();
+    unmount();
+  });
+
+  it("fresh snapshot does not render the stale badge", () => {
+    // Fresh fixture (generatedAt = now) — should NOT show stale badge
+    const freshFixture = makeProjectGraphFixture();
+    mockGetProjectGraph(freshFixture);
+
+    const { unmount } = render(<CodeVaultGraph />);
+    expect(screen.queryByText("stale")).toBeNull();
+    unmount();
+  });
+
+  // ── Test 7: integrity warning ─────────────────────────────────────────────
+
+  it("integrity warning renders when storedNodeCount < nodeCount or storedLinkCount < linkCount (D-08)", () => {
+    // storedNodeCountOverride=2, nodeCount=3 → storedNodeCount(2) < nodeCount(3)
+    const integrityFixture = makeProjectGraphFixture({ storedNodeCountOverride: 2 });
+    mockGetProjectGraph(integrityFixture);
+
+    const { unmount } = render(<CodeVaultGraph />);
+
+    // The dangling-drop warning banner renders
+    expect(screen.getByText(/links dropped as dangling/)).toBeDefined();
+    unmount();
+  });
+
+  it("integrity warning does not render when stored counts match emitted counts", () => {
+    // Default fixture: storedNodeCount === nodeCount, storedLinkCount === linkCount
+    const cleanFixture = makeProjectGraphFixture();
+    mockGetProjectGraph(cleanFixture);
+
+    const { unmount } = render(<CodeVaultGraph />);
+    expect(screen.queryByText(/links dropped as dangling/)).toBeNull();
+    unmount();
+  });
+
+  // ── Test 8: detail panel on node click ────────────────────────────────────
+
+  it("clicking a node opens the detail panel showing id, label, type, source, community, and neighbors", () => {
+    const fixture = makeProjectGraphFixture();
+    mockGetProjectGraph(fixture);
+
+    render(<CodeVaultGraph />);
+
+    // Panel is not open initially (no node selected)
+    expect(screen.queryByRole("button", { name: "Close node details" })).toBeNull();
+
+    // Simulate a node click via the captured onNodeClick prop
+    const nodeA = fixture.nodes[0]; // graphify:codepulse:src/a.ts
+    expect(typeof lastForceGraphProps.onNodeClick).toBe("function");
+    act(() => {
+      lastForceGraphProps.onNodeClick(nodeA);
+    });
+
+    // Panel should now be open
+    expect(screen.getByRole("button", { name: "Close node details" })).toBeDefined();
+    expect(screen.getByLabelText("Node details")).toBeDefined();
+
+    // Panel shows the node's id (truncated text)
+    expect(screen.getByTitle(nodeA.id)).toBeDefined();
+
+    // Panel shows the label
+    expect(screen.getByText(nodeA.label)).toBeDefined();
+
+    // Panel shows the type as a badge
+    expect(screen.getByText(nodeA.type)).toBeDefined();
+
+    // Panel shows source label
+    expect(screen.getByText("codepulse")).toBeDefined();
+
+    // Panel shows community
+    expect(screen.getByText(/community:/)).toBeDefined();
+
+    // Panel shows neighbors section (a.ts has neighbors: b.ts and Note.md)
+    expect(screen.getByText(/Neighbors/)).toBeDefined();
+
+    // Close panel
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Close node details" }));
+    });
+    expect(screen.queryByRole("button", { name: "Close node details" })).toBeNull();
+  });
+
+  // ── Test 9: colorFn returns correct colors ─────────────────────────────────
+
+  it("colorFn returns #10b981 for graphify/code-source nodes and #8b5cf6 for vault-source nodes", () => {
+    const fixture = makeProjectGraphFixture();
+    mockGetProjectGraph(fixture);
+
+    render(<CodeVaultGraph />);
+
+    // The colorFn was passed to ForceGraphCanvas — call it with test nodes
+    const capturedColorFn = lastForceGraphProps.colorFn;
+    expect(typeof capturedColorFn).toBe("function");
+
+    // graphify source node → #10b981 (CODE_COLOR)
+    const codeNode = { source: "graphify:codepulse:", id: "graphify:codepulse:src/a.ts" };
+    expect(capturedColorFn(codeNode)).toBe("#10b981");
+
+    // vault source node → #8b5cf6 (VAULT_COLOR)
+    const vaultNode = { source: "vault:", id: "vault:Note.md" };
+    expect(capturedColorFn(vaultNode)).toBe("#8b5cf6");
+  });
 });
