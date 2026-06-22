@@ -1,6 +1,7 @@
 import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { legacyEventData } from "./ingestSummary";
 
 /**
  * HTTP action: POST /runtime-ingest
@@ -39,10 +40,13 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
       const timestamp = evt.timestamp ?? now;
       const data = evt.data ?? evt;
 
-      // Always insert into legacy runtime_events
+      // Always insert into legacy runtime_events. For graph_snapshot, store a
+      // compact summary (not the full nodes/links blob) so the insert stays
+      // under Convex's ~1 MiB per-document limit — the full graph is persisted
+      // row-based by the graphSnapshots receiver below.
       await ctx.runMutation(api.events.insertEvent, {
         eventType: evt.eventType,
-        data: data,
+        data: legacyEventData(evt.eventType, data),
         timestamp: timestamp,
         critical: evt.critical ?? false,
         receivedAt: now,
