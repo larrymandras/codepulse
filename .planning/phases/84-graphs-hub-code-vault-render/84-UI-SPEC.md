@@ -53,18 +53,18 @@ Exceptions:
 
 ## Typography
 
-The existing de-facto type scale from Phase 71. No new sizes introduced.
+The existing de-facto type scale from Phase 71. No new sizes introduced. Exactly **2 weights**: regular `400` (`font-normal`) and bold `700` (`font-bold`). Hierarchy on the section label comes from `font-mono uppercase tracking-widest`, not a third weight.
 
 | Role | Size | Weight | Line Height | Token / Class |
 |------|------|--------|-------------|---------------|
 | Page heading | 24px (`text-2xl`) | 700 (`font-bold`) | 1.2 | Standard H1 per `Dashboard.tsx:53` |
-| Section label | 10px (`text-[10px]`) | 600 (`font-semibold`) | 1 | `font-mono uppercase tracking-widest` — matches HivePage header style |
+| Section label | 10px (`text-[10px]`) | 700 (`font-bold`) | 1 | `font-mono uppercase tracking-widest` — matches HivePage header style; bold reinforces the operational-chrome label |
 | Body / panel text | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Default prose inside panels |
 | Metric / badge | 12px (`text-xs`) | 400 (`font-normal`) | 1 | `font-mono` for numbers and status chrome |
 
-Canvas label text (node labels rendered in canvas, not CSS):
+Canvas label text (node labels rendered in canvas, not CSS — these are Canvas2D `ctx.font` properties, not part of the CSS 2-weight scale):
 - Default: 11px JetBrains Mono, node fill color.
-- Hovered: 13px bold JetBrains Mono, `#ffffff`.
+- Hovered: 13px bold JetBrains Mono, `#ffffff` (canvas render property only).
 - Background pill: `rgba(9,9,11,0.7)` — inherits ForceGraphCanvas defaultPaint pattern.
 
 ---
@@ -134,7 +134,7 @@ All components are existing — no new primitives needed.
 ```
 /graphs  (GraphsHub.tsx)
 ├── Page header row [flex items-center justify-between]
-│   ├── H1: "GRAPHS HUB" [text-[10px] font-mono uppercase tracking-widest text-primary]
+│   ├── H1: "GRAPHS HUB" [text-[10px] font-mono uppercase tracking-widest font-bold text-primary]
 │   │       + Network icon h-4 w-4 text-primary
 │   │       + InfoTooltip: "Unified view of Ástríðr's code, vault, and tool graphs"
 │   └── (no right-side control — no filter at page level)
@@ -238,17 +238,19 @@ Example: `"src/pages/GraphsHub.tsx · file · graphify:codepulse"`
 
 ### Detail panel (D-10)
 
-Opens in `grid grid-cols-1 lg:grid-cols-[1fr_320px]` layout, right column, same as KGDetailsPanel. Close: X button top-right + background click.
+Opens in `grid grid-cols-1 lg:grid-cols-[1fr_320px]` layout, right column, same as KGDetailsPanel. Close: X button top-right (`aria-label="Close node details"`) + background click.
 
 **Field order (locked):**
 1. **id** — full namespaced id, `font-mono text-xs text-muted-foreground`, truncated with `truncate` class, full id in native title attribute.
-2. **label** — `font-semibold text-sm text-foreground`
+2. **label** — `font-bold text-sm text-foreground`
 3. **type** — `Badge variant="outline"` `text-xs`
 4. **source** — source family chip: emerald `Code` or violet `Vault` pill matching node color
 5. **community** — `text-xs text-muted-foreground` prefixed `"community:"` — shown even if `null` ("community: —"), to surface the field for later Phase 86 use
 6. **Direct neighbors** — `SectionHeader title="Neighbors"` then a list of neighbor node labels (clickable to select that node), each as an `EntityRow`. If > 8 neighbors, wrap in `ScrollArea h-[200px]`.
 
 Panel state when no node selected: render the panel column with a placeholder `"Select a node to inspect"` in `text-xs font-mono text-muted-foreground` centered vertically.
+
+The close (`X h-4 w-4`) button is icon-only and MUST carry `aria-label="Close node details"`.
 
 ### Empty / null state (D-12)
 
@@ -377,6 +379,7 @@ Follow Phase 71 rules — no new keyframes.
 - Filter chips: use `role="group"` container + `aria-pressed` on each chip button.
 - Fullscreen button: `aria-label="Expand graph"` / `aria-label="Exit fullscreen"`.
 - Detail panel: `aria-label="Node details"` on the panel div; focus management on open (focus the panel heading or first field).
+- Detail panel close button: icon-only `X` button MUST carry `aria-label="Close node details"`.
 - Canvas: `aria-label="Code and vault knowledge graph"` on the ForceGraphCanvas outer div.
 - Stale badge: `aria-label="Graph snapshot is stale — last updated {relativeTime}"`.
 - Truncation chips: screen-reader-visible via text content (no icon-only patterns).
