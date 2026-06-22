@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle,
   ShieldX,
+  Ban,
 } from "lucide-react";
 import { modelBadgeClass } from "./AgentNode";
 
@@ -29,7 +30,7 @@ export interface SwarmTaskNodeData {
   agentId?: string;
 }
 
-// 7-state border class map (UI-SPEC State vocabulary table)
+// 8-state border class map (UI-SPEC State vocabulary table + cancelled)
 const stateBorder: Record<string, string> = {
   pending: "border-border/50",
   claimed: "border-primary/40",
@@ -38,9 +39,10 @@ const stateBorder: Record<string, string> = {
   done: "border-primary/30",
   failed: "border-[#ef4444]/60",
   verify_rejected: "border-[#ef4444]/60",
+  cancelled: "border-[#f59e0b]/50",
 };
 
-// 7-state glow/shadow map
+// 8-state glow/shadow map
 const stateGlow: Record<string, string> = {
   pending: "",
   claimed: "shadow-[0_0_8px_rgba(16,185,129,0.15)]",
@@ -49,9 +51,10 @@ const stateGlow: Record<string, string> = {
   done: "shadow-[0_0_8px_rgba(16,185,129,0.10)]",
   failed: "shadow-[0_0_15px_rgba(239,68,68,0.25)]",
   verify_rejected: "shadow-[0_0_15px_rgba(239,68,68,0.25)]",
+  cancelled: "",
 };
 
-// 7-state animation for glow pulse (running=600ms, verifying=1.4s)
+// 8-state animation for glow pulse (running=600ms, verifying=1.4s; cancelled=terminal/inert)
 const stateAnimation: Record<string, string> = {
   pending: "",
   claimed: "",
@@ -60,9 +63,10 @@ const stateAnimation: Record<string, string> = {
   done: "",
   failed: "",
   verify_rejected: "",
+  cancelled: "",
 };
 
-// 7-state status dot color map
+// 8-state status dot color map
 const stateDot: Record<string, string> = {
   pending: "bg-muted-foreground/50",
   claimed: "bg-primary/60",
@@ -71,9 +75,10 @@ const stateDot: Record<string, string> = {
   done: "bg-primary/80",
   failed: "bg-[#ef4444]",
   verify_rejected: "bg-[#ef4444]",
+  cancelled: "bg-[#f59e0b]/70",
 };
 
-// 7-state icon map (Lucide icons, 14px h-3.5 w-3.5)
+// 8-state icon map (Lucide icons, 14px h-3.5 w-3.5)
 const stateIconColor: Record<string, string> = {
   pending: "text-muted-foreground/70",
   claimed: "text-primary/70",
@@ -82,9 +87,10 @@ const stateIconColor: Record<string, string> = {
   done: "text-primary/70",
   failed: "text-[#ef4444]",
   verify_rejected: "text-[#ef4444]",
+  cancelled: "text-[#f59e0b]/80",
 };
 
-// 7-state label map (UI-SPEC Copywriting Contract)
+// 8-state label map (UI-SPEC Copywriting Contract + cancelled)
 const stateLabel: Record<string, string> = {
   pending: "Pending",
   claimed: "Claimed",
@@ -93,6 +99,7 @@ const stateLabel: Record<string, string> = {
   done: "Done",
   failed: "Failed",
   verify_rejected: "Rejected",
+  cancelled: "Cancelled",
 };
 
 function StateIcon({ state }: { state: string }) {
@@ -112,6 +119,8 @@ function StateIcon({ state }: { state: string }) {
       return <XCircle className={cls} />;
     case "verify_rejected":
       return <ShieldX className={cls} />;
+    case "cancelled":
+      return <Ban className={cls} />;
     default:
       return <Clock className={cls} />;
   }
