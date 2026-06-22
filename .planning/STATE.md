@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: verifying
-stopped_at: Phase 84 UI-SPEC approved
+stopped_at: Phase 84 executed + automated-verified — awaiting human UAT
 last_updated: "2026-06-22T14:44:55.744Z"
 last_activity: 2026-06-22
 progress:
@@ -26,10 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 84 (graphs-hub-code-vault-render) — EXECUTING
-Plan: 3 of 3
-Next: Phase 84 (Graphs Hub + Code/Vault Render) — `/gsd-discuss-phase 84`
-Status: Phase complete — ready for verification
+Phase: 84 (graphs-hub-code-vault-render) — AWAITING HUMAN UAT
+Plan: 3 of 3 executed; code-review fixes applied; verifier 7/7 automated must-haves PASS
+Next: Human browser UAT of 7 items (see 84-HUMAN-UAT.md). On pass → mark Phase 84 complete + advance to Phase 85. On failure → `/gsd-plan-phase 84 --gaps`.
+Status: Execution + automated verification complete — held for human browser test (not yet marked complete)
 Last activity: 2026-06-22
 
 Progress bar: `██░░░░░░░░` 20% (1/5 phases)
