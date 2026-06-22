@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 const STORAGE_KEY = "codepulse_onboarding_complete";
 
@@ -29,25 +30,50 @@ export default function OnboardingGuide() {
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
 
+  const dismiss = useCallback(() => {
+    localStorage.setItem(STORAGE_KEY, "true");
+    setVisible(false);
+  }, []);
+
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) {
       setVisible(true);
     }
   }, []);
 
+  // Escape dismisses the guide so it never traps the operator (must run before
+  // the early return — hooks are unconditional).
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [visible, dismiss]);
+
   if (!visible) return null;
 
   const isFirst = step === 0;
   const isLast = step === steps.length - 1;
 
-  const dismiss = () => {
-    localStorage.setItem(STORAGE_KEY, "true");
-    setVisible(false);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 max-w-lg w-full mx-4">
+    // Backdrop click (outside the card) dismisses — never a no-exit click trap.
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) dismiss();
+      }}
+    >
+      <div className="relative bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 max-w-lg w-full mx-4">
+        {/* Always-visible close affordance */}
+        <button
+          onClick={dismiss}
+          aria-label="Close onboarding"
+          className="absolute right-3 top-3 text-gray-400 hover:text-gray-100 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
         {/* Step content */}
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-100 mb-2">
