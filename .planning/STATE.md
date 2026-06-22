@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: verifying
-stopped_at: Phase 84 executed + automated-verified — awaiting human UAT
-last_updated: "2026-06-22T14:44:55.744Z"
+status: ready_to_plan
+stopped_at: Phase 84 complete (3/3) — ready to discuss Phase 88
+last_updated: 2026-06-22T16:13:16.550Z
 last_activity: 2026-06-22
 progress:
   total_phases: 6
@@ -21,25 +21,25 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 84 — graphs-hub-code-vault-render
-**Last completed:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
+**Current focus:** Phase 88 — analytics rollup table durable fix for convex 16 mib read li
+**Last completed:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. CodeVaultGraph dual-palette hero + GraphsHub page + `/graphs` route + nav flip; 5 UAT-found fixes (tooltip provider, zoom-fit, vault id-prefix discriminator, amber integrity banner) + amber D-08; 7/7 must-haves + human UAT passed via Playwright on real Convex data. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 84 (graphs-hub-code-vault-render) — AWAITING HUMAN UAT
-Plan: 3 of 3 executed; code-review fixes applied; verifier 7/7 automated must-haves PASS
-Next: Human browser UAT of 7 items (see 84-HUMAN-UAT.md). On pass → mark Phase 84 complete + advance to Phase 85. On failure → `/gsd-plan-phase 84 --gaps`.
-Status: Execution + automated verification complete — held for human browser test (not yet marked complete)
+Phase: 84 COMPLETE (3/3 plans; 7/7 must-haves + human UAT passed 2026-06-22 via Playwright on real Convex data)
+Plan: —
+Next: choose next phase — Phase 85 Cross-Graph Navigation (v8.0 roadmap sequence; no dir yet → `/gsd-discuss-phase 85`) OR Phase 88 Analytics Rollup Table (already scaffolded, prod-impacting → `/gsd-discuss-phase 88`). `phase.complete` auto-pointed focus at 88 because 85 has no dir yet; sequence order is 85.
+Status: Phase 84 closed; awaiting next-phase selection
 Last activity: 2026-06-22
 
-Progress bar: `██░░░░░░░░` 20% (1/5 phases)
+Progress bar: `████░░░░░░` 40% (2/5 v8.0 phases: 83, 84 complete)
 
 ## Milestone v8.0 Roadmap (2026-06-18)
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 83 | Graph Snapshot Receiver | GH-01 | ✅ Complete + verified (2026-06-18) |
-| 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | Not started |
+| 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | ✅ Complete + UAT passed (2026-06-22) |
 | 85 | Cross-Graph Navigation | GH-04 | Not started |
 | 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | Not started |
 | 87 | Saved Views + Temporal Diff | KG-10, KG-11 | Not started |

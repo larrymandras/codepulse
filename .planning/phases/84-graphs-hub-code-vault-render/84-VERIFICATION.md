@@ -1,8 +1,9 @@
 ---
 phase: 84-graphs-hub-code-vault-render
 verified: 2026-06-22T00:00:00Z
-status: human_needed
+status: passed
 score: 7/7 must-haves verified
+human_uat: passed 2026-06-22 (Playwright + browser UAT on real Convex data; see 84-HUMAN-UAT.md)
 overrides_applied: 0
 human_verification:
   - test: "Navigate to /graphs in npm run dev; click Graphs Hub in the sidebar"
