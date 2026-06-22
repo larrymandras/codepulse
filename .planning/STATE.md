@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: Phase 84 closed; awaiting next-phase selection
-stopped_at: Phase 85 context gathered
-last_updated: "2026-06-22T18:00:41.756Z"
+status: executing
+stopped_at: Phase 85 UI-SPEC approved
+last_updated: "2026-06-22T18:55:57.485Z"
 last_activity: 2026-06-22
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 10
+  completed_plans: 7
   percent: 33
 ---
 
@@ -21,15 +21,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 88 — analytics rollup table durable fix for convex 16 mib read li
+**Current focus:** Phase 85 — cross-graph-navigation
 **Last completed:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. CodeVaultGraph dual-palette hero + GraphsHub page + `/graphs` route + nav flip; 5 UAT-found fixes (tooltip provider, zoom-fit, vault id-prefix discriminator, amber integrity banner) + amber D-08; 7/7 must-haves + human UAT passed via Playwright on real Convex data. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 84 COMPLETE (3/3 plans; 7/7 must-haves + human UAT passed 2026-06-22 via Playwright on real Convex data)
-Plan: —
+Phase: 85 (cross-graph-navigation) — EXECUTING
+Plan: 2 of 4
 Next: choose next phase — Phase 85 Cross-Graph Navigation (v8.0 roadmap sequence; no dir yet → `/gsd-discuss-phase 85`) OR Phase 88 Analytics Rollup Table (already scaffolded, prod-impacting → `/gsd-discuss-phase 88`). `phase.complete` auto-pointed focus at 88 because 85 has no dir yet; sequence order is 85.
-Status: Phase 84 closed; awaiting next-phase selection
+Status: Ready to execute
 Last activity: 2026-06-22
 
 Progress bar: `████░░░░░░` 40% (2/5 v8.0 phases: 83, 84 complete)
@@ -158,7 +158,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-22T18:00:41.749Z
-Stopped at: Phase 85 context gathered
+Last session: 2026-06-22T18:55:57.474Z
+Stopped at: Phase 85 UI-SPEC approved
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
-Resume file: .planning/phases/85-cross-graph-navigation/85-CONTEXT.md
+Resume file: None

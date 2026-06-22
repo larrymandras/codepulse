@@ -219,7 +219,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   3. Cross-graph links that have no data backing are silently absent — no broken nav or dead links appear
   4. Navigation preserves the originating graph's state so the operator can return to their prior context
 **Plans**: 4 plans (2 waves)
-  - [ ] 85-01-PLAN.md — Shared focus plumbing: buildFocusUrl + normalized-exact match utils (focus-url.ts) + useFocusParam hook + from-param same-origin guard, with unit tests (GH-04)
+  - [x] 85-01-PLAN.md — Shared focus plumbing: buildFocusUrl + normalized-exact match utils (focus-url.ts) + useFocusParam hook + from-param same-origin guard, with unit tests (GH-04)
   - [ ] 85-02-PLAN.md — Tool Galaxy surface: eager tool→owning-agent link + inbound ?focus center + return chip (GH-04, SC#1)
   - [ ] 85-03-PLAN.md — CodeVaultGraph surface: eager agent→KG-entities link (via existing useKnowledgeGraph) + inbound ?focus center + return chip (GH-04, SC#2)
   - [ ] 85-04-PLAN.md — KnowledgeGraph destination: inbound entity-lens override (post-hydration) + center + return chip (GH-04, SC#2 landing)
@@ -268,7 +268,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
-| 85. Cross-Graph Navigation | v8.0 | 0/? | Not started | — |
+| 85. Cross-Graph Navigation | v8.0 | 1/4 | In Progress|  |
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
