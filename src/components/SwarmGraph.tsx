@@ -108,7 +108,10 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
   const handleNodeClick: NodeMouseHandler = useCallback(
     (_event, node) => {
       if (node.type === "queen") return;
-      onSelectTask?.(node.data as SwarmTaskNodeData);
+      // React Flow types node.data as Record<string, unknown>; double-cast
+      // through unknown (standard idiom). SwarmTaskNodeData is structurally
+      // assignable to onSelectTask's SwarmTaskDetailData.
+      onSelectTask?.(node.data as unknown as SwarmTaskNodeData);
     },
     [onSelectTask]
   );
