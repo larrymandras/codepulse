@@ -218,7 +218,11 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   2. Selecting an agent node navigates to related KG entities where a `{agent}` relationship exists in the KG
   3. Cross-graph links that have no data backing are silently absent — no broken nav or dead links appear
   4. Navigation preserves the originating graph's state so the operator can return to their prior context
-**Plans**: TBD
+**Plans**: 4 plans (2 waves)
+  - [ ] 85-01-PLAN.md — Shared focus plumbing: buildFocusUrl + normalized-exact match utils (focus-url.ts) + useFocusParam hook + from-param same-origin guard, with unit tests (GH-04)
+  - [ ] 85-02-PLAN.md — Tool Galaxy surface: eager tool→owning-agent link + inbound ?focus center + return chip (GH-04, SC#1)
+  - [ ] 85-03-PLAN.md — CodeVaultGraph surface: eager agent→KG-entities link (via existing useKnowledgeGraph) + inbound ?focus center + return chip (GH-04, SC#2)
+  - [ ] 85-04-PLAN.md — KnowledgeGraph destination: inbound entity-lens override (post-hydration) + center + return chip (GH-04, SC#2 landing)
 **UI hint**: yes
 
 ### Phase 86: KG Full-Text Search + Clustering Layout
