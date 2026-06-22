@@ -24,20 +24,18 @@ resolved:
   - CR-01  # fixed in bff0d83 — decodeFromParam validate-only (no double decode)
   - WR-01  # fixed in bff0d83 — backslash path rejection
   - WR-03  # fixed in bff0d83 — hops clamped to [1,6]
-deferred:
-  - WR-02  # focus centering may fire before force layout assigns x/y (UX, needs running-app tuning)
-  - WR-04  # KG inbound-focus effect relies on incidental loading-flip ordering (UX/robustness)
-status: issues_found
+  - WR-02  # fixed in 429cf29 — centerNodeWhenReady rAF-retries until layout assigns x/y
+  - WR-04  # fixed in 429cf29 — KG hydration is reactive state; override effect re-runs explicitly
+status: resolved
 ---
 
 # Phase 85: Code Review Report
 
-> **Resolution (2026-06-22, orchestrator):** CR-01 (blocker), WR-01, and WR-03
-> fixed and committed in `bff0d83` — verified by `tsc` + full Vitest suite
-> (1184 passing). WR-02 (centering before force layout) and WR-04 (KG effect
-> ordering) are UX-robustness items deferred to a follow-up todo; they need
-> tuning against the running force graph and are best handled during human UAT.
-> INFO items left as-is.
+> **Resolution (2026-06-22, orchestrator):** ALL findings resolved. CR-01
+> (blocker), WR-01, WR-03 fixed in `bff0d83`; WR-02 (centering race) and WR-04
+> (KG effect ordering) fixed in `429cf29` (centerNodeWhenReady rAF-retry helper
+> + reactive hydration state). Verified by `tsc` + full Vitest suite (1189
+> passing, incl. 5 new graph-center tests). INFO items left as-is.
 
 **Reviewed:** 2026-06-22
 **Depth:** standard
