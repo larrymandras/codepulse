@@ -166,9 +166,10 @@ describe("CodeVaultGraph", () => {
     const canvasAfter = screen.getByTestId("force-graph-canvas");
     expect(canvasAfter.getAttribute("data-node-count")).toBe("2");
 
-    // Verify no vault node in the filtered data
+    // Verify no vault node in the filtered data. Vault nodes are discriminated
+    // by the `vault:` id prefix (source is a bare name like "vault"/"codepulse").
     const filteredNodes: any[] = lastForceGraphProps.data?.nodes ?? [];
-    expect(filteredNodes.every((n: any) => !n.source.startsWith("vault:"))).toBe(true);
+    expect(filteredNodes.every((n: any) => !n.id.startsWith("vault:"))).toBe(true);
 
     // Verify no dangling link (the cross-source link source=a.ts target=Note.md should be gone)
     const filteredLinks: any[] = lastForceGraphProps.data?.links ?? [];
@@ -177,6 +178,28 @@ describe("CodeVaultGraph", () => {
       (l: any) => !keptIds.has(l.source) || !keptIds.has(l.target)
     );
     expect(hasDangling).toBe(false);
+  });
+
+  // ── Test 4b: Vault filter shows vault nodes (UAT-84 regression) ───────────
+
+  it("source filter 'vault' keeps only the vault node (bare 'vault' source, not 'vault:')", () => {
+    // Real getProjectGraph emits node.source as a BARE name ("vault"), with the
+    // `vault:` prefix only on the node id. A startsWith("vault:") check on
+    // node.source matched nothing → Vault filter showed "0 of 3 nodes" in UAT.
+    const fixture = makeProjectGraphFixture();
+    mockGetProjectGraph(fixture);
+
+    render(<CodeVaultGraph />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Vault" }));
+
+    const canvas = screen.getByTestId("force-graph-canvas");
+    expect(canvas.getAttribute("data-node-count")).toBe("1");
+
+    const filteredNodes: any[] = lastForceGraphProps.data?.nodes ?? [];
+    expect(filteredNodes).toHaveLength(1);
+    expect(filteredNodes[0].id).toBe("vault:Note.md");
+    expect(filteredNodes[0].source).toBe("vault");
   });
 
   // ── Test 5: truncation header ─────────────────────────────────────────────
@@ -310,22 +333,23 @@ describe("CodeVaultGraph", () => {
 
   // ── Test 9: colorFn returns correct colors ─────────────────────────────────
 
-  it("colorFn returns #10b981 for graphify/code-source nodes and #8b5cf6 for vault-source nodes", () => {
+  it("colorFn returns #10b981 for code nodes and #8b5cf6 for vault nodes (by id prefix, bare source)", () => {
     const fixture = makeProjectGraphFixture();
     mockGetProjectGraph(fixture);
 
     render(<CodeVaultGraph />);
 
-    // The colorFn was passed to ForceGraphCanvas — call it with test nodes
+    // The colorFn was passed to ForceGraphCanvas — call it with test nodes.
+    // Node shapes mirror real getProjectGraph: bare `source`, prefixed `id`.
     const capturedColorFn = lastForceGraphProps.colorFn;
     expect(typeof capturedColorFn).toBe("function");
 
-    // graphify source node → #10b981 (CODE_COLOR)
-    const codeNode = { source: "graphify:codepulse:", id: "graphify:codepulse:src/a.ts" };
+    // code node (graphify: id prefix, bare "codepulse" source) → #10b981
+    const codeNode = { source: "codepulse", id: "graphify:codepulse:src/a.ts" };
     expect(capturedColorFn(codeNode)).toBe("#10b981");
 
-    // vault source node → #8b5cf6 (VAULT_COLOR)
-    const vaultNode = { source: "vault:", id: "vault:Note.md" };
+    // vault node (vault: id prefix, bare "vault" source) → #8b5cf6
+    const vaultNode = { source: "vault", id: "vault:Note.md" };
     expect(capturedColorFn(vaultNode)).toBe("#8b5cf6");
   });
 });

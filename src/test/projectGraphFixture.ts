@@ -72,27 +72,30 @@ export function makeProjectGraphFixture(
     ...rest
   } = overrides;
 
+  // NOTE: `source` is a BARE source name ("codepulse" | "vault"), matching the
+  // real getProjectGraph payload. The `vault:` / `graphify:` prefix lives in the
+  // node `id`, which is the reliable code/vault discriminator (see isVaultNode).
   const defaultNodes: FixtureNode[] = [
     {
       id: "graphify:codepulse:src/a.ts",
       label: "a.ts",
       type: "file",
       community: 0,
-      source: "graphify:codepulse:",
+      source: "codepulse",
     },
     {
       id: "graphify:codepulse:src/b.ts",
       label: "b.ts",
       type: "file",
       community: 0,
-      source: "graphify:codepulse:",
+      source: "codepulse",
     },
     {
       id: "vault:Note.md",
       label: "Note.md",
       type: "note",
       community: null,
-      source: "vault:",
+      source: "vault",
     },
   ];
 
@@ -111,7 +114,7 @@ export function makeProjectGraphFixture(
 
   const defaultSources: SourceEntry[] = [
     {
-      source: "graphify:codepulse:",
+      source: "codepulse",
       kind: "graphify",
       // Truncation means the source held MORE than was emitted/stored, so the
       // total (nodeCount/linkCount) is the larger number — the chip renders
@@ -123,8 +126,8 @@ export function makeProjectGraphFixture(
       truncated,
     },
     {
-      source: "vault:",
-      kind: "obsidian",
+      source: "vault",
+      kind: "vault",
       nodeCount: 1,
       linkCount: 1,
       emittedNodeCount: 1,

@@ -80,10 +80,21 @@ function relativeTime(ageMs: number): string {
   return `${days}d ago`;
 }
 
+// ── Vault-origin discriminator ───────────────────────────────────────────────
+// A node is vault-origin iff its id carries the `vault:` prefix — the SAME
+// discriminator linkColorFn uses on link endpoints. getProjectGraph returns the
+// node `source` field as a BARE source NAME ("vault" | "codepulse" |
+// "astridr-repo"), NOT a prefixed string, so `source.startsWith("vault:")` never
+// matches real data — it mis-colored the vault node green and made the Vault
+// filter show 0 nodes (UAT-84). Node ids are reliably prefixed; use them.
+function isVaultNode(node: { id?: string }): boolean {
+  return node.id?.startsWith("vault:") ?? false;
+}
+
 // ── colorFn (D-04 / D-05) ────────────────────────────────────────────────────
 
 function colorFn(node: any): string {
-  return node.source?.startsWith("vault:") ? VAULT_COLOR : CODE_COLOR;
+  return isVaultNode(node) ? VAULT_COLOR : CODE_COLOR;
 }
 
 // ── labelFn (D-11) ───────────────────────────────────────────────────────────
@@ -130,11 +141,9 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     if (sourceFilter === "both") {
       return { nodes: snapshot.nodes, links: snapshot.links };
     }
-    const keepSource =
-      sourceFilter === "code"
-        ? (s: string) => !s.startsWith("vault:")
-        : (s: string) => s.startsWith("vault:");
-    const keptNodes = snapshot.nodes.filter((n) => keepSource(n.source));
+    const keptNodes = snapshot.nodes.filter((n) =>
+      sourceFilter === "code" ? !isVaultNode(n) : isVaultNode(n)
+    );
     const keptIds = new Set(keptNodes.map((n) => n.id));
     const keptLinks = snapshot.links.filter(
       (l) => keptIds.has(l.source) && keptIds.has(l.target)
@@ -447,9 +456,9 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                   <span
                     className="inline-block text-xs font-mono px-2 py-0.5 rounded-full"
                     style={{
-                      color: selectedNode.source?.startsWith("vault:") ? VAULT_COLOR : CODE_COLOR,
-                      border: `1px solid ${selectedNode.source?.startsWith("vault:") ? VAULT_COLOR : CODE_COLOR}`,
-                      backgroundColor: selectedNode.source?.startsWith("vault:")
+                      color: isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR,
+                      border: `1px solid ${isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR}`,
+                      backgroundColor: isVaultNode(selectedNode)
                         ? "rgba(139, 92, 246, 0.1)"
                         : "rgba(16, 185, 129, 0.1)",
                     }}
