@@ -30,6 +30,7 @@ import {
   type GalaxyNode,
 } from "../lib/tool-galaxy";
 import { buildFocusUrl, focusKeysMatch } from "../lib/focus-url";
+import { centerNodeWhenReady } from "../lib/graph-center";
 import { useProjectGraph } from "../hooks/useProjectGraph";
 import { useFocusParam } from "../hooks/useFocusParam";
 
@@ -152,11 +153,8 @@ function GalaxyCanvas({
     getId: (n) => n.id,
     onFocus: (node) => {
       setSelectedNodeId(node.id);
-      const typedNode = node as GalaxyNode & { x?: number; y?: number };
-      if (typedNode.x != null && typedNode.y != null) {
-        fgRef.current?.centerAt(typedNode.x, typedNode.y, 800);
-        fgRef.current?.zoom(3, 800);
-      }
+      // Center once the force layout assigns x/y (WR-02 — retry, don't skip).
+      centerNodeWhenReady(fgRef, node as GalaxyNode & { x?: number; y?: number });
     },
   });
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -12,6 +12,7 @@ import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
 import { useFocusParam } from "../hooks/useFocusParam";
+import { centerNodeWhenReady } from "../lib/graph-center";
 import {
   ENTITY_TYPE_COLORS,
   type KgNode,
@@ -74,18 +75,18 @@ export default function KnowledgeGraph() {
   const lensParam = searchParams.get("lens");
   const hopsParam = searchParams.get("hops");
 
-  // Track the first time loading becomes false (idb hydration complete).
-  // The saved-state restore runs inside useKnowledgeGraph before the first
-  // fetch; once loading transitions to false the first time, hydration is done.
-  const hydratedRef = useRef(false);
+  // Track idb hydration completion as reactive STATE (not a ref) so the
+  // override effect below re-runs explicitly when hydration settles, instead of
+  // depending on incidental `loading`-flip ordering (WR-04). The saved-state
+  // restore runs inside useKnowledgeGraph before the first fetch; once loading
+  // transitions to false the first time, hydration is done.
+  const [hydrated, setHydrated] = useState(false);
   // One-shot guard: apply the inbound override exactly once.
   const appliedFocusRef = useRef(false);
 
   useEffect(() => {
-    // Record when idb hydration has settled at least once.
-    if (!loading && !hydratedRef.current) {
-      hydratedRef.current = true;
-    }
+    // Idempotent: flips to true on the first non-loading render and stays.
+    if (!loading) setHydrated(true);
   }, [loading]);
 
   useEffect(() => {
@@ -93,8 +94,8 @@ export default function KnowledgeGraph() {
     if (!focusEntity) return;
     // Already applied → stay no-op.
     if (appliedFocusRef.current) return;
-    // idb hydration not yet complete → wait.
-    if (!hydratedRef.current) return;
+    // idb hydration not yet complete → wait (explicit dependency, WR-04).
+    if (!hydrated) return;
 
     // Apply the entity-lens override AFTER hydration so saved-state restore
     // cannot clobber it.
@@ -105,7 +106,7 @@ export default function KnowledgeGraph() {
     // negative or huge value that would otherwise reach the backend (WR-03).
     const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
     setFilter("hops", parsedHops);
-  }, [focusEntity, lensParam, hopsParam, loading, setLens, setFilter]);
+  }, [focusEntity, lensParam, hopsParam, hydrated, setLens, setFilter]);
 
   // ── Center the focused entity once it resolves ───────────────────────────────
   // useFocusParam matches on node.name (KG focus is name-based, D-02).
@@ -115,11 +116,8 @@ export default function KnowledgeGraph() {
     getId: (n: KgNode) => n.name,
     onFocus: (node: KgNode) => {
       kg.selectNode(node.id);
-      const n = node as KgNode & { x?: number; y?: number };
-      if (n.x != null && n.y != null) {
-        fgRef.current?.centerAt(n.x, n.y, 800);
-        fgRef.current?.zoom(3, 800);
-      }
+      // Center once the force layout assigns x/y (WR-02 — retry, don't skip).
+      centerNodeWhenReady(fgRef, node as KgNode & { x?: number; y?: number });
     },
   });
 

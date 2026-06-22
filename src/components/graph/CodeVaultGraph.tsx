@@ -38,6 +38,7 @@ import {
 } from "./ForceGraphCanvas";
 import { useProjectGraph, type ProjectGraphData } from "../../hooks/useProjectGraph";
 import { useKnowledgeGraph } from "../../hooks/useKnowledgeGraph";
+import { centerNodeWhenReady } from "../../lib/graph-center";
 import { useFocusParam } from "../../hooks/useFocusParam";
 import { buildFocusUrl, normalizeFocusKey } from "../../lib/focus-url";
 import { Badge } from "../ui/badge";
@@ -145,10 +146,8 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     getId: (n) => n.id,
     onFocus: (node) => {
       setSelectedNodeId(node.id);
-      if ((node as any).x != null && (node as any).y != null) {
-        fgRef.current?.centerAt((node as any).x, (node as any).y, 800);
-        fgRef.current?.zoom(3, 800);
-      }
+      // Center once the force layout assigns x/y (WR-02 — retry, don't skip).
+      centerNodeWhenReady(fgRef, node as { x?: number; y?: number });
     },
   });
 
