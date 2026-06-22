@@ -8,7 +8,11 @@ export const activityHeatmap = query({
       .withIndex("by_timestamp")
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .take(5000);
+      // Quick unblock: capped to stay under Convex's 16 MiB/exec read limit.
+      // `events.payload` is v.any() (fat), so each row is costly to read even
+      // though we only use `timestamp`. Durable fix tracked in Phase: analytics rollup table.
+      // 1000 ≈ 9 MiB at current payload sizes (~56% of limit); leaves headroom for payload growth.
+      .take(1000);
 
     const cells: Record<string, number> = {};
     let maxCount = 0;
@@ -40,7 +44,8 @@ export const toolFlowSankey = query({
       .withIndex("by_timestamp")
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .take(2000);
+      // Quick unblock: capped under the 16 MiB/exec read limit (fat events.payload). See heatmap note.
+      .take(1000);
 
     const nodeSet = new Set<string>();
     const linkMap: Record<string, number> = {};
@@ -97,7 +102,8 @@ export const tokenSunburst = query({
     const all = await ctx.db.query("llmMetrics")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+      // Defensive cap: llmMetrics rows are slim, but unbounded .collect() is a latent read-limit risk.
+      .take(30000);
 
     let totalCost = 0;
     let totalTokens = 0;
@@ -149,21 +155,22 @@ export const errorRateTrend = query({
       .withIndex("by_type", (q) => q.eq("eventType", "Error"))
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .take(500);
+      // Quick unblock: 3 fat-payload reads run in one execution; cap each (fits 16 MiB/exec).
+      .take(300);
 
     const toolErrors = await ctx.db
       .query("events")
       .withIndex("by_type", (q) => q.eq("eventType", "ToolError"))
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .take(500);
+      .take(300);
 
     const toolUseFailures = await ctx.db
       .query("events")
       .withIndex("by_type", (q) => q.eq("eventType", "PostToolUseFailure"))
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .take(500);
+      .take(300);
 
     const allErrors = [...errors, ...toolErrors, ...toolUseFailures];
     const recentErrors = allErrors.filter((e) => e.timestamp >= dayAgo);
@@ -228,7 +235,8 @@ export const tokenWaterfall = query({
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .order("asc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+      // Defensive cap (30-min window is small, but avoid unbounded .collect()).
+      .take(30000);
 
     return all.map((r) => ({
       timestamp: r.timestamp,
