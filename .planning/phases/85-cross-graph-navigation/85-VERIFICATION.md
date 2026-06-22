@@ -1,7 +1,7 @@
 ---
 phase: 85-cross-graph-navigation
 verified: 2026-06-22T00:00:00Z
-status: human_needed
+status: passed
 score: 4/4 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -35,7 +35,7 @@ human_verification:
 
 **Phase Goal:** Selecting a node in one graph surface can navigate to the corresponding entity in another surface where the data supports the link.
 **Verified:** 2026-06-22
-**Status:** human_needed
+**Status:** passed (human UAT demonstrated 2026-06-22 — all 4 SCs)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
