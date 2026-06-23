@@ -13,6 +13,7 @@ import { entityTypeColor } from "../../lib/kg-graph";
 import type { KgLens, KgFilters } from "../../hooks/useKnowledgeGraph";
 import KGViewsPopover from "./KGViewsPopover";
 import KGDiffControls from "./KGDiffControls";
+import KGAnimateControls from "./KGAnimateControls";
 import type { SavedKgView } from "../../hooks/useSavedViews";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -55,6 +56,23 @@ export interface KGControlsProps {
   onChangeDiffDateB: (d: string | null) => void;
   onCompare: () => void;
   diffLoading: boolean;
+  // Animate controls (KG-11, Plan 04)
+  animRangeStart: string | null;
+  animRangeEnd: string | null;
+  animInterval: "day" | "week" | "month";
+  onChangeAnimRange: (start: string | null, end: string | null) => void;
+  onChangeAnimInterval: (i: "day" | "week" | "month") => void;
+  animFrames: string[];
+  animCurrentFrameIndex: number;
+  animIsPlaying: boolean;
+  animFps: number;
+  animFrameError: string | null;
+  onAnimPlay: () => void;
+  onAnimPause: () => void;
+  onAnimStepBack: () => void;
+  onAnimStepForward: () => void;
+  onAnimSetFrameIndex: (i: number) => void;
+  onAnimSetFps: (n: number) => void;
 }
 
 const TEMPORAL_SUB_MODES: { id: TemporalSubMode; label: string }[] = [
@@ -86,6 +104,22 @@ export default function KGControls({
   onChangeDiffDateB,
   onCompare,
   diffLoading,
+  animRangeStart,
+  animRangeEnd,
+  animInterval,
+  onChangeAnimRange,
+  onChangeAnimInterval,
+  animFrames,
+  animCurrentFrameIndex,
+  animIsPlaying,
+  animFps,
+  animFrameError,
+  onAnimPlay,
+  onAnimPause,
+  onAnimStepBack,
+  onAnimStepForward,
+  onAnimSetFrameIndex,
+  onAnimSetFps,
 }: KGControlsProps) {
   return (
     <div className="space-y-3">
@@ -239,11 +273,26 @@ export default function KGControls({
           />
         )}
 
-        {/* Animate sub-mode: stub placeholder (Plan 04 fills this) */}
+        {/* Animate sub-mode: KGAnimateControls (KG-11, Plan 04) */}
         {lens === "temporal" && temporalSubMode === "animate" && (
-          <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground/60">
-            Animation controls coming in Plan 04.
-          </div>
+          <KGAnimateControls
+            rangeStart={animRangeStart}
+            rangeEnd={animRangeEnd}
+            interval={animInterval}
+            onChangeRange={onChangeAnimRange}
+            onChangeInterval={onChangeAnimInterval}
+            frames={animFrames}
+            currentFrameIndex={animCurrentFrameIndex}
+            isPlaying={animIsPlaying}
+            fps={animFps}
+            frameError={animFrameError}
+            onPlay={onAnimPlay}
+            onPause={onAnimPause}
+            onStepBack={onAnimStepBack}
+            onStepForward={onAnimStepForward}
+            onSetFrameIndex={onAnimSetFrameIndex}
+            onSetFps={onAnimSetFps}
+          />
         )}
 
         {/* Entity-type filter — all lenses (acts client-side + server for overview) */}

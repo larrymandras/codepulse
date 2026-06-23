@@ -61,6 +61,23 @@ function renderControls(
     onChangeDiffDateB: vi.fn(),
     onCompare: vi.fn(),
     diffLoading: false,
+    // Animate controls defaults (KG-11, Plan 04)
+    animRangeStart: null,
+    animRangeEnd: null,
+    animInterval: "day" as const,
+    onChangeAnimRange: vi.fn(),
+    onChangeAnimInterval: vi.fn(),
+    animFrames: [],
+    animCurrentFrameIndex: 0,
+    animIsPlaying: false,
+    animFps: 1,
+    animFrameError: null,
+    onAnimPlay: vi.fn(),
+    onAnimPause: vi.fn(),
+    onAnimStepBack: vi.fn(),
+    onAnimStepForward: vi.fn(),
+    onAnimSetFrameIndex: vi.fn(),
+    onAnimSetFps: vi.fn(),
   };
   return render(<KGControls {...props} />);
 }

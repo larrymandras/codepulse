@@ -14,6 +14,7 @@ import KGSearchResults from "../components/kg/KGSearchResults";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
 import { useSavedViews } from "../hooks/useSavedViews";
 import { useKgDiff } from "../hooks/useKgDiff";
+import { useKgAnimation } from "../hooks/useKgAnimation";
 import { useFocusParam } from "../hooks/useFocusParam";
 import { centerNodeWhenReady } from "../lib/graph-center";
 import { buildFocusUrl } from "../lib/focus-url";
@@ -125,11 +126,9 @@ export default function KnowledgeGraph() {
   // Resets to "point" when lens changes away from / re-enters temporal (UI-SPEC: state discarded).
   const [temporalSubMode, setTemporalSubMode] = useState<TemporalSubMode>("point");
 
-  useEffect(() => {
-    if (lens !== "temporal") {
-      setTemporalSubMode("point");
-    }
-  }, [lens]);
+  // animPauseRef holds the latest anim.pause so the lens-change effect below can
+  // call it without depending on the anim object (avoids a circular dep chain).
+  const animPauseRef = useRef<() => void>(() => {});
 
   // ── Diff state (KG-11, Plan 03) ───────────────────────────────────────────────
   const [diffDateA, setDiffDateA] = useState<string | null>(null);
@@ -141,6 +140,36 @@ export default function KnowledgeGraph() {
     error: diffError,
     compare,
   } = useKgDiff(diffDateA, diffDateB);
+
+  // ── Animation state (KG-11, Plan 04) ─────────────────────────────────────────
+  const [animRangeStart, setAnimRangeStart] = useState<string | null>(null);
+  const [animRangeEnd, setAnimRangeEnd] = useState<string | null>(null);
+  const [animInterval, setAnimInterval] = useState<"day" | "week" | "month">("day");
+
+  const anim = useKgAnimation({
+    rangeStart: animRangeStart,
+    rangeEnd: animRangeEnd,
+    interval: animInterval,
+  });
+
+  // Keep animPauseRef current so the sub-mode/lens reset effect can call pause without deps.
+  animPauseRef.current = anim.pause;
+
+  // Reset temporal sub-mode to "point" and pause animation when leaving temporal lens
+  // (UI-SPEC: animation + diff state discarded on lens change).
+  useEffect(() => {
+    if (lens !== "temporal") {
+      setTemporalSubMode("point");
+      animPauseRef.current();
+    }
+  }, [lens]);
+
+  // Pause animation when switching temporal sub-mode away from animate (UI-SPEC).
+  useEffect(() => {
+    if (temporalSubMode !== "animate") {
+      animPauseRef.current();
+    }
+  }, [temporalSubMode]);
 
   // ── Search lens state (KG-08) ─────────────────────────────────────────────
   const [searchResults, setSearchResults] = useState<KgSearchHit[]>([]);
@@ -569,6 +598,25 @@ export default function KnowledgeGraph() {
           onChangeDiffDateB={setDiffDateB}
           onCompare={compare}
           diffLoading={diffLoading}
+          animRangeStart={animRangeStart}
+          animRangeEnd={animRangeEnd}
+          animInterval={animInterval}
+          onChangeAnimRange={(start, end) => {
+            setAnimRangeStart(start);
+            setAnimRangeEnd(end);
+          }}
+          onChangeAnimInterval={setAnimInterval}
+          animFrames={anim.frames}
+          animCurrentFrameIndex={anim.currentFrameIndex}
+          animIsPlaying={anim.isPlaying}
+          animFps={anim.fps}
+          animFrameError={anim.frameError}
+          onAnimPlay={anim.play}
+          onAnimPause={anim.pause}
+          onAnimStepBack={anim.stepBack}
+          onAnimStepForward={anim.stepForward}
+          onAnimSetFrameIndex={anim.setFrameIndex}
+          onAnimSetFps={anim.setFps}
         />
       </SectionErrorBoundary>
 
@@ -740,7 +788,61 @@ export default function KnowledgeGraph() {
                   </div>
                 )}
 
-              {!diffLoading && (
+              {/* Animate sub-mode: frame error + canvas (KG-11, Plan 04, D-08 graceful-degrade) */}
+              <SectionErrorBoundary name="KG Animation">
+                {lens === "temporal" && temporalSubMode === "animate" && (
+                  <>
+                    {/* Per-frame inline error — non-blocking (D-08) */}
+                    {anim.frameError && (
+                      <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3 mb-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+                        <div className="text-sm font-mono leading-relaxed">
+                          <p className="text-foreground">{anim.frameError}</p>
+                          <p className="text-muted-foreground/70 mt-0.5">
+                            Check that Ástríðr is running and the date is within the stored snapshot range.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Animate canvas: render anim.currentGraph with standard paintNode */}
+                    {anim.frames.length > 0 && (
+                      anim.currentGraph === null ? (
+                        /* Loading first frame */
+                        <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
+                          <p className="text-primary/70 font-mono text-base animate-pulse">
+                            Animating…
+                          </p>
+                        </div>
+                      ) : (
+                        <ForceGraphCanvas
+                          ref={fgRef}
+                          data={anim.currentGraph}
+                          colorFn={(n: any) => (n as KgNode).color}
+                          labelFn={labelFn}
+                          paintNode={paintNode}
+                          linkColorFn={linkColorFn}
+                          linkWidthFn={linkWidthFn}
+                          linkLineDashFn={linkLineDashFn}
+                          linkDirectionalArrow
+                          focusSet={focusSet}
+                          clusterForce={true}
+                          communityColorFn={(n: any) =>
+                            communityColor((n as KgNode).community)
+                          }
+                          onNodeClick={(n: any) => selectNode(n.id)}
+                          onBackgroundClick={() => {
+                            selectNode(null);
+                            selectEdge(null);
+                          }}
+                        />
+                      )
+                    )}
+                  </>
+                )}
+              </SectionErrorBoundary>
+
+              {!diffLoading && temporalSubMode !== "animate" && (
                 loading ? (
                   <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
                     <p className="text-primary/70 font-mono text-base animate-pulse">
