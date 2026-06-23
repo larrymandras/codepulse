@@ -99,8 +99,9 @@ describe("KanbanCard", () => {
       labels: ["urgent", "backend"],
     };
     const { container } = render(<KanbanCard task={task} isDragging={false} />);
-    const chips = container.querySelectorAll(".text-\\[10px\\]");
-    // At least the label chips should be present
+    // Label chips render with the text-xs class (see KanbanCard.tsx); the
+    // avatar uses text-[10px], which is why filtering by chip text is needed.
+    const chips = container.querySelectorAll(".text-xs");
     const labelsEl = Array.from(chips).filter(
       (el) => el.textContent === "urgent" || el.textContent === "backend"
     );

@@ -82,9 +82,9 @@ describe("SwarmTaskNode — legibility (readable-hive redesign)", () => {
     expect(titleEl.className).not.toMatch(/\btruncate\b/);
   });
 
-  it("node uses the wider 260px box", () => {
+  it("node uses the wider 300px box", () => {
     const { container } = render(<SwarmTaskNode data={makeData()} />);
-    expect((container.firstChild as HTMLElement).className).toMatch(/w-\[260px\]/);
+    expect((container.firstChild as HTMLElement).className).toMatch(/w-\[300px\]/);
   });
 });
 
