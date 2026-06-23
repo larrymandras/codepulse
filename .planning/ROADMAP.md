@@ -7,6 +7,7 @@
 - ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74 shipped light; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18; **76 Unified Graph Hub NOT shipped → deferred to v8.0** per 2026-06-18 reconciliation)
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 - 🟦 **v8.0 Graph/KG Consolidation** — Phases 83-87 (**started 2026-06-18**) — unified Graphs hub + KG depth features
+- 🌱 **v9.0 Readability & Experience (seed)** — Phase 89 (**created 2026-06-22**) — readable theme system + editorial skin toggle (Matrix-Emerald is hard to read); Agent Room + 3D galaxy are candidate follow-ons
 
 ## Phases
 
@@ -173,8 +174,10 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ### Phase Summary
 
 - [x] **Phase 83: Graph Snapshot Receiver** — Convex table + ingest dispatch for `graph_snapshot`; stops dropping Ástríðr's nightly snapshots (completed 2026-06-18)
-- [x] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub (3/3 plans; 7/7 must-haves + human UAT passed via Playwright on real Convex data; completed 2026-06-22 — see 84-HUMAN-UAT.md)
-- [x] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces (completed 2026-06-22)
+- [x] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub
+ (3/3 plans; 7/7 must-haves + human UAT passed via Playwright on real Convex data; completed 2026-06-22 — see 84-HUMAN-UAT.md)
+- [x] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
+ (completed 2026-06-22)
 - [ ] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
 - [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
 
@@ -234,7 +237,10 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   2. The search is backed by the Ástríðr `/api/kg/search` endpoint; the cross-repo dependency is called out and gated appropriately in the plan
   3. Graphs with a `community` field on nodes render with co-community nodes visually clustered together (color-coded or spatially grouped), making large graphs scannable at a glance
   4. Graphs without the `community` field continue to render with the existing force-directed layout — no regression
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+- [ ] 86-01-PLAN.md — Clustering core: community palette + KgNode.community + ForceGraphCanvas cluster force/halo + code/vault graph wiring (KG-09, SC#3/SC#4)
+- [ ] 86-02-PLAN.md — KG Explorer clustering: halo paint + clusterForce wiring + auto-hide Communities legend (KG-09, SC#3/SC#4)
+- [ ] 86-03-PLAN.md — Search lens (cross-repo gated): fetchSearch + graceful-degrade gate + 5th Search lens + KGSearchResults + result-click ego focus (KG-08, SC#1/SC#2)
 **UI hint**: yes
 
 ### Phase 87: Saved Views + Temporal Diff
@@ -272,6 +278,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
+| 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
 
 ### Phase 88: Analytics Rollup Table — durable fix for Convex 16 MiB read-limit in analytics aggregation queries
 
@@ -292,6 +299,26 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 88 to break down)
+
+---
+
+### Phase 89: Readable Themes & Editorial Skin Toggle — v9.0 seed
+
+**Status:** 🌱 SEED (created 2026-06-22 from the Agent OS mining initiative — vault `agent-os-mining-initiative.md`). **UI phase** → run `/gsd-ui-phase 89` (UI-SPEC required) then `/gsd-plan-phase 89`.
+
+**Goal:** Give the operator a theme toggle with a **readability-first** theme — the shipped **Matrix-Emerald cyberpunk** skin is hard to read in places (low contrast, CRT/glow noise over text). Add a warm **"Midnight Aubergine" editorial** theme as a premium alternative; keep Matrix-Emerald as an option.
+
+**Why:** Direct operator feedback (Larry, 2026-06-22). Readability is the priority; "cooler" is secondary. Pairs with the unfinished Phase 71 token cleanup (themes must be 100% token-driven).
+
+**Proposed Requirements:** TH-01 (token-driven theming, finish Phase 71 audit), TH-02 (readability-first WCAG-AA theme, reduced glow/scanline over text), TH-03 (Midnight Aubergine editorial theme as tokens), TH-04 (keep Matrix-Emerald), TH-05 (no-flash persisted switcher + prefers-reduced-motion), TH-06 (a11y/contrast pass via Playwright/axe). Full detail + open questions in `phases/89-readable-themes-editorial-skin-toggle/89-CONTEXT.md`.
+
+**Depends on:** Phase 71 design tokens (recommended to finish first). **UI hint:** yes.
+
+**Candidate follow-ons (v9.0):** Agent Room (multi-persona live group chat over `/room`+`/war-room`), 3D Memory Galaxy (React Three Fiber mode for CodeVaultGraph). Tracked here, not yet phased.
+
+**Provenance** (re-implement, do NOT copy): pack `src/app/globals.css` (Midnight Aubergine tokens, paper-grain `body::before`, ambient `body::after`, editorial primitives). Ground truth: `phases/071-unified-design-system/UI-SPEC.md`, `src/index.css`.
+
+**Plans:** 0 plans.
 
 ---
 
