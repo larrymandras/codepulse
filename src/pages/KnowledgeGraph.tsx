@@ -13,12 +13,14 @@ import KGDetailsPanel from "../components/kg/KGDetailsPanel";
 import KGSearchResults from "../components/kg/KGSearchResults";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
 import { useSavedViews } from "../hooks/useSavedViews";
+import { useKgDiff } from "../hooks/useKgDiff";
 import { useFocusParam } from "../hooks/useFocusParam";
 import { centerNodeWhenReady } from "../lib/graph-center";
 import { buildFocusUrl } from "../lib/focus-url";
 import { fetchSearch, type KgSearchHit } from "../lib/kgApi";
 import { AstridrApiError } from "../lib/astridrApi";
 import type { KgLens } from "../hooks/useKnowledgeGraph";
+import type { TemporalSubMode } from "../components/kg/KGControls";
 import type { SavedKgView } from "../hooks/useSavedViews";
 import { toast } from "sonner";
 import type { Id } from "../../convex/_generated/dataModel";
@@ -44,6 +46,44 @@ function linkWidthFn(l: any): number {
 }
 function linkLineDashFn(l: any): number[] | null {
   return (l as KgLink).current ? null : [4, 3];
+}
+
+// ── Diff edge styling (KG-11, Plan 03) — UI-SPEC Color section ──────────────
+// Resolves the same edge key as computeDiff (must stay in sync with useKgDiff.ts).
+function diffEdgeKey(l: KgLink): string {
+  if (l.id) return l.id;
+  const src =
+    typeof l.source === "object" && l.source !== null
+      ? (l.source as KgNode).id
+      : String(l.source);
+  const tgt =
+    typeof l.target === "object" && l.target !== null
+      ? (l.target as KgNode).id
+      : String(l.target);
+  return `${src}|${tgt}|${l.predicate}`;
+}
+
+function makeLinkColorDiffFn(edges: {
+  added: Set<string>;
+  removed: Set<string>;
+  changed: Set<string>;
+}) {
+  return function linkColorDiffFn(l: any): string {
+    const link = l as KgLink;
+    const key = diffEdgeKey(link);
+    if (edges.added.has(key)) return "rgba(34,197,94,0.55)";   // green — added
+    if (edges.removed.has(key)) return "rgba(239,68,68,0.40)"; // red — removed
+    if (edges.changed.has(key)) return "rgba(234,179,8,0.55)";  // amber — changed
+    return "rgba(161,163,170,0.15)";                            // zinc — unchanged
+  };
+}
+
+function makeLinkLineDashDiffFn(edges: { removed: Set<string> }) {
+  return function linkLineDashDiffFn(l: any): number[] | null {
+    const link = l as KgLink;
+    const key = diffEdgeKey(link);
+    return edges.removed.has(key) ? [4, 3] : null; // removed edges are dashed
+  };
 }
 
 /** Derive origin surface label from the decoded from-param path. */
@@ -79,6 +119,28 @@ export default function KnowledgeGraph() {
     predicates,
     entityTypes,
   } = kg;
+
+  // ── Temporal sub-mode state (KG-11, Plan 03) ─────────────────────────────────
+  // Defaults to "point" which preserves the existing single-as-of behavior (SC — no regression).
+  // Resets to "point" when lens changes away from / re-enters temporal (UI-SPEC: state discarded).
+  const [temporalSubMode, setTemporalSubMode] = useState<TemporalSubMode>("point");
+
+  useEffect(() => {
+    if (lens !== "temporal") {
+      setTemporalSubMode("point");
+    }
+  }, [lens]);
+
+  // ── Diff state (KG-11, Plan 03) ───────────────────────────────────────────────
+  const [diffDateA, setDiffDateA] = useState<string | null>(null);
+  const [diffDateB, setDiffDateB] = useState<string | null>(null);
+  const {
+    diff,
+    graphB: diffGraphB,
+    loading: diffLoading,
+    error: diffError,
+    compare,
+  } = useKgDiff(diffDateA, diffDateB);
 
   // ── Search lens state (KG-08) ─────────────────────────────────────────────
   const [searchResults, setSearchResults] = useState<KgSearchHit[]>([]);
@@ -339,6 +401,78 @@ export default function KnowledgeGraph() {
     [selectedNodeId],
   );
 
+  // ── Diff canvas paint function (KG-11, Plan 03) ──────────────────────────────
+  // Mirrors paintNode but applies the diff color palette (UI-SPEC Color section).
+  // Unchanged nodes are dimmed to globalAlpha 0.35 (RESEARCH Pitfall 3 — explicit dim).
+  const paintNodeDiff = useCallback(
+    (
+      node: any,
+      ctx: CanvasRenderingContext2D,
+      globalScale: number,
+      opts: { hovered: boolean; dimmed: boolean },
+    ) => {
+      const n = node as KgNode & { x: number; y: number };
+      const size = Math.max(n.val ?? 3, 3);
+      const isSelected = n.id === selectedNodeId;
+
+      // Diff color lookup — added/removed/changed/unchanged (UI-SPEC Color section)
+      const DIFF_COLORS: Record<string, { fill: string; alpha: number }> = {
+        added:     { fill: "#22c55e", alpha: 1.0 },
+        removed:   { fill: "#ef4444", alpha: 1.0 },
+        changed:   { fill: "#eab308", alpha: 1.0 },
+        unchanged: { fill: n.color,   alpha: 0.35 }, // node.color @ 35% (Pitfall 3)
+      };
+
+      const state = diff
+        ? diff.added.has(n.id)
+          ? "added"
+          : diff.removed.has(n.id)
+            ? "removed"
+            : diff.changed.has(n.id)
+              ? "changed"
+              : "unchanged"
+        : "unchanged";
+
+      const dc = DIFF_COLORS[state];
+
+      ctx.globalAlpha = dc.alpha; // 0.35 for unchanged (RESEARCH Pitfall 3)
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, size, 0, 2 * Math.PI, false);
+      ctx.shadowColor = dc.fill;
+      ctx.shadowBlur = opts.hovered || isSelected ? 24 : 8;
+      ctx.fillStyle = opts.hovered || isSelected ? "#ffffff" : dc.fill;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Selection ring (same as paintNode — unchanged in diff mode)
+      if (isSelected) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, size + 3, 0, 2 * Math.PI, false);
+        ctx.strokeStyle = dc.fill;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      if (globalScale > 1.3 || opts.hovered || isSelected) {
+        const fontSize = (opts.hovered ? 13 : 11) / globalScale;
+        ctx.font = `${opts.hovered ? "bold " : ""}${fontSize}px "JetBrains Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const label = n.name;
+        const tw = ctx.measureText(label).width;
+        ctx.fillStyle = "rgba(9, 9, 11, 0.7)";
+        ctx.fillRect(n.x - tw / 2 - 4, n.y + size + 2, tw + 8, fontSize + 4);
+        ctx.fillStyle = opts.hovered || isSelected ? "#ffffff" : dc.fill;
+        ctx.fillText(label, n.x, n.y + size + 2 + (fontSize + 4) / 2);
+      }
+
+      // Reset alpha after painting each node (RESEARCH Pitfall 3)
+      ctx.globalAlpha = 1;
+    },
+    [selectedNodeId, diff],
+  );
+
   const labelFn = useCallback((n: any) => {
     const node = n as KgNode;
     return `${node.name} · ${node.entityType}${
@@ -346,21 +480,44 @@ export default function KnowledgeGraph() {
     }`;
   }, []);
 
+  // ── Diff edge style functions (memoized on diff.edges) ─────────────────────
+  const linkColorDiffFn = useMemo(
+    () => (diff ? makeLinkColorDiffFn(diff.edges) : linkColorFn),
+    [diff],
+  );
+  const linkLineDashDiffFn = useMemo(
+    () =>
+      diff
+        ? makeLinkLineDashDiffFn(diff.edges)
+        : linkLineDashFn,
+    [diff],
+  );
+
+  // ── Determine which graph data to render (diff: use graphB; otherwise: graph) ──
+  const isDiffActive =
+    lens === "temporal" &&
+    temporalSubMode === "diff" &&
+    diff !== null &&
+    diffGraphB !== null;
+
+  // The active graph data: use diffGraphB when in diff mode, otherwise the main graph.
+  const activeGraph = isDiffActive ? diffGraphB! : graph;
+
   // Legend shows only the types present in the current graph.
   const legendTypes = useMemo(() => {
-    const present = new Set(graph.nodes.map((n) => n.entityType));
+    const present = new Set(activeGraph.nodes.map((n) => n.entityType));
     return ENTITY_TYPE_COLORS.filter((c) => present.has(c.type));
-  }, [graph.nodes]);
+  }, [activeGraph.nodes]);
 
   // Community legend: sorted unique non-null community ids from the current graph.
   // Auto-hides when no node carries community (SC#4 no-regression).
   const presentCommunities = useMemo(() => {
     const ids = new Set<number>();
-    for (const n of graph.nodes) {
+    for (const n of activeGraph.nodes) {
       if (n.community != null) ids.add(n.community);
     }
     return [...ids].sort((a, b) => a - b);
-  }, [graph.nodes]);
+  }, [activeGraph.nodes]);
 
   const isEmpty = graph.nodes.length === 0;
   const needsEntityName =
@@ -404,6 +561,14 @@ export default function KnowledgeGraph() {
           onDeleteView={handleDeleteView}
           onCopyLink={handleCopyLink}
           onSaveView={handleSaveView}
+          temporalSubMode={temporalSubMode}
+          onSubMode={setTemporalSubMode}
+          diffDateA={diffDateA}
+          diffDateB={diffDateB}
+          onChangeDiffDateA={setDiffDateA}
+          onChangeDiffDateB={setDiffDateB}
+          onCompare={compare}
+          diffLoading={diffLoading}
         />
       </SectionErrorBoundary>
 
@@ -416,6 +581,19 @@ export default function KnowledgeGraph() {
             <p className="text-muted-foreground mt-0.5">{error}</p>
             <p className="text-muted-foreground/70 mt-0.5">
               The summary cards above still reflect the last pushed telemetry.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Diff error banner — inline, non-blocking (D-08 graceful-degrade) */}
+      {diffError && temporalSubMode === "diff" && (
+        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+          <div className="text-sm font-mono leading-relaxed">
+            <p className="text-foreground">{diffError}</p>
+            <p className="text-muted-foreground/70 mt-0.5">
+              Check that Ástríðr is running and the date is within the stored snapshot range.
             </p>
           </div>
         </div>
@@ -516,58 +694,130 @@ export default function KnowledgeGraph() {
                     ))}
                   </>
                 )}
+
+                {/* DIFF legend — appended below entity types when diff mode is active (UI-SPEC Layout Contract) */}
+                {temporalSubMode === "diff" && diff && (
+                  <>
+                    <span className="mt-1 border-t border-border pt-1 text-muted-foreground uppercase tracking-wide text-[10px]">
+                      DIFF
+                    </span>
+                    {[
+                      { label: "added",     color: "#22c55e", alpha: 1 },
+                      { label: "removed",   color: "#ef4444", alpha: 1 },
+                      { label: "changed",   color: "#eab308", alpha: 1 },
+                      { label: "unchanged", color: "#a1a1aa", alpha: 0.35 },
+                    ].map(({ label, color, alpha }) => (
+                      <span key={label} className="flex items-center gap-2 text-muted-foreground">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: color, opacity: alpha }}
+                        />
+                        {label}
+                      </span>
+                    ))}
+                  </>
+                )}
               </div>
 
-              {loading ? (
+              {/* Diff loading overlay — "Diffing knowledge graph…" animate-pulse */}
+              {diffLoading && temporalSubMode === "diff" && (
                 <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
                   <p className="text-primary/70 font-mono text-base animate-pulse">
-                    Querying knowledge graph…
+                    Diffing knowledge graph…
                   </p>
                 </div>
-              ) : isEmpty ? (
-                <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
-                  <AlertTriangle className="h-6 w-6 text-primary/50" />
-                  <p className="text-base text-muted-foreground font-mono">
-                    {needsEntityName
-                      ? "Search for an entity to view its ego graph."
-                      : lens === "contradiction"
-                        ? "No flagged contradictions. 🎉"
-                        : "No entities match the current lens/filters."}
-                  </p>
-                  <p className="text-sm text-muted-foreground/60 max-w-md">
-                    {error
-                      ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
-                      : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}
-                  </p>
-                </div>
-              ) : (
-                <ForceGraphCanvas
-                  ref={fgRef}
-                  data={graph}
-                  colorFn={(n: any) => (n as KgNode).color}
-                  labelFn={labelFn}
-                  paintNode={paintNode}
-                  linkColorFn={linkColorFn}
-                  linkWidthFn={linkWidthFn}
-                  linkLineDashFn={linkLineDashFn}
-                  linkDirectionalArrow
-                  focusSet={focusSet}
-                  clusterForce={true}
-                  communityColorFn={(n: any) =>
-                    communityColor((n as KgNode).community)
-                  }
-                  onNodeClick={(n: any) => selectNode(n.id)}
-                  onBackgroundClick={() => {
-                    selectNode(null);
-                    selectEdge(null);
-                  }}
-                />
+              )}
+
+              {/* Diff empty result — no changes between snapshots */}
+              {!diffLoading &&
+                isDiffActive &&
+                diff.added.size === 0 &&
+                diff.removed.size === 0 &&
+                diff.changed.size === 0 && (
+                  <div className="flex items-center gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-sm font-mono text-muted-foreground">
+                    <Info className="h-4 w-4 shrink-0 text-amber-500" />
+                    No changes between these two snapshots.
+                  </div>
+                )}
+
+              {!diffLoading && (
+                loading ? (
+                  <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
+                    <p className="text-primary/70 font-mono text-base animate-pulse">
+                      Querying knowledge graph…
+                    </p>
+                  </div>
+                ) : activeGraph.nodes.length === 0 ? (
+                  <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
+                    <AlertTriangle className="h-6 w-6 text-primary/50" />
+                    <p className="text-base text-muted-foreground font-mono">
+                      {needsEntityName
+                        ? "Search for an entity to view its ego graph."
+                        : lens === "contradiction"
+                          ? "No flagged contradictions. 🎉"
+                          : isDiffActive
+                            ? "No entities in the selected snapshot."
+                            : "No entities match the current lens/filters."}
+                    </p>
+                    <p className="text-sm text-muted-foreground/60 max-w-md">
+                      {error
+                        ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
+                        : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}
+                    </p>
+                  </div>
+                ) : isDiffActive ? (
+                  /* Diff mode: render graphB with diff paint functions */
+                  <ForceGraphCanvas
+                    ref={fgRef}
+                    data={activeGraph}
+                    colorFn={(n: any) => (n as KgNode).color}
+                    labelFn={labelFn}
+                    paintNode={paintNodeDiff}
+                    linkColorFn={linkColorDiffFn}
+                    linkWidthFn={linkWidthFn}
+                    linkLineDashFn={linkLineDashDiffFn}
+                    linkDirectionalArrow
+                    focusSet={focusSet}
+                    clusterForce={true}
+                    communityColorFn={(n: any) =>
+                      communityColor((n as KgNode).community)
+                    }
+                    onNodeClick={(n: any) => selectNode(n.id)}
+                    onBackgroundClick={() => {
+                      selectNode(null);
+                      selectEdge(null);
+                    }}
+                  />
+                ) : (
+                  /* Point mode (and other lenses): original paintNode/linkColorFn — NO REGRESSION */
+                  <ForceGraphCanvas
+                    ref={fgRef}
+                    data={graph}
+                    colorFn={(n: any) => (n as KgNode).color}
+                    labelFn={labelFn}
+                    paintNode={paintNode}
+                    linkColorFn={linkColorFn}
+                    linkWidthFn={linkWidthFn}
+                    linkLineDashFn={linkLineDashFn}
+                    linkDirectionalArrow
+                    focusSet={focusSet}
+                    clusterForce={true}
+                    communityColorFn={(n: any) =>
+                      communityColor((n as KgNode).community)
+                    }
+                    onNodeClick={(n: any) => selectNode(n.id)}
+                    onBackgroundClick={() => {
+                      selectNode(null);
+                      selectEdge(null);
+                    }}
+                  />
+                )
               )}
             </div>
 
-            {/* Details panel (KG-06) */}
+            {/* Details panel (KG-06) — uses activeGraph so diff mode shows "To" snapshot facts */}
             <KGDetailsPanel
-              graph={graph}
+              graph={activeGraph}
               selectedNodeId={selectedNodeId}
               selectedEdgeId={selectedEdgeId}
               onClose={() => {
