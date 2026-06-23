@@ -42,6 +42,13 @@ function renderControls(
     predicates: ["knows", "works_at"],
     loading: false,
     onRefresh: vi.fn(),
+    // Saved-views surface (KG-10) — defaults for existing tests
+    views: [],
+    activeViewId: null,
+    onLoadView: vi.fn(),
+    onDeleteView: vi.fn(),
+    onCopyLink: vi.fn(),
+    onSaveView: vi.fn(),
   };
   return render(<KGControls {...props} />);
 }

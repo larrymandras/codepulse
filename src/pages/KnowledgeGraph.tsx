@@ -12,11 +12,16 @@ import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
 import KGSearchResults from "../components/kg/KGSearchResults";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
+import { useSavedViews } from "../hooks/useSavedViews";
 import { useFocusParam } from "../hooks/useFocusParam";
 import { centerNodeWhenReady } from "../lib/graph-center";
 import { buildFocusUrl } from "../lib/focus-url";
 import { fetchSearch, type KgSearchHit } from "../lib/kgApi";
 import { AstridrApiError } from "../lib/astridrApi";
+import type { KgLens } from "../hooks/useKnowledgeGraph";
+import type { SavedKgView } from "../hooks/useSavedViews";
+import { toast } from "sonner";
+import type { Id } from "../../convex/_generated/dataModel";
 import {
   ENTITY_TYPE_COLORS,
   communityColor,
@@ -52,6 +57,7 @@ function originLabel(fromPath: string): string {
 
 export default function KnowledgeGraph() {
   const kg = useKnowledgeGraph();
+  const savedViews = useSavedViews();
   const fgRef = useRef<ForceGraphHandle>(null);
   const navigate = useNavigate();
 
@@ -90,6 +96,13 @@ export default function KnowledgeGraph() {
   const lensParam = searchParams.get("lens");
   const hopsParam = searchParams.get("hops");
 
+  // ── ?view share-link hydration (KG-10) ──────────────────────────────────────
+  const viewToken = searchParams.get("view");
+  // One-shot guard: apply the ?view hydration exactly once (mirrors appliedFocusRef).
+  const appliedViewRef = useRef(false);
+  // Track the currently-loaded saved-view _id (cleared on any subsequent filter/lens change).
+  const [activeViewId, setActiveViewId] = useState<string | null>(null);
+
   // Track idb hydration completion as reactive STATE (not a ref) so the
   // override effect below re-runs explicitly when hydration settles, instead of
   // depending on incidental `loading`-flip ordering (WR-04). The saved-state
@@ -122,6 +135,37 @@ export default function KnowledgeGraph() {
     const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
     setFilter("hops", parsedHops);
   }, [focusEntity, lensParam, hopsParam, hydrated, setLens, setFilter]);
+
+  // ── ?view share-link one-shot hydration (KG-10, RESEARCH Pitfall 1) ─────────
+  // Mirrors the ?focus guard above. Requires a THIRD guard (views !== undefined)
+  // because view resolution needs a Convex query result, not just idb hydration.
+  useEffect(() => {
+    if (!viewToken) return;             // no ?view param → nothing to do
+    if (appliedViewRef.current) return; // already applied
+    if (!hydrated) return;              // wait for idb hydration
+    // RESEARCH Pitfall 1: wait for Convex list query to settle.
+    // isLoading is true when the underlying useQuery returns undefined.
+    // This is the third guard condition required for ?view (not needed for ?focus
+    // which only uses nodes already in the graph, not a separate Convex query).
+    if (savedViews.isLoading) return;
+
+    const view = savedViews.views.find((v) => v.shareToken === viewToken);
+    if (!view) return; // token absent/expired → silent fallback (D-04)
+
+    appliedViewRef.current = true;
+    appliedFocusRef.current = true; // suppress ?focus guard (RESEARCH Pitfall 5)
+
+    setLens(view.lens as KgLens);
+    // Apply all persisted filter fields
+    setFilter("entityName", (view.filters.entityName as string) ?? "");
+    setFilter("hops", (view.filters.hops as number) ?? 1);
+    setFilter("asOf", (view.filters.asOf as string | null) ?? null);
+    setFilter("entityType", (view.filters.entityType as string | null) ?? null);
+    setFilter("predicate", (view.filters.predicate as string | null) ?? null);
+    setFilter("agentId", (view.filters.agentId as string | null) ?? null);
+    setFilter("limit", (view.filters.limit as number) ?? 100);
+    setActiveViewId(view._id);
+  }, [viewToken, hydrated, savedViews.isLoading, savedViews.views, setLens, setFilter]);
 
   // ── Search lens: debounced fetch (KG-08) ────────────────────────────────────
   // Active only when lens === "search". Empty/whitespace query → idle, no fetch.
@@ -175,6 +219,46 @@ export default function KnowledgeGraph() {
 
     return () => clearTimeout(timer);
   }, [lens, filters.searchQuery, filters.entityType, filters.agentId]);
+
+  // ── Saved-view callbacks (KG-10) ─────────────────────────────────────────────
+  const handleSaveView = useCallback(
+    (name: string) => {
+      savedViews.saveView(name, lens, filters, filters.entityName, filters.hops);
+    },
+    [savedViews, lens, filters],
+  );
+
+  const handleLoadView = useCallback(
+    (view: SavedKgView) => {
+      setLens(view.lens as KgLens);
+      setFilter("entityName", (view.filters.entityName as string) ?? "");
+      setFilter("hops", (view.filters.hops as number) ?? 1);
+      setFilter("asOf", (view.filters.asOf as string | null) ?? null);
+      setFilter("entityType", (view.filters.entityType as string | null) ?? null);
+      setFilter("predicate", (view.filters.predicate as string | null) ?? null);
+      setFilter("agentId", (view.filters.agentId as string | null) ?? null);
+      setFilter("limit", (view.filters.limit as number) ?? 100);
+      setActiveViewId(view._id);
+    },
+    [setLens, setFilter],
+  );
+
+  const handleDeleteView = useCallback(
+    (id: Id<"savedKgViews">) => {
+      savedViews.deleteView(id);
+      // Clear active if this was the loaded view
+      setActiveViewId((prev) => (prev === id ? null : prev));
+    },
+    [savedViews],
+  );
+
+  const handleCopyLink = useCallback(
+    (shareToken: string) => {
+      navigator.clipboard.writeText(savedViews.buildShareUrl(shareToken));
+      toast.success("View link copied");
+    },
+    [savedViews],
+  );
 
   // ── Result-click → ego lens focus (D-02, Phase 85 buildFocusUrl reuse) ──────
   // subjectName is passed VERBATIM — no normalization (RESEARCH Pitfall 4).
@@ -314,6 +398,12 @@ export default function KnowledgeGraph() {
           predicates={predicates}
           loading={loading}
           onRefresh={refresh}
+          views={savedViews.views}
+          activeViewId={activeViewId}
+          onLoadView={handleLoadView}
+          onDeleteView={handleDeleteView}
+          onCopyLink={handleCopyLink}
+          onSaveView={handleSaveView}
         />
       </SectionErrorBoundary>
 

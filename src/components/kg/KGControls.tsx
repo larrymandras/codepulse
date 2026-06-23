@@ -11,6 +11,9 @@ import {
 } from "@/components/ui/select";
 import { entityTypeColor } from "../../lib/kg-graph";
 import type { KgLens, KgFilters } from "../../hooks/useKnowledgeGraph";
+import KGViewsPopover from "./KGViewsPopover";
+import type { SavedKgView } from "../../hooks/useSavedViews";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 const LENSES: { id: KgLens; label: string; hint: string }[] = [
   { id: "overview", label: "Overview", hint: "Bounded top-N entities + relationships" },
@@ -32,6 +35,13 @@ export interface KGControlsProps {
   predicates: string[];
   loading: boolean;
   onRefresh: () => void;
+  // Saved-views surface (KG-10)
+  views: SavedKgView[];
+  activeViewId: string | null;
+  onLoadView: (view: SavedKgView) => void;
+  onDeleteView: (id: Id<"savedKgViews">) => void;
+  onCopyLink: (shareToken: string) => void;
+  onSaveView: (name: string) => void;
 }
 
 export default function KGControls({
@@ -43,6 +53,12 @@ export default function KGControls({
   predicates,
   loading,
   onRefresh,
+  views,
+  activeViewId,
+  onLoadView,
+  onDeleteView,
+  onCopyLink,
+  onSaveView,
 }: KGControlsProps) {
   return (
     <div className="space-y-3">
@@ -63,7 +79,15 @@ export default function KGControls({
             {l.label}
           </button>
         ))}
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1.5">
+          <KGViewsPopover
+            views={views}
+            activeViewId={activeViewId}
+            onLoadView={onLoadView}
+            onDeleteView={onDeleteView}
+            onCopyLink={onCopyLink}
+            onSaveView={onSaveView}
+          />
           <Button
             variant="secondary"
             size="sm"
