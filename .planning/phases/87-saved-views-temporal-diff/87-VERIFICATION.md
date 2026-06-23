@@ -30,7 +30,7 @@ human_verification:
 
 **Phase Goal:** Operators can save and share named graph views, and can compare or animate the KG between two points in time
 **Verified:** 2026-06-23T20:00:00Z
-**Status:** human_needed
+**Status:** passed (4/4 verified at code level; all 6 human UAT items confirmed PASS in-browser 2026-06-23 — see ## Human UAT Results)
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
