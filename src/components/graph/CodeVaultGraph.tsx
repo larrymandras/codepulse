@@ -36,6 +36,7 @@ import {
   ForceGraphCanvas,
   type ForceGraphHandle,
 } from "./ForceGraphCanvas";
+import { communityColor } from "../../lib/kg-graph";
 import { useProjectGraph, type ProjectGraphData } from "../../hooks/useProjectGraph";
 import { useKnowledgeGraph } from "../../hooks/useKnowledgeGraph";
 import { centerNodeWhenReady } from "../../lib/graph-center";
@@ -478,6 +479,8 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             onBackgroundClick={() => setSelectedNodeId(null)}
             onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
             className={canvasClass}
+            clusterForce={true}
+            communityColorFn={(node: any) => communityColor(node.community)}
           />
         </div>
 
