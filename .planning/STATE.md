@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: planning
+status: executing
 stopped_at: Phase 86 UI-SPEC approved + context gathered
-last_updated: "2026-06-22T22:57:11.204Z"
-last_activity: 2026-06-22
+last_updated: "2026-06-23T12:07:49.276Z"
+last_activity: 2026-06-23 -- Phase 86 planning complete
 progress:
   total_phases: 7
   completed_phases: 3
-  total_plans: 10
+  total_plans: 13
   completed_plans: 10
   percent: 43
 ---
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 Phase: 86 (next in v8.0 sequence) — or 88 (scaffolded, prod-impacting)
 Plan: Not started
 Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09 — carries the Ástríðr `/api/kg/search` cross-repo delta) OR Phase 88 (Analytics Rollup Table — prod-impacting). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
-Status: Ready to plan
-Last activity: 2026-06-22
+Status: Ready to execute
+Last activity: 2026-06-23 -- Phase 86 planning complete
 
 Progress bar: `██████░░░░` 60% (3/5 v8.0 phases: 83, 84, 85 complete)
 
