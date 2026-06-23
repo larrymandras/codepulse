@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: planning
+status: executing
 stopped_at: Phase 87 context gathered
-last_updated: "2026-06-23T16:48:53.793Z"
-last_activity: 2026-06-23
+last_updated: "2026-06-23T17:52:17.430Z"
+last_activity: 2026-06-23 -- Phase 87 planning complete
 progress:
   total_phases: 7
   completed_phases: 4
-  total_plans: 13
+  total_plans: 17
   completed_plans: 13
   percent: 57
 ---
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 Phase: 86 (kg-full-text-search-clustering-layout) — COMPLETE (3/3), code-verified 7/7; human UAT pending
 Plan: 3 of 3 (all complete)
 Next: Phase 87 (Saved Views + Temporal Diff, KG-10/KG-11) — the next `[ ]` phase. Run `/gsd-discuss-phase 87`. Before that, optionally run the 3 live-UI UAT checks for Phase 86 (see below).
-Status: Phase 86 code-complete + automated verification PASS (7/7) + live UAT PASS (Playwright, 2026-06-23, auth-bypassed dev instance). UAT results: (1) ✅ community halos + spatial clustering render on `/graphs` CodeVault graph — 4038 real Convex nodes, multi-color COMMUNITY_PALETTE + halo rings; (2) ✅ Communities legend correctly absent on the KG Explorer (community-null entities); (3) ✅ Search lens degrades gracefully (amber "Could not reach the KG search API… Entity-name search still works" — network-unreachable variant, since Ástríðr was not running locally; the 404 "not-deployed" variant is code-verified). Two states remain dark by design until Ástríðr ships: fully-lit community halos on KG Explorer (needs Ástríðr to emit `community`, D-10) and live search results (needs SEED-008 `/api/kg/search`). Cross-repo handoff written: astridr-repo `.planning/seeds/SEED-008-kg-search-endpoint-for-codepulse.md`.
-Last activity: 2026-06-23
+Status: Ready to execute
+Last activity: 2026-06-23 -- Phase 87 planning complete
 
 Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83, 84, 85, 86)
 

@@ -569,7 +569,7 @@ export function useKgDiff(dateA: string | null, dateB: string | null) {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`crypto.randomUUID()` in Convex mutation handlers**
    - What we know: Used in browser context in 8 places in this codebase. Convex runs V8 isolates with a Web Crypto API available.

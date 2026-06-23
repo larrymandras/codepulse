@@ -80,6 +80,7 @@ See full detail + success criteria in git history (`5c5c85a:.planning/ROADMAP.md
 Phases are sequenced so each ships independently and the riskiest unknown (live-log streaming) is isolated late.
 
 ### Phase 78: Forge Emitter + Convex Schema
+
 **Status**: ✅ SHIPPED (read-only foundation)
 **Goal**: A local Forge daemon emits job/workspace state UP to Convex; CodePulse stores and can query it. No UI, commands, or logs yet.
 **Requirements**: FI-01 (forge schema), FI-02 (emitter + `/forge-ingest`), FI-03 (read query API)
@@ -88,6 +89,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 **Artifacts**: `phases/078-forge-emitter-convex-schema/` (CONTEXT + PLAN + SUMMARY)
 
 ### Phase 79: Forge UI Tab (read-only render)
+
 **Status**: ✅ SHIPPED (PR #20)
 **Goal**: A `/forge` route + nav entry rendering jobs/status/detail from `useQuery(api.forge.*)`, porting StatusBadge/JobList/JobDetail ~1:1 from `forge/web/src`. View-only.
 **Requirements**: FI-04 (forge page + route), FI-05 (component port)
@@ -95,50 +97,64 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 **Plans**: 3/3 complete (3 waves) — see `phases/79-forge-ui-tab-read-only-render/`
 
 ### Phase 80: Command Bridge (launch + stop)
+
 **Status**: ✅ COMPLETE (4/4 plans, 3 waves) — verified live 2026-06-16 (bridge launch + stop round-trip)
 **Goal**: A Convex `forgeCommands` queue the daemon long-polls; launch/stop → command → daemon executes → status reflects back. Port NewJobModal. Clerk-gated mutations.
 **Requirements**: FI-06 (command queue + daemon poll), FI-07 (launch/stop UI), FI-08 (auth gating)
 **Depends on**: Phase 79 (shipped)
 **Success Criteria** (what must be TRUE):
+
   1. An enqueued launch/stop command in `forgeCommands` is delivered to the daemon exactly once via long-poll, and its execution status reflects back into `forgeJobs`
   2. Operator launches a new Forge job (ported NewJobModal) and stops a running job from `/forge`, round-tripping through the queue
   3. Command-issuing mutations are Clerk-gated — no unauthenticated write path to launch/stop
+
 **Plans**: 4 plans (2 waves)
+
   - [x] 80-01-PLAN.md — Convex backend: forgeCommands/forgeHosts schema, Clerk fail-closed enqueue mutations, daemon claim/ack httpActions, TTL cron, tests (FI-06, FI-08)
   - [x] 80-02-PLAN.md — Cross-repo Forge daemon CommandPoller: poll → claim → execute (launch/stop) → ack; reflect-back via existing emitter (FI-06)
   - [x] 80-03-PLAN.md — Launch UI: useForge hooks, ForgeStatusBadge variants, trimmed ForgeLaunchModal + host picker, Clerk-gated Launch button + optimistic pending rows (FI-07, FI-08)
   - [x] 80-04-PLAN.md — Stop UI: ForgeStopConfirmDialog (work-discard warning) + ForgeJobDetail Stop wiring with honest Stopping… async (FI-07, FI-08)
 
 ### Phase 81: Live Log Streaming
+
 **Status**: ✅ COMPLETE (4/4 plans, 3 waves) — verified live 2026-06-17 (Forge→CodePulse log round-trip; closes Forge 08-HUMAN-UAT). VERIFICATION: passed (4/4 criteria).
 **Goal**: Stream live job logs into the read-only Forge UI tab. **Design locked in `phases/081-live-log-streaming/081-SPEC.md` (2026-06-15)** — supersedes the original "HIGH-risk direct daemon→browser SSE/WebSocket spike." Logs flow Forge → `POST /forge-log-ingest` → append-only `forgeLogChunks` table → reactive `forge.listJobLogs` query; **Convex reactivity IS the live stream** (no SSE/WS to build). Risk dropped from HIGH to LOW.
 **Requirements**: FI-09 (log-ingest endpoint + append-only `forgeLogChunks` + `seq` idempotency), FI-10 (LogViewer renders live tail via reactive `listJobLogs`), FI-11 (retention: 7-day TTL cron + per-job byte cap)
 **Depends on**: Phase 80
 **Locked decisions** (from 081-SPEC):
+
   - **D-1**: monotonic per-job `seq` (required on envelope) → deterministic ordering + idempotent re-delivery
   - **D-2**: 7-day TTL cron **+** per-job byte/chunk cap (drop-oldest) — a deliverable with a test, not deferred (~1 MB/job suggested)
   - **D-3**: reuse `FORGE_INGEST_API_KEY` (separate `FORGE_LOG_INGEST_URL` gate, shared key)
+
 **Success Criteria** (what must be TRUE):
+
   1. `POST /forge-log-ingest` with `{type:"log", hostId, forgeJobId, lines, seq}` + valid bearer appends a chunk; repeat `(hostId,forgeJobId,seq)` is a no-op; bad body → 400; bad bearer → 401; OPTIONS → CORS
   2. `forge.listJobLogs({hostId, forgeJobId})` returns chunks ordered by `seq`; the Forge UI tab renders them and updates live as chunks arrive
   3. A scheduled sweep enforces the 7-day TTL AND per-job byte cap — verified by a cron/cleanup test
   4. **Cross-repo handoff** (Forge side, ~1 task): `makeLogSink` no-op → real `fetch` to `/forge-log-ingest`; set `FORGE_LOG_INGEST_URL`; live round-trip closes Forge `08-HUMAN-UAT.md`
+
 **Plans**: 4 plans (3 waves)
+
   - [x] 81-01-PLAN.md — Receiver: forgeLogChunks schema + /forge-log-ingest httpAction + appendLogChunk (seq-idempotent) + listJobLogs + contract test (FI-09)
   - [x] 81-02-PLAN.md — Retention: sweepForgeLogChunks (7-day TTL + per-job ~1 MB cap, drop-oldest) + daily cron + cleanup test (FI-11)
   - [x] 81-03-PLAN.md — UI: useForgeJobLogs hook + ForgeLogPane (auto-follow tail / pause / jump-to-latest) behind a Details/Logs tab in ForgeJobDetail (FI-10)
   - [x] 81-04-PLAN.md — Cross-repo: finalize Forge makeLogSink (real fetch + seq, T-6-KEYLEAK) + live round-trip, closes Forge 08-HUMAN-UAT (FI-09/10/11)
 
 ### Phase 82: Files + Artifact Preview + Hardening
+
 **Status**: 📋 ACTIVE
 **Goal**: Browse a terminal job's workspace files and preview text/code/HTML + image artifacts in the cloud `/forge` UI, with metadata + capped bytes flowing daemon → Convex → cloud (the Surface-Substrate bridge used for logs in Phase 81 — NOT a tunnel/local-https/localhost path); plus end-to-end auth correctness, OPS-01 production CORS + deploy checklist, and empty/loading/error polish.
 **Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
 **Depends on**: Phase 81
 **Success Criteria** (what must be TRUE):
+
   1. Operator browses a job's workspace files and previews artifacts in `/forge` (ported FileBrowser / ArtifactPreview)
   2. Artifact/file content is reachable from the cloud UI via the Convex bounded-ingest bridge (no mixed-content `http://localhost`; tunnel/local-https rejected per 82-SPEC)
   3. End-to-end auth gating across the Forge surface; the full launch→run→logs→artifacts path is auth-correct and production-ready
+
 **Plans**: 4 plans
+
   - [x] 82-01-PLAN.md — Convex receiver: forgeFiles/forgeArtifacts tables, bearer-authed /forge-file-ingest, listJobFiles/getJobArtifact queries
   - [x] 82-02-PLAN.md — Retention sweep (TTL + per-job cap, blob-before-row) + daily cron + OPS-01 deploy checklist
   - [x] 82-03-PLAN.md — UI port: useForgeJobFiles hooks, FileBrowser + ArtifactPreview (sandboxed), ForgeFilesPane + Files tab
@@ -176,89 +192,126 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] **Phase 83: Graph Snapshot Receiver** — Convex table + ingest dispatch for `graph_snapshot`; stops dropping Ástríðr's nightly snapshots (completed 2026-06-18)
 - [x] **Phase 84: Graphs Hub + Code/Vault Render** — `/graphs` landing route + unified hub IA replacing the `placeholder:true` nav stub
  (3/3 plans; 7/7 must-haves + human UAT passed via Playwright on real Convex data; completed 2026-06-22 — see 84-HUMAN-UAT.md)
+
 - [x] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
  (completed 2026-06-22)
+
 - [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
  (completed 2026-06-23)
+
 - [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
 
 ## Phase Details
 
 ### Phase 83: Graph Snapshot Receiver
+
 **Goal**: Ástríðr's nightly `graph_snapshot` events are stored in Convex instead of dropped, with a query API ready for downstream rendering
 **Depends on**: Nothing (Ástríðr-side producer already ships)
 **Requirements**: GH-01
 **Success Criteria** (what must be TRUE):
+
   1. A `graph_snapshot` POST to `/runtime-ingest` populates a `graphSnapshots` Convex table — operator can verify by querying the table after Ástríðr's next nightly run
   2. Re-posting the same `snapshotId` is a no-op (idempotent full-replacement) — no duplicate rows accumulate over repeated runs
   3. `api.graphSnapshots.listSnapshots` and `api.graphSnapshots.getProjectGraph` queries return stored snapshot metadata and the active version's `{nodes,links}` payload respectively (final names reconciled in 83-RESEARCH Pattern 5)
   4. No existing `/runtime-ingest` dispatch paths are broken — all other event types continue routing correctly
+
 **Plans**: 3 plans
+
 - [x] 83-01-PLAN.md — Schema: graphSnapshots + graphSnapshotNodes + graphSnapshotLinks tables (row-based storage, D-01)
 - [x] 83-02-PLAN.md — Receiver module (upsertGraphSnapshot versioned swap, getProjectGraph/listSnapshots, retention sweep) + dispatch case + cron + unit tests
 - [x] 83-03-PLAN.md — Fixture-POST live round-trip verification (operator checkpoint)
 
 ### Phase 84: Graphs Hub + Code/Vault Render
+
 **Goal**: The code and vault graph from Convex is visible in the UI, and all graph surfaces are reachable from one unified hub
 **Depends on**: Phase 83
 **Requirements**: GH-02, GH-03
 **Success Criteria** (what must be TRUE):
+
   1. Navigating to `/graphs` shows the most recent code+vault snapshot rendered as a force-directed graph via `ForceGraphCanvas`, with a visible truncation indicator when the node cap is hit
   2. The "Graphs Hub" nav entry is no longer a `placeholder:true` stub — it routes to `/graphs` and renders real content
   3. KG Explorer, Tool Galaxy, MCP Inventory, and the code/vault graph are all reachable from `/graphs` as tabs or sections with consistent interaction patterns (zoom, pan, node selection)
   4. The hub renders gracefully when no snapshot has been stored yet (empty state) or when Ástríðr is offline
+
 **Plans**: 3 plans (3 waves)
+
 - [x] 84-01-PLAN.md — useProjectGraph hook + Wave 0 test scaffolding (fixture/mock + three test files) (GH-02, GH-03)
 - [x] 84-02-PLAN.md — CodeVaultGraph: dual-palette render, source filter, truncation/freshness/integrity, detail panel, fullscreen (GH-02)
 - [x] 84-03-PLAN.md — GraphsHub page (live tiles + hero) + /graphs lazy route + nav placeholder flip (GH-03)
+
 **UI hint**: yes
 
 ### Phase 85: Cross-Graph Navigation
+
 **Goal**: Selecting a node in one graph surface can navigate to the corresponding entity in another surface where the data supports the link
 **Depends on**: Phase 84
 **Requirements**: GH-04
 **Success Criteria** (what must be TRUE):
+
   1. Selecting a tool node in Tool Galaxy navigates to (or highlights) its owning agent in the code/vault graph where a matching node exists
   2. Selecting an agent node navigates to related KG entities where a `{agent}` relationship exists in the KG
   3. Cross-graph links that have no data backing are silently absent — no broken nav or dead links appear
   4. Navigation preserves the originating graph's state so the operator can return to their prior context
+
 **Plans**: 4 plans (2 waves)
+
   - [x] 85-01-PLAN.md — Shared focus plumbing: buildFocusUrl + normalized-exact match utils (focus-url.ts) + useFocusParam hook + from-param same-origin guard, with unit tests (GH-04)
   - [x] 85-02-PLAN.md — Tool Galaxy surface: eager tool→owning-agent link + inbound ?focus center + return chip (GH-04, SC#1)
   - [x] 85-03-PLAN.md — CodeVaultGraph surface: eager agent→KG-entities link (via existing useKnowledgeGraph) + inbound ?focus center + return chip (GH-04, SC#2)
   - [x] 85-04-PLAN.md — KnowledgeGraph destination: inbound entity-lens override (post-hydration) + center + return chip (GH-04, SC#2 landing)
+
 **UI hint**: yes
 
 ### Phase 86: KG Full-Text Search + Clustering Layout
+
 **Goal**: Operators can search across KG fact text and relationships (not just entity names), and large graphs render with legible community-cluster layout
 **Depends on**: Phase 84
 **Requirements**: KG-08, KG-09
 **Success Criteria** (what must be TRUE):
+
   1. Typing a term in the KG search box returns fact-text and relationship-label matches, not just entity-name matches — results are distinct from the existing entity-name search
   2. The search is backed by the Ástríðr `/api/kg/search` endpoint; the cross-repo dependency is called out and gated appropriately in the plan
   3. Graphs with a `community` field on nodes render with co-community nodes visually clustered together (color-coded or spatially grouped), making large graphs scannable at a glance
   4. Graphs without the `community` field continue to render with the existing force-directed layout — no regression
+
 **Plans**: 3 plans (3 waves)
+
 - [x] 86-01-PLAN.md — Clustering core: community palette + KgNode.community + ForceGraphCanvas cluster force/halo + code/vault graph wiring (KG-09, SC#3/SC#4)
 - [x] 86-02-PLAN.md — KG Explorer clustering: halo paint + clusterForce wiring + auto-hide Communities legend (KG-09, SC#3/SC#4)
 - [x] 86-03-PLAN.md — Search lens (cross-repo gated): fetchSearch + graceful-degrade gate + 5th Search lens + KGSearchResults + result-click ego focus (KG-08, SC#1/SC#2)
+
 **UI hint**: yes
 
 ### Phase 87: Saved Views + Temporal Diff
+
 **Goal**: Operators can save and share named graph views, and can compare or animate the KG between two points in time
 **Depends on**: Phase 84
 **Requirements**: KG-10, KG-11
 **Success Criteria** (what must be TRUE):
+
   1. Operator saves the current graph state (lens + filters + focus + hops) as a named view and retrieves it by name in a later session — beyond the existing last-state idb auto-persist
   2. A saved view can be shared via a URL or link that restores the same lens/filter/focus/hops configuration when opened
   3. Operator selects two as-of dates and sees nodes/edges that were added, removed, or changed between those dates rendered with distinct visual treatment (added/removed/changed)
   4. Operator can animate the KG forward through time, observing how the graph evolves — or step through manually
+
 **Plans**: 4 plans
 Plans:
+**Wave 1**
+
 - [ ] 87-01-PLAN.md — savedKgViews Convex table + useSavedViews hook (KG-10 data layer)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 87-02-PLAN.md — KGViewsPopover + KGControls/KnowledgeGraph wiring + ?view share-link hydration (KG-10 UI)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 87-03-PLAN.md — Temporal Diff: useKgDiff + Point|Diff|Animate toggle + paintNodeDiff + DIFF legend (KG-11)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 87-04-PLAN.md — Temporal Animate: useKgAnimation (client-synth frames + LRU) + KGAnimateControls (KG-11)
+
 **UI hint**: yes
 
 ---
@@ -295,6 +348,7 @@ Plans:
 **Approach (to refine in planning):** Maintain slim pre-aggregated rollup table(s) updated at ingest time (`convex/ingest.ts` / `runtimeIngest.ts`) — e.g. day-hour activity buckets, error-type counts per hour, llm token/cost totals per provider/model. Analytics queries then read O(buckets) instead of O(events). Once rollups are authoritative, restore full-fidelity analytics and remove the `.take()` caps.
 
 **Acceptance:**
+
 - All analytics queries read well under 16 MiB regardless of total event volume (verify via `npx convex run` byte WARN absence at scale).
 - Heatmap / sankey / error-trend fidelity no longer bounded by `.take()` count caps.
 - Rollups stay correct under ingest, archival, and backfill.
@@ -304,6 +358,7 @@ Plans:
 **Plans:** 0 plans
 
 Plans:
+
 - [ ] TBD (run /gsd-plan-phase 88 to break down)
 
 ---
