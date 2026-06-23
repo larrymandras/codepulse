@@ -10,9 +10,13 @@ import {
 import KGSummaryCards from "../components/kg/KGSummaryCards";
 import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
+import KGSearchResults from "../components/kg/KGSearchResults";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
 import { useFocusParam } from "../hooks/useFocusParam";
 import { centerNodeWhenReady } from "../lib/graph-center";
+import { buildFocusUrl } from "../lib/focus-url";
+import { fetchSearch, type KgSearchHit } from "../lib/kgApi";
+import { AstridrApiError } from "../lib/astridrApi";
 import {
   ENTITY_TYPE_COLORS,
   communityColor,
@@ -70,6 +74,16 @@ export default function KnowledgeGraph() {
     entityTypes,
   } = kg;
 
+  // ── Search lens state (KG-08) ─────────────────────────────────────────────
+  const [searchResults, setSearchResults] = useState<KgSearchHit[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchGateState, setSearchGateState] = useState<
+    "ok" | "not-deployed" | "error" | "idle"
+  >("idle");
+  const [searchErrorMessage, setSearchErrorMessage] = useState<string | null>(null);
+  // Monotonic token — drops stale responses when a new fetch supersedes the current one.
+  const searchReqRef = useRef(0);
+
   // ── Inbound entity-lens focus params ────────────────────────────────────────
   const [searchParams] = useSearchParams();
   const focusEntity = searchParams.get("focus");
@@ -108,6 +122,75 @@ export default function KnowledgeGraph() {
     const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
     setFilter("hops", parsedHops);
   }, [focusEntity, lensParam, hopsParam, hydrated, setLens, setFilter]);
+
+  // ── Search lens: debounced fetch (KG-08) ────────────────────────────────────
+  // Active only when lens === "search". Empty/whitespace query → idle, no fetch.
+  // Gate: AstridrApiError 404/501 → "not-deployed" informational copy (D-01/SC#2).
+  // Monotonic token guard drops stale responses from superseded fetches (T-86-10).
+  useEffect(() => {
+    if (lens !== "search") return;
+
+    const query = filters.searchQuery.trim();
+    if (!query) {
+      setSearchGateState("idle");
+      setSearchResults([]);
+      return;
+    }
+
+    // 250ms debounce (UI-SPEC Interaction Contract)
+    const timer = setTimeout(async () => {
+      const token = ++searchReqRef.current;
+      setSearchLoading(true);
+      setSearchErrorMessage(null);
+
+      try {
+        const data = await fetchSearch({
+          query,
+          entity_type: filters.entityType,
+          agent_id: filters.agentId,
+        });
+        if (token !== searchReqRef.current) return; // stale drop
+        setSearchResults(data.results);
+        setSearchGateState("ok");
+      } catch (e) {
+        if (token !== searchReqRef.current) return; // stale drop
+        if (
+          e instanceof AstridrApiError &&
+          (e.status === 404 || e.status === 501)
+        ) {
+          // D-01 graceful-degrade: endpoint not yet deployed on this Ástríðr build
+          setSearchGateState("not-deployed");
+          setSearchResults([]);
+        } else {
+          setSearchGateState("error");
+          setSearchResults([]);
+          setSearchErrorMessage(
+            e instanceof Error ? e.message : "Unknown error",
+          );
+        }
+      } finally {
+        if (token === searchReqRef.current) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [lens, filters.searchQuery, filters.entityType, filters.agentId]);
+
+  // ── Result-click → ego lens focus (D-02, Phase 85 buildFocusUrl reuse) ──────
+  // subjectName is passed VERBATIM — no normalization (RESEARCH Pitfall 4).
+  // buildFocusUrl produces: /knowledge-graph?focus=<name>&lens=entity&hops=1&from=<encoded>
+  // The existing inbound override effect (lensParam === "entity" branch) switches
+  // from "search" to "entity" automatically when the URL is navigated to.
+  const handleSearchResultClick = useCallback(
+    (subjectName: string) => {
+      const url = buildFocusUrl(
+        { surface: "knowledge-graph", entityName: subjectName, hops: 1 },
+        window.location.pathname + window.location.search,
+      );
+      navigate(url);
+    },
+    [navigate],
+  );
 
   // ── Center the focused entity once it resolves ───────────────────────────────
   // useFocusParam matches on node.name (KG focus is name-based, D-02).
@@ -257,123 +340,157 @@ export default function KnowledgeGraph() {
         </div>
       )}
 
-      {/* Graph + details panel */}
+      {/* Graph + details panel — layout forks on the Search lens (KG-08) */}
       <SectionErrorBoundary name="KG Graph">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-          <div className="relative">
-            {/* Legend */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono max-h-[60%] overflow-y-auto custom-scrollbar">
-              {legendTypes.length > 0 ? (
-                legendTypes.map((t) => (
-                  <span
-                    key={t.type}
-                    className="flex items-center gap-2 text-muted-foreground"
-                  >
+        {lens === "search" ? (
+          /* Search lens: left pane = KGSearchResults, right pane = KGDetailsPanel */
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+            <SectionErrorBoundary name="KG Search Results">
+              <KGSearchResults
+                results={searchResults}
+                query={filters.searchQuery}
+                loading={searchLoading}
+                gateState={searchGateState}
+                errorMessage={searchErrorMessage}
+                onSelectResult={handleSearchResultClick}
+              />
+            </SectionErrorBoundary>
+
+            {/* Details panel reused — shows selected entity after a result-click ego-load */}
+            <KGDetailsPanel
+              graph={graph}
+              selectedNodeId={selectedNodeId}
+              selectedEdgeId={selectedEdgeId}
+              onClose={() => {
+                selectNode(null);
+                selectEdge(null);
+              }}
+              onSelectNode={selectNode}
+              returnTo={fromParam}
+              returnLabel={returnLabel}
+              onReturnNav={(url) => navigate(url)}
+            />
+          </div>
+        ) : (
+          /* All other lenses: existing graph + details layout unchanged */
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
+            <div className="relative">
+              {/* Legend */}
+              <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono max-h-[60%] overflow-y-auto custom-scrollbar">
+                {legendTypes.length > 0 ? (
+                  legendTypes.map((t) => (
                     <span
-                      className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: t.color }}
-                    />
-                    {t.type}
-                  </span>
-                ))
-              ) : (
-                <span className="text-muted-foreground">no entities</span>
-              )}
-              <span className="mt-1 border-t border-border pt-1 flex items-center gap-2 text-muted-foreground">
-                <span className="inline-block w-4 border-t-2 border-primary/60" />
-                current
-              </span>
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <span className="inline-block w-4 border-t-2 border-dashed border-slate-400/50" />
-                superseded
-              </span>
-              <span className="flex items-center gap-2 text-muted-foreground">
-                <span className="inline-block w-4 border-t-2 border-red-500" />
-                contradiction
-              </span>
-              {presentCommunities.length > 0 && (
-                <>
-                  <span className="mt-1 border-t border-border pt-1 text-muted-foreground uppercase tracking-wide">
-                    Communities
-                  </span>
-                  {presentCommunities.map((c) => (
-                    <span
-                      key={c}
+                      key={t.type}
                       className="flex items-center gap-2 text-muted-foreground"
                     >
                       <span
                         className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{
-                          backgroundColor: communityColor(c) ?? "transparent",
-                        }}
+                        style={{ backgroundColor: t.color }}
                       />
-                      Cluster {c}
+                      {t.type}
                     </span>
-                  ))}
-                </>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground">no entities</span>
+                )}
+                <span className="mt-1 border-t border-border pt-1 flex items-center gap-2 text-muted-foreground">
+                  <span className="inline-block w-4 border-t-2 border-primary/60" />
+                  current
+                </span>
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="inline-block w-4 border-t-2 border-dashed border-slate-400/50" />
+                  superseded
+                </span>
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <span className="inline-block w-4 border-t-2 border-red-500" />
+                  contradiction
+                </span>
+                {presentCommunities.length > 0 && (
+                  <>
+                    <span className="mt-1 border-t border-border pt-1 text-muted-foreground uppercase tracking-wide">
+                      Communities
+                    </span>
+                    {presentCommunities.map((c) => (
+                      <span
+                        key={c}
+                        className="flex items-center gap-2 text-muted-foreground"
+                      >
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{
+                            backgroundColor: communityColor(c) ?? "transparent",
+                          }}
+                        />
+                        Cluster {c}
+                      </span>
+                    ))}
+                  </>
+                )}
+              </div>
+
+              {loading ? (
+                <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
+                  <p className="text-primary/70 font-mono text-base animate-pulse">
+                    Querying knowledge graph…
+                  </p>
+                </div>
+              ) : isEmpty ? (
+                <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
+                  <AlertTriangle className="h-6 w-6 text-primary/50" />
+                  <p className="text-base text-muted-foreground font-mono">
+                    {needsEntityName
+                      ? "Search for an entity to view its ego graph."
+                      : lens === "contradiction"
+                        ? "No flagged contradictions. 🎉"
+                        : "No entities match the current lens/filters."}
+                  </p>
+                  <p className="text-sm text-muted-foreground/60 max-w-md">
+                    {error
+                      ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
+                      : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}
+                  </p>
+                </div>
+              ) : (
+                <ForceGraphCanvas
+                  ref={fgRef}
+                  data={graph}
+                  colorFn={(n: any) => (n as KgNode).color}
+                  labelFn={labelFn}
+                  paintNode={paintNode}
+                  linkColorFn={linkColorFn}
+                  linkWidthFn={linkWidthFn}
+                  linkLineDashFn={linkLineDashFn}
+                  linkDirectionalArrow
+                  focusSet={focusSet}
+                  clusterForce={true}
+                  communityColorFn={(n: any) =>
+                    communityColor((n as KgNode).community)
+                  }
+                  onNodeClick={(n: any) => selectNode(n.id)}
+                  onBackgroundClick={() => {
+                    selectNode(null);
+                    selectEdge(null);
+                  }}
+                />
               )}
             </div>
 
-            {loading ? (
-              <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-                <p className="text-primary/70 font-mono text-base animate-pulse">
-                  Querying knowledge graph…
-                </p>
-              </div>
-            ) : isEmpty ? (
-              <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
-                <AlertTriangle className="h-6 w-6 text-primary/50" />
-                <p className="text-base text-muted-foreground font-mono">
-                  {needsEntityName
-                    ? "Search for an entity to view its ego graph."
-                    : lens === "contradiction"
-                      ? "No flagged contradictions. 🎉"
-                      : "No entities match the current lens/filters."}
-                </p>
-                <p className="text-sm text-muted-foreground/60 max-w-md">
-                  {error
-                    ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
-                    : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}
-                </p>
-              </div>
-            ) : (
-              <ForceGraphCanvas
-                ref={fgRef}
-                data={graph}
-                colorFn={(n: any) => (n as KgNode).color}
-                labelFn={labelFn}
-                paintNode={paintNode}
-                linkColorFn={linkColorFn}
-                linkWidthFn={linkWidthFn}
-                linkLineDashFn={linkLineDashFn}
-                linkDirectionalArrow
-                focusSet={focusSet}
-                clusterForce={true}
-                communityColorFn={(n: any) => communityColor((n as KgNode).community)}
-                onNodeClick={(n: any) => selectNode(n.id)}
-                onBackgroundClick={() => {
-                  selectNode(null);
-                  selectEdge(null);
-                }}
-              />
-            )}
+            {/* Details panel (KG-06) */}
+            <KGDetailsPanel
+              graph={graph}
+              selectedNodeId={selectedNodeId}
+              selectedEdgeId={selectedEdgeId}
+              onClose={() => {
+                selectNode(null);
+                selectEdge(null);
+              }}
+              onSelectNode={selectNode}
+              returnTo={fromParam}
+              returnLabel={returnLabel}
+              onReturnNav={(url) => navigate(url)}
+            />
           </div>
-
-          {/* Details panel (KG-06) */}
-          <KGDetailsPanel
-            graph={graph}
-            selectedNodeId={selectedNodeId}
-            selectedEdgeId={selectedEdgeId}
-            onClose={() => {
-              selectNode(null);
-              selectEdge(null);
-            }}
-            onSelectNode={selectNode}
-            returnTo={fromParam}
-            returnLabel={returnLabel}
-            onReturnNav={(url) => navigate(url)}
-          />
-        </div>
+        )}
       </SectionErrorBoundary>
     </div>
   );
