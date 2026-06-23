@@ -1,237 +1,222 @@
-# Technology Stack — CodePulse v5.0 Additions
+# Technology Stack — CodePulse v9.0 Additions
 
-**Project:** CodePulse v5.0 Advanced Visualization & Integrations
-**Researched:** 2026-05-16
-**Scope:** NEW additions only. Existing stack (React 19, Vite 7, TypeScript 5.9, Tailwind 4, Convex, shadcn/ui, React Flow, motion, dnd-kit, Sonner) is validated and unchanged.
-
----
-
-## Critical Pre-Research Finding
-
-`recharts` **is already installed at ^3.8.0** and used in `src/components/hr/`. Recharts v3 ships a native `SunburstChart` component. This eliminates the need for D3.js entirely for the token sunburst feature. Do not add D3 — recharts already covers this.
-
----
-
-## Core Additions
-
-### 1. Visualization — Token Sunburst (VIZ-03)
-
-**Use: `recharts` (already installed, ^3.8.0)**
-
-Recharts v3 added `SunburstChart` natively. It accepts hierarchical `{ name, value, children }` data matching exactly how token consumption is structured (agent → tool → call). No new package required — just use the component that's already bundled.
-
-Why not D3 directly: D3 requires manual SVG management and React reconciliation workarounds. Recharts wraps D3 internally and integrates with React's render cycle. The project already paid the bundle cost for recharts — use it.
-
-Why not visx: visx is lower-level than recharts (requires composing D3 primitives manually) and would be a third charting abstraction on top of the existing custom flex charts + recharts. Not worth it.
-
-**Data shape for SunburstChart:**
-```ts
-type SunburstNode = {
-  name: string;
-  value?: number;       // leaf token count
-  children?: SunburstNode[];
-};
-// Root: { name: "Total", children: [{ name: "agent-A", children: [{ name: "tool-X", value: 420 }] }] }
-```
-
-**Version:** Already at ^3.8.0 — no install needed.
-
----
-
-### 2. Visualization — Call Graph (VIZ-01)
-
-**Use: `@xyflow/react` (already installed, ^12.10.1)**
-
-React Flow is already installed for the RunTimeline DAG. The call graph (integration dependencies + error propagation) is the same problem domain — directed graph with nodes and edges. Use React Flow's existing `useNodesState`/`useEdgesState` hooks and add a dedicated `CallGraphView` component.
-
-Why not D3 force simulation: D3 force layouts require manual DOM management and fight React. React Flow handles node positioning, pan/zoom, edge routing, and interaction out of the box. The project already uses it — leverage it.
-
-Why not a new graph library (Cytoscape.js, Sigma.js): Adding a second graph library when React Flow already solves the problem is unjustifiable bundle bloat.
-
-For call graph layout specifically, use `dagre` (already installed at ^0.8.5) for hierarchical left-to-right layout — the same layout algorithm already used in RunTimeline.
-
-**No new packages needed for VIZ-01.**
-
----
-
-### 3. Visualization — Context Window Growth Animation (VIZ-02)
-
-**Use: `recharts` `AreaChart` + `motion` (both already installed)**
-
-Real-time context window growth is a time-series line/area chart where new data points arrive via WebSocket and animate in. This is exactly what recharts `AreaChart` + `LineChart` do, already used in `hr/` components. Use `isAnimationActive` prop on recharts series for smooth updates.
-
-For the "growth/shrink" emphasis (context filling up, then compressing on summarization), use `motion` (Framer Motion, already at ^12.38.0) to animate a fill-bar overlay on top of the recharts chart — a thin progress-bar-style indicator showing % of context window used, animating between values.
-
-**No new packages needed for VIZ-02.**
-
----
-
-### 4. Email Digest Delivery (EXT-01)
-
-**Add: `resend` npm package**
-
-Resend is the correct choice for Convex-based email delivery. Resend has an official Convex integration page (`resend.com/convex`) documenting exactly this pattern. Convex actions use the Fetch API natively (no Node.js `nodemailer` compatibility layer needed), and Resend's SDK uses fetch internally, making it compatible with Convex's runtime without any shims.
-
-Why not Nodemailer: Nodemailer requires Node.js net/tls modules unavailable in Convex's V8 isolate runtime. It would require a Node.js action (slower cold starts) and SMTP credential management. Resend is fetch-based and works in Convex's default runtime.
-
-Why not SendGrid: Resend has better DX (React Email templates), simpler API, and an explicit Convex integration guide. SendGrid works but requires more boilerplate.
-
-Why not Postmark: Same fetch compatibility, but less React-ecosystem alignment and no Convex-specific docs.
-
-**Implementation pattern:**
-```ts
-// convex/actions/emailDigest.ts (Convex action)
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-export const sendDigest = action({
-  handler: async (ctx, args) => {
-    await resend.emails.send({
-      from: "codepulse@yourdomain.com",
-      to: args.recipientEmail,
-      subject: "Ástríðr Daily Digest",
-      html: args.htmlBody,  // rendered server-side from digest data
-    });
-  },
-});
-```
-
-Schedule via Convex cron (`convex/crons.ts`) — no new scheduler needed, the project already has cron management infrastructure.
-
-**Install:** `npm install resend`
-**Version:** ^4.x (current stable as of 2026)
-
----
-
-### 5. PagerDuty Integration (EXT-02)
-
-**Use: native `fetch` in Convex action — no SDK**
-
-PagerDuty's Events API v2 is a simple REST endpoint (`https://events.pagerduty.com/v2/enqueue`). It accepts a JSON POST with `routing_key`, `event_action`, `payload`, and optional `dedup_key`. No SDK is justified for a two-field POST — adding `@pagerduty/pdjs` (~800KB) for what is a 15-line fetch call is not warranted.
-
-Why not the official PagerDuty JS SDK (`@pagerduty/pdjs`): It's large, designed for full REST API management (services, escalation policies, users), and brings in unnecessary dependencies for what CodePulse needs — just triggering/resolving incidents via Events API v2.
-
-**Implementation pattern:**
-```ts
-// convex/actions/pagerduty.ts
-export const triggerIncident = action({
-  handler: async (ctx, { routingKey, summary, severity, dedupKey }) => {
-    const res = await fetch("https://events.pagerduty.com/v2/enqueue", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        routing_key: routingKey,
-        event_action: "trigger",
-        dedup_key: dedupKey,
-        payload: {
-          summary,
-          severity, // "critical" | "error" | "warning" | "info"
-          source: "codepulse",
-        },
-      }),
-    });
-    if (!res.ok) throw new Error(`PagerDuty error: ${res.status}`);
-  },
-});
-```
-
-Store `routing_key` in Convex config table (already exists) or environment variable. Auto-resolve incidents by calling with `event_action: "resolve"` and matching `dedup_key`.
-
-**No new packages needed for EXT-02.**
-
----
-
-### 6. GitHub Actions Trigger (EXT-03)
-
-**Use: native `fetch` in Convex action — no SDK**
-
-GitHub's REST API `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` triggers a workflow via `workflow_dispatch` event. This requires a GitHub PAT with `repo` scope (or fine-grained token with Actions write). Like PagerDuty, this is a single authenticated POST — no SDK justified.
-
-Why not `@octokit/rest` or `@octokit/core`: Octokit is designed for broad GitHub API coverage. Adding it for one endpoint is ~150KB of unnecessary bundle in the Convex action bundle. The fetch call is 10 lines.
-
-**Implementation pattern:**
-```ts
-// convex/actions/githubActions.ts
-export const triggerWorkflow = action({
-  handler: async (ctx, { owner, repo, workflowId, ref, inputs }) => {
-    const res = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/actions/workflows/${workflowId}/dispatches`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.GITHUB_PAT}`,
-          Accept: "application/vnd.github+json",
-          "X-GitHub-Api-Version": "2022-11-28",
-        },
-        body: JSON.stringify({ ref, inputs }),
-      }
-    );
-    if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-  },
-});
-```
-
-Store PAT, owner, repo, and workflow IDs in Convex config table or environment variables. Surface these as configurable fields in the existing Config Editor (already built in v4.0 Phase 4).
-
-**No new packages needed for EXT-03.**
+**Project:** CodePulse v9.0 Readability & Experience
+**Researched:** 2026-06-23
+**Scope:** NEW additions only. The existing stack (React 19, Vite 7, TypeScript 5.9, Tailwind 4, Convex, shadcn/ui New York, Lucide, React Flow/xyflow, D3.js/d3-force-3d, dagre, react-force-graph-2d, Recharts, Resend, React Email, Tone.js, motion, dnd-kit, Sonner, idb-keyval, Clerk) is validated and unchanged. Do not re-research these.
 
 ---
 
 ## Summary: What to Install
 
-| Package | Version | Feature | Reason |
-|---------|---------|---------|--------|
-| `resend` | ^4.x | EXT-01 email digest | Only addition needed — fetch-based, official Convex integration |
+| Package | Version | Feature area | Install as |
+|---------|---------|-------------|------------|
+| `react-force-graph-3d` | ^1.29.1 | 3D Memory Galaxy | `dependency` |
+| `three` | ^0.184.0 | 3D Memory Galaxy (R3F peer + transitive) | `dependency` |
+| `@react-three/fiber` | ^9.6.1 | 3D Memory Galaxy (R3F renderer, React 19) | `dependency` |
+| `@react-three/drei` | ^10.7.7 | 3D Memory Galaxy (OrbitControls, camera helpers) | `dependency` |
+| `@axe-core/playwright` | latest | TH-06 a11y contrast audit in Playwright | `devDependency` |
 
-That's it. One package.
-
----
-
-## Supporting Library Notes
-
-### Convex Action Retrier (optional, not required at start)
-
-If email or PagerDuty delivery reliability becomes an issue, `@convex-dev/action-retrier` provides automatic exponential backoff for failed actions. Available as `npm install @convex-dev/action-retrier`. Do not add upfront — add when a specific reliability requirement surfaces.
-
-### react-email (defer)
-
-Resend pairs well with `react-email` for building HTML email templates as React components. This is a nice-to-have for richer digest formatting but not required for v5.0 — raw HTML string templates are sufficient to ship. Add in a follow-on phase if email formatting becomes a priority.
+**Three packages for 3D, one devDep for a11y. Everything else (theming, Agent Room, Analytics Rollup) needs zero new deps.**
 
 ---
 
-## Don't Add
+## Feature Area 1: 3D Memory Galaxy
 
-| Library | Why Not |
-|---------|---------|
-| `d3` / `d3-force` | recharts already installed, covers sunburst; React Flow covers call graph |
-| `@visx/hierarchy` | Third charting abstraction on top of existing recharts — not justified |
-| `cytoscape` / `sigma.js` | Second graph library when React Flow already handles call graphs |
-| `nodemailer` | Incompatible with Convex V8 isolate runtime (requires Node.js net/tls) |
-| `@pagerduty/pdjs` | ~800KB SDK for a 15-line Events API v2 POST |
-| `@octokit/rest` | ~150KB for one `workflow_dispatch` endpoint — raw fetch is sufficient |
-| `apache-echarts` / `echarts-for-react` | Heavy (~1MB), recharts already covers every needed chart type |
-| `react-email` | Nice-to-have for digest templates, defer past v5.0 |
+### The Decision: `react-force-graph-3d` over `r3f-forcegraph`
+
+Two paths exist from vasturiano's ecosystem:
+
+**Option A — `react-force-graph-3d` (standalone, self-contained WebGL):**
+The direct 3D sibling of the already-installed `react-force-graph-2d`. Ships its own Three.js scene internally. Install `three` + `react-force-graph-3d`; done.
+
+**Option B — `r3f-forcegraph` (R3F-native scene object):**
+Vasturiano's own R3F binding for `three-forcegraph`. Renders as a scene object inside a `<Canvas>`. Requires `@react-three/fiber` + `@react-three/drei` + `three`. Requires the consumer to drive the simulation clock via `useFrame(() => ref.current.tickFrame())`.
+
+**Recommendation: Option A** (`react-force-graph-3d`), for these reasons:
+
+1. **Props are nearly identical to react-force-graph-2d.** `graphData`, `nodeId`, `nodeLabel`, `nodeColor`, `nodeVal`, `linkColor`, `linkWidth`, `onNodeClick`, `onNodeHover`, `onBackgroundClick`, `cooldownTicks`, `d3VelocityDecay`, `nodeRelSize` — all present in both 2D and 3D. The existing `ForceGraphCanvas` wrapper can be extended for 3D with a render-mode prop without rewriting its interface.
+2. **React peer dependency is `"*"` (any version)** — confirmed from vasturiano/react-force-graph package.json. No React 19 compat risk.
+3. **No new scene-management surface area.** `react-force-graph-3d` owns its own Three.js `WebGLRenderer`, camera, and scene. No `<Canvas>` wrapper, no `useFrame` clock, no OrbitControls wiring required in consuming code.
+4. **~4,000 nodes is within operating range.** The library's demo suite includes a large-graph example; community reports show degradation appearing at 10,000+ nodes, not at 4,000. The existing 2D path already runs ~4,038 nodes. The 3D path will be opt-in with a toggle — not the default — so performance concerns are gated behind user intent.
+
+**When Option B (`r3f-forcegraph`) would be better:** If v9.0 needed a fully immersive 3D scene with bloom/post-processing, custom shaders, or mixed 3D UI — but the scope is an opt-in render-mode toggle on one existing graph, not a new 3D environment.
+
+**Confidence: HIGH** — verified from library source, Context7, and npm.
+
+### Required Packages
+
+**`react-force-graph-3d` ^1.29.1**
+- Confirmed latest (npm, published ~Feb 2026). Same mono-repo as installed `react-force-graph-2d@^1.29.1` — versions are in sync.
+- Install: `npm install react-force-graph-3d`
+- Three.js is a transitive peer (`three` is a dep of `3d-force-graph` which is a dep of `react-force-graph-3d`). It must also be explicitly installed to avoid resolution drift.
+
+**`three` ^0.184.0**
+- Latest confirmed: 0.184.0 (published ~Apr 2026).
+- Required explicitly even though it's a transitive dep — React Three Fiber (if also added) specifies `three >=0.156` as a peer dep, and react-force-graph-3d's underlying `3d-force-graph` pulls it in. Pinning explicitly prevents two copies in the bundle.
+- Install: `npm install three`
+
+**`@react-three/fiber` ^9.6.1 and `@react-three/drei` ^10.7.7**
+- These are NOT required for `react-force-graph-3d` (Option A). They ARE required if the team later chooses Option B or wants to add custom post-processing (bloom, glow layers) over the 3D graph. Add them only if that is explicitly scoped.
+- If added: R3F v9 pairs with React 19 (confirmed from official R3F docs and v9 migration guide). `@react-three/drei@10` added React 19 support (peer dep issue #2260 closed). Install: `npm install @react-three/fiber @react-three/drei`
+- For v9.0 3D Memory Galaxy as specced (opt-in render-mode toggle, same data), **do not add R3F unless custom post-processing is explicitly added to scope.** Adding R3F + drei brings ~300KB (gzipped) of three.js renderer boilerplate for no benefit when react-force-graph-3d already manages its own Three.js scene.
+
+### Integration with Existing 2D Path
+
+The existing `ForceGraphCanvas` (at `src/components/graph/ForceGraphCanvas.tsx`) wraps `react-force-graph-2d` with a thin callback interface. The 3D mode should NOT replace or modify this component — instead, add a `ForceGraph3DCanvas` sibling that mirrors the same prop interface:
+
+- Accept same `data`, `colorFn`, `labelFn`, `onNodeClick`, `onBackgroundClick`, `onEngineStop` props
+- Map `colorFn` to `nodeColor`, `labelFn` to `nodeLabel`
+- Replace canvas `paintNode` (2D Canvas API) with `nodeThreeObject` (Three.js mesh) for custom node rendering if needed; fall back to `nodeAutoColorBy` for simple color encoding
+- The existing `useProjectGraph()` hook and snapshot data shape are identical for both modes — no Convex schema changes required
+- Render-mode toggle state: add `renderMode: '2d' | '3d'` to `CodeVaultGraph` state, persisted to `idb-keyval` (already installed)
+
+**3D-specific props to expose from ForceGraph3D:**
+- `enableNodeDrag` — allow orbit + drag (set false initially for stability)
+- `nodeThreeObject` — optional custom mesh (for community-color halos, use `nodeColor` first, upgrade later)
+- `cooldownTicks`, `d3VelocityDecay` — same physics tuning as 2D
+
+**Performance guardrail:** Disable `linkDirectionalParticles` and particle effects in 3D at 4k nodes — they multiply GPU draw calls. Default to `linkWidth=0.3` (thinner than 2D's 0.6) for readability in 3D space.
+
+### Install Command
+
+```bash
+npm install react-force-graph-3d three
+```
 
 ---
 
-## Integration Points with Existing Stack
+## Feature Area 2: Readable Theme System + Editorial Skin Toggle (TH-01..06)
 
-- **Recharts SunburstChart + AreaChart** integrate directly into React components — same import pattern as existing `hr/` charts. Use `useQuery` from Convex to feed data, same as current analytics pages.
-- **React Flow call graph** reuses the existing `dagre` layout helper pattern from RunTimeline. Create a new `CallGraphView` page/component following the same node/edge schema.
-- **Convex actions for email/PD/GH** trigger from the existing alert rule engine (v4.0 Phase 6). The alert delivery system already has a webhook dispatch pattern — add action dispatch alongside it.
-- **Resend API key** stored as Convex environment variable (`RESEND_API_KEY`), same pattern as existing LLM API keys.
-- **GitHub PAT + PagerDuty routing key** stored in Convex environment variables. Optionally surface in existing Config Editor UI for operator self-service.
-- **Email digest scheduling** uses Convex crons (`convex/crons.ts`) — infrastructure already exists from v4.0 briefings cron.
-- **Context window animation** feeds from WebSocket telemetry already flowing through `AstridrWSContext`. Subscribe to context-window-growth events, pipe into recharts `AreaChart` with live data appended to state.
+**Zero new dependencies.** All six TH requirements are achievable with the existing stack:
+
+| Requirement | Existing tool |
+|-------------|---------------|
+| TH-01 Token-driven theming (CSS custom properties) | Already used in `src/index.css`; Tailwind 4 is CSS-first with `@custom-variant` |
+| TH-02 WCAG-AA readable theme | Pure CSS token set; no library needed |
+| TH-03 Midnight Aubergine editorial theme | Pure CSS token set + `body::before`/`body::after` (paper-grain, ambient gradients) |
+| TH-04 Keep Matrix-Emerald | Already the current theme; no change |
+| TH-05 Theme switcher + no-flash persistence | `idb-keyval` already installed for graph state; for no-flash, an inline `<script>` in `index.html` reading `localStorage` before React hydrates is the standard pattern — no external lib |
+| TH-06 A11y pass | `@axe-core/playwright` as devDependency (see below) |
+
+**Tailwind 4 multi-theme pattern:** Use `data-theme` attribute on `<html>` instead of class toggling. Define token sets as:
+```css
+:root { /* default / readable theme */ }
+[data-theme="matrix-emerald"] { /* cyberpunk */ }
+[data-theme="midnight-aubergine"] { /* editorial */ }
+```
+Tailwind 4's `@custom-variant` handles dark-mode variants scoped per theme without any new library.
+
+**No-flash pattern:** A 5-line inline `<script>` in `public/index.html` (before the React bundle loads) reads `localStorage.getItem('codepulse-theme')` and sets `document.documentElement.dataset.theme`. This is the same pattern every production theme implementation uses (Next.js `next-themes`, etc.) and requires no package.
+
+**prefers-reduced-motion:** Existing Tailwind `motion-reduce:` variant and the `reducedMotion` check already in `ForceGraphCanvas.tsx` (line 151) cover animation suppression. Extend this pattern to CSS `@media (prefers-reduced-motion: reduce)` blocks for scanline/tick animations in the theme token CSS.
+
+### A11y Tooling: `@axe-core/playwright`
+
+**Add as devDependency.** The project already has Playwright installed (`@playwright/test@^1.58.2`). Axe-core's Playwright adapter is the canonical integration point:
+
+```ts
+// in e2e tests
+import { checkA11y } from '@axe-core/playwright';
+await checkA11y(page, undefined, { runOnly: { type: 'tag', values: ['wcag2aa'] } });
+```
+
+This directly satisfies TH-06 — automated WCAG AA contrast verification across high-traffic pages without a separate CI tool.
+
+**Version:** Follow axe-core's versioning scheme (major.minor mirrors axe-core version, e.g., 4.10.x). Use `latest` on install; it will resolve to 4.10.x or higher.
+
+```bash
+npm install -D @axe-core/playwright
+```
+
+**Confidence: HIGH** — Official Playwright accessibility testing docs recommend this exact package. The Playwright + axe-core integration is well-documented and the pattern is standard in 2025/2026 projects.
+
+**What NOT to add:**
+- `next-themes`: Next.js specific, does not apply to a Vite SPA
+- `color2k` / `chroma-js`: No programmatic color manipulation needed — theme tokens are static CSS
+- `@radix-ui/react-themes`: Radix's theme system conflicts with Tailwind 4's own token approach; the project already uses shadcn/ui which layers on top of CSS variables directly
+
+---
+
+## Feature Area 3: Agent Room
+
+**Zero new dependencies.** Audit the existing `hr/` scaffolding (voice/room/war-room components) first; the surface area is Convex realtime + existing UI primitives.
+
+Convex's built-in reactivity (`useQuery`, mutations) already handles multi-user state. WebSocket telemetry already flows. Room/multi-persona state = Convex tables + subscriptions. No new real-time layer needed.
+
+If the Agent Room requires markdown rendering with streaming tokens, `react-markdown` is already installed at `^10.1.0`. If it requires rich text input, `@uiw/react-codemirror` is already installed. If it needs message timestamp formatting, `date-fns` is already installed.
+
+The only dependency that might emerge here is a **lightweight audio notification** for new messages — `tone` is already installed for the ambient audio engine (`^15.1.22`). A simple note trigger from the existing `audioEngine.ts` pattern covers it.
+
+Flag: if Agent Room adds a "typing indicator" or presence system, Convex's `useQuery` on a `presenceState` table handles it natively. No third-party presence lib (e.g., `@liveblocks/*`, Pusher) is needed given Convex is the backend.
+
+---
+
+## Feature Area 4: Analytics Rollup
+
+**Zero new dependencies.** This is a pure Convex backend refactor — ingest-time rollup tables replacing `.take()` count caps to stay under the 16 MiB/exec read limit.
+
+Pattern: Convex mutations writing to `analyticsRollup_{hour,day}` tables at event-ingest time, with cron-based backfill for any gaps. All within Convex's scheduler (`convex/crons.ts`) and mutation patterns already in the project.
+
+No new npm packages. No external rollup pipeline. No third-party analytics SDK.
+
+---
+
+## Alternatives Considered
+
+| Category | Recommended | Alternative | Why Not |
+|----------|-------------|-------------|---------|
+| 3D graph | `react-force-graph-3d` | `r3f-forcegraph` | r3f-forcegraph requires full R3F scene setup + useFrame clock; react-force-graph-3d is a drop-in with nearly identical props to the already-installed 2D version |
+| 3D graph | `react-force-graph-3d` | `@react-three/fiber` + custom nodes | R3F alone provides no force layout; would require reimplementing d3-force-3d physics from scratch |
+| 3D graph | `react-force-graph-3d` | `reagraph` | reagraph is WebGL + React but uses its own layout engine (not d3-force); incompatible data shape; harder to share data with the 2D path |
+| A11y | `@axe-core/playwright` | `@axe-core/react` (React component) | Runtime component injection is noisier and less CI-friendly; Playwright integration runs post-render across real pages, which is what TH-06 needs |
+| Theme no-flash | Inline `<script>` in index.html | `next-themes` | next-themes is Next.js specific. The inline script pattern is framework-agnostic and has zero bundle cost |
+| Convex rollup | Native Convex mutations | Kafka / event stream | Massively over-engineered for a single-operator dashboard; Convex's scheduler covers the pattern |
+
+---
+
+## Explicit Do-Not-Add List
+
+| Library | Why |
+|---------|-----|
+| `@react-three/fiber` | Not needed for react-force-graph-3d Option A. Add only if post-processing (bloom) is scoped — it is not in v9.0. |
+| `@react-three/drei` | Same as above — no scene management needed. |
+| `three-spritetext` | Optional text-as-sprite for 3D labels. Skip for v9.0; the 3D graph's built-in `nodeLabel` tooltip (HTML overlay) is sufficient. |
+| `reagraph` | Different layout engine, different data shape, incompatible with the 2D path's `{ nodes, links }` schema. |
+| `next-themes` | Next.js only. |
+| `color2k` / `chroma-js` | No runtime color math needed; themes are static CSS token sets. |
+| `@liveblocks/*` / Pusher | Agent Room's presence/realtime is Convex-native. |
+| `@radix-ui/react-themes` | Conflicts with shadcn/ui + Tailwind 4 CSS variable approach. |
+| `visx` / `nivo` | No new chart types in v9.0; existing Recharts + D3 cover analytics. |
+| `react-spring` | `motion` (Framer Motion) already installed for animation. |
+| `@fontsource/bricolage-grotesque` | Midnight Aubergine editorial font from the pack. Only add if the UI-SPEC explicitly requires it post-discussion; Geist approximates the editorial feel at zero font-loading cost. Decide in discuss-phase. |
+
+---
+
+## Installation
+
+```bash
+# Required for 3D Memory Galaxy
+npm install react-force-graph-3d three
+
+# Required for TH-06 a11y pass (devDependency)
+npm install -D @axe-core/playwright
+```
+
+Total: 2 new production deps, 1 new devDep. Everything else is existing stack.
 
 ---
 
 ## Sources
 
-- Recharts SunburstChart API: https://recharts.github.io/en-US/api/SunburstChart
-- Resend + Convex official integration: https://resend.com/convex
-- Convex Actions (fetch-based HTTP calls): https://docs.convex.dev/functions/actions
-- PagerDuty Events API v2: https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgx-send-an-alert-event
-- GitHub Actions workflow dispatch: https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event
-- Convex Action Retrier component: https://www.npmjs.com/package/@convex-dev/action-retrier (MEDIUM confidence — verified on npm, not tested in this project)
+- react-force-graph-3d props API: Context7 `/vasturiano/react-force-graph` (HIGH confidence)
+- react-force-graph package.json peer deps (`"react": "*"`): https://github.com/vasturiano/react-force-graph/blob/master/package.json (HIGH confidence)
+- r3f-forcegraph integration pattern: Context7 `/vasturiano/r3f-forcegraph`, package.json (`three >=0.154`): https://github.com/vasturiano/r3f-forcegraph/blob/master/package.json (HIGH confidence)
+- R3F v9 pairs with React 19: Context7 `/pmndrs/react-three-fiber`, official docs https://r3f.docs.pmnd.rs/getting-started/installation (HIGH confidence)
+- @react-three/drei React 19 support resolved: https://github.com/pmndrs/drei/issues/2260 (MEDIUM confidence — issue closed, exact version not pinned)
+- @react-three/fiber latest (9.6.1): https://app.unpkg.com/@react-three/fiber@9.0.1 (MEDIUM confidence)
+- @react-three/drei latest (10.7.7): npm search results (MEDIUM confidence)
+- three.js latest (0.184.0): npm search results June 2026 (MEDIUM confidence)
+- react-force-graph-3d latest (1.29.1): npm search results, same as react-force-graph-2d already installed (HIGH confidence)
+- @axe-core/playwright: https://playwright.dev/docs/accessibility-testing (HIGH confidence)
+- Tailwind 4 multi-theme with data-theme attribute: https://tailwindcss.com/docs/dark-mode (HIGH confidence — CSS-first config, @custom-variant)
+- react-force-graph-3d performance at large node counts: https://github.com/vasturiano/react-force-graph/issues/202, https://github.com/vasturiano/react-force-graph/issues/223 — degradation reported at 10k+, not 4k (MEDIUM confidence — no controlled benchmark for exactly 4,038 nodes)

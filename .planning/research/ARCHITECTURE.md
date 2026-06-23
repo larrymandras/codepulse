@@ -1,820 +1,369 @@
-# Architecture: CodePulse v5.0 Advanced Visualization & Integrations
+# Architecture Patterns — v9.0 Readability & Experience Integration
 
-**Project:** CodePulse  
-**Researched:** 2026-05-16  
-**Milestone:** v5.0 Advanced Visualization & Integrations  
-**Mode:** Subsequent milestone — integration analysis against existing architecture
-
----
-
-## Existing Architecture Snapshot
-
-Before specifying what changes, a precise picture of what already exists:
-
-**Frontend:**
-- React 19 SPA, Vite 7, TypeScript 5.9, Tailwind CSS 4, shadcn/ui New York
-- `@xyflow/react` ^12.10.1 already installed (React Flow v12)
-- `dagre` ^0.8.5 already installed (auto-layout engine)
-- `recharts` ^3.8.0 already installed (not currently used for charts — FlexBarChart is custom CSS)
-- `motion` ^12.38.0 already installed (Framer Motion successor)
-- 15 pages, 90+ components
-- Component patterns: `MetricCard`, `EntityRow`, `SectionHeader`, `FlexBarChart`
-
-**Backend:**
-- Convex with 40+ tables in `schema.ts`
-- Bidirectional WebSocket via `AstridrWSContext` (single connection, topic-based fan-out)
-- Cron jobs in `convex/crons.ts` for aggregation, briefings, anomaly detection, alert delivery
-- `internalAction` pattern for all HTTP egress (Discord/Slack webhook delivery via `sendAlertWebhook`)
-- Alert lifecycle: `alerts` table → `webhookDeliveryLog` → Discord/Slack via `sendAlertWebhook`
-- `briefings` table and `generateDailyDigestAction` already exist
-- `contextSnapshots` table already exists with `contextTokens`, `summaryTokens` fields
-- `llmMetrics` table has `provider`, `model`, `promptTokens`, `completionTokens`, `cost`, `sessionId`
-- `integrationCalls` table already exists for external service call tracking
-- `githubWorkflowRuns` table and `GithubActionsPanel` component already exist (passive monitoring only — v5.0 adds trigger capability)
-- `agentCoordination` table has `fromAgent`, `toAgent`, `eventType` fields
-
-**Notification delivery pattern (existing):**
-```
-Alert created → webhookStatus: "pending"
-  → ctx.scheduler.runAfter(0, sendAlertWebhook)
-    → internalAction fetches alert + channels + prefs
-    → HTTP POST to Discord/Slack
-    → logDeliveryAttempt → webhookDeliveryLog
-    → retry via RETRY_DELAYS [5s, 30s, 120s]
-```
-
-All new delivery channels (email, PagerDuty) must follow this same pattern.
+**Domain:** CodePulse v9.0 — integration audit of four feature areas into the existing React 19 + Vite + Convex SPA
+**Researched:** 2026-06-23
+**Confidence:** HIGH — all claims traced to live files read in this session
 
 ---
 
-## Feature 1: Call Graph Visualization (VIZ-01)
+## 1. Theming (TH-01..06)
 
-### What it is
-A React Flow DAG showing integration dependencies between Ástríðr components and the error propagation path when something fails. Distinct from `AgentTopology` (which shows agent parent/child relationships): this shows which integrations call which other integrations and where errors originate.
+### How themes work today
 
-### Data Source
-Two existing tables are the primary source:
-- `integrationCalls` — has `integrationName`, `endpointName`, `success`, `statusCode`
-- `agentCoordination` — has `fromAgent`, `toAgent`, `eventType`
+Two parallel mechanisms co-exist after Phase 89:
 
-These alone are not sufficient for a call graph. A call graph needs edges that say "integration X called integration Y", not just "this call happened". A new Convex table is required.
+**1a. Dark/light class toggle (DashboardLayout.tsx)**
+`DashboardLayout.tsx:219-238` — `DarkModeToggle` component reads/writes `document.documentElement.classList` and `localStorage.setItem("theme", ...)`. On mount (`DashboardLayout.tsx:563-571`) it reads `localStorage.getItem("theme")` to restore state. The HTML ships with `<html class="dark">` hardcoded (`index.html:2`).
 
-### New Convex Table: `callGraphEdges`
+**1b. Skin `data-theme` switcher (ThemeSwitcher.tsx)**
+`src/components/ThemeSwitcher.tsx` — reads/writes `localStorage.getItem("codepulse-theme")` (default `"cyan"`) and calls `document.documentElement.setAttribute("data-theme", value)`. Rendered in the header toolbar (`DashboardLayout.tsx:707`).
 
-```typescript
-callGraphEdges: defineTable({
-  fromNode: v.string(),       // "agent:claude" | "integration:supabase" | "tool:bash"
-  toNode: v.string(),         // same format
-  edgeType: v.string(),       // "calls" | "depends_on" | "triggers"
-  sessionId: v.optional(v.string()),
-  errorPropagated: v.boolean(),
-  callCount: v.float64(),
-  errorCount: v.float64(),
-  lastSeenAt: v.float64(),
-})
-  .index("by_from", ["fromNode", "lastSeenAt"])
-  .index("by_session", ["sessionId", "lastSeenAt"])
-  .index("by_error", ["errorPropagated", "lastSeenAt"])
-```
+**Token structure in src/index.css:**
+- `:root` (lines 58-125) — monochrome oklch light palette + `--radius: 0.5rem` + `--glow-*` tokens + `--speaking-ring*` tokens
+- `.dark, [data-theme="cyan"]` (lines 127-182) — Electric Cyan skin (current default; `--primary: #06b6d4`)
+- `[data-theme="emerald"]` (lines 184-200) — Matrix Emerald overrides only (`--primary: #10b981`; inherits neutrals from `.dark`)
+- `[data-theme="amber"]` (lines 202-218) — Warning Amber overrides only
 
-**Alternative (lower schema footprint):** Derive the graph at query time by joining `integrationCalls` + `toolExecutions` + `agentCoordination`. This avoids a new table but requires grouping in a Convex query, which can scan many rows. For a dashboard that refreshes frequently, pre-materialized edges are better.
+The `.dark` class and `[data-theme="cyan"]` are combined in one rule block — this is the shipped default. Skin overrides (`[data-theme="emerald"]`, `[data-theme="amber"]`) only reset the ~8 accent/brand tokens; they inherit the dark neutrals from the `.dark` block. A new "Midnight Aubergine" skin would follow the same pattern.
 
-### New Convex Queries
+**What Phase 71 already shipped:**
+- `--radius: 0.5rem` set (`:root:101`)
+- `--info` alias token added (`:root:113`)
+- `--glow-xs/sm/md/lg` tokens added — but using cyan `rgba(6,182,212,…)` values now that Electric Cyan is the default, not emerald
+- `--speaking-ring` / `--speaking-ring-glow` tokens per skin (`[data-theme="cyan"]`, `[data-theme="emerald"]`, `[data-theme="amber"]`)
 
-In a new `convex/callGraph.ts`:
-```typescript
-// Public query — returns nodes + edges for the graph
-export const getGraph = query({
-  args: {
-    sessionId: v.optional(v.string()),
-    timeWindowSeconds: v.optional(v.float64()), // default: last 24h
-  },
-  handler: async (ctx, args) => { ... }
-});
+**Hardcoded colors still in components (Phase 71 cleanup debt):**
+The UI-SPEC at `.planning/phases/071-unified-design-system/UI-SPEC.md` (section 2.3, 2.4) identifies these drifts. Based on the live code, the key offenders are:
+- `MetricCard.tsx` — severity dots use hardcoded rgba/Tailwind classes rather than `--status-*` tokens (UI-SPEC §2.3)
+- `FlexBarChart.tsx:78` — hardcoded orange hover glow (`rgba(249,115,22,0.6)`) instead of `--glow-sm`/primary
+- Nav active/hover states in `DashboardLayout.tsx:312-313` — hardcoded `rgba(16,185,129,…)` emerald values, not `var(--primary)`. These will render wrong when a non-emerald skin is active.
+- `.glow-card::before` in `index.css:258` — hardcoded `rgba(6,182,212,0.15)` cyan, not `var(--primary)/0.15`
+- Scrollbar in `index.css:350-360` — hardcoded cyan rgba, not `var(--primary)`
+- `ForceGraphCanvas.tsx:258` — `box-shadow: var(--glow-lg)` already uses the token (good)
+- `RoomListItem.tsx:35` — correctly uses `var(--speaking-ring)` token (good)
+- `AgentVoiceCard.tsx:55` — correctly uses `var(--speaking-ring)` / `var(--speaking-ring-glow)` (good)
 
-// Internal mutation — upsert edge on each integration call (called from ingest pipeline)
-export const upsertEdge = internalMutation({ ... });
-```
+**No-flash pre-paint script:**
+`index.html` has NO inline script today (lines 1-16). It sets `class="dark"` statically but does not persist or restore the `data-theme` skin value before first paint. This means a user who saved `codepulse-theme: emerald` sees Electric Cyan until `ThemeSwitcher`'s `useEffect` fires — a FOUC on the theme switcher's first render. A `<script>` block reading `localStorage` and calling `document.documentElement.setAttribute("data-theme", ...)` synchronously before the body parses would fix this. This script must also toggle the `dark` class from `localStorage.getItem("theme")`.
 
-### Component: `CallGraphViz`
+**WCAG-AA / readability-first theme:**
+No dedicated "Readable" theme exists. The light `:root` is monochrome oklch with sufficient contrast ratios for text but the dark skins have not been audited for WCAG AA. The `prefers-reduced-motion` block at `index.css:442-447` is present and correct.
 
-```
-src/components/CallGraphViz.tsx
-  - Uses @xyflow/react (already installed, same as AgentTopology)
-  - Node types: "service" (integration), "agent", "tool"
-  - Edge styling: red = error propagated, green = healthy, gray = stale
-  - Error highlighting: when a node has errorCount > 0, pulse red ring
-  - Layout: dagre auto-layout (already installed)
-  - Sidebar: click node → detail panel showing recent calls from integrationCalls
-  - NOT animated edges by default (too noisy for a dependency graph)
-```
+### Integration map — theming
 
-**Existing pattern to follow:** `AgentTopology.tsx` uses `@xyflow/react`, `dagre`, custom `nodeTypes`, click-to-select detail panel. `CallGraphViz` should follow this exact structure. Reuse `AgentNode.tsx` styling pattern for service nodes.
+| File | Change | New vs Modified |
+|------|--------|-----------------|
+| `src/index.css` | Add `[data-theme="aubergine"]` block; fix `.glow-card::before` and scrollbar to use `var(--primary)`; add `--speaking-ring`/`--speaking-ring-glow` to new skin | Modified |
+| `index.html` | Add inline `<script>` before `</head>` to read `localStorage` and set `data-theme` + `dark` class synchronously (no-flash) | Modified |
+| `src/components/ThemeSwitcher.tsx` | Add "Midnight Aubergine" `<SelectItem>` entry | Modified |
+| `src/layouts/DashboardLayout.tsx:312-313` | Replace hardcoded `rgba(16,185,129,…)` nav active/hover glow values with `var(--primary)/…` | Modified |
+| `src/components/MetricCard.tsx:66-72` | Replace hardcoded severity colors with `--status-*`/`--info` token CSS vars | Modified |
+| `src/components/FlexBarChart.tsx:78` | Replace orange hover glow with `var(--primary)` or `--glow-sm` | Modified |
 
-### Integration Points
-- Page: New section on `Infrastructure.tsx` page (already has DockerPanel, IntegrationHealth) OR new dedicated page `CallGraph.tsx` added to router
-- WebSocket: No new WS subscription needed. Convex real-time query is sufficient for dependency graphs (not millisecond-sensitive)
-- Ingest path: When Ástríðr sends `integration_call` events through `/runtime-ingest`, the ingest handler should call `upsertEdge` to maintain the materialized graph
+**New files:** None — theming is entirely CSS token additions + component token-cleanup.
 
-### Data Flow
-
-```
-Ástríðr runtime
-  → POST /runtime-ingest { eventType: "integration_call", data: { from, to, success } }
-    → convex/ingest.ts (existing handler)
-      → insert integrationCalls (existing)
-      → callGraph.upsertEdge (new)
-        → upsert callGraphEdges (new table)
-
-UI
-  useQuery(api.callGraph.getGraph, { timeWindowSeconds: 86400 })
-    → Convex real-time subscription
-      → CallGraphViz renders nodes/edges
-```
+**Dependency:** The Phase 71 token cleanup (MetricCard, FlexBarChart drift) gates full cross-skin correctness. These components will look wrong on any non-emerald/non-cyan skin until they use `var(--primary)` and `var(--status-*)`.
 
 ---
 
-## Feature 2: Real-Time Context Window Animation (VIZ-02)
+## 2. Agent Room
 
-### What it is
-A live visualization showing the context window growing and shrinking during an active session. The existing `contextSnapshots` table already records `contextTokens` and `summaryTokens` at each snapshot point. The missing piece is a time-series sparkline or animated bar that reacts in real time.
+### What exists (wired and working)
 
-### Existing Infrastructure (no new tables needed)
-`contextSnapshots` table already has everything needed:
-- `sessionId`
-- `contextTokens` — current context size in tokens
-- `summaryTokens` — tokens in summary/compacted form
-- `timestamp`
+**Route:** `/war-room` — registered in `App.tsx:118`, lazy-loaded `WarRoom` page, in the ACTIVITY nav cluster (`DashboardLayout.tsx:196`).
 
-`historyBySession` query already exists and returns ordered snapshots.
+**Page:** `src/pages/WarRoom.tsx` — fully wired:
+- Queries `api.warRoom.listRooms` (reads `warRooms` table) and `api.warRoom.getRoomEvents` (reads `warRoomEvents` table)
+- Subscribes to `transcript.chunk` and `room.participant_speaking` WebSocket events via `useAstridrWS` context
+- Renders `RoomListItem`, `AgentVoiceCard`, `TranscriptPanel` (which wraps `TranscriptBubble`), `VoiceControlBar`
+- Renders `WarRoomLaunchDialog` (which calls `createWarRoom` → `POST /api/war-room` on Ástríðr)
 
-The `useContextSnapshots.ts` hook already provides `useContextHistory(sessionId)`.
+**Convex tables backing War Room (schema.ts:1277-1313):**
+- `warRooms` — `{ roomId, name, status, participantIds[], createdAt, updatedAt }` — indexed by `roomId` and `status`
+- `warRoomEvents` — `{ roomId, eventType, speakerId, speakerName, text, payload, timestamp }` — indexed by `room` and `timestamp`
+- `voiceCalls` — `{ callId, botSessionId, status, platform, agentProfileId, durationMs, participantCount, costUsd, startedAt, endedAt }` — exists in schema but `warRoom.ts` does not query it; used by MeetingBot page
 
-**No new Convex tables or queries are required for VIZ-02.** The data is already there.
+**Convex module:** `convex/warRoom.ts` — only two queries: `listRooms` (.collect() on `warRooms`) and `getRoomEvents` (.take(500) on `warRoomEvents`). No mutations or HTTP actions — room creation goes through Ástríðr's `/api/war-room` REST endpoint, not Convex directly. Room records presumably arrive via `runtimeIngest.ts` (the `warRooms` and `warRoomEvents` tables have no ingest switch in the first 100 lines of `runtimeIngest.ts`, but the tables exist and the page reads them — the ingest path is past line 100 of `runtimeIngest.ts` or via a separate mechanism).
 
-### New Component: `ContextWindowAnimator`
+**Components (all in `src/components/`):**
+- `RoomListItem.tsx` — uses `--speaking-ring` token correctly; fully implemented
+- `AgentVoiceCard.tsx` — uses `--speaking-ring`/`--speaking-ring-glow` tokens; honors `prefers-reduced-motion` via `useReducedMotion()` from `motion/react`; fully implemented
+- `TranscriptBubble.tsx` — imported by `TranscriptPanel.tsx`, used in WarRoom; implemented
+- `CallStatsBar.tsx` — 4-cell metric grid; used only in `MeetingBot.tsx`, NOT in WarRoom
+- `WarRoomLaunchDialog.tsx` (in `src/components/hr/`) — fully implemented; calls `createWarRoom` from `astridrApi.ts`
 
-```
-src/components/ContextWindowAnimator.tsx
-  Props:
-    sessionId: string
-    maxTokens?: number  // default: 200000 (Claude's max)
+**HR scaffolding:** `src/components/hr/` contains 45 files — roster, catalog, onboarding, teams, analytics, wizard, team presets, detail sheets. None of these are the "Agent Room" per se. `WarRoomLaunchDialog.tsx` lives here because it exposes `teamPresets` integration.
 
-  Data:
-    useContextHistory(sessionId) → sorted snapshots
-    useLatestContext(sessionId) → current value
+**teamPresets table (schema.ts:1358-1367):** `{ name, description, agentIds[], createdAt, updatedAt, createdBy, lastUsedAt, warRoomCount }` — used by `WarRoomLaunchDialog` via `useTeamPresets()` hook.
 
-  Rendering:
-    - Horizontal bar: filled width = contextTokens / maxTokens
-    - Color bands: green (0-60%), yellow (60-80%), red (80%+)
-    - Compaction events: sudden drop = animated shrink via motion library
-    - Threshold line at 80% and 95%
-    - Mini sparkline showing last N snapshots (reuse Sparkline component already at src/components/Sparkline.tsx)
-    - "Danger zone" flash when > 95%
-```
+### What is orphaned / incomplete
 
-**Animation approach:** Use `motion` (already installed as `motion` ^12.38.0) for the bar fill transition. A `useEffect` that tracks the previous value and animates the difference is cleaner than CSS transitions alone because it can handle both growth (smooth fill right) and compaction (fast snap left with a brief flash).
+**warRoom.ts `listRooms` uses `.collect()`** — unbounded read. With many rooms this will eventually hit the 16 MiB limit.
 
-### Real-Time Feed
-The WebSocket `contextSnapshots` topic is already handled in AstridrWSContext. Add a WebSocket subscription:
+**No multi-persona / multi-agent chat within a room** — the current `warRoomEvents` schema stores `transcript.chunk` rows but there is no mechanism for CodePulse to *send* messages into the room. `VoiceControlBar` handles join/leave/mute UI state locally but has no API call for actual voice bridging — the actual voice/audio transport is entirely Ástríðr-side.
 
-```
-subscribe("live-runs", callback) — existing topic
-```
+**No direct ingest path visible for `warRooms` rows** — room creation is delegated to Ástríðr's `/api/war-room` POST; how that results in a `warRooms` Convex document is not in `warRoom.ts` (no mutations). The ingest path is presumably in `runtimeIngest.ts` past line 100 or via a Convex action called by Ástríðr's server. This gap needs to be confirmed.
 
-When a `run.thinking` event arrives with token count data, update local state. For between-event accuracy, Convex real-time subscription on `contextSnapshots` is sufficient (Convex pushes within ~100ms of mutation).
+**Cross-repo dependency:** Multi-persona chat (agents talking to each other in a room, not just transcripts of external calls) requires Ástríðr to emit `transcript.chunk` WebSocket events per agent turn and to expose a `/api/war-room` endpoint that accepts topics and orchestrates agents. This is an Ástríðr-side dependency; CodePulse-side is already wired to consume the events.
 
-### Integration Points
-- New component placed on `LiveRun.tsx` page (already shows active session runs)
-- Also usable on `SessionDetail.tsx` for historical sessions (static view of the timeline)
-- Reuses `useLatestContext` and `useContextHistory` hooks (already exist)
+### Integration map — Agent Room
 
-### Data Flow
+| File | Change | New vs Modified |
+|------|--------|-----------------|
+| `convex/warRoom.ts` | Add `listRooms` pagination (`.paginate()` or bounded `.take(N)`) to prevent unbounded collect; add mutations for room state if Ástríðr doesn't write directly | Modified |
+| `src/pages/WarRoom.tsx` | Scope completion depends on Ástríðr API surface — CodePulse side is largely complete for transcript display and room management | Likely minor modification |
+| `convex/schema.ts` | No new tables needed for Phase 90 unless multi-persona chat storage is added | Possibly modified |
+| `src/components/hr/WarRoomLaunchDialog.tsx` | Currently functional for launching via Ástríðr API; extension if multi-agent config grows | Possibly modified |
 
-```
-Ástríðr runtime
-  → POST /runtime-ingest { eventType: "context_snapshot", data: { contextTokens, summaryTokens } }
-    → contextSnapshots.record (existing mutation)
-
-UI (LiveRun page)
-  useContextHistory(sessionId) → Convex real-time subscription
-    → ContextWindowAnimator updates bar and sparkline
-  OR
-  subscribe("live-runs", cb) in AstridrWSContext
-    → parse context token counts from run events
-    → update local useState for sub-100ms responsiveness
-```
-
-**Recommendation:** Use both. Convex subscription for durable state; WS for immediate visual response. Deduplicate by taking the max of the two sources.
+**New files needed:** Potentially a `src/pages/AgentRoom.tsx` (distinct from WarRoom) if the "Agent Room" scope resolves to a dedicated multi-persona surface rather than extending the existing War Room page. The audit-first requirement is correct — the existing `/war-room` page and its component tree is substantially complete.
 
 ---
 
-## Feature 3: Token Sunburst (VIZ-03)
+## 3. 3D Memory Galaxy
 
-### What it is
-A sunburst (or treemap) showing token consumption breakdown: outer ring = agent, inner segments = tools called by that agent, sized by `promptTokens + completionTokens`.
+### Existing graph stack
 
-### Data Source
-`llmMetrics` table has `sessionId`, `promptTokens`, `completionTokens`, `cost`. It does NOT have `agentId` or `toolName` as a direct field. To build the sunburst hierarchy:
+**`src/components/graph/ForceGraphCanvas.tsx`** — generic `react-force-graph-2d` wrapper:
+- Props: `data: {nodes, links}`, `colorFn`, `labelFn`, `paintNode`, `linkColorFn`, `linkWidthFn`, `linkLineDashFn`, `focusSet`, `onNodeClick`, `onEngineStop`, `clusterForce`, `communityColorFn`
+- Exposes `ForceGraphHandle` ref with `centerAt`, `zoom`, `zoomToFit`, `d3Force`, `d3ReheatSimulation`
+- Imports `ForceGraph2D` from `react-force-graph-2d` at the module level — **not lazy loaded**
 
-```
-Session
-  → Agent (from agents table via sessionId)
-    → Tool calls within agent (from toolExecutions via sessionId)
-```
+**`src/components/graph/CodeVaultGraph.tsx`** — consumes `useProjectGraph()` hook which reads `graphSnapshots` Convex table. Wraps `ForceGraphCanvas` with source-filter chips, freshness badge, integrity warnings, node detail panel, cross-graph navigation, fullscreen toggle. All domain logic (colorFn, paintNode, linkColorFn) is defined here.
 
-The missing link is that `llmMetrics` rows don't carry `agentId`. If Ástríðr doesn't emit `agentId` in LLM metric events, the hierarchy must be inferred from timing overlap with agent lifecycles.
+**`src/hooks/useProjectGraph.ts`** — Convex `useQuery` subscription to the latest graph snapshot (inferred from the component's three-state logic: `undefined` = loading, `null` = no snapshot, `ProjectGraphData` = live).
 
-**Two options:**
-1. Require Ástríðr to include `agentId` in LLM metric events (schema change to `llmMetrics` — add optional `agentId` field). This is the right long-term fix.
-2. Derive at query time by joining `agents` (time overlap) — fragile and expensive.
-
-**Recommendation:** Add `agentId` as an optional field to the `llmMetrics` schema, populated when Ástríðr emits it. The sunburst degrades gracefully if `agentId` is null (shows flat per-model breakdown).
-
-### Schema Change to Existing Table
-
+**Data shape (`ProjectGraphData` — inferred from CodeVaultGraph.tsx usage):**
 ```typescript
-// In schema.ts, add to llmMetrics:
-agentId: v.optional(v.string()),
-toolName: v.optional(v.string()),  // which tool invoked this LLM call, if any
-```
-
-No new table needed. Add an index:
-```typescript
-.index("by_agent", ["agentId", "timestamp"])
-```
-
-### New Convex Query: `tokenBreakdown`
-
-```typescript
-// In convex/analytics.ts (already exists) or new convex/tokenBreakdown.ts
-export const bySession = query({
-  args: { sessionId: v.string() },
-  handler: async (ctx, args) => {
-    // Returns hierarchy: { agents: [{ agentId, model, promptTokens, completionTokens, tools: [...] }] }
-  }
-});
-
-export const rollup = query({
-  args: { periodHours: v.optional(v.float64()) },
-  handler: async (ctx, args) => {
-    // Returns flat breakdown by model for the sunburst outer ring
-  }
-});
-```
-
-### Component: `TokenSunburst`
-
-```
-src/components/TokenSunburst.tsx
-  - Uses recharts (already installed, ^3.8.0) — specifically PieChart with nested data
-  - OR uses a custom SVG sunburst (simple to implement, no extra deps)
-  - Recommendation: custom SVG — recharts' PieChart doesn't natively support true sunbursts
-    (concentric rings with different data sets)
-  - Two rings:
-      Inner ring: per-model token share (computed from llmMetrics by model)
-      Outer ring: per-session or per-agent share
-  - Tooltip on hover: model, tokens, cost, % of total
-  - Click outer segment: drill into session detail
-  - Color: oklch-based palette matching existing design language
-  - Size: fits in a 400x400 canvas, compact enough for sidebar placement
-```
-
-**SVG sunburst pattern:** Compute start/end angles for each arc based on token count proportions. Use `path` elements with `d` attribute for arcs. No external library needed beyond React — the math is ~50 lines.
-
-### Integration Points
-- New section on `Analytics.tsx` page (already exists, has cost breakdown charts)
-- Or as a widget on the `Dashboard.tsx` page in the overview section
-- Convex real-time subscription updates as new LLM calls come in
-
-### Data Flow
-
-```
-llmMetrics table (existing, with new agentId field)
-  ↓
-tokenBreakdown.bySession or tokenBreakdown.rollup query
-  ↓ Convex real-time subscription
-TokenSunburst component renders arcs
-```
-
----
-
-## Feature 4: Email Digest Delivery (EXT-01)
-
-### What it is
-Send the daily digest (already generated by `generateDailyDigestAction`) to an email address. Possibly also send per-severity alert emails for "critical" alerts.
-
-### Existing Infrastructure
-- `briefings` table already has `daily_digest` type entries with full `narrative` text
-- `generateDailyDigestAction` already runs daily at 06:00 UTC via cron
-- `profileConfigs` table already has `emailAddress` field per profile
-- The entire Discord/Slack delivery pattern in `webhookDelivery.ts` is the template
-
-### Email Provider Decision
-Convex `internalAction` can make arbitrary HTTP calls. The cleanest integration that doesn't require managing SMTP:
-
-**Use Resend** (resend.com) — single HTTP POST to `https://api.resend.com/emails`, no SDK needed in a Convex action. Free tier: 3000 emails/month, 100/day. Alternatively SendGrid, which has the same HTTP API pattern.
-
-**No new npm packages needed** — Convex actions use `fetch`. The API key is stored in `agentConfigs`.
-
-### New Convex File: `convex/emailDelivery.ts`
-
-```typescript
-// Config keys stored in agentConfigs:
-//   "email-provider" → { provider: "resend", apiKey: "re_..." }
-//   "email-to-address" → string (operator email)
-//   "email-alert-severities" → string[] (which severities get email, default ["critical"])
-
-export const sendDailyDigestEmail = internalAction({
-  args: { briefingId: v.id("briefings") },
-  handler: async (ctx, args) => {
-    // Load briefing
-    // Load email config
-    // POST to Resend/SendGrid
-    // Log to emailDeliveryLog (new table)
-  }
-});
-
-export const sendAlertEmail = internalAction({
-  args: { alertId: v.id("alerts") },
-  handler: async (ctx, args) => {
-    // Same pattern as sendAlertWebhook
-    // Only fires for severities in email-alert-severities config
-  }
-});
-
-// Public config mutations for Settings page
-export const setEmailConfig = mutation({ ... });
-export const getEmailConfig = query({ ... }); // never returns apiKey
-```
-
-### New Convex Table: `emailDeliveryLog`
-
-```typescript
-emailDeliveryLog: defineTable({
-  type: v.string(),            // "digest" | "alert"
-  refId: v.string(),           // briefingId or alertId as string
-  toAddress: v.string(),
-  subject: v.string(),
-  status: v.string(),          // "sent" | "failed" | "skipped"
-  statusCode: v.optional(v.float64()),
-  errorMessage: v.optional(v.string()),
-  attempt: v.float64(),
-  sentAt: v.float64(),
-})
-  .index("by_type_sent", ["type", "sentAt"])
-  .index("by_sentAt", ["sentAt"])
-```
-
-### Trigger Integration
-
-**Daily digest email:** Extend `generateDailyDigestAction` to schedule `sendDailyDigestEmail` after storing the briefing:
-```typescript
-// After storeBriefing in generateDailyDigestAction:
-await ctx.scheduler.runAfter(0, internal.emailDelivery.sendDailyDigestEmail, {
-  briefingId: newBriefingId,
-});
-```
-
-**Alert email:** Extend `createIfNew` in `evaluateInternal` (same location where `sendAlertWebhook` is scheduled) to also schedule `sendAlertEmail` for qualifying severities.
-
-### Settings UI Changes
-- Extend `Settings.tsx` with a new "Email Delivery" section alongside existing NotificationChannels
-- New component: `EmailDeliveryConfig.tsx` — email address input, provider API key input, severity checkboxes, test button
-- Test button: new `testEmailDelivery` action that sends a test email
-
-### Data Flow
-
-```
-generateDailyDigestAction (existing, 06:00 UTC cron)
-  → storeBriefing (existing)
-  → schedule emailDelivery.sendDailyDigestEmail (new)
-    → load briefing.narrative
-    → fetch Resend API
-    → log to emailDeliveryLog
-
-alerts.evaluateInternal (existing, 2min cron)
-  → createIfNew (when severity matches config)
-    → schedule webhookDelivery.sendAlertWebhook (existing)
-    → schedule emailDelivery.sendAlertEmail (new, for qualifying severities)
-```
-
----
-
-## Feature 5: PagerDuty Integration (EXT-02)
-
-### What it is
-When a "critical" alert fires, create a PagerDuty incident via the Events API v2. Optionally auto-resolve the PagerDuty incident when the alert is acknowledged/resolved in CodePulse.
-
-### PagerDuty Events API v2
-- Endpoint: `https://events.pagerduty.com/v2/enqueue`
-- Auth: `routing_key` (Integration Key) in request body — no Bearer token
-- Payload: `{ routing_key, event_action: "trigger"|"resolve", dedup_key, payload: { summary, severity, source, timestamp } }`
-- `dedup_key` maps to alert `_id` — enables resolve calls to match the original incident
-
-No npm SDK needed. Pure `fetch` in a Convex action.
-
-### New Convex File: `convex/pagerduty.ts`
-
-```typescript
-// Config in agentConfigs:
-//   "pagerduty-routing-key" → string (Integration Key)
-//   "pagerduty-enabled-severities" → string[] (default: ["critical"])
-
-export const triggerIncident = internalAction({
-  args: {
-    alertId: v.id("alerts"),
-    dedupKey: v.string(),  // = alertId as string
-  },
-  handler: async (ctx, args) => {
-    // Load alert, check severity, load routing key
-    // POST to events.pagerduty.com/v2/enqueue
-    // Log to pagerdutyDeliveryLog
-  }
-});
-
-export const resolveIncident = internalAction({
-  args: { dedupKey: v.string() },
-  handler: async (ctx, args) => {
-    // POST event_action: "resolve" with same dedupKey
-    // Update pagerdutyDeliveryLog
-  }
-});
-
-export const setPagerDutyConfig = mutation({ ... });
-export const getPagerDutyConfig = query({ ... }); // omits routing_key
-```
-
-### New Convex Table: `pagerdutyDeliveryLog`
-
-```typescript
-pagerdutyDeliveryLog: defineTable({
-  alertId: v.string(),         // alert _id as string
-  dedupKey: v.string(),
-  eventAction: v.string(),     // "trigger" | "resolve"
-  status: v.string(),          // "sent" | "failed"
-  statusCode: v.optional(v.float64()),
-  errorMessage: v.optional(v.string()),
-  sentAt: v.float64(),
-})
-  .index("by_alertId", ["alertId", "sentAt"])
-  .index("by_sentAt", ["sentAt"])
-```
-
-### Trigger Integration
-
-Same hook points as email:
-- In `createIfNew` within `evaluateInternal`: schedule `pagerduty.triggerIncident`
-- In `alertLifecycle.acknowledgeAlert` or `resolveAlert`: schedule `pagerduty.resolveIncident` using the alert `_id` as `dedupKey`
-
-**Auto-resolve:** Extend `alertLifecycle.resolveAlert` to call `ctx.scheduler.runAfter(0, internal.pagerduty.resolveIncident, { dedupKey: args.alertId })`. This closes the PagerDuty incident when the operator resolves in the dashboard.
-
-### Settings UI Changes
-- New component: `PagerDutyConfig.tsx` — routing key input (masked), severity filter, enabled toggle, test button
-- Test button sends a trigger + immediate resolve to verify connectivity
-
-### Data Flow
-
-```
-alerts.evaluateInternal → createIfNew (critical alert)
-  → schedule pagerduty.triggerIncident
-    → POST events.pagerduty.com/v2/enqueue { event_action: "trigger" }
-    → log pagerdutyDeliveryLog
-
-alertLifecycle.resolveAlert (operator action)
-  → schedule pagerduty.resolveIncident
-    → POST events.pagerduty.com/v2/enqueue { event_action: "resolve", dedup_key }
-    → update pagerdutyDeliveryLog
-```
-
----
-
-## Feature 6: GitHub Actions Trigger from Alert Rules (EXT-03)
-
-### What it is
-When an alert rule fires, trigger a GitHub Actions workflow via the `workflow_dispatch` API. This enables auto-remediation: "if container is down, trigger restart-container.yml".
-
-This is distinct from the existing `githubWorkflowRuns` table which only receives passive status reports. EXT-03 adds active triggering from CodePulse outward.
-
-### GitHub Actions API
-- Endpoint: `POST https://api.github.com/repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches`
-- Auth: `Authorization: Bearer {github_pat}` — requires `workflow` scope PAT
-- Payload: `{ ref: "main", inputs: { alert_id, severity, source } }`
-- Response: 204 No Content on success
-
-The `workflow_id` can be the workflow file name (e.g., `restart-container.yml`) or the numeric ID.
-
-### Schema Change: `alertRuleCustom` + New Table
-
-The trigger configuration must be associated with a rule. Two options:
-
-**Option A (preferred):** Add `githubTrigger` optional field to `alertRuleCustom`:
-```typescript
-// In alertRuleCustom table, add:
-githubTrigger: v.optional(v.object({
-  repo: v.string(),           // "owner/repo"
-  workflowId: v.string(),     // "restart-container.yml"
-  ref: v.optional(v.string()), // default: "main"
-  enabled: v.boolean(),
-})),
-```
-
-This keeps trigger config colocated with the rule that fires it.
-
-**Option B:** Separate `alertRuleTriggers` table. More extensible if multiple trigger types are added, but requires a join.
-
-**Recommendation:** Option A for v5.0. Extend to Option B in a future milestone if trigger types proliferate.
-
-### New Convex File: `convex/githubTrigger.ts`
-
-```typescript
-// Config in agentConfigs:
-//   "github-pat" → string (PAT with workflow scope)
-
-export const dispatchWorkflow = internalAction({
-  args: {
-    alertId: v.id("alerts"),
-    repo: v.string(),
-    workflowId: v.string(),
-    ref: v.string(),
-  },
-  handler: async (ctx, args) => {
-    // Load PAT from agentConfigs
-    // POST github.com/repos/{repo}/actions/workflows/{workflowId}/dispatches
-    // Record in githubTriggerLog
-  }
-});
-
-export const setGitHubPAT = mutation({ ... }); // requires auth
-export const getGitHubPAT = query({ ... });     // returns only masked value
-```
-
-### New Convex Table: `githubTriggerLog`
-
-```typescript
-githubTriggerLog: defineTable({
-  alertId: v.string(),
-  ruleId: v.string(),
-  repo: v.string(),
-  workflowId: v.string(),
-  ref: v.string(),
-  status: v.string(),       // "dispatched" | "failed" | "skipped"
-  statusCode: v.optional(v.float64()),
-  errorMessage: v.optional(v.string()),
-  triggeredAt: v.float64(),
-})
-  .index("by_alertId", ["alertId"])
-  .index("by_triggeredAt", ["triggeredAt"])
-```
-
-### Trigger Integration
-
-In `evaluateInternal` (existing), after `createIfNew`:
-```typescript
-// For custom rules that have githubTrigger configured:
-if (triggered && customRule.githubTrigger?.enabled) {
-  await ctx.scheduler.runAfter(0, internal.githubTrigger.dispatchWorkflow, {
-    alertId: newAlertId,
-    repo: customRule.githubTrigger.repo,
-    workflowId: customRule.githubTrigger.workflowId,
-    ref: customRule.githubTrigger.ref ?? "main",
-  });
+{
+  nodes: Array<{ id: string; label: string; type: string; source: string; community?: number; val?: number; x?: number; y?: number }>
+  links: Array<{ source: string; target: string }>
+  nodeCount: number
+  storedNodeCount: number
+  linkCount: number
+  storedLinkCount: number
+  generatedAt: number  // Unix seconds
+  sources: Array<{ source: string; nodeCount: number; emittedNodeCount: number; truncated: boolean }>
 }
 ```
 
-### UI Changes
-- `AlertRuleForm.tsx` (existing component) — add a "GitHub Actions Trigger" collapsible section with repo, workflow file, ref inputs and enabled toggle
-- `GithubActionsPanel.tsx` (existing) — add a "Triggered by Alert" badge when a run appears in `githubTriggerLog` with matching runId
-- `ConditionBuilder.tsx` (existing) — no change needed
-- New Settings section: GitHub PAT configuration
+**3D slot-in architecture:**
 
-### Data Flow
+The Key Decision in PROJECT.md is: "a render-mode toggle on the existing `CodeVaultGraph`, reusing its data — not a new immersive page." This maps to:
+
+1. A `renderMode: "2d" | "3d"` state in `CodeVaultGraph` (or lifted to the parent page)
+2. When `"3d"`: lazy-import `react-force-graph-3d` (which pulls in Three.js, ~600 KB gzipped) instead of rendering `ForceGraphCanvas`
+3. When `"2d"`: current `ForceGraphCanvas` path unchanged
+
+The critical constraint is that `react-force-graph-2d` is currently imported statically in `ForceGraphCanvas.tsx:9`. The 3D library must NOT be in the same module. The pattern:
+
+```typescript
+// src/components/graph/ForceGraphCanvas3D.tsx  [NEW]
+// Lazy-imported from CodeVaultGraph only when 3D mode is selected
+import ForceGraph3D from "react-force-graph-3d";
+// ... same prop API as ForceGraphCanvas where possible
+```
+
+`CodeVaultGraph.tsx` would use `React.lazy()` or dynamic `import()` for the 3D canvas, only when mode is toggled. The 2D default (`ForceGraphCanvas`) remains statically imported as today — no regression on the default render path.
+
+**`ForceGraphCanvas` API compatibility:** The 3D component needs to accept the same `data`, `colorFn`, `onNodeClick`, `onEngineStop` props. `paintNode` (Canvas 2D API) cannot be reused for 3D — Three.js materials replace it. `linkColorFn`, `linkWidthFn`, `linkLineDashFn` have equivalents in `react-force-graph-3d`. The `ForceGraphHandle` ref interface (`centerAt`, `zoomToFit`, etc.) has equivalents in the 3D library.
+
+**Note on R3F vs react-force-graph-3d:** PROJECT.md's Key Decision says "React Three Fiber 3D render mode toggle." `react-force-graph-3d` uses Three.js directly (not R3F). If a full R3F integration is intended (for custom particle effects, `@react-three/fiber` scene), a separate `<Canvas>` from `@react-three/fiber` would be needed — heavier setup. `react-force-graph-3d` is simpler, reuses the same force simulation API as the 2D library, and matches the existing ForceGraph2D API surface more closely. Recommend `react-force-graph-3d` unless custom shader/particle effects are required.
+
+### Integration map — 3D Memory Galaxy
+
+| File | Change | New vs Modified |
+|------|--------|-----------------|
+| `src/components/graph/ForceGraphCanvas3D.tsx` | New component; lazy-imported; wraps `react-force-graph-3d` with same prop surface as `ForceGraphCanvas` | **New** |
+| `src/components/graph/CodeVaultGraph.tsx` | Add `renderMode` state (`"2d"` default); toggle button in header row; `React.lazy()` / dynamic import for `ForceGraphCanvas3D`; `<Suspense>` fallback in 3D branch | Modified |
+| `package.json` | Add `react-force-graph-3d` (and `three` if not already present) | Modified |
+| `src/test/setup.ts` | Add Three.js / `react-force-graph-3d` mock alongside existing `react-force-graph-2d` mock | Modified |
+| `convex/` | No changes — same data, same `useProjectGraph()` hook | Unchanged |
+| `src/App.tsx` | No changes — `GraphsHub` and its `CodeVaultGraph` are already lazy-loaded | Unchanged |
+
+**Three.js bundle impact:** `react-force-graph-3d` + `three` is ~600-800 KB gzipped. Lazy loading in a dynamic import inside `CodeVaultGraph` means it is only fetched when the user activates 3D mode for the first time. The 2D default has zero bundle regression.
+
+---
+
+## 4. Analytics Rollup
+
+### Current read patterns (convex/analytics.ts)
+
+All five queries read raw domain tables with `.take()` caps as a quick-unblock:
+
+| Query | Table(s) | Cap | Comment in code |
+|-------|----------|-----|-----------------|
+| `activityHeatmap` | `events` | `.take(1000)` | "~56% of 16 MiB limit at current payload sizes" |
+| `toolFlowSankey` | `events` | `.take(1000)` | Same note |
+| `tokenSunburst` | `llmMetrics` | `.take(30000)` | "slim rows but unbounded .collect() is latent risk" |
+| `errorRateTrend` | `events` x3 queries | `.take(300)` each | "3 fat-payload reads" |
+| `tokenWaterfall` | `llmMetrics` | `.take(30000)` | "avoid unbounded .collect()" |
+| `sessionDurations` | `sessions` | `.take(200)` | Sessions are slim; lower risk |
+
+**The `events.payload` problem:** `events.payload` is `v.any()` (fat — arbitrary JSON from hook events). Even reading only `timestamp` from a row costs the full document deserialization in Convex's read budget. 1000 events x ~9 KB avg payload = ~9 MiB, leaving little headroom. The `.take(1000)` cap means heatmap and Sankey only reflect the most recent ~1000 events, silently under-counting older activity.
+
+**Existing pre-computed aggregates table:** `aggregates` table exists in schema (`schema.ts:883-891`):
+```
+{ metric_type: "cost"|"events"|"errors", period: "hourly"|"daily", bucket_start: float64, value: float64, dimensions?: any }
+```
+This table was added in v4.0 Phase 5 for cost aggregation. It is not currently used by `analytics.ts` queries.
+
+### Ingest write paths
+
+**Build-time:** `convex/ingest.ts` (`buildIngest` httpAction) → `api.events.ingest` mutation (writes `events` table). No rollup writes here currently.
+
+**Runtime:** `convex/runtimeIngest.ts` (`runtimeIngest` httpAction) → `api.llm.recordCall` mutation (writes `llmMetrics` table) for `llm_call` events.
+
+**Where rollup writes go:** Ingest-time rollup means: after writing the raw row, immediately increment a pre-aggregated counter in a rollup table. Pattern (from v4.0 Phase 5 precedent using `aggregates`):
 
 ```
-alertRuleCustom (with githubTrigger config)
-  ↓
-evaluateInternal fires (2min cron)
-  → createIfNew → newAlertId
-  → schedule githubTrigger.dispatchWorkflow
-    → POST github API
-    → insert githubTriggerLog { status: "dispatched" }
+runtimeIngest → api.llm.recordCall [existing]
+             → api.analytics.incrementHourlyBucket [new mutation]
+ingest.ts    → api.events.ingest [existing]
+             → api.analytics.incrementEventBucket [new mutation]
+```
 
-Ástríðr GitHub Actions workflow (separate repo)
-  → runs remediation steps
-  → POST /runtime-ingest { eventType: "github_workflow_run" } (existing pattern)
-    → insert githubWorkflowRuns (existing)
+The read-path swap then changes `activityHeatmap` and `toolFlowSankey` to query the `analyticsRollup` or reuse `aggregates` by `metric_type` + `period:hourly` + time range — completely eliminating the fat-payload `events` read.
 
-UI
-  GithubActionsPanel shows run
-  githubTriggerLog links run back to the alert that triggered it
+### Integration map — Analytics Rollup
+
+| File | Change | New vs Modified |
+|------|--------|-----------------|
+| `convex/schema.ts` | Add rollup tables (or extend `aggregates`) for: event-counts by hour (heatmap), event-type-to-outcome flows (Sankey), error counts by hour — OR reuse the existing `aggregates` table with new `metric_type` values | Modified |
+| `convex/analytics.ts` | Replace `.take()`-capped reads with rollup table queries for `activityHeatmap`, `toolFlowSankey`, `errorRateTrend`; `tokenSunburst` and `tokenWaterfall` can keep `llmMetrics` reads (rows are slim) but bounded by time window | Modified |
+| `convex/ingest.ts` | After `api.events.ingest`, call new rollup mutation to increment event-count and event-type buckets | Modified |
+| `convex/runtimeIngest.ts` | After `api.llm.recordCall` for `llm_call` events, increment cost/token rollup buckets | Modified |
+| `convex/analyticsRollup.ts` (or extend `convex/aggregates.ts`) | Mutations: `incrementEventBucket`, `incrementErrorBucket`, `incrementFlowBucket` | **New** |
+
+**Dependency:** The rollup tables must exist and be populated before the analytics read-path swap. The recommended sequence is: (1) add schema + rollup mutations, (2) deploy and let ingest populate rollups forward, (3) swap analytics queries to read from rollups. A backfill migration is optional but not required for correctness — pre-rollup history simply shows zero until real data accumulates.
+
+---
+
+## 5. Component Boundaries Summary
+
+```
+src/main.tsx
+  ConvexProvider
+    PrivacyProvider
+      AmbientProvider
+        ClerkProvider (optional)
+          BrowserRouter
+            AstridrWSProvider
+              AuthGuard
+                DashboardLayout (nav + header + CRT overlay)
+                  [theme: index.html sets class="dark"; ThemeSwitcher sets data-theme]
+                  Outlet
+                    /graphs → GraphsHub → CodeVaultGraph → ForceGraphCanvas (2D, default)
+                                                         → ForceGraphCanvas3D [NEW, lazy, 3D toggle]
+                    /war-room → WarRoom → RoomListItem (--speaking-ring token)
+                                       → AgentVoiceCard (--speaking-ring tokens, reduced-motion)
+                                       → TranscriptPanel → TranscriptBubble
+                                       → VoiceControlBar
+                    /analytics → Analytics (lazy)
+                    /meeting-bot → MeetingBot → CallStatsBar [not used in WarRoom]
+```
+
+```
+convex/
+  schema.ts            ← 50+ tables; warRooms + warRoomEvents + voiceCalls + teamPresets + aggregates
+  analytics.ts         ← 5 queries; all use .take() caps against raw tables [to be replaced]
+  analyticsRollup.ts   ← [NEW] ingest-time rollup mutations
+  warRoom.ts           ← listRooms (.collect() — needs cap) + getRoomEvents
+  ingest.ts            ← buildIngest httpAction; add rollup mutation calls
+  runtimeIngest.ts     ← runtimeIngest httpAction; add rollup mutation calls
 ```
 
 ---
 
-## Component Hierarchy Summary
+## 6. Suggested Build Order (with dependency rationale)
 
-### New Components
+### Phase 88 — Analytics Rollup (independent, lowest risk)
 
-| Component | File | Page Placement | Data Source |
-|-----------|------|----------------|-------------|
-| `CallGraphViz` | `src/components/CallGraphViz.tsx` | Infrastructure or new CallGraph page | `callGraph.getGraph` query |
-| `CallGraphNode` | `src/components/CallGraphNode.tsx` | Used by CallGraphViz | props from parent |
-| `ContextWindowAnimator` | `src/components/ContextWindowAnimator.tsx` | LiveRun, SessionDetail | `useContextHistory` + WS |
-| `TokenSunburst` | `src/components/TokenSunburst.tsx` | Analytics page | `tokenBreakdown.bySession` |
-| `EmailDeliveryConfig` | `src/components/EmailDeliveryConfig.tsx` | Settings page | `emailDelivery` queries |
-| `PagerDutyConfig` | `src/components/PagerDutyConfig.tsx` | Settings page | `pagerduty` queries |
+1. **Schema + rollup mutations** — add tables/extend `aggregates`, write `analyticsRollup.ts` mutations. No UI change.
+2. **Wire ingest** — call rollup mutations from `ingest.ts` and `runtimeIngest.ts`. Deploy. Rollup data begins accumulating.
+3. **Read-path swap** — update `analytics.ts` queries to read from rollup tables. Remove `.take()` caps on the event queries.
+4. *(Optional backfill)* — scan existing `events` rows and populate rollup tables. Not required for correctness.
 
-### Modified Components
+**Rationale:** Entirely Convex-side, no UI changes, no component regressions. Should ship first or in parallel with Phase 89.
 
-| Component | Change |
-|-----------|--------|
-| `AlertRuleForm.tsx` | Add GitHub Actions Trigger section (collapsible) |
-| `GithubActionsPanel.tsx` | Show "triggered by alert" badge when triggered |
-| `Settings.tsx` | Add Email Delivery + PagerDuty + GitHub PAT sections |
-| `LiveRun.tsx` | Embed ContextWindowAnimator for active session |
-| `SessionDetail.tsx` | Static context window timeline using ContextWindowAnimator |
-| `Analytics.tsx` | Add TokenSunburst widget |
+### Phase 89 — Theming (gates later phases on token-clean components)
 
-### New Convex Files
+**Sub-sequence:**
+1. **Token cleanup first** — fix `DashboardLayout.tsx` nav glow values, `MetricCard.tsx` severity, `FlexBarChart.tsx` orange glow to use `var(--primary)` and `var(--status-*)`. Without this, any non-cyan skin renders incorrectly.
+2. **No-flash script** — add inline `<script>` to `index.html` reading `localStorage` for both `theme` (dark/light class) and `codepulse-theme` (data-theme). Must happen before or alongside skin additions or users see FOUC.
+3. **New skin(s)** — add `[data-theme="aubergine"]` block to `index.css`, add `SelectItem` to `ThemeSwitcher.tsx`. Safe to ship after #1 and #2.
+4. **WCAG-AA audit** — check contrast ratios for all three current skins + new skin. Fix any failing token values. Depends on #1 (so tokens are canonical) but can run in parallel with #3.
 
-| File | Purpose |
-|------|---------|
-| `convex/callGraph.ts` | Call graph queries + edge upsert |
-| `convex/emailDelivery.ts` | Email send action + config |
-| `convex/pagerduty.ts` | PagerDuty trigger/resolve actions + config |
-| `convex/githubTrigger.ts` | GitHub workflow dispatch action + config |
+**Rationale:** Token cleanup gates correctness for all skins. The 3D Galaxy's node colors will also benefit from token-clean components (`var(--primary)` is already used in `ForceGraphCanvas.tsx:258` via `--glow-lg`).
 
-### Modified Convex Files
+### Phase 90+ — Agent Room (gated on Ástríðr API audit)
 
-| File | Change |
-|------|--------|
-| `convex/schema.ts` | Add `callGraphEdges`, `emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`; add `agentId`/`toolName` to `llmMetrics`; add `githubTrigger` to `alertRuleCustom` |
-| `convex/briefings.ts` | Schedule email delivery after digest generation |
-| `convex/alerts.ts` | Schedule PagerDuty + GitHub trigger after createIfNew |
-| `convex/alertLifecycle.ts` | Schedule PagerDuty resolve on alert resolution |
-| `convex/ingest.ts` | Call `callGraph.upsertEdge` on integration_call events |
-| `convex/crons.ts` | No structural changes needed |
+1. **Confirm ingest path** — read `convex/runtimeIngest.ts` past line 100 to confirm how `warRooms` rows are created. Fill gap if missing.
+2. **Fix `warRoom.ts` listRooms** — replace `.collect()` with `.take(N)` or `.paginate()`.
+3. **Audit Ástríðr `/api/war-room` API** — the scope of multi-persona chat depends entirely on what Ástríðr can orchestrate. The CodePulse display layer is largely complete.
+4. **Extend or add page** — if multi-persona chat is a different UX from the war-room voice surface, add `/agent-room` route and page. If it extends the existing surface, modify `WarRoom.tsx`.
+
+**Rationale:** Agent Room depends on Ástríðr-side API completeness (cross-repo). The audit-first approach is correct. Do not build new CodePulse UI before knowing what events Ástríðr will emit.
+
+### Phase 91+ — 3D Memory Galaxy (independent, requires Phase 89 for token-clean colors)
+
+1. **Install `react-force-graph-3d`** — add to `package.json`; add `three` if not already present.
+2. **Add test mock** — extend `src/test/setup.ts` with a `react-force-graph-3d` mock alongside the existing `react-force-graph-2d` mock.
+3. **Create `ForceGraphCanvas3D.tsx`** — new component, NOT exported from `ForceGraphCanvas.tsx`. Same prop surface where possible.
+4. **Wire toggle in `CodeVaultGraph.tsx`** — add `renderMode` state, toggle button, `React.lazy()` import of the 3D canvas.
+
+**Rationale:** Independent of theming and analytics. Can ship any time after Phase 89 theming is stable so the 3D canvas inherits correct `var(--primary)` colors. No Convex changes needed.
 
 ---
 
-## New Convex Tables Summary
+## 7. Anti-Patterns to Avoid
 
-| Table | Purpose | Approx Rows/Day |
-|-------|---------|-----------------|
-| `callGraphEdges` | Materialized integration dependency graph | Low (upsert, not insert) |
-| `emailDeliveryLog` | Email send audit trail | 1-10 |
-| `pagerdutyDeliveryLog` | PagerDuty incident audit trail | 0-5 |
-| `githubTriggerLog` | GitHub dispatch audit trail | 0-10 |
+### Anti-Pattern 1: Importing Three.js statically alongside react-force-graph-2d
+**What:** Adding `import ForceGraph3D from "react-force-graph-3d"` at the top of `ForceGraphCanvas.tsx`
+**Why bad:** Bundles Three.js (~600 KB) into the 2D default code path, regressing every page that renders a graph
+**Instead:** New `ForceGraphCanvas3D.tsx` module, dynamic-imported from `CodeVaultGraph.tsx` only on 3D mode activation
 
-Total schema additions: 4 new tables, 3 modified tables.
+### Anti-Pattern 2: Hardcoding accent colors in new components
+**What:** Writing `rgba(6,182,212,…)` (cyan) or `#10b981` (emerald) directly in component styles
+**Why bad:** The skin system is `data-theme` driven; hardcoded values break on any non-default skin
+**Instead:** Use `var(--primary)`, `var(--glow-sm)`, `var(--status-*)` tokens in all new and modified components
 
----
+### Anti-Pattern 3: Blocking analytics read-path swap before rollup data exists
+**What:** Switching `analytics.ts` to read from rollup tables before the ingest mutations have populated them
+**Why bad:** All analytics charts show zero — looks like data loss
+**Instead:** Deploy rollup mutations + ingest wiring first; let data accumulate for one ingest cycle; then swap read path
 
-## Data Flow Diagrams
+### Anti-Pattern 4: Building new Agent Room UI before confirming Ástríðr API surface
+**What:** Designing a multi-persona chat interface against an assumed WebSocket event schema
+**Why bad:** If Ástríðr emits different event names/shapes, the CodePulse components need rewriting
+**Instead:** Read `runtimeIngest.ts` in full; test with a real `transcript.chunk` event from a live room; then extend the UI
 
-### Visualization Features (read path)
-
-```
-Ástríðr runtime
-    │
-    ├── POST /runtime-ingest { integration_call }
-    │       → integrationCalls (existing)
-    │       → callGraph.upsertEdge → callGraphEdges (new)
-    │
-    ├── POST /runtime-ingest { context_snapshot }
-    │       → contextSnapshots (existing)
-    │
-    └── POST /runtime-ingest { llm_metric, agentId }
-            → llmMetrics (existing, + agentId field)
-
-React UI (read path)
-    ├── CallGraphViz ← useQuery(callGraph.getGraph)
-    ├── ContextWindowAnimator ← useQuery(contextSnapshots.historyBySession)
-    └── TokenSunburst ← useQuery(tokenBreakdown.bySession)
-```
-
-### Integration Features (write/delivery path)
-
-```
-alerts.evaluateInternal (cron, 2min)
-    │
-    └── createIfNew (severity: critical)
-            │
-            ├── scheduler → webhookDelivery.sendAlertWebhook (existing → Discord/Slack)
-            ├── scheduler → emailDelivery.sendAlertEmail (new → Resend/SendGrid)
-            ├── scheduler → pagerduty.triggerIncident (new → PagerDuty Events API)
-            └── if customRule.githubTrigger → scheduler → githubTrigger.dispatchWorkflow
-
-alertLifecycle.resolveAlert (operator action)
-    └── scheduler → pagerduty.resolveIncident (new → PagerDuty Events API)
-
-briefings.generateDailyDigestAction (cron, 06:00 UTC)
-    └── after storeBriefing → scheduler → emailDelivery.sendDailyDigestEmail (new)
-```
-
----
-
-## Build Order
-
-Dependencies determine the order. Schema must be migrated before any feature that uses new tables. Integration features are independent of each other after the shared schema migration.
-
-### Phase A: Schema Foundation (prerequisite for all)
-1. Add `agentId` and `toolName` to `llmMetrics` in `schema.ts`
-2. Add `githubTrigger` to `alertRuleCustom` in `schema.ts`
-3. Add all 4 new tables (`callGraphEdges`, `emailDeliveryLog`, `pagerdutyDeliveryLog`, `githubTriggerLog`) to `schema.ts`
-4. Run `npx convex dev` to push schema — this is a non-breaking additive migration
-
-### Phase B: Visualization (parallel after Phase A)
-
-**B1: Context Window Animation (VIZ-02) — Build First**
-- Rationale: No new Convex tables, no schema changes, purely UI. Fastest to complete and validates the `motion` animation approach before VIZ-01/VIZ-03.
-- Components: `ContextWindowAnimator`
-- Hooks: extend existing `useContextSnapshots.ts`
-
-**B2: Token Sunburst (VIZ-03)**
-- Depends on: Phase A (`agentId` in `llmMetrics`)
-- New queries: `tokenBreakdown.ts`
-- Components: `TokenSunburst`
-- Extends `Analytics.tsx`
-
-**B3: Call Graph Visualization (VIZ-01) — Build Last Among Viz**
-- Depends on: Phase A (`callGraphEdges` table), ingest path modification
-- New: `callGraph.ts`, `CallGraphViz`, `CallGraphNode`
-- Most complex of the three viz features due to materialization logic
-
-### Phase C: Integration Features (parallel after Phase A)
-
-**C1: Email Digest (EXT-01)**
-- Depends on: Phase A (`emailDeliveryLog` table)
-- Rationale: Build first among integrations because it has the highest operator value (daily digest) and the API is simplest (no two-way handshake)
-- New: `emailDelivery.ts`, `EmailDeliveryConfig`
-- Modifies: `briefings.ts`, `Settings.tsx`
-
-**C2: PagerDuty (EXT-02)**
-- Depends on: Phase A (`pagerdutyDeliveryLog` table)
-- New: `pagerduty.ts`, `PagerDutyConfig`
-- Modifies: `alerts.ts`, `alertLifecycle.ts`, `Settings.tsx`
-- Note: Two-way (trigger + resolve) makes this more complex than email
-
-**C3: GitHub Actions Trigger (EXT-03)**
-- Depends on: Phase A (`githubTriggerLog` table, `githubTrigger` field in `alertRuleCustom`)
-- New: `githubTrigger.ts`
-- Modifies: `alerts.ts`, `AlertRuleForm.tsx`, `GithubActionsPanel.tsx`, `Settings.tsx`
-- Note: UI changes to `AlertRuleForm` require careful handling of the existing form structure
-
-### Recommended Phase Grouping for GSD Roadmap
-
-```
-Phase N:   Schema Foundation (A1-A4) — 1 phase, ~half day
-Phase N+1: Context Window Animation (B1) — 1 phase, 1 day
-Phase N+2: Token Sunburst (B2) — 1 phase, 1-2 days
-Phase N+3: Email Digest Delivery (C1) — 1 phase, 1-2 days
-Phase N+4: Call Graph Visualization (B3) — 1 phase, 2-3 days (most complex viz)
-Phase N+5: PagerDuty Integration (C2) — 1 phase, 1-2 days
-Phase N+6: GitHub Actions Trigger (C3) — 1 phase, 1-2 days
-```
-
-B3 and C1/C2/C3 can be developed in parallel by separate work streams after Phase N (schema), but sequentially is safer given single-developer context.
-
----
-
-## Key Architecture Decisions
-
-| Decision | Rationale |
-|----------|-----------|
-| Call graph as materialized `callGraphEdges` (not derived at query time) | Avoids expensive multi-table joins on each dashboard refresh. Convex queries on 40+ tables already push complexity |
-| Resend (not SMTP/nodemailer) for email | Convex actions are serverless — no persistent SMTP connection. HTTP API is the only viable approach. Resend has the simplest API of the HTTP providers |
-| PagerDuty Events API v2 (not REST API) | Events API is stateless, designed for monitoring integrations. REST API requires account-scoped auth and is overkill for alert delivery |
-| Add `agentId` to `llmMetrics` (schema change) vs. derive at query time | Derivation would require time-overlap join between `llmMetrics` and `agents` — unreliable and expensive. Schema change is the correct fix |
-| `githubTrigger` embedded in `alertRuleCustom` (not a separate table) | Single join point, simpler for v5.0. Separate table only needed if multiple trigger types per rule become necessary |
-| Use `motion` for ContextWindowAnimator (not CSS transitions) | CSS transitions can't animate from unknown current value to new value reactively. Motion's `animate` API handles value-driven animation correctly |
-| Custom SVG sunburst (not recharts PieChart) | Recharts PieChart cannot natively represent concentric rings with independent datasets. Custom SVG arcs are ~50 lines and match the existing Paperclip aesthetic better |
-
----
-
-## Configuration Storage Pattern
-
-All new integrations follow the existing pattern: config stored in `agentConfigs` table with structured keys.
-
-```
-"email-provider"              → { provider: "resend", apiKey: "re_..." }
-"email-to-address"            → "operator@example.com"
-"email-alert-severities"      → ["critical", "error"]
-"pagerduty-routing-key"       → "abc123def456..."
-"pagerduty-enabled-severities" → ["critical"]
-"github-pat"                  → "ghp_..."
-```
-
-**Security:** API keys are never returned from public queries. The pattern already established in `briefings.ts` (getLLMConfig omits apiKey, getLLMConfigInternal includes it) must be replicated for all new configs.
+### Anti-Pattern 5: Theme no-flash script after the React bundle loads
+**What:** Restoring the `data-theme` skin in a React `useEffect` (as `ThemeSwitcher` currently does)
+**Why bad:** React hydration completes after the HTML is painted — user sees the wrong skin for ~200-400ms
+**Instead:** Inline `<script>` in `<head>` of `index.html` synchronously sets both `class` and `data-theme` attributes before the browser paints
 
 ---
 
 ## Sources
 
-All findings are based on direct code inspection of the existing CodePulse codebase at `C:\Users\mandr\codepulse`. No external documentation lookup was required for integration analysis — all integration points were derived from reading existing `convex/schema.ts`, `convex/webhookDelivery.ts`, `convex/alerts.ts`, `convex/briefings.ts`, `convex/crons.ts`, `src/contexts/AstridrWSContext.tsx`, `src/components/AgentTopology.tsx`, and `package.json`.
+All claims traced to live files read in this session:
 
-External API documentation referenced from training data (HIGH confidence, stable APIs):
-- PagerDuty Events API v2: `https://developer.pagerduty.com/docs/ZG9jOjExMDI5NTgw-events-api-v2-overview`
-- GitHub Actions workflow dispatch: `https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event`
-- Resend API: `https://resend.com/docs/api-reference/emails/send-email`
-- React Flow (@xyflow/react v12): version confirmed from `package.json`
+- `src/index.css` — full file (448 lines)
+- `src/layouts/DashboardLayout.tsx` — full file (741 lines)
+- `src/App.tsx` — full file
+- `src/components/ThemeSwitcher.tsx` — full file
+- `src/components/graph/CodeVaultGraph.tsx` — full file (702 lines)
+- `src/components/graph/ForceGraphCanvas.tsx` — full file (297 lines)
+- `src/components/RoomListItem.tsx` — full file
+- `src/components/AgentVoiceCard.tsx` — full file
+- `src/components/hr/WarRoomLaunchDialog.tsx` — full file
+- `src/pages/WarRoom.tsx` — full file
+- `src/lib/astridrApi.ts` — lines 1-60, 245-256
+- `convex/analytics.ts` — full file (250 lines)
+- `convex/ingest.ts` — lines 1-100
+- `convex/runtimeIngest.ts` — lines 1-100
+- `convex/warRoom.ts` — full file
+- `convex/schema.ts` — full file (1400+ lines; warRooms:1277, warRoomEvents:1288, voiceCalls:1300, teamPresets:1358, aggregates:883)
+- `.planning/phases/071-unified-design-system/UI-SPEC.md` — full file
+- `.planning/PROJECT.md` — full file
+- `index.html` — full file
