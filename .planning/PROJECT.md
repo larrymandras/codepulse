@@ -10,9 +10,8 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**In progress:** v8.0 Graph/KG Consolidation (started 2026-06-18). **Phase 83 — Graph Snapshot Receiver (GH-01)** complete 2026-06-18 (Convex tables + `graphSnapshots.ts` receiver, versioned-swap upsert, dangling-link drop, retention cron, `getProjectGraph` read API; live round-trip verified vs `tidy-whale-981`). **Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)** complete 2026-06-22 (`useProjectGraph` hook, `CodeVaultGraph` dual-palette force-graph hero with source filter / truncation / freshness / integrity / detail panel / fullscreen, `GraphsHub` page, lazy `/graphs` route, nav placeholder flipped; 7/7 must-haves + human UAT passed via Playwright on real Convex data). **Phase 85 — Cross-Graph Navigation (GH-04)** complete 2026-06-22 (shared `focus-url`/`useFocusParam` deep-link plumbing + forward links/return chips wired into Tool Galaxy, Code/Vault, KG Explorer; 4/4 plans, 4/4 must-haves, UAT demonstrated live in Playwright — `telegram_tool → owning-agent Hildr → /graphs → return chip` round-trip on the real graph). Also hardened the ingest path: `/runtime-ingest` now stores a compact summary of `graph_snapshot` events in legacy `runtime_events` (was rejecting >1 MiB graphs, silently capping the production cron) — deployed; the full ~4,038-node astridr+codepulse+vault snapshot now ingests. Next: Phase 86 KG Full-Text Search (GH/KG-08, carries the Ástríðr `/api/kg/search` cross-repo delta) per roadmap sequence, or Phase 88 Analytics Rollup (scaffolded).
-**Shipped:** v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse as a first-class module via the Surface-Substrate bridge: a local Forge daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Read render → launch/stop → live log streaming → files + artifact preview, all Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`.
-**Prior shipped:** v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End **closed 2026-06-18** — phases 71-74 shipped (light); 77 (CI hardening) complete; 75 (Agent Console) superseded by v7.0 Forge; **76 (Unified Graph Hub) NOT shipped → deferred to v8.0** (2026-06-18 reconciliation).
+**Shipped:** v8.0 Graph/KG Consolidation (2026-06-23) — all 5 phases (83-87), 8/8 requirements (GH-01..04, KG-08..11), milestone audit PASSED. Built the receiver for Ástríðr's nightly `graph_snapshot` (GH-01), the unified `/graphs` hub replacing the placeholder nav stub (GH-02/03), cross-graph tool→agent→KG navigation (GH-04), community-cluster layout (KG-09), a full-text KG Search lens (KG-08), saved + shareable graph views (KG-10), and KG temporal Diff/Animate sub-modes (KG-11). Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live clustering needs `community` emission, D-10) — CodePulse side complete and degrades gracefully. Phase 87 deployed to prod `tidy-whale-981`. Archive: `milestones/v8.0-ROADMAP.md`.
+**Prior shipped:** v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse via the Surface-Substrate bridge: a local daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`. v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End **closed 2026-06-18** — phases 71-74 shipped (light); 77 (CI hardening) complete; 75 (Agent Console) superseded by v7.0 Forge; **76 (Unified Graph Hub) NOT shipped → deferred to v8.0** (2026-06-18 reconciliation).
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons, D3.js, dagre, Resend, React Email
 **Codebase:** ~66,600 LOC TypeScript (src/ + convex/)
 
@@ -36,19 +35,13 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
-## Current Milestone: v8.0 Graph/KG Consolidation
+## Shipped Milestone: v8.0 Graph/KG Consolidation
 
-> **Started 2026-06-18.** Completes the Unified Graph Hub that Phase 76 (v6.0) never shipped, and deepens the KG Explorer (Phase 74). Net-new work is almost entirely CodePulse-side: Ástríðr's `graph_snapshot` uploader (graphify code graph + Obsidian vault wikilinks → `{nodes,links}` pushed to Convex `/runtime-ingest`, nightly cron) **already ships** (Ástríðr Phase 137 / M1.P4, 2026-06-09) — but CodePulse has **no receiver**, so those snapshots are currently dropped on the floor. v8.0 builds the receiver, the `/graphs` hub, cross-graph navigation, and four KG depth features.
+> **Shipped 2026-06-23** (started 2026-06-18). 5 phases (83-87), 17 plans, 8/8 requirements (GH-01..04, KG-08..11); milestone audit PASSED. Completed the Unified Graph Hub that Phase 76 (v6.0) never shipped and deepened the KG Explorer (Phase 74): graph-snapshot receiver (stops dropping Ástríðr's nightly snapshots — the full ~4,038-node real graph is now live) + `/graphs` hub + cross-graph navigation + KG search / clustering / saved-views / temporal-diff. Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live community clustering needs `community` emission, D-10) — the CodePulse side is complete and degrades gracefully today. Archive: `milestones/v8.0-ROADMAP.md`; audit: `milestones/v8.0-MILESTONE-AUDIT.md`.
 
-**Goal:** Operators explore all of Ástríðr's graphs — KG, tool galaxy, MCP, and the code/vault dependency graph — from one unified Graphs hub, with deeper KG search, clustering, saved views, and temporal diff.
+## Next Milestone: v9.0 Readability & Experience (seed)
 
-**Requirements:**
-- **GH-01..04** — graph-snapshot receiver (Convex table + `runtimeIngest` dispatch; fixes the dropped-events bug), `/graphs` landing rendering the pushed code+vault graph, unified hub IA, cross-graph navigation
-- **KG-08..11** — full-text fact search (+ Ástríðr `/api/kg/search` endpoint), clustering/community-detection layout (leverages the `community` field already in the snapshot payload), named/saved + shareable views, temporal diff/animation
-
-**Phases (83+):** set by the roadmap — this section updates when the roadmap lands. Reuses in-house patterns: the v7.0 Forge receiver (for GH-01), `ForceGraphCanvas` / `kg-graph.ts` / `ObsidianGraph` (render), and the existing KG Explorer (Phase 74) for the depth features.
-
-**Cross-repo:** mostly CodePulse-side. The one likely Ástríðr delta is a `/api/kg/search` endpoint for full-text fact search (KG-08); the snapshot uploader (GH-01's producer) is already done.
+> **Seeded 2026-06-22.** Readable theme system + editorial skin toggle (the dark Matrix-Emerald default is hard to read). Phase 89 in progress — `ThemeSwitcher` shipped (toggles `data-theme` cyan/emerald/amber via the existing `index.css` palettes; default skin now Electric Cyan). Agent Room + 3D galaxy are candidate follow-ons. Fresh requirements to be defined via `/gsd-new-milestone`.
 
 ## Closed Milestone: v6.0 Agentic OS Front-End
 
@@ -104,18 +97,18 @@ v5.0 added 12 phases:
 
 - ✓ FI-01 … FI-14 — Forge folded into CodePulse (schema/emitter, read UI, command bridge, live logs, files/preview, hardening) — Phases 78-82 (shipped 2026-06-17)
 
-### Active (v8.0 Graph/KG Consolidation)
+### Validated (v8.0 Graph/KG Consolidation)
 
-- [x] GH-01 — Graph-snapshot receiver: `graphSnapshots` table + `runtimeIngest` dispatch for `graph_snapshot` (idempotent on `snapshotId`) + read query API; stops dropping Ástríðr's nightly snapshots — **Phase 83 (2026-06-18)**
-- [x] GH-02 — `/graphs` landing renders the pushed code (graphify) + vault (Obsidian) graph from Convex, reusing `ForceGraphCanvas`, with truncation indicated — **Phase 84 (2026-06-22)**
-- [x] GH-03 — Unified Graphs hub: KG Explorer, Tool Galaxy, MCP Inventory, code/vault graph reachable from one hub with consistent interactions — **Phase 84 (2026-06-22)**
-- [x] GH-04 — Cross-graph navigation: deep-link tool → owning agent → KG entity across graph surfaces where data supports it — **Phase 85 (2026-06-22)**
-- [ ] KG-08 — Full-text fact search across fact text/values + relationship labels (backed by an Ástríðr `/api/kg/search` endpoint)
-- [ ] KG-09 — Clustering / community-detection layout for large graphs (leverages the `community` field in the snapshot payload)
-- [ ] KG-10 — Named, saved, and shareable graph views (beyond last-state idb persistence)
-- [ ] KG-11 — Temporal diff / animation: compare the KG between two as-of points and/or animate evolution
+- ✓ GH-01 — Graph-snapshot receiver: `graphSnapshots` table + `runtimeIngest` dispatch (idempotent on `snapshotId`) + read query API; stops dropping Ástríðr's nightly snapshots — Phase 83 (2026-06-18)
+- ✓ GH-02 — `/graphs` landing renders the pushed code (graphify) + vault (Obsidian) graph from Convex, reusing `ForceGraphCanvas`, with truncation indicated — Phase 84 (2026-06-22)
+- ✓ GH-03 — Unified Graphs hub: KG Explorer, Tool Galaxy, MCP Inventory, code/vault graph reachable from one hub — Phase 84 (2026-06-22)
+- ✓ GH-04 — Cross-graph navigation: deep-link tool → owning agent → KG entity — Phase 85 (2026-06-22)
+- ✓ KG-08 — Full-text fact/relationship Search lens (backed by Ástríðr `/api/kg/search`) — Phase 86 (2026-06-23); live results data-gated on the Ástríðr endpoint (SEED-008), graceful-degrade gate shipped
+- ✓ KG-09 — Clustering / community-detection layout for large graphs — Phase 86 (2026-06-23); live halos data-gated on Ástríðr `community` emission (D-10), no-regression when absent
+- ✓ KG-10 — Named, saved, and shareable graph views (beyond last-state idb persistence) — Phase 87 (2026-06-23)
+- ✓ KG-11 — Temporal diff / animation between two as-of points — Phase 87 (2026-06-23)
 
-Full definitions + traceability: `.planning/REQUIREMENTS.md`. Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained there as well.
+Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREMENTS.md` (fresh `REQUIREMENTS.md` is created by the next `/gsd-new-milestone`). Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in the archive as well.
 
 ### Out of Scope
 
@@ -180,4 +173,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-22 — v8.0 in progress: Phases 83 (GH-01 receiver), 84 (GH-02/GH-03 hub + render), 85 (GH-04 cross-graph navigation) complete & UAT-passed; ingest 1 MiB cap fixed + deployed; full ~4,038-node real snapshot live. KG-08..11 remain. Next: Phase 86 KG Full-Text Search (roadmap sequence; Ástríðr `/api/kg/search` delta) or Phase 88 Analytics Rollup (scaffolded).*
+*Last updated: 2026-06-23 — v8.0 Graph/KG Consolidation SHIPPED (phases 83-87, 8/8 requirements, milestone audit PASSED, archived + tagged). KG-08/KG-09 live output data-gated on cross-repo Ástríðr deltas. Next: v9.0 Readability & Experience (Phase 89 in progress) — define fresh requirements via `/gsd-new-milestone`; Phase 88 (Analytics Rollup) remains a standalone scaffolded option.*

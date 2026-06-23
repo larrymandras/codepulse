@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: complete
-stopped_at: Phase 87 complete + verified (4/4 code + 6/6 in-browser UAT) + deployed to prod (tidy-whale-981); v8.0 milestone done
-last_updated: "2026-06-23T20:40:00.000Z"
-last_activity: 2026-06-23
+status: Awaiting next milestone
+stopped_at: Phase 87 context gathered
+last_updated: "2026-06-23T20:14:52.326Z"
+last_activity: 2026-06-23 — Milestone v8.0 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -26,13 +26,10 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 87 (saved-views-temporal-diff) — ✅ COMPLETE + verified + deployed to prod
-Plan: 4 of 4 (all complete)
-Next: v8.0 is fully shipped (83-87). Close it with `/gsd-complete-milestone`, then activate v9.0 (Phase 89 — Readability & Experience). No remaining v8.0 work.
-Status: Milestone v8.0 complete
-Last activity: 2026-06-23
-
-Progress bar: `██████████` 100% (5/5 v8.0 phases complete: 83, 84, 85, 86, 87)
+Phase: Milestone v8.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-23 — Milestone v8.0 completed and archived
 
 ## Milestone v8.0 Roadmap (2026-06-18)
 
@@ -188,3 +185,7 @@ Last session: 2026-06-23T18:37:15.851Z
 Stopped at: Phase 87 context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

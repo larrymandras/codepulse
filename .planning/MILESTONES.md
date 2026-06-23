@@ -1,5 +1,25 @@
 # Milestones
 
+## v8.0 Graph/KG Consolidation (Shipped: 2026-06-23)
+
+**Phases completed:** 5 phases (83–87), 17 plans, 23 tasks
+**Timeline:** 2026-06-18 → 2026-06-23 (6 days)
+**Requirements:** 8/8 (GH-01..04, KG-08..11) — milestone audit PASSED
+**Verification:** all phases verified; Phases 84/85/86/87 human-UAT'd via Playwright; Phase 87 deployed to prod (`tidy-whale-981`)
+
+**Key accomplishments:**
+
+- **GH-01 — Graph Snapshot Receiver:** Convex row-based tables (`graphSnapshots`/`graphSnapshotNodes`/`graphSnapshotLinks`) + versioned-swap upsert + retention cron + `case graph_snapshot` dispatch; stops dropping Ástríðr's nightly code/vault snapshots — the full ~4,038-node real graph is now live.
+- **GH-02/GH-03 — Unified Graphs Hub:** replaced the `placeholder:true` nav stub with a real `/graphs` route + `GraphsHub`; `CodeVaultGraph` dual-palette render of the code+vault graph from Convex; Tool Galaxy / MCP Inventory / KG Explorer all reachable from one hub.
+- **GH-04 — Cross-Graph Navigation:** `buildFocusUrl`/`useFocusParam` deep-links tool → owning agent → KG entity with same-origin `?from` return chips (normalized-EXACT matching, zero false jumps).
+- **KG-09 — Community-Cluster Layout:** d3-force clustering + color halos in `ForceGraphCanvas`, auto-gated on the snapshot `community` field (no regression when absent).
+- **KG-08 — Full-Text Search Lens:** `fetchSearch` + Search lens + `KGSearchResults` behind a graceful-degrade gate (live results data-gated on Ástríðr `/api/kg/search`, SEED-008).
+- **KG-10/KG-11 — Saved Views + Temporal Diff/Animate:** `savedKgViews` + `useSavedViews` + `KGViewsPopover` + shareable `?view=<token>` links; `Point | Diff | Animate` temporal sub-modes (client-side `computeDiff` + `useKgAnimation` frame-synth + 20-entry LRU).
+
+**Notable:** Phase 87 code review caught 1 BLOCKER (animation prefetch shared the frame display token → stuck frame) + 4 warnings, all fixed with a regression test. A pre-existing build break (stray `ThemeSwitcher` import without its committed component) was found + fixed during the close-out push; CI green.
+
+---
+
 ## v5.0 Advanced Visualization & Integrations (Shipped: 2026-05-25)
 
 **Phases completed:** 12 phases (6 with GSD plans, 6 built outside GSD), 23 plans, 31 tasks
