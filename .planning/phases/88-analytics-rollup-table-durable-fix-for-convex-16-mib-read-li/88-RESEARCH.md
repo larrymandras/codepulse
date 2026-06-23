@@ -648,7 +648,7 @@ Step 2.6: SKIPPED — Phase 88 is pure Convex backend code with no external tool
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Dimension shape for `tokenSunburst` (D-10) — cost row key reconstruction**
    - What we know: Cost `aggregates` rows store `dimensions: {provider, model, billingType, goalId}` as a 4-segment key. `tokenSunburst` needs provider+model breakdowns.
