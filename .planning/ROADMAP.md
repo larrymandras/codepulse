@@ -199,7 +199,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
  (completed 2026-06-23)
 
-- [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
+- [x] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points (completed 2026-06-23)
 
 ## Phase Details
 
@@ -310,7 +310,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 87-04-PLAN.md — Temporal Animate: useKgAnimation (client-synth frames + LRU) + KGAnimateControls (KG-11)
+- [x] 87-04-PLAN.md — Temporal Animate: useKgAnimation (client-synth frames + LRU) + KGAnimateControls (KG-11)
 
 **UI hint**: yes
 
@@ -335,7 +335,7 @@ Plans:
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete   | 2026-06-23 |
-| 87. Saved Views + Temporal Diff | v8.0 | 3/4 | In Progress|  |
+| 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete   | 2026-06-23 |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
 
