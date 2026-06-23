@@ -238,7 +238,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   3. Graphs with a `community` field on nodes render with co-community nodes visually clustered together (color-coded or spatially grouped), making large graphs scannable at a glance
   4. Graphs without the `community` field continue to render with the existing force-directed layout — no regression
 **Plans**: 3 plans (3 waves)
-- [ ] 86-01-PLAN.md — Clustering core: community palette + KgNode.community + ForceGraphCanvas cluster force/halo + code/vault graph wiring (KG-09, SC#3/SC#4)
+- [x] 86-01-PLAN.md — Clustering core: community palette + KgNode.community + ForceGraphCanvas cluster force/halo + code/vault graph wiring (KG-09, SC#3/SC#4)
 - [ ] 86-02-PLAN.md — KG Explorer clustering: halo paint + clusterForce wiring + auto-hide Communities legend (KG-09, SC#3/SC#4)
 - [ ] 86-03-PLAN.md — Search lens (cross-repo gated): fetchSearch + graceful-degrade gate + 5th Search lens + KGSearchResults + result-click ego focus (KG-08, SC#1/SC#2)
 **UI hint**: yes
@@ -275,7 +275,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
-| 86. KG Full-Text Search + Clustering | v8.0 | 0/? | Not started | — |
+| 86. KG Full-Text Search + Clustering | v8.0 | 1/3 | In Progress|  |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
