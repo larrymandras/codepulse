@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
-stopped_at: Phase 86 UI-SPEC approved + context gathered
-last_updated: "2026-06-23T12:28:06.709Z"
+stopped_at: Phase 86 Plan 02 complete — KG Explorer community clustering wired
+last_updated: "2026-06-23T12:34:20.826Z"
 last_activity: 2026-06-23
 progress:
   total_phases: 7
   completed_phases: 3
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 43
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 ## Current Position
 
 Phase: 86 (kg-full-text-search-clustering-layout) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09 — carries the Ástríðr `/api/kg/search` cross-repo delta) OR Phase 88 (Analytics Rollup Table — prod-impacting). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
 Status: Ready to execute
 Last activity: 2026-06-23
@@ -74,6 +74,11 @@ See PROJECT.md Key Decisions table for full history.
 
 - **KG-09 halo architecture** — drawn in `ForceGraphCanvas` shared `paint` wrapper via new `communityColorFn` prop, not in each caller's `paintNode`. Single implementation serves both KG and CodeVaultGraph without duplication.
 - **COMMUNITY_PALETTE hex overlap** — slots 1/4/5 intentionally share values with ENTITY_TYPE_COLORS. The plan's "none present in ENTITY_TYPE_COLORS" behavior spec conflicted with the locked UI-SPEC hex values. Exact UI-SPEC values take precedence; semantic distinctness preserved by different visual roles (halo ring vs. node fill).
+
+**Phase 86 Plan 02 decisions (2026-06-23):**
+
+- **KG Explorer single halo path** — `communityColorFn` prop on `<ForceGraphCanvas>` used on the KG call site; the page's `paintNode` is not modified. Avoids double-stroke and keeps the halo implementation in one place (shared paint wrapper from Plan 01).
+- **Communities legend auto-hide** — `presentCommunities.length > 0` conditional; no "no clusters" copy rendered when community-less (Q4-A). Mirrors the `legendTypes` useMemo pattern for consistency.
 
 **v7.0 Forge Integration decisions:**
 
@@ -163,7 +168,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-23T12:28:06.700Z
+Last session: 2026-06-23T12:34:20.815Z
 Stopped at: Phase 86 UI-SPEC approved + context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
 Resume file: None
