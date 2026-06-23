@@ -3,8 +3,9 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience
 status: planning
-last_updated: "2026-06-23T21:17:15.400Z"
-last_activity: 2026-06-23
+stopped_at: Phase 88 context gathered
+last_updated: "2026-06-23T22:45:42.296Z"
+last_activity: 2026-06-23 — v9.0 roadmap defined (Phases 88-91, 15 requirements mapped)
 progress:
   total_phases: 4
   completed_phases: 0
@@ -49,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 See PROJECT.md Key Decisions table for full history.
 
 **v9.0 scoping decisions (2026-06-23):**
+
 - **Reverse "3D out of scope"** — opt-in mode on `CodeVaultGraph` only (not a new page); `react-force-graph-3d` not R3F (near-identical prop API, manages own WebGLRenderer).
 - **Phase 89 sub-sequence** — token cleanup (77 hex sites) → no-flash script → key consolidation → Aubergine tokens → WCAG-AA axe audit. `class="dark"` stays permanent (all v9.0 themes are dark variants).
 - **Phase 90 cross-repo gate** — confirm `POST /api/war-room` ingest path and `warRooms` Convex population before writing any ROOM code. If Join isn't feasible, ship observer mode with honest label.
@@ -66,7 +68,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-23
-Stopped at: v9.0 roadmap written (ROADMAP.md + STATE.md + REQUIREMENTS.md traceability)
+Last session: 2026-06-23T22:45:42.287Z
+Stopped at: Phase 88 context gathered
 Next action: `/gsd-plan-phase 88` — Analytics Rollup (AR-01..03)
-Resume file: None
+Resume file: .planning/phases/88-analytics-rollup-table-durable-fix-for-convex-16-mib-read-li/88-CONTEXT.md
