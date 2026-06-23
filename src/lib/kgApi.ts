@@ -16,6 +16,21 @@
  *   - `/entity` returns `{ entity, triples }`.
  *   - `/contradictions` returns `{ contradictions }`.
  * `kg-graph.ts` normalizes all four into a uniform `{nodes,links}` model.
+ *
+ * Phase 86 addition — `/search`:
+ *   - Consumer-defined shape (see KgSearchParams / KgSearchResponse below).
+ *     Ástríðr is the source of truth when live — document known consumer/emitter
+ *     divergences here.
+ *   - Assumption A2: If Ástríðr returns only `subjectId` (no `subjectName`), the
+ *     consumer must reverse-map id → name before calling `buildFocusUrl`. This is
+ *     a cross-repo SEED requirement: Ástríðr `/api/kg/search` MUST include
+ *     `subjectName` in each hit.
+ *   - Open Question 1: Default GET with query params (consistent with kgGet
+ *     pattern). If Ástríðr requires POST for long queries that exceed URL limits,
+ *     that is a cross-repo SEED detail — document here when known.
+ *   - Gate: 404/501 from this endpoint → informational "not deployed" copy in the
+ *     UI (D-01). The gate lives in the consumer (KnowledgeGraph.tsx), not here.
+ *     kgGet throws AstridrApiError on any non-2xx; the consumer inspects status.
  */
 import { authHeaders, astridrApiBase, AstridrApiError } from "./astridrApi";
 
@@ -83,6 +98,48 @@ export interface KgEntityResponse {
 export interface KgContradictionsResponse {
   contradictions: KgTriple[];
   count: number;
+}
+
+// ── Search types (Phase 86, KG-08) ────────────────────────────────────────
+
+/**
+ * Params for `/api/kg/search`. Consumer-defined; Ástríðr must conform.
+ * snake_case keys match kgGet param-key convention (passed directly to URLSearchParams).
+ */
+export interface KgSearchParams {
+  query: string;
+  entity_type?: string | null;
+  agent_id?: string | null;
+  limit?: number;
+}
+
+/**
+ * A single full-text search hit from `/api/kg/search`.
+ *
+ * NOTE (Assumption A2): `subjectName` is required — if Ástríðr only returns
+ * `subjectId`, the consumer cannot call `buildFocusUrl` without a reverse-map.
+ * Ástríðr MUST include `subjectName` (cross-repo SEED requirement).
+ */
+export interface KgSearchHit {
+  /** Subject entity name — used verbatim as the focus target for result-click (D-02). */
+  subjectName: string;
+  /** Subject entity id. */
+  subjectId: string;
+  /** The relationship label / predicate that matched. */
+  predicate: string;
+  /** The fact text or object literal snippet containing the match. */
+  snippet: string;
+  /** The matched substring within snippet, for emphasis rendering (font-semibold text-primary). */
+  matchedTerm?: string;
+  /** Confidence of the underlying triple (optional). */
+  confidence?: number | null;
+}
+
+/** Response envelope from `/api/kg/search`. */
+export interface KgSearchResponse {
+  results: KgSearchHit[];
+  count: number;
+  query: string;
 }
 
 // ── Param shapes ───────────────────────────────────────────────────────────
@@ -162,4 +219,23 @@ export function fetchContradictions(
   limit?: number,
 ): Promise<KgContradictionsResponse> {
   return kgGet<KgContradictionsResponse>("/api/kg/contradictions", { limit });
+}
+
+/**
+ * Full-text search across KG fact text + relationship labels (Phase 86, KG-08).
+ *
+ * Bearer-authed GET to `/api/kg/search` via kgGet — throws AstridrApiError on
+ * non-2xx. The consumer (KnowledgeGraph.tsx) is responsible for gating 404/501
+ * to the "not deployed" informational copy (D-01 graceful-degrade).
+ *
+ * See Phase 86 header comment for cross-repo SEED requirements (subjectName,
+ * GET vs POST, wire shape ownership).
+ */
+export function fetchSearch(params: KgSearchParams): Promise<KgSearchResponse> {
+  return kgGet<KgSearchResponse>("/api/kg/search", {
+    query: params.query,
+    entity_type: params.entity_type,
+    agent_id: params.agent_id,
+    limit: params.limit,
+  });
 }

@@ -4,6 +4,7 @@ import {
   fetchOverview,
   fetchEntity,
   fetchContradictions,
+  fetchSearch,
 } from "./kgApi";
 import { AstridrApiError } from "./astridrApi";
 
@@ -144,6 +145,92 @@ describe("kgApi — error handling", () => {
   it("propagates a network failure", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
     await expect(fetchSummary()).rejects.toThrow("Failed to fetch");
+  });
+});
+
+describe("kgApi — fetchSearch", () => {
+  const searchResponse = {
+    results: [
+      {
+        subjectName: "Larry",
+        subjectId: "e-larry",
+        predicate: "knows",
+        snippet: "Larry knows the architecture",
+        matchedTerm: "architecture",
+        confidence: 0.9,
+      },
+    ],
+    count: 1,
+    query: "architecture",
+  };
+
+  it("GETs /api/kg/search with query + entity_type + agent_id params", async () => {
+    fetchMock.mockResolvedValue(okJson(searchResponse));
+    await fetchSearch({
+      query: "architecture",
+      entity_type: "person",
+      agent_id: "skuld",
+    });
+    const url = lastUrl();
+    expect(url.pathname).toBe("/api/kg/search");
+    expect(url.searchParams.get("query")).toBe("architecture");
+    expect(url.searchParams.get("entity_type")).toBe("person");
+    expect(url.searchParams.get("agent_id")).toBe("skuld");
+  });
+
+  it("includes the Bearer Authorization header via authHeaders()", async () => {
+    fetchMock.mockResolvedValue(okJson(searchResponse));
+    await fetchSearch({ query: "test" });
+    const headers = lastInit().headers as Record<string, string>;
+    // authHeaders() always sets Content-Type; Authorization only when key present (unset in tests).
+    expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("omits null/empty optional params", async () => {
+    fetchMock.mockResolvedValue(okJson(searchResponse));
+    await fetchSearch({ query: "facts", entity_type: null, agent_id: "" });
+    const url = lastUrl();
+    expect(url.searchParams.has("entity_type")).toBe(false);
+    expect(url.searchParams.has("agent_id")).toBe(false);
+    expect(url.searchParams.get("query")).toBe("facts");
+  });
+
+  it("passes limit when provided", async () => {
+    fetchMock.mockResolvedValue(okJson(searchResponse));
+    await fetchSearch({ query: "test", limit: 20 });
+    expect(lastUrl().searchParams.get("limit")).toBe("20");
+  });
+
+  it("throws AstridrApiError with status 404 on a 404 response", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+      json: async () => ({ detail: "endpoint not deployed" }),
+    } as unknown as Response);
+    const err = await fetchSearch({ query: "test" }).catch((e) => e);
+    expect(err).toBeInstanceOf(AstridrApiError);
+    expect(err.status).toBe(404);
+  });
+
+  it("throws AstridrApiError with status 501 on a 501 response", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 501,
+      statusText: "Not Implemented",
+      json: async () => ({ detail: "search not implemented" }),
+    } as unknown as Response);
+    const err = await fetchSearch({ query: "test" }).catch((e) => e);
+    expect(err).toBeInstanceOf(AstridrApiError);
+    expect(err.status).toBe(501);
+  });
+
+  it("parses and returns the KgSearchResponse on 200", async () => {
+    fetchMock.mockResolvedValue(okJson(searchResponse));
+    const out = await fetchSearch({ query: "architecture" });
+    expect(out.count).toBe(1);
+    expect(out.results[0].subjectName).toBe("Larry");
+    expect(out.results[0].predicate).toBe("knows");
   });
 });
 
