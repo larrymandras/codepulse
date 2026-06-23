@@ -4,12 +4,21 @@ title: OnboardingGuide modal blocks all clicks (no close button, full-screen)
 type: bug
 area: ux
 priority: medium
-status: pending
+status: resolved
 created: 2026-06-22
+resolved: 2026-06-22
 discovered_in: phase 84 UAT
 resolves_phase:
 evidence: src/components/OnboardingGuide.tsx:49
 ---
+
+> **RESOLVED 2026-06-22.** `OnboardingGuide` now has a visible **X close button**
+> (`aria-label="Close onboarding"`), an **Escape** handler, and **backdrop-click**
+> dismiss — all set the `codepulse_onboarding_complete` flag, so the modal can no
+> longer trap the operator. Added `OnboardingGuide.test.tsx` (5 tests) covering the
+> localStorage gate + all three dismiss paths + "click inside the card does not
+> dismiss". Full suite green.
+
 
 ## Problem
 

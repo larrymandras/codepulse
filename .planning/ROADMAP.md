@@ -6,7 +6,7 @@
 - ✅ **v5.0 Advanced Visualization & Integrations** — Phases 59-70 (shipped 2026-05-25)
 - ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74 shipped light; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18; **76 Unified Graph Hub NOT shipped → deferred to v8.0** per 2026-06-18 reconciliation)
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
-- 🟦 **v8.0 Graph/KG Consolidation** — Phases 83-87 (**started 2026-06-18**) — unified Graphs hub + KG depth features
+- ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**started 2026-06-18, all phases complete + verified 2026-06-23**) — unified Graphs hub + KG depth features. Ready to close via `/gsd-complete-milestone`.
 - 🌱 **v9.0 Readability & Experience (seed)** — Phase 89 (**created 2026-06-22**) — readable theme system + editorial skin toggle (Matrix-Emerald is hard to read); Agent Room + 3D galaxy are candidate follow-ons
 
 ## Phases
@@ -199,7 +199,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
  (completed 2026-06-23)
 
-- [x] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points (completed 2026-06-23)
+- [x] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points (completed 2026-06-23; 4/4 plans, code review 1 BLOCKER + 4 warnings all fixed, verified 4/4 code + 6/6 in-browser UAT via Playwright, deployed to prod `tidy-whale-981`)
 
 ## Phase Details
 

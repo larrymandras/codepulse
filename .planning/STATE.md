@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: verifying
-stopped_at: Phase 87 context gathered
-last_updated: "2026-06-23T18:37:15.860Z"
+status: complete
+stopped_at: Phase 87 complete + verified (4/4 code + 6/6 in-browser UAT) + deployed to prod (tidy-whale-981); v8.0 milestone done
+last_updated: "2026-06-23T20:40:00.000Z"
 last_activity: 2026-06-23
 progress:
-  total_phases: 7
+  total_phases: 5
   completed_phases: 5
   total_plans: 17
   completed_plans: 17
-  percent: 71
+  percent: 100
 ---
 
 # Project State
@@ -21,18 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 87 — saved-views-temporal-diff
-**Last completed:** Phase 85 — Cross-Graph Navigation (GH-04), 4/4 plans, 2026-06-22. Shared `src/lib/focus-url.ts` (`buildFocusUrl`, normalized-EXACT `focusKeysMatch`, same-origin `decodeFromParam` guard) + `src/hooks/useFocusParam.ts` one-shot focus hook; forward links + `?from` return chips wired into Tool Galaxy (tool→owning-agent), CodeVaultGraph (agent→KG entities), KnowledgeGraph (destination). Code review fixed CR-01 (`?from` double-decode), WR-01 (backslash guard), WR-03 (hops clamp), WR-02 (centering rAF-retry via `src/lib/graph-center.ts`), WR-04 (KG reactive hydration). UAT demonstrated live in Playwright on the real graph: `telegram_tool → "Owning agent: Hildr" → /graphs?focus=vault:Hildr&from=… → "Back to Tool Galaxy"` round-trip; SC#2 gate confirmed (41 KG entities for agent_id=astridr). **Ingest hardening (same session):** `/runtime-ingest` now summarizes `graph_snapshot` in legacy `runtime_events` (`convex/ingestSummary.ts` `legacyEventData`) — was rejecting >1 MiB graphs at the legacy insert and silently capping the production cron; **deployed to `tidy-whale-981`**, and the full ~4,038-node real snapshot (astridr-repo 1500 + codepulse 1500 + vault 1038) is now live via the Phase 83 receiver. **Prior:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
+**Current focus:** v8.0 Graph/KG Consolidation — COMPLETE (phases 83-87 all shipped + verified). Ready to close via `/gsd-complete-milestone`; next active milestone is v9.0 Readability & Experience (Phase 89 seed).
+**Last completed:** Phase 87 — Saved Views + Temporal Diff (KG-10, KG-11), 4/4 plans, 2026-06-23. KG-10: global-scope `savedKgViews` Convex table (`by_shareToken`/`by_createdAt`) + `useSavedViews` hook (strips `searchQuery`, client `crypto.randomUUID()` token) + `KGViewsPopover` + one-shot `?view=<token>` share-link hydration (four-guard race protection). KG-11: `Point | Diff | Animate` temporal sub-mode toggle (Point unchanged, no regression); `useKgDiff`/`computeDiff` client-side set-arithmetic + `paintNodeDiff` green/red/amber/dimmed + DIFF legend; `useKgAnimation` client-synth frames + 20-entry LRU + transport. Code review found 1 BLOCKER (CR-01: animation prefetch shared the display token → stuck frame) + 4 warnings — **all fixed** (`bd58402`) with a renderHook regression test. Verifier: 4/4 code-level; **all 6 human UAT items confirmed PASS in a real browser** (Playwright vs auth-free :5174 + live Convex/Ástríðr). **Deployed to prod `tidy-whale-981`** (`npx convex deploy --yes`; `savedKgViews:list --prod` → `[]`). Also fixed 2 stale pre-existing test assertions (SwarmTaskNode 260→300px, KanbanCard text-xs selector) surfaced by the regression gate. **Prior:** Phase 85 — Cross-Graph Navigation (GH-04), 4/4 plans, 2026-06-22. Shared `src/lib/focus-url.ts` (`buildFocusUrl`, normalized-EXACT `focusKeysMatch`, same-origin `decodeFromParam` guard) + `src/hooks/useFocusParam.ts` one-shot focus hook; forward links + `?from` return chips wired into Tool Galaxy (tool→owning-agent), CodeVaultGraph (agent→KG entities), KnowledgeGraph (destination). Code review fixed CR-01 (`?from` double-decode), WR-01 (backslash guard), WR-03 (hops clamp), WR-02 (centering rAF-retry via `src/lib/graph-center.ts`), WR-04 (KG reactive hydration). UAT demonstrated live in Playwright on the real graph: `telegram_tool → "Owning agent: Hildr" → /graphs?focus=vault:Hildr&from=… → "Back to Tool Galaxy"` round-trip; SC#2 gate confirmed (41 KG entities for agent_id=astridr). **Ingest hardening (same session):** `/runtime-ingest` now summarizes `graph_snapshot` in legacy `runtime_events` (`convex/ingestSummary.ts` `legacyEventData`) — was rejecting >1 MiB graphs at the legacy insert and silently capping the production cron; **deployed to `tidy-whale-981`**, and the full ~4,038-node real snapshot (astridr-repo 1500 + codepulse 1500 + vault 1038) is now live via the Phase 83 receiver. **Prior:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 87 (saved-views-temporal-diff) — EXECUTING
-Plan: 4 of 4
-Next: Phase 87 (Saved Views + Temporal Diff, KG-10/KG-11) — the next `[ ]` phase. Run `/gsd-discuss-phase 87`. Before that, optionally run the 3 live-UI UAT checks for Phase 86 (see below).
-Status: Phase complete — ready for verification
+Phase: 87 (saved-views-temporal-diff) — ✅ COMPLETE + verified + deployed to prod
+Plan: 4 of 4 (all complete)
+Next: v8.0 is fully shipped (83-87). Close it with `/gsd-complete-milestone`, then activate v9.0 (Phase 89 — Readability & Experience). No remaining v8.0 work.
+Status: Milestone v8.0 complete
 Last activity: 2026-06-23
 
-Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83, 84, 85, 86)
+Progress bar: `██████████` 100% (5/5 v8.0 phases complete: 83, 84, 85, 86, 87)
 
 ## Milestone v8.0 Roadmap (2026-06-18)
 
@@ -42,7 +42,7 @@ Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83
 | 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | ✅ Complete + UAT passed (2026-06-22) |
 | 85 | Cross-Graph Navigation | GH-04 | ✅ Complete (4/4, 2026-06-22) |
 | 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | ✅ Complete (3/3, 2026-06-23) — KG-09 (community cluster renderer, Plans 01-02) + KG-08 (full-text Search lens, Plan 03, gated on Ástríðr /api/kg/search SEED) |
-| 87 | Saved Views + Temporal Diff | KG-10, KG-11 | Not started |
+| 87 | Saved Views + Temporal Diff | KG-10, KG-11 | ✅ Complete + verified + UAT (4/4 code, 6/6 in-browser) + deployed to prod (2026-06-23) |
 
 **Key sequencing constraint:** Phase 83 (receiver) must land before any rendering phase. Phase 86 (full-text search) carries a cross-repo dependency on a net-new Ástríðr `/api/kg/search` endpoint — flag at plan time.
 
