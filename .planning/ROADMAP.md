@@ -306,7 +306,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 87-03-PLAN.md — Temporal Diff: useKgDiff + Point|Diff|Animate toggle + paintNodeDiff + DIFF legend (KG-11)
+- [x] 87-03-PLAN.md — Temporal Diff: useKgDiff + Point|Diff|Animate toggle + paintNodeDiff + DIFF legend (KG-11)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -335,7 +335,7 @@ Plans:
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete   | 2026-06-23 |
-| 87. Saved Views + Temporal Diff | v8.0 | 2/4 | In Progress|  |
+| 87. Saved Views + Temporal Diff | v8.0 | 3/4 | In Progress|  |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
 

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
-stopped_at: Phase 87 context gathered
-last_updated: "2026-06-23T18:12:31.959Z"
+stopped_at: Phase 87 Plan 03 complete — temporal diff wired
+last_updated: "2026-06-23T18:23:16Z"
 last_activity: 2026-06-23
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 17
-  completed_plans: 15
+  completed_plans: 16
   percent: 57
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 ## Current Position
 
 Phase: 87 (saved-views-temporal-diff) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Next: Phase 87 (Saved Views + Temporal Diff, KG-10/KG-11) — the next `[ ]` phase. Run `/gsd-discuss-phase 87`. Before that, optionally run the 3 live-UI UAT checks for Phase 86 (see below).
 Status: Ready to execute
 Last activity: 2026-06-23
@@ -69,6 +69,13 @@ Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**Phase 87 Plan 03 decisions (2026-06-23):**
+
+- **paintNodeDiff closes over `diff` state** — avoids changing `ForceGraphCanvas` paintNode signature; closes over diff sets via `useCallback([selectedNodeId, diff])`.
+- **linkColorDiffFn/linkLineDashDiffFn as factory fns + useMemo([diff])** — prevents `ForceGraphCanvas` re-mounts on every render; diff edge fns recreated only when `diff` changes.
+- **isDiffActive flag drives canvas fork** — diff mode uses `diffGraphB` + diff paint fns; Point mode uses original `paintNode`/`linkColorFn` (no regression SC).
+- **diffEdgeKey duplicated in KnowledgeGraph.tsx** — avoids circular import with `useKgDiff`; comment documents sync invariant.
 
 **Phase 86 Plan 01 decisions (2026-06-23):**
 
