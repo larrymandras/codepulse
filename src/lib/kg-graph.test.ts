@@ -13,6 +13,8 @@ import {
   derivePredicates,
   deriveEntityTypes,
   ENTITY_TYPE_COLORS,
+  COMMUNITY_PALETTE,
+  communityColor,
   type KgPayload,
 } from "./kg-graph";
 import type {
@@ -356,5 +358,90 @@ describe("derivePredicates / deriveEntityTypes", () => {
     );
     expect(derivePredicates(g)).toEqual(["owns"]);
     expect(deriveEntityTypes(g)).toEqual(["person", "project"]);
+  });
+});
+
+// ── COMMUNITY_PALETTE + communityColor ──────────────────────────────────────
+
+describe("COMMUNITY_PALETTE", () => {
+  it("has exactly 8 entries", () => {
+    expect(COMMUNITY_PALETTE).toHaveLength(8);
+  });
+
+  it("does not include the #10b981 emerald accent color", () => {
+    expect(COMMUNITY_PALETTE).not.toContain("#10b981");
+  });
+
+  it("contains all 8 UI-SPEC locked hex values in exact slot order", () => {
+    // Slots specified in 86-UI-SPEC.md § Color (locked values):
+    const expected = [
+      "#60a5fa", // 0 — blue-400
+      "#f472b6", // 1 — pink-400
+      "#fbbf24", // 2 — amber-400
+      "#34d399", // 3 — emerald-400
+      "#a78bfa", // 4 — violet-400
+      "#22d3ee", // 5 — cyan-400
+      "#fb923c", // 6 — orange-400
+      "#a3e635", // 7 — lime-400
+    ];
+    expect(COMMUNITY_PALETTE).toEqual(expected);
+  });
+
+  it("slot 0 is #60a5fa (blue-400)", () => {
+    expect(COMMUNITY_PALETTE[0]).toBe("#60a5fa");
+  });
+
+  it("slot 3 is #34d399 (emerald-400 — lighter than accent)", () => {
+    expect(COMMUNITY_PALETTE[3]).toBe("#34d399");
+  });
+});
+
+describe("communityColor", () => {
+  it("returns null for null community", () => {
+    expect(communityColor(null)).toBeNull();
+  });
+
+  it("returns null for undefined community", () => {
+    expect(communityColor(undefined)).toBeNull();
+  });
+
+  it("returns slot 0 (#60a5fa) for community 0", () => {
+    expect(communityColor(0)).toBe("#60a5fa");
+  });
+
+  it("returns slot 3 (#34d399) for community 3", () => {
+    expect(communityColor(3)).toBe("#34d399");
+  });
+
+  it("wraps at 8: community 8 returns slot 0 (#60a5fa)", () => {
+    expect(communityColor(8)).toBe("#60a5fa");
+  });
+
+  it("wraps at 8: community 9 returns slot 1", () => {
+    expect(communityColor(9)).toBe(COMMUNITY_PALETTE[1]);
+  });
+
+  it("handles negative community via Math.abs: -1 returns slot 1", () => {
+    const result = communityColor(-1);
+    expect(result).toBe(COMMUNITY_PALETTE[1]);
+    expect(result).not.toBeNull();
+  });
+});
+
+// ── KgNode.community field threaded through toGraphData ──────────────────────
+
+describe("KgNode.community field", () => {
+  it("is null by default (no seed community)", () => {
+    const g = toGraphData(payload([ent("a", "person")], []));
+    const a = g.nodes.find((n) => n.id === "a")!;
+    expect(a.community).toBeNull();
+  });
+
+  it("threads community value from the entity seed", () => {
+    // Simulate a seed with a community field (as graphSnapshotNodes emit it)
+    const entityWithCommunity = { ...ent("a", "person"), community: 2 } as any;
+    const g = toGraphData({ entities: [entityWithCommunity], triples: [] });
+    const a = g.nodes.find((n) => n.id === "a")!;
+    expect(a.community).toBe(2);
   });
 });

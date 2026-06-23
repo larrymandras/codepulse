@@ -49,6 +49,9 @@ export interface KgNode {
   attributes: KgAttribute[];
   /** true when this node was synthesized from a triple endpoint (no entity row). */
   synthetic: boolean;
+  /** Community cluster id (from graphify snapshot or future KG community detection).
+   *  null = unclustered (vault nodes, un-clustered KG nodes). undefined = API hasn't emitted it yet. */
+  community?: number | null;
 }
 
 export interface KgAttribute {
@@ -110,6 +113,35 @@ export const ENTITY_TYPE_COLORS: { type: string; color: string }[] = [
   { type: "document", color: "#c084fc" }, // purple
   { type: "other", color: "#94a3b8" }, // slate — fallback
 ];
+
+/**
+ * Community-cluster palette — 8-slot categorical (Phase 86, KG-09).
+ * Assigned by `community % 8` so a given community id is stable across renders.
+ * Distinct from ENTITY_TYPE_COLORS and from the #10b981 emerald accent.
+ * Drawn as a halo ring around the node fill; both encodings coexist.
+ */
+export const COMMUNITY_PALETTE: string[] = [
+  "#60a5fa", // slot 0 — blue-400
+  "#f472b6", // slot 1 — pink-400
+  "#fbbf24", // slot 2 — amber-400
+  "#34d399", // slot 3 — emerald-400 (lighter than #10b981 accent — distinct)
+  "#a78bfa", // slot 4 — violet-400
+  "#22d3ee", // slot 5 — cyan-400
+  "#fb923c", // slot 6 — orange-400
+  "#a3e635", // slot 7 — lime-400
+];
+
+/**
+ * Return the community-cluster halo color for a node.
+ * Returns null when community is null/undefined (no halo drawn — SC#4 no-regression).
+ * Wraps via Math.abs(community) % 8 so any int/float is clamped to [0,7].
+ */
+export function communityColor(
+  community: number | null | undefined,
+): string | null {
+  if (community == null) return null;
+  return COMMUNITY_PALETTE[Math.abs(community) % 8];
+}
 
 const FALLBACK_COLOR =
   ENTITY_TYPE_COLORS[ENTITY_TYPE_COLORS.length - 1].color;
@@ -237,6 +269,7 @@ export function toGraphData(payload: KgPayload): KgGraphData {
         color: entityTypeColor(et),
         attributes: [],
         synthetic,
+        community: (seed as any)?.community ?? null, // ADD: thread from KgEntity once API emits it
       };
       nodeById.set(id, n);
     } else if (synthetic === false && seed?.name && n.synthetic) {
