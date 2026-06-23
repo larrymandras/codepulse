@@ -31,6 +31,8 @@ function renderControls(
     filters: KgFilters;
     onLens: (l: KgLens) => void;
     setFilter: <K extends keyof KgFilters>(key: K, value: KgFilters[K]) => void;
+    onSubMode: (m: "point" | "diff" | "animate") => void;
+    temporalSubMode: "point" | "diff" | "animate";
   }> = {},
 ) {
   const props = {
@@ -49,6 +51,16 @@ function renderControls(
     onDeleteView: vi.fn(),
     onCopyLink: vi.fn(),
     onSaveView: vi.fn(),
+    // Temporal sub-mode toggle (KG-11, Plan 03)
+    temporalSubMode: overrides.temporalSubMode ?? "point",
+    onSubMode: overrides.onSubMode ?? vi.fn(),
+    // Diff controls defaults
+    diffDateA: null,
+    diffDateB: null,
+    onChangeDiffDateA: vi.fn(),
+    onChangeDiffDateB: vi.fn(),
+    onCompare: vi.fn(),
+    diffLoading: false,
   };
   return render(<KGControls {...props} />);
 }
@@ -166,5 +178,80 @@ describe("KGControls — Search lens hint tooltip", () => {
     expect(searchTab.getAttribute("title")).toBe(
       "Full-text across fact text + relationship labels",
     );
+  });
+});
+
+describe("KGControls — Temporal sub-mode toggle (KG-11)", () => {
+  it("renders Point, Diff, and Animate sub-mode chips when lens=temporal", () => {
+    renderControls({ lens: "temporal" });
+    expect(screen.getByRole("button", { name: /^Point$/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Diff$/i })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Animate$/i })).toBeTruthy();
+  });
+
+  it("does NOT render sub-mode chips when lens is not temporal", () => {
+    renderControls({ lens: "overview" });
+    expect(screen.queryByRole("button", { name: /^Point$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Diff$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Animate$/i })).toBeNull();
+  });
+
+  it("clicking Diff chip calls onSubMode('diff')", () => {
+    const onSubMode = vi.fn();
+    renderControls({ lens: "temporal", onSubMode });
+    fireEvent.click(screen.getByRole("button", { name: /^Diff$/i }));
+    expect(onSubMode).toHaveBeenCalledWith("diff");
+  });
+
+  it("clicking Point chip calls onSubMode('point')", () => {
+    const onSubMode = vi.fn();
+    renderControls({ lens: "temporal", onSubMode, temporalSubMode: "diff" });
+    fireEvent.click(screen.getByRole("button", { name: /^Point$/i }));
+    expect(onSubMode).toHaveBeenCalledWith("point");
+  });
+
+  it("clicking Animate chip calls onSubMode('animate')", () => {
+    const onSubMode = vi.fn();
+    renderControls({ lens: "temporal", onSubMode });
+    fireEvent.click(screen.getByRole("button", { name: /^Animate$/i }));
+    expect(onSubMode).toHaveBeenCalledWith("animate");
+  });
+
+  it("Diff chip is marked active (aria-pressed=true) when temporalSubMode='diff'", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "diff" });
+    const diffChip = screen.getByRole("button", { name: /^Diff$/i });
+    expect(diffChip.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("Point chip is marked active (aria-pressed=true) when temporalSubMode='point'", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "point" });
+    const pointChip = screen.getByRole("button", { name: /^Point$/i });
+    expect(pointChip.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  // Regression guard: Point mode still renders the as-of date Input (SC — no regression)
+  it("Point sub-mode still renders the as-of date Input (regression guard)", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "point" });
+    // The as-of date input has id="kg-asof" — assert it is present
+    const asofInput = document.getElementById("kg-asof");
+    expect(asofInput).toBeTruthy();
+  });
+
+  it("Diff sub-mode does NOT render the as-of date Input", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "diff" });
+    const asofInput = document.getElementById("kg-asof");
+    expect(asofInput).toBeNull();
+  });
+
+  it("Diff sub-mode renders From and To date inputs", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "diff" });
+    expect(document.getElementById("kg-diff-from")).toBeTruthy();
+    expect(document.getElementById("kg-diff-to")).toBeTruthy();
+  });
+
+  it("Compare button is disabled when dateA is null", () => {
+    renderControls({ lens: "temporal", temporalSubMode: "diff" });
+    const compareBtn = screen.getByRole("button", { name: /Compare/i });
+    expect((compareBtn as HTMLButtonElement).disabled).toBe(true);
   });
 });

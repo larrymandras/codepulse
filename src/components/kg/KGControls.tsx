@@ -12,6 +12,7 @@ import {
 import { entityTypeColor } from "../../lib/kg-graph";
 import type { KgLens, KgFilters } from "../../hooks/useKnowledgeGraph";
 import KGViewsPopover from "./KGViewsPopover";
+import KGDiffControls from "./KGDiffControls";
 import type { SavedKgView } from "../../hooks/useSavedViews";
 import type { Id } from "../../../convex/_generated/dataModel";
 
@@ -25,6 +26,8 @@ const LENSES: { id: KgLens; label: string; hint: string }[] = [
 ];
 
 const ALL = "__all__";
+
+export type TemporalSubMode = "point" | "diff" | "animate";
 
 export interface KGControlsProps {
   lens: KgLens;
@@ -42,7 +45,23 @@ export interface KGControlsProps {
   onDeleteView: (id: Id<"savedKgViews">) => void;
   onCopyLink: (shareToken: string) => void;
   onSaveView: (name: string) => void;
+  // Temporal sub-mode toggle (KG-11, Plan 03)
+  temporalSubMode: TemporalSubMode;
+  onSubMode: (m: TemporalSubMode) => void;
+  // Diff controls (KG-11, Plan 03)
+  diffDateA: string | null;
+  diffDateB: string | null;
+  onChangeDiffDateA: (d: string | null) => void;
+  onChangeDiffDateB: (d: string | null) => void;
+  onCompare: () => void;
+  diffLoading: boolean;
 }
+
+const TEMPORAL_SUB_MODES: { id: TemporalSubMode; label: string }[] = [
+  { id: "point", label: "Point" },
+  { id: "diff", label: "Diff" },
+  { id: "animate", label: "Animate" },
+];
 
 export default function KGControls({
   lens,
@@ -59,6 +78,14 @@ export default function KGControls({
   onDeleteView,
   onCopyLink,
   onSaveView,
+  temporalSubMode,
+  onSubMode,
+  diffDateA,
+  diffDateB,
+  onChangeDiffDateA,
+  onChangeDiffDateB,
+  onCompare,
+  diffLoading,
 }: KGControlsProps) {
   return (
     <div className="space-y-3">
@@ -103,6 +130,26 @@ export default function KGControls({
         </div>
       </div>
 
+      {/* Temporal sub-mode toggle (KG-11) — appears only when lens === "temporal" */}
+      {lens === "temporal" && (
+        <div className="flex items-center gap-1.5">
+          {TEMPORAL_SUB_MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => onSubMode(m.id)}
+              aria-pressed={temporalSubMode === m.id}
+              className={`px-3 py-1.5 rounded-[var(--radius-sm)] text-[10px] font-mono uppercase tracking-wide border transition-colors ${
+                temporalSubMode === m.id
+                  ? "bg-primary/15 border-primary/50 text-primary"
+                  : "bg-card/60 border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Filter row — lens-aware */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Entity search — entity lens only */}
@@ -146,8 +193,9 @@ export default function KGControls({
           </div>
         )}
 
-        {/* As-of scrubber — temporal lens only */}
-        {lens === "temporal" && (
+        {/* Temporal lens body — branches by sub-mode */}
+        {lens === "temporal" && temporalSubMode === "point" && (
+          /* Point sub-mode: existing single as-of behavior — NO REGRESSION (SC) */
           <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
             <label htmlFor="kg-asof" className="whitespace-nowrap">
               As of
@@ -176,6 +224,25 @@ export default function KGControls({
                 Now
               </Button>
             )}
+          </div>
+        )}
+
+        {lens === "temporal" && temporalSubMode === "diff" && (
+          /* Diff sub-mode: From/To date pickers + Compare button */
+          <KGDiffControls
+            dateA={diffDateA}
+            dateB={diffDateB}
+            onChangeA={onChangeDiffDateA}
+            onChangeB={onChangeDiffDateB}
+            onCompare={onCompare}
+            loading={diffLoading}
+          />
+        )}
+
+        {/* Animate sub-mode: stub placeholder (Plan 04 fills this) */}
+        {lens === "temporal" && temporalSubMode === "animate" && (
+          <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground/60">
+            Animation controls coming in Plan 04.
           </div>
         )}
 
