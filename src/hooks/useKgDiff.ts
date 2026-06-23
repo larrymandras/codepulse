@@ -221,6 +221,10 @@ export function useKgDiff(
     const token = ++reqRef.current;
     setLoading(true);
     setError(null);
+    // Clear any prior result so a failed re-compare cannot render a stale diff
+    // beneath the error banner (D-08). Repopulated on success below.
+    setGraphA(null);
+    setGraphB(null);
 
     try {
       const [respA, respB] = await Promise.all([

@@ -20,7 +20,7 @@ import { centerNodeWhenReady } from "../lib/graph-center";
 import { buildFocusUrl } from "../lib/focus-url";
 import { fetchSearch, type KgSearchHit } from "../lib/kgApi";
 import { AstridrApiError } from "../lib/astridrApi";
-import type { KgLens } from "../hooks/useKnowledgeGraph";
+import type { KgLens, KgFilters } from "../hooks/useKnowledgeGraph";
 import type { TemporalSubMode } from "../components/kg/KGControls";
 import type { SavedKgView } from "../hooks/useSavedViews";
 import { toast } from "sonner";
@@ -343,6 +343,25 @@ export default function KnowledgeGraph() {
     [savedViews],
   );
 
+  // User-initiated lens/filter changes diverge from any loaded saved view, so
+  // clear the active-view highlight (WR-01). These wrap the raw setters ONLY
+  // where they're handed to KGControls — programmatic load/hydration keeps
+  // using setLens/setFilter directly and re-sets activeViewId afterward.
+  const handleUserLens = useCallback(
+    (l: KgLens) => {
+      setActiveViewId(null);
+      setLens(l);
+    },
+    [setLens],
+  );
+  const handleUserFilter = useCallback(
+    <K extends keyof KgFilters>(key: K, value: KgFilters[K]) => {
+      setActiveViewId(null);
+      setFilter(key, value);
+    },
+    [setFilter],
+  );
+
   const handleCopyLink = useCallback(
     (shareToken: string) => {
       navigator.clipboard.writeText(savedViews.buildShareUrl(shareToken));
@@ -577,9 +596,9 @@ export default function KnowledgeGraph() {
       <SectionErrorBoundary name="KG Controls">
         <KGControls
           lens={lens}
-          onLens={setLens}
+          onLens={handleUserLens}
           filters={filters}
-          setFilter={setFilter}
+          setFilter={handleUserFilter}
           entityTypes={entityTypes}
           predicates={predicates}
           loading={loading}

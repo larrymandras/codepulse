@@ -34,7 +34,9 @@ export const save = mutation({
     if (trimmed.length > 100) {
       throw new Error("View name cannot exceed 100 characters.");
     }
-    return await ctx.db.insert("savedKgViews", args);
+    // Persist the validated (trimmed) name — don't rely on the client having
+    // trimmed it. The server is the validation boundary.
+    return await ctx.db.insert("savedKgViews", { ...args, name: trimmed });
   },
 });
 

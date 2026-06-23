@@ -5,7 +5,8 @@
  *   2. LRU cache — insertion-order eviction at 20-entry cap (D-09)
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
 
 // ── Extracted testable helpers (mirrored from useKgAnimation.ts) ─────────────
 
@@ -164,5 +165,49 @@ describe("LRU cache eviction (D-09)", () => {
     cacheSet("w", 40);
     expect(cache.has("x")).toBe(false);
     expect([...cache.keys()]).toEqual(["y", "z", "w"]);
+  });
+});
+
+// ── CR-01 regression: current frame must actually display ────────────────────
+// The lookahead prefetch used to share the primary fetch's monotonic token and
+// bump it synchronously, so the primary fetch's `.then` saw a stale token and
+// returned early — setCurrentGraph never fired and the canvas stuck. Frame 0 of
+// a multi-frame range is a cache miss WITH uncached lookahead frames, the exact
+// trigger. This renders the real hook and asserts the current frame populates.
+describe("useKgAnimation — current frame display (CR-01 regression)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  it("populates currentGraph on a cache-miss frame even when lookahead frames are uncached", async () => {
+    const graphFor = (asOf: string) => ({ nodes: [{ id: asOf }], links: [] });
+
+    vi.doMock("../lib/kgApi", () => ({
+      fetchOverview: vi.fn(({ asOf }: { asOf: string }) => Promise.resolve({ asOf })),
+    }));
+    vi.doMock("../lib/kg-graph", () => ({
+      normalizeOverview: (r: { asOf: string }) => r,
+      toGraphData: (r: { asOf: string }) => graphFor(r.asOf),
+    }));
+
+    const { useKgAnimation } = await import("./useKgAnimation");
+
+    // 3-frame range → frame 0 is a cache miss with 2 uncached lookahead frames.
+    const { result } = renderHook(() =>
+      useKgAnimation({
+        rangeStart: "2025-01-01",
+        rangeEnd: "2025-01-03",
+        interval: "day",
+      }),
+    );
+
+    expect(result.current.frames).toHaveLength(3);
+
+    await waitFor(() => {
+      expect(result.current.currentGraph).not.toBeNull();
+    });
+
+    expect(result.current.currentGraph).toEqual(graphFor("2025-01-01"));
+    expect(result.current.frameError).toBeNull();
   });
 });

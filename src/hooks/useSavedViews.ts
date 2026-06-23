@@ -87,7 +87,7 @@ export function useSavedViews() {
    * deployment.
    */
   const buildShareUrl = (shareToken: string): string => {
-    return `${window.location.origin}/knowledge-graph?view=${shareToken}`;
+    return `${window.location.origin}/knowledge-graph?view=${encodeURIComponent(shareToken)}`;
   };
 
   return {

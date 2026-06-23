@@ -143,30 +143,36 @@ export function useKgAnimation({
       return;
     }
 
+    // Prefetch ~2 frames ahead (fire-and-forget). Prefetch ONLY populates the
+    // cache by immutable asOf key — it never touches display state — so it must
+    // NOT share/bump the primary display token (CR-01). Sharing it made the
+    // primary fetch's token go stale before it resolved, so setCurrentGraph
+    // never fired and the canvas stuck on the previous/empty frame. Caching a
+    // fetched frame is always safe regardless of which frame is current.
+    const prefetchAhead = () => {
+      for (const offset of [1, 2]) {
+        const ahead = frames[currentFrameIndex + offset];
+        if (ahead && !cacheRef.current.has(ahead)) {
+          fetchOverview({ asOf: ahead })
+            .then((resp) => {
+              cacheSet(cacheRef.current, ahead, toGraphData(normalizeOverview(resp)));
+            })
+            .catch(() => {
+              /* prefetch failure is silent — primary fetch surfaces errors */
+            });
+        }
+      }
+    };
+
     // Cache hit: serve immediately, no fetch (Pitfall 4)
     if (cacheRef.current.has(key)) {
       setCurrentGraph(cacheRef.current.get(key)!);
       setFrameError(null);
-
-      // Prefetch ~2 frames ahead (cache-miss only, fire-and-forget)
-      for (const offset of [1, 2]) {
-        const ahead = frames[currentFrameIndex + offset];
-        if (ahead && !cacheRef.current.has(ahead)) {
-          const prefetchToken = ++frameReqRef.current;
-          fetchOverview({ asOf: ahead })
-            .then((resp) => {
-              if (prefetchToken !== frameReqRef.current) return; // stale drop
-              cacheSet(cacheRef.current, ahead, toGraphData(normalizeOverview(resp)));
-            })
-            .catch(() => {
-              /* prefetch failure is silent — per-frame fetch error handles it if needed */
-            });
-        }
-      }
+      prefetchAhead();
       return;
     }
 
-    // Cache miss: fetch with monotonic token
+    // Cache miss: fetch with monotonic token (display stale-drop, Pitfall 4)
     const token = ++frameReqRef.current;
     fetchOverview({ asOf: key })
       .then((resp) => {
@@ -176,28 +182,14 @@ export function useKgAnimation({
         setCurrentGraph(g);
         setFrameError(null);
       })
-      .catch((err) => {
+      .catch(() => {
         if (token !== frameReqRef.current) return; // stale drop
         // D-08 graceful-degrade: per-frame inline error, no hard block
         setFrameError(`Could not load snapshot for ${key}.`);
         // Keep currentGraph at last successful frame (don't null it)
       });
 
-    // Prefetch ~2 frames ahead (fire-and-forget, cache-checked)
-    for (const offset of [1, 2]) {
-      const ahead = frames[currentFrameIndex + offset];
-      if (ahead && !cacheRef.current.has(ahead)) {
-        const prefetchToken = ++frameReqRef.current;
-        fetchOverview({ asOf: ahead })
-          .then((resp) => {
-            if (prefetchToken !== frameReqRef.current) return;
-            cacheSet(cacheRef.current, ahead, toGraphData(normalizeOverview(resp)));
-          })
-          .catch(() => {
-            /* prefetch failure is silent */
-          });
-      }
-    }
+    prefetchAhead();
   }, [currentFrameIndex, frames]);
 
   // ── Playback timer (NOT requestAnimationFrame — 1fps cadence) ─────────────
