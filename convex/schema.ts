@@ -1035,6 +1035,21 @@ export default defineSchema({
     updatedAt: v.float64(),                    // epoch seconds — when CodePulse received it
   }),
 
+  // KG-10: Named saved views for the KG Explorer. Global scope (D-02) — no owner
+  // field. Each view captures lens + filters (minus searchQuery, D-06) + focus
+  // entityName + hops (D-05). Share links use the opaque shareToken (D-03).
+  savedKgViews: defineTable({
+    name: v.string(),           // operator-given label (1..100 chars)
+    lens: v.string(),           // KgLens value
+    filters: v.any(),           // KgFilters minus searchQuery
+    focus: v.string(),          // entityName for Entity/Temporal lens (D-05)
+    hops: v.float64(),          // hop depth (D-05)
+    shareToken: v.string(),     // opaque random UUID for share links (D-03)
+    createdAt: v.float64(),     // epoch ms
+  })
+    .index("by_shareToken", ["shareToken"])
+    .index("by_createdAt", ["createdAt"]),
+
   emailDeliveryLog: defineTable({
     alertId: v.optional(v.id("alerts")),
     ruleId: v.string(),
