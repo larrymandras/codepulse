@@ -201,7 +201,7 @@ Auto-hides when diff mode is off or diff data is not loaded.
 
 | Element | Copy |
 |---------|------|
-| Primary CTA (save view) | Button label: `Save view` · confirm button after name entry: `Save` |
+| Primary CTA (save view) | Button label: `Save view` · confirm button after name entry: `Save view` |
 | Save-name placeholder | `Name this view…` |
 | Views popover heading | `SAVED VIEWS` |
 | Empty views state | Heading: `No saved views yet` · Body: `Save the current lens, filters, and focus as a named view — retrieve it in any session.` |
