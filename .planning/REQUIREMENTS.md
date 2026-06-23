@@ -13,7 +13,7 @@
 
 ### Graph Hub (GH)
 
-- [ ] **GH-01**: A `graphSnapshots` Convex table + `runtimeIngest` dispatch for the `graph_snapshot` event (idempotent on `snapshotId`, full-replacement) + a read query API — so Ástríðr's nightly code/vault snapshots are stored instead of dropped. *(Fixes the current dropped-events bug; mirrors the v7.0 Forge receiver pattern.)*
+- [x] **GH-01**: A `graphSnapshots` Convex table + `runtimeIngest` dispatch for the `graph_snapshot` event (idempotent on `snapshotId`, full-replacement) + a read query API — so Ástríðr's nightly code/vault snapshots are stored instead of dropped. *(Fixes the current dropped-events bug; mirrors the v7.0 Forge receiver pattern.)*
 - [x] **GH-02**: A `/graphs` landing route renders the pushed code (graphify) + vault (Obsidian) graph from Convex via `useQuery`, reusing `ForceGraphCanvas`, with truncation explicitly indicated when caps are hit
 - [x] **GH-03**: KG Explorer, Tool Galaxy, MCP Inventory, and the code/vault graph are all reachable from one unified Graphs hub with consistent interactions (replaces the `placeholder:true` "Graphs Hub" nav stub)
 - [x] **GH-04**: Cross-graph navigation — selecting a tool → its owning agent → a related KG entity deep-links across the graph surfaces where the data supports it
@@ -130,14 +130,14 @@ All 14 requirements (FI-01 … FI-14) satisfied and verified live. Archived to [
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| GH-01 | Phase 83 | Complete — verified (live round-trip, 2026-06-18) |
-| GH-02 | Phase 84 | Pending — not started |
-| GH-03 | Phase 84 | Pending — not started |
-| GH-04 | Phase 85 | Pending — not started |
-| KG-08 | Phase 86 | Pending — not started |
-| KG-09 | Phase 86 | Pending — not started |
-| KG-10 | Phase 87 | Pending — not started |
-| KG-11 | Phase 87 | Pending — not started |
+| GH-01 | Phase 83 | ✅ Complete — verified (live round-trip, 2026-06-18) |
+| GH-02 | Phase 84 | ✅ Complete — verified + UAT passed (2026-06-22) |
+| GH-03 | Phase 84 | ✅ Complete — verified + UAT passed (2026-06-22) |
+| GH-04 | Phase 85 | ✅ Complete — verified + UAT passed (2026-06-22) |
+| KG-08 | Phase 86 | ✅ Complete — verified + UAT passed (2026-06-23); live search data-gated on Ástríðr /api/kg/search (SEED-008) |
+| KG-09 | Phase 86 | ✅ Complete — verified + UAT passed (2026-06-23); live clustering data-gated on Ástríðr community emission (D-10) |
+| KG-10 | Phase 87 | ✅ Complete — verified + UAT passed (2026-06-23) |
+| KG-11 | Phase 87 | ✅ Complete — verified + UAT passed (2026-06-23) |
 | DS-01 | Phase 71 | ✅ Shipped (light) — `index.css` token layer |
 | DS-02 | Phase 71 | ✅ Shipped (light) — MetricCard/EntityRow/StatusBadge/GlassPanel/SectionHeader |
 | DS-03 | Phase 71 | ✅ Shipped (light) — GRAPHS+CONSOLE nav clusters (`DashboardLayout.tsx`) |
