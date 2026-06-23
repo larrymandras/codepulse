@@ -39,9 +39,17 @@ v5.0 added 12 phases:
 
 > **Shipped 2026-06-23** (started 2026-06-18). 5 phases (83-87), 17 plans, 8/8 requirements (GH-01..04, KG-08..11); milestone audit PASSED. Completed the Unified Graph Hub that Phase 76 (v6.0) never shipped and deepened the KG Explorer (Phase 74): graph-snapshot receiver (stops dropping Ástríðr's nightly snapshots — the full ~4,038-node real graph is now live) + `/graphs` hub + cross-graph navigation + KG search / clustering / saved-views / temporal-diff. Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live community clustering needs `community` emission, D-10) — the CodePulse side is complete and degrades gracefully today. Archive: `milestones/v8.0-ROADMAP.md`; audit: `milestones/v8.0-MILESTONE-AUDIT.md`.
 
-## Next Milestone: v9.0 Readability & Experience (seed)
+## Current Milestone: v9.0 Readability & Experience
 
-> **Seeded 2026-06-22.** Readable theme system + editorial skin toggle (the dark Matrix-Emerald default is hard to read). Phase 89 in progress — `ThemeSwitcher` shipped (toggles `data-theme` cyan/emerald/amber via the existing `index.css` palettes; default skin now Electric Cyan). Agent Room + 3D galaxy are candidate follow-ons. Fresh requirements to be defined via `/gsd-new-milestone`.
+**Goal:** Make CodePulse readable and richer to operate — a readability-first theme system plus three experience surfaces (Agent Room, 3D graph mode, durable analytics).
+
+**Target features:**
+- **Readable themes + editorial skin toggle** (Phase 89, partly in flight) — token-driven theming (finish the Phase 71 audit), a WCAG-AA readability-first theme, the "Midnight Aubergine" editorial skin, keep Matrix-Emerald as an option, a no-flash persisted switcher honoring `prefers-reduced-motion`, and an a11y/contrast pass.
+- **Agent Room** — audit the existing room/war-room/voice/`hr/` scaffolding, then complete it into a usable multi-persona surface (scope finalized after the research/audit pass).
+- **3D Memory Galaxy** — an optional React Three Fiber 3D render mode toggle for `CodeVaultGraph` (reuses the existing graph data; reverses the prior "3D out of scope" call — see Key Decisions).
+- **Analytics Rollup** (Phase 88, quick-unblock already deployed) — a durable Convex 16 MiB/exec read-limit fix via ingest-time rollups, replacing the fragile `.take()` count caps.
+
+> **Seeded 2026-06-22**, formalized 2026-06-23 via `/gsd-new-milestone`. Phase 89 already has `ThemeSwitcher` shipped (default skin now Electric Cyan); Phase 88 quick-unblock deployed (`edb614c`). Continues phase numbering — Agent Room + 3D galaxy become Phase 90+. Requirements + roadmap defined below / in ROADMAP.md.
 
 ## Closed Milestone: v6.0 Agentic OS Front-End
 
@@ -115,8 +123,8 @@ Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREM
 - Mobile app — web-first, responsive layouts sufficient
 - Multi-tenant — single operator dashboard
 - OpenTelemetry collector — Convex handles persistence
-- React Three Fiber / 3D visualizations — not operationally useful
 - Bidirectional PagerDuty sync — inbound webhook complexity disproportionate for single operator
+- ~~React Three Fiber / 3D visualizations~~ — **reversed in v9.0** (3D Memory Galaxy, opt-in mode for CodeVaultGraph); see Key Decisions
 
 ## Context
 
@@ -154,6 +162,7 @@ Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREM
 | Force-directed (react-force-graph-2d) for relationship graphs (v6.0) | Reverses the v5.0 "force-directed out of scope" call: dagre suits DAGs (call graph), but the Obsidian vault graph and Ástríðr KG are cyclic entity-relationship graphs where force layout is the right fit. Already validated by the merged Obsidian graph. | KG-viz + Obsidian graph use it; dagre retained for the call graph |
 | Cross-graph nav = normalized-EXACT match, no fuzzy (v8.0, Phase 85) | A wrong jump is worse than a missing one — `focusKeysMatch` is strict equality on normalized keys; a non-match shows no link (SC#3). `decodeFromParam` constrains the return target to same-origin in-app paths. | Zero-false-positive forward links; `from`-param return chips |
 | Summarize `graph_snapshot` in legacy `runtime_events` (v8.0, Phase 85) | The full {nodes,links} blob (>1 MiB) blew Convex's per-doc limit on the legacy insert, rejecting the whole ingest and silently capping the production cron; the row-based `graphSnapshots` receiver already holds the full graph. | Legacy row stores counts+sources only; full snapshots ingest (~4k nodes live) |
+| Reverse "3D out of scope" for an opt-in 3D Memory Galaxy (v9.0) | The v5.0 blanket "React Three Fiber / 3D — not operationally useful" call was right for *forced* 3D, but the code/vault/KG graph is a spatial entity-relationship structure where an **opt-in** 3D mode adds genuine exploratory value without regressing the 2D default. Scoped narrowly: a render-mode toggle on the existing `CodeVaultGraph`, reusing its data — not a new immersive page. | 3D is opt-in only; 2D `ForceGraphCanvas` stays the default render path |
 
 ## Evolution
 
@@ -173,4 +182,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-23 — v8.0 Graph/KG Consolidation SHIPPED (phases 83-87, 8/8 requirements, milestone audit PASSED, archived + tagged). KG-08/KG-09 live output data-gated on cross-repo Ástríðr deltas. Next: v9.0 Readability & Experience (Phase 89 in progress) — define fresh requirements via `/gsd-new-milestone`; Phase 88 (Analytics Rollup) remains a standalone scaffolded option.*
+*Last updated: 2026-06-23 — **v9.0 Readability & Experience started** via `/gsd-new-milestone`. Scope: readable themes + editorial skin toggle (Phase 89), Agent Room (audit-first), 3D Memory Galaxy (opt-in R3F mode — reverses prior 3D out-of-scope), and Analytics Rollup (Phase 88, folded in). Continues phase numbering (Agent Room + 3D = Phase 90+). Prior: v8.0 Graph/KG Consolidation SHIPPED (phases 83-87, 8/8 requirements, milestone audit PASSED, archived + tagged).*
