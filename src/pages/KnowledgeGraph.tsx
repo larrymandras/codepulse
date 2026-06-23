@@ -15,6 +15,7 @@ import { useFocusParam } from "../hooks/useFocusParam";
 import { centerNodeWhenReady } from "../lib/graph-center";
 import {
   ENTITY_TYPE_COLORS,
+  communityColor,
   type KgNode,
   type KgLink,
 } from "../lib/kg-graph";
@@ -184,6 +185,16 @@ export default function KnowledgeGraph() {
     return ENTITY_TYPE_COLORS.filter((c) => present.has(c.type));
   }, [graph.nodes]);
 
+  // Community legend: sorted unique non-null community ids from the current graph.
+  // Auto-hides when no node carries community (SC#4 no-regression).
+  const presentCommunities = useMemo(() => {
+    const ids = new Set<number>();
+    for (const n of graph.nodes) {
+      if (n.community != null) ids.add(n.community);
+    }
+    return [...ids].sort((a, b) => a - b);
+  }, [graph.nodes]);
+
   const isEmpty = graph.nodes.length === 0;
   const needsEntityName =
     lens === "entity" && !filters.entityName.trim();
@@ -280,6 +291,27 @@ export default function KnowledgeGraph() {
                 <span className="inline-block w-4 border-t-2 border-red-500" />
                 contradiction
               </span>
+              {presentCommunities.length > 0 && (
+                <>
+                  <span className="mt-1 border-t border-border pt-1 text-muted-foreground uppercase tracking-wide">
+                    Communities
+                  </span>
+                  {presentCommunities.map((c) => (
+                    <span
+                      key={c}
+                      className="flex items-center gap-2 text-muted-foreground"
+                    >
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{
+                          backgroundColor: communityColor(c) ?? "transparent",
+                        }}
+                      />
+                      Cluster {c}
+                    </span>
+                  ))}
+                </>
+              )}
             </div>
 
             {loading ? (
@@ -316,6 +348,8 @@ export default function KnowledgeGraph() {
                 linkLineDashFn={linkLineDashFn}
                 linkDirectionalArrow
                 focusSet={focusSet}
+                clusterForce={true}
+                communityColorFn={(n: any) => communityColor((n as KgNode).community)}
                 onNodeClick={(n: any) => selectNode(n.id)}
                 onBackgroundClick={() => {
                   selectNode(null);
