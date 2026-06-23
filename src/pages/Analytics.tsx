@@ -262,7 +262,7 @@ export default function Analytics() {
               height={120}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">No execution depth data yet.</p>
+            <p className="text-base text-muted-foreground">No execution depth data yet.</p>
           )}
         </GlassPanel>
       </SectionErrorBoundary>
@@ -272,13 +272,13 @@ export default function Analytics() {
         <SectionHeader title="Advisor Strategy" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <GlassPanel className="p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Savings</p>
+            <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Savings</p>
             <p className="text-2xl font-semibold tabular-nums mt-1">
               ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
             </p>
           </GlassPanel>
           <GlassPanel className="p-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
+            <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
             <p className="text-2xl font-semibold tabular-nums mt-1">
               {advisorRecent && advisorRecent.length > 0
                 ? `${Math.round((advisorRecent.filter(e => e.used).length / advisorRecent.length) * 100)}%`
@@ -300,7 +300,7 @@ export default function Analytics() {
             <TableBody>
               {(advisorRecent ?? []).slice(0, 10).map((evt, i) => (
                 <TableRow key={i}>
-                  <TableCell className="font-mono text-xs">{evt.provider}</TableCell>
+                  <TableCell className="font-mono text-sm">{evt.provider}</TableCell>
                   <TableCell className="tabular-nums">${evt.costUsd.toFixed(4)}</TableCell>
                   <TableCell className="tabular-nums">${evt.standardCostUsd.toFixed(4)}</TableCell>
                   <TableCell className="tabular-nums" style={{ color: "var(--status-ok)" }}>

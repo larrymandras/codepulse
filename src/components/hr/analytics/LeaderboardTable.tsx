@@ -23,7 +23,7 @@ export function LeaderboardTable({
 }: LeaderboardTableProps) {
   if (rows.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
+      <p className="text-base text-muted-foreground py-8 text-center">
         No metrics yet
       </p>
     );

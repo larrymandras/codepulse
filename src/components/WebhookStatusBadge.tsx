@@ -39,7 +39,7 @@ export function WebhookStatusBadge({
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-[var(--status-ok)] shrink-0" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           {deliveredAt ? `Delivered ${relativeTime(deliveredAt)}` : "Delivered"}
         </span>
       </span>
@@ -50,7 +50,7 @@ export function WebhookStatusBadge({
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-[var(--status-error)] shrink-0" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Failed after 3 attempts
         </span>
       </span>
@@ -61,7 +61,7 @@ export function WebhookStatusBadge({
     return (
       <span className="inline-flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-[var(--status-warn)] shrink-0" />
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Retrying ({attempts}/3)
         </span>
       </span>

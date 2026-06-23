@@ -20,7 +20,7 @@ export function NewSkillsBanner({
 
       <div className="flex items-center gap-3 relative z-10">
         <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-        <span className="text-sm text-primary font-mono font-bold tracking-widest uppercase relative z-10">
+        <span className="text-base text-primary font-mono font-bold tracking-widest uppercase relative z-10">
         {count} new skill{count !== 1 ? "s" : ""} auto-categorized.
       </span>
       </div>
@@ -28,13 +28,13 @@ export function NewSkillsBanner({
       <div className="flex items-center gap-4 relative z-10">
         <button
           onClick={onReview}
-          className="text-[10px] font-mono tracking-widest uppercase font-bold text-primary hover:text-primary/70 transition-colors"
+          className="text-xs font-mono tracking-widest uppercase font-bold text-primary hover:text-primary/70 transition-colors"
         >
           [ Review ]
         </button>
         <button
           onClick={onAcceptAll}
-          className="text-[10px] font-mono tracking-widest uppercase font-bold text-muted-foreground hover:text-foreground transition-colors"
+          className="text-xs font-mono tracking-widest uppercase font-bold text-muted-foreground hover:text-foreground transition-colors"
         >
           [ Accept All ]
         </button>

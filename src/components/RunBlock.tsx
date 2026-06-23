@@ -77,7 +77,7 @@ export function RunBlock({ block, streaming = false }: RunBlockProps) {
     default:
       return (
         <div className="bg-(--muted) border border-(--border) rounded p-3">
-          <pre className="font-mono text-xs whitespace-pre-wrap text-(--muted-foreground)">
+          <pre className="font-mono text-sm whitespace-pre-wrap text-(--muted-foreground)">
             {JSON.stringify(block, null, 2)}
           </pre>
         </div>

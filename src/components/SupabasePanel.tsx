@@ -21,11 +21,11 @@ export default function SupabasePanel() {
 
   const renderSection = (title: string, records: any[]) => (
     <div>
-      <h3 className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">
+      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
         {title}
       </h3>
       {records.length === 0 ? (
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-base text-gray-500 py-4 text-center">
           No health checks recorded
         </p>
       ) : (
@@ -36,16 +36,16 @@ export default function SupabasePanel() {
               className="flex items-center justify-between bg-gray-900/50 rounded-lg px-4 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className="text-sm font-mono text-gray-200">
+                <span className="text-base font-mono text-gray-200">
                   {s.service}
                 </span>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded ${statusColor(s.status)}`}
+                  className={`text-sm px-2 py-0.5 rounded ${statusColor(s.status)}`}
                 >
                   {s.status}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-sm text-gray-500">
                 {s.responseTimeMs != null && <span>{s.responseTimeMs}ms</span>}
                 <span>{formatTimestamp(s.checkedAt)}</span>
               </div>
@@ -58,7 +58,7 @@ export default function SupabasePanel() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Supabase Health<InfoTooltip text="Supabase service health: database, auth, storage, realtime, and edge functions" />
       </h2>
       <div className="space-y-4">

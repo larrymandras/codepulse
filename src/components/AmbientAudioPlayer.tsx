@@ -81,7 +81,7 @@ export default function AmbientAudioPlayer() {
         onClick={toggle}
         aria-label={enabled ? "Mute ambient audio" : "Enable ambient audio"}
         title={enabled ? "Ambient audio ON — click to mute (M)" : "Ambient audio OFF — click to enable (M)"}
-        className={`p-1.5 rounded-lg transition-colors text-xs flex items-center gap-1.5 ${
+        className={`p-1.5 rounded-lg transition-colors text-sm flex items-center gap-1.5 ${
           enabled
             ? "bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30"
             : "text-gray-500 hover:text-gray-300 hover:bg-gray-800"
@@ -100,7 +100,7 @@ export default function AmbientAudioPlayer() {
           </span>
         )}
         {!enabled && (
-          <span className="text-[9px] uppercase tracking-wider opacity-60">Audio</span>
+          <span className="text-[11px] uppercase tracking-wider opacity-60">Audio</span>
         )}
       </button>
 
@@ -112,7 +112,7 @@ export default function AmbientAudioPlayer() {
           aria-label={`Ambient preset: ${PRESETS.find((p) => p.value === preset)?.label ?? preset}. Click to change`}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className="px-2 py-1 rounded-lg text-[10px] text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors truncate max-w-[80px]"
+          className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-gray-200 hover:bg-gray-800 transition-colors truncate max-w-[80px]"
           title="Change ambient preset"
         >
           {PRESETS.find((p) => p.value === preset)?.label ?? preset}
@@ -135,7 +135,7 @@ export default function AmbientAudioPlayer() {
                 setPreset(p.value);
                 setOpen(false);
               }}
-              className={`w-full text-left px-3 py-1.5 text-xs transition-colors ${
+              className={`w-full text-left px-3 py-1.5 text-sm transition-colors ${
                 preset === p.value
                   ? "text-emerald-400 bg-emerald-600/10"
                   : "text-gray-400 hover:text-gray-200 hover:bg-gray-800"

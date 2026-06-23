@@ -29,7 +29,7 @@ export default function WizardStepper({
                 className="flex flex-col items-center gap-1.5 group"
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border transition-colors ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium border transition-colors ${
                     completed
                       ? "bg-primary border-primary text-primary-foreground cursor-pointer group-hover:bg-primary/80"
                       : active
@@ -40,7 +40,7 @@ export default function WizardStepper({
                   {completed ? <Check className="h-3.5 w-3.5" /> : i + 1}
                 </div>
                 <span
-                  className={`text-[11px] whitespace-nowrap ${
+                  className={`text-sm whitespace-nowrap ${
                     active
                       ? "text-foreground font-medium"
                       : completed
@@ -68,10 +68,10 @@ export default function WizardStepper({
 
       {/* Mobile: compact */}
       <div className="sm:hidden flex items-center justify-center gap-2 py-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-sm text-muted-foreground">
           Step {currentStep + 1} of {totalSteps}
         </span>
-        <span className="text-xs font-medium text-foreground">
+        <span className="text-sm font-medium text-foreground">
           {labels[currentStep]}
         </span>
       </div>

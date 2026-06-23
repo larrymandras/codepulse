@@ -21,14 +21,14 @@ export default function PulseChart({ events }: PulseChartProps) {
 
   return (
     <div className="p-6 h-full flex flex-col">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Activity Pulse
         <InfoTooltip text="Real-time event activity over the last hour, grouped into 1-minute buckets" />
       </h2>
       <div className="flex-1 min-h-[200px]">
         {data.length === 0 ? (
-          <p className="text-xs font-mono text-muted-foreground py-12 text-center">No activity data yet</p>
+          <p className="text-sm font-mono text-muted-foreground py-12 text-center">No activity data yet</p>
         ) : (
           <FlexBarChart data={data} height={200} />
         )}

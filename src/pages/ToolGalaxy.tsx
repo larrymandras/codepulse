@@ -235,7 +235,7 @@ function GalaxyCanvas({
   if (loading) {
     return (
       <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-        <div className="flex items-center gap-3 text-primary/70 font-mono text-sm">
+        <div className="flex items-center gap-3 text-primary/70 font-mono text-base">
           <RefreshCw className="h-4 w-4 animate-spin" />
           Assembling capability galaxy...
         </div>
@@ -259,7 +259,7 @@ function GalaxyCanvas({
       {noTelemetry && (
         <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-3">
           <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
-          <div className="text-xs font-mono leading-relaxed">
+          <div className="text-sm font-mono leading-relaxed">
             <p className="text-foreground">No usage telemetry yet.</p>
             <p className="text-muted-foreground mt-0.5">
               {graph.stats.toolCount} tools are installed, but no tool calls have
@@ -278,7 +278,7 @@ function GalaxyCanvas({
           <button
             aria-label={"Return to " + surfaceLabel(fromParam)}
             onClick={() => navigate(fromParam)}
-            className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
           >
             <ChevronLeft className="h-3 w-3" />
             {"Back to " + surfaceLabel(fromParam)}
@@ -295,7 +295,7 @@ function GalaxyCanvas({
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
 
           {/* Legend */}
-          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-[10px] font-mono">
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono">
             <LegendDot color="rgb(16,185,129)" label="Tool (bright = recent)" />
             <LegendDot color={COLORS.agent} label="Agent / persona" />
             <LegendDot color={COLORS.server} label="MCP server" />
@@ -307,10 +307,10 @@ function GalaxyCanvas({
           {isEmpty ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center px-6">
               <AlertTriangle className="h-6 w-6 text-primary/50" />
-              <p className="text-sm text-muted-foreground font-mono">
+              <p className="text-base text-muted-foreground font-mono">
                 No capabilities match the current filters.
               </p>
-              <p className="text-xs text-muted-foreground/60">
+              <p className="text-sm text-muted-foreground/60">
                 Tools, MCP servers, and agent call edges will appear here once
                 Ástríðr telemetry arrives.
               </p>
@@ -369,7 +369,7 @@ function GalaxyCanvas({
           >
             {/* Panel header */}
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
                 Node Details
               </span>
               <button
@@ -385,20 +385,20 @@ function GalaxyCanvas({
               <div className="space-y-3">
                 {/* Name */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
                     name
                   </p>
-                  <p className="font-bold text-sm text-foreground">
+                  <p className="font-bold text-base text-foreground">
                     {selectedNode.name}
                   </p>
                 </div>
 
                 {/* Kind */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
                     kind
                   </p>
-                  <p className="text-xs font-mono text-muted-foreground">
+                  <p className="text-sm font-mono text-muted-foreground">
                     {selectedNode.kind}
                   </p>
                 </div>
@@ -406,10 +406,10 @@ function GalaxyCanvas({
                 {/* Call count (tools only) */}
                 {selectedNode.kind === "tool" && (
                   <div>
-                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
+                    <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">
                       calls
                     </p>
-                    <p className="text-xs font-mono text-muted-foreground">
+                    <p className="text-sm font-mono text-muted-foreground">
                       {selectedNode.callCount}
                       {selectedNode.errorCount > 0 &&
                         ` · ${selectedNode.errorCount} errors`}
@@ -424,7 +424,7 @@ function GalaxyCanvas({
                     <div
                       aria-label="Related across graphs navigation links"
                     >
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+                      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2">
                         RELATED ACROSS GRAPHS
                       </p>
                       <SectionErrorBoundary name="Cross-graph links">
@@ -443,10 +443,10 @@ function GalaxyCanvas({
                           }}
                         >
                           <ArrowRight className="h-3 w-3 text-primary shrink-0" />
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             Owning agent:
                           </span>
-                          <span className="text-xs font-semibold text-foreground truncate">
+                          <span className="text-sm font-semibold text-foreground truncate">
                             {ownerMatch.label}
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
@@ -457,7 +457,7 @@ function GalaxyCanvas({
                 )}
               </div>
             ) : (
-              <p className="text-xs font-mono text-muted-foreground text-center mt-8">
+              <p className="text-sm font-mono text-muted-foreground text-center mt-8">
                 Select a node to inspect
               </p>
             )}
@@ -516,7 +516,7 @@ export default function ToolGalaxy() {
             Tool Galaxy
             <InfoTooltip text="Force-directed map of every installed tool, MCP server, and the agents that call them. Node brightness = recency, size = usage; dashed amber rings flag installed-but-unused (orphan) tools." />
           </h1>
-          <p className="text-xs text-muted-foreground font-mono mt-1">
+          <p className="text-sm text-muted-foreground font-mono mt-1">
             Capability topology from discoveredTools · mcpServers · callGraphEdges · kits
           </p>
         </div>
@@ -527,7 +527,7 @@ export default function ToolGalaxy() {
             value={agentFilter ?? ALL}
             onValueChange={(v) => setAgentFilter(v === ALL ? null : v)}
           >
-            <SelectTrigger className="w-44 font-mono text-xs">
+            <SelectTrigger className="w-44 font-mono text-sm">
               <SelectValue placeholder="All agents" />
             </SelectTrigger>
             <SelectContent>
@@ -544,7 +544,7 @@ export default function ToolGalaxy() {
             value={mcpFilter ?? ALL}
             onValueChange={(v) => setMcpFilter(v === ALL ? null : v)}
           >
-            <SelectTrigger className="w-44 font-mono text-xs">
+            <SelectTrigger className="w-44 font-mono text-sm">
               <SelectValue placeholder="All MCP servers" />
             </SelectTrigger>
             <SelectContent>

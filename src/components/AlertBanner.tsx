@@ -21,7 +21,7 @@ export default function AlertBanner() {
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
         <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${counts.critical > 0 ? "bg-red-500" : "bg-orange-500"}`} />
       </span>
-      <span className="text-sm font-medium text-gray-200">
+      <span className="text-base font-medium text-gray-200">
         {urgentCount} active {urgentCount === 1 ? "alert" : "alerts"}
         {counts.critical > 0 && (
           <span className="text-red-400 ml-1">
@@ -34,7 +34,7 @@ export default function AlertBanner() {
           </span>
         )}
       </span>
-      <span className="ml-auto text-xs text-gray-500">View all &rarr;</span>
+      <span className="ml-auto text-sm text-gray-500">View all &rarr;</span>
     </button>
   );
 }

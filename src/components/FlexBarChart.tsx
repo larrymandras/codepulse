@@ -57,7 +57,7 @@ export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarC
                   );
                 })}
               </div>
-              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-primary/50 px-3 py-1.5 rounded text-[10px] font-mono tracking-widest text-primary whitespace-nowrap z-10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-primary/50 px-3 py-1.5 rounded text-xs font-mono tracking-widest text-primary whitespace-nowrap z-10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
                 <div className="font-semibold mb-1">{d.label}</div>
                 {d.segments.map((seg) => (
                   <div key={seg.label}>{seg.label}: {seg.value.toFixed(2)}</div>
@@ -78,7 +78,7 @@ export function FlexBarChart({ data, height = '100%', onSegmentClick }: FlexBarC
               className="w-full bg-gradient-to-t from-primary/10 to-primary/60 group-hover:from-primary/30 group-hover:to-primary border-t border-primary/50 group-hover:border-primary transition-all shadow-none group-hover:shadow-[var(--glow-sm)] rounded-t-[2px]"
               style={{ height: `${((d.value ?? 0) / maxVal) * 100}%` }}
             />
-            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-primary/50 px-3 py-1.5 rounded text-[10px] font-mono tracking-widest text-primary whitespace-nowrap z-10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block bg-card border border-primary/50 px-3 py-1.5 rounded text-xs font-mono tracking-widest text-primary whitespace-nowrap z-10 shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
               {d.label}: {d.value}
             </div>
           </div>

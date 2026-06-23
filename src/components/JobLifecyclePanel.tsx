@@ -46,13 +46,13 @@ export default function JobLifecyclePanel({ jobs }: JobLifecyclePanelProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Job Lifecycle
-        <span className="ml-2 text-xs text-gray-500 font-normal">{entries.length}</span>
+        <span className="ml-2 text-sm text-gray-500 font-normal">{entries.length}</span>
         <InfoTooltip text="Async jobs tracked by Astridr runtime — pipelines, delegated tasks, and background operations." />
       </h2>
       {entries.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">No jobs recorded yet</p>
+        <p className="text-base text-gray-500 py-6 text-center">No jobs recorded yet</p>
       ) : (
         <div className="space-y-1 max-h-[360px] overflow-y-auto">
           {entries.map(({ jobId, latest, events }) => {
@@ -65,23 +65,23 @@ export default function JobLifecyclePanel({ jobs }: JobLifecyclePanelProps) {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot(latest.status)}`} />
-                    <span className="text-sm font-mono text-gray-200 truncate">{jobId}</span>
-                    <span className={`text-xs capitalize flex-shrink-0 ${statusColor(latest.status)}`}>
+                    <span className="text-base font-mono text-gray-200 truncate">{jobId}</span>
+                    <span className={`text-sm capitalize flex-shrink-0 ${statusColor(latest.status)}`}>
                       {latest.status}
                     </span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                     {latest.trigger && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
                         {latest.trigger}
                       </span>
                     )}
-                    <span className="text-xs text-gray-600">{relativeTime(latest.timestamp)}</span>
-                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-sm text-gray-600">{relativeTime(latest.timestamp)}</span>
+                    <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-xs">
+                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
                     <span className="text-gray-500 block mb-1">State Transitions</span>
                     <div className="space-y-0.5">
                       {events.map((evt: any, i: number) => (

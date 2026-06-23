@@ -11,8 +11,8 @@ export default function SessionComparison() {
   if (rawSessions === undefined) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
-        <p className="text-gray-500 text-sm animate-pulse">Loading...</p>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
+        <p className="text-gray-500 text-base animate-pulse">Loading...</p>
       </div>
     );
   }
@@ -20,8 +20,8 @@ export default function SessionComparison() {
   if (rawSessions.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
-        <p className="text-gray-500 text-sm">No sessions yet.</p>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison<InfoTooltip text="Side-by-side comparison of recent sessions by model, events, duration, and status" /></h2>
+        <p className="text-gray-500 text-base">No sessions yet.</p>
       </div>
     );
   }
@@ -33,9 +33,9 @@ export default function SessionComparison() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison</h2>
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison</h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-base">
           <thead>
             <tr className="text-gray-400 border-b border-gray-700">
               <th className="text-left py-2 pr-3 font-medium">Session ID</th>
@@ -59,13 +59,13 @@ export default function SessionComparison() {
                   }`}
                   onClick={() => navigate(`/sessions/${session.sessionId}`)}
                 >
-                  <td className="py-2 pr-3 text-gray-200 font-mono text-xs">
+                  <td className="py-2 pr-3 text-gray-200 font-mono text-sm">
                     {session.sessionId.length > 12
                       ? session.sessionId.slice(0, 12) + "..."
                       : session.sessionId}
                   </td>
-                  <td className="py-2 px-3 text-gray-300 text-xs">
-                    {session.model ? session.model : <span className="text-muted-foreground italic text-xs">untagged</span>}
+                  <td className="py-2 px-3 text-gray-300 text-sm">
+                    {session.model ? session.model : <span className="text-muted-foreground italic text-sm">untagged</span>}
                   </td>
                   <td className="py-2 px-3 text-right text-gray-300">
                     {session.eventCount}
@@ -75,7 +75,7 @@ export default function SessionComparison() {
                   </td>
                   <td className="py-2 pl-3">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                      className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${
                         session.status === "active"
                           ? "bg-green-900/40 text-green-400"
                           : session.status === "completed"

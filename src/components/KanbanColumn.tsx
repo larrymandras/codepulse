@@ -62,7 +62,7 @@ export function KanbanColumn({
         onMouseLeave={() => setIsHovered(false)}
       >
         <span
-          className="text-[10px] uppercase tracking-wider text-(--muted-foreground) whitespace-nowrap"
+          className="text-xs uppercase tracking-wider text-(--muted-foreground) whitespace-nowrap"
           style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
         >
           {columnLabel}
@@ -87,7 +87,7 @@ export function KanbanColumn({
     >
       {/* Column header */}
       <div className="px-3 py-2 border-b border-(--border) flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-(--muted-foreground)">
+        <span className="text-sm font-semibold uppercase tracking-wide text-(--muted-foreground)">
           {columnLabel}
           <span className="ml-2 font-normal">({tasks.length})</span>
         </span>
@@ -121,7 +121,7 @@ export function KanbanColumn({
         {/* Empty state */}
         {tasks.length === 0 && (
           <div className="flex-1 flex items-center justify-center border border-dashed border-(--border) p-4">
-            <span className="text-xs text-(--muted-foreground) text-center">
+            <span className="text-sm text-(--muted-foreground) text-center">
               Drop tasks here
             </span>
           </div>

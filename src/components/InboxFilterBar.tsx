@@ -40,7 +40,7 @@ export function InboxFilterBar({ filter, counts, onChange }: InboxFilterBarProps
           <button
             key={tab.id}
             className={[
-              "text-sm px-3 py-2.5 transition-colors",
+              "text-base px-3 py-2.5 transition-colors",
               isActive
                 ? "border-b-2 border-(--primary) text-(--foreground) font-medium"
                 : "text-(--muted-foreground) hover:text-(--foreground) border-b-2 border-transparent",
@@ -49,7 +49,7 @@ export function InboxFilterBar({ filter, counts, onChange }: InboxFilterBarProps
           >
             {tab.label}
             {count > 0 && (
-              <span className="ml-1.5 text-xs bg-(--muted) text-(--foreground) px-1.5 py-0.5 rounded-full">
+              <span className="ml-1.5 text-sm bg-(--muted) text-(--foreground) px-1.5 py-0.5 rounded-full">
                 {count}
               </span>
             )}

@@ -64,13 +64,13 @@ export default function GithubActionsPanel() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         GitHub Actions
         <InfoTooltip text="Workflow run status for automated sync checks and CI/CD pipelines" />
       </h2>
 
       {/* Summary bar */}
-      <div className="flex items-center gap-3 mb-3 text-xs text-gray-400">
+      <div className="flex items-center gap-3 mb-3 text-sm text-gray-400">
         {lastRun ? (
           <>
             <span>
@@ -95,8 +95,8 @@ export default function GithubActionsPanel() {
 
       {runs.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-sm text-gray-400">No workflow runs recorded yet</p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-base text-gray-400">No workflow runs recorded yet</p>
+          <p className="text-sm text-gray-500 mt-1">
             Runs will appear after the sync-check workflow executes
           </p>
         </div>
@@ -111,19 +111,19 @@ export default function GithubActionsPanel() {
               >
                 <div className="flex items-center gap-2.5 min-w-0">
                   <span
-                    className={`text-sm flex-shrink-0 ${si.color} ${si.spin ? "animate-spin" : ""}`}
+                    className={`text-base flex-shrink-0 ${si.color} ${si.spin ? "animate-spin" : ""}`}
                   >
                     {si.icon}
                   </span>
-                  <span className="text-sm text-gray-200 truncate">
+                  <span className="text-base text-gray-200 truncate">
                     {run.workflowName}
                   </span>
-                  <span className="text-xs text-gray-500 flex-shrink-0">
+                  <span className="text-sm text-gray-500 flex-shrink-0">
                     {shortRepo(run.repo)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2.5 flex-shrink-0 ml-2">
-                  <span className="text-[11px] text-gray-500">
+                  <span className="text-sm text-gray-500">
                     {relativeTime(run.triggeredAt)}
                   </span>
                   {run.runUrl && (
@@ -131,7 +131,7 @@ export default function GithubActionsPanel() {
                       href={run.runUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-blue-400/70 hover:text-blue-300 transition-colors"
+                      className="text-xs text-blue-400/70 hover:text-blue-300 transition-colors"
                     >
                       View
                     </a>

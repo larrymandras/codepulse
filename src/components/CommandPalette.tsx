@@ -226,7 +226,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               >
                 <Terminal className="mr-2 h-4 w-4" />
                 {cmd.name}
-                <span className="ml-auto text-xs text-muted-foreground">
+                <span className="ml-auto text-sm text-muted-foreground">
                   {cmd.category}
                 </span>
               </CommandItem>

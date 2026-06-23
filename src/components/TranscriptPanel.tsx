@@ -80,7 +80,7 @@ export function TranscriptPanel({ chunks, live }: TranscriptPanelProps) {
           className="space-y-3 p-4"
         >
           {chunks.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
+            <p className="text-base text-muted-foreground text-center py-8">
               Waiting for conversation to begin.
             </p>
           ) : (

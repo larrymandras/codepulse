@@ -28,7 +28,7 @@ export function FavoriteSkills({ skills, onLaunch, onToggleFavorite }: FavoriteS
 
   return (
     <div className="mb-8">
-      <h2 className="text-[10px] font-mono font-bold text-amber-400/80 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+      <h2 className="text-xs font-mono font-bold text-amber-400/80 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
         <span className="relative flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
           <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-400"></span>
@@ -61,14 +61,14 @@ export function FavoriteSkills({ skills, onLaunch, onToggleFavorite }: FavoriteS
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent translate-y-[-100%] group-hover:translate-y-[100%] transition-transform duration-1000 pointer-events-none" />
               
               <div className="flex items-center justify-center w-6 h-6 rounded bg-background border shadow-sm shrink-0" style={{ borderColor: `${hex}30` }}>
-                <span className="text-sm">{skill.categoryIcon}</span>
+                <span className="text-base">{skill.categoryIcon}</span>
               </div>
               
               <div className="flex flex-col min-w-0 pr-4">
-                <span className="text-xs font-mono font-bold text-white truncate">
+                <span className="text-sm font-mono font-bold text-white truncate">
                   {skill.displayName}
                 </span>
-                <span className="text-[8px] font-mono text-muted-foreground uppercase tracking-wider truncate">
+                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider truncate">
                   {skill.name}
                 </span>
               </div>

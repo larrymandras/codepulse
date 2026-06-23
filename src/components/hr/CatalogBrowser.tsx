@@ -53,14 +53,14 @@ export default function CatalogBrowser({
       />
 
       {error && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-sm">
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-base">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
           <button
             onClick={() => {
               setQuery(query);
             }}
-            className="ml-auto text-xs underline hover:no-underline"
+            className="ml-auto text-sm underline hover:no-underline"
           >
             Retry
           </button>
@@ -83,7 +83,7 @@ export default function CatalogBrowser({
       </div>
 
       {!loading && !error && results.length === 0 && query && (
-        <p className="text-center text-sm text-muted-foreground py-8">
+        <p className="text-center text-base text-muted-foreground py-8">
           No archetypes found. Try adjusting your search or filters.
         </p>
       )}
@@ -106,7 +106,7 @@ export default function CatalogBrowser({
             )}
 
             {previewError && (
-              <p className="text-sm text-destructive py-4">{previewError}</p>
+              <p className="text-base text-destructive py-4">{previewError}</p>
             )}
 
             {previewEntry && (
@@ -115,20 +115,20 @@ export default function CatalogBrowser({
                   <h2 className="text-lg font-semibold text-foreground">
                     {previewEntry.name}
                   </h2>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
                     {previewEntry.category}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   {previewEntry.description}
                 </p>
                 {previewEntry.body && (
-                  <div className="text-sm text-foreground/80 whitespace-pre-wrap border-t border-border/30 pt-3">
+                  <div className="text-base text-foreground/80 whitespace-pre-wrap border-t border-border/30 pt-3">
                     {previewEntry.body}
                   </div>
                 )}
                 {previewEntry.source && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Source: {previewEntry.source}
                   </p>
                 )}
@@ -138,7 +138,7 @@ export default function CatalogBrowser({
                       setPreviewId(null);
                       onSelectEntry(previewEntry);
                     }}
-                    className="text-sm font-medium bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
+                    className="text-base font-medium bg-primary hover:bg-primary/90 text-primary-foreground px-4 py-2 rounded-lg transition-colors"
                   >
                     Onboard This Agent
                   </button>

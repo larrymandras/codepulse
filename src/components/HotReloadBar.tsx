@@ -28,7 +28,7 @@ export default function HotReloadBar({ status, errorMessage }: HotReloadBarProps
   }
 
   return (
-    <div className="flex items-center gap-2 h-6 text-xs transition-opacity duration-200">
+    <div className="flex items-center gap-2 h-6 text-sm transition-opacity duration-200">
       {status === "pending" && (
         <>
           <Loader2 className="animate-spin h-4 w-4" />

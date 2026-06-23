@@ -23,7 +23,7 @@ export default function SecurityStats() {
         >
           <div className="flex items-center gap-2 mb-1">
             <span className={`w-2 h-2 rounded-full ${s.dot}`} />
-            <p className={`text-xs uppercase tracking-wide ${s.color}`}>{s.label}</p>
+            <p className={`text-sm uppercase tracking-wide ${s.color}`}>{s.label}</p>
           </div>
           <span className="text-2xl font-semibold text-gray-100">
             {counts ? counts[s.key] ?? 0 : "--"}

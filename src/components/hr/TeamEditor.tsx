@@ -96,14 +96,14 @@ function SortableMember({ agentId, agent, onRemove }: SortableMemberProps) {
         status="idle"
       />
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold font-mono tracking-wide text-foreground truncate group-hover:text-primary transition-colors">
+        <p className="text-base font-bold font-mono tracking-wide text-foreground truncate group-hover:text-primary transition-colors">
           {agent?.name ?? agentId}
         </p>
       </div>
       {agent?.tier && (
         <Badge
           variant="secondary"
-          className={`text-[9px] font-mono tracking-widest uppercase px-2 py-0.5 ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
+          className={`text-[11px] font-mono tracking-widest uppercase px-2 py-0.5 ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
         >
           {agent.tier}
         </Badge>
@@ -130,7 +130,7 @@ function DragPreview({ agent }: { agent: RosterAgent | undefined }) {
         size="sm"
         status="idle"
       />
-      <span className="text-sm font-medium">{agent?.name ?? "Agent"}</span>
+      <span className="text-base font-medium">{agent?.name ?? "Agent"}</span>
     </div>
   );
 }
@@ -286,7 +286,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
   if (teamId && !existingTeam && teams.length > 0) {
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
-        <p className="text-sm text-muted-foreground">Team not found.</p>
+        <p className="text-base text-muted-foreground">Team not found.</p>
         <Button variant="outline" size="sm" onClick={() => navigate("/hr/teams")}>
           Back to Teams
         </Button>
@@ -301,7 +301,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
         <h2 className="text-lg font-semibold text-foreground">
           {isEditMode ? "Edit Team" : "New Team"}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           {isEditMode
             ? "Update team members and details."
             : "Create a reusable team preset for war room launches."}
@@ -313,7 +313,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
         <div className="space-y-2">
           <label
             htmlFor="team-name"
-            className="text-sm font-medium text-foreground"
+            className="text-base font-medium text-foreground"
           >
             Team Name *
           </label>
@@ -327,7 +327,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
         <div className="space-y-2">
           <label
             htmlFor="team-desc"
-            className="text-sm font-medium text-foreground"
+            className="text-base font-medium text-foreground"
           >
             Description
           </label>
@@ -351,7 +351,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
           {/* Left panel — Available Agents */}
           <div className="border border-border/50 rounded-xl p-5 flex flex-col gap-4 bg-card/80 backdrop-blur glow-card shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.1)] transition-all">
-            <h3 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
+            <h3 className="text-base font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary/50" />
               Available Agents
             </h3>
@@ -366,7 +366,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
             </div>
             <div className="flex-1 overflow-auto max-h-[350px] space-y-1.5">
               {availableAgents.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-8">
+                <p className="text-sm text-muted-foreground text-center py-8">
                   {agents.length === 0
                     ? "No agents registered"
                     : "All agents are in the team"}
@@ -384,14 +384,14 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
                     status="idle"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="text-base font-medium text-foreground truncate">
                       {agent.name}
                     </p>
                   </div>
                   {agent.tier && (
                     <Badge
                       variant="secondary"
-                      className={`text-[10px] ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
+                      className={`text-xs ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
                     >
                       {agent.tier}
                     </Badge>
@@ -405,7 +405,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
           {/* Right panel — Team Members */}
           <div className="border border-primary/20 rounded-xl p-5 flex flex-col gap-4 bg-primary/5 backdrop-blur glow-card shadow-[inset_0_0_20px_rgba(16,185,129,0.05)] hover:shadow-[inset_0_0_30px_rgba(16,185,129,0.1)] transition-all relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <h3 className="text-sm font-bold font-mono tracking-wide text-primary uppercase flex items-center gap-2">
+            <h3 className="text-base font-bold font-mono tracking-wide text-primary uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               Team Members ({memberIds.length})
             </h3>
@@ -415,7 +415,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
             >
               <div className="flex-1 overflow-auto max-h-[390px] space-y-1.5">
                 {memberIds.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-8">
+                  <p className="text-sm text-muted-foreground text-center py-8">
                     Click agents on the left to add them to this team.
                   </p>
                 )}

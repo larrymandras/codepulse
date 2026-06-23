@@ -35,7 +35,7 @@ function TagInput({
         {value.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded"
+            className="inline-flex items-center gap-1 px-2 py-0.5 text-sm bg-primary/10 text-primary rounded"
           >
             {tag}
             <button
@@ -58,7 +58,7 @@ function TagInput({
           }
         }}
         placeholder={placeholder}
-        className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+        className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
       />
     </div>
   );
@@ -87,7 +87,7 @@ export default function IdentityStep() {
         <h2 className="text-base font-medium text-foreground">
           Agent Identity
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Define who this agent is.
         </p>
       </div>
@@ -96,7 +96,7 @@ export default function IdentityStep() {
       <div className="space-y-4">
         {/* Agent ID */}
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Agent ID
           </label>
           <input
@@ -111,13 +111,13 @@ export default function IdentityStep() {
               },
             })}
             placeholder="my-agent"
-            className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
-          <p className="text-[11px] text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Unique identifier (lowercase, hyphens allowed)
           </p>
           {identityErrors?.agentId && (
-            <p className="text-xs text-destructive mt-1">
+            <p className="text-sm text-destructive mt-1">
               {identityErrors.agentId.message}
             </p>
           )}
@@ -125,16 +125,16 @@ export default function IdentityStep() {
 
         {/* Display Name */}
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Display Name
           </label>
           <input
             {...register("identity.displayName")}
             placeholder="My Agent"
-            className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           />
           {identityErrors?.displayName && (
-            <p className="text-xs text-destructive mt-1">
+            <p className="text-sm text-destructive mt-1">
               {identityErrors.displayName.message}
             </p>
           )}
@@ -142,12 +142,12 @@ export default function IdentityStep() {
 
         {/* Tier */}
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Tier
           </label>
           <select
             {...register("identity.tier")}
-            className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+            className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             {TIER_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -156,7 +156,7 @@ export default function IdentityStep() {
             ))}
           </select>
           {identityErrors?.tier && (
-            <p className="text-xs text-destructive mt-1">
+            <p className="text-sm text-destructive mt-1">
               {identityErrors.tier.message}
             </p>
           )}
@@ -164,7 +164,7 @@ export default function IdentityStep() {
 
         {/* Description */}
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Description
           </label>
           <textarea
@@ -172,16 +172,16 @@ export default function IdentityStep() {
             rows={3}
             maxLength={500}
             placeholder="What does this agent do?"
-            className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
+            className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none"
           />
-          <p className="text-[11px] text-muted-foreground mt-1 text-right">
+          <p className="text-sm text-muted-foreground mt-1 text-right">
             {description.length}/500
           </p>
         </div>
 
         {/* Profiles */}
         <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">
+          <label className="block text-sm font-medium text-foreground mb-1.5">
             Profiles
           </label>
           <TagInput
@@ -194,19 +194,19 @@ export default function IdentityStep() {
 
       {/* Avatar section */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-foreground">Avatar</h3>
+        <h3 className="text-base font-medium text-foreground">Avatar</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Image upload */}
           <div>
-            <p className="text-xs text-muted-foreground mb-2">Profile Image</p>
+            <p className="text-sm text-muted-foreground mb-2">Profile Image</p>
             {imageStorageId ? (
               <div className="space-y-2">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center text-xs text-muted-foreground border border-border/40">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center text-sm text-muted-foreground border border-border/40">
                   Uploaded
                 </div>
                 <button
                   onClick={() => setValue("identity.imageStorageId", undefined)}
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-sm text-muted-foreground hover:text-foreground"
                 >
                   Remove
                 </button>
@@ -221,7 +221,7 @@ export default function IdentityStep() {
           </div>
           {/* Emoji fallback */}
           <div>
-            <p className="text-xs text-muted-foreground mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               Emoji (fallback)
             </p>
             <div className="flex items-center gap-2">
@@ -239,7 +239,7 @@ export default function IdentityStep() {
               />
             </div>
             {imageStorageId && emoji && (
-              <p className="text-[11px] text-muted-foreground mt-1.5">
+              <p className="text-sm text-muted-foreground mt-1.5">
                 Image is primary; emoji shown as overlay.
               </p>
             )}
@@ -251,7 +251,7 @@ export default function IdentityStep() {
       <div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {showAdvanced ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -265,19 +265,19 @@ export default function IdentityStep() {
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-border/30">
             {/* Reports To */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Reports To
               </label>
               <input
                 {...register("identity.reportsTo")}
                 placeholder="parent-agent-id"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             {/* Channels */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Channels
               </label>
               <TagInput
@@ -289,7 +289,7 @@ export default function IdentityStep() {
 
             {/* Budget Fraction */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Budget Fraction (0-1)
               </label>
               <input
@@ -301,13 +301,13 @@ export default function IdentityStep() {
                   valueAsNumber: true,
                 })}
                 placeholder="0.10"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             {/* Timeout */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Timeout (seconds)
               </label>
               <input
@@ -317,13 +317,13 @@ export default function IdentityStep() {
                   valueAsNumber: true,
                 })}
                 placeholder="300"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             {/* Max Rounds */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Max Rounds
               </label>
               <input
@@ -331,7 +331,7 @@ export default function IdentityStep() {
                 min="1"
                 {...register("identity.maxRounds", { valueAsNumber: true })}
                 placeholder="10"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
           </div>

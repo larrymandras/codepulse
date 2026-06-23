@@ -79,7 +79,7 @@ function RiskBadge({ level }: { level: RiskLevel }) {
   };
   return (
     <span
-      className={`inline-block text-xs font-semibold px-1.5 py-0.5 rounded ${styles[level]}`}
+      className={`inline-block text-sm font-semibold px-1.5 py-0.5 rounded ${styles[level]}`}
     >
       {labels[level]}
     </span>
@@ -112,7 +112,7 @@ function AlertInlineActions({ alertId }: { alertId: Id<"alerts"> }) {
   return (
     <div className="flex items-center gap-1 mt-2">
       <button
-        className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors"
+        className="text-sm px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors"
         onClick={handleAcknowledge}
       >
         Acknowledge
@@ -120,7 +120,7 @@ function AlertInlineActions({ alertId }: { alertId: Id<"alerts"> }) {
       <MuteDurationPicker
         onSelect={handleMuteSelect}
         trigger={
-          <button className="text-xs px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <button className="text-sm px-2 py-1 rounded bg-muted text-muted-foreground hover:text-foreground transition-colors">
             Mute
           </button>
         }
@@ -188,26 +188,26 @@ export function InboxCard({
       <div className="flex items-start justify-between gap-2 mb-1">
         <div className="flex flex-col gap-0.5 min-w-0">
           <span
-            className={`text-sm font-semibold truncate ${item.read ? "text-(--muted-foreground)" : "text-(--foreground)"}`}
+            className={`text-base font-semibold truncate ${item.read ? "text-(--muted-foreground)" : "text-(--foreground)"}`}
           >
             {item.title}
           </span>
           {item.agentName && (
-            <span className="text-xs text-(--muted-foreground)">
+            <span className="text-sm text-(--muted-foreground)">
               {item.agentName}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {item.riskLevel && <RiskBadge level={item.riskLevel} />}
-          <span className="text-xs text-(--muted-foreground)">
+          <span className="text-sm text-(--muted-foreground)">
             {relativeTime(item.timestamp)}
           </span>
         </div>
       </div>
 
       {/* Message body */}
-      <p className="text-sm text-(--muted-foreground) mb-3 line-clamp-2">
+      <p className="text-base text-(--muted-foreground) mb-3 line-clamp-2">
         {item.message}
       </p>
 
@@ -221,7 +221,7 @@ export function InboxCard({
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <button
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-(--primary) text-(--primary-foreground) rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 bg-(--primary) text-(--primary-foreground) rounded disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={approving || rejectPending || !wsConnected}
               onClick={handleApprove}
             >
@@ -229,14 +229,14 @@ export function InboxCard({
               {approving ? "Approving…" : "Approve"}
             </button>
             <button
-              className="text-xs px-3 py-1.5 border border-(--destructive) text-(--destructive) rounded disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-sm px-3 py-1.5 border border-(--destructive) text-(--destructive) rounded disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={approving || rejectPending || !wsConnected}
               onClick={() => setShowRejectInput((v) => !v)}
             >
               Reject
             </button>
             {!wsConnected && (
-              <span className="text-xs text-(--muted-foreground)">
+              <span className="text-sm text-(--muted-foreground)">
                 Offline — unavailable
               </span>
             )}
@@ -246,7 +246,7 @@ export function InboxCard({
           {showRejectInput && (
             <div className="flex flex-col gap-2 mt-1">
               <textarea
-                className="text-xs w-full bg-(--muted) border border-(--border) rounded p-2 text-(--foreground) placeholder:text-(--muted-foreground) resize-none focus:outline-none focus:ring-1 focus:ring-(--primary)"
+                className="text-sm w-full bg-(--muted) border border-(--border) rounded p-2 text-(--foreground) placeholder:text-(--muted-foreground) resize-none focus:outline-none focus:ring-1 focus:ring-(--primary)"
                 rows={2}
                 placeholder="Reason (optional)"
                 value={rejectNote}
@@ -261,7 +261,7 @@ export function InboxCard({
               />
               <div className="flex gap-2">
                 <button
-                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-(--destructive) text-(--destructive) rounded disabled:opacity-50"
+                  className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-(--destructive) text-(--destructive) rounded disabled:opacity-50"
                   disabled={rejectPending}
                   onClick={() => void handleRejectSubmit()}
                 >
@@ -271,7 +271,7 @@ export function InboxCard({
                   {rejectPending ? "Rejecting…" : "Reject"}
                 </button>
                 <button
-                  className="text-xs px-3 py-1.5 text-(--muted-foreground) rounded hover:text-(--foreground)"
+                  className="text-sm px-3 py-1.5 text-(--muted-foreground) rounded hover:text-(--foreground)"
                   onClick={() => {
                     setShowRejectInput(false);
                     setRejectNote("");
@@ -287,7 +287,7 @@ export function InboxCard({
 
       {/* Post-action indicator */}
       {isActioned && (
-        <p className="text-xs text-(--muted-foreground) italic">
+        <p className="text-sm text-(--muted-foreground) italic">
           {approved ? "Approved" : "Rejected"}
         </p>
       )}

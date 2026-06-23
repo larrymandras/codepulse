@@ -407,7 +407,7 @@ export default function Chat() {
         >
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="text-base text-muted-foreground text-center">
                 No messages yet. Send a message to start chatting with Ástríðr.
               </p>
             </div>
@@ -439,7 +439,7 @@ export default function Chat() {
               setAutoScroll(true);
               scrollToBottom();
             }}
-            className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 text-xs border border-(--border) bg-(--background) text-(--foreground) hover:bg-(--muted) transition-colors rounded-none shadow-sm"
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 text-sm border border-(--border) bg-(--background) text-(--foreground) hover:bg-(--muted) transition-colors rounded-none shadow-sm"
           >
             ↓ New message
           </button>
@@ -449,7 +449,7 @@ export default function Chat() {
       {/* Input */}
       {skillBadge && (
         <div className="flex items-center gap-2 px-4 pb-1">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-xs text-indigo-300">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-sm text-indigo-300">
             Skill: {skillBadge}
             <button
               onClick={() => setSkillBadge(null)}

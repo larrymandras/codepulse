@@ -188,12 +188,12 @@ export default function AgentTopology() {
   if (allAgents.length === 0) {
     return (
       <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Agent Topology
           <InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" />
         </h2>
-        <p className="text-xs font-mono text-muted-foreground py-8 text-center">No agents running</p>
+        <p className="text-sm font-mono text-muted-foreground py-8 text-center">No agents running</p>
       </div>
     );
   }
@@ -202,7 +202,7 @@ export default function AgentTopology() {
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4 border-b border-border/30 pb-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Agent Topology
           <InfoTooltip text="Visual graph of agent hierarchy showing parent-child relationships and coordination events" />
@@ -214,7 +214,7 @@ export default function AgentTopology() {
             <button
               key={f.value}
               onClick={() => setStatusFilter(f.value)}
-              className={`flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 rounded-sm transition-colors ${
+              className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded-sm transition-colors ${
                 statusFilter === f.value
                   ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
                   : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-muted/50"
@@ -222,7 +222,7 @@ export default function AgentTopology() {
             >
               {f.dot && <span className={`w-1.5 h-1.5 rounded-full ${f.dot.replace("bg-green-400", "bg-primary").replace("bg-yellow-400", "bg-yellow-500").replace("bg-red-400", "bg-destructive")}`} />}
               {f.label}
-              <span className="text-primary/70 text-[9px] opacity-80">({f.count})</span>
+              <span className="text-primary/70 text-[11px] opacity-80">({f.count})</span>
             </button>
           ))}
         </div>
@@ -230,12 +230,12 @@ export default function AgentTopology() {
 
       {/* Legend */}
       <div className="flex items-center gap-4 mb-4 flex-wrap font-mono uppercase tracking-widest">
-        <span className="text-[9px] text-muted-foreground">Edges:</span>
-        <span className="flex items-center gap-1.5 text-[9px] text-primary/80">
+        <span className="text-[11px] text-muted-foreground">Edges:</span>
+        <span className="flex items-center gap-1.5 text-[11px] text-primary/80">
           <span className="w-4 h-0.5 bg-primary/60 rounded" /> parent→child
         </span>
         {Object.entries(COORDINATION_COLORS).map(([type, color]) => (
-          <span key={type} className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
+          <span key={type} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <span className="w-4 h-0.5 rounded shadow-[0_0_5px_rgba(0,0,0,0.5)]" style={{ backgroundColor: color, opacity: 0.8 }} /> {type}
           </span>
         ))}

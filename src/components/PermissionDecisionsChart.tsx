@@ -26,10 +26,10 @@ export default function PermissionDecisionsChart() {
   if (total === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
           Permission Decisions<InfoTooltip text="Tool permission decisions: accept vs reject ratio and breakdown by decision source" />
         </h2>
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-base text-gray-500 py-4 text-center">
           No permission decision data yet
         </p>
       </div>
@@ -45,25 +45,25 @@ export default function PermissionDecisionsChart() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
         Permission Decisions
       </h2>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <p className="text-xs text-gray-400 mb-2 text-center">
+          <p className="text-sm text-gray-400 mb-2 text-center">
             Accept vs Reject
           </p>
           <FlexBarChart data={decisionData} height={180} />
         </div>
 
         <div>
-          <p className="text-xs text-gray-400 mb-2 text-center">By Source</p>
+          <p className="text-sm text-gray-400 mb-2 text-center">By Source</p>
           <FlexBarChart data={sourceData} height={180} />
         </div>
       </div>
 
-      <div className="mt-3 text-center text-xs text-gray-500">
+      <div className="mt-3 text-center text-sm text-gray-500">
         {total} total decisions &middot; {((acceptCount / total) * 100).toFixed(1)}% accepted
       </div>
     </div>

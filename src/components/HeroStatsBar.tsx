@@ -123,17 +123,17 @@ export default function HeroStatsBar() {
       {/* Top Section: Progress Bar and Global Controls */}
       <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
         <div className="absolute top-4 right-4 flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-mono">Status</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Status</span>
           <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} text-${hc.bg.replace('bg-', '')}`} />
         </div>
         
         <div className="flex flex-col gap-4">
           <div className="flex items-baseline gap-4">
-            <span className="text-xs text-primary uppercase tracking-widest font-mono flex items-center gap-2">
+            <span className="text-sm text-primary uppercase tracking-widest font-mono flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               System Load
             </span>
-            <span className="text-[10px] text-muted-foreground font-mono tracking-widest">LIVE / 5H WINDOW</span>
+            <span className="text-xs text-muted-foreground font-mono tracking-widest">LIVE / 5H WINDOW</span>
           </div>
           
           <div className="flex items-center gap-6">
@@ -151,8 +151,8 @@ export default function HeroStatsBar() {
             </div>
             
             <div className="text-right">
-              <div className="text-xs text-muted-foreground font-mono tracking-widest uppercase">Memory</div>
-              <div className="text-sm text-white font-mono">{hitRateValue != null ? hitRateValue : 0}% / 100%</div>
+              <div className="text-sm text-muted-foreground font-mono tracking-widest uppercase">Memory</div>
+              <div className="text-base text-white font-mono">{hitRateValue != null ? hitRateValue : 0}% / 100%</div>
             </div>
           </div>
         </div>
@@ -160,11 +160,11 @@ export default function HeroStatsBar() {
 
       {/* Quick Action Badges (Integrations row simulation) */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none border-y border-border/50 py-3">
-        <span className="text-[10px] text-primary uppercase tracking-widest font-mono mr-2">Integrations</span>
+        <span className="text-xs text-primary uppercase tracking-widest font-mono mr-2">Integrations</span>
         {['GITHUB', 'LINEAR', 'SLACK', 'CONVEX', 'VERCEL'].map((integration) => (
           <div key={integration} className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-card/40 border border-border/50 hover:border-primary/50 cursor-pointer transition-colors">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/80"></span>
-            <span className="text-[10px] text-muted-foreground font-mono tracking-widest uppercase">{integration}</span>
+            <span className="text-xs text-muted-foreground font-mono tracking-widest uppercase">{integration}</span>
           </div>
         ))}
       </div>

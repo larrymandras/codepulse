@@ -31,13 +31,13 @@ export default function AnomalyBadge({
       <Tooltip>
         <TooltipTrigger asChild>
           <span
-            className={`text-xs px-2 py-1 font-medium inline-flex items-center cursor-default ${colorClass}`}
+            className={`text-sm px-2 py-1 font-medium inline-flex items-center cursor-default ${colorClass}`}
           >
             {label}
           </span>
         </TooltipTrigger>
         <TooltipContent>
-          <div className="text-xs space-y-1">
+          <div className="text-sm space-y-1">
             <p className="font-medium">{metric} anomaly</p>
             <p>Current: {value.toFixed(2)}</p>
             <p>Expected: ~{mean.toFixed(2)}</p>

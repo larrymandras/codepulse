@@ -37,7 +37,7 @@ export function WSStatusIndicator({ status }: { status: WSStatus }) {
         className={`w-2 h-2 rounded-full ${dotClass}`}
         aria-hidden="true"
       />
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-sm text-muted-foreground">{label}</span>
     </div>
   );
 }

@@ -67,10 +67,10 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
 
   return (
     <div className="space-y-2 py-3 border-b border-border last:border-0">
-      <p className="text-sm font-medium">{label}</p>
+      <p className="text-base font-medium">{label}</p>
 
       {existingConfig && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Current: {existingConfig.provider} / {existingConfig.model}
         </p>
       )}
@@ -81,7 +81,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
           value={provider || existingConfig?.provider || "openai"}
           onChange={(e) => setProvider(e.target.value)}
           disabled={saveState === "saving"}
-          className="bg-background border border-input px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring/50"
+          className="bg-background border border-input px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-ring/50"
         >
           <option value="openai">openai</option>
           <option value="anthropic">anthropic</option>
@@ -94,7 +94,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
           onChange={(e) => setModel(e.target.value)}
           placeholder="gpt-4o-mini or claude-3-5-haiku-20241022"
           disabled={saveState === "saving"}
-          className="flex-1 min-w-40 bg-background border border-input px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring/50"
+          className="flex-1 min-w-40 bg-background border border-input px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-ring/50"
         />
 
         {/* API Key input */}
@@ -104,14 +104,14 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
           onChange={(e) => setApiKey(e.target.value)}
           placeholder="sk-..."
           disabled={saveState === "saving"}
-          className="flex-1 min-w-40 bg-background border border-input px-2 py-1 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-ring/50"
+          className="flex-1 min-w-40 bg-background border border-input px-2 py-1 text-base font-mono focus:outline-none focus:ring-1 focus:ring-ring/50"
         />
 
         {/* Save button */}
         <button
           onClick={handleSave}
           disabled={saveState === "saving" || (!apiKey && !existingConfig)}
-          className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2 shrink-0"
+          className="px-3 py-1 text-base bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2 shrink-0"
         >
           {saveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
           {saveState === "saved"
@@ -127,19 +127,19 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
         <div className="flex items-center gap-2">
           {showRemoveConfirm ? (
             <>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Remove Provider: This will disable briefing generation and anomaly digest until a new provider is configured. Remove anyway?
               </p>
               <button
                 onClick={handleRemove}
                 disabled={saveState === "saving"}
-                className="px-2 py-0.5 text-xs text-destructive border border-destructive/50 hover:bg-destructive/10 disabled:opacity-50"
+                className="px-2 py-0.5 text-sm text-destructive border border-destructive/50 hover:bg-destructive/10 disabled:opacity-50"
               >
                 {saveState === "saving" ? "Removing..." : "Confirm Remove"}
               </button>
               <button
                 onClick={() => setShowRemoveConfirm(false)}
-                className="px-2 py-0.5 text-xs text-muted-foreground border border-border hover:bg-muted/50"
+                className="px-2 py-0.5 text-sm text-muted-foreground border border-border hover:bg-muted/50"
               >
                 Cancel
               </button>
@@ -148,7 +148,7 @@ function ProviderRow({ slot, label }: ProviderRowProps) {
             <button
               onClick={handleRemove}
               disabled={saveState === "saving"}
-              className="text-xs text-destructive hover:underline disabled:opacity-50"
+              className="text-sm text-destructive hover:underline disabled:opacity-50"
             >
               Remove Provider
             </button>

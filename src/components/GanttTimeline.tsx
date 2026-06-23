@@ -120,13 +120,13 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">Gantt Timeline</h2>
+        <h2 className="text-base font-semibold text-gray-300">Gantt Timeline</h2>
         <div className="flex items-center gap-3 flex-wrap">
           {Object.entries(EVENT_COLORS)
             .filter(([k]) => !["SessionStart", "SessionEnd"].includes(k))
             .slice(0, 6)
             .map(([name, color]) => (
-              <span key={name} className="flex items-center gap-1 text-[9px] text-gray-500">
+              <span key={name} className="flex items-center gap-1 text-[11px] text-gray-500">
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
                 {name}
               </span>
@@ -135,7 +135,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
       </div>
 
       {totalLanes === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">No agent data for Gantt view</p>
+        <p className="text-base text-gray-500 py-8 text-center">No agent data for Gantt view</p>
       ) : (
         <div className="overflow-x-auto">
           <div className="min-w-[600px]">
@@ -144,7 +144,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
               {ticks.map((tick, i) => (
                 <span
                   key={i}
-                  className="absolute text-[9px] text-gray-600 font-mono"
+                  className="absolute text-[11px] text-gray-600 font-mono"
                   style={{ left: `${tick.pos}%`, transform: "translateX(-50%)" }}
                 >
                   {tick.label}
@@ -171,7 +171,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
                         className="w-2 h-2 rounded-full shrink-0"
                         style={{ backgroundColor: barColor }}
                       />
-                      <span className="text-[10px] text-gray-300 font-mono truncate">
+                      <span className="text-xs text-gray-300 font-mono truncate">
                         {redact(agent.agentId, `A-${agent.agentId.slice(-4)}`)}
                       </span>
                     </div>
@@ -222,7 +222,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
               {orphanLane.length > 0 && (
                 <div className="flex items-center" style={{ height: ROW_HEIGHT }}>
                   <div className="w-28 shrink-0 pr-2">
-                    <span className="text-[10px] text-gray-500">session</span>
+                    <span className="text-xs text-gray-500">session</span>
                   </div>
                   <div className="flex-1 relative h-full">
                     <div className="absolute inset-x-0 top-1/2 h-px bg-gray-700/20" />
@@ -254,7 +254,7 @@ export default function GanttTimeline({ events, agents, sessionStart }: Props) {
 
             {/* Hover tooltip */}
             {hoveredEvent && (
-              <div className="mt-2 bg-gray-900/90 border border-gray-700/50 rounded-lg px-3 py-2 text-xs">
+              <div className="mt-2 bg-gray-900/90 border border-gray-700/50 rounded-lg px-3 py-2 text-sm">
                 <div className="flex items-center gap-2">
                   <span
                     className="w-2 h-2 rounded-full"

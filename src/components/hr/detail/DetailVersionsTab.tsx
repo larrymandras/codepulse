@@ -73,7 +73,7 @@ function DiffBadge({ type }: { type: "added" | "removed" | "changed" }) {
     changed: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
   };
   return (
-    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${colors[type]}`}>
+    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${colors[type]}`}>
       {type}
     </span>
   );
@@ -84,12 +84,12 @@ function ValueDisplay({ value }: { value: unknown }) {
   const str = typeof value === "string" ? value : JSON.stringify(value, null, 2);
   if (str.length > 100) {
     return (
-      <pre className="text-xs font-mono bg-muted p-1.5 rounded max-h-24 overflow-auto whitespace-pre-wrap break-all">
+      <pre className="text-sm font-mono bg-muted p-1.5 rounded max-h-24 overflow-auto whitespace-pre-wrap break-all">
         {str}
       </pre>
     );
   }
-  return <code className="text-xs font-mono bg-muted px-1 py-0.5 rounded">{str}</code>;
+  return <code className="text-sm font-mono bg-muted px-1 py-0.5 rounded">{str}</code>;
 }
 
 export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
@@ -176,7 +176,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
     return (
       <div className="flex flex-col items-center gap-2 py-12 text-center">
         <History className="h-8 w-8 text-muted-foreground" />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           No version history yet. Versions are recorded when config is saved.
         </p>
       </div>
@@ -187,7 +187,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
     <div className="space-y-3">
       {/* Diff selection hint */}
       {diffA !== null && diffB === null && (
-        <div className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2">
+        <div className="text-sm text-muted-foreground bg-muted/50 rounded px-3 py-2">
           Selected v{diffA} for comparison. Click another version to compare, or{" "}
           <button className="underline" onClick={clearDiff}>
             cancel
@@ -202,17 +202,17 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <GitCompareArrows className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium">
+              <span className="text-sm font-medium">
                 Comparing v{diffA} vs v{diffB}
               </span>
             </div>
-            <Button variant="ghost" size="sm" onClick={clearDiff} className="text-xs h-6">
+            <Button variant="ghost" size="sm" onClick={clearDiff} className="text-sm h-6">
               Close
             </Button>
           </div>
 
           {diffResults.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">
+            <p className="text-sm text-muted-foreground py-2">
               No differences found between these versions.
             </p>
           ) : (
@@ -220,18 +220,18 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
               {diffResults.map((d) => (
                 <div key={d.field} className="border rounded p-2 space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium">{d.field}</span>
+                    <span className="text-sm font-medium">{d.field}</span>
                     <DiffBadge type={d.type} />
                   </div>
                   {d.type !== "added" && (
                     <div className="flex items-start gap-1">
-                      <span className="text-[10px] text-red-500 font-mono mt-0.5">-</span>
+                      <span className="text-xs text-red-500 font-mono mt-0.5">-</span>
                       <ValueDisplay value={d.oldVal} />
                     </div>
                   )}
                   {d.type !== "removed" && (
                     <div className="flex items-start gap-1">
-                      <span className="text-[10px] text-green-500 font-mono mt-0.5">+</span>
+                      <span className="text-xs text-green-500 font-mono mt-0.5">+</span>
                       <ValueDisplay value={d.newVal} />
                     </div>
                   )}
@@ -256,23 +256,23 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium">v{v.version}</span>
+                  <span className="text-base font-medium">v{v.version}</span>
                   <Badge
                     variant="secondary"
-                    className={`text-[10px] ${CHANGE_TYPE_COLORS[v.changeType] ?? ""}`}
+                    className={`text-xs ${CHANGE_TYPE_COLORS[v.changeType] ?? ""}`}
                   >
                     {v.changeType}
                   </Badge>
                   {v.parentVersion && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       from v{v.parentVersion}
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="text-sm text-muted-foreground truncate">
                   {v.changeSummary}
                 </p>
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                   <span>{formatTimestamp(v.createdAt)}</span>
                   {v.author && <span>by {v.author}</span>}
                 </div>
@@ -283,7 +283,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                 <Button
                   variant={isSelectedForDiff ? "default" : "outline"}
                   size="sm"
-                  className="h-7 text-[10px] px-2"
+                  className="h-7 text-xs px-2"
                   onClick={() => handleDiffSelect(v.version)}
                   aria-label={`Compare version ${v.version}`}
                 >
@@ -295,7 +295,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-[10px] px-2"
+                    className="h-7 text-xs px-2"
                     onClick={() =>
                       setRollbackTarget({
                         version: v.version,
@@ -312,7 +312,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-[10px] px-2"
+                  className="h-7 text-xs px-2"
                   onClick={() =>
                     setExpandedVersion(isExpanded ? null : v.version)
                   }
@@ -329,7 +329,7 @@ export function DetailVersionsTab({ agentId }: DetailVersionsTabProps) {
 
             {/* Expanded config snapshot */}
             {isExpanded && (
-              <pre className="mt-2 text-xs font-mono bg-muted p-2 rounded max-h-48 overflow-auto">
+              <pre className="mt-2 text-sm font-mono bg-muted p-2 rounded max-h-48 overflow-auto">
                 {JSON.stringify(v.config, null, 2)}
               </pre>
             )}

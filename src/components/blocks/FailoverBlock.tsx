@@ -27,7 +27,7 @@ export function FailoverBlock({ block }: FailoverBlockProps) {
           <ChevronRight className="h-4 w-4 shrink-0 text-(--status-warn)" />
         )}
         <AlertTriangle className="h-4 w-4 shrink-0 text-(--status-warn)" />
-        <span className="text-xs text-(--foreground)">
+        <span className="text-sm text-(--foreground)">
           <span className="font-mono font-semibold">{block.failedProvider ?? "unknown"}</span>
           {" failed → "}
           <span className="font-mono font-semibold">{block.newProvider ?? "unknown"}</span>
@@ -35,7 +35,7 @@ export function FailoverBlock({ block }: FailoverBlockProps) {
       </div>
       {expanded && block.errorMessage && (
         <div className="px-3 pb-3 pt-0">
-          <pre className="font-mono text-xs whitespace-pre-wrap text-(--muted-foreground) bg-(--card) rounded p-2">
+          <pre className="font-mono text-sm whitespace-pre-wrap text-(--muted-foreground) bg-(--card) rounded p-2">
             {block.errorMessage}
           </pre>
         </div>

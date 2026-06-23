@@ -93,16 +93,16 @@ function SortableProfileCard({
           size="md"
         />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold text-foreground truncate">
+          <h3 className="text-base font-semibold text-foreground truncate">
             {profile.displayName ?? profile.name}
           </h3>
-          <p className="text-[10px] text-muted-foreground font-mono">
+          <p className="text-xs text-muted-foreground font-mono">
             {profile.profileId}
           </p>
         </div>
         <button
           onClick={() => onEdit(profile)}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground text-xs transition-opacity"
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground text-sm transition-opacity"
         >
           Edit
         </button>
@@ -111,7 +111,7 @@ function SortableProfileCard({
       {/* Model badge */}
       {profile.model && (
         <div className="mb-3">
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
             {profile.model}
           </span>
         </div>
@@ -119,7 +119,7 @@ function SortableProfileCard({
 
       {/* Avatar description & capabilities */}
       {avatar?.description && (
-        <p className="text-xs text-muted-foreground mb-2">{avatar.description}</p>
+        <p className="text-sm text-muted-foreground mb-2">{avatar.description}</p>
       )}
 
       {avatar?.capabilities && avatar.capabilities.length > 0 && (
@@ -127,7 +127,7 @@ function SortableProfileCard({
           {avatar.capabilities.map((cap: string) => (
             <span
               key={cap}
-              className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+              className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
             >
               {cap}
             </span>
@@ -136,7 +136,7 @@ function SortableProfileCard({
       )}
 
       {/* Runtime stats */}
-      <div className="flex items-center gap-3 pt-2 border-t border-border text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-3 pt-2 border-t border-border text-xs text-muted-foreground">
         <span>
           {runtimeCount} instance{runtimeCount !== 1 ? "s" : ""}
         </span>
@@ -311,14 +311,14 @@ export default function Agents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agents</h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Agent registry, runtime instances, and coordination topology
           </p>
         </div>
         {tab === "registry" && !editingProfile && !creatingProfile && (
           <button
             onClick={() => setCreatingProfile(true)}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm"
           >
             New Profile
           </button>
@@ -344,7 +344,7 @@ export default function Agents() {
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
-            className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px ${
+            className={`px-4 py-2 text-base transition-colors border-b-2 -mb-px ${
               tab === t.value
                 ? "border-indigo-500 text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground"
@@ -352,7 +352,7 @@ export default function Agents() {
           >
             {t.label}
             {t.count !== undefined && (
-              <span className="ml-1.5 text-[10px] text-muted-foreground">
+              <span className="ml-1.5 text-xs text-muted-foreground">
                 ({t.count})
               </span>
             )}
@@ -383,13 +383,13 @@ export default function Agents() {
             <>
               {seeding && profiles.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-base">
                     Seeding Astridr build teams...
                   </p>
                 </div>
               ) : profiles.length === 0 ? (
                 <div className="py-12 text-center">
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-muted-foreground text-base">
                     No agent profiles registered yet
                   </p>
                   <button
@@ -399,7 +399,7 @@ export default function Agents() {
                         .then(() => setSeeding(false))
                         .catch(() => setSeeding(false));
                     }}
-                    className="mt-3 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm"
+                    className="mt-3 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-base"
                   >
                     Seed Default Teams
                   </button>
@@ -457,7 +457,7 @@ export default function Agents() {
         <SectionErrorBoundary name="Runtime Agents">
         <div className="bg-card border border-border rounded-xl p-4">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-            <h2 className="text-sm font-semibold text-muted-foreground">
+            <h2 className="text-base font-semibold text-muted-foreground">
               Runtime Instances<InfoTooltip text="Live agent instances currently running or recently completed — click to view details" />
             </h2>
             <div className="flex items-center gap-1 bg-background border border-border rounded-lg p-0.5">
@@ -465,7 +465,7 @@ export default function Agents() {
                 <button
                   key={f.value}
                   onClick={() => setFilter(f.value)}
-                  className={`flex items-center gap-1 text-[11px] px-2 py-1 rounded-md transition-colors ${
+                  className={`flex items-center gap-1 text-sm px-2 py-1 rounded-md transition-colors ${
                     filter === f.value
                       ? "bg-muted text-foreground"
                       : "text-muted-foreground hover:text-foreground"
@@ -477,7 +477,7 @@ export default function Agents() {
                     />
                   )}
                   {f.label}
-                  <span className="text-muted-foreground text-[10px]">
+                  <span className="text-muted-foreground text-xs">
                     ({f.count})
                   </span>
                 </button>
@@ -487,8 +487,8 @@ export default function Agents() {
 
           {filtered.length === 0 ? (
             <div className="py-12 text-center">
-              <p className="text-muted-foreground text-sm">No agents found</p>
-              <p className="text-muted-foreground text-xs mt-1">
+              <p className="text-muted-foreground text-base">No agents found</p>
+              <p className="text-muted-foreground text-sm mt-1">
                 Agents will appear here once Astridr starts processing
                 sessions
               </p>
@@ -533,11 +533,11 @@ export default function Agents() {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-foreground truncate font-medium">
+                          <span className="text-base text-foreground truncate font-medium">
                             {agent.agentId}
                           </span>
                           <span
-                            className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                            className={`text-[11px] px-1.5 py-0.5 rounded-full ${
                               STATUS_BADGE[agent.status] ??
                               "bg-muted text-muted-foreground"
                             }`}
@@ -545,7 +545,7 @@ export default function Agents() {
                             {agent.status}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                           <span>{agent.agentType}</span>
                           {agent.model && (
                             <>
@@ -591,15 +591,15 @@ export default function Agents() {
       {tab === "security" && (
         <SectionErrorBoundary name="Security Scan">
           <div className="bg-card border border-border rounded-xl p-4">
-            <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+            <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Security Scan Results
               <InfoTooltip text="Active tool scan findings from Ástríðr's proactive ideation scanner. Dismiss findings to clear them (they will reappear if the tool is re-scanned)." />
             </h2>
 
             {Object.keys(findingsByLocation).length === 0 ? (
               <div className="py-12 text-center">
-                <p className="text-muted-foreground text-sm">No active scan findings</p>
-                <p className="text-muted-foreground text-xs mt-1">
+                <p className="text-muted-foreground text-base">No active scan findings</p>
+                <p className="text-muted-foreground text-sm mt-1">
                   Findings appear here when Ástríðr's tool scanner detects security patterns
                 </p>
               </div>
@@ -614,7 +614,7 @@ export default function Agents() {
                       className="bg-background border border-border rounded-lg p-3"
                     >
                       <div className="flex items-center gap-3 mb-1">
-                        <span className="text-sm font-medium text-foreground font-mono flex-1 truncate">
+                        <span className="text-base font-medium text-foreground font-mono flex-1 truncate">
                           {location}
                         </span>
                         <RiskLevelBadge
@@ -631,7 +631,7 @@ export default function Agents() {
                               prev === location ? null : location,
                             )
                           }
-                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
                           {isExpanded ? "collapse" : `${findings.length} finding${findings.length !== 1 ? "s" : ""}`}
                         </button>

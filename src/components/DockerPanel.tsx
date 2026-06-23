@@ -28,7 +28,7 @@ export default function DockerPanel() {
       starting: "text-yellow-400 bg-yellow-400/10",
     };
     return (
-      <span className={`text-[10px] px-1.5 py-0.5 rounded ${colors[health] ?? "text-gray-400 bg-gray-400/10"}`}>
+      <span className={`text-xs px-1.5 py-0.5 rounded ${colors[health] ?? "text-gray-400 bg-gray-400/10"}`}>
         {health}
       </span>
     );
@@ -37,7 +37,7 @@ export default function DockerPanel() {
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Docker Containers
           <InfoTooltip text="Docker container status including health, CPU, and memory usage" />
@@ -45,7 +45,7 @@ export default function DockerPanel() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="text-[10px] uppercase tracking-widest font-mono px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all disabled:opacity-50 flex items-center gap-2"
+          className="text-xs uppercase tracking-widest font-mono px-3 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {refreshing ? (
             <span className="animate-pulse">Refreshing...</span>
@@ -55,7 +55,7 @@ export default function DockerPanel() {
         </button>
       </div>
       {containers.length === 0 ? (
-        <p className="text-xs font-mono text-muted-foreground py-6 text-center">Docker monitoring active — waiting for container data</p>
+        <p className="text-sm font-mono text-muted-foreground py-6 text-center">Docker monitoring active — waiting for container data</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2">
           {containers.map((c: any) => (
@@ -66,14 +66,14 @@ export default function DockerPanel() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className={`w-2 h-2 rounded-full ${statusColor(c.status ?? "")} shadow-[0_0_5px_currentColor]`} />
-                  <span className="text-xs font-mono text-foreground truncate">{c.name}</span>
+                  <span className="text-sm font-mono text-foreground truncate">{c.name}</span>
                 </div>
                 {healthBadge(c.health)}
               </div>
               {c.image && (
-                <p className="text-[10px] text-muted-foreground font-mono mb-2 truncate opacity-70">{c.image}</p>
+                <p className="text-xs text-muted-foreground font-mono mb-2 truncate opacity-70">{c.image}</p>
               )}
-              <div className="grid grid-cols-2 gap-2 text-[10px] uppercase font-mono tracking-widest text-muted-foreground pt-2 border-t border-border/30 mt-2">
+              <div className="grid grid-cols-2 gap-2 text-xs uppercase font-mono tracking-widest text-muted-foreground pt-2 border-t border-border/30 mt-2">
                 <span className="flex flex-col gap-0.5">
                   <span className="text-primary/70">CPU</span>
                   <span className="text-foreground">{c.cpuPercent?.toFixed(1) ?? "N/A"}%</span>

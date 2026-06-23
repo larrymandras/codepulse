@@ -18,7 +18,7 @@ export function ForgeHostBadge({ hostId }: ForgeHostBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className="text-[10px] font-mono uppercase tracking-wider px-2 py-0"
+      className="text-xs font-mono uppercase tracking-wider px-2 py-0"
     >
       {label}
     </Badge>

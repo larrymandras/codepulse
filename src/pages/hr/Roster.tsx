@@ -89,7 +89,7 @@ export default function Roster() {
       <div className="flex-1 overflow-auto">
         <GlassPanel className="m-6 p-8">
           <div className="flex flex-col items-center gap-4 py-12 text-center">
-            <p className="text-sm text-destructive">
+            <p className="text-base text-destructive">
               Failed to load agents — check that Astridhr is running and
               accessible.
             </p>
@@ -114,7 +114,7 @@ export default function Roster() {
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                 Agent Roster
               </h1>
-              <div className="flex items-center gap-3 text-[10px] font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
+              <div className="flex items-center gap-3 text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5 text-primary/70" />
                   {totalCount} total
@@ -134,12 +134,12 @@ export default function Roster() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowImportDialog(true)}
-                className="font-mono text-[10px] uppercase tracking-widest border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
+                className="font-mono text-xs uppercase tracking-widest border-primary/20 hover:bg-primary/10 hover:text-primary transition-all"
               >
                 <Upload className="h-4 w-4 mr-1" />
                 Import YAML
               </Button>
-              <Button asChild size="sm" className="font-mono text-[10px] uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
+              <Button asChild size="sm" className="font-mono text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
                 <Link to="/hr/onboarding">
                   <Plus className="h-4 w-4 mr-1" />
                   Onboard Agent
@@ -176,17 +176,17 @@ export default function Roster() {
           {!isLoading && (
             <>
               {sortedAgents.length === 0 && agents.length > 0 && (
-                <p className="text-sm text-muted-foreground text-center py-12">
+                <p className="text-base text-muted-foreground text-center py-12">
                   No agents match your search.
                 </p>
               )}
 
               {sortedAgents.length === 0 && agents.length === 0 && (
                 <div className="text-center py-12">
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-base font-medium text-foreground">
                     No agents registered
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Agents will appear here once registered through the
                     onboarding wizard or config files. Get started by onboarding
                     your first agent.

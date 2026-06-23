@@ -104,7 +104,7 @@ export function NotificationPreferences() {
         {SEVERITIES.map(({ key, label, colorClass }) => (
           <div key={key} className="flex items-center justify-between gap-4">
             <span
-              className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-sm ${colorClass}`}
+              className={`inline-flex items-center px-2 py-0.5 text-sm font-medium rounded-sm ${colorClass}`}
             >
               {label}
             </span>
@@ -121,7 +121,7 @@ export function NotificationPreferences() {
                     <span>
                       {modeLabel}
                       {sublabel && (
-                        <span className="text-xs text-muted-foreground ml-1">
+                        <span className="text-sm text-muted-foreground ml-1">
                           ({sublabel.replace("{severity}", key)})
                         </span>
                       )}

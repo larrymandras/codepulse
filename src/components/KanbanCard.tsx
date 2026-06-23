@@ -50,7 +50,7 @@ export function KanbanCard({ task, isDragging = false, onClick }: KanbanCardProp
       onClick={() => onClick?.(task)}
     >
       {/* Title */}
-      <p className="text-sm font-medium line-clamp-2 leading-snug">{task.title}</p>
+      <p className="text-base font-medium line-clamp-2 leading-snug">{task.title}</p>
 
       {/* Labels */}
       {task.labels && task.labels.length > 0 && (
@@ -58,7 +58,7 @@ export function KanbanCard({ task, isDragging = false, onClick }: KanbanCardProp
           {task.labels.map((label) => (
             <span
               key={label}
-              className="text-[10px] px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground)"
+              className="text-xs px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground)"
             >
               {label}
             </span>
@@ -67,11 +67,11 @@ export function KanbanCard({ task, isDragging = false, onClick }: KanbanCardProp
       )}
 
       {/* Footer row */}
-      <div className="flex items-center gap-2 mt-2 text-xs text-(--muted-foreground)">
+      <div className="flex items-center gap-2 mt-2 text-sm text-(--muted-foreground)">
         {/* Agent avatar */}
         {task.agentName && (
           <div
-            className="w-4 h-4 rounded-full bg-(--primary) text-[8px] font-bold text-(--primary-foreground) flex items-center justify-center flex-shrink-0"
+            className="w-4 h-4 rounded-full bg-(--primary) text-[10px] font-bold text-(--primary-foreground) flex items-center justify-center flex-shrink-0"
             title={task.agentName}
           >
             {task.agentName[0]?.toUpperCase()}
@@ -93,7 +93,7 @@ export function KanbanCard({ task, isDragging = false, onClick }: KanbanCardProp
 
         {/* Finding badge */}
         {task.findingId && (
-          <span className="text-[10px] px-1 py-0.5 bg-(--status-warn)/20 text-(--status-warn)">
+          <span className="text-xs px-1 py-0.5 bg-(--status-warn)/20 text-(--status-warn)">
             Finding
           </span>
         )}

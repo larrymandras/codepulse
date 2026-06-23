@@ -58,7 +58,7 @@ export default function ComponentTable({ components }: { components: ComponentRo
 
   const colHeader = (label: string, key: SortKey) => (
     <th
-      className="text-left text-xs text-gray-400 uppercase tracking-wide py-2 px-3 cursor-pointer hover:text-gray-200 select-none"
+      className="text-left text-sm text-gray-400 uppercase tracking-wide py-2 px-3 cursor-pointer hover:text-gray-200 select-none"
       onClick={() => handleSort(key)}
     >
       {label} {sortKey === key ? (sortAsc ? "^" : "v") : ""}
@@ -68,17 +68,17 @@ export default function ComponentTable({ components }: { components: ComponentRo
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-300">Components</h3>
+        <h3 className="text-base font-semibold text-gray-300">Components</h3>
         <input
           type="text"
           placeholder="Filter..."
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="bg-gray-700/50 border border-gray-600/50 rounded-lg px-3 py-1 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 w-48"
+          className="bg-gray-700/50 border border-gray-600/50 rounded-lg px-3 py-1 text-base text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 w-48"
         />
       </div>
       {sorted.length === 0 ? (
-        <p className="text-center text-gray-500 text-sm py-4">No components found</p>
+        <p className="text-center text-gray-500 text-base py-4">No components found</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -97,13 +97,13 @@ export default function ComponentTable({ components }: { components: ComponentRo
                   key={c._id}
                   className="border-b border-gray-700/30 hover:bg-gray-700/20"
                 >
-                  <td className="py-2 px-3 text-sm font-mono text-gray-200">
+                  <td className="py-2 px-3 text-base font-mono text-gray-200">
                     {c.component}
                   </td>
-                  <td className="py-2 px-3 text-sm text-gray-400">{c.phase}</td>
+                  <td className="py-2 px-3 text-base text-gray-400">{c.phase}</td>
                   <td className="py-2 px-3">
                     <span
-                      className={`text-xs px-2 py-0.5 rounded ${STATUS_BADGE[c.status] ?? STATUS_BADGE.pending}`}
+                      className={`text-sm px-2 py-0.5 rounded ${STATUS_BADGE[c.status] ?? STATUS_BADGE.pending}`}
                     >
                       {c.status}
                     </span>
@@ -116,12 +116,12 @@ export default function ComponentTable({ components }: { components: ComponentRo
                           style={{ width: `${c.progress ?? 0}%` }}
                         />
                       </div>
-                      <span className="text-xs text-gray-400 w-8 text-right">
+                      <span className="text-sm text-gray-400 w-8 text-right">
                         {c.progress ?? 0}%
                       </span>
                     </div>
                   </td>
-                  <td className="py-2 px-3 text-xs text-gray-500">
+                  <td className="py-2 px-3 text-sm text-gray-500">
                     {formatTimestamp(c.updatedAt)}
                   </td>
                 </tr>

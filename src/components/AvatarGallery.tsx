@@ -55,13 +55,13 @@ export default function AvatarGallery({ selectedId, onSelect, onCreateWithEmoji 
 
       {onCreateWithEmoji && (
         <div>
-          <p className="text-xs text-gray-500 mb-2">Quick emoji avatar</p>
+          <p className="text-sm text-gray-500 mb-2">Quick emoji avatar</p>
           <div className="flex flex-wrap gap-1.5">
             {PRESET_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
                 onClick={() => onCreateWithEmoji(emoji)}
-                className="w-8 h-8 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center text-sm transition-colors"
+                className="w-8 h-8 rounded-full bg-gray-700/50 hover:bg-gray-600/50 flex items-center justify-center text-base transition-colors"
               >
                 {emoji}
               </button>

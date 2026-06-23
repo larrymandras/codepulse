@@ -105,7 +105,7 @@ export function ForgeStatusBadge({ status }: ForgeStatusBadgeProps) {
       aria-label={status}
       data-status={status}
       data-color-scheme={colorScheme}
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${config.className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-semibold ${config.className}`}
     >
       <config.Icon
         className={`h-3 w-3${

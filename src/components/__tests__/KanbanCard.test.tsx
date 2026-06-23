@@ -93,7 +93,7 @@ describe("KanbanCard", () => {
     expect(html).toContain("status-ok");
   });
 
-  it("renders label chips as text-[10px] elements when labels array is non-empty", () => {
+  it("renders label chips as text-xs elements when labels array is non-empty", () => {
     const task: KanbanTask = {
       ...baseTask,
       labels: ["urgent", "backend"],

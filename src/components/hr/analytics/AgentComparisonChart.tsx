@@ -68,7 +68,7 @@ export function AgentComparisonChart({
             const row = payload[0]?.payload as ChartRow | undefined;
             if (!row) return null;
             return (
-              <div className="bg-popover border border-border rounded-md p-2 text-xs shadow-md">
+              <div className="bg-popover border border-border rounded-md p-2 text-sm shadow-md">
                 <p className="font-semibold mb-1">{label}</p>
                 <p>Completion: {row._rawCompletion.toFixed(1)}%</p>
                 <p>

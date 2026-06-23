@@ -5,7 +5,7 @@ interface TextBlockProps {
 export function TextBlock({ block }: TextBlockProps) {
   return (
     <div className="bg-(--card) rounded p-3">
-      <p className="text-sm text-(--foreground) whitespace-pre-wrap leading-relaxed">
+      <p className="text-base text-(--foreground) whitespace-pre-wrap leading-relaxed">
         {block.text ?? ""}
       </p>
     </div>

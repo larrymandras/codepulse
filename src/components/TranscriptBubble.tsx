@@ -44,12 +44,12 @@ export function TranscriptBubble({
       aria-label={`${speaker}: ${text}`}
     >
       <div className={bubbleClass} style={agentBorderStyle}>
-        <p className="text-xs font-semibold text-muted-foreground mb-1">
+        <p className="text-sm font-semibold text-muted-foreground mb-1">
           {speaker}
         </p>
-        <p className="text-sm leading-relaxed">{text}</p>
+        <p className="text-base leading-relaxed">{text}</p>
       </div>
-      <span className="text-xs text-muted-foreground mt-0.5 px-1">
+      <span className="text-sm text-muted-foreground mt-0.5 px-1">
         {new Date(timestamp).toLocaleTimeString()}
       </span>
     </div>

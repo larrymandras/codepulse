@@ -71,7 +71,7 @@ export function DetailActivityTab({ agentId }: DetailActivityTabProps) {
       <div>
         <h3 className="text-base font-semibold mb-3">Activity Feed</h3>
         {events.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">
+          <p className="text-base text-muted-foreground py-8 text-center">
             No activity recorded for this agent.
           </p>
         ) : (
@@ -89,28 +89,28 @@ export function DetailActivityTab({ agentId }: DetailActivityTabProps) {
                     key={idx}
                     className="flex items-start gap-2 py-2 border-b border-border/50 last:border-0"
                   >
-                    <span className="text-xs mt-0.5 shrink-0 text-muted-foreground">
+                    <span className="text-sm mt-0.5 shrink-0 text-muted-foreground">
                       {isOutgoing ? "\u2192" : "\u2190"}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge
                           variant="secondary"
-                          className={`text-[9px] px-1.5 py-0 ${etClass}`}
+                          className={`text-[11px] px-1.5 py-0 ${etClass}`}
                         >
                           {event.eventType}
                         </Badge>
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="text-sm text-muted-foreground truncate">
                           {other}
                         </span>
                       </div>
                       {event.status && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {event.status}
                         </p>
                       )}
                     </div>
-                    <span className="text-[10px] text-muted-foreground shrink-0">
+                    <span className="text-xs text-muted-foreground shrink-0">
                       {relativeTime(event.timestamp)}
                     </span>
                   </div>

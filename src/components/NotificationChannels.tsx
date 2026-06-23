@@ -161,7 +161,7 @@ function ChannelRow({ label, channel, storedUrl, onSave, onRemove, onTest }: Cha
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-normal text-foreground block">
+      <label className="text-base font-normal text-foreground block">
         {label}
       </label>
       <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ function ChannelRow({ label, channel, storedUrl, onSave, onRemove, onTest }: Cha
             size="sm"
             onClick={handleTest}
             disabled={state.testStatus === "loading"}
-            className="text-sm shrink-0"
+            className="text-base shrink-0"
           >
             {state.testStatus === "loading" ? (
               <>
@@ -216,10 +216,10 @@ function ChannelRow({ label, channel, storedUrl, onSave, onRemove, onTest }: Cha
 
       {/* Test status text */}
       {state.testStatus === "success" && (
-        <p className="text-xs text-[oklch(0.65_0.15_142)]">Test delivered</p>
+        <p className="text-sm text-[oklch(0.65_0.15_142)]">Test delivered</p>
       )}
       {state.testStatus === "error" && state.testError && (
-        <p className="text-xs text-destructive">{state.testError}</p>
+        <p className="text-sm text-destructive">{state.testError}</p>
       )}
 
       {/* Remove webhook inline confirm */}
@@ -227,13 +227,13 @@ function ChannelRow({ label, channel, storedUrl, onSave, onRemove, onTest }: Cha
         <button
           type="button"
           onClick={handleRemoveClick}
-          className="text-xs text-destructive hover:underline"
+          className="text-sm text-destructive hover:underline"
         >
           Remove webhook
         </button>
       )}
       {state.pendingRemove && (
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Remove webhook?</span>
           <button
             type="button"

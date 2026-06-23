@@ -129,15 +129,15 @@ function TreeNodeRow({
         style={{ paddingLeft: depth * 16 + 8 }}
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${opStyle.dot}`} />
-        <span className="text-xs text-gray-200 font-mono truncate flex-1">
+        <span className="text-sm text-gray-200 font-mono truncate flex-1">
           {maskPath(node.name)}
         </span>
-        <span className={`text-[10px] px-1.5 py-0.5 rounded ${opStyle.text} ${opStyle.bg}`}>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${opStyle.text} ${opStyle.bg}`}>
           {node.lastOp}
         </span>
-        <span className="text-[10px] text-gray-500">{node.ops}×</span>
+        <span className="text-xs text-gray-500">{node.ops}×</span>
         {node.linesChanged > 0 && (
-          <span className="text-[10px] text-gray-600">{node.linesChanged}L</span>
+          <span className="text-xs text-gray-600">{node.linesChanged}L</span>
         )}
       </div>
     );
@@ -151,13 +151,13 @@ function TreeNodeRow({
         className="w-full flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-700/20 transition-colors text-left"
         style={{ paddingLeft: depth * 16 + 8 }}
       >
-        <span className="text-[10px] text-gray-600 w-3 shrink-0">
+        <span className="text-xs text-gray-600 w-3 shrink-0">
           {expanded ? "▼" : "▶"}
         </span>
-        <span className="text-xs text-gray-400 font-mono truncate flex-1">
+        <span className="text-sm text-gray-400 font-mono truncate flex-1">
           {maskPath(node.name)}/
         </span>
-        <span className="text-[10px] text-gray-600">{node.ops}×</span>
+        <span className="text-xs text-gray-600">{node.ops}×</span>
       </button>
       {expanded &&
         sortedChildren.map((child) => (
@@ -188,24 +188,24 @@ export default function FileTree({ sessionId }: FileTreeProps) {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-gray-300">
           File Tree ({summary.length} files)
         </h2>
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-[9px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-gray-500">
             <span className="w-2 h-2 rounded-full bg-green-400" aria-hidden="true" /> Write ({writeCount})
           </span>
-          <span className="flex items-center gap-1 text-[9px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-gray-500">
             <span className="w-2 h-2 rounded-full bg-yellow-400" aria-hidden="true" /> Edit ({editCount})
           </span>
-          <span className="flex items-center gap-1 text-[9px] text-gray-500">
+          <span className="flex items-center gap-1 text-[11px] text-gray-500">
             <span className="w-2 h-2 rounded-full bg-blue-400" aria-hidden="true" /> Read ({readCount})
           </span>
         </div>
       </div>
 
       {summary.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">No file operations yet</p>
+        <p className="text-base text-gray-500 py-6 text-center">No file operations yet</p>
       ) : (
         <div className="max-h-[500px] overflow-y-auto -mx-1">
           {[...tree.children.values()]

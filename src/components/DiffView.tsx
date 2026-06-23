@@ -72,7 +72,7 @@ function computeDiff(original: string, current: string): DiffLine[] {
 export default function DiffView({ original, current }: DiffViewProps) {
   if (original === current) {
     return (
-      <p className="text-sm text-(--muted-foreground) italic py-4 text-center">
+      <p className="text-base text-(--muted-foreground) italic py-4 text-center">
         No changes to review.
       </p>
     );
@@ -81,7 +81,7 @@ export default function DiffView({ original, current }: DiffViewProps) {
   const lines = computeDiff(original, current);
 
   return (
-    <div className="border border-(--border) bg-(--muted)/30 font-mono text-xs max-h-[300px] overflow-y-auto">
+    <div className="border border-(--border) bg-(--muted)/30 font-mono text-sm max-h-[300px] overflow-y-auto">
       {lines.map((line, idx) => {
         let bgClass = "";
         let prefixColorClass = "text-(--muted-foreground)";

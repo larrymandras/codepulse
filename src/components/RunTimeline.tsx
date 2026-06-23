@@ -74,7 +74,7 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
 
   if (showThinking) {
     return (
-      <div className="text-(--muted-foreground) text-sm animate-pulse">
+      <div className="text-(--muted-foreground) text-base animate-pulse">
         Thinking...
       </div>
     );
@@ -91,18 +91,18 @@ export function RunTimeline({ blocks, streaming = false }: RunTimelineProps) {
         return (
           <details key={round.index} open={isActive}>
             <summary
-              className={`flex items-center gap-2 cursor-pointer select-none p-2 text-sm font-semibold border-l-4 ${
+              className={`flex items-center gap-2 cursor-pointer select-none p-2 text-base font-semibold border-l-4 ${
                 isActive
                   ? "border-(--status-warn)"
                   : "border-transparent"
               }`}
             >
               <span>Round {round.index}</span>
-              <span className="text-xs text-(--muted-foreground) font-normal">
+              <span className="text-sm text-(--muted-foreground) font-normal">
                 {toolCallCount} tool call{toolCallCount !== 1 ? "s" : ""}
               </span>
               {round.done && (
-                <span className="text-xs text-(--status-ok)">✓</span>
+                <span className="text-sm text-(--status-ok)">✓</span>
               )}
               {isActive && streaming && (
                 <span className="h-2 w-2 rounded-full bg-(--status-warn) animate-pulse" />

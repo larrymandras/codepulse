@@ -99,14 +99,14 @@ function StaticRuleRow({
       </button>
 
       {/* Severity badge */}
-      <span className={`relative z-10 text-xs font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
+      <span className={`relative z-10 text-sm font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
         {rule.severity}
       </span>
 
       {/* Rule info */}
       <div className="flex-1 min-w-0 relative z-10 flex flex-col pr-4 border-r border-primary/10">
-        <span className="text-sm text-white font-medium tracking-wide truncate">{rule.name}</span>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">{rule.condition}</p>
+        <span className="text-base text-white font-medium tracking-wide truncate">{rule.name}</span>
+        <p className="text-sm text-muted-foreground truncate mt-0.5">{rule.condition}</p>
       </div>
 
       {/* Threshold override (shown on hover) */}
@@ -123,13 +123,13 @@ function StaticRuleRow({
               if (e.key === "Enter") handleThresholdCommit();
             }}
             placeholder={String(rule.id)}
-            className="w-24 h-8 text-xs font-mono bg-background border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/50"
+            className="w-24 h-8 text-sm font-mono bg-background border-primary/30 focus-visible:ring-1 focus-visible:ring-primary/50"
             title="Threshold override"
             aria-label="Threshold override"
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
-          <span className="text-xs px-2 py-1 rounded bg-primary/5 text-primary/70 border border-primary/20 hidden sm:inline font-mono tracking-wider uppercase">
+          <span className="text-sm px-2 py-1 rounded bg-primary/5 text-primary/70 border border-primary/20 hidden sm:inline font-mono tracking-wider uppercase">
             {rule.category}
           </span>
         )}
@@ -165,14 +165,14 @@ function StaticRuleRow({
               )}
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-[10px] font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
+              <p className="text-xs font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
         {/* Edit button */}
         <button
-          className="text-xs font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm"
+          className="text-sm font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm"
           onClick={onEdit}
         >
           Edit
@@ -211,12 +211,12 @@ function CustomRuleRow({
         <div className="w-full h-[1px] animate-scanline bg-primary" />
       </div>
 
-      <span className={`relative z-10 text-xs font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
+      <span className={`relative z-10 text-sm font-mono tracking-wider uppercase px-2.5 py-1 rounded-md flex-shrink-0 border font-bold ${sevClass}`}>
         {rule.severity}
       </span>
       <div className="flex-1 min-w-0 relative z-10 flex flex-col pr-4 border-r border-primary/10">
-        <span className="text-sm text-white font-medium tracking-wide truncate">{rule.name}</span>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">{rule.conditionLogic} conditions</p>
+        <span className="text-base text-white font-medium tracking-wide truncate">{rule.name}</span>
+        <p className="text-sm text-muted-foreground truncate mt-0.5">{rule.conditionLogic} conditions</p>
       </div>
 
       <div className="flex items-center gap-1 relative z-10 shrink-0">
@@ -248,13 +248,13 @@ function CustomRuleRow({
               )}
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-xs font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
+              <p className="text-sm font-mono">{isMuted ? "UNMUTE RULE" : "MUTE RULE"}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
 
         <button 
-          className="text-xs font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm" 
+          className="text-sm font-medium uppercase tracking-wider text-primary/80 border border-primary/20 bg-primary/5 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-1.5 transition-all shadow-sm" 
           onClick={onEdit}
         >
           Edit
@@ -334,7 +334,7 @@ export default function AlertRulesEngine() {
           <div>
             <h2 className="text-lg font-bold tracking-wide text-white flex items-center gap-3">
               Alert Rules Engine
-              <span className="text-xs px-2 py-1 rounded-md border text-primary border-primary/50 bg-primary/10 font-mono">
+              <span className="text-sm px-2 py-1 rounded-md border text-primary border-primary/50 bg-primary/10 font-mono">
                 {enabledCount}/{alertRules.length} rules active
               </span>
             </h2>
@@ -342,14 +342,14 @@ export default function AlertRulesEngine() {
           <div className="flex items-center gap-4">
             <button
               onClick={openNewCustomRule}
-              className="text-xs font-medium uppercase tracking-wider text-primary border border-primary/30 bg-primary/10 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-2 transition-all shadow-sm"
+              className="text-sm font-medium uppercase tracking-wider text-primary border border-primary/30 bg-primary/10 hover:bg-primary/20 hover:text-primary rounded-md px-4 py-2 transition-all shadow-sm"
             >
               + New Custom Rule
             </button>
             <button
               onClick={handleEvaluate}
               disabled={evaluating}
-              className="text-xs font-medium uppercase tracking-wider text-primary-foreground border border-primary/30 bg-primary hover:bg-primary/80 hover:border-primary rounded-md px-5 py-2 transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              className="text-sm font-medium uppercase tracking-wider text-primary-foreground border border-primary/30 bg-primary hover:bg-primary/80 hover:border-primary rounded-md px-5 py-2 transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
             >
               {evaluating ? "EVALUATING..." : "EVALUATE NOW"}
             </button>
@@ -363,7 +363,7 @@ export default function AlertRulesEngine() {
               <button
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
-                className={`text-xs font-medium tracking-wider uppercase px-4 py-2 rounded-md transition-all border ${
+                className={`text-sm font-medium tracking-wider uppercase px-4 py-2 rounded-md transition-all border ${
                   category === cat.value
                     ? "bg-primary/20 border-primary text-primary shadow-[inset_0_0_10px_rgba(16,185,129,0.2)]"
                     : "bg-transparent border-transparent text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5"
@@ -379,7 +379,7 @@ export default function AlertRulesEngine() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search Rules..."
-              className="text-sm bg-background/50 border border-primary/30 rounded-md px-4 py-2 text-white placeholder-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 w-full transition-all"
+              className="text-base bg-background/50 border border-primary/30 rounded-md px-4 py-2 text-white placeholder-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 w-full transition-all"
             />
           </div>
         </div>
@@ -399,7 +399,7 @@ export default function AlertRulesEngine() {
             );
           })}
           {filtered.length === 0 && (
-            <div className="text-center text-sm tracking-wide text-muted-foreground py-12 bg-primary/5">
+            <div className="text-center text-base tracking-wide text-muted-foreground py-12 bg-primary/5">
               No rules match current filters.
             </div>
           )}
@@ -409,7 +409,7 @@ export default function AlertRulesEngine() {
         {customRules.length > 0 && (
           <div className="border-t border-primary/30 bg-background/50">
             <div className="px-4 py-2 border-b border-primary/10 bg-primary/5">
-              <p className="text-[10px] font-mono tracking-widest text-primary uppercase font-bold">
+              <p className="text-xs font-mono tracking-widest text-primary uppercase font-bold">
                 CUSTOM RULES
               </p>
             </div>

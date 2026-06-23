@@ -36,18 +36,18 @@ export default function CancelButton({ executionId }: CancelButtonProps) {
   };
 
   if (state === "success") {
-    return <span className="text-[10px] text-amber-400">Cancelled</span>;
+    return <span className="text-xs text-amber-400">Cancelled</span>;
   }
 
   if (state === "error") {
-    return <span className="text-[10px] text-red-400">{errorMsg}</span>;
+    return <span className="text-xs text-red-400">{errorMsg}</span>;
   }
 
   return (
     <button
       onClick={handleCancel}
       disabled={state === "loading"}
-      className={`text-[10px] px-2 py-1 rounded border border-red-500/40 bg-red-600/10 text-red-400 transition-colors ${
+      className={`text-xs px-2 py-1 rounded border border-red-500/40 bg-red-600/10 text-red-400 transition-colors ${
         state === "loading" ? "cursor-not-allowed opacity-50" : "hover:bg-red-600/20"
       }`}
     >

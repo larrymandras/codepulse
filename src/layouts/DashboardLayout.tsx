@@ -5,6 +5,7 @@ import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
 import OnboardingGuide from "../components/OnboardingGuide";
 import UserMenu from "../components/UserMenu";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import PrivacyShield from "../components/PrivacyShield";
 import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
 import { useAudioEvents } from "../hooks/useAudioEvents";
@@ -252,7 +253,7 @@ function NavGroup({
       {!collapsed && (
         <div className="px-3 pt-4 pb-2 flex items-center gap-2">
           <span className="w-1 h-1 rounded-full bg-primary/50 animate-pulse" />
-          <p className="text-[10px] uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
+          <p className="text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
             {label}
           </p>
         </div>
@@ -272,13 +273,13 @@ function NavGroup({
                 title={collapsed ? `${item.label} (coming soon)` : undefined}
                 className={`group flex items-center ${
                   collapsed ? "justify-center px-2" : "gap-3 px-3"
-                } py-2 text-xs font-mono tracking-wider text-muted-foreground/40 cursor-not-allowed select-none`}
+                } py-2 text-sm font-mono tracking-wider text-muted-foreground/40 cursor-not-allowed select-none`}
               >
                 <IconComponent className="h-4 w-4 shrink-0" />
                 {!collapsed && (
                   <span className="flex-1 flex items-center justify-between gap-2">
                     {item.label}
-                    <span className="text-[8px] uppercase tracking-widest text-primary/40 border border-primary/20 px-1 py-px rounded-sm">
+                    <span className="text-[10px] uppercase tracking-widest text-primary/40 border border-primary/20 px-1 py-px rounded-sm">
                       soon
                     </span>
                   </span>
@@ -289,7 +290,7 @@ function NavGroup({
               return (
                 <Tooltip key={`ph-${item.group}-${item.label}`}>
                   <TooltipTrigger asChild>{placeholderInner}</TooltipTrigger>
-                  <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-muted-foreground">
+                  <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-muted-foreground">
                     {item.label} — soon
                   </TooltipContent>
                 </Tooltip>
@@ -306,7 +307,7 @@ function NavGroup({
               onClick={onNavClick}
               aria-label={collapsed ? item.label : undefined}
               className={({ isActive }) =>
-                `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-xs font-mono tracking-wider transition-all relative overflow-hidden ${
+                `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                   isActive
                     ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
                     : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
@@ -327,7 +328,7 @@ function NavGroup({
             return (
               <Tooltip key={item.to}>
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                   {item.label}
                 </TooltipContent>
               </Tooltip>
@@ -376,7 +377,7 @@ function SidebarContent({
       <div className="p-4 border-b border-border">
         <div className={`flex items-center ${collapsed ? "justify-center" : "justify-between"}`}>
           {collapsed ? (
-            <div className="w-8 h-8 bg-primary flex items-center justify-center text-sm font-bold text-primary-foreground">
+            <div className="w-8 h-8 bg-primary flex items-center justify-center text-base font-bold text-primary-foreground">
               CP
             </div>
           ) : (
@@ -388,7 +389,7 @@ function SidebarContent({
                   onClick={() => setIsAvatarUploadOpen(true)}
                 >
                   <div className="absolute inset-0 bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors pointer-events-none">
-                    <span className="text-primary font-mono text-[11px] font-bold tracking-widest uppercase">LM</span>
+                    <span className="text-primary font-mono text-sm font-bold tracking-widest uppercase">LM</span>
                   </div>
                   {avatarUrl && (
                     <img 
@@ -405,10 +406,10 @@ function SidebarContent({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h1 className="text-sm font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
+                    <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
                     <DarkModeToggle />
                   </div>
-                  <div className="text-[9px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
+                  <div className="text-[11px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
                     <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)] mt-0.5" />
                     <span className="break-words">Operator: Larry Mandras</span>
                   </div>
@@ -439,7 +440,7 @@ function SidebarContent({
                 onClick={onNavClick}
                 aria-label={collapsed ? "Settings" : undefined}
                 className={({ isActive }) =>
-                  `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-xs font-mono tracking-wider transition-all relative overflow-hidden ${
+                  `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                     isActive
                       ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
                       : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
@@ -453,7 +454,7 @@ function SidebarContent({
             return collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>{settingsLink}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8} className="font-mono text-[10px] uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -481,7 +482,7 @@ function SidebarContent({
               <TooltipContent side="right">{statusLabel}</TooltipContent>
             </Tooltip>
           ) : (
-            <span className="text-xs text-muted-foreground">{statusLabel}</span>
+            <span className="text-sm text-muted-foreground">{statusLabel}</span>
           )}
         </div>
       </div>
@@ -527,7 +528,7 @@ function CrtToggle({
       onClick={toggle}
       aria-label={crtEnabled ? "Disable CRT effect" : "Enable CRT effect"}
       title={crtEnabled ? "CRT effect ON — click to disable" : "CRT effect OFF — click to enable"}
-      className={`p-1.5 transition-colors text-[10px] font-mono font-medium ${
+      className={`p-1.5 transition-colors text-xs font-mono font-medium ${
         crtEnabled
           ? "bg-green-600/20 text-green-400 hover:bg-green-600/30"
           : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -680,12 +681,12 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                <span className="text-[10px] font-mono tracking-widest text-primary uppercase">
+                <span className="text-xs font-mono tracking-widest text-primary uppercase">
                   Astridr Runtime Telemetry
                 </span>
               </div>
               
-              <div className="hidden lg:flex items-center gap-4 text-[10px] font-mono text-primary/60 pl-2 border-l border-primary/20">
+              <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary/60 pl-2 border-l border-primary/20">
                 <span className="flex items-center gap-1.5">
                   <Cpu className="w-3 h-3 text-primary/80" /> 
                   SYS: <span className="text-primary font-bold">14%</span>
@@ -703,6 +704,7 @@ export default function DashboardLayout() {
             <div className="w-px h-4 bg-primary/20 mx-1" />
             <NotificationBell />
             <PrivacyShield />
+            <ThemeSwitcher />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
             <div className="w-px h-4 bg-primary/20 mx-1" />

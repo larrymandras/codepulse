@@ -140,7 +140,7 @@ export function CommandTryItForm({
         <form onSubmit={handleSubmit} className="space-y-3">
           {propertyNames.map((key) => (
             <div key={key} className="space-y-1">
-              <Label className="text-xs">{key}</Label>
+              <Label className="text-sm">{key}</Label>
               {renderField(key, properties[key])}
             </div>
           ))}
@@ -162,7 +162,7 @@ export function CommandTryItForm({
         </form>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             No parameters required.
           </p>
           <div className="flex items-center gap-2">
@@ -185,13 +185,13 @@ export function CommandTryItForm({
 
       {(result !== null || error !== null) && (
         <Collapsible open={resultOpen} onOpenChange={setResultOpen}>
-          <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <CollapsibleTrigger className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
             <ChevronDown className="h-3 w-3" />
             Result
           </CollapsibleTrigger>
           <CollapsibleContent>
             <pre
-              className={`mt-2 p-3 text-xs font-mono whitespace-pre-wrap max-h-48 overflow-auto rounded ${
+              className={`mt-2 p-3 text-sm font-mono whitespace-pre-wrap max-h-48 overflow-auto rounded ${
                 error
                   ? "bg-destructive/10 text-destructive"
                   : "bg-muted text-foreground"

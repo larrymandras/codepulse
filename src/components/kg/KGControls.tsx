@@ -52,7 +52,7 @@ export default function KGControls({
             onClick={() => onLens(l.id)}
             title={l.hint}
             aria-pressed={lens === l.id}
-            className={`px-3 py-1.5 rounded-[var(--radius-sm)] text-xs font-mono border transition-colors ${
+            className={`px-3 py-1.5 rounded-[var(--radius-sm)] text-sm font-mono border transition-colors ${
               lens === l.id
                 ? "bg-primary/15 border-primary/50 text-primary"
                 : "bg-card/60 border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
@@ -67,7 +67,7 @@ export default function KGControls({
             size="sm"
             onClick={onRefresh}
             disabled={loading}
-            className="font-mono text-xs"
+            className="font-mono text-sm"
           >
             <RefreshCw
               className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`}
@@ -88,10 +88,10 @@ export default function KGControls({
                 value={filters.entityName}
                 onChange={(e) => setFilter("entityName", e.target.value)}
                 placeholder="Search entity by name…"
-                className="pl-8 w-56 font-mono text-xs"
+                className="pl-8 w-56 font-mono text-sm"
               />
             </div>
-            <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
               <span className="whitespace-nowrap">Hops {filters.hops}</span>
               <Slider
                 value={[filters.hops]}
@@ -108,7 +108,7 @@ export default function KGControls({
 
         {/* As-of scrubber — temporal lens only */}
         {lens === "temporal" && (
-          <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 font-mono text-sm text-muted-foreground">
             <label htmlFor="kg-asof" className="whitespace-nowrap">
               As of
             </label>
@@ -124,13 +124,13 @@ export default function KGControls({
                     : null,
                 )
               }
-              className="w-40 font-mono text-xs"
+              className="w-40 font-mono text-sm"
             />
             {filters.asOf && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs"
+                className="h-7 px-2 text-sm"
                 onClick={() => setFilter("asOf", null)}
               >
                 Now
@@ -144,7 +144,7 @@ export default function KGControls({
           value={filters.entityType ?? ALL}
           onValueChange={(v) => setFilter("entityType", v === ALL ? null : v)}
         >
-          <SelectTrigger className="w-40 font-mono text-xs">
+          <SelectTrigger className="w-40 font-mono text-sm">
             <SelectValue placeholder="All types" />
           </SelectTrigger>
           <SelectContent>
@@ -168,7 +168,7 @@ export default function KGControls({
           value={filters.predicate ?? ALL}
           onValueChange={(v) => setFilter("predicate", v === ALL ? null : v)}
         >
-          <SelectTrigger className="w-44 font-mono text-xs">
+          <SelectTrigger className="w-44 font-mono text-sm">
             <SelectValue placeholder="All predicates" />
           </SelectTrigger>
           <SelectContent>
@@ -186,7 +186,7 @@ export default function KGControls({
           value={filters.agentId ?? ""}
           onChange={(e) => setFilter("agentId", e.target.value || null)}
           placeholder="agent (blank = shared)"
-          className="w-44 font-mono text-xs"
+          className="w-44 font-mono text-sm"
           aria-label="agent scope filter"
         />
       </div>

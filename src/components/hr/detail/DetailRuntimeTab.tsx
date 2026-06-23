@@ -16,8 +16,8 @@ function Field({
 }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground uppercase mb-0.5">{label}</p>
-      <div className="text-sm text-foreground">{children}</div>
+      <p className="text-sm text-muted-foreground uppercase mb-0.5">{label}</p>
+      <div className="text-base text-foreground">{children}</div>
     </div>
   );
 }
@@ -25,7 +25,7 @@ function Field({
 export function DetailRuntimeTab({ agentDetail }: DetailRuntimeTabProps) {
   if (!agentDetail) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
+      <p className="text-base text-muted-foreground py-8 text-center">
         No runtime data available.
       </p>
     );
@@ -51,7 +51,7 @@ export function DetailRuntimeTab({ agentDetail }: DetailRuntimeTabProps) {
             {(agentDetail.channels ?? []).length > 0 ? (
               <div className="flex gap-1 flex-wrap">
                 {agentDetail.channels.map((ch) => (
-                  <Badge key={ch} variant="outline" className="text-[10px]">
+                  <Badge key={ch} variant="outline" className="text-xs">
                     {ch}
                   </Badge>
                 ))}
@@ -65,7 +65,7 @@ export function DetailRuntimeTab({ agentDetail }: DetailRuntimeTabProps) {
 
       {/* Future enhancement */}
       <div className="border-t border-border pt-4 mt-4">
-        <p className="text-xs text-muted-foreground italic">
+        <p className="text-sm text-muted-foreground italic">
           Active sessions will be displayed here when real-time session tracking
           is available.
         </p>

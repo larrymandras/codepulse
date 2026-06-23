@@ -23,12 +23,12 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
             </div>
             <div>
               <h1 className="text-xl font-semibold text-gray-100">CodePulse</h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-base text-gray-500 mt-1">
                 Sign in to access the telemetry dashboard
               </p>
             </div>
             <SignInButton mode="modal">
-              <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-sm font-medium transition-colors">
+              <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-base font-medium transition-colors">
                 Sign In
               </button>
             </SignInButton>

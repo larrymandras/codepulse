@@ -61,7 +61,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
       {/* Row 1: title + priority badge */}
       <div className="flex flex-col gap-1.5 pl-2">
         <div className="flex items-start justify-between gap-2">
-          <span className="text-sm font-semibold text-foreground/90 leading-tight line-clamp-2">{task.title}</span>
+          <span className="text-base font-semibold text-foreground/90 leading-tight line-clamp-2">{task.title}</span>
           <div className="shrink-0 scale-90 origin-top-right">
             <StatusBadge status={task.priority} />
           </div>
@@ -69,7 +69,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
 
         {/* Row 2: description snippet */}
         {task.description && (
-          <p className="text-xs text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1 font-mono">
+          <p className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-2 mt-1 font-mono">
             {task.description}
           </p>
         )}
@@ -77,12 +77,12 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
         {/* Row 3: source badge + due date */}
         <div className="flex items-center gap-2 mt-3">
           {task.source && (
-            <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 font-mono bg-primary/5 text-primary border-primary/20 tracking-wider uppercase">
+            <Badge variant="outline" className="text-[11px] px-1.5 py-0.5 font-mono bg-primary/5 text-primary border-primary/20 tracking-wider uppercase">
               {task.source}
             </Badge>
           )}
           {task.dueAt && (
-            <span className="text-[10px] font-mono text-muted-foreground/60 ml-auto tracking-widest uppercase">
+            <span className="text-xs font-mono text-muted-foreground/60 ml-auto tracking-widest uppercase">
               {new Date(task.dueAt * 1000).toLocaleDateString()}
             </span>
           )}

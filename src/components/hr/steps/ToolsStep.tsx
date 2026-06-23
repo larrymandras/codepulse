@@ -124,7 +124,7 @@ export default function ToolsStep() {
     <div className="space-y-5 max-w-2xl">
       <div>
         <h2 className="text-base font-medium text-foreground">Tools</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Choose which tools this agent can use.
         </p>
       </div>
@@ -133,7 +133,7 @@ export default function ToolsStep() {
       <div className="flex items-center gap-1 bg-background/60 border border-border/40 rounded-lg p-0.5 w-fit">
         <button
           onClick={() => setValue("tools.mode", "glob")}
-          className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
             mode === "glob"
               ? "bg-primary/15 text-primary font-medium"
               : "text-muted-foreground hover:text-foreground"
@@ -143,7 +143,7 @@ export default function ToolsStep() {
         </button>
         <button
           onClick={() => setValue("tools.mode", "individual")}
-          className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+          className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
             mode === "individual"
               ? "bg-primary/15 text-primary font-medium"
               : "text-muted-foreground hover:text-foreground"
@@ -160,7 +160,7 @@ export default function ToolsStep() {
             {patterns.map((p) => (
               <span
                 key={p}
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-primary/10 text-primary rounded-lg"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-sm bg-primary/10 text-primary rounded-lg"
               >
                 {p}
                 <button
@@ -184,16 +184,16 @@ export default function ToolsStep() {
                 }
               }}
               placeholder="e.g. web_*, code_*, memory_*"
-              className="flex-1 px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="flex-1 px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
             <button
               onClick={addPattern}
-              className="px-3 py-2 text-sm bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
+              className="px-3 py-2 text-base bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors"
             >
               Add
             </button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Patterns will be resolved against available tools at deployment
             time.
           </p>
@@ -210,7 +210,7 @@ export default function ToolsStep() {
               value={toolSearch}
               onChange={(e) => setToolSearch(e.target.value)}
               placeholder="Filter tools..."
-              className="w-full pl-9 pr-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full pl-9 pr-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>
           <div className="max-h-60 overflow-auto space-y-1 border border-border/40 rounded-lg p-2">
@@ -225,13 +225,13 @@ export default function ToolsStep() {
                   onChange={() => toggleTool(tool)}
                   className="rounded border-border/40"
                 />
-                <span className="text-sm text-foreground font-mono">
+                <span className="text-base text-foreground font-mono">
                   {tool}
                 </span>
               </label>
             ))}
             {filteredTools.length === 0 && (
-              <p className="text-xs text-muted-foreground py-2 text-center">
+              <p className="text-sm text-muted-foreground py-2 text-center">
                 No tools match your filter.
               </p>
             )}
@@ -241,7 +241,7 @@ export default function ToolsStep() {
 
       {/* Selected summary */}
       {selectedCount > 0 && (
-        <div className="text-xs text-muted-foreground">
+        <div className="text-sm text-muted-foreground">
           {selectedCount} {mode === "glob" ? "pattern" : "tool"}
           {selectedCount !== 1 ? "s" : ""} selected
         </div>
@@ -251,7 +251,7 @@ export default function ToolsStep() {
       <div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {showAdvanced ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -265,7 +265,7 @@ export default function ToolsStep() {
           <div className="mt-3 space-y-5 pl-4 border-l-2 border-border/30">
             {/* Autonomy Rules */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Autonomy Rules
               </label>
               <div className="space-y-2">
@@ -278,14 +278,14 @@ export default function ToolsStep() {
                         updateAutonomyRule(idx, "pattern", e.target.value)
                       }
                       placeholder="Pattern (e.g. web_*)"
-                      className="flex-1 px-3 py-1.5 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      className="flex-1 px-3 py-1.5 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                     />
                     <select
                       value={rule.level}
                       onChange={(e) =>
                         updateAutonomyRule(idx, "level", e.target.value)
                       }
-                      className="px-2 py-1.5 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      className="px-2 py-1.5 text-base bg-background/60 border border-border/40 rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                     >
                       {AUTONOMY_LEVELS.map((lvl) => (
                         <option key={lvl} value={lvl}>
@@ -304,7 +304,7 @@ export default function ToolsStep() {
               </div>
               <button
                 onClick={addAutonomyRule}
-                className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Add Rule
@@ -313,14 +313,14 @@ export default function ToolsStep() {
 
             {/* Peer Communication */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Peer Communication
               </label>
               <div className="flex flex-wrap gap-1.5 mb-2">
                 {peerCommAllowed.map((peer) => (
                   <span
                     key={peer}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-primary/10 text-primary rounded"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-sm bg-primary/10 text-primary rounded"
                   >
                     {peer}
                     <button
@@ -348,13 +348,13 @@ export default function ToolsStep() {
                   }
                 }}
                 placeholder="Agent ID (press Enter)"
-                className="w-full px-3 py-1.5 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-1.5 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             {/* Daily Rhythm */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Daily Rhythm
               </label>
               <div className="space-y-2">
@@ -367,7 +367,7 @@ export default function ToolsStep() {
                         updateRhythm(idx, "cron", e.target.value)
                       }
                       placeholder="Cron (e.g. 0 9 * * *)"
-                      className="w-40 px-3 py-1.5 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 font-mono"
+                      className="w-40 px-3 py-1.5 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 font-mono"
                     />
                     <input
                       type="text"
@@ -376,7 +376,7 @@ export default function ToolsStep() {
                         updateRhythm(idx, "task", e.target.value)
                       }
                       placeholder="Task description"
-                      className="flex-1 px-3 py-1.5 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                      className="flex-1 px-3 py-1.5 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
                     />
                     <button
                       onClick={() => removeRhythm(idx)}
@@ -389,7 +389,7 @@ export default function ToolsStep() {
               </div>
               <button
                 onClick={addRhythm}
-                className="mt-2 flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
+                className="mt-2 flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
               >
                 <Plus className="h-3 w-3" />
                 Add Schedule

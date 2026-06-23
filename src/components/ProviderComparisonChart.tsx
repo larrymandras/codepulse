@@ -34,29 +34,29 @@ export default function ProviderComparisonChart() {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Provider Comparison
         <InfoTooltip text="Success rate, average latency, and task count per provider over the last 24 hours" />
       </h2>
 
       {stats.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No gateway task data in the last 24 hours.</p>
+        <p className="text-base text-muted-foreground">No gateway task data in the last 24 hours.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+            <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
               Success Rate (%)
             </p>
             <FlexBarChart data={successData} height={200} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+            <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
               Avg Latency (s)
             </p>
             <FlexBarChart data={latencyData} height={200} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
+            <p className="text-sm text-muted-foreground uppercase tracking-wide mb-2">
               Task Count
             </p>
             <FlexBarChart data={countData} height={200} />

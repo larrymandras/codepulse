@@ -29,7 +29,7 @@ function ProvenanceLink({ sourceEventId }: { sourceEventId?: string | null }) {
   if (!href) {
     return (
       <span
-        className="text-[10px] text-muted-foreground/50 font-mono"
+        className="text-xs text-muted-foreground/50 font-mono"
         title="No source event recorded for this fact"
       >
         no provenance
@@ -39,7 +39,7 @@ function ProvenanceLink({ sourceEventId }: { sourceEventId?: string | null }) {
   return (
     <Link
       to={href}
-      className="inline-flex items-center gap-1 text-[10px] font-mono text-primary hover:underline"
+      className="inline-flex items-center gap-1 text-xs font-mono text-primary hover:underline"
       title="Open the episodic memory that taught this fact"
     >
       <ExternalLink className="h-3 w-3" />
@@ -62,16 +62,16 @@ function AttributeRow({ attr }: { attr: KgAttribute }) {
     <div className="flex items-start justify-between gap-3 rounded-[var(--radius-sm)] border border-border bg-card/50 px-2.5 py-1.5">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-mono text-primary">{attr.predicate}</span>
-          <span className="text-[11px] text-muted-foreground">=</span>
-          <span className="text-[11px] font-mono text-foreground break-all">
+          <span className="text-sm font-mono text-primary">{attr.predicate}</span>
+          <span className="text-sm text-muted-foreground">=</span>
+          <span className="text-sm font-mono text-foreground break-all">
             {attr.value}
           </span>
           {attr.contradictionFlag && (
             <AlertTriangle className="h-3 w-3 text-amber-500" />
           )}
         </div>
-        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+        <div className="text-xs text-muted-foreground font-mono mt-0.5">
           conf {fmtConfidence(attr.confidence)} · {fmtDate(attr.validFrom)}
           {attr.validTo ? ` → ${fmtDate(attr.validTo)}` : ""}
         </div>
@@ -94,16 +94,16 @@ function EdgeRow({
     <div className="flex items-start justify-between gap-3 rounded-[var(--radius-sm)] border border-border bg-card/50 px-2.5 py-1.5">
       <div className="min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-mono text-primary">{link.predicate}</span>
+          <span className="text-sm font-mono text-primary">{link.predicate}</span>
           <ArrowRight className="h-3 w-3 text-muted-foreground" />
           <button
             onClick={() => onSelect(link.target)}
-            className="text-[11px] font-mono text-foreground hover:text-primary hover:underline truncate"
+            className="text-sm font-mono text-foreground hover:text-primary hover:underline truncate"
           >
             {targetName}
           </button>
           {!link.current && (
-            <span className="text-[9px] uppercase tracking-wide text-muted-foreground/70 border border-border rounded px-1">
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground/70 border border-border rounded px-1">
               superseded
             </span>
           )}
@@ -111,7 +111,7 @@ function EdgeRow({
             <AlertTriangle className="h-3 w-3 text-red-500" />
           )}
         </div>
-        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+        <div className="text-xs text-muted-foreground font-mono mt-0.5">
           conf {fmtConfidence(link.confidence)} · {fmtDate(link.validFrom)}
           {link.validTo ? ` → ${fmtDate(link.validTo)}` : " → current"}
         </div>
@@ -147,7 +147,7 @@ function PanelShell({
           <button
             aria-label={`Return to ${label}`}
             onClick={() => onReturnNav(returnTo)}
-            className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+            className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
           >
             <ChevronLeft className="h-3 w-3" />
             {`Back to ${label}`}
@@ -156,9 +156,9 @@ function PanelShell({
       )}
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-foreground break-words">{title}</h3>
+          <h3 className="text-base font-semibold text-foreground break-words">{title}</h3>
           {subtitle && (
-            <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+            <p className="text-sm text-muted-foreground font-mono mt-0.5">
               {subtitle}
             </p>
           )}
@@ -206,14 +206,14 @@ export default function KGDetailsPanel({
             <button
               aria-label={`Return to ${label}`}
               onClick={() => onReturnNav(returnTo)}
-              className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
+              className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200"
             >
               <ChevronLeft className="h-3 w-3" />
               {`Back to ${label}`}
             </button>
           </SectionErrorBoundary>
           <div className="flex-1 flex items-center justify-center text-center">
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-sm text-muted-foreground font-mono">
               Select an entity or edge to inspect its facts and provenance.
             </p>
           </div>
@@ -222,7 +222,7 @@ export default function KGDetailsPanel({
     }
     return (
       <div className="rounded-[var(--radius)] border border-dashed border-border bg-card/30 p-4 h-full flex items-center justify-center text-center">
-        <p className="text-xs text-muted-foreground font-mono">
+        <p className="text-sm text-muted-foreground font-mono">
           Select an entity or edge to inspect its facts and provenance.
         </p>
       </div>
@@ -242,7 +242,7 @@ export default function KGDetailsPanel({
           returnLabel={returnLabel}
           onReturnNav={onReturnNav}
         >
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             This entity is filtered out of the current view.
           </p>
         </PanelShell>
@@ -269,7 +269,7 @@ export default function KGDetailsPanel({
         {/* Literal attributes */}
         {node.attributes.length > 0 && (
           <section className="space-y-1.5">
-            <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            <h4 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
               Attributes ({node.attributes.length})
             </h4>
             {node.attributes.map((a) => (
@@ -280,11 +280,11 @@ export default function KGDetailsPanel({
 
         {/* Entity-edge facts */}
         <section className="space-y-1.5">
-          <h4 className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          <h4 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
             Relationships ({outgoing.length})
           </h4>
           {outgoing.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground font-mono">
+            <p className="text-sm text-muted-foreground font-mono">
               No outgoing relationships in view.
             </p>
           ) : (
@@ -315,7 +315,7 @@ export default function KGDetailsPanel({
         returnLabel={returnLabel}
         onReturnNav={onReturnNav}
       >
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           This relationship is filtered out of the current view.
         </p>
       </PanelShell>
@@ -326,7 +326,7 @@ export default function KGDetailsPanel({
   return (
     <PanelShell
       title={
-        <span className="inline-flex items-center gap-1.5 flex-wrap text-sm">
+        <span className="inline-flex items-center gap-1.5 flex-wrap text-base">
           <button
             onClick={() => onSelectNode(link.source)}
             className="font-mono hover:text-primary hover:underline"
@@ -349,7 +349,7 @@ export default function KGDetailsPanel({
       returnLabel={returnLabel}
       onReturnNav={onReturnNav}
     >
-      <div className="space-y-1 text-[11px] font-mono">
+      <div className="space-y-1 text-sm font-mono">
         <Row label="Confidence" value={fmtConfidence(link.confidence)} />
         <Row label="Valid from" value={fmtDate(link.validFrom)} />
         <Row label="Valid to" value={link.validTo ? fmtDate(link.validTo) : "current"} />

@@ -32,24 +32,24 @@ export function CatalogCard({ entry, onSelect, onPreview }: CatalogCardProps) {
           <h3 className="text-base font-bold text-foreground font-mono tracking-wide truncate group-hover:text-primary transition-colors">
             {entry.name}
           </h3>
-          <span className="text-[9px] font-mono uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded mt-1 inline-block">
+          <span className="text-[11px] font-mono uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 px-2 py-0.5 rounded mt-1 inline-block">
             {entry.category}
           </span>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground/80 font-mono line-clamp-3 flex-1 mt-2 leading-relaxed">
+      <p className="text-sm text-muted-foreground/80 font-mono line-clamp-3 flex-1 mt-2 leading-relaxed">
         {entry.description}
       </p>
       <div className="flex items-center gap-2 pt-3 mt-2 border-t border-border/30">
         <button
           onClick={() => onPreview(entry)}
-          className="text-xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+          className="text-sm font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
         >
           Preview
         </button>
         <button
           onClick={() => onSelect(entry)}
-          className="ml-auto text-xs font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-3 py-1.5 rounded-md transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+          className="ml-auto text-sm font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-3 py-1.5 rounded-md transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
         >
           Onboard This Agent
         </button>
@@ -81,11 +81,11 @@ export function BlankAgentCard({ onSelect }: BlankAgentCardProps) {
       </div>
       <div className="text-center">
         <h3 className="text-base font-bold font-mono tracking-wide text-foreground group-hover:text-primary transition-colors">Blank Agent</h3>
-        <p className="text-xs font-mono tracking-widest uppercase text-muted-foreground/80 mt-2">
+        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground/80 mt-2">
           Start from scratch
         </p>
       </div>
-      <button className="mt-2 text-xs font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-4 py-2 rounded-md transition-all">
+      <button className="mt-2 text-sm font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-4 py-2 rounded-md transition-all">
         Start Onboarding
       </button>
     </div>

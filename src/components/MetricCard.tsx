@@ -123,7 +123,7 @@ function MetricCardInner({
         }}
       ></div>
       
-      <p className="text-xs text-muted-foreground uppercase tracking-widest font-mono z-10 relative">{label}</p>
+      <p className="text-sm text-muted-foreground uppercase tracking-widest font-mono z-10 relative">{label}</p>
       <div className="mt-2 flex items-baseline gap-2 z-10 relative">
         <span
           className="text-3xl font-medium tracking-tight text-white"

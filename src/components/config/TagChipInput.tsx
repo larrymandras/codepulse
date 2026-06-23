@@ -45,7 +45,7 @@ export function TagChipInput({ values, onChange, placeholder = "Add..." }: TagCh
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className="h-7 w-32 text-xs"
+        className="h-7 w-32 text-sm"
       />
     </div>
   );

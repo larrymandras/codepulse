@@ -113,74 +113,108 @@
   --info: var(--status-info);
   --sidebar-active-bar: var(--primary);
 
-  /* Phase 71: glow scale — emerald accent glow tokens (replaces inline rgba magic) */
-  --glow-xs: 0 0 8px rgba(16, 185, 129, 0.15);
-  --glow-sm: 0 0 15px rgba(16, 185, 129, 0.2);
-  --glow-md: 0 0 25px rgba(16, 185, 129, 0.3);
-  --glow-lg: 0 0 40px rgba(16, 185, 129, 0.15);
+  /* Phase 71: glow scale — cyan/violet accent glow tokens (replaces inline rgba magic) */
+  --glow-xs: 0 0 8px rgba(6, 182, 212, 0.15);
+  --glow-sm: 0 0 15px rgba(6, 182, 212, 0.2);
+  --glow-md: 0 0 25px rgba(6, 182, 212, 0.3);
+  --glow-lg: 0 0 40px rgba(139, 92, 246, 0.25);
 
   /* Phase 72: War Room speaking ring tokens */
   --speaking-ring: oklch(0.65 0.15 142);
   --speaking-ring-glow: oklch(0.65 0.15 142 / 0.35);
 }
 
-.dark {
-  --background: #09090b;
-  --foreground: #ffffff;
-  --card: #141416;
-  --card-foreground: #ffffff;
-  --popover: #141416;
-  --popover-foreground: #ffffff;
-  --primary: #10b981; /* Matrix Emerald */
-  --primary-foreground: #09090b;
-  --secondary: #27272a;
-  --secondary-foreground: #ffffff;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
+.dark,
+[data-theme="cyan"] {
+  --background: #040405; /* Deep, almost black violet */
+  --foreground: #f8fafc;
+  --card: #0a0a0c;
+  --card-foreground: #f8fafc;
+  --popover: #0a0a0c;
+  --popover-foreground: #f8fafc;
+  --primary: #06b6d4; /* Electric Cyan */
+  --primary-foreground: #040405;
+  --secondary: #1e1e24;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e1e24;
+  --muted-foreground: #94a3b8;
+  --accent: #8b5cf6; /* Violet */
   --accent-foreground: #ffffff;
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #10b981;
-  --chart-1: #10b981;
-  --chart-2: #22c55e;
+  --border: #1e1e24;
+  --input: #1e1e24;
+  --ring: #06b6d4;
+  --chart-1: #06b6d4;
+  --chart-2: #8b5cf6;
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: #141416;
+  --sidebar: #0a0a0c;
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: #10b981;
-  --sidebar-primary-foreground: #09090b;
-  --sidebar-accent: #27272a;
+  --sidebar-primary: #06b6d4;
+  --sidebar-primary-foreground: #040405;
+  --sidebar-accent: #1e1e24;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: #27272a;
-  --sidebar-ring: #10b981;
+  --sidebar-border: #1e1e24;
+  --sidebar-ring: #06b6d4;
 
-  --status-ok: #22c55e;
+  --status-ok: #06b6d4; /* Cyan */
   --status-error: #ef4444;
   --status-warn: #eab308;
   --status-info: #3b82f6;
 
-  /* Brighten hardcoded grays for better dark mode contrast */
-  --color-gray-400: #d4d4d8; /* originally #9ca3af or #a1a1aa */
-  --color-gray-500: #a1a1aa; /* originally #6b7280 or #71717a */
-  --color-gray-600: #71717a; /* originally #4b5563 or #52525b */
+  --color-gray-400: #d4d4d8;
+  --color-gray-500: #a1a1aa;
+  --color-gray-600: #71717a;
 
-  --chart-bar: #27272a;
-  --chart-bar-accent: #10b981;
-  --chart-p50: #10b981;
+  --chart-bar: #1e1e24;
+  --chart-bar-accent: #06b6d4;
+  --chart-p50: #06b6d4;
   --chart-p95: #f59e0b;
   --chart-p99: #ef4444;
 
-  /* Phase 72: War Room speaking ring tokens */
-  --speaking-ring: #22c55e;
-  --speaking-ring-glow: rgba(34, 197, 94, 0.35);
+  --speaking-ring: #06b6d4;
+  --speaking-ring-glow: rgba(6, 182, 212, 0.35);
 
-  /* Phase 63 dark overrides */
-  --glass-bg: rgba(20, 20, 22, 0.75);
-  --glass-border: rgba(39, 39, 42, 0.6);
-  --glass-blur: 12px;
+  --glass-bg: rgba(10, 10, 12, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-blur: 16px;
+}
+
+[data-theme="emerald"] {
+  --background: #020617; /* Very dark slate */
+  --primary: #10b981; /* Emerald */
+  --accent: #059669;
+  --ring: #10b981;
+  --chart-1: #10b981;
+  --chart-2: #059669;
+  --sidebar-primary: #10b981;
+  --sidebar-ring: #10b981;
+  --status-ok: #10b981;
+  --chart-bar-accent: #10b981;
+  --chart-p50: #10b981;
+  --speaking-ring: #10b981;
+  --speaking-ring-glow: rgba(16, 185, 129, 0.35);
+  --glass-bg: rgba(2, 6, 23, 0.6);
+  --glass-border: rgba(16, 185, 129, 0.1);
+}
+
+[data-theme="amber"] {
+  --background: #0a0a0a; /* Almost black */
+  --primary: #f59e0b; /* Amber */
+  --accent: #ea580c;
+  --ring: #f59e0b;
+  --chart-1: #f59e0b;
+  --chart-2: #ea580c;
+  --sidebar-primary: #f59e0b;
+  --sidebar-ring: #f59e0b;
+  --status-ok: #f59e0b;
+  --chart-bar-accent: #f59e0b;
+  --chart-p50: #f59e0b;
+  --speaking-ring: #f59e0b;
+  --speaking-ring-glow: rgba(245, 158, 11, 0.35);
+  --glass-bg: rgba(10, 10, 10, 0.6);
+  --glass-border: rgba(245, 158, 11, 0.1);
 }
 
 @layer base {
@@ -197,6 +231,14 @@
 
 body {
   font-family: var(--font-geist);
+  -webkit-font-smoothing: subpixel-antialiased !important;
+  -moz-osx-font-smoothing: auto !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Force hardware acceleration on panels to fix backdrop-blur blurriness */
+.hardware-accelerated {
+  /* Removed translateZ as it causes blur on fractional scaling in Chrome/Windows */
 }
 
 /* Glow & Glassmorphism Utilities */
@@ -213,7 +255,7 @@ body {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.15) 0%, transparent 50%);
+  background: radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -306,15 +348,15 @@ code, pre, .font-mono {
 }
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.2);
-  border-left: 1px solid rgba(16, 185, 129, 0.1);
+  border-left: 1px solid rgba(6, 182, 212, 0.1);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(16, 185, 129, 0.3);
+  background: rgba(6, 182, 212, 0.3);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(16, 185, 129, 0.6);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+  background: rgba(6, 182, 212, 0.6);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.8);
 }
 
 /* Glitch effect */
@@ -337,13 +379,13 @@ code, pre, .font-mono {
 
 .glitch-text:hover::before {
   left: 2px;
-  text-shadow: -1px 0 rgba(16, 185, 129, 0.8);
+  text-shadow: -1px 0 rgba(6, 182, 212, 0.8);
   animation: glitch-anim-1 2s infinite linear alternate-reverse;
 }
 
 .glitch-text:hover::after {
   left: -2px;
-  text-shadow: -1px 0 rgba(16, 185, 129, 0.8);
+  text-shadow: -1px 0 rgba(139, 92, 246, 0.8);
   animation: glitch-anim-2 3s infinite linear alternate-reverse;
 }
 
@@ -365,23 +407,24 @@ code, pre, .font-mono {
   100% { clip-path: inset(5% 0 80% 0); transform: translate(-1px, -2px); }
 }
 
-/* Matrix Background */
+/* Premium Radial Background */
 .matrix-bg {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: -1;
   background-image: 
-    linear-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(16, 185, 129, 0.05) 1px, transparent 1px);
-  background-size: 30px 30px;
-  opacity: 0.8;
+    radial-gradient(circle at 15% 50%, rgba(6, 182, 212, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
+  background-size: cover;
+  opacity: 1;
 }
 .matrix-bg::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 0%, var(--background) 80%);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 /* Phase 149-03 — PULSE-03 swarm edge particle flow animation */

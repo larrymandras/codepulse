@@ -88,7 +88,7 @@ export function CategoryCard({
       </button>
 
       <span 
-        className="absolute top-3 right-3 text-xs font-mono font-bold uppercase tracking-widest rounded px-2 py-0.5 border text-white"
+        className="absolute top-3 right-3 text-sm font-mono font-bold uppercase tracking-widest rounded px-2 py-0.5 border text-white"
         style={{
           borderColor: `${hex}50`,
           backgroundColor: `${hex}30`,
@@ -104,11 +104,11 @@ export function CategoryCard({
         >
           {category.icon}
         </span>
-        <div className="text-sm font-bold font-mono uppercase tracking-widest text-white mt-1">
+        <div className="text-base font-bold font-mono uppercase tracking-widest text-white mt-1">
           {category.displayName}
         </div>
         {category.description && (
-          <div className="text-xs text-muted-foreground line-clamp-2 max-w-[90%] leading-relaxed">
+          <div className="text-sm text-muted-foreground line-clamp-2 max-w-[90%] leading-relaxed">
             {category.description}
           </div>
         )}
@@ -116,7 +116,7 @@ export function CategoryCard({
 
       {isDropTarget && (
         <div className="absolute inset-x-0 bottom-3 text-center">
-          <span className="text-[10px] font-mono uppercase tracking-widest font-bold" style={{ color: hex }}>
+          <span className="text-xs font-mono uppercase tracking-widest font-bold" style={{ color: hex }}>
             Drop to assign
           </span>
         </div>

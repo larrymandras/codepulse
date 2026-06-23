@@ -83,7 +83,7 @@ export default function Profiles() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Agent Profiles</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Operational profiles for Personal, Business, and Consulting workstreams
         </p>
       </div>
@@ -130,14 +130,14 @@ export default function Profiles() {
       {/* Profile Activity Timeline */}
       {profileSwitches.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-3">
+          <h2 className="text-base font-semibold text-foreground mb-3">
             Profile Switch Timeline
           </h2>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {profileSwitches.map((sw: any) => (
               <div
                 key={sw._id}
-                className="flex items-start gap-3 text-xs border-l-2 border-border pl-3 py-1"
+                className="flex items-start gap-3 text-sm border-l-2 border-border pl-3 py-1"
               >
                 <span className="text-muted-foreground whitespace-nowrap shrink-0">
                   {formatTimestamp(sw.timestamp)}
@@ -161,11 +161,11 @@ export default function Profiles() {
       {/* Channel Health Summary */}
       {allChannels.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
-          <h2 className="text-sm font-semibold text-foreground mb-3">
+          <h2 className="text-base font-semibold text-foreground mb-3">
             Channel Health Summary
           </h2>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="text-muted-foreground border-b border-border">
                   <th className="text-left py-1.5 pr-4">Profile</th>

@@ -53,7 +53,7 @@ function PillButton({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-2 py-0.5 rounded-sm border font-mono transition-colors uppercase tracking-widest ${
+      className={`text-xs px-2 py-0.5 rounded-sm border font-mono transition-colors uppercase tracking-widest ${
         active
           ? "bg-primary/20 text-primary border-primary"
           : "bg-muted/30 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/50"
@@ -131,13 +131,13 @@ export default function DriftTimeline() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+          <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             Config Drift
             <InfoTooltip text="Configuration change timeline tracking drift across MCP servers, plugins, and settings" />
           </h2>
           {summary.isDrifting && (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 font-mono uppercase tracking-widest animate-pulse">
+            <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-500 border border-yellow-500/40 font-mono uppercase tracking-widest animate-pulse">
               DRIFTING
             </span>
           )}
@@ -147,7 +147,7 @@ export default function DriftTimeline() {
             <button
               onClick={handleAcknowledgeAll}
               onBlur={() => setConfirmingAckAll(false)}
-              className={`text-[10px] px-3 py-1 rounded border font-mono uppercase tracking-widest transition-colors ${
+              className={`text-xs px-3 py-1 rounded border font-mono uppercase tracking-widest transition-colors ${
                 confirmingAckAll
                   ? "bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500/30"
                   : "bg-background/50 text-muted-foreground border-border/30 hover:text-foreground hover:border-border/50"
@@ -158,7 +158,7 @@ export default function DriftTimeline() {
                 : `Ack All (${filteredChanges.length})`}
             </button>
           )}
-          <div className="flex items-center gap-3 text-[10px] font-mono tracking-widest uppercase text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs font-mono tracking-widest uppercase text-muted-foreground">
             <span className="flex gap-1.5"><span className="text-primary/70">{summary.changesLastHour}</span> / hr</span>
             <span className="flex gap-1.5"><span className="text-primary/70">{summary.changesLast24h}</span> / 24h</span>
           </div>
@@ -202,24 +202,24 @@ export default function DriftTimeline() {
           {Object.entries(summary.byCategory).map(([cat, count]) => (
             <span
               key={cat}
-              className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300 border border-gray-600/30"
+              className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300 border border-gray-600/30"
             >
               {cat}: {count}
             </span>
           ))}
           {Object.keys(summary.byCategory).length === 0 && (
-            <span className="text-[10px] text-gray-500">No changes</span>
+            <span className="text-xs text-gray-500">No changes</span>
           )}
         </div>
         <div className="w-20 shrink-0">
           <VelocityBar data={summary.velocity} />
-          <p className="text-[9px] text-gray-600 text-center mt-0.5">24h velocity</p>
+          <p className="text-[11px] text-gray-600 text-center mt-0.5">24h velocity</p>
         </div>
       </div>
 
       {/* Timeline */}
       {filteredChanges.length === 0 ? (
-        <p className="text-gray-500 text-sm">
+        <p className="text-gray-500 text-base">
           {changes.length === 0 ? "No data yet." : "No changes match filters."}
         </p>
       ) : (
@@ -251,21 +251,21 @@ export default function DriftTimeline() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] px-1 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                      <span className="text-xs px-1 py-0.5 rounded bg-gray-700/50 text-gray-400">
                         {prefix}
                       </span>
-                      <span className="text-xs text-gray-200 font-medium truncate">
+                      <span className="text-sm text-gray-200 font-medium truncate">
                         {name}
                       </span>
-                      <span className={`text-[10px] ${ct.dot.replace("bg-", "text-")}`}>
+                      <span className={`text-xs ${ct.dot.replace("bg-", "text-")}`}>
                         {ct.label}
                       </span>
-                      <span className="text-[10px] text-gray-600 ml-auto">
+                      <span className="text-xs text-gray-600 ml-auto">
                         {isExpanded ? "▾" : "▸"}
                       </span>
                     </div>
                     {!isExpanded && c.changeType === "modified" && c.oldValue != null && (
-                      <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                      <p className="text-xs text-gray-500 truncate mt-0.5">
                         {mask(typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue))}{" "}
                         →{" "}
                         {mask(typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue))}
@@ -280,21 +280,21 @@ export default function DriftTimeline() {
                       handleAcknowledge(String(c.id));
                     }}
                     disabled={isFading}
-                    className="text-gray-600 hover:text-green-400 transition-colors text-xs px-1 pt-0.5 shrink-0"
+                    className="text-gray-600 hover:text-green-400 transition-colors text-sm px-1 pt-0.5 shrink-0"
                     title="Acknowledge change"
                   >
                     ✓
                   </button>
 
                   {/* Timestamp */}
-                  <span className="text-[10px] text-gray-600 shrink-0 pt-0.5">
+                  <span className="text-xs text-gray-600 shrink-0 pt-0.5">
                     {relativeTime(c.changedAt)}
                   </span>
                 </div>
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="ml-7 mb-2 p-2 bg-gray-900/40 rounded-lg border border-gray-700/30 text-[11px]">
+                  <div className="ml-7 mb-2 p-2 bg-gray-900/40 rounded-lg border border-gray-700/30 text-sm">
                     {c.oldValue != null && (
                       <div className="mb-1.5">
                         <span className="text-gray-500 font-medium">Old value:</span>

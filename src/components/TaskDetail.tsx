@@ -59,12 +59,12 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
         </div>
 
         {/* Fields */}
-        <div className="flex flex-col gap-3 text-sm">
+        <div className="flex flex-col gap-3 text-base">
           {/* Priority */}
           <div className="flex items-center gap-2">
             <span className="text-(--muted-foreground) w-24 flex-shrink-0">Priority</span>
             <span
-              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-sm text-(--foreground) uppercase ${PRIORITY_COLORS[task.priority]}`}
+              className={`text-xs font-semibold px-1.5 py-0.5 rounded-sm text-(--foreground) uppercase ${PRIORITY_COLORS[task.priority]}`}
             >
               {task.priority}
             </span>
@@ -92,7 +92,7 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
                 {task.labels.map((label) => (
                   <span
                     key={label}
-                    className="text-[10px] px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground) border border-(--border)"
+                    className="text-xs px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground) border border-(--border)"
                   >
                     {label}
                   </span>
@@ -126,7 +126,7 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
           {/* Description */}
           {task.description && (
             <div className="flex flex-col gap-1 pt-2 border-t border-(--border)">
-              <span className="text-(--muted-foreground) text-xs font-medium uppercase tracking-wider">
+              <span className="text-(--muted-foreground) text-sm font-medium uppercase tracking-wider">
                 Description
               </span>
               <p className="text-(--foreground) leading-relaxed whitespace-pre-wrap">
@@ -138,10 +138,10 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
           {/* Origin — linked finding (D-07 bidirectional linking) */}
           {task.findingId && (
             <div className="mt-4 pt-4 border-t border-(--border)">
-              <p className="text-xs font-semibold uppercase tracking-wide text-(--muted-foreground) mb-2">Origin</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-(--muted-foreground) mb-2">Origin</p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] px-1 py-0.5 bg-(--status-warn)/20 text-(--status-warn)">Finding</span>
-                <span className="text-sm text-(--foreground)">Linked finding: {task.findingId}</span>
+                <span className="text-xs px-1 py-0.5 bg-(--status-warn)/20 text-(--status-warn)">Finding</span>
+                <span className="text-base text-(--foreground)">Linked finding: {task.findingId}</span>
               </div>
             </div>
           )}
@@ -150,13 +150,13 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
         {/* Move to column selector */}
         {onMove && (
           <div className="pt-2 border-t border-(--border)">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider block mb-1">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider block mb-1">
               Move to
             </label>
             <select
               value={task.column}
               onChange={(e) => onMove(task.id, e.target.value as TaskColumn)}
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) w-full"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) w-full"
             >
               {TASK_COLUMNS.map((col) => (
                 <option key={col} value={col}>
@@ -171,7 +171,7 @@ export function TaskDetail({ task, open, onClose, onMove }: TaskDetailProps) {
         <div className="flex justify-end pt-2 border-t border-(--border)">
           <button
             onClick={onClose}
-            className="text-sm text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors"
+            className="text-base text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors"
           >
             Close
           </button>

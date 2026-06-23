@@ -38,7 +38,7 @@ export function StackedAvatars({
             zIndex: 0,
           }}
         >
-          <span className="text-[10px] font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-muted-foreground">
             +{overflow}
           </span>
         </div>

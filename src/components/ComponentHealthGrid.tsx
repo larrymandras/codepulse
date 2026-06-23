@@ -26,10 +26,10 @@ export default function ComponentHealthGrid({ components }: ComponentHealthGridP
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide">
+        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide">
           Component Health
         </h2>
-        <span className="text-xs text-gray-400">
+        <span className="text-sm text-gray-400">
           {components.length === 0
             ? "No components"
             : `${healthy}/${components.length} healthy`}
@@ -37,7 +37,7 @@ export default function ComponentHealthGrid({ components }: ComponentHealthGridP
       </div>
 
       {components.length === 0 ? (
-        <p className="text-gray-500 text-sm text-center py-4">
+        <p className="text-gray-500 text-base text-center py-4">
           No component data available
         </p>
       ) : (
@@ -50,7 +50,7 @@ export default function ComponentHealthGrid({ components }: ComponentHealthGridP
               <span
                 className={`w-3 h-3 rounded-full shadow-sm ${dotColor(c.outcome)}`}
               />
-              <span className="text-xs text-gray-300 font-mono text-center truncate w-full">
+              <span className="text-sm text-gray-300 font-mono text-center truncate w-full">
                 {c.component}
               </span>
             </div>

@@ -33,7 +33,7 @@ export default function HivePage() {
     <div className="space-y-6 p-6">
       {/* Page header: HIVE MIND label + live-pulse dot + GoalPicker right */}
       <div className="flex items-center justify-between">
-        <h1 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-2">
+        <h1 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           HIVE MIND
         </h1>

@@ -98,8 +98,8 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
           className="border-2 border-dashed border-gray-600/50 rounded-xl p-8 text-center hover:border-gray-500/50 transition-colors cursor-pointer"
           onClick={() => document.getElementById("avatar-file-input")?.click()}
         >
-          <p className="text-sm text-gray-400 mb-1">Drop an image here or click to browse</p>
-          <p className="text-xs text-gray-600">PNG, JPG, WebP</p>
+          <p className="text-base text-gray-400 mb-1">Drop an image here or click to browse</p>
+          <p className="text-sm text-gray-600">PNG, JPG, WebP</p>
           <input
             id="avatar-file-input"
             type="file"
@@ -111,7 +111,7 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
         {onCancel && (
           <button
             onClick={onCancel}
-            className="text-xs text-gray-400 hover:text-gray-200"
+            className="text-sm text-gray-400 hover:text-gray-200"
           >
             Cancel
           </button>
@@ -147,20 +147,20 @@ export default function AvatarUploader({ onUpload, onCancel }: AvatarUploaderPro
         <button
           onClick={handleSave}
           disabled={uploading}
-          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm flex-1"
+          className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-base flex-1"
         >
           {uploading ? "Uploading..." : "Save"}
         </button>
         <button
           onClick={() => setImageSrc(null)}
-          className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-sm"
+          className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-base"
         >
           Reset
         </button>
         {onCancel && (
           <button
             onClick={onCancel}
-            className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-sm"
+            className="bg-gray-700 hover:bg-gray-600 text-gray-200 px-4 py-2 rounded-lg text-base"
           >
             Cancel
           </button>

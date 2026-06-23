@@ -29,7 +29,7 @@ export function JumpToLatestPill({ visible, onClick }: JumpToLatestPillProps) {
                 : { duration: 0.15, ease: "easeOut" }
             }
             onClick={onClick}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-(--accent) text-(--foreground) text-xs px-3 py-1.5 rounded-full shadow-md hover:bg-(--accent)/80 transition-colors"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-(--accent) text-(--foreground) text-sm px-3 py-1.5 rounded-full shadow-md hover:bg-(--accent)/80 transition-colors"
           >
             Jump to latest
           </motion.button>

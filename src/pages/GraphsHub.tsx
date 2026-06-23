@@ -96,7 +96,7 @@ export default function GraphsHub() {
     <div className="space-y-6 p-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-[10px] font-mono uppercase tracking-widest font-bold text-primary flex items-center gap-2">
+        <h1 className="text-xs font-mono uppercase tracking-widest font-bold text-primary flex items-center gap-2">
           <Network className="h-5 w-5 text-primary" />
           GRAPHS HUB
           <InfoTooltip text="Ástríðr's code, vault, and tool graphs — unified. The hero below shows the nightly graphify + Obsidian snapshot." />

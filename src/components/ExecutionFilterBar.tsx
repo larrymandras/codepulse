@@ -30,12 +30,12 @@ function FilterGroup({
 }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold shrink-0">
+      <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold shrink-0">
         {label}
       </span>
       <button
         onClick={() => onFilterChange(filterKey, null)}
-        className={`text-[10px] px-2 py-1 rounded cursor-pointer transition-colors ${
+        className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
           activeValue === null
             ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/40"
             : "bg-gray-700/30 text-gray-400 border border-transparent hover:border-gray-600/50"
@@ -47,7 +47,7 @@ function FilterGroup({
         <button
           key={opt}
           onClick={() => onFilterChange(filterKey, activeValue === opt ? null : opt)}
-          className={`text-[10px] px-2 py-1 rounded cursor-pointer transition-colors ${
+          className={`text-xs px-2 py-1 rounded cursor-pointer transition-colors ${
             activeValue === opt
               ? "bg-indigo-500/20 text-indigo-400 border border-indigo-500/40"
               : "bg-gray-700/30 text-gray-400 border border-transparent hover:border-gray-600/50"

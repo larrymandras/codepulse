@@ -171,13 +171,13 @@ export default function Skills() {
           <div className="flex gap-3 justify-center">
             <button
               onClick={() => seedAll()}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors text-sm"
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors text-base"
             >
               Auto-Classify
             </button>
             <button
               onClick={() => setCreatingCategory(true)}
-              className="bg-muted text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-colors text-sm"
+              className="bg-muted text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-colors text-base"
             >
               Set Up Manually
             </button>
@@ -195,13 +195,13 @@ export default function Skills() {
                 placeholder="Search all skills..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-xs font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
+                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
               />
             </div>
             <select
               value={originFilter}
               onChange={(e) => setOriginFilter(e.target.value)}
-              className="bg-card border border-border rounded-lg px-2 py-1.5 text-sm text-foreground"
+              className="bg-card border border-border rounded-lg px-2 py-1.5 text-base text-foreground"
               aria-label="Filter by origin"
             >
               <option value="all">All origins</option>
@@ -213,7 +213,7 @@ export default function Skills() {
             </select>
             
             <div className="flex flex-col gap-2">
-              <h2 className="text-[10px] font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
+              <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
                 <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
                 Categories
               </h2>
@@ -234,7 +234,7 @@ export default function Skills() {
             <div className="mt-4 pt-4 border-t border-primary/20">
               <button
                 onClick={() => setSelectedCategory(null)}
-                className={`w-full text-left px-3 py-2 text-xs font-mono font-bold uppercase tracking-widest rounded transition-all ${
+                className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
                   !selectedCategory ? 'bg-primary/20 text-primary border border-primary/50' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent'
                 }`}
               >

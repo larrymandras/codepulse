@@ -64,7 +64,7 @@ export function RiskLevelBadge({
 }) {
   if (severity.toUpperCase() === "SAFE") {
     return (
-      <span className="text-[10px] text-(--muted-foreground)" onClick={onClick}>
+      <span className="text-xs text-(--muted-foreground)" onClick={onClick}>
         Clean
       </span>
     );
@@ -73,7 +73,7 @@ export function RiskLevelBadge({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide cursor-pointer hover:opacity-80 transition-opacity ${severityBadgeClass(severity)}`}
+      className={`text-xs px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide cursor-pointer hover:opacity-80 transition-opacity ${severityBadgeClass(severity)}`}
     >
       {severity.toUpperCase()}
     </button>
@@ -89,7 +89,7 @@ export function ScanResultsPanel({
 
   if (findings.length === 0) {
     return (
-      <span className="text-[10px] text-(--muted-foreground)">Clean</span>
+      <span className="text-xs text-(--muted-foreground)">Clean</span>
     );
   }
 
@@ -106,7 +106,7 @@ export function ScanResultsPanel({
       >
         <ShieldAlert className="h-4 w-4 text-gray-500 shrink-0" />
         <RiskLevelBadge severity={topSeverity} />
-        <span className="text-[10px] text-(--muted-foreground)">
+        <span className="text-xs text-(--muted-foreground)">
           {findings.length} finding{findings.length !== 1 ? "s" : ""}
         </span>
         {expanded ? (
@@ -122,16 +122,16 @@ export function ScanResultsPanel({
           {findings.map((finding) => (
             <div
               key={finding._id}
-              className="bg-(--card) border border-(--border) rounded p-2 text-xs space-y-1"
+              className="bg-(--card) border border-(--border) rounded p-2 text-sm space-y-1"
             >
               {/* Severity + category + dismiss */}
               <div className="flex items-center gap-2">
                 <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide ${severityBadgeClass(finding.severity)}`}
+                  className={`text-xs px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide ${severityBadgeClass(finding.severity)}`}
                 >
                   {finding.severity.toUpperCase()}
                 </span>
-                <span className="text-(--muted-foreground) uppercase tracking-wide text-[10px]">
+                <span className="text-(--muted-foreground) uppercase tracking-wide text-xs">
                   {finding.category}
                 </span>
                 <button
@@ -151,7 +151,7 @@ export function ScanResultsPanel({
 
               {/* Suggested fix */}
               {finding.suggestedFix && (
-                <p className="text-xs text-(--muted-foreground) italic">
+                <p className="text-sm text-(--muted-foreground) italic">
                   Fix: {finding.suggestedFix}
                 </p>
               )}

@@ -21,10 +21,10 @@ export default function ApiErrorPanel() {
   if (errors.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
           API Errors<InfoTooltip text="API errors in the last 24 hours: status codes, error messages, and frequency" />
         </h2>
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-base text-gray-500 py-4 text-center">
           No API errors recorded
         </p>
       </div>
@@ -33,20 +33,20 @@ export default function ApiErrorPanel() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
         API Errors
       </h2>
 
       {/* Summary */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
-          <p className="text-xs text-gray-400">Last 24h</p>
+          <p className="text-sm text-gray-400">Last 24h</p>
           <p className="text-lg font-bold text-red-400">
             {errorsLast24h.length}
           </p>
         </div>
         <div className="bg-gray-900/50 rounded-lg px-3 py-2 text-center">
-          <p className="text-xs text-gray-400">Most Common</p>
+          <p className="text-sm text-gray-400">Most Common</p>
           <p className="text-lg font-bold text-amber-400">
             {mostCommon ? `${mostCommon.statusCode} (${mostCommon.count})` : "--"}
           </p>
@@ -59,7 +59,7 @@ export default function ApiErrorPanel() {
           {byStatusCode.slice(0, 6).map((sc: any) => (
             <span
               key={sc.statusCode}
-              className="text-[10px] font-mono bg-gray-900/60 text-gray-300 px-2 py-1 rounded"
+              className="text-xs font-mono bg-gray-900/60 text-gray-300 px-2 py-1 rounded"
             >
               {sc.statusCode}:{" "}
               <span className="text-red-400 font-semibold">{sc.count}</span>
@@ -77,25 +77,25 @@ export default function ApiErrorPanel() {
           >
             <div className="flex items-center gap-2 mb-1">
               {err.statusCode && (
-                <span className="text-[10px] font-mono font-semibold text-red-400 bg-red-600/10 rounded px-1.5 py-0.5">
+                <span className="text-xs font-mono font-semibold text-red-400 bg-red-600/10 rounded px-1.5 py-0.5">
                   {err.statusCode}
                 </span>
               )}
               {err.model && (
-                <span className="text-[10px] text-gray-400 font-mono">
+                <span className="text-xs text-gray-400 font-mono">
                   {err.model}
                 </span>
               )}
               {err.attempt != null && (
-                <span className="text-[10px] text-gray-500">
+                <span className="text-xs text-gray-500">
                   attempt #{err.attempt}
                 </span>
               )}
-              <span className="text-[10px] text-gray-500 ml-auto shrink-0">
+              <span className="text-xs text-gray-500 ml-auto shrink-0">
                 {relativeTime(err.timestamp)}
               </span>
             </div>
-            <p className="text-xs text-gray-300 truncate">
+            <p className="text-sm text-gray-300 truncate">
               {err.errorMessage}
             </p>
           </div>

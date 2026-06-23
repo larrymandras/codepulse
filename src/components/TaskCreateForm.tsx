@@ -113,7 +113,7 @@ export function TaskCreateForm({
           </button>
         </div>
 
-        <p className="text-xs text-(--muted-foreground)">
+        <p className="text-sm text-(--muted-foreground)">
           Adding to:{" "}
           <span className="font-medium text-(--foreground)">
             {COLUMN_LABELS[defaultColumn]}
@@ -122,7 +122,7 @@ export function TaskCreateForm({
 
         {/* Pre-fill notice (per UI-SPEC) */}
         {prefillData?.findingId && (
-          <p className="text-xs text-(--muted-foreground) italic mb-4">
+          <p className="text-sm text-(--muted-foreground) italic mb-4">
             Pre-filled from finding: {prefillData.title}
           </p>
         )}
@@ -130,7 +130,7 @@ export function TaskCreateForm({
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {/* Title */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Title <span className="text-(--status-error)">*</span>
             </label>
             <input
@@ -140,13 +140,13 @@ export function TaskCreateForm({
               placeholder="Task title..."
               required
               autoFocus
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground)"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground)"
             />
           </div>
 
           {/* Description */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Description
             </label>
             <textarea
@@ -154,19 +154,19 @@ export function TaskCreateForm({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional description..."
               rows={3}
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground) resize-none"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground) resize-none"
             />
           </div>
 
           {/* Priority */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Priority
             </label>
             <select
               value={priority}
               onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
             >
               {PRIORITY_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -178,7 +178,7 @@ export function TaskCreateForm({
 
           {/* Labels */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Labels
             </label>
             <input
@@ -186,14 +186,14 @@ export function TaskCreateForm({
               value={labelsInput}
               onChange={(e) => setLabelsInput(e.target.value)}
               placeholder="Comma-separated, e.g. security, critical"
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground)"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary) placeholder:text-(--muted-foreground)"
             />
             {labels.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {labels.map((label) => (
                   <span
                     key={label}
-                    className="text-[10px] px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground) border border-(--border)"
+                    className="text-xs px-1.5 py-0.5 bg-(--muted) text-(--muted-foreground) border border-(--border)"
                   >
                     {label}
                   </span>
@@ -204,26 +204,26 @@ export function TaskCreateForm({
 
           {/* Due Date */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Due Date
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
             />
           </div>
 
           {/* Agent */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-(--muted-foreground) uppercase tracking-wider">
+            <label className="text-sm font-medium text-(--muted-foreground) uppercase tracking-wider">
               Assign Agent
             </label>
             <select
               value={agentId}
               onChange={(e) => setAgentId(e.target.value)}
-              className="bg-(--background) border border-(--border) text-(--foreground) text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
+              className="bg-(--background) border border-(--border) text-(--foreground) text-base px-3 py-2 outline-none focus:ring-1 focus:ring-(--primary)"
             >
               <option value="">Unassigned</option>
               {AGENT_OPTIONS.map((agent) => (
@@ -239,14 +239,14 @@ export function TaskCreateForm({
             <button
               type="button"
               onClick={onCancel}
-              className="text-sm text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors"
+              className="text-base text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!title.trim()}
-              className="text-sm bg-(--primary) text-(--primary-foreground) px-4 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+              className="text-base bg-(--primary) text-(--primary-foreground) px-4 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
             >
               Create Task
             </button>

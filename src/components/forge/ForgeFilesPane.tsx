@@ -71,7 +71,7 @@ export function ForgeFilesPane({
   if (!TERMINAL_STATUSES.includes(jobStatus)) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 py-8 px-4 text-center">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Files appear after the job completes.
         </p>
       </div>
@@ -140,7 +140,7 @@ function ForgeFilesPaneContent({
   // ---------------------------------------------------------------------------
   if (files === undefined) {
     return (
-      <div className="flex items-center justify-center h-full gap-2 text-sm text-muted-foreground">
+      <div className="flex items-center justify-center h-full gap-2 text-base text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
         Loading files…
       </div>
@@ -153,7 +153,7 @@ function ForgeFilesPaneContent({
   if (files.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-2 py-8 px-4 text-center">
-        <p className="text-sm text-muted-foreground">No files found for this job.</p>
+        <p className="text-base text-muted-foreground">No files found for this job.</p>
       </div>
     );
   }
@@ -193,7 +193,7 @@ function ForgeFilesPaneContent({
             filePath={selectedFile.path}
           />
         ) : (
-          <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+          <div className="flex items-center justify-center h-full text-base text-muted-foreground">
             Select a file to preview
           </div>
         )}

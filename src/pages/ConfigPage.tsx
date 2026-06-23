@@ -246,7 +246,7 @@ export default function ConfigPage() {
       >
         <TabsList className="flex flex-col h-full w-44 shrink-0 border-r border-(--border) bg-transparent rounded-none justify-start gap-1 p-2">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
-            <TabsTrigger key={id} value={id} className="w-full justify-start gap-2 px-3 py-2 text-sm">
+            <TabsTrigger key={id} value={id} className="w-full justify-start gap-2 px-3 py-2 text-base">
               <Icon className="h-4 w-4" />
               {label}
             </TabsTrigger>
@@ -261,7 +261,7 @@ export default function ConfigPage() {
             </h1>
             <div className="flex items-center gap-2">
               {showRawToggle && (
-                <Button variant="ghost" size="sm" onClick={toggleRawMode} className="gap-1.5 text-xs">
+                <Button variant="ghost" size="sm" onClick={toggleRawMode} className="gap-1.5 text-sm">
                   <Code className="h-3.5 w-3.5" />
                   {rawMode ? "Form" : "Raw YAML"}
                 </Button>
@@ -295,7 +295,7 @@ export default function ConfigPage() {
 
           {/* Validation result */}
           {validationResult && (
-            <div className={`mx-4 mt-3 px-3 py-2 text-sm border-l-2 ${
+            <div className={`mx-4 mt-3 px-3 py-2 text-base border-l-2 ${
               validationResult.success
                 ? "border-l-green-500 bg-green-500/10"
                 : "border-l-(--status-error) bg-(--status-error)/10"
@@ -307,7 +307,7 @@ export default function ConfigPage() {
           {/* Apply confirmation */}
           {showConfirm && (
             <div className="mx-4 mt-3 px-3 py-2 border border-(--border) bg-(--muted) flex items-center gap-3">
-              <span className="text-sm">Apply and hot-reload config?</span>
+              <span className="text-base">Apply and hot-reload config?</span>
               <Button size="sm" onClick={handleApplyConfirm}>Confirm</Button>
               <Button variant="ghost" size="sm" onClick={() => setShowConfirm(false)}>Cancel</Button>
             </div>
@@ -322,7 +322,7 @@ export default function ConfigPage() {
           {isDirty && (
             <div className="px-4 pt-2">
               {showRevertConfirm ? (
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-base">
                   <span className="text-(--muted-foreground)">Revert all unsaved changes?</span>
                   <Button variant="destructive" size="sm" onClick={handleRevert}>Revert</Button>
                   <Button variant="outline" size="sm" onClick={() => setShowRevertConfirm(false)}>Keep editing</Button>
@@ -345,7 +345,7 @@ export default function ConfigPage() {
               </div>
             ) : loadError ? (
               <div className="flex items-center gap-3">
-                <span className="text-sm text-(--status-error)">{loadError}</span>
+                <span className="text-base text-(--status-error)">{loadError}</span>
                 <Button variant="link" size="sm" onClick={loadConfig}>Retry</Button>
               </div>
             ) : (

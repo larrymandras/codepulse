@@ -115,7 +115,7 @@ export default function Infrastructure() {
                   const widthPct = maxDuration > 0 ? (evt.duration / maxDuration) * 100 : 0;
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-muted-foreground w-28 shrink-0 truncate">
+                      <span className="text-sm font-mono text-muted-foreground w-28 shrink-0 truncate">
                         {evt.subsystem ?? evt.phase}
                       </span>
                       <div className="flex-1 h-5 bg-muted/30 rounded-none overflow-hidden">
@@ -128,21 +128,21 @@ export default function Infrastructure() {
                           }}
                         />
                       </div>
-                      <span className="text-xs tabular-nums text-muted-foreground w-16 text-right shrink-0">
+                      <span className="text-sm tabular-nums text-muted-foreground w-16 text-right shrink-0">
                         {evt.duration.toFixed(0)}ms
                       </span>
                     </div>
                   );
                 })}
               <div className="flex items-center justify-end pt-2 border-t border-border">
-                <span className="text-xs text-muted-foreground mr-2">Total:</span>
-                <span className="text-sm font-semibold tabular-nums">
+                <span className="text-sm text-muted-foreground mr-2">Total:</span>
+                <span className="text-base font-semibold tabular-nums">
                   {startupEvents[0]?.totalMs?.toFixed(0) ?? "—"}ms
                 </span>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               No startup events recorded yet. Events appear after the runtime emits startup telemetry via /startup-ingest.
             </p>
           )}
@@ -166,17 +166,17 @@ export default function Infrastructure() {
               {authAliases && authAliases.length > 0 ? (
                 authAliases.map((alias, i) => (
                   <TableRow key={i}>
-                    <TableCell className="font-mono text-xs">{alias.alias}</TableCell>
+                    <TableCell className="font-mono text-sm">{alias.alias}</TableCell>
                     <TableCell>{alias.provider}</TableCell>
-                    <TableCell className="font-mono text-xs truncate max-w-[200px]">{alias.userId}</TableCell>
-                    <TableCell className="tabular-nums text-xs text-muted-foreground">
+                    <TableCell className="font-mono text-sm truncate max-w-[200px]">{alias.userId}</TableCell>
+                    <TableCell className="tabular-nums text-sm text-muted-foreground">
                       {new Date(alias.createdAt).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-sm text-muted-foreground text-center py-8">
+                  <TableCell colSpan={4} className="text-base text-muted-foreground text-center py-8">
                     No auth aliases configured. Aliases are ingested via /auth-alias-ingest.
                   </TableCell>
                 </TableRow>
@@ -192,16 +192,16 @@ export default function Infrastructure() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {(providerMetrics ?? []).map(pm => (
             <GlassPanel key={pm.provider} className="p-4">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">{pm.provider}</p>
+              <p className="text-sm text-muted-foreground uppercase tracking-wide">{pm.provider}</p>
               <p className="text-2xl font-semibold tabular-nums mt-1">{pm.count} calls</p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Avg: <span className="tabular-nums">${pm.avgCostUsd.toFixed(4)}</span>/call
                 {pm.avgLatencyMs != null && <> · <span className="tabular-nums">{Math.round(pm.avgLatencyMs)}ms</span></>}
               </p>
             </GlassPanel>
           ))}
           {(!providerMetrics || providerMetrics.length === 0) && (
-            <p className="text-sm text-muted-foreground col-span-full">No advisor events recorded yet.</p>
+            <p className="text-base text-muted-foreground col-span-full">No advisor events recorded yet.</p>
           )}
         </div>
       </SectionErrorBoundary>
@@ -210,7 +210,7 @@ export default function Infrastructure() {
       <SectionErrorBoundary name="Network Policy">
         <SectionHeader title="Network Policy" />
         <GlassPanel className="p-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Per-provider network policy rules will appear here once policy configuration is ingested.
           </p>
         </GlassPanel>

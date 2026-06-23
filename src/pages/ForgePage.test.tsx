@@ -139,11 +139,11 @@ describe("ForgePage", () => {
     fireEvent.click(cardA);
 
     // After selection, the detail header should show the agent name
-    // ForgeJobDetail renders: <span className="text-sm font-semibold text-foreground">{job.agent}</span>
+    // ForgeJobDetail renders: <span className="text-base font-semibold text-foreground">{job.agent}</span>
     // There will be multiple "claude" texts (list + detail) — just assert at least one exists with semibold styling
     // We rely on the detail pane no-selection prompt disappearing and header agent appearing
     expect(screen.queryByText(/select a job to view details/i)).not.toBeInTheDocument();
-    // Agent name appears in the detail header (text-sm font-semibold)
+    // Agent name appears in the detail header (text-base font-semibold)
     const agentTexts = screen.getAllByText(/^claude$/i);
     expect(agentTexts.length).toBeGreaterThanOrEqual(1);
   });

@@ -34,7 +34,7 @@ export interface SwarmTaskNodeData {
 const stateBorder: Record<string, string> = {
   pending: "border-border/50",
   claimed: "border-primary/40",
-  running: "border-[#22c55e]/60",
+  running: "border-cyan-400/60",
   verifying: "border-primary/70",
   done: "border-primary/30",
   failed: "border-[#ef4444]/60",
@@ -44,14 +44,14 @@ const stateBorder: Record<string, string> = {
 
 // 8-state glow/shadow map
 const stateGlow: Record<string, string> = {
-  pending: "",
-  claimed: "shadow-[0_0_8px_rgba(16,185,129,0.15)]",
-  running: "shadow-[0_0_20px_rgba(34,197,94,0.30)]",
-  verifying: "shadow-[0_0_15px_rgba(16,185,129,0.40)]",
-  done: "shadow-[0_0_8px_rgba(16,185,129,0.10)]",
-  failed: "shadow-[0_0_15px_rgba(239,68,68,0.25)]",
-  verify_rejected: "shadow-[0_0_15px_rgba(239,68,68,0.25)]",
-  cancelled: "",
+  pending: "shadow-md",
+  claimed: "shadow-[0_4px_12px_rgba(6,182,212,0.1)]",
+  running: "shadow-[0_4px_24px_rgba(6,182,212,0.25)]",
+  verifying: "shadow-[0_4px_20px_rgba(139,92,246,0.25)]",
+  done: "shadow-[0_2px_8px_rgba(6,182,212,0.05)]",
+  failed: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]",
+  verify_rejected: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]",
+  cancelled: "shadow-sm",
 };
 
 // 8-state animation for glow pulse (running=600ms, verifying=1.4s; cancelled=terminal/inert)
@@ -70,8 +70,8 @@ const stateAnimation: Record<string, string> = {
 const stateDot: Record<string, string> = {
   pending: "bg-muted-foreground/50",
   claimed: "bg-primary/60",
-  running: "bg-[#22c55e]",
-  verifying: "bg-primary",
+  running: "bg-cyan-400",
+  verifying: "bg-violet-400",
   done: "bg-primary/80",
   failed: "bg-[#ef4444]",
   verify_rejected: "bg-[#ef4444]",
@@ -82,8 +82,8 @@ const stateDot: Record<string, string> = {
 const stateIconColor: Record<string, string> = {
   pending: "text-muted-foreground/70",
   claimed: "text-primary/70",
-  running: "text-[#22c55e]",
-  verifying: "text-primary",
+  running: "text-cyan-400",
+  verifying: "text-violet-400",
   done: "text-primary/70",
   failed: "text-[#ef4444]",
   verify_rejected: "text-[#ef4444]",
@@ -141,10 +141,10 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
   return (
     <div
       className={[
-        "relative bg-card/80 backdrop-blur border rounded-xl px-3 py-2.5",
-        "w-[260px] min-h-[108px] flex flex-col justify-between gap-1.5 overflow-hidden",
-        "cursor-pointer hover:ring-1 hover:ring-primary/40",
-        "transition-all duration-300 ease-in-out",
+        "relative bg-card/90 backdrop-blur-md border rounded-xl px-4 py-3.5",
+        "w-[300px] min-h-[116px] flex flex-col justify-between gap-2 overflow-hidden",
+        "cursor-pointer hover:ring-1 hover:ring-primary/50 hover:scale-[1.05] hover:shadow-2xl hover:z-10",
+        "transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
         stateBorder[state] ?? "border-border/50",
         stateGlow[state] ?? "",
         stateAnimation[state] ?? "",
@@ -162,11 +162,11 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
       />
 
       {/* Top row: state icon + subtask description */}
-      <div className="flex items-start gap-1.5 flex-1 min-h-0">
-        <div className="shrink-0 mt-0.5">
+      <div className="flex items-start gap-2 flex-1 min-h-0">
+        <div className="shrink-0 mt-1">
           <StateIcon state={state} />
         </div>
-        <p className="text-[12px] font-semibold text-foreground line-clamp-2 leading-[1.35] flex-1 min-w-0">
+        <p className="text-base font-medium text-foreground/90 line-clamp-2 leading-relaxed flex-1 min-w-0">
           {data.subtask}
         </p>
       </div>
@@ -180,13 +180,13 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
           <span
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${stateDot[state] ?? "bg-muted-foreground/50"}`}
           />
-          <span className="text-[10px] font-mono text-muted-foreground truncate">
+          <span className="text-xs font-mono text-muted-foreground truncate">
             {label} • {agentDisplay}
           </span>
         </span>
         {data.model && (
           <span
-            className={`text-[10px] px-1 py-0.5 rounded shrink-0 ${modelBadgeClass(data.model)}`}
+            className={`text-xs px-1 py-0.5 rounded shrink-0 ${modelBadgeClass(data.model)}`}
           >
             {data.model.split("/").pop()?.split("-").slice(0, 2).join("-") ??
               data.model}

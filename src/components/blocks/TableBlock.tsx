@@ -41,13 +41,13 @@ export function TableBlock({ block }: TableBlockProps) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="text-sm border-collapse w-full">
+      <table className="text-base border-collapse w-full">
         <thead>
           <tr className="bg-(--secondary)">
             {block.columns.map((col, i) => (
               <th
                 key={i}
-                className="border border-(--border) px-3 py-2 cursor-pointer select-none uppercase tracking-wide text-xs text-(--muted-foreground) text-left"
+                className="border border-(--border) px-3 py-2 cursor-pointer select-none uppercase tracking-wide text-sm text-(--muted-foreground) text-left"
                 onClick={() => handleHeaderClick(i)}
               >
                 {col}

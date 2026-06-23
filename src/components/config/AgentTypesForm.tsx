@@ -60,22 +60,22 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
               {/* Collapsed: scan row */}
               <AccordionTrigger className="px-4 py-3 hover:no-underline">
                 <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <span className="font-semibold text-sm">{name}</span>
+                  <span className="font-semibold text-base">{name}</span>
                   {norseMeaning && (
-                    <span className="text-xs text-(--muted-foreground) truncate">{norseMeaning}</span>
+                    <span className="text-sm text-(--muted-foreground) truncate">{norseMeaning}</span>
                   )}
                   <div className="flex items-center gap-2 ml-auto mr-4">
-                    <Badge variant={TIER_VARIANTS[tier] ?? "outline"} className="text-[10px]">
+                    <Badge variant={TIER_VARIANTS[tier] ?? "outline"} className="text-xs">
                       {tier}
                     </Badge>
-                    <Badge variant={active ? "default" : "secondary"} className="text-[10px]">
+                    <Badge variant={active ? "default" : "secondary"} className="text-xs">
                       {active ? "active" : "inactive"}
                     </Badge>
-                    <span className="text-xs text-(--muted-foreground) font-mono">
+                    <span className="text-sm text-(--muted-foreground) font-mono">
                       {model ?? "default"}
                     </span>
                     {budget != null && (
-                      <span className="text-xs text-(--muted-foreground) font-mono">
+                      <span className="text-sm text-(--muted-foreground) font-mono">
                         {Math.round(budget * 100)}%
                       </span>
                     )}
@@ -88,20 +88,20 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                 <div className="space-y-6">
                   {/* Identity */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Identity</h4>
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Identity</h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Name</Label>
+                        <Label className="text-sm">Name</Label>
                         <Input
                           value={String(agent.name ?? "")}
                           onChange={(e) => updateAgent(idx, "name", e.target.value)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Tier</Label>
+                        <Label className="text-sm">Tier</Label>
                         <Select value={tier} onValueChange={(v) => updateAgent(idx, "tier", v)}>
-                          <SelectTrigger size="sm" className="h-8 text-sm">
+                          <SelectTrigger size="sm" className="h-8 text-base">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -113,16 +113,16 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Description</Label>
+                      <Label className="text-sm">Description</Label>
                       <Textarea
                         value={String(agent.description ?? "")}
                         onChange={(e) => updateAgent(idx, "description", e.target.value)}
                         rows={2}
-                        className="text-sm"
+                        className="text-base"
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs">Active</Label>
+                      <Label className="text-sm">Active</Label>
                       <Switch
                         size="sm"
                         checked={active}
@@ -130,11 +130,11 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-(--muted-foreground)">Norse meaning</Label>
+                      <Label className="text-sm text-(--muted-foreground)">Norse meaning</Label>
                       <Input
                         value={String(agent.norse_meaning ?? "")}
                         onChange={(e) => updateAgent(idx, "norse_meaning", e.target.value)}
-                        className="h-8 text-sm text-(--muted-foreground)"
+                        className="h-8 text-base text-(--muted-foreground)"
                       />
                     </div>
                   </section>
@@ -143,46 +143,46 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
 
                   {/* Limits */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Limits</h4>
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Limits</h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Model override</Label>
+                        <Label className="text-sm">Model override</Label>
                         <Input
                           value={String(agent.model_override ?? "")}
                           onChange={(e) => updateAgent(idx, "model_override", e.target.value || null)}
                           placeholder="default"
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Budget fraction</Label>
+                        <Label className="text-sm">Budget fraction</Label>
                         <Input
                           type="number"
                           value={agent.budget_fraction != null ? String(agent.budget_fraction) : ""}
                           onChange={(e) => updateAgent(idx, "budget_fraction", e.target.value ? parseFloat(e.target.value) : undefined)}
                           placeholder="0.0 - 1.0"
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                           step={0.05}
                           min={0}
                           max={1}
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Timeout (seconds)</Label>
+                        <Label className="text-sm">Timeout (seconds)</Label>
                         <Input
                           type="number"
                           value={agent.timeout_seconds != null ? String(agent.timeout_seconds) : ""}
                           onChange={(e) => updateAgent(idx, "timeout_seconds", e.target.value ? parseInt(e.target.value) : undefined)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Max rounds</Label>
+                        <Label className="text-sm">Max rounds</Label>
                         <Input
                           type="number"
                           value={agent.max_rounds != null ? String(agent.max_rounds) : ""}
                           onChange={(e) => updateAgent(idx, "max_rounds", e.target.value ? parseInt(e.target.value) : undefined)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                     </div>
@@ -192,9 +192,9 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
 
                   {/* Tools & Channels */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Tools & Channels</h4>
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Tools & Channels</h4>
                     <div className="space-y-2">
-                      <Label className="text-xs">Tools enabled</Label>
+                      <Label className="text-sm">Tools enabled</Label>
                       <TagChipInput
                         values={(agent.tools_enabled as string[]) ?? []}
                         onChange={(v) => updateAgent(idx, "tools_enabled", v)}
@@ -202,7 +202,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Channels</Label>
+                      <Label className="text-sm">Channels</Label>
                       <TagChipInput
                         values={(agent.channels as string[]) ?? []}
                         onChange={(v) => updateAgent(idx, "channels", v)}
@@ -210,7 +210,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Peer comm allowed</Label>
+                      <Label className="text-sm">Peer comm allowed</Label>
                       <TagChipInput
                         values={(agent.peer_comm_allowed as string[]) ?? []}
                         onChange={(v) => updateAgent(idx, "peer_comm_allowed", v)}
@@ -218,7 +218,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Kits</Label>
+                      <Label className="text-sm">Kits</Label>
                       <TagChipInput
                         values={(agent.kits as string[]) ?? []}
                         onChange={(v) => updateAgent(idx, "kits", v)}
@@ -226,7 +226,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Capabilities</Label>
+                      <Label className="text-sm">Capabilities</Label>
                       <TagChipInput
                         values={(agent.capabilities as string[]) ?? []}
                         onChange={(v) => updateAgent(idx, "capabilities", v)}
@@ -239,7 +239,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
 
                   {/* Autonomy Rules */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Autonomy Rules</h4>
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Autonomy Rules</h4>
                     <InlineTable
                       columns={AUTONOMY_COLUMNS}
                       rows={(agent.autonomy_rules as Record<string, unknown>[]) ?? []}
@@ -252,7 +252,7 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
 
                   {/* Daily Rhythm */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Daily Rhythm</h4>
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Daily Rhythm</h4>
                     <InlineTable
                       columns={RHYTHM_COLUMNS}
                       rows={(agent.daily_rhythm as Record<string, unknown>[]) ?? []}
@@ -266,11 +266,11 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                     <>
                       <Separator />
                       <section className="space-y-2">
-                        <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Memory (read-only)</h4>
+                        <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Memory (read-only)</h4>
                         {["l1_index", "l2_topics_dir", "l3_logs_dir"].map((k) => {
                           const mem = agent.memory as Record<string, unknown>;
                           return mem[k] ? (
-                            <div key={k} className="flex items-center gap-2 text-xs">
+                            <div key={k} className="flex items-center gap-2 text-sm">
                               <span className="text-(--muted-foreground) w-24">{k}:</span>
                               <span className="font-mono">{String(mem[k])}</span>
                             </div>
@@ -285,31 +285,31 @@ export function AgentTypesForm({ data, onChange }: AgentTypesFormProps) {
                     <>
                       <Separator />
                       <section className="space-y-3">
-                        <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">Email</h4>
+                        <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">Email</h4>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <Label className="text-xs">Default layout</Label>
+                            <Label className="text-sm">Default layout</Label>
                             <Input
                               value={String(agent.email_default_layout ?? "")}
                               onChange={(e) => updateAgent(idx, "email_default_layout", e.target.value || null)}
-                              className="h-8 text-sm"
+                              className="h-8 text-base"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Signature name</Label>
+                            <Label className="text-sm">Signature name</Label>
                             <Input
                               value={String(agent.email_signature_name ?? "")}
                               onChange={(e) => updateAgent(idx, "email_signature_name", e.target.value || null)}
-                              className="h-8 text-sm"
+                              className="h-8 text-base"
                             />
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Signature title</Label>
+                          <Label className="text-sm">Signature title</Label>
                           <Input
                             value={String(agent.email_signature_title ?? "")}
                             onChange={(e) => updateAgent(idx, "email_signature_title", e.target.value || null)}
-                            className="h-8 text-sm"
+                            className="h-8 text-base"
                           />
                         </div>
                       </section>

@@ -32,7 +32,7 @@ export function CodeBlock({ block, diff }: CodeBlockProps) {
     return (
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <p className="text-xs uppercase tracking-wide text-(--muted-foreground) mb-1">
+          <p className="text-sm uppercase tracking-wide text-(--muted-foreground) mb-1">
             Before
           </p>
           <SyntaxHighlighter language={lang} style={oneDark} customStyle={codeStyle}>
@@ -40,7 +40,7 @@ export function CodeBlock({ block, diff }: CodeBlockProps) {
           </SyntaxHighlighter>
         </div>
         <div>
-          <p className="text-xs uppercase tracking-wide text-(--muted-foreground) mb-1">
+          <p className="text-sm uppercase tracking-wide text-(--muted-foreground) mb-1">
             After
           </p>
           <SyntaxHighlighter language={lang} style={oneDark} customStyle={codeStyle}>

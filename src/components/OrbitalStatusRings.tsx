@@ -160,10 +160,10 @@ export default function OrbitalStatusRings() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-300">Orbital Status</h2>
+        <h2 className="text-base font-semibold text-gray-300">Orbital Status</h2>
         <div className="flex items-center gap-3">
           {(["healthy", "degraded", "down", "unknown"] as NodeStatus[]).map((s) => (
-            <span key={s} className="flex items-center gap-1 text-[9px] text-gray-500">
+            <span key={s} className="flex items-center gap-1 text-[11px] text-gray-500">
               <span
                 className="w-2 h-2 rounded-full"
                 style={{ backgroundColor: STATUS_COLORS[s].dot }}
@@ -253,7 +253,7 @@ export default function OrbitalStatusRings() {
                             }}
                           />
                           <span
-                            className="relative text-[8px] font-bold"
+                            className="relative text-[10px] font-bold"
                             style={{ color: nodeColor.dot }}
                           >
                             {node.icon}
@@ -261,7 +261,7 @@ export default function OrbitalStatusRings() {
 
                           {/* Tooltip */}
                           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-                            <span className="text-[8px] text-gray-400 bg-gray-900/90 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] text-gray-400 bg-gray-900/90 px-1.5 py-0.5 rounded">
                               {node.label}
                             </span>
                           </div>
@@ -273,7 +273,7 @@ export default function OrbitalStatusRings() {
 
                 {/* Ring label */}
                 <span
-                  className="absolute text-[9px] text-gray-600 font-medium"
+                  className="absolute text-[11px] text-gray-600 font-medium"
                   style={{
                     top: `calc(50% - ${ring.radius}px - 12px)`,
                     left: "50%",
@@ -303,7 +303,7 @@ export default function OrbitalStatusRings() {
                 }}
               >
                 <span
-                  className="text-xs font-bold uppercase"
+                  className="text-sm font-bold uppercase"
                   style={{ color: healthColor.dot }}
                 >
                   {health === "healthy" ? "OK" : health === "degraded" ? "!!" : health === "down" ? "DN" : "??"}
@@ -326,8 +326,8 @@ export default function OrbitalStatusRings() {
               className="text-center py-2 rounded-lg"
               style={{ backgroundColor: `${rc.dot}08`, border: `1px solid ${rc.dot}20` }}
             >
-              <p className="text-[10px] text-gray-400">{ring.label}</p>
-              <p className="text-sm font-semibold" style={{ color: rc.dot }}>
+              <p className="text-xs text-gray-400">{ring.label}</p>
+              <p className="text-base font-semibold" style={{ color: rc.dot }}>
                 {healthyCount}/{ring.nodes.length}
               </p>
             </div>

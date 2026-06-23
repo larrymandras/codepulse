@@ -111,12 +111,12 @@ function FileRow({ entry, workspace, onSelectFile, isSelected }: FileRowProps) {
       }}
     >
       {/* Filename — React text node, NEVER innerHTML (T-82-11) */}
-      <span className="text-sm text-foreground truncate flex-1">
+      <span className="text-base text-foreground truncate flex-1">
         {entry.path}
       </span>
 
       {/* Size annotation */}
-      <span className="text-[10px] font-mono text-muted-foreground flex-shrink-0">
+      <span className="text-xs font-mono text-muted-foreground flex-shrink-0">
         {formatFileSize(entry.sizeBytes)}
       </span>
 
@@ -153,7 +153,7 @@ function KindGroup({ kind, entries, workspace, onSelectFile, selectedPath }: Kin
   return (
     <div>
       <Separator />
-      <div className="px-4 pt-1.5 pb-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-widest font-mono bg-card">
+      <div className="px-4 pt-1.5 pb-1 text-xs font-semibold text-muted-foreground uppercase tracking-widest font-mono bg-card">
         {KIND_LABEL[kind]}
       </div>
       <div role="list">
@@ -203,7 +203,7 @@ export function FileBrowser({
   if (files.length === 0) {
     return (
       <div className="flex items-center justify-center py-8 px-4 text-center">
-        <p className="text-sm text-muted-foreground">No files found for this job.</p>
+        <p className="text-base text-muted-foreground">No files found for this job.</p>
       </div>
     );
   }

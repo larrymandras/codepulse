@@ -22,11 +22,11 @@ export function TokenSavingsIndicator({
   return (
     <div className={`flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg ${className}`}>
       <TrendingDown className="w-4 h-4 text-emerald-600" />
-      <div className="text-sm">
+      <div className="text-base">
         <span className="font-semibold text-emerald-700">{percentage}%</span>
         <span className="text-emerald-600 ml-1">token savings</span>
         {savedTokens > 0 && (
-          <span className="text-emerald-500 text-xs ml-1">
+          <span className="text-emerald-500 text-sm ml-1">
             ({savedTokens.toLocaleString()} tokens saved via lean-ctx)
           </span>
         )}

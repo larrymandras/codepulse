@@ -52,15 +52,15 @@ function computeTierFlag(
 const tierFlagConfig: Record<TierFlag, { dotClass: string; labelClass: string }> = {
   "TIER OK": {
     dotClass: "w-2 h-2 rounded-full bg-[#10b981]",
-    labelClass: "text-[10px] font-mono text-[#10b981]",
+    labelClass: "text-xs font-mono text-[#10b981]",
   },
   "OPUS WORKER": {
     dotClass: "w-2 h-2 rounded-full bg-[#ef4444] animate-pulse",
-    labelClass: "text-[10px] font-mono text-[#ef4444]",
+    labelClass: "text-xs font-mono text-[#ef4444]",
   },
   "CHECKING...": {
     dotClass: "w-2 h-2 rounded-full bg-muted-foreground/50",
-    labelClass: "text-[10px] font-mono text-muted-foreground",
+    labelClass: "text-xs font-mono text-muted-foreground",
   },
 };
 
@@ -94,7 +94,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <h2
-            className={`text-[10px] font-mono uppercase tracking-widest flex items-center gap-2 ${
+            className={`text-xs font-mono uppercase tracking-widest flex items-center gap-2 ${
               isRunaway ? "text-[#eab308]" : "text-primary"
             }`}
           >
@@ -108,7 +108,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
           {isRunaway && (
             <Badge
               variant="outline"
-              className="border-[#eab308]/60 text-[#eab308] bg-[#eab308]/10 text-[10px] font-mono"
+              className="border-[#eab308]/60 text-[#eab308] bg-[#eab308]/10 text-xs font-mono"
             >
               COST WARNING
             </Badge>
@@ -126,8 +126,8 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
         /* Empty state */
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
           <DollarSign className="h-6 w-6 text-muted-foreground/50" />
-          <p className="text-xs font-medium text-foreground">No cost data yet</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-medium text-foreground">No cost data yet</p>
+          <p className="text-sm text-muted-foreground">
             Costs will accumulate as LLM calls are made during the swarm run.
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
           <div className="flex-[3] min-w-0">
             {/* Total cost metric */}
             <div className="mb-3">
-              <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-0.5">
+              <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-0.5">
                 TOTAL COST
               </p>
               <p
@@ -153,16 +153,16 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
+                  <TableHead className="text-xs font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
                     Provider
                   </TableHead>
-                  <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
+                  <TableHead className="text-xs font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
                     Model
                   </TableHead>
-                  <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
+                  <TableHead className="text-xs font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
                     Cost
                   </TableHead>
-                  <TableHead className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
+                  <TableHead className="text-xs font-mono uppercase tracking-widest text-muted-foreground h-7 px-1">
                     %
                   </TableHead>
                 </TableRow>
@@ -180,22 +180,22 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                       className={isOpus ? "bg-amber-500/10" : ""}
                     >
                       <TableCell
-                        className={`text-xs tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
                       >
                         {row.provider}
                       </TableCell>
                       <TableCell
-                        className={`text-xs tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
                       >
                         {row.model}
                       </TableCell>
                       <TableCell
-                        className={`text-xs tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
                       >
                         ${row.cost.toFixed(4)}
                       </TableCell>
                       <TableCell
-                        className={`text-xs tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
                       >
                         {pct}%
                       </TableCell>
@@ -209,7 +209,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
           {/* Right column (40%): sparkline + label */}
           <div className="flex-[2] min-w-0 flex flex-col gap-2">
             <FlexBarChart data={sparklineData} height={48} />
-            <p className="text-[10px] font-mono text-muted-foreground">cost trend</p>
+            <p className="text-xs font-mono text-muted-foreground">cost trend</p>
           </div>
         </div>
       )}

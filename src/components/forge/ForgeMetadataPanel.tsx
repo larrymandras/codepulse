@@ -57,7 +57,7 @@ function GroupDivider({ label }: { label: string }) {
   return (
     <>
       <dt className="col-span-2 border-t border-border mt-1" />
-      <dd className="col-span-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground pb-1">
+      <dd className="col-span-2 text-xs font-mono uppercase tracking-widest text-muted-foreground pb-1">
         {label}
       </dd>
     </>
@@ -74,90 +74,90 @@ export function ForgeMetadataPanel({ job }: ForgeMetadataPanelProps) {
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-4 py-3">
 
         {/* ── Identity ── */}
-        <dt className="col-span-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground pb-1">
+        <dt className="col-span-2 text-xs font-mono uppercase tracking-widest text-muted-foreground pb-1">
           Identity
         </dt>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Agent
         </dt>
-        <dd className="text-xs text-foreground capitalize">{job.agent}</dd>
+        <dd className="text-sm text-foreground capitalize">{job.agent}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Mode
         </dt>
-        <dd className="text-xs text-foreground capitalize">{job.mode}</dd>
+        <dd className="text-sm text-foreground capitalize">{job.mode}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Status
         </dt>
-        <dd className="text-xs text-foreground">
+        <dd className="text-sm text-foreground">
           <ForgeStatusBadge status={job.status} />
         </dd>
 
         {/* ── Execution ── */}
         <GroupDivider label="Execution" />
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           PID
         </dt>
-        <dd className="text-xs text-foreground">{formatNullableNumber(job.pid)}</dd>
+        <dd className="text-sm text-foreground">{formatNullableNumber(job.pid)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Exit Code
         </dt>
-        <dd className="text-xs text-foreground">{formatNullableNumber(job.exitCode)}</dd>
+        <dd className="text-sm text-foreground">{formatNullableNumber(job.exitCode)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Started At
         </dt>
-        <dd className="text-xs text-foreground">{formatDateTime(job.startedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.startedAt)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Finished At
         </dt>
-        <dd className="text-xs text-foreground">{formatDateTime(job.finishedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.finishedAt)}</dd>
 
         {/* ── Resources ── */}
         <GroupDivider label="Resources" />
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Workspace ID
         </dt>
-        <dd className="text-xs text-foreground">{formatWorkspaceId(job.workspaceId)}</dd>
+        <dd className="text-sm text-foreground">{formatWorkspaceId(job.workspaceId)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Artifact Count
         </dt>
-        <dd className="text-xs text-foreground">{job.artifactCount}</dd>
+        <dd className="text-sm text-foreground">{job.artifactCount}</dd>
 
         {/* ── Configuration ── */}
         <GroupDivider label="Configuration" />
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Model
         </dt>
-        <dd className="text-xs text-foreground">{formatModel(job.model)}</dd>
+        <dd className="text-sm text-foreground">{formatModel(job.model)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Capabilities
         </dt>
-        <dd className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
+        <dd className="text-sm font-mono text-muted-foreground whitespace-pre-wrap">
           {formatCapabilities(job.capabilities)}
         </dd>
 
         {/* ── Audit ── */}
         <GroupDivider label="Audit" />
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Created At
         </dt>
-        <dd className="text-xs text-foreground">{formatDateTime(job.createdAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.createdAt)}</dd>
 
-        <dt className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+        <dt className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
           Updated At
         </dt>
-        <dd className="text-xs text-foreground">{formatDateTime(job.updatedAt)}</dd>
+        <dd className="text-sm text-foreground">{formatDateTime(job.updatedAt)}</dd>
 
       </dl>
     </GlassPanel>

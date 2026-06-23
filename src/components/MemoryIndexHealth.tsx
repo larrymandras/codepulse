@@ -52,11 +52,11 @@ export default function MemoryIndexHealth() {
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-gray-300">
           Memory Index Health<InfoTooltip text="Episodic memory health: total events, recent activity, and breakdown by type and agent" />
         </h2>
         <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}
+          className={`text-sm font-medium px-2 py-0.5 rounded-full ${st.bg} ${st.color}`}
         >
           {st.label}
         </span>
@@ -65,19 +65,19 @@ export default function MemoryIndexHealth() {
       {/* Key metrics */}
       <div className="grid grid-cols-3 gap-3">
         <div>
-          <p className="text-xs text-gray-500">Total</p>
+          <p className="text-sm text-gray-500">Total</p>
           <p className="text-lg font-semibold text-gray-100">
             {health.totalEvents}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Last 24h</p>
+          <p className="text-sm text-gray-500">Last 24h</p>
           <p className="text-lg font-semibold text-gray-100">
             {health.last24h}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500">Last 7d</p>
+          <p className="text-sm text-gray-500">Last 7d</p>
           <p className="text-lg font-semibold text-gray-100">
             {health.last7d}
           </p>
@@ -86,7 +86,7 @@ export default function MemoryIndexHealth() {
 
       {/* Last event */}
       {health.lastEvent && (
-        <p className="text-xs text-gray-500">
+        <p className="text-sm text-gray-500">
           Last event:{" "}
           <span className="text-gray-400">
             {relativeTime(health.lastEvent)}
@@ -97,12 +97,12 @@ export default function MemoryIndexHealth() {
       {/* Event type breakdown */}
       {typeEntries.length > 0 && (
         <div>
-          <p className="text-xs text-gray-500 mb-2">Event Types</p>
+          <p className="text-sm text-gray-500 mb-2">Event Types</p>
           <div className="flex flex-wrap gap-1.5">
             {typeEntries.map(([type, count], i) => (
               <span
                 key={type}
-                className={`text-xs px-2 py-0.5 rounded-full ${typeColors[i % typeColors.length]}`}
+                className={`text-sm px-2 py-0.5 rounded-full ${typeColors[i % typeColors.length]}`}
               >
                 {type}{" "}
                 <span className="opacity-70">{count as number}</span>
@@ -115,12 +115,12 @@ export default function MemoryIndexHealth() {
       {/* Agent breakdown */}
       {agentEntries.length > 0 && (
         <div>
-          <p className="text-xs text-gray-500 mb-2">By Agent</p>
+          <p className="text-sm text-gray-500 mb-2">By Agent</p>
           <div className="space-y-1">
             {agentEntries.map(([agent, count]) => (
               <div
                 key={agent}
-                className="flex items-center justify-between text-xs"
+                className="flex items-center justify-between text-sm"
               >
                 <span className="text-gray-400 truncate">{agent}</span>
                 <span className="text-gray-500 ml-2">{count as number}</span>

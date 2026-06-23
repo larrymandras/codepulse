@@ -134,7 +134,7 @@ function ConditionRow({
         onChange={(e) =>
           onChange({ ...condition, threshold: parseFloat(e.target.value) || 0 })
         }
-        className="w-24 h-8 text-sm"
+        className="w-24 h-8 text-base"
         placeholder="0"
       />
 
@@ -185,7 +185,7 @@ function LogicToggle({
     <button
       type="button"
       onClick={onToggle}
-      className="text-xs bg-muted px-2 py-1 rounded font-medium hover:bg-muted/80 transition-colors"
+      className="text-sm bg-muted px-2 py-1 rounded font-medium hover:bg-muted/80 transition-colors"
       aria-label={`Condition logic: ${logic}. Click to toggle.`}
     >
       {logic}
@@ -275,7 +275,7 @@ export function ConditionBuilder({
       {conditionGroups.map((group, gIdx) => (
         <div key={gIdx} className="pl-6 border-l-2 border-muted flex flex-col gap-1">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-muted-foreground">Group</span>
+            <span className="text-sm text-muted-foreground">Group</span>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -322,7 +322,7 @@ export function ConditionBuilder({
             variant="ghost"
             size="sm"
             type="button"
-            className="w-fit text-sm mt-1"
+            className="w-fit text-base mt-1"
             onClick={() =>
               updateGroup(gIdx, {
                 ...group,
@@ -342,7 +342,7 @@ export function ConditionBuilder({
           variant="ghost"
           size="sm"
           type="button"
-          className="text-sm"
+          className="text-base"
           onClick={addCondition}
         >
           <PlusIcon className="w-4 h-4 mr-1" />
@@ -352,7 +352,7 @@ export function ConditionBuilder({
           variant="ghost"
           size="sm"
           type="button"
-          className="text-sm"
+          className="text-base"
           onClick={addGroup}
         >
           Add group

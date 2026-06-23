@@ -96,15 +96,15 @@ export function YamlImportDialog({
           {file ? (
             <div className="flex items-center justify-center gap-2">
               <FileText className="h-5 w-5 text-muted-foreground" />
-              <span className="text-sm">{file.name}</span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-base">{file.name}</span>
+              <span className="text-sm text-muted-foreground">
                 ({(file.size / 1024).toFixed(1)} KB)
               </span>
             </div>
           ) : (
             <>
               <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Drop a .yml or .yaml file here, or click to browse
               </p>
             </>
@@ -121,11 +121,11 @@ export function YamlImportDialog({
         {/* Validation errors */}
         {errors.length > 0 && (
           <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3">
-            <div className="flex items-center gap-2 text-destructive text-sm font-medium mb-1">
+            <div className="flex items-center gap-2 text-destructive text-base font-medium mb-1">
               <AlertCircle className="h-4 w-4" />
               Validation errors
             </div>
-            <ul className="list-disc list-inside text-xs text-destructive/80 space-y-0.5">
+            <ul className="list-disc list-inside text-sm text-destructive/80 space-y-0.5">
               {errors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}

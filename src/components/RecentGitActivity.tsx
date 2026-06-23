@@ -16,10 +16,10 @@ export default function RecentGitActivity() {
   if (commits.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+        <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
           Recent Git Activity
         </h2>
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-base text-gray-500 py-4 text-center">
           No git commits recorded yet
         </p>
       </div>
@@ -28,7 +28,7 @@ export default function RecentGitActivity() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
         Recent Git Activity
       </h2>
       <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
@@ -55,8 +55,8 @@ export default function RecentGitActivity() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-gray-200 truncate">{c.message}</p>
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                <p className="text-sm text-gray-200 truncate">{c.message}</p>
+                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                   <span className="font-mono">
                     {c.sha?.slice(0, 7) ?? "\u2014"}
                   </span>
@@ -72,7 +72,7 @@ export default function RecentGitActivity() {
                 </div>
               </div>
               {isSelfHealing && (
-                <span className="mt-1 text-[9px] uppercase tracking-wider font-semibold text-emerald-400 bg-emerald-600/10 rounded px-1.5 py-0.5 shrink-0">
+                <span className="mt-1 text-[11px] uppercase tracking-wider font-semibold text-emerald-400 bg-emerald-600/10 rounded px-1.5 py-0.5 shrink-0">
                   recovery
                 </span>
               )}

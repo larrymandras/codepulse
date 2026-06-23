@@ -41,7 +41,7 @@ export default function KGSummaryCards() {
     return (
       <div className="flex items-start gap-3 rounded-[var(--radius)] border border-border bg-card/50 px-4 py-3">
         <Database className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-        <div className="text-xs font-mono leading-relaxed">
+        <div className="text-sm font-mono leading-relaxed">
           <p className="text-foreground">No KG summary telemetry yet.</p>
           <p className="text-muted-foreground mt-0.5">
             Cards populate once Ástríðr emits a{" "}
@@ -88,13 +88,13 @@ export default function KGSummaryCards() {
       {/* By-type breakdown chips, colored by the stable entity-type palette */}
       {byType.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+          <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
             <Database className="h-3 w-3" /> By type
           </span>
           {byType.map(([type, count]) => (
             <span
               key={type}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-card/60 px-2 py-0.5 text-[11px] font-mono"
+              className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-border bg-card/60 px-2 py-0.5 text-sm font-mono"
             >
               <span
                 className="inline-block h-2 w-2 rounded-full"

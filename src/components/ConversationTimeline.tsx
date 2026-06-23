@@ -28,7 +28,7 @@ export default function ConversationTimeline() {
   return (
     <div className="p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Conversation Timeline
         </h2>
@@ -37,7 +37,7 @@ export default function ConversationTimeline() {
             <button
               key={z}
               onClick={() => setZoom(z)}
-              className={`text-[10px] font-mono tracking-widest uppercase px-3 py-1.5 rounded transition-colors ${
+              className={`text-xs font-mono tracking-widest uppercase px-3 py-1.5 rounded transition-colors ${
                 zoom === z
                   ? "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(249,115,22,0.4)]"
                   : "text-muted-foreground hover:text-primary hover:bg-card"
@@ -51,7 +51,7 @@ export default function ConversationTimeline() {
 
       <div className="flex-1 min-h-[200px]">
         {aggregated.length === 0 ? (
-          <p className="text-xs font-mono text-muted-foreground py-12 text-center">
+          <p className="text-sm font-mono text-muted-foreground py-12 text-center">
             No message activity in this time range
           </p>
         ) : (

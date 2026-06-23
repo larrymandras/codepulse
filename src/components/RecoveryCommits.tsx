@@ -23,10 +23,10 @@ export default function RecoveryCommits() {
   if (recoveryCommits.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Recovery Commits
         </h2>
-        <p className="text-sm text-gray-500 py-4 text-center">
+        <p className="text-base text-gray-500 py-4 text-center">
           No recovery commits recorded yet
         </p>
       </div>
@@ -35,7 +35,7 @@ export default function RecoveryCommits() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Recovery Commits
       </h2>
       <div className="space-y-2 max-h-[300px] overflow-y-auto">
@@ -48,8 +48,8 @@ export default function RecoveryCommits() {
               <Check className="h-4 w-4 text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-200 truncate">{c.message}</p>
-              <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+              <p className="text-sm text-gray-200 truncate">{c.message}</p>
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                 <span className="font-mono">
                   {c.sha?.slice(0, 7) ?? "\u2014"}
                 </span>

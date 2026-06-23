@@ -77,7 +77,7 @@ export function SkillsInCategory({
           <h2 className="text-white text-base font-mono font-bold tracking-widest uppercase flex items-center gap-3">
             {categoryDisplayName}
             <span 
-              className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
+              className="text-xs font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
               style={{
                 color: hex,
                 borderColor: `${hex}50`,
@@ -91,7 +91,7 @@ export function SkillsInCategory({
         
         {otherCategories.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-mono uppercase text-muted-foreground">Move target:</span>
+            <span className="text-[11px] font-mono uppercase text-muted-foreground">Move target:</span>
             {otherCategories.map((cat) => {
               const catHex = COLOR_HEX[cat.color] ?? COLOR_HEX.gray;
               const isHover = hoverTarget === cat.name;
@@ -117,7 +117,7 @@ export function SkillsInCategory({
                     boxShadow: isHover ? `0 0 10px ${catHex}40` : "none"
                   }}
                 >
-                  <span className="text-[10px]">{cat.icon}</span>
+                  <span className="text-xs">{cat.icon}</span>
                 </div>
               );
             })}
@@ -126,7 +126,7 @@ export function SkillsInCategory({
       </div>
 
       {skills.length === 0 && (
-        <div className="text-center font-mono text-[11px] tracking-widest text-muted-foreground py-8 border border-dashed border-primary/20 rounded bg-primary/5">
+        <div className="text-center font-mono text-sm tracking-widest text-muted-foreground py-8 border border-dashed border-primary/20 rounded bg-primary/5">
           [ NO SKILLS FOUND IN SECTOR ]
         </div>
       )}
@@ -149,7 +149,7 @@ export function SkillsInCategory({
               <GripVertical className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary cursor-grab flex-shrink-0" />
 
               <div className="flex items-center w-64 flex-shrink-0 gap-2 pr-4 border-r border-primary/10">
-                <div className="text-white font-mono font-bold text-[11px] tracking-wide truncate">
+                <div className="text-white font-mono font-bold text-sm tracking-wide truncate">
                   {skill.displayName}
                 </div>
                 {skill.favorite && (
@@ -159,15 +159,15 @@ export function SkillsInCategory({
               
               <div className="flex-1 min-w-0 pr-4">
                 {desc ? (
-                  <div className="text-muted-foreground text-[10px] truncate">{desc}</div>
+                  <div className="text-muted-foreground text-xs truncate">{desc}</div>
                 ) : (
-                  <div className="text-muted-foreground/30 text-[10px] italic">No description available</div>
+                  <div className="text-muted-foreground/30 text-xs italic">No description available</div>
                 )}
               </div>
 
               <div className="flex items-center gap-2 flex-shrink-0">
                 {(skill.useCount ?? 0) > 0 && (
-                  <span className="text-[9px] font-mono text-primary/60 px-2 w-16 text-right">
+                  <span className="text-[11px] font-mono text-primary/60 px-2 w-16 text-right">
                     {skill.useCount} uses
                   </span>
                 )}
@@ -191,7 +191,7 @@ export function SkillsInCategory({
 
                 <button
                   onClick={() => onLaunch(skill.name)}
-                  className="text-[9px] font-mono font-bold uppercase tracking-widest text-primary hover:text-primary-foreground border border-primary/30 bg-transparent hover:bg-primary rounded px-3 py-1 transition-all"
+                  className="text-[11px] font-mono font-bold uppercase tracking-widest text-primary hover:text-primary-foreground border border-primary/30 bg-transparent hover:bg-primary rounded px-3 py-1 transition-all"
                 >
                   Launch
                 </button>

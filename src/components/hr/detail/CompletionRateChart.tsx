@@ -76,11 +76,11 @@ export function CompletionRateChart({ metrics }: CompletionRateChartProps) {
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs font-normal text-muted-foreground mb-2">
+      <p className="text-sm font-normal text-muted-foreground mb-2">
         Task Completion & Error Rate
       </p>
       {data.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p className="text-base text-muted-foreground text-center py-8">
           No task data
         </p>
       ) : (

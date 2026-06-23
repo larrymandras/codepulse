@@ -31,7 +31,7 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
 
   if (sorted.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-sm">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-base">
         No phase data available
       </div>
     );
@@ -39,7 +39,7 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
-      <h3 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Phase Progress</h3>
+      <h3 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Phase Progress</h3>
       {sorted.map((p) => {
         const isComplete = p.total > 0 && p.completed === p.total;
         const failedPct = p.total > 0 ? (p.failed / p.total) * 100 : 0;
@@ -49,12 +49,12 @@ export default function PhaseProgressBars({ phases }: { phases: PhaseData[] }) {
           <div key={p.phase}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-200 font-medium">{p.phase}</span>
+                <span className="text-base text-gray-200 font-medium">{p.phase}</span>
                 {isComplete && (
-                  <span className="text-green-400 text-xs">&#10003;</span>
+                  <span className="text-green-400 text-sm">&#10003;</span>
                 )}
               </div>
-              <span className="text-xs text-gray-400">
+              <span className="text-sm text-gray-400">
                 {p.completed}/{p.total} ({p.avgProgress}%)
               </span>
             </div>

@@ -79,7 +79,7 @@ export default function OnboardingGuide() {
           <h2 className="text-xl font-semibold text-gray-100 mb-2">
             {steps[step].title}
           </h2>
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-base text-gray-400 leading-relaxed">
             {steps[step].description}
           </p>
         </div>
@@ -102,7 +102,7 @@ export default function OnboardingGuide() {
           <button
             onClick={() => setStep((s) => s - 1)}
             disabled={isFirst}
-            className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+            className={`px-4 py-2 text-base rounded-lg transition-colors ${
               isFirst
                 ? "text-gray-600 cursor-not-allowed"
                 : "text-gray-300 hover:bg-gray-700"
@@ -114,7 +114,7 @@ export default function OnboardingGuide() {
             {!isLast && (
               <button
                 onClick={dismiss}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+                className="px-4 py-2 text-base text-gray-400 hover:text-gray-200 transition-colors"
               >
                 Skip
               </button>
@@ -122,14 +122,14 @@ export default function OnboardingGuide() {
             {isLast ? (
               <button
                 onClick={dismiss}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-base text-white rounded-lg transition-colors"
               >
                 Done
               </button>
             ) : (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-base text-white rounded-lg transition-colors"
               >
                 Next
               </button>

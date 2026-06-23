@@ -16,8 +16,8 @@ function Field({
 }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground uppercase mb-0.5">{label}</p>
-      <div className="text-sm text-foreground">{children}</div>
+      <p className="text-sm text-muted-foreground uppercase mb-0.5">{label}</p>
+      <div className="text-base text-foreground">{children}</div>
     </div>
   );
 }
@@ -25,7 +25,7 @@ function Field({
 export function DetailSecurityTab({ agentDetail }: DetailSecurityTabProps) {
   if (!agentDetail) {
     return (
-      <p className="text-sm text-muted-foreground py-8 text-center">
+      <p className="text-base text-muted-foreground py-8 text-center">
         No security data available.
       </p>
     );
@@ -42,7 +42,7 @@ export function DetailSecurityTab({ agentDetail }: DetailSecurityTabProps) {
         <div className="grid grid-cols-1 gap-4">
           {agentDetail.autonomy_level && (
             <Field label="Autonomy Level">
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-xs">
                 {agentDetail.autonomy_level}
               </Badge>
             </Field>
@@ -55,7 +55,7 @@ export function DetailSecurityTab({ agentDetail }: DetailSecurityTabProps) {
                   <Badge
                     key={peer}
                     variant="outline"
-                    className="text-[10px] font-mono"
+                    className="text-xs font-mono"
                   >
                     {peer}
                   </Badge>
@@ -73,7 +73,7 @@ export function DetailSecurityTab({ agentDetail }: DetailSecurityTabProps) {
                   <Badge
                     key={tool}
                     variant="outline"
-                    className="text-[10px] font-mono"
+                    className="text-xs font-mono"
                   >
                     {tool}
                   </Badge>
@@ -90,7 +90,7 @@ export function DetailSecurityTab({ agentDetail }: DetailSecurityTabProps) {
       <div className="border-t border-border pt-4 mt-4">
         <div className="flex items-center gap-2 text-muted-foreground">
           <ShieldCheck className="h-4 w-4" />
-          <p className="text-xs italic">
+          <p className="text-sm italic">
             Security scan results will be displayed here when security scanning
             is integrated.
           </p>

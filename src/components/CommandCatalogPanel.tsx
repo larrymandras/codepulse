@@ -84,7 +84,7 @@ export default function CommandCatalogPanel({
   if (status === "loading") {
     return (
       <div className="bg-(--card) p-4">
-        <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <div className="text-base font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           COMMANDS
         </div>
         <div className="h-px bg-(--border) mb-4" />
@@ -99,11 +99,11 @@ export default function CommandCatalogPanel({
   if (status === "error") {
     return (
       <div className="bg-(--card) p-4">
-        <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+        <div className="text-base font-semibold uppercase tracking-wide text-muted-foreground mb-3">
           COMMANDS
         </div>
         <div className="h-px bg-(--border) mb-4" />
-        <p className="text-sm text-muted-foreground py-4 text-center">
+        <p className="text-base text-muted-foreground py-4 text-center">
           {error ?? "Registry unavailable. Connect to Ástríðr to load the command catalog."}
         </p>
       </div>
@@ -114,7 +114,7 @@ export default function CommandCatalogPanel({
   return (
     <div className="bg-(--card) p-4">
       {/* Section header */}
-      <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+      <div className="text-base font-semibold uppercase tracking-wide text-muted-foreground mb-3">
         COMMANDS
       </div>
       <div className="h-px bg-(--border) mb-4" />
@@ -124,7 +124,7 @@ export default function CommandCatalogPanel({
         <div className="flex flex-wrap gap-1.5 mb-4">
           <button
             onClick={() => setActiveCategory(null)}
-            className={`px-2.5 py-1 rounded-sm text-xs transition-colors ${
+            className={`px-2.5 py-1 rounded-sm text-sm transition-colors ${
               activeCategory === null
                 ? "bg-(--primary) text-(--primary-foreground)"
                 : "bg-(--muted) text-(--muted-foreground) hover:bg-(--accent)"
@@ -136,7 +136,7 @@ export default function CommandCatalogPanel({
             <button
               key={cat}
               onClick={() => handleCategoryClick(cat)}
-              className={`px-2.5 py-1 rounded-sm text-xs transition-colors ${
+              className={`px-2.5 py-1 rounded-sm text-sm transition-colors ${
                 activeCategory === cat
                   ? "bg-(--primary) text-(--primary-foreground)"
                   : "bg-(--muted) text-(--muted-foreground) hover:bg-(--accent)"
@@ -151,13 +151,13 @@ export default function CommandCatalogPanel({
       {/* Empty state */}
       {commands.length === 0 ? (
         <div className="py-6 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">No commands registered</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-base font-semibold text-muted-foreground">No commands registered</p>
+          <p className="text-sm text-muted-foreground mt-1">
             The command registry is empty. No slash commands were loaded from manifests.
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-6 text-center">
+        <p className="text-base text-muted-foreground py-6 text-center">
           No commands match your search
         </p>
       ) : (
@@ -168,10 +168,10 @@ export default function CommandCatalogPanel({
               {/* Category header */}
               <div className="flex items-center gap-2 mb-1.5 px-1">
                 <span className="w-1 h-1 rounded-full bg-(--muted-foreground) flex-shrink-0" />
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {cat}
                 </h3>
-                <span className="text-xs text-muted-foreground opacity-50">
+                <span className="text-sm text-muted-foreground opacity-50">
                   {catCommands.length}
                 </span>
               </div>
@@ -189,9 +189,9 @@ export default function CommandCatalogPanel({
                       >
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="w-1 h-1 rounded-full bg-(--muted-foreground) flex-shrink-0" />
-                          <span className="font-mono text-sm truncate">{cmd.name}</span>
+                          <span className="font-mono text-base truncate">{cmd.name}</span>
                           {cmd.description && (
-                            <span className="text-xs text-muted-foreground truncate hidden lg:inline">
+                            <span className="text-sm text-muted-foreground truncate hidden lg:inline">
                               {cmd.description}
                             </span>
                           )}
@@ -207,28 +207,28 @@ export default function CommandCatalogPanel({
 
                       {/* Expanded detail */}
                       {isExpanded && (
-                        <div className="mx-3 mb-2 bg-(--muted) border border-(--border) px-4 py-3 text-xs">
+                        <div className="mx-3 mb-2 bg-(--muted) border border-(--border) px-4 py-3 text-sm">
                           {/* Full description */}
-                          <p className="text-sm text-(--foreground) mb-3">{cmd.description}</p>
+                          <p className="text-base text-(--foreground) mb-3">{cmd.description}</p>
 
                           {/* Parameters table */}
                           <div className="mb-3">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                            <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                               Parameters
                             </p>
                             {!cmd.parameters || cmd.parameters.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">No parameters</p>
+                              <p className="text-sm text-muted-foreground">No parameters</p>
                             ) : (
                               <table className="w-full">
                                 <thead>
                                   <tr className="border-b border-(--border)">
-                                    <th className="text-left text-xs text-muted-foreground pb-1 pr-4">
+                                    <th className="text-left text-sm text-muted-foreground pb-1 pr-4">
                                       Name
                                     </th>
-                                    <th className="text-left text-xs text-muted-foreground pb-1 pr-4">
+                                    <th className="text-left text-sm text-muted-foreground pb-1 pr-4">
                                       Type
                                     </th>
-                                    <th className="text-left text-xs text-muted-foreground pb-1">
+                                    <th className="text-left text-sm text-muted-foreground pb-1">
                                       Required
                                     </th>
                                   </tr>
@@ -236,8 +236,8 @@ export default function CommandCatalogPanel({
                                 <tbody>
                                   {cmd.parameters.map((param) => (
                                     <tr key={param.name} className="border-b border-(--border)/50">
-                                      <td className="font-mono text-xs py-1 pr-4">{param.name}</td>
-                                      <td className="font-mono text-xs text-muted-foreground py-1 pr-4">
+                                      <td className="font-mono text-sm py-1 pr-4">{param.name}</td>
+                                      <td className="font-mono text-sm text-muted-foreground py-1 pr-4">
                                         {param.type}
                                       </td>
                                       <td className="py-1">
@@ -257,10 +257,10 @@ export default function CommandCatalogPanel({
                           {/* Source */}
                           {cmd.source && (
                             <div className="mb-3">
-                              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                              <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">
                                 Source
                               </p>
-                              <p className="font-mono text-xs text-muted-foreground">
+                              <p className="font-mono text-sm text-muted-foreground">
                                 {cmd.source}
                               </p>
                             </div>
@@ -274,7 +274,7 @@ export default function CommandCatalogPanel({
                               ) : (
                                 <button
                                   onClick={() => onTryCommand?.(cmd.name)}
-                                  className="px-2.5 py-1 rounded-sm text-xs bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
+                                  className="px-2.5 py-1 rounded-sm text-sm bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
                                 >
                                   Try It
                                 </button>

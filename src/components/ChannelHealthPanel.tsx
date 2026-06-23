@@ -30,7 +30,7 @@ function ChannelHealthPanelInner() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Channel Health</h2>
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Channel Health</h2>
       <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {channels.map((ch) => {
           const data = healthData[ch];
@@ -45,18 +45,18 @@ function ChannelHealthPanelInner() {
                 <span
                   className={`w-2 h-2 rounded-full ${status?.dot ?? "bg-gray-600"}`}
                 />
-                <span className="text-sm font-medium text-gray-200">
+                <span className="text-base font-medium text-gray-200">
                   {channelLabels[ch]}
                 </span>
               </div>
               {data ? (
-                <div className="space-y-1 text-xs text-gray-400">
+                <div className="space-y-1 text-sm text-gray-400">
                   <div>{Math.round(data.messagesLastHour)} msg/hr</div>
                   <div>{(data.avgResponseMs / 1000).toFixed(1)}s avg</div>
                   <div>last: {formatRelativeTime(data.lastMessageAt)}</div>
                 </div>
               ) : (
-                <p className="text-xs text-gray-600">No data</p>
+                <p className="text-sm text-gray-600">No data</p>
               )}
             </div>
           );

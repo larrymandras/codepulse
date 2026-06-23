@@ -39,7 +39,7 @@ export function ToolCallBlock({ block }: ToolCallBlockProps) {
           ) : (
             <ChevronRight className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
           )}
-          <span className="text-xs font-mono font-semibold text-(--foreground) shrink-0">
+          <span className="text-sm font-mono font-semibold text-(--foreground) shrink-0">
             {block.tool_name ?? "tool"}
           </span>
           <span
@@ -50,7 +50,7 @@ export function ToolCallBlock({ block }: ToolCallBlockProps) {
           />
         </div>
         {!expanded && (
-          <span className="text-xs text-(--muted-foreground) font-mono truncate">
+          <span className="text-sm text-(--muted-foreground) font-mono truncate">
             {truncateArgs(block.arguments)}
           </span>
         )}
@@ -59,16 +59,16 @@ export function ToolCallBlock({ block }: ToolCallBlockProps) {
         <div className="px-3 pb-3 pt-0 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
           {block.arguments != null && (
             <div>
-              <p className="text-xs font-semibold text-(--muted-foreground) mb-1">Arguments</p>
-              <pre className="font-mono text-xs whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2 overflow-x-auto">
+              <p className="text-sm font-semibold text-(--muted-foreground) mb-1">Arguments</p>
+              <pre className="font-mono text-sm whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2 overflow-x-auto">
                 {JSON.stringify(block.arguments, null, 2)}
               </pre>
             </div>
           )}
           {block.result != null && (
             <div>
-              <p className="text-xs font-semibold text-(--muted-foreground) mb-1">Result</p>
-              <pre className="font-mono text-xs whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2 overflow-x-auto max-h-48">
+              <p className="text-sm font-semibold text-(--muted-foreground) mb-1">Result</p>
+              <pre className="font-mono text-sm whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2 overflow-x-auto max-h-48">
                 {block.result}
               </pre>
             </div>

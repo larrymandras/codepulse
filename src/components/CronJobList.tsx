@@ -36,10 +36,10 @@ export default function CronJobList({
   if (jobs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-2 border border-(--border) bg-(--card)">
-        <h3 className="text-sm font-semibold text-(--foreground)">
+        <h3 className="text-base font-semibold text-(--foreground)">
           No cron jobs configured
         </h3>
-        <p className="text-xs text-(--muted-foreground)">
+        <p className="text-sm text-(--muted-foreground)">
           Add a scheduled job to automate Astrid tasks.
         </p>
       </div>
@@ -58,14 +58,14 @@ export default function CronJobList({
             className="flex flex-col gap-0.5 flex-1 min-w-0 cursor-pointer"
             onClick={() => onEdit(job)}
           >
-            <span className="text-sm font-medium text-(--foreground) truncate">
+            <span className="text-base font-medium text-(--foreground) truncate">
               {job.name}
             </span>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-(--muted-foreground)">
+              <span className="font-mono text-sm text-(--muted-foreground)">
                 {job.expression}
               </span>
-              <span className="text-xs text-(--muted-foreground)">
+              <span className="text-sm text-(--muted-foreground)">
                 {cronToHuman(job.expression)}
               </span>
             </div>

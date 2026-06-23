@@ -38,7 +38,7 @@ export function InlineTable({ columns, rows, onChange, emptyRow }: InlineTablePr
   return (
     <div className="space-y-1">
       {/* Header */}
-      <div className="flex items-center gap-2 text-xs text-(--muted-foreground) font-medium px-1">
+      <div className="flex items-center gap-2 text-sm text-(--muted-foreground) font-medium px-1">
         {columns.map((col) => (
           <div key={col.key} className="flex-1" style={col.width ? { width: col.width, flex: "none" } : undefined}>
             {col.label}
@@ -57,7 +57,7 @@ export function InlineTable({ columns, rows, onChange, emptyRow }: InlineTablePr
                   value={(row[col.key] as string) ?? ""}
                   onChange={(e) => updateCell(rowIdx, col.key, e.target.value)}
                   placeholder={col.placeholder}
-                  className="h-7 text-xs"
+                  className="h-7 text-sm"
                 />
               )}
               {col.type === "select" && col.options && (
@@ -65,7 +65,7 @@ export function InlineTable({ columns, rows, onChange, emptyRow }: InlineTablePr
                   value={(row[col.key] as string) ?? ""}
                   onValueChange={(v) => updateCell(rowIdx, col.key, v)}
                 >
-                  <SelectTrigger size="sm" className="h-7 text-xs">
+                  <SelectTrigger size="sm" className="h-7 text-sm">
                     <SelectValue placeholder={col.placeholder ?? "Select..."} />
                   </SelectTrigger>
                   <SelectContent>
@@ -89,7 +89,7 @@ export function InlineTable({ columns, rows, onChange, emptyRow }: InlineTablePr
         </div>
       ))}
 
-      <Button variant="ghost" size="xs" onClick={addRow} className="text-xs gap-1 mt-1">
+      <Button variant="ghost" size="xs" onClick={addRow} className="text-sm gap-1 mt-1">
         <Plus className="h-3 w-3" /> Add row
       </Button>
     </div>

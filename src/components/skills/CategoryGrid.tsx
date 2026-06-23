@@ -92,7 +92,7 @@ export function CategoryGrid({
             </span>
             
             <div className="flex flex-col min-w-0 flex-1">
-              <span className={`text-xs font-mono font-bold truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
+              <span className={`text-sm font-mono font-bold truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
                 {cat.displayName}
               </span>
             </div>
@@ -110,7 +110,7 @@ export function CategoryGrid({
               </button>
               
               <span 
-                className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
+                className="text-xs font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
                 style={{
                   color: isActive ? '#fff' : hex,
                   borderColor: isActive ? '#fff' : `${hex}50`,
@@ -129,7 +129,7 @@ export function CategoryGrid({
         className="mt-2 flex items-center gap-3 w-full px-3 py-2 rounded border border-dashed border-primary/30 text-primary/60 hover:text-primary hover:border-primary hover:bg-primary/10 transition-all group"
       >
         <Plus className="w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-90" />
-        <span className="text-[10px] font-mono uppercase tracking-widest font-bold">New Category</span>
+        <span className="text-xs font-mono uppercase tracking-widest font-bold">New Category</span>
       </button>
     </div>
   );

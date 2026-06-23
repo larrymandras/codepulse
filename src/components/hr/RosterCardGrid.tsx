@@ -9,7 +9,7 @@ interface RosterCardGridProps {
 export function RosterCardGrid({ agents, onAgentClick }: RosterCardGridProps) {
   if (agents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-12">
+      <p className="text-base text-muted-foreground text-center py-12">
         No agents match your search.
       </p>
     );

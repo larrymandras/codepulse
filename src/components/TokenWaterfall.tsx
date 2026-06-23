@@ -61,28 +61,28 @@ export default function TokenWaterfall() {
   if (providerGroups.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
-        <p className="text-gray-500 text-sm">No data yet.</p>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
+        <p className="text-gray-500 text-base">No data yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Token Usage (30 min)<InfoTooltip text="Prompt vs completion token breakdown per model over the last 30 minutes" /></h2>
       <div className="space-y-3">
         {providerGroups.map(({ provider, models, totalTokens: provTotal }) => (
           <div key={provider} className="space-y-2">
-            {/* Provider header per UI-SPEC: text-xs font-semibold uppercase with color dot */}
+            {/* Provider header per UI-SPEC: text-sm font-semibold uppercase with color dot */}
             <div className="flex items-center gap-2 pt-2">
               <span
                 className="inline-block w-2 h-2 rounded-full"
                 style={{ backgroundColor: getModelColor(models[0]?.model ?? provider) }}
               />
-              <span className="text-xs font-semibold text-muted-foreground uppercase">
+              <span className="text-sm font-semibold text-muted-foreground uppercase">
                 {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
               </span>
-              <span className="text-[10px] text-gray-500 ml-auto">
+              <span className="text-xs text-gray-500 ml-auto">
                 {provTotal.toLocaleString()} tokens
               </span>
             </div>
@@ -96,8 +96,8 @@ export default function TokenWaterfall() {
                 return (
                   <div key={model}>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-mono text-gray-300">{model}</span>
-                      <span className="text-xs text-gray-500">{total.toLocaleString()} tokens</span>
+                      <span className="text-sm font-mono text-gray-300">{model}</span>
+                      <span className="text-sm text-gray-500">{total.toLocaleString()} tokens</span>
                     </div>
                     <div className="flex h-4 rounded overflow-hidden gap-px">
                       <div
@@ -112,8 +112,8 @@ export default function TokenWaterfall() {
                       />
                     </div>
                     <div className="flex gap-3 mt-0.5">
-                      <span className="text-[10px] text-gray-500">In: {prompt.toLocaleString()}</span>
-                      <span className="text-[10px] text-gray-500">Out: {completion.toLocaleString()}</span>
+                      <span className="text-xs text-gray-500">In: {prompt.toLocaleString()}</span>
+                      <span className="text-xs text-gray-500">Out: {completion.toLocaleString()}</span>
                     </div>
                   </div>
                 );

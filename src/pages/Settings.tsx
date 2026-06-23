@@ -37,7 +37,7 @@ function Toggle({
       onClick={onToggle}
       className="flex items-center justify-between w-full py-1.5 group"
     >
-      <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+      <span className="text-base text-muted-foreground group-hover:text-foreground transition-colors">
         {label}
       </span>
       <div
@@ -82,13 +82,13 @@ function RetentionControl() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 border-b border-border pb-2">
-        <h3 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+        <h3 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
           Data Retention
         </h3>
       </div>
       <div className="space-y-3">
         <div className="flex items-center gap-3">
-          <label className="text-xs text-muted-foreground">Retention period</label>
+          <label className="text-sm text-muted-foreground">Retention period</label>
           <input
             type="number"
             min={1}
@@ -96,26 +96,26 @@ function RetentionControl() {
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
             disabled={saving}
-            className={`w-20 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+            className={`w-20 text-right bg-background border px-2 py-1 text-base tabular-nums ${
               !isValid ? "border-destructive" : "border-input"
             } focus:outline-none focus:ring-1 focus:ring-ring/50`}
           />
-          <span className="text-xs text-muted-foreground">days</span>
+          <span className="text-sm text-muted-foreground">days</span>
           <button
             onClick={handleSave}
             disabled={!isValid || !isChanged || saving}
-            className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+            className="px-3 py-1 text-base bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Update Retention
           </button>
         </div>
         {!isValid && (
-          <p className="text-xs text-[hsl(var(--status-error))]">
+          <p className="text-sm text-[hsl(var(--status-error))]">
             Enter a value between 1 and 365 days.
           </p>
         )}
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Events older than this threshold are automatically archived. Minimum 1 day, maximum 365 days.
         </p>
       </div>
@@ -155,13 +155,13 @@ function IntelligenceSettings() {
     <div className="bg-card border border-border rounded-xl p-4 mt-12">
       <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-border pb-2">
-          <h3 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+          <h3 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
             Intelligence
           </h3>
         </div>
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <label className="text-xs text-muted-foreground">Monthly Budget Cap ($)</label>
+            <label className="text-sm text-muted-foreground">Monthly Budget Cap ($)</label>
             <input
               type="number"
               min={1}
@@ -170,31 +170,31 @@ function IntelligenceSettings() {
               onChange={(e) => setCap(Number(e.target.value))}
               disabled={saveState === "saving"}
               placeholder="e.g. 100"
-              className={`w-28 text-right bg-background border px-2 py-1 text-sm tabular-nums ${
+              className={`w-28 text-right bg-background border px-2 py-1 text-base tabular-nums ${
                 cap !== 0 && !isValid ? "border-destructive" : "border-input"
               } focus:outline-none focus:ring-1 focus:ring-ring/50`}
             />
             <button
               onClick={handleSave}
               disabled={!isValid || saveState === "saving"}
-              className="px-3 py-1 text-sm bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
+              className="px-3 py-1 text-base bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
             >
               {saveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
               {saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : "Save Budget Settings"}
             </button>
           </div>
           {cap !== 0 && !isValid && (
-            <p className="text-xs text-[hsl(var(--status-error))]">
+            <p className="text-sm text-[hsl(var(--status-error))]">
               Enter a value between 1 and 999,999.
             </p>
           )}
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Monthly spending cap for cost forecasting. Set to 0 or leave blank to disable budget tracking.
           </p>
         </div>
 
         {/* LLM Providers subsection */}
-        <h4 className="text-xs font-normal uppercase tracking-wide text-muted-foreground mt-6">
+        <h4 className="text-sm font-normal uppercase tracking-wide text-muted-foreground mt-6">
           LLM Providers
         </h4>
         <SectionErrorBoundary name="LLM Provider Config">
@@ -270,39 +270,39 @@ export default function Settings() {
       {/* Connection Status */}
       <SectionErrorBoundary name="Connection Status">
       <div className="bg-card border border-border rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Connection Status<InfoTooltip text="Backend connection details and environment configuration" />
         </h2>
         <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">Backend</span>
-            <span className="text-muted-foreground text-xs">Convex</span>
+            <span className="text-muted-foreground text-sm">Convex</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">Deployment</span>
-            <span className="text-muted-foreground text-xs font-mono">{CONVEX_DEPLOYMENT}</span>
+            <span className="text-muted-foreground text-sm font-mono">{CONVEX_DEPLOYMENT}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">URL</span>
-            <span className="text-muted-foreground text-xs font-mono truncate max-w-[280px]">{CONVEX_URL || "Not configured"}</span>
+            <span className="text-muted-foreground text-sm font-mono truncate max-w-[280px]">{CONVEX_URL || "Not configured"}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">Status</span>
             {CONVEX_URL ? (
-              <span className="flex items-center gap-1.5 text-xs text-green-400">
+              <span className="flex items-center gap-1.5 text-sm text-green-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
                 Connected
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs text-red-400">
+              <span className="flex items-center gap-1.5 text-sm text-red-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                 Not configured
               </span>
             )}
           </div>
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-base">
             <span className="text-muted-foreground">Environment</span>
-            <span className="text-muted-foreground text-xs">{import.meta.env.MODE}</span>
+            <span className="text-muted-foreground text-sm">{import.meta.env.MODE}</span>
           </div>
         </div>
       </div>
@@ -311,7 +311,7 @@ export default function Settings() {
       {/* Profile Email Addresses */}
       <SectionErrorBoundary name="Profile Emails">
       <div className="bg-card border border-border rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Profile Email Addresses
           <InfoTooltip text="Email addresses used by each profile for briefings and notifications. Changes are synced to the framework on next restart." />
         </h2>
@@ -325,7 +325,7 @@ export default function Settings() {
 
             return (
               <div key={profileId} className="space-y-1">
-                <label className="text-xs text-muted-foreground block">{label}</label>
+                <label className="text-sm text-muted-foreground block">{label}</label>
                 <div className="flex gap-2">
                   <input
                     type="email"
@@ -336,20 +336,20 @@ export default function Settings() {
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && isDirty) handleEmailSave(profileId);
                     }}
-                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                    className="flex-1 bg-background border border-border rounded-lg px-3 py-1.5 text-base text-foreground font-mono focus:outline-none focus:border-indigo-500 transition-colors"
                     placeholder="email@example.com"
                   />
                   {isDirty && (
                     <button
                       onClick={() => handleEmailSave(profileId)}
                       disabled={isSaving}
-                      className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white px-3 py-1.5 rounded-lg text-xs whitespace-nowrap"
+                      className="bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white px-3 py-1.5 rounded-lg text-sm whitespace-nowrap"
                     >
                       {isSaving ? "Saving..." : "Save"}
                     </button>
                   )}
                   {justSaved && (
-                    <span className="flex items-center text-xs text-green-400 whitespace-nowrap">
+                    <span className="flex items-center text-sm text-green-400 whitespace-nowrap">
                       Saved
                     </span>
                   )}
@@ -358,7 +358,7 @@ export default function Settings() {
             );
           })}
         </div>
-        <p className="text-[10px] text-muted-foreground mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           These addresses determine where briefings and email notifications are delivered per profile.
         </p>
       </div>
@@ -368,9 +368,9 @@ export default function Settings() {
       <SectionErrorBoundary name="Privacy Masking">
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Privacy Masking<InfoTooltip text="Control data masking levels for screenshots and demos — hides sensitive session IDs, file paths, and values" /></h2>
+          <h2 className="text-base font-semibold text-muted-foreground">Privacy Masking<InfoTooltip text="Control data masking levels for screenshots and demos — hides sensitive session IDs, file paths, and values" /></h2>
           <span
-            className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               privacy.level === "demo"
                 ? "bg-amber-600/20 text-amber-400"
                 : privacy.level === "screenshot"
@@ -420,17 +420,17 @@ export default function Settings() {
             </div>
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           When active, sensitive data is redacted across all dashboard views. Stored data is not modified.
         </p>
           <div className="mt-3 pt-3 border-t border-border">
-            <span className="text-sm text-muted-foreground mb-2 block">Privacy Level</span>
+            <span className="text-base text-muted-foreground mb-2 block">Privacy Level</span>
             <div className="flex gap-2">
               {(["off", "demo", "screenshot"] as const).map((level) => (
                 <button
                   key={level}
                   onClick={() => privacy.setLevel(level)}
-                  className={`px-3 py-1.5 rounded-lg text-xs capitalize transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-sm capitalize transition-colors ${
                     privacy.level === level
                       ? "bg-indigo-600 text-white"
                       : "bg-muted text-muted-foreground hover:bg-accent"
@@ -441,13 +441,13 @@ export default function Settings() {
               ))}
             </div>
             <div className="mt-2 space-y-0.5">
-              <p className={`text-[10px] ${privacy.level === "off" ? "text-muted-foreground" : "text-muted-foreground"}`}>
+              <p className={`text-xs ${privacy.level === "off" ? "text-muted-foreground" : "text-muted-foreground"}`}>
                 <span className="font-medium">Off:</span> Normal view — all data visible
               </p>
-              <p className={`text-[10px] ${privacy.level === "demo" ? "text-amber-400/80" : "text-muted-foreground"}`}>
+              <p className={`text-xs ${privacy.level === "demo" ? "text-amber-400/80" : "text-muted-foreground"}`}>
                 <span className="font-medium">Demo:</span> Demo mode — sensitive values blurred for presentations
               </p>
-              <p className={`text-[10px] ${privacy.level === "screenshot" ? "text-red-400/80" : "text-muted-foreground"}`}>
+              <p className={`text-xs ${privacy.level === "screenshot" ? "text-red-400/80" : "text-muted-foreground"}`}>
                 <span className="font-medium">Screenshot:</span> Screenshot safe — all data hidden
               </p>
             </div>
@@ -459,9 +459,9 @@ export default function Settings() {
       <SectionErrorBoundary name="Ambient Audio">
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Ambient Audio<InfoTooltip text="Background audio presets for focus and immersion — choose from ambient, lofi, nature, and synth categories" /></h2>
+          <h2 className="text-base font-semibold text-muted-foreground">Ambient Audio<InfoTooltip text="Background audio presets for focus and immersion — choose from ambient, lofi, nature, and synth categories" /></h2>
           <span
-            className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               ambient.enabled
                 ? "bg-emerald-600/20 text-emerald-400"
                 : "bg-muted text-muted-foreground"
@@ -480,7 +480,7 @@ export default function Settings() {
             <div className="space-y-4">
               {/* Preset Selector */}
               <div>
-                <span className="text-sm text-muted-foreground mb-2 block">Soundscape</span>
+                <span className="text-base text-muted-foreground mb-2 block">Soundscape</span>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
@@ -495,7 +495,7 @@ export default function Settings() {
                     <button
                       key={p.value}
                       onClick={() => ambient.setPreset(p.value)}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                      className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                         ambient.preset === p.value
                           ? "bg-emerald-600 text-white"
                           : "bg-muted text-muted-foreground hover:bg-accent"
@@ -510,8 +510,8 @@ export default function Settings() {
               {/* Master Volume */}
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Master Volume</span>
-                  <span className="text-xs text-muted-foreground font-mono">
+                  <span className="text-base text-muted-foreground">Master Volume</span>
+                  <span className="text-sm text-muted-foreground font-mono">
                     {Math.round(ambient.volume * 100)}%
                   </span>
                 </div>
@@ -527,7 +527,7 @@ export default function Settings() {
 
               {/* Category Volumes */}
               <div>
-                <span className="text-sm text-muted-foreground mb-2 block">Channel Volumes</span>
+                <span className="text-base text-muted-foreground mb-2 block">Channel Volumes</span>
                 <div className="space-y-2 pl-3 border-l border-border ml-1">
                   {(
                     [
@@ -539,8 +539,8 @@ export default function Settings() {
                   ).map(({ cat, label }) => (
                     <div key={cat}>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">{label}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">
+                        <span className="text-sm text-muted-foreground">{label}</span>
+                        <span className="text-xs text-muted-foreground font-mono">
                           {Math.round(ambient.categoryVolumes[cat] * 100)}%
                         </span>
                       </div>
@@ -561,7 +561,7 @@ export default function Settings() {
             </div>
           )}
         </div>
-        <p className="text-[10px] text-muted-foreground mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           Generative soundscape that responds to system health. Green = consonant, Yellow = tense, Red = dissonant.
         </p>
       </div>
@@ -571,9 +571,9 @@ export default function Settings() {
       <SectionErrorBoundary name="CRT Overlay">
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">CRT Overlay<InfoTooltip text="Retro CRT monitor effect with scanlines, glow, and flicker — purely cosmetic" /></h2>
+          <h2 className="text-base font-semibold text-muted-foreground">CRT Overlay<InfoTooltip text="Retro CRT monitor effect with scanlines, glow, and flicker — purely cosmetic" /></h2>
           <span
-            className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               crtEnabled
                 ? "bg-green-600/20 text-green-400"
                 : "bg-muted text-muted-foreground"
@@ -599,7 +599,7 @@ export default function Settings() {
           }}
           label="Enable CRT scanline effect"
         />
-        <p className="text-[10px] text-muted-foreground mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           Adds a retro CRT monitor scanline overlay effect across the entire dashboard.
         </p>
       </div>
@@ -616,11 +616,11 @@ export default function Settings() {
       <SectionErrorBoundary name="Agent Profiles">
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
+          <h2 className="text-base font-semibold text-muted-foreground">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
           {!creatingProfile && !editingProfile && (
             <button
               onClick={() => setCreatingProfile(true)}
-              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs"
+              className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm"
             >
               New Profile
             </button>
@@ -645,7 +645,7 @@ export default function Settings() {
         {!creatingProfile && !editingProfile && (
           <div className="space-y-2">
             {profiles.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
+              <p className="text-base text-muted-foreground py-4 text-center">
                 No agent profiles yet. Create one to get started.
               </p>
             ) : (
@@ -656,16 +656,16 @@ export default function Settings() {
                 >
                   <AgentAvatar avatar={getAvatar(p.avatarId)} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground truncate">
+                    <p className="text-base text-foreground truncate">
                       {p.displayName || p.name}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {p.profileId} {p.model ? `/ ${p.model}` : ""}
                     </p>
                   </div>
                   <button
                     onClick={() => setEditingProfile(p)}
-                    className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-xs"
+                    className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
                   >
                     Edit
                   </button>
@@ -679,11 +679,11 @@ export default function Settings() {
 
       <SectionErrorBoundary name="Hooks">
       <div className="bg-card border border-border rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Hooks</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Hooks</h2>
+        <p className="text-base text-muted-foreground">
           Configure Claude Code hooks to point to CodePulse for live telemetry.
         </p>
-        <pre className="mt-3 bg-background rounded-lg p-3 text-xs text-muted-foreground overflow-x-auto font-mono">{`// .claude/settings.json
+        <pre className="mt-3 bg-background rounded-lg p-3 text-sm text-muted-foreground overflow-x-auto font-mono">{`// .claude/settings.json
 {
   "hooks": {
     "PreToolUse": [{ "command": "node hooks/dispatch.mjs" }],
@@ -696,8 +696,8 @@ export default function Settings() {
 
       <SectionErrorBoundary name="About">
       <div className="bg-card border border-border rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">About</h2>
-        <div className="space-y-1 text-sm text-muted-foreground">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">About</h2>
+        <div className="space-y-1 text-base text-muted-foreground">
           <p>CodePulse v0.1.0</p>
           <p>Phase 1–6 — Full Dashboard + Auth + Privacy + Audio</p>
         </div>

@@ -198,7 +198,7 @@ export default function KnowledgeGraph() {
             KG Explorer
             <InfoTooltip text="Ástríðr's temporal knowledge graph: entities (type-colored) and the facts connecting them. Current relationships are solid; superseded facts dashed; contradictions red. Literal facts show as entity attributes in the details panel." />
           </h1>
-          <p className="text-xs text-muted-foreground font-mono mt-1">
+          <p className="text-sm text-muted-foreground font-mono mt-1">
             entities · knowledge_triples — fetched on demand from /api/kg
           </p>
         </div>
@@ -227,7 +227,7 @@ export default function KnowledgeGraph() {
       {error && (
         <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
-          <div className="text-xs font-mono leading-relaxed">
+          <div className="text-sm font-mono leading-relaxed">
             <p className="text-foreground">Could not reach the KG read API.</p>
             <p className="text-muted-foreground mt-0.5">{error}</p>
             <p className="text-muted-foreground/70 mt-0.5">
@@ -237,7 +237,7 @@ export default function KnowledgeGraph() {
         </div>
       )}
       {truncated?.truncated && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-xs font-mono">
+        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-sm font-mono">
           <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
           <span className="text-muted-foreground">
             Showing {graph.stats.nodeCount} of {truncated.total} entities
@@ -251,7 +251,7 @@ export default function KnowledgeGraph() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
           <div className="relative">
             {/* Legend */}
-            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-[10px] font-mono max-h-[60%] overflow-y-auto custom-scrollbar">
+            <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono max-h-[60%] overflow-y-auto custom-scrollbar">
               {legendTypes.length > 0 ? (
                 legendTypes.map((t) => (
                   <span
@@ -284,21 +284,21 @@ export default function KnowledgeGraph() {
 
             {loading ? (
               <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-                <p className="text-primary/70 font-mono text-sm animate-pulse">
+                <p className="text-primary/70 font-mono text-base animate-pulse">
                   Querying knowledge graph…
                 </p>
               </div>
             ) : isEmpty ? (
               <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
                 <AlertTriangle className="h-6 w-6 text-primary/50" />
-                <p className="text-sm text-muted-foreground font-mono">
+                <p className="text-base text-muted-foreground font-mono">
                   {needsEntityName
                     ? "Search for an entity to view its ego graph."
                     : lens === "contradiction"
                       ? "No flagged contradictions. 🎉"
                       : "No entities match the current lens/filters."}
                 </p>
-                <p className="text-xs text-muted-foreground/60 max-w-md">
+                <p className="text-sm text-muted-foreground/60 max-w-md">
                   {error
                     ? "The KG read API is unreachable — start Ástríðr or check VITE_ASTRIDR_API_URL/KEY."
                     : "Data appears once Ástríðr's KG is backfilled and the read API is reachable."}

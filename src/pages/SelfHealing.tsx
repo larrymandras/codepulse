@@ -78,7 +78,7 @@ export default function SelfHealing() {
       {/* Recovery Stats */}
       {stats && Object.keys(stats.actionCounts).length > 0 && (
         <div className="bg-card border border-border rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">
+          <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
             Recovery Actions
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -88,7 +88,7 @@ export default function SelfHealing() {
                 className="bg-background rounded-lg p-3 text-center"
               >
                 <p className="text-lg font-semibold text-foreground">{count}</p>
-                <p className="text-xs text-muted-foreground capitalize">{action}</p>
+                <p className="text-sm text-muted-foreground capitalize">{action}</p>
               </div>
             ))}
           </div>
@@ -113,7 +113,7 @@ export default function SelfHealing() {
 
       {/* Escalation Chain */}
       <div className="bg-card border border-border rounded-xl p-5">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wide mb-4">
+        <h2 className="text-base font-semibold text-foreground uppercase tracking-wide mb-4">
           Escalation Chain
         </h2>
         <div className="space-y-2">
@@ -122,13 +122,13 @@ export default function SelfHealing() {
               key={esc.level}
               className="flex items-center gap-3 bg-background rounded-lg px-4 py-2.5"
             >
-              <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+              <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0">
                 {esc.level}
               </span>
-              <span className="text-sm text-foreground font-medium flex-1">
+              <span className="text-base text-foreground font-medium flex-1">
                 {esc.label}
               </span>
-              <span className="text-xs text-muted-foreground">{esc.detail}</span>
+              <span className="text-sm text-muted-foreground">{esc.detail}</span>
             </div>
           ))}
         </div>

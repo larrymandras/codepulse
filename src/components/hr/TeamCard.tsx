@@ -32,7 +32,7 @@ export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
             {team.name}
           </h3>
           {team.description && (
-            <p className="text-xs text-muted-foreground/80 font-mono line-clamp-2 mt-1">
+            <p className="text-sm text-muted-foreground/80 font-mono line-clamp-2 mt-1">
               {team.description}
             </p>
           )}
@@ -50,13 +50,13 @@ export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
       {/* Avatars + count */}
       <div className="flex items-center gap-3">
         <StackedAvatars agents={agents} max={4} size="sm" />
-        <Badge variant="secondary" className="text-[9px] font-mono tracking-widest uppercase bg-primary/10 text-primary/90 border border-primary/20 py-0.5 px-2">
+        <Badge variant="secondary" className="text-[11px] font-mono tracking-widest uppercase bg-primary/10 text-primary/90 border border-primary/20 py-0.5 px-2">
           {agents.length} agent{agents.length !== 1 ? "s" : ""}
         </Badge>
       </div>
 
       {/* Usage stats */}
-      <div className="flex items-center gap-4 text-[10px] font-mono tracking-widest uppercase text-muted-foreground/60 bg-muted/20 rounded p-2 border border-border/30">
+      <div className="flex items-center gap-4 text-xs font-mono tracking-widest uppercase text-muted-foreground/60 bg-muted/20 rounded p-2 border border-border/30">
         <span>{team.warRoomCount ?? 0} sessions</span>
         <span>•</span>
         <span>

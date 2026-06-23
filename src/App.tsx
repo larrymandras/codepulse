@@ -83,7 +83,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/capabilities" element={<Capabilities />} />
-              <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-sm p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
+              <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-base p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
               <Route path="/alerts" element={<Alerts />} />
               <Route path="/infrastructure" element={<Infrastructure />} />
               <Route path="/profiles" element={<Navigate to="/hr/roster" replace />} />
@@ -93,48 +93,48 @@ export default function App() {
               <Route path="/self-healing" element={<SelfHealing />} />
               <Route path="/build" element={<BuildProgress />} />
               {/* Phase 79: Forge job viewer */}
-              <Route path="/forge" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Forge...</div>}><ForgePage /></Suspense>} />
+              <Route path="/forge" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Forge...</div>}><ForgePage /></Suspense>} />
               {/* Phase 149: Hive swarm observability */}
-              <Route path="/hive" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Hive...</div>}><HivePage /></Suspense>} />
+              <Route path="/hive" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Hive...</div>}><HivePage /></Suspense>} />
               <Route path="/memory" element={<Memory />} />
               <Route path="/briefings" element={<Briefings />} />
               <Route path="/automation" element={<Automation />} />
               <Route path="/executions" element={<Executions />} />
               <Route path="/settings" element={<Settings />} />
               {/* Phase 56: Command Center pages */}
-              <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
-              <Route path="/skills" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Skills...</div>}><Skills /></Suspense>} />
-              <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
-              <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
-              <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />
-              <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
+              <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
+              <Route path="/skills" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Skills...</div>}><Skills /></Suspense>} />
+              <Route path="/live-run" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Live Run...</div>}><LiveRun /></Suspense>} />
+              <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
+              <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />
+              <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
               {/* Phase 03: Interaction layer pages */}
-              <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
+              <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
               {/* Phase 63: Dashboard overhaul pages */}
-              <Route path="/dreaming" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Dreaming...</div>}><Dreaming /></Suspense>} />
+              <Route path="/dreaming" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Dreaming...</div>}><Dreaming /></Suspense>} />
               {/* Phase 68: WhatsApp channel page */}
-              <Route path="/channels/whatsapp" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading WhatsApp...</div>}><WhatsApp /></Suspense>} />
+              <Route path="/channels/whatsapp" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading WhatsApp...</div>}><WhatsApp /></Suspense>} />
               {/* Phase 72: War Room & Meeting Suite pages */}
-              <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
-              <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
-              <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
+              <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
+              <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
+              <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
               {/* Phase 84: Graphs Hub (GRAPHS cluster — hub first) */}
-              <Route path="/graphs" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Graphs Hub...</div>}><GraphsHub /></Suspense>} />
+              <Route path="/graphs" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Graphs Hub...</div>}><GraphsHub /></Suspense>} />
               {/* Phase 72: Tool / Capability Galaxy (GRAPHS cluster) */}
-              <Route path="/tool-galaxy" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Tool Galaxy...</div>}><ToolGalaxy /></Suspense>} />
+              <Route path="/tool-galaxy" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tool Galaxy...</div>}><ToolGalaxy /></Suspense>} />
               {/* Phase 73: MCP Inventory + Health (GRAPHS cluster) */}
-              <Route path="/mcp-inventory" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading MCP Inventory...</div>}><McpInventory /></Suspense>} />
+              <Route path="/mcp-inventory" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading MCP Inventory...</div>}><McpInventory /></Suspense>} />
               {/* Phase 74: Temporal-KG Explorer (GRAPHS cluster) */}
-              <Route path="/knowledge-graph" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading KG Explorer...</div>}><KnowledgeGraph /></Suspense>} />
+              <Route path="/knowledge-graph" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading KG Explorer...</div>}><KnowledgeGraph /></Suspense>} />
               {/* Phase 74: HR Section pages */}
-              <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
-              <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
-              <Route path="/hr/catalog" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Catalog...</div>}><HrCatalog /></Suspense>} />
-              <Route path="/hr/onboarding" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
-              <Route path="/hr/onboarding/:catalogId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
-              <Route path="/hr/teams" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
-              <Route path="/hr/teams/:teamId" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
-              <Route path="/hr/analytics" element={<Suspense fallback={<div className="text-muted-foreground text-sm p-8 text-center">Loading Analytics...</div>}><HrAgentAnalytics /></Suspense>} />
+              <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
+              <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
+              <Route path="/hr/catalog" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Catalog...</div>}><HrCatalog /></Suspense>} />
+              <Route path="/hr/onboarding" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
+              <Route path="/hr/onboarding/:catalogId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Onboarding...</div>}><HrOnboarding /></Suspense>} />
+              <Route path="/hr/teams" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
+              <Route path="/hr/teams/:teamId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Teams...</div>}><HrTeams /></Suspense>} />
+              <Route path="/hr/analytics" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Analytics...</div>}><HrAgentAnalytics /></Suspense>} />
             </Route>
           </Routes>
         </AuthGuard>

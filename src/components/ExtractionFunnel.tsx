@@ -36,11 +36,11 @@ export function ExtractionFunnel({ steps, className }: ExtractionFunnelProps) {
             >
               {step.count.toLocaleString()}
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground text-center">
+            <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground text-center">
               {step.label}
             </span>
             {i > 0 && (
-              <span className="text-xs text-muted-foreground tabular-nums">{pct}%</span>
+              <span className="text-sm text-muted-foreground tabular-nums">{pct}%</span>
             )}
             {i < steps.length - 1 && (
               <span className="absolute right-0 top-1/2 -translate-y-1/2 text-muted-foreground text-lg leading-none">

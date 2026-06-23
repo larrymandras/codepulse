@@ -71,15 +71,15 @@ export function EmailDigestConfig() {
       <div className="space-y-4">
         {/* Recipient info (read-only — from profileConfigs) */}
         <div>
-          <Label className="text-sm font-semibold">Recipient email</Label>
-          <p className="text-xs text-muted-foreground mt-1">
+          <Label className="text-base font-semibold">Recipient email</Label>
+          <p className="text-sm text-muted-foreground mt-1">
             Uses profile email address. Edit in Agent Profiles if different.
           </p>
         </div>
 
         {/* Schedule */}
         <div>
-          <Label className="text-sm font-semibold">Schedule</Label>
+          <Label className="text-base font-semibold">Schedule</Label>
           <Select value={schedule} onValueChange={setSchedule}>
             <SelectTrigger className="w-[200px] mt-1">
               <SelectValue />
@@ -97,7 +97,7 @@ export function EmailDigestConfig() {
         {/* Enabled toggle */}
         <div className="flex items-center gap-3">
           <Switch checked={enabled} onCheckedChange={setEnabled} />
-          <Label className="text-sm">Send email digest</Label>
+          <Label className="text-base">Send email digest</Label>
         </div>
 
         {/* Save */}

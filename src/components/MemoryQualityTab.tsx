@@ -22,12 +22,12 @@ function AccordionSection({
         className="flex items-center justify-between w-full py-3 border-b border-border"
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="flex items-center gap-2 text-sm font-medium">
+        <span className="flex items-center gap-2 text-base font-medium">
           {icon}
           {title}
         </span>
         <span className="flex items-center gap-2">
-          <span className="text-xs bg-gray-700/60 text-gray-400 px-2 py-0.5 rounded-full">
+          <span className="text-sm bg-gray-700/60 text-gray-400 px-2 py-0.5 rounded-full">
             {count}
           </span>
           <ChevronDown
@@ -46,7 +46,7 @@ export default function MemoryQualityTab() {
   // Loading state
   if (data === undefined) {
     return (
-      <div className="text-xs text-muted-foreground py-4 text-center">
+      <div className="text-sm text-muted-foreground py-4 text-center">
         Loading quality data...
       </div>
     );
@@ -56,10 +56,10 @@ export default function MemoryQualityTab() {
   if (data === null) {
     return (
       <div className="py-8 text-center">
-        <p className="text-sm font-medium text-foreground mb-1">
+        <p className="text-base font-medium text-foreground mb-1">
           No quality issues detected
         </p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Run memory quality evaluation to check for duplicates, stale entries,
           and contradictions.
         </p>
@@ -81,7 +81,7 @@ export default function MemoryQualityTab() {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+          <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Dedup Rate
           </p>
           <p className="text-2xl font-semibold tabular-nums text-gray-100">
@@ -89,7 +89,7 @@ export default function MemoryQualityTab() {
           </p>
         </div>
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+          <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Stale Memories
           </p>
           <p className="text-2xl font-semibold tabular-nums text-gray-100">
@@ -97,7 +97,7 @@ export default function MemoryQualityTab() {
           </p>
         </div>
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+          <p className="text-sm text-muted-foreground uppercase tracking-wide mb-1">
             Contradictions
           </p>
           <p className="text-2xl font-semibold tabular-nums text-gray-100">
@@ -114,7 +114,7 @@ export default function MemoryQualityTab() {
           title="Duplicate Flags"
           count={Math.round(data.deduplicationRate * 100)}
         >
-          <p className="text-xs text-muted-foreground py-4">
+          <p className="text-sm text-muted-foreground py-4">
             {data.deduplicationRate > 0
               ? `${(data.deduplicationRate * 100).toFixed(1)}% of stored memories were identified as duplicates and pruned.`
               : "No issues detected"}
@@ -128,7 +128,7 @@ export default function MemoryQualityTab() {
           count={staleIds.length}
         >
           {staleIds.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4">
+            <p className="text-sm text-muted-foreground py-4">
               No issues detected
             </p>
           ) : (
@@ -136,10 +136,10 @@ export default function MemoryQualityTab() {
               {staleIds.map((id) => (
                 <div key={id} className="flex items-center gap-3">
                   <Clock className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <span className="font-mono text-xs text-gray-300 truncate flex-1">
+                  <span className="font-mono text-sm text-gray-300 truncate flex-1">
                     {id}
                   </span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">
                     Stale
                   </span>
                 </div>
@@ -155,7 +155,7 @@ export default function MemoryQualityTab() {
           count={contradictions.length}
         >
           {contradictions.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4">
+            <p className="text-sm text-muted-foreground py-4">
               No issues detected
             </p>
           ) : (
@@ -164,11 +164,11 @@ export default function MemoryQualityTab() {
                 <div key={idx} className="flex items-start gap-3">
                   <AlertTriangle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-300 font-mono truncate">
+                    <p className="text-sm text-gray-300 font-mono truncate">
                       {pair.memoryA} vs {pair.memoryB}
                     </p>
                     {pair.reason && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="text-sm text-muted-foreground mt-0.5">
                         {pair.reason}
                       </p>
                     )}

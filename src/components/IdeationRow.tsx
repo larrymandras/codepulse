@@ -60,27 +60,27 @@ export function IdeationRow({
       />
 
       <span
-        className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-none shrink-0 ${severityClass}`}
+        className={`text-xs font-semibold px-1.5 py-0.5 rounded-none shrink-0 ${severityClass}`}
       >
         {finding.severity.toUpperCase()}
       </span>
 
-      <span className="text-[10px] font-mono text-(--muted-foreground) shrink-0">
+      <span className="text-xs font-mono text-(--muted-foreground) shrink-0">
         {finding.scanType}
       </span>
 
-      <span className="text-xs text-(--muted-foreground) shrink-0">
+      <span className="text-sm text-(--muted-foreground) shrink-0">
         {finding.category}
       </span>
 
-      <span className="text-sm text-(--foreground) flex-1 truncate">
+      <span className="text-base text-(--foreground) flex-1 truncate">
         {finding.description}
       </span>
 
       <StatusBadge status={statusEntry.semantic} label={statusEntry.label} />
 
       {finding.taskId && (
-        <span className="text-[10px] px-1 py-0.5 bg-(--status-ok)/20 text-(--status-ok) shrink-0">
+        <span className="text-xs px-1 py-0.5 bg-(--status-ok)/20 text-(--status-ok) shrink-0">
           Task linked
         </span>
       )}
@@ -100,7 +100,7 @@ export function IdeationRow({
         {effectiveStatus === "open" && (
           <button
             onClick={() => onAcknowledge(finding._id)}
-            className="text-[10px] px-1.5 py-0.5 text-(--muted-foreground) hover:text-(--foreground) transition-colors"
+            className="text-xs px-1.5 py-0.5 text-(--muted-foreground) hover:text-(--foreground) transition-colors"
           >
             ACK
           </button>
@@ -109,7 +109,7 @@ export function IdeationRow({
         {effectiveStatus !== "dismissed" && (
           <button
             onClick={() => onDismiss(finding._id)}
-            className="text-[10px] px-1.5 py-0.5 text-(--muted-foreground) hover:text-(--foreground) transition-colors"
+            className="text-xs px-1.5 py-0.5 text-(--muted-foreground) hover:text-(--foreground) transition-colors"
           >
             Dismiss
           </button>

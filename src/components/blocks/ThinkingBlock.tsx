@@ -25,21 +25,21 @@ export function ThinkingBlock({ block, streaming = false }: ThinkingBlockProps) 
         ) : (
           <ChevronRight className="h-4 w-4 shrink-0 text-(--muted-foreground)" />
         )}
-        <span className="text-xs font-semibold text-(--foreground) bg-(--secondary) px-2 py-0.5 rounded">
+        <span className="text-sm font-semibold text-(--foreground) bg-(--secondary) px-2 py-0.5 rounded">
           Round {block.round_num ?? "?"}
         </span>
         {streaming && (
           <span className="h-2 w-2 rounded-full bg-(--status-warn) animate-pulse" />
         )}
         {!expanded && text && (
-          <span className="text-xs text-(--muted-foreground) truncate">
+          <span className="text-sm text-(--muted-foreground) truncate">
             {preview}
           </span>
         )}
       </div>
       {expanded && text && (
         <div className="px-3 pb-3 pt-0">
-          <pre className="font-mono text-xs whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2">
+          <pre className="font-mono text-sm whitespace-pre-wrap text-(--foreground) bg-(--card) rounded p-2">
             {text}
           </pre>
         </div>

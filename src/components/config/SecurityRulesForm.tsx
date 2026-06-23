@@ -47,7 +47,7 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
       {/* Core Security Layers */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Core Security Layers</CardTitle>
+          <CardTitle className="text-base">Core Security Layers</CardTitle>
         </CardHeader>
         <CardContent className="space-y-0">
           {CORE_LAYERS.map((layer, idx) => (
@@ -58,10 +58,10 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
               }`}
             >
               <div className="flex items-center gap-3">
-                <Badge variant="outline" className="text-[10px] font-mono w-8 justify-center">
+                <Badge variant="outline" className="text-xs font-mono w-8 justify-center">
                   {layer.layer}
                 </Badge>
-                <Label className="text-sm font-normal">{layer.label}</Label>
+                <Label className="text-base font-normal">{layer.label}</Label>
               </div>
               <Switch
                 size="sm"
@@ -76,7 +76,7 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
       {/* Advanced Settings */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Advanced</CardTitle>
+          <CardTitle className="text-base">Advanced</CardTitle>
         </CardHeader>
         <CardContent className="space-y-0">
           {ADVANCED_LAYERS.map((layer, idx) => (
@@ -86,7 +86,7 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
                 idx % 2 === 0 ? "bg-(--muted)/30" : ""
               }`}
             >
-              <Label className={`text-sm font-normal ${layer.muted ? "text-(--muted-foreground)" : ""}`}>
+              <Label className={`text-base font-normal ${layer.muted ? "text-(--muted-foreground)" : ""}`}>
                 {layer.label}
               </Label>
               <Switch
@@ -97,7 +97,7 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
             </div>
           ))}
           {!!security.dm_pairing && !!security.dm_pairs_file && (
-            <p className="text-xs text-(--muted-foreground) px-2 pt-1">
+            <p className="text-sm text-(--muted-foreground) px-2 pt-1">
               Pairs file: {String(security.dm_pairs_file)}
             </p>
           )}
@@ -107,13 +107,13 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
       {/* Threshold */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Thresholds</CardTitle>
+          <CardTitle className="text-base">Thresholds</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-normal">Legal HITL Risk Threshold</Label>
-              <span className="text-sm font-mono tabular-nums w-8 text-right">
+              <Label className="text-base font-normal">Legal HITL Risk Threshold</Label>
+              <span className="text-base font-mono tabular-nums w-8 text-right">
                 {(security.legal_hitl_risk_threshold as number) ?? 70}
               </span>
             </div>
@@ -131,7 +131,7 @@ export function SecurityRulesForm({ data, onChange }: SecurityRulesFormProps) {
       {/* Protected Env Vars */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Protected Env Vars</CardTitle>
+          <CardTitle className="text-base">Protected Env Vars</CardTitle>
         </CardHeader>
         <CardContent>
           <TagChipInput

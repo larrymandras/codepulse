@@ -33,13 +33,13 @@ interface SwarmTaskDetailProps {
 }
 
 const eyebrow =
-  "text-[10px] font-mono uppercase tracking-widest text-muted-foreground";
+  "text-xs font-mono uppercase tracking-widest text-muted-foreground";
 
 function MetaTile({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border/40 bg-card/40 p-2.5 flex flex-col gap-1 min-w-0">
       <span className={eyebrow}>{label}</span>
-      <div className="text-xs text-foreground break-words">{children}</div>
+      <div className="text-sm text-foreground break-words">{children}</div>
     </div>
   );
 }
@@ -85,7 +85,7 @@ export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps)
               <MetaTile label="Model">
                 {task.model ? (
                   <span
-                    className={`inline-block text-[11px] px-1.5 py-0.5 rounded ${modelBadgeClass(task.model)}`}
+                    className={`inline-block text-sm px-1.5 py-0.5 rounded ${modelBadgeClass(task.model)}`}
                   >
                     {task.model}
                   </span>
@@ -98,7 +98,7 @@ export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps)
             <section className="flex flex-col gap-2">
               <span className={eyebrow}>Depends on ({deps.length})</span>
               {deps.length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">
+                <span className="text-sm text-muted-foreground italic">
                   No dependencies
                 </span>
               ) : (
@@ -106,7 +106,7 @@ export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps)
                   {deps.map((d) => (
                     <span
                       key={d}
-                      className="rounded border border-border/40 bg-muted/20 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground break-all"
+                      className="rounded border border-border/40 bg-muted/20 px-1.5 py-0.5 font-mono text-sm text-muted-foreground break-all"
                     >
                       {d}
                     </span>
@@ -117,7 +117,7 @@ export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps)
 
             <section className="flex flex-col gap-1.5">
               <span className={eyebrow}>Subtask ID</span>
-              <span className="font-mono text-[11px] break-all text-muted-foreground">
+              <span className="font-mono text-sm break-all text-muted-foreground">
                 {task.subtaskId}
               </span>
             </section>

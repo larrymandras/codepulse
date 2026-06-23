@@ -110,23 +110,23 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
         >
           <div className="flex items-center gap-3 min-w-0">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${cs.dot}`} />
-            <span className="text-sm font-mono text-gray-200 truncate">{t.name}</span>
+            <span className="text-base font-mono text-gray-200 truncate">{t.name}</span>
             <OriginBadge origin={t.origin} />
             {t.description && (
-              <span className="text-[11px] text-gray-500 truncate max-w-[280px] hidden lg:inline">
+              <span className="text-sm text-gray-500 truncate max-w-[280px] hidden lg:inline">
                 {t.description}
               </span>
             )}
           </div>
           <div className="flex items-center gap-3 flex-shrink-0 ml-2">
             {t.usageCount > 0 && (
-              <span className="text-[10px] text-gray-500">{t.usageCount} uses</span>
+              <span className="text-xs text-gray-500">{t.usageCount} uses</span>
             )}
-            <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+            <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
           </div>
         </div>
         {isExpanded && (
-          <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-xs">
+          <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
               <div>
                 <span className="text-gray-500">Name</span>
@@ -161,7 +161,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                 </p>
               </div>
               {t.origin && (
-                <div className="flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground w-24">Origin</span>
                   <OriginBadge origin={t.origin} />
                 </div>
@@ -177,16 +177,16 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       {/* Header row */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">
+        <h2 className="text-base font-semibold text-gray-300">
           Tool Catalog
-          <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+          <span className="ml-2 text-sm text-gray-500 font-normal">{filtered.length}</span>
           <InfoTooltip text="All Ástríðr Python tool scripts organized by category. Click any tool to see full details." />
         </h2>
         {/* View toggle */}
         <div className="flex items-center gap-1 bg-gray-900/50 rounded-lg p-0.5">
           <button
             onClick={() => setViewMode("grouped")}
-            className={`px-2.5 py-1 rounded text-[11px] transition-colors ${
+            className={`px-2.5 py-1 rounded text-sm transition-colors ${
               viewMode === "grouped"
                 ? "bg-gray-700 text-gray-200"
                 : "text-gray-500 hover:text-gray-300"
@@ -196,7 +196,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
           </button>
           <button
             onClick={() => setViewMode("table")}
-            className={`px-2.5 py-1 rounded text-[11px] transition-colors ${
+            className={`px-2.5 py-1 rounded text-sm transition-colors ${
               viewMode === "table"
                 ? "bg-gray-700 text-gray-200"
                 : "text-gray-500 hover:text-gray-300"
@@ -211,7 +211,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
       <div className="flex flex-wrap gap-1.5 mb-4">
         <button
           onClick={() => setActiveCategory(null)}
-          className={`px-2.5 py-1 rounded-full text-[11px] transition-colors ${
+          className={`px-2.5 py-1 rounded-full text-sm transition-colors ${
             activeCategory === null
               ? "bg-gray-600 text-gray-100"
               : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300"
@@ -226,7 +226,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
             <button
               key={cat}
               onClick={() => setActiveCategory(isActive ? null : cat)}
-              className={`px-2.5 py-1 rounded-full text-[11px] transition-colors flex items-center gap-1.5 ${
+              className={`px-2.5 py-1 rounded-full text-sm transition-colors flex items-center gap-1.5 ${
                 isActive
                   ? `${cs.bg} ${cs.text} ring-1 ring-current`
                   : "bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-gray-300"
@@ -240,7 +240,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-base text-gray-500 py-6 text-center">
           {filter || activeCategory ? "No tools match your filters" : "No tools discovered yet"}
         </p>
       ) : viewMode === "grouped" ? (
@@ -252,10 +252,10 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
               <div key={cat}>
                 <div className="flex items-center gap-2 mb-1.5 px-1">
                   <span className={`w-2 h-2 rounded-full ${cs.dot}`} />
-                  <h3 className={`text-xs font-semibold uppercase tracking-wider ${cs.text}`}>
+                  <h3 className={`text-sm font-semibold uppercase tracking-wider ${cs.text}`}>
                     {cat}
                   </h3>
-                  <span className="text-[10px] text-gray-600">{catTools.length}</span>
+                  <span className="text-xs text-gray-600">{catTools.length}</span>
                 </div>
                 <div className="space-y-1">
                   {catTools.map(renderToolRow)}
@@ -280,10 +280,10 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                   <th
                     key={field}
                     onClick={() => toggleSort(field)}
-                    className="text-xs text-gray-500 uppercase px-3 py-2 cursor-pointer select-none hover:text-gray-300 transition-colors"
+                    className="text-sm text-gray-500 uppercase px-3 py-2 cursor-pointer select-none hover:text-gray-300 transition-colors"
                   >
                     {label}
-                    <span className="font-mono text-[10px]">{arrow(field)}</span>
+                    <span className="font-mono text-xs">{arrow(field)}</span>
                   </th>
                 ))}
               </tr>
@@ -301,32 +301,32 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                     >
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-mono text-gray-200">{t.name}</span>
+                          <span className="text-base font-mono text-gray-200">{t.name}</span>
                           <OriginBadge origin={t.origin} />
                           {t.description && (
-                            <span className="text-[11px] text-gray-500 truncate max-w-[200px] hidden xl:inline">
+                            <span className="text-sm text-gray-500 truncate max-w-[200px] hidden xl:inline">
                               {t.description}
                             </span>
                           )}
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${cs.bg} ${cs.text}`}>
+                        <span className={`text-sm px-1.5 py-0.5 rounded ${cs.bg} ${cs.text}`}>
                           {t.serverName ?? "uncategorized"}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-sm text-gray-400">{t.usageCount}</td>
-                      <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                      <td className="px-3 py-2 text-base text-gray-400">{t.usageCount}</td>
+                      <td className="px-3 py-2 text-sm text-gray-500 font-mono">
                         {formatTimestamp(t.discoveredAt)}
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-500 font-mono">
+                      <td className="px-3 py-2 text-sm text-gray-500 font-mono">
                         {t.lastUsedAt ? formatTimestamp(t.lastUsedAt) : "--"}
                       </td>
                     </tr>
                     {isExpanded && (
                       <tr key={`${t._id}-detail`}>
                         <td colSpan={5} className="px-3 pb-3">
-                          <div className="ml-3 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-xs">
+                          <div className="ml-3 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 text-sm">
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-1.5">
                               <div>
                                 <span className="text-gray-500">Name</span>
@@ -361,7 +361,7 @@ export default function DiscoveredToolsTable({ tools, filter }: DiscoveredToolsT
                                 </p>
                               </div>
                               {t.origin && (
-                                <div className="flex items-center gap-2 text-xs">
+                                <div className="flex items-center gap-2 text-sm">
                                   <span className="text-muted-foreground w-24">Origin</span>
                                   <OriginBadge origin={t.origin} />
                                 </div>

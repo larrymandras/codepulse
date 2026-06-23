@@ -83,7 +83,7 @@ export function MetricsDashboard({
             <ToggleGroupItem
               key={w}
               value={w}
-              className="text-xs px-3 h-7"
+              className="text-sm px-3 h-7"
             >
               {w}
             </ToggleGroupItem>
@@ -94,10 +94,10 @@ export function MetricsDashboard({
       {metrics.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-12 text-center">
           <BarChart3 className="h-8 w-8 text-muted-foreground" />
-          <p className="text-sm font-medium text-muted-foreground">
+          <p className="text-base font-medium text-muted-foreground">
             No metrics yet
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Performance data will appear here once this agent processes
             interactions.
           </p>
@@ -107,35 +107,35 @@ export function MetricsDashboard({
           {/* Summary Cards */}
           <div className="grid grid-cols-3 gap-4">
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs text-muted-foreground mb-1">
+              <p className="text-sm text-muted-foreground mb-1">
                 Response Time (p50)
               </p>
               <p className="font-mono text-2xl font-semibold">
                 {stats ? `${Math.round(stats.p50)}ms` : "--"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 p95: {stats ? `${Math.round(stats.p95)}ms` : "--"} / p99:{" "}
                 {stats ? `${Math.round(stats.p99)}ms` : "--"}
               </p>
             </div>
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs text-muted-foreground mb-1">
+              <p className="text-sm text-muted-foreground mb-1">
                 Task Completion
               </p>
               <p className="font-mono text-2xl font-semibold text-[var(--status-ok)]">
                 {stats ? `${stats.successRate.toFixed(1)}%` : "--"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Error: {stats ? `${stats.errorRate.toFixed(1)}%` : "--"} /
                 Timeout: {stats ? `${stats.timeoutRate.toFixed(1)}%` : "--"}
               </p>
             </div>
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-xs text-muted-foreground mb-1">Token Usage</p>
+              <p className="text-sm text-muted-foreground mb-1">Token Usage</p>
               <p className="font-mono text-2xl font-semibold">
                 {stats ? stats.totalTokens.toLocaleString() : "--"}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Est. cost: {stats ? formatCost(stats.totalCost) : "--"}
               </p>
             </div>

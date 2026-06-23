@@ -14,7 +14,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
   if (result === undefined) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <p className="text-xs text-gray-500 text-center py-2">Loading capabilities...</p>
+        <p className="text-sm text-gray-500 text-center py-2">Loading capabilities...</p>
       </div>
     );
   }
@@ -22,7 +22,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
   if (result === null) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <p className="text-xs text-gray-500 text-center py-2">No capabilities snapshot for this session</p>
+        <p className="text-sm text-gray-500 text-center py-2">No capabilities snapshot for this session</p>
       </div>
     );
   }
@@ -50,8 +50,8 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-700/20 rounded-xl transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-300">Session Capabilities</span>
-          <span className="text-xs text-gray-500">Scanned {scannedDate}</span>
+          <span className="text-base font-semibold text-gray-300">Session Capabilities</span>
+          <span className="text-sm text-gray-500">Scanned {scannedDate}</span>
         </div>
         <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
@@ -87,7 +87,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {mcpServers.map((s: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-blue-400/10 text-blue-300 border border-blue-400/20"
+                    className="text-sm px-2 py-1 rounded bg-blue-400/10 text-blue-300 border border-blue-400/20"
                     title={s.url}
                   >
                     {s.name}
@@ -107,7 +107,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {tools.map((t: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-purple-400/10 text-purple-300 border border-purple-400/20"
+                    className="text-sm px-2 py-1 rounded bg-purple-400/10 text-purple-300 border border-purple-400/20"
                   >
                     {typeof t === "string" ? t : t.name ?? t.toolName ?? JSON.stringify(t)}
                   </span>
@@ -123,7 +123,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {plugins.map((p: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-emerald-400/10 text-emerald-300 border border-emerald-400/20"
+                    className="text-sm px-2 py-1 rounded bg-emerald-400/10 text-emerald-300 border border-emerald-400/20"
                   >
                     {p.name}{p.version ? ` v${p.version}` : ""}
                   </span>
@@ -139,7 +139,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {skills.map((s: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20"
+                    className="text-sm px-2 py-1 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20"
                     title={s.description}
                   >
                     {s.name}
@@ -156,7 +156,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {hooks.map((h: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-rose-400/10 text-rose-300 border border-rose-400/20"
+                    className="text-sm px-2 py-1 rounded bg-rose-400/10 text-rose-300 border border-rose-400/20"
                   >
                     {h.hookType}
                   </span>
@@ -172,7 +172,7 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
                 {slashCommands.map((c: any, i: number) => (
                   <span
                     key={i}
-                    className="text-xs px-2 py-1 rounded bg-cyan-400/10 text-cyan-300 border border-cyan-400/20"
+                    className="text-sm px-2 py-1 rounded bg-cyan-400/10 text-cyan-300 border border-cyan-400/20"
                     title={c.description}
                   >
                     /{c.name}
@@ -193,8 +193,8 @@ export default function SessionCapabilities({ sessionId }: SessionCapabilitiesPr
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-xs text-gray-500">{label}</p>
-      <p className="text-xs font-mono text-gray-300 mt-0.5 truncate" title={value}>
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="text-sm font-mono text-gray-300 mt-0.5 truncate" title={value}>
         {value}
       </p>
     </div>
@@ -204,7 +204,7 @@ function Field({ label, value }: { label: string; value: string }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-medium text-gray-400 mb-1.5">{title}</p>
+      <p className="text-sm font-medium text-gray-400 mb-1.5">{title}</p>
       {children}
     </div>
   );
@@ -216,12 +216,12 @@ function RawSnapshot({ data }: { data: Record<string, any> }) {
     <div>
       <button
         onClick={() => setShow(!show)}
-        className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+        className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
       >
         {show ? "Hide" : "Show"} raw snapshot
       </button>
       {show && (
-        <pre className="mt-2 p-3 bg-gray-900/60 rounded-lg text-xs text-gray-400 font-mono max-h-64 overflow-auto whitespace-pre-wrap break-all">
+        <pre className="mt-2 p-3 bg-gray-900/60 rounded-lg text-sm text-gray-400 font-mono max-h-64 overflow-auto whitespace-pre-wrap break-all">
           {JSON.stringify(data, null, 2)}
         </pre>
       )}

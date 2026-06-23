@@ -260,7 +260,7 @@ export default function CronBuilder({
       {/* Expression output */}
       <div
         data-testid="cron-expression"
-        className="font-mono text-xs bg-(--muted) px-2 py-1 border border-(--border)"
+        className="font-mono text-sm bg-(--muted) px-2 py-1 border border-(--border)"
       >
         {expression || "* * * * *"}
       </div>
@@ -268,7 +268,7 @@ export default function CronBuilder({
       {/* Human-readable preview */}
       <p
         data-testid="cron-preview"
-        className="text-sm text-(--muted-foreground) italic"
+        className="text-base text-(--muted-foreground) italic"
       >
         {humanReadable}
       </p>

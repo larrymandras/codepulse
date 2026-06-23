@@ -7,17 +7,17 @@ export default function SankeyFlow() {
   if (nodes.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Tool Flow<InfoTooltip text="Tool execution flow from event sources through tools to outcomes (success, error, human-in-the-loop)" /></h2>
-        <p className="text-gray-500 text-sm">No data yet.</p>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Tool Flow<InfoTooltip text="Tool execution flow from event sources through tools to outcomes (success, error, human-in-the-loop)" /></h2>
+        <p className="text-gray-500 text-base">No data yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Tool Flow<InfoTooltip text="Tool execution flow from event sources through tools to outcomes (success, error, human-in-the-loop)" /></h2>
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Tool Flow<InfoTooltip text="Tool execution flow from event sources through tools to outcomes (success, error, human-in-the-loop)" /></h2>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-base">
           <thead>
             <tr className="text-gray-400 border-b border-gray-700">
               <th className="text-left py-2 pr-3 font-medium">From</th>

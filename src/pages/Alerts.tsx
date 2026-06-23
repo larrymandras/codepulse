@@ -70,39 +70,39 @@ function AlertRow({ a }: { a: any }) {
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
-              <span className={`text-xs font-medium uppercase ${colors.text}`}>
+              <span className={`text-sm font-medium uppercase ${colors.text}`}>
                 {a.severity}
               </span>
             </span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
+            <span className="text-sm px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
               {a.source}
             </span>
             {isAcked && (
-              <span className="text-xs px-2 bg-muted rounded text-muted-foreground">
+              <span className="text-sm px-2 bg-muted rounded text-muted-foreground">
                 Acknowledged
               </span>
             )}
             {isResolved && (
-              <span className="text-xs px-2 bg-muted rounded text-muted-foreground">
+              <span className="text-sm px-2 bg-muted rounded text-muted-foreground">
                 Auto-resolved
               </span>
             )}
             {isMuted && !isAcked && !isResolved && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" />
                 Muted
               </span>
             )}
           </div>
-          <p className={`text-sm text-foreground ${isAcked ? "line-through text-muted-foreground" : ""}`}>
+          <p className={`text-base text-foreground ${isAcked ? "line-through text-muted-foreground" : ""}`}>
             {a.message}
             {a.groupCount > 1 && (
-              <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              <span className="ml-2 text-sm px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                 x{a.groupCount}
               </span>
             )}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">{relativeTime(a.createdAt)}</p>
+          <p className="text-sm text-muted-foreground mt-1">{relativeTime(a.createdAt)}</p>
           {a.webhookStatus && (
             <div className="mt-1">
               <WebhookStatusBadge
@@ -170,7 +170,7 @@ export default function Alerts() {
             <button
               key={tab.value}
               onClick={() => setSeverityFilter(tab.value)}
-              className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+              className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
                 severityFilter === tab.value
                   ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -185,7 +185,7 @@ export default function Alerts() {
         <div className="flex items-center gap-2 bg-card border border-border rounded-xl p-1">
           <button
             onClick={() => setShowAll(false)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
               !showAll ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -193,7 +193,7 @@ export default function Alerts() {
           </button>
           <button
             onClick={() => setShowAll(true)}
-            className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
+            className={`text-sm px-3 py-1.5 rounded-lg transition-colors ${
               showAll ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -212,7 +212,7 @@ export default function Alerts() {
             </div>
             <div>
               <p className="text-green-400 text-xl font-medium tracking-wide mb-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">No active alerts</p>
-              <p className="text-muted-foreground text-sm">All monitored thresholds are within normal range.</p>
+              <p className="text-muted-foreground text-base">All monitored thresholds are within normal range.</p>
             </div>
           </div>
         </div>

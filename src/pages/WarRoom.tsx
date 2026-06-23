@@ -119,7 +119,7 @@ export default function WarRoom() {
         <h1 className="text-xl font-semibold">War Room</h1>
         <button
           onClick={() => setLaunchOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-base font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
         >
           <Plus className="h-4 w-4" />
           New Room
@@ -148,7 +148,7 @@ export default function WarRoom() {
                 />
               ))}
               {activeRooms.length === 0 && (
-                <p className="text-xs text-muted-foreground px-4 py-2">
+                <p className="text-sm text-muted-foreground px-4 py-2">
                   No active rooms
                 </p>
               )}
@@ -178,7 +178,7 @@ export default function WarRoom() {
                 <div className="p-4 border-b border-(--border) flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold">{selectedRoom.name}</h2>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {selectedRoom.participantIds?.length ?? 0} participants
                     </p>
                   </div>
@@ -215,7 +215,7 @@ export default function WarRoom() {
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   Select a room to view details.
                 </p>
               </div>

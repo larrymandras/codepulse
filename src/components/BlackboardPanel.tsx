@@ -66,11 +66,11 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
     <div>
       {/* Header: BLACKBOARD label + live-pulse dot + task count badge */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-[10px] font-mono uppercase tracking-widest text-primary flex items-center gap-2">
+        <h2 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           BLACKBOARD
         </h2>
-        <Badge variant="outline" className="text-[10px] font-mono">
+        <Badge variant="outline" className="text-xs font-mono">
           {taskCount} tasks
         </Badge>
       </div>
@@ -79,11 +79,11 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
       {taskCount === 0 ? (
         <div className="flex flex-col items-center justify-center py-6 gap-2 text-center">
           <ClipboardList className="h-6 w-6 text-muted-foreground/50" />
-          <p className="text-xs font-medium text-foreground">
+          <p className="text-sm font-medium text-foreground">
             {completedGoal ? "No tasks found for this goal." : "Waiting for tasks"}
           </p>
           {!completedGoal && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Subtasks will appear here once the Queen begins decomposition.
             </p>
           )}
@@ -104,7 +104,7 @@ export default function BlackboardPanel({ goalId, completedGoal = false, onSelec
                   <div className="flex items-center gap-1.5">
                     <StatusBadge status={task.state} />
                     {elapsed && (
-                      <span className="text-[10px] font-mono text-muted-foreground">{elapsed}</span>
+                      <span className="text-xs font-mono text-muted-foreground">{elapsed}</span>
                     )}
                   </div>
                 }

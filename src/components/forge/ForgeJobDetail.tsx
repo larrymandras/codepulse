@@ -89,7 +89,7 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
 
   if (!job) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-base text-muted-foreground">
         Select a job to view details
       </div>
     );
@@ -112,7 +112,7 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card shrink-0">
           <ForgeStatusBadge status={job.status as JobStatus} />
         </div>
-        <div className="flex items-center justify-center flex-1 text-sm text-muted-foreground">
+        <div className="flex items-center justify-center flex-1 text-base text-muted-foreground">
           {job.status === "failed"
             ? `Command failed: ${job.prompt ?? "unknown error"}`
             : job.status === "expired"
@@ -131,10 +131,10 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header: agent name + status badge + prompt + Stop button (running only) */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card shrink-0">
-        <span className="text-sm font-semibold text-foreground">{job.agent}</span>
+        <span className="text-base font-semibold text-foreground">{job.agent}</span>
         <ForgeStatusBadge status={job.status} />
         {job.prompt && (
-          <span className="flex-1 text-xs text-muted-foreground truncate">
+          <span className="flex-1 text-sm text-muted-foreground truncate">
             {job.prompt}
           </span>
         )}
@@ -155,7 +155,7 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
       <div className="flex gap-0 border-b border-border shrink-0 px-4">
         <button
           onClick={() => setActiveTab("details")}
-          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "details"
               ? "border-emerald-500 text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -165,7 +165,7 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
         </button>
         <button
           onClick={() => setActiveTab("logs")}
-          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "logs"
               ? "border-emerald-500 text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -175,7 +175,7 @@ export function ForgeJobDetail({ job }: ForgeJobDetailProps) {
         </button>
         <button
           onClick={() => setActiveTab("files")}
-          className={`px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
+          className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "files"
               ? "border-emerald-500 text-foreground"
               : "border-transparent text-muted-foreground hover:text-foreground"

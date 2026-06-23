@@ -98,18 +98,18 @@ export default function ProfileCard({
           />
         )}
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-gray-200 truncate">
+          <h3 className="text-base font-semibold text-gray-200 truncate">
             {meta?.name ?? profileId}
           </h3>
           {meta?.description && (
-            <p className="text-[10px] text-gray-500 truncate">{meta.description}</p>
+            <p className="text-xs text-gray-500 truncate">{meta.description}</p>
           )}
         </div>
         {!meta && (
           <span className="sr-only">{hasRecentActivity ? "Recently active" : "Inactive"}</span>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-sm">
         <div className="bg-gray-900/50 rounded-lg p-2">
           <p className="text-gray-500">Cost Today</p>
           <p className="text-gray-200 font-semibold">${costToday.toFixed(4)}</p>
@@ -129,7 +129,7 @@ export default function ProfileCard({
       </div>
 
       {/* Extended info section */}
-      <div className="border-t border-gray-700/50 mt-3 pt-3 space-y-2 text-xs">
+      <div className="border-t border-gray-700/50 mt-3 pt-3 space-y-2 text-sm">
         {/* Channel health */}
         {channels && channels.length > 0 ? (
           <div className="flex items-center gap-2 flex-wrap">

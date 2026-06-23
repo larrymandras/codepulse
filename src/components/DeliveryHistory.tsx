@@ -18,10 +18,10 @@ export function DeliveryHistory() {
 
   const renderEmptyState = () => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <p className="text-sm font-semibold text-gray-300 mb-1">
+      <p className="text-base font-semibold text-gray-300 mb-1">
         No deliveries yet
       </p>
-      <p className="text-xs text-muted-foreground max-w-xs">
+      <p className="text-sm text-muted-foreground max-w-xs">
         Delivery history appears here after the first scheduled digest or
         PagerDuty trigger.
       </p>
@@ -76,16 +76,16 @@ export function DeliveryHistory() {
                         {log.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-base">
                       {log.subject ?? "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-sm">
                       {log.recipient ?? "—"}
                     </TableCell>
-                    <TableCell className="tabular-nums text-xs text-muted-foreground">
+                    <TableCell className="tabular-nums text-sm text-muted-foreground">
                       {new Date(log.sentAt * 1000).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground truncate max-w-[300px]">
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-[300px]">
                       {log.errorMessage ?? "—"}
                     </TableCell>
                   </TableRow>
@@ -127,17 +127,17 @@ export function DeliveryHistory() {
                         {log.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm capitalize">
+                    <TableCell className="text-base capitalize">
                       {log.action ?? "—"}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="font-mono text-sm">
                       {log.dedupKey ?? "—"}
                     </TableCell>
-                    <TableCell className="text-xs">{log.ruleId}</TableCell>
-                    <TableCell className="tabular-nums text-xs text-muted-foreground">
+                    <TableCell className="text-sm">{log.ruleId}</TableCell>
+                    <TableCell className="tabular-nums text-sm text-muted-foreground">
                       {new Date(log.sentAt * 1000).toLocaleString()}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground truncate max-w-[300px]">
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-[300px]">
                       {log.errorMessage ?? "—"}
                     </TableCell>
                   </TableRow>

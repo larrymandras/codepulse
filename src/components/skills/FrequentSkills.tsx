@@ -38,7 +38,7 @@ export function FrequentSkills({ skills, onLaunch }: FrequentSkillsProps) {
 
   return (
     <div>
-      <div className="text-gray-500 text-[11px] uppercase tracking-wider mb-2">
+      <div className="text-gray-500 text-sm uppercase tracking-wider mb-2">
         Frequently Used
       </div>
       <div className="flex gap-2 flex-wrap">
@@ -49,7 +49,7 @@ export function FrequentSkills({ skills, onLaunch }: FrequentSkillsProps) {
             <button
               key={skill.name}
               onClick={() => onLaunch(skill.name)}
-              className={`bg-gradient-to-r ${gradient} text-white text-xs font-medium px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity`}
+              className={`bg-gradient-to-r ${gradient} text-white text-sm font-medium px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity`}
             >
               {skill.displayName}
             </button>

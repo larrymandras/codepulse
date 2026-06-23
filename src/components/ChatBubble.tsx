@@ -58,22 +58,22 @@ function formatRelativeTime(timestamp: number): string {
 const markdownComponents: Components = {
   // Collapse headings to body text — no large headings inside bubbles
   h1: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   h2: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   h3: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   h4: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   h5: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   h6: ({ children }) => (
-    <span className="block font-semibold text-sm mb-1">{children}</span>
+    <span className="block font-semibold text-base mb-1">{children}</span>
   ),
   // Code — inline vs block detection
   code: ({ className, children, ...props }) => {
@@ -86,7 +86,7 @@ const markdownComponents: Components = {
           style={oneDark}
           language={language}
           PreTag="div"
-          className="font-mono text-xs rounded-none my-1"
+          className="font-mono text-sm rounded-none my-1"
           customStyle={{ margin: 0, borderRadius: 0, fontSize: "0.75rem" }}
         >
           {String(children).replace(/\n$/, "")}
@@ -96,7 +96,7 @@ const markdownComponents: Components = {
 
     return (
       <code
-        className="font-mono text-xs bg-black/20 px-1 rounded-none"
+        className="font-mono text-sm bg-black/20 px-1 rounded-none"
         {...props}
       >
         {children}
@@ -105,16 +105,16 @@ const markdownComponents: Components = {
   },
   // Paragraphs — tight spacing inside bubbles
   p: ({ children }) => (
-    <p className="text-sm leading-relaxed mb-1 last:mb-0">{children}</p>
+    <p className="text-base leading-relaxed mb-1 last:mb-0">{children}</p>
   ),
   // Lists
   ul: ({ children }) => (
-    <ul className="text-sm list-disc list-inside mb-1 space-y-0.5">{children}</ul>
+    <ul className="text-base list-disc list-inside mb-1 space-y-0.5">{children}</ul>
   ),
   ol: ({ children }) => (
-    <ol className="text-sm list-decimal list-inside mb-1 space-y-0.5">{children}</ol>
+    <ol className="text-base list-decimal list-inside mb-1 space-y-0.5">{children}</ol>
   ),
-  li: ({ children }) => <li className="text-sm">{children}</li>,
+  li: ({ children }) => <li className="text-base">{children}</li>,
 };
 
 // ─── Blink cursor style ───────────────────────────────────────────────────────
@@ -197,7 +197,7 @@ export function ChatBubble({
       <div className={wrapperClass}>
         <div className={bubbleClass}>
           {isUser ? (
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{content}</p>
           ) : blocks && blocks.length > 0 ? (
             // Generative UI Block path (D-04)
             <div className="flex flex-col gap-2">
@@ -211,7 +211,7 @@ export function ChatBubble({
               ))}
               {streaming && (
                 <span
-                  className="inline-block text-sm"
+                  className="inline-block text-base"
                   style={blinkStyle}
                   aria-hidden="true"
                 >
@@ -230,7 +230,7 @@ export function ChatBubble({
               </ReactMarkdown>
               {streaming && (
                 <span
-                  className="inline-block text-sm"
+                  className="inline-block text-base"
                   style={blinkStyle}
                   aria-hidden="true"
                 >
@@ -245,7 +245,7 @@ export function ChatBubble({
             <button
               type="button"
               onClick={handlePlayToggle}
-              className="mt-2 flex items-center gap-1 text-xs transition-colors"
+              className="mt-2 flex items-center gap-1 text-sm transition-colors"
               style={{ color: isPlaying ? "var(--primary)" : "var(--muted-foreground)" }}
               aria-label={isPlaying ? "Stop audio" : "Play audio"}
             >
@@ -260,7 +260,7 @@ export function ChatBubble({
         </div>
 
         {timestamp !== undefined && (
-          <span className="text-xs text-muted-foreground mt-0.5 px-1">
+          <span className="text-sm text-muted-foreground mt-0.5 px-1">
             {formatRelativeTime(timestamp)}
           </span>
         )}

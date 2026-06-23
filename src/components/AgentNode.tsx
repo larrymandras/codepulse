@@ -72,8 +72,8 @@ export default function AgentNode({ data }: { data: AgentNodeData }) {
           size="sm"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-medium text-gray-200 truncate">{data.agentId}</p>
-          <p className="text-[9px] text-gray-500 truncate">{data.agentType}</p>
+          <p className="text-sm font-medium text-gray-200 truncate">{data.agentId}</p>
+          <p className="text-[11px] text-gray-500 truncate">{data.agentType}</p>
         </div>
       </div>
 
@@ -81,19 +81,19 @@ export default function AgentNode({ data }: { data: AgentNodeData }) {
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="flex items-center gap-1">
           <span className={`w-1.5 h-1.5 rounded-full ${statusDot[data.status] ?? "bg-gray-500"}`} />
-          <span className="text-[9px] text-gray-400">
+          <span className="text-[11px] text-gray-400">
             {statusLabel[data.status] ?? data.status}
           </span>
         </span>
         {data.model && (
-          <span className={`text-[8px] px-1 py-0.5 rounded ${modelBadgeClass(data.model)}`}>
+          <span className={`text-[10px] px-1 py-0.5 rounded ${modelBadgeClass(data.model)}`}>
             {data.model.split("/").pop()?.split("-").slice(0, 2).join("-") ?? data.model}
           </span>
         )}
       </div>
 
       {data.duration && (
-        <p className="text-[8px] text-gray-600 mt-1">{data.duration}</p>
+        <p className="text-[10px] text-gray-600 mt-1">{data.duration}</p>
       )}
 
       <Handle type="source" position={Position.Bottom} className="!bg-gray-500 !w-2 !h-2 !border-gray-800" />

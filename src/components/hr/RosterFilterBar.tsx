@@ -42,7 +42,7 @@ export function RosterFilterBar({
         value={filters.tier}
         onValueChange={(v) => onFiltersChange({ ...filters, tier: v })}
       >
-        <SelectTrigger className="w-[130px] h-9 text-xs">
+        <SelectTrigger className="w-[130px] h-9 text-sm">
           <SelectValue placeholder="Tier" />
         </SelectTrigger>
         <SelectContent>
@@ -58,7 +58,7 @@ export function RosterFilterBar({
         value={filters.status}
         onValueChange={(v) => onFiltersChange({ ...filters, status: v })}
       >
-        <SelectTrigger className="w-[130px] h-9 text-xs">
+        <SelectTrigger className="w-[130px] h-9 text-sm">
           <SelectValue placeholder="Status" />
         </SelectTrigger>
         <SelectContent>
@@ -74,7 +74,7 @@ export function RosterFilterBar({
         value={filters.profile}
         onValueChange={(v) => onFiltersChange({ ...filters, profile: v })}
       >
-        <SelectTrigger className="w-[130px] h-9 text-xs">
+        <SelectTrigger className="w-[130px] h-9 text-sm">
           <SelectValue placeholder="Profile" />
         </SelectTrigger>
         <SelectContent>
@@ -94,7 +94,7 @@ export function RosterFilterBar({
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Search agents..."
-          className="pl-8 h-9 text-xs"
+          className="pl-8 h-9 text-sm"
         />
       </div>
 
@@ -104,7 +104,7 @@ export function RosterFilterBar({
           variant="ghost"
           size="sm"
           onClick={clearAll}
-          className="h-9 text-xs text-muted-foreground"
+          className="h-9 text-sm text-muted-foreground"
         >
           <X className="h-3.5 w-3.5 mr-1" />
           Clear

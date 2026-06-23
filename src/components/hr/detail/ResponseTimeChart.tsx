@@ -86,11 +86,11 @@ export function ResponseTimeChart({ metrics }: ResponseTimeChartProps) {
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs font-normal text-muted-foreground mb-2">
+      <p className="text-sm font-normal text-muted-foreground mb-2">
         Response Time Distribution
       </p>
       {!hasData ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p className="text-base text-muted-foreground text-center py-8">
           No response time data
         </p>
       ) : (

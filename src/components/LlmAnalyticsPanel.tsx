@@ -20,21 +20,21 @@ export default function LlmAnalyticsPanel() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-6">
       <div>
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Provider Comparison<InfoTooltip text="Detailed LLM analytics: provider comparison and per-model performance breakdown" /></h2>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Provider Comparison<InfoTooltip text="Detailed LLM analytics: provider comparison and per-model performance breakdown" /></h2>
         {barData.length === 0 ? (
-          <p className="text-gray-500 text-sm">No provider data yet.</p>
+          <p className="text-gray-500 text-base">No provider data yet.</p>
         ) : (
           <FlexBarChart data={barData} height={220} />
         )}
       </div>
 
       <div>
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Model Breakdown</h2>
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Model Breakdown</h2>
         {modelRows.length === 0 ? (
-          <p className="text-gray-500 text-sm">No model data yet.</p>
+          <p className="text-gray-500 text-base">No model data yet.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="text-gray-400 border-b border-gray-700">
                   <th className="text-left py-2 pr-3 font-medium">Model</th>
@@ -46,7 +46,7 @@ export default function LlmAnalyticsPanel() {
               <tbody>
                 {modelRows.map((row) => (
                   <tr key={row.model} className="border-b border-gray-700/50 hover:bg-gray-700/20">
-                    <td className="py-2 pr-3 text-gray-200 font-mono text-xs">{row.model}</td>
+                    <td className="py-2 pr-3 text-gray-200 font-mono text-sm">{row.model}</td>
                     <td className="py-2 px-3 text-right text-gray-300">{row.calls}</td>
                     <td className="py-2 px-3 text-right text-gray-300">{row.tokens.toLocaleString()}</td>
                     <td className="py-2 pl-3 text-right text-gray-300 font-mono">{formatCost(row.cost)}</td>

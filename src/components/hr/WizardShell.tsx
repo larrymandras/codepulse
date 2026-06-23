@@ -60,7 +60,7 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
           <div className="absolute inset-0 bg-background/80 backdrop-blur-md flex items-center justify-center z-50 rounded-b-xl">
             <div className="flex flex-col items-center gap-4 text-primary">
               <Loader2 className="h-8 w-8 animate-spin" />
-              <span className="text-xs font-mono tracking-widest uppercase">Initializing Agent Sequence...</span>
+              <span className="text-sm font-mono tracking-widest uppercase">Initializing Agent Sequence...</span>
             </div>
           </div>
         )}
@@ -72,20 +72,20 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
         <button
           onClick={goBack}
           disabled={isFirstStep}
-          className="px-4 py-2 font-mono tracking-wider text-xs uppercase rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card/50 backdrop-blur"
+          className="px-4 py-2 font-mono tracking-wider text-sm uppercase rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors disabled:opacity-30 disabled:cursor-not-allowed bg-card/50 backdrop-blur"
         >
           Back
         </button>
 
         <div className="flex items-center gap-2 ml-auto">
           {savedAt && (
-            <span className="text-[10px] font-mono tracking-widest text-primary/70 animate-in fade-in uppercase">
+            <span className="text-xs font-mono tracking-widest text-primary/70 animate-in fade-in uppercase">
               Draft saved {savedAt}
             </span>
           )}
           <button
             onClick={handleSaveDraft}
-            className="flex items-center gap-1.5 px-3 py-2 font-mono tracking-wider text-xs uppercase rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors bg-card/50 backdrop-blur"
+            className="flex items-center gap-1.5 px-3 py-2 font-mono tracking-wider text-sm uppercase rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors bg-card/50 backdrop-blur"
           >
             <Save className="h-3.5 w-3.5" />
             Save Draft
@@ -94,14 +94,14 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
             <button
               onClick={goNext}
               disabled={deploying}
-              className="px-5 py-2 font-mono font-bold tracking-wider text-xs uppercase rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50"
+              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50"
             >
               Deploy
             </button>
           ) : (
             <button
               onClick={goNext}
-              className="px-5 py-2 font-mono font-bold tracking-wider text-xs uppercase rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
             >
               Next
             </button>

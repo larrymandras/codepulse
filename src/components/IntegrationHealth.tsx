@@ -21,7 +21,7 @@ function statusBadge(status: string) {
   };
   return (
     <span
-      className={`text-xs px-2 py-0.5 rounded ${colors[status] ?? colors.Unknown}`}
+      className={`text-sm px-2 py-0.5 rounded ${colors[status] ?? colors.Unknown}`}
     >
       {status}
     </span>
@@ -40,7 +40,7 @@ export default function IntegrationHealth() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Integration Health<InfoTooltip text="Connection status for all integrated services with quick test capability" />
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -50,14 +50,14 @@ export default function IntegrationHealth() {
             className="flex items-center justify-between bg-gray-900/50 border border-gray-700/30 rounded-lg px-4 py-3"
           >
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono text-gray-500 w-6 text-center">
+              <span className="text-sm font-mono text-gray-500 w-6 text-center">
                 {integration.icon}
               </span>
-              <span className="text-sm text-gray-200">{integration.name}</span>
+              <span className="text-base text-gray-200">{integration.name}</span>
             </div>
             <div className="flex items-center gap-2">
               {testing === integration.key ? (
-                <span className="text-[10px] text-yellow-400 animate-pulse">
+                <span className="text-xs text-yellow-400 animate-pulse">
                   checking...
                 </span>
               ) : (
@@ -66,7 +66,7 @@ export default function IntegrationHealth() {
               <button
                 onClick={() => handleTest(integration.key)}
                 disabled={testing === integration.key}
-                className="text-[10px] px-1.5 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
+                className="text-xs px-1.5 py-0.5 rounded border border-gray-600/30 text-gray-500 hover:text-gray-300 hover:border-gray-500/50 transition-colors disabled:opacity-50"
                 title="Test connection"
               >
                 Test

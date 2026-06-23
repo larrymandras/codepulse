@@ -49,16 +49,16 @@ export default function ReplayButton({ executionId, profileId, disabled }: Repla
   };
 
   if (state === "success") {
-    return <span className="text-[10px] text-emerald-400">Replayed</span>;
+    return <span className="text-xs text-emerald-400">Replayed</span>;
   }
 
   if (state === "error") {
-    return <span className="text-[10px] text-red-400">{errorMsg}</span>;
+    return <span className="text-xs text-red-400">{errorMsg}</span>;
   }
 
   if (state === "confirming" || state === "loading") {
     return (
-      <span className="inline-flex items-center gap-2 text-[10px] text-gray-300">
+      <span className="inline-flex items-center gap-2 text-xs text-gray-300">
         <span>Replay this execution?</span>
         <button
           onClick={handleConfirm}
@@ -82,7 +82,7 @@ export default function ReplayButton({ executionId, profileId, disabled }: Repla
     <button
       onClick={handleReplayClick}
       disabled={disabled}
-      className={`text-[10px] px-2 py-1 rounded border border-indigo-500/40 bg-indigo-500/20 text-indigo-400 transition-colors ${
+      className={`text-xs px-2 py-1 rounded border border-indigo-500/40 bg-indigo-500/20 text-indigo-400 transition-colors ${
         disabled ? "cursor-not-allowed opacity-50" : "hover:bg-indigo-500/30"
       }`}
     >

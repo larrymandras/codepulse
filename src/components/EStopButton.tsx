@@ -46,7 +46,7 @@ export function EStopButton() {
         disabled={!isConnected}
         title={isConnected ? "Emergency Stop — halt all agents" : "Not connected to Ástríðr"}
         aria-label="Emergency Stop"
-        className="flex items-center gap-1 px-2 py-1 text-xs font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="flex items-center gap-1 px-2 py-1 text-sm font-medium bg-red-600 hover:bg-red-500 text-white rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <OctagonX className="h-4 w-4" />
         <span>E-Stop</span>
@@ -78,7 +78,7 @@ export function EStopButton() {
                 </h2>
                 <p
                   id="estop-dialog-desc"
-                  className="text-sm text-(--muted-foreground) mt-1"
+                  className="text-base text-(--muted-foreground) mt-1"
                 >
                   This will halt <strong className="text-(--foreground)">ALL running agents</strong> immediately.
                   This action cannot be undone from CodePulse.
@@ -92,7 +92,7 @@ export function EStopButton() {
                 type="button"
                 onClick={() => setOpen(false)}
                 disabled={loading}
-                className="text-sm text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors disabled:opacity-50"
+                className="text-base text-(--muted-foreground) hover:text-(--foreground) px-3 py-1.5 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -100,7 +100,7 @@ export function EStopButton() {
                 type="button"
                 onClick={handleActivate}
                 disabled={loading}
-                className="text-sm bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                className="text-base bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {loading ? "Activating..." : "Confirm E-Stop"}
               </button>

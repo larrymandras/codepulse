@@ -60,18 +60,18 @@ export function WarRoomKanbanColumn({
           size="lg"
         />
         <div className="flex flex-col">
-          <span className="text-sm font-bold text-foreground font-mono tracking-wide">{agent.agentName}</span>
+          <span className="text-base font-bold text-foreground font-mono tracking-wide">{agent.agentName}</span>
           {agent.role && (
-            <span className="text-xs text-muted-foreground/80 font-mono tracking-widest mt-0.5 uppercase">
+            <span className="text-sm text-muted-foreground/80 font-mono tracking-widest mt-0.5 uppercase">
               {agent.role}
             </span>
           )}
-          <span className="text-[10px] text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
+          <span className="text-xs text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             Online
           </span>
         </div>
-        <div className="ml-auto flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 text-primary border border-primary/20 text-xs font-mono">
+        <div className="ml-auto flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 text-primary border border-primary/20 text-sm font-mono">
           {tasks.length}
         </div>
       </div>
@@ -97,10 +97,10 @@ export function WarRoomKanbanColumn({
         {/* Empty state */}
         {tasks.length === 0 && (
           <div className="flex-1 flex flex-col items-center justify-center py-4">
-            <p className="text-xs text-muted-foreground text-center py-4">
+            <p className="text-sm text-muted-foreground text-center py-4">
               No tasks
             </p>
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-sm text-muted-foreground text-center">
               Drag a task here or create one from conversation.
             </p>
           </div>

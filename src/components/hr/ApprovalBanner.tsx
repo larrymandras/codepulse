@@ -66,13 +66,13 @@ export function ApprovalBanner({ onDetailsClick }: ApprovalBannerProps) {
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2 min-w-0">
               <AlertTriangle className="h-4 w-4 text-[var(--status-warn)] shrink-0" />
-              <span className="text-sm font-medium text-foreground truncate">
+              <span className="text-base font-medium text-foreground truncate">
                 {approval.agentName}
               </span>
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-xs">
                 {approval.tier}
               </Badge>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-sm text-muted-foreground">
                 requested {relativeTime(approval.requestedAt)}
               </span>
             </div>
@@ -80,7 +80,7 @@ export function ApprovalBanner({ onDetailsClick }: ApprovalBannerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-7"
+                className="text-sm h-7"
                 onClick={() => onDetailsClick(approval.agentId)}
               >
                 Details
@@ -88,7 +88,7 @@ export function ApprovalBanner({ onDetailsClick }: ApprovalBannerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-xs h-7 text-destructive border-destructive/30 hover:bg-destructive/10"
+                className="text-sm h-7 text-destructive border-destructive/30 hover:bg-destructive/10"
                 disabled={loadingIds.has(`reject-${approval.requestId}`)}
                 onClick={() => handleReject(approval.requestId)}
               >
@@ -99,7 +99,7 @@ export function ApprovalBanner({ onDetailsClick }: ApprovalBannerProps) {
               </Button>
               <Button
                 size="sm"
-                className="text-xs h-7 bg-green-600 hover:bg-green-700 text-white"
+                className="text-sm h-7 bg-green-600 hover:bg-green-700 text-white"
                 disabled={loadingIds.has(`approve-${approval.requestId}`)}
                 onClick={() => handleApprove(approval.requestId)}
               >

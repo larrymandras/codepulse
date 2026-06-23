@@ -50,7 +50,7 @@ export function StatusBadge({ status, label }: StatusBadgeProps) {
   const style = semanticStyles[resolvedSemantic] ?? semanticStyles.idle;
 
   return (
-    <Badge variant="secondary" className={cn("rounded-sm text-xs", style)}>
+    <Badge variant="secondary" className={cn("rounded-sm text-sm", style)}>
       {resolvedLabel}
     </Badge>
   );

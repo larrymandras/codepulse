@@ -41,14 +41,14 @@ export function MuteDurationPicker({ onSelect, trigger }: MuteDurationPickerProp
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent className="w-48 p-2" align="start">
-        <p className="text-sm font-medium px-2 py-1 mb-1">Mute for how long?</p>
+        <p className="text-base font-medium px-2 py-1 mb-1">Mute for how long?</p>
         <div className="flex flex-col">
           {DURATION_OPTIONS.map((opt) => (
             <Button
               key={opt.value}
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-sm"
+              className="w-full justify-start text-base"
               style={{ minHeight: "44px" }}
               onClick={() => handleSelect(opt.value)}
             >

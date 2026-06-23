@@ -60,7 +60,7 @@ function AvatarImage({ storageId, size, alt }: { storageId: Id<"_storage">; size
 export default function AgentAvatar({ avatar, status = "idle", size = "md" }: AgentAvatarProps) {
   const px = SIZE_MAP[size];
   const ringClass = STATUS_RING[status] ?? STATUS_RING.idle;
-  const fontSize = size === "sm" ? "text-xs" : size === "md" ? "text-base" : size === "2xl" ? "text-5xl" : size === "xl" ? "text-4xl" : "text-2xl";
+  const fontSize = size === "sm" ? "text-sm" : size === "md" ? "text-base" : size === "2xl" ? "text-5xl" : size === "xl" ? "text-4xl" : "text-2xl";
 
   return (
     <div

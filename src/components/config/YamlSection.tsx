@@ -13,7 +13,7 @@ export function YamlSection({ value, onChange, description }: YamlSectionProps) 
   return (
     <div className="flex flex-col h-full">
       {description && (
-        <p className="text-xs text-(--muted-foreground) px-1 pb-2">{description}</p>
+        <p className="text-sm text-(--muted-foreground) px-1 pb-2">{description}</p>
       )}
       <div className="flex-1 overflow-hidden">
         <CodeMirror

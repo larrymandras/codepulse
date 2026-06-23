@@ -66,15 +66,15 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
               {/* Collapsed row */}
               <AccordionTrigger className="px-4 py-3 hover:no-underline">
                 <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <span className="font-semibold text-sm">{name}</span>
-                  <span className="text-xs text-(--muted-foreground)">{id}</span>
+                  <span className="font-semibold text-base">{name}</span>
+                  <span className="text-sm text-(--muted-foreground)">{id}</span>
                   <div className="flex items-center gap-1.5 ml-auto mr-4">
                     {channels.map((ch) => (
-                      <Badge key={ch} variant="secondary" className="text-[10px]">
+                      <Badge key={ch} variant="secondary" className="text-xs">
                         {ch}
                       </Badge>
                     ))}
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-xs">
                       {projectTag ?? "personal"}
                     </Badge>
                   </div>
@@ -86,20 +86,20 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                 <div className="space-y-6">
                   {/* Identity */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Identity
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">ID</Label>
-                        <Input value={id} readOnly className="h-8 text-sm bg-(--muted)" />
+                        <Label className="text-sm">ID</Label>
+                        <Input value={id} readOnly className="h-8 text-base bg-(--muted)" />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Name</Label>
+                        <Label className="text-sm">Name</Label>
                         <Input
                           value={String(profile.name ?? "")}
                           onChange={(e) => updateProfile(idx, "name", e.target.value)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                     </div>
@@ -109,11 +109,11 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
 
                   {/* Channels */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Channels
                     </h4>
                     <div className="space-y-2">
-                      <Label className="text-xs">Channels</Label>
+                      <Label className="text-sm">Channels</Label>
                       <TagChipInput
                         values={channels}
                         onChange={(v) => updateProfile(idx, "channels", v)}
@@ -121,7 +121,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Default for</Label>
+                      <Label className="text-sm">Default for</Label>
                       <TagChipInput
                         values={defaultFor}
                         onChange={(v) => updateProfile(idx, "default_for", v)}
@@ -129,7 +129,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">TTS channels</Label>
+                      <Label className="text-sm">TTS channels</Label>
                       <TagChipInput
                         values={ttsChannels}
                         onChange={(v) => updateProfile(idx, "tts_channels", v)}
@@ -137,7 +137,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs">TTS enabled</Label>
+                      <Label className="text-sm">TTS enabled</Label>
                       <Switch
                         size="sm"
                         checked={ttsEnabled}
@@ -150,38 +150,38 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
 
                   {/* Budget */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Budget
                     </h4>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Daily USD</Label>
+                        <Label className="text-sm">Daily USD</Label>
                         <Input
                           type="number"
                           value={budget.daily_usd != null ? String(budget.daily_usd) : ""}
                           onChange={(e) =>
                             updateProfileBudget(idx, "daily_usd", e.target.value ? parseFloat(e.target.value) : undefined)
                           }
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                           step={0.5}
                           min={0}
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Monthly USD</Label>
+                        <Label className="text-sm">Monthly USD</Label>
                         <Input
                           type="number"
                           value={budget.monthly_usd != null ? String(budget.monthly_usd) : ""}
                           onChange={(e) =>
                             updateProfileBudget(idx, "monthly_usd", e.target.value ? parseFloat(e.target.value) : undefined)
                           }
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                           step={1}
                           min={0}
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Soft limit %</Label>
+                        <Label className="text-sm">Soft limit %</Label>
                         <Input
                           type="number"
                           value={budget.soft_limit_pct != null ? String(budget.soft_limit_pct) : ""}
@@ -189,7 +189,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                             updateProfileBudget(idx, "soft_limit_pct", e.target.value ? parseFloat(e.target.value) : undefined)
                           }
                           placeholder="0.0 - 1.0"
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                           step={0.05}
                           min={0}
                           max={1}
@@ -202,35 +202,35 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
 
                   {/* Model */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Model
                     </h4>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Model default</Label>
+                        <Label className="text-sm">Model default</Label>
                         <Input
                           value={String(profile.model_default ?? "")}
                           onChange={(e) => updateProfile(idx, "model_default", e.target.value || null)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Model fallback</Label>
+                        <Label className="text-sm">Model fallback</Label>
                         <Input
                           value={String(profile.model_fallback ?? "")}
                           onChange={(e) => updateProfile(idx, "model_fallback", e.target.value || null)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Max rounds</Label>
+                        <Label className="text-sm">Max rounds</Label>
                         <Input
                           type="number"
                           value={profile.max_rounds != null ? String(profile.max_rounds) : ""}
                           onChange={(e) =>
                             updateProfile(idx, "max_rounds", e.target.value ? parseInt(e.target.value) : undefined)
                           }
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                     </div>
@@ -240,11 +240,11 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
 
                   {/* Tools */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Tools
                     </h4>
                     <div className="space-y-2">
-                      <Label className="text-xs">Tools enabled</Label>
+                      <Label className="text-sm">Tools enabled</Label>
                       <TagChipInput
                         values={toolsEnabled}
                         onChange={(v) => updateProfile(idx, "tools_enabled", v)}
@@ -252,7 +252,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs">Tools disabled</Label>
+                      <Label className="text-sm">Tools disabled</Label>
                       <TagChipInput
                         values={toolsDisabled}
                         onChange={(v) => updateProfile(idx, "tools_disabled", v)}
@@ -265,24 +265,24 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
 
                   {/* Persona */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Persona
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Persona ID</Label>
+                        <Label className="text-sm">Persona ID</Label>
                         <Input
                           value={String(profile.persona_id ?? "")}
                           onChange={(e) => updateProfile(idx, "persona_id", e.target.value || null)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Project tag</Label>
+                        <Label className="text-sm">Project tag</Label>
                         <Input
                           value={String(profile.project_tag ?? "")}
                           onChange={(e) => updateProfile(idx, "project_tag", e.target.value || null)}
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                     </div>
@@ -298,7 +298,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
       {personas.length > 0 && (
         <>
           <Separator />
-          <h3 className="text-sm font-semibold">Personas</h3>
+          <h3 className="text-base font-semibold">Personas</h3>
           <Accordion type="multiple" className="space-y-2">
             {personas.map((persona, idx) => {
               const id = String(persona.id ?? `persona-${idx}`);
@@ -309,8 +309,8 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                 <AccordionItem key={id} value={id} className="border border-(--border) rounded-md">
                   <AccordionTrigger className="px-4 py-3 hover:no-underline">
                     <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                      <span className="font-semibold text-sm">{name}</span>
-                      <span className="text-xs text-(--muted-foreground)">{id}</span>
+                      <span className="font-semibold text-base">{name}</span>
+                      <span className="text-sm text-(--muted-foreground)">{id}</span>
                     </div>
                   </AccordionTrigger>
 
@@ -318,29 +318,29 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">ID</Label>
-                          <Input value={id} readOnly className="h-8 text-sm bg-(--muted)" />
+                          <Label className="text-sm">ID</Label>
+                          <Input value={id} readOnly className="h-8 text-base bg-(--muted)" />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Name</Label>
+                          <Label className="text-sm">Name</Label>
                           <Input
                             value={String(persona.name ?? "")}
                             onChange={(e) => updatePersona(idx, "name", e.target.value)}
-                            className="h-8 text-sm"
+                            className="h-8 text-base"
                           />
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">Voice ID</Label>
+                          <Label className="text-sm">Voice ID</Label>
                           <Input
                             value={String(voice.voice_id ?? "")}
                             onChange={(e) => updatePersonaVoice(idx, "voice_id", e.target.value || null)}
-                            className="h-8 text-sm"
+                            className="h-8 text-base"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Stability</Label>
+                          <Label className="text-sm">Stability</Label>
                           <Input
                             type="number"
                             value={voice.stability != null ? String(voice.stability) : ""}
@@ -348,14 +348,14 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                               updatePersonaVoice(idx, "stability", e.target.value ? parseFloat(e.target.value) : undefined)
                             }
                             placeholder="0.0 - 1.0"
-                            className="h-8 text-sm"
+                            className="h-8 text-base"
                             step={0.05}
                             min={0}
                             max={1}
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Similarity boost</Label>
+                          <Label className="text-sm">Similarity boost</Label>
                           <Input
                             type="number"
                             value={voice.similarity_boost != null ? String(voice.similarity_boost) : ""}
@@ -363,7 +363,7 @@ export function ProfilesForm({ data, onChange }: ProfilesFormProps) {
                               updatePersonaVoice(idx, "similarity_boost", e.target.value ? parseFloat(e.target.value) : undefined)
                             }
                             placeholder="0.0 - 1.0"
-                            className="h-8 text-sm"
+                            className="h-8 text-base"
                             step={0.05}
                             min={0}
                             max={1}

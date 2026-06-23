@@ -72,7 +72,7 @@ function NoActiveGoal() {
       <p className="text-[13px] font-semibold text-foreground">
         No active goal
       </p>
-      <p className="text-xs text-muted-foreground text-center max-w-[260px]">
+      <p className="text-sm text-muted-foreground text-center max-w-[260px]">
         Select a goal above or trigger a swarm run from Ástríðr.
       </p>
     </div>
@@ -85,7 +85,7 @@ function WaitingForDecomposition() {
       <p className="text-[13px] font-semibold text-foreground">
         Waiting for decomposition
       </p>
-      <p className="text-xs text-muted-foreground text-center max-w-[300px]">
+      <p className="text-sm text-muted-foreground text-center max-w-[300px]">
         The Queen is planning subtasks. The graph will populate as tasks are
         written to the blackboard.
       </p>

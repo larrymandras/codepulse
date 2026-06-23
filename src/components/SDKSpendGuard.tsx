@@ -47,7 +47,7 @@ export default function SDKSpendGuard() {
   if (rawBuckets === undefined) {
     return (
       <div className="space-y-2">
-        <h3 className="text-xs font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
+        <h3 className="text-sm font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
         <div className="h-2 bg-muted animate-pulse rounded-none" />
         <div className="h-10 bg-muted animate-pulse rounded-none" />
         <div className="h-4 bg-muted animate-pulse rounded-none w-1/2" />
@@ -101,12 +101,12 @@ export default function SDKSpendGuard() {
   return (
     <div className="space-y-2">
       {/* Heading */}
-      <h3 className="text-xs font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
+      <h3 className="text-sm font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
 
       {/* Metric row */}
       <div className="flex items-baseline gap-2">
         <p className="text-xl font-semibold tabular-nums">{formatCost(todaySpend)}</p>
-        <span className="text-sm text-muted-foreground">of {formatCost(DAILY_CAP)} today</span>
+        <span className="text-base text-muted-foreground">of {formatCost(DAILY_CAP)} today</span>
       </div>
 
       {/* Gauge bar */}
@@ -141,12 +141,12 @@ export default function SDKSpendGuard() {
       {/* Projection row — only when we have enough data */}
       {elapsedHours >= 2 && (
         willExceedCap ? (
-          <p className="text-sm text-[--status-warn]">
+          <p className="text-base text-[--status-warn]">
             <Clock className="inline h-3 w-3 mr-1" />
             At current rate, you'll hit {formatCost(DAILY_CAP)} by ~{projectedHitTime?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">Projected: {formatCost(projectedTotal)} today</p>
+          <p className="text-base text-muted-foreground">Projected: {formatCost(projectedTotal)} today</p>
         )
       )}
     </div>

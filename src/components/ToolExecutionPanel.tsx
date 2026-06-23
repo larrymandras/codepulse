@@ -27,7 +27,7 @@ function PillButton({
   return (
     <button
       onClick={onClick}
-      className={`text-[10px] px-2 py-0.5 rounded-sm border font-mono uppercase tracking-widest transition-colors ${
+      className={`text-xs px-2 py-0.5 rounded-sm border font-mono uppercase tracking-widest transition-colors ${
         active
           ? "bg-primary/20 text-primary border-primary"
           : "bg-muted/30 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/50"
@@ -124,7 +124,7 @@ export default function ToolExecutionPanel() {
   if (executions.length === 0) {
     return (
       <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
           Tool Executions
           <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
@@ -132,8 +132,8 @@ export default function ToolExecutionPanel() {
         
         <div className="flex-1 flex flex-col items-center justify-center opacity-70 min-h-[200px]">
           <div className="w-12 h-12 border border-primary/20 rounded-full border-t-primary animate-spin mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]" />
-          <p className="text-[10px] font-mono tracking-widest text-primary uppercase animate-pulse">Awaiting Telemetry</p>
-          <div className="mt-4 text-[9px] font-mono text-primary/40 flex flex-col items-center gap-1.5">
+          <p className="text-xs font-mono tracking-widest text-primary uppercase animate-pulse">Awaiting Telemetry</p>
+          <div className="mt-4 text-[11px] font-mono text-primary/40 flex flex-col items-center gap-1.5">
             <span className="bg-primary/10 px-2 py-0.5 rounded border border-primary/20">[ SYSTEM STANDBY ]</span>
             <span>Intercepting agent tool calls...</span>
           </div>
@@ -144,25 +144,25 @@ export default function ToolExecutionPanel() {
 
   return (
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Tool Executions
         <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
       </h2>
 
       {/* Summary bar */}
-      <div className="grid grid-cols-3 gap-3 mb-6 text-[10px] uppercase font-mono tracking-widest">
+      <div className="grid grid-cols-3 gap-3 mb-6 text-xs uppercase font-mono tracking-widest">
         <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
           <p className="text-primary/70 mb-1">Total</p>
-          <p className="text-sm font-bold tracking-tight text-foreground">{totalExecutions}</p>
+          <p className="text-base font-bold tracking-tight text-foreground">{totalExecutions}</p>
         </div>
         <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
           <p className="text-primary/70 mb-1">Success Rate</p>
-          <p className="text-sm font-bold tracking-tight text-primary">{overallRate}%</p>
+          <p className="text-base font-bold tracking-tight text-primary">{overallRate}%</p>
         </div>
         <div className="bg-background/50 border border-border/30 rounded-lg p-2 text-center shadow-[0_0_10px_rgba(0,0,0,0.2)] hover:border-primary/40 transition-colors">
           <p className="text-primary/70 mb-1">Avg Duration</p>
-          <p className="text-sm font-bold tracking-tight text-indigo-400">{avgDuration}ms</p>
+          <p className="text-base font-bold tracking-tight text-indigo-400">{avgDuration}ms</p>
         </div>
       </div>
 
@@ -199,7 +199,7 @@ export default function ToolExecutionPanel() {
           ))}
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-gray-500">Sort:</span>
+          <span className="text-xs text-gray-500">Sort:</span>
           <PillButton
             active={sortMode === "time"}
             onClick={() => setSortMode("time")}
@@ -224,7 +224,7 @@ export default function ToolExecutionPanel() {
 
       {/* Recent executions list */}
       {filteredExecutions.length === 0 ? (
-        <p className="text-xs font-mono text-muted-foreground py-2 text-center">
+        <p className="text-sm font-mono text-muted-foreground py-2 text-center">
           No executions match filters.
         </p>
       ) : (
@@ -248,17 +248,17 @@ export default function ToolExecutionPanel() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-foreground font-mono truncate tracking-widest group-hover:text-primary transition-colors">
+                        <span className="text-sm text-foreground font-mono truncate tracking-widest group-hover:text-primary transition-colors">
                           {exec.toolName}
                         </span>
                         {exec.durationMs != null && (
-                          <span className="text-[9px] text-primary/60 font-mono">
+                          <span className="text-[11px] text-primary/60 font-mono">
                             {exec.durationMs.toFixed(0)}ms
                           </span>
                         )}
                         {exec.decision && (
                           <span
-                            className={`text-[8px] uppercase tracking-widest font-mono rounded-sm px-1.5 py-0.5 ml-auto ${
+                            className={`text-[10px] uppercase tracking-widest font-mono rounded-sm px-1.5 py-0.5 ml-auto ${
                               exec.decision === "accept"
                                 ? "text-primary border border-primary/30 bg-primary/10"
                                 : "text-yellow-500 border border-yellow-500/30 bg-yellow-500/10"
@@ -269,14 +269,14 @@ export default function ToolExecutionPanel() {
                         )}
                       </div>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-[9px] font-mono text-muted-foreground/50">
+                        <span className="text-[11px] font-mono text-muted-foreground/50">
                           ID: {exec._id.slice(-6)}
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-mono text-muted-foreground shrink-0">
+                          <span className="text-[11px] font-mono text-muted-foreground shrink-0">
                             {relativeTime(exec.timestamp)}
                           </span>
-                          <span className="text-[9px] text-muted-foreground group-hover:text-primary transition-colors">
+                          <span className="text-[11px] text-muted-foreground group-hover:text-primary transition-colors">
                             {isExpanded ? "\u25BE" : "\u25B8"}
                           </span>
                         </div>
@@ -286,7 +286,7 @@ export default function ToolExecutionPanel() {
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-1 p-2 bg-background/50 rounded-lg border border-border/30 text-[11px] font-mono tracking-wide space-y-1">
+                  <div className="ml-5 mt-1 mb-1 p-2 bg-background/50 rounded-lg border border-border/30 text-sm font-mono tracking-wide space-y-1">
                     {!exec.success && exec.errorMessage && (
                       <div>
                         <span className="text-gray-500 font-medium">

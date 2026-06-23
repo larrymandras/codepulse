@@ -17,7 +17,7 @@ export function ChartBlock({ block }: ChartBlockProps) {
   return (
     <div>
       {block.title && (
-        <p className="text-xs uppercase tracking-wide text-(--muted-foreground) mb-1">
+        <p className="text-sm uppercase tracking-wide text-(--muted-foreground) mb-1">
           {block.title}
         </p>
       )}

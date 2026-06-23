@@ -35,7 +35,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
     <div className="bg-(--card) border border-(--border) rounded p-3 flex flex-col gap-1">
       <div className="flex items-center gap-1.5 text-(--muted-foreground)">
         {icon}
-        <span className="text-xs">{label}</span>
+        <span className="text-sm">{label}</span>
       </div>
       <span className="text-lg font-semibold text-(--foreground) font-mono">{value}</span>
     </div>
@@ -66,7 +66,7 @@ export function RunSummary({ rounds, inputTokens, outputTokens, cost, startedAt,
   if (status === "idle") {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-sm text-(--muted-foreground)">No run data yet.</p>
+        <p className="text-base text-(--muted-foreground)">No run data yet.</p>
       </div>
     );
   }
@@ -83,7 +83,7 @@ export function RunSummary({ rounds, inputTokens, outputTokens, cost, startedAt,
         <div className="bg-(--card) border border-(--border) rounded p-3 flex flex-col gap-1">
           <div className="flex items-center gap-1.5 text-(--muted-foreground)">
             <Activity className="h-3.5 w-3.5" />
-            <span className="text-xs">Status</span>
+            <span className="text-sm">Status</span>
           </div>
           <span className={`text-lg font-semibold font-mono ${statusColor}`}>{status}</span>
         </div>
@@ -97,11 +97,11 @@ export function RunSummary({ rounds, inputTokens, outputTokens, cost, startedAt,
         <div className="bg-(--card) border border-(--border) rounded p-3">
           <div className="flex items-center gap-1.5 text-(--muted-foreground) mb-2">
             <Activity className="h-3.5 w-3.5" />
-            <span className="text-xs">Provider Trail</span>
+            <span className="text-sm">Provider Trail</span>
           </div>
           <div className="flex flex-col gap-1">
             {failoverTrail.map((f, i) => (
-              <span key={i} className="text-xs font-mono text-(--foreground)">
+              <span key={i} className="text-sm font-mono text-(--foreground)">
                 <span className="text-(--status-error)">{f.from}</span>{" → "}<span className="text-(--status-ok)">{f.to}</span>
               </span>
             ))}
@@ -112,11 +112,11 @@ export function RunSummary({ rounds, inputTokens, outputTokens, cost, startedAt,
         <div className="bg-(--card) border border-(--border) rounded p-3">
           <div className="flex items-center gap-1.5 text-(--muted-foreground) mb-2">
             <Wrench className="h-3.5 w-3.5" />
-            <span className="text-xs">Tool Usage ({toolCounts.size} unique)</span>
+            <span className="text-sm">Tool Usage ({toolCounts.size} unique)</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {Array.from(toolCounts.entries()).map(([name, count]) => (
-              <span key={name} className="text-xs font-mono bg-(--secondary) text-(--foreground) px-2 py-0.5 rounded">
+              <span key={name} className="text-sm font-mono bg-(--secondary) text-(--foreground) px-2 py-0.5 rounded">
                 {name} {count > 1 ? `×${count}` : ""}
               </span>
             ))}

@@ -22,7 +22,7 @@ export default function RoutingDecisionsTable() {
     : decisions;
 
   const heading = (
-    <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+    <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
       Routing Decisions
       <InfoTooltip text="Shows why each provider was selected for a gateway task, with per-provider score breakdown" />
     </h2>
@@ -37,7 +37,7 @@ export default function RoutingDecisionsTable() {
             <button
               key={f}
               onClick={() => setFallbackFilter(f)}
-              className={`text-xs px-2 py-1 font-mono transition-colors ${
+              className={`text-sm px-2 py-1 font-mono transition-colors ${
                 fallbackFilter === f
                   ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
                   : "bg-gray-700/50 text-gray-400 border border-gray-600/30 hover:bg-gray-700/80"
@@ -48,9 +48,9 @@ export default function RoutingDecisionsTable() {
           ))}
         </div>
         {fallbackFilter === "fallback" ? (
-          <p className="text-sm text-muted-foreground mt-2">No fallback routing decisions found.</p>
+          <p className="text-base text-muted-foreground mt-2">No fallback routing decisions found.</p>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             No routing decisions recorded. Routing decisions are logged when gateway tasks are dispatched.
           </p>
         )}
@@ -66,7 +66,7 @@ export default function RoutingDecisionsTable() {
           <button
             key={f}
             onClick={() => setFallbackFilter(f)}
-            className={`text-xs px-2 py-1 font-mono transition-colors ${
+            className={`text-sm px-2 py-1 font-mono transition-colors ${
               fallbackFilter === f
                 ? "bg-purple-400/20 text-purple-300 border border-purple-500/40"
                 : "bg-gray-700/50 text-gray-400 border border-gray-600/30 hover:bg-gray-700/80"
@@ -105,7 +105,7 @@ export default function RoutingDecisionsTable() {
                     setExpanded(expanded === d._id ? null : d._id)
                   }
                 >
-                  <TableCell className="font-mono text-xs" title={d.taskId}>
+                  <TableCell className="font-mono text-sm" title={d.taskId}>
                     {d.taskId.slice(0, 8)}
                   </TableCell>
                   <TableCell>
@@ -118,17 +118,17 @@ export default function RoutingDecisionsTable() {
                   </TableCell>
                   <TableCell>
                     {d.fallbackUsed ? (
-                      <span className="text-xs px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-mono uppercase">
+                      <span className="text-sm px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-mono uppercase">
                         FALLBACK
                       </span>
                     ) : (
-                      <span className="text-xs text-gray-500">—</span>
+                      <span className="text-sm text-gray-500">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="font-mono text-xs tabular-nums text-gray-400">
+                  <TableCell className="font-mono text-sm tabular-nums text-gray-400">
                     {d.finalScore?.toFixed(3) ?? "—"}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-sm text-muted-foreground">
                     {timeStr}
                   </TableCell>
                 </TableRow>
@@ -138,7 +138,7 @@ export default function RoutingDecisionsTable() {
                       colSpan={6}
                       className="bg-gray-900/30 px-4 py-2"
                     >
-                      <div className="grid grid-cols-4 gap-2 text-xs text-gray-400 font-mono tabular-nums">
+                      <div className="grid grid-cols-4 gap-2 text-sm text-gray-400 font-mono tabular-nums">
                         <span>Quota: {d.quotaScore?.toFixed(3) ?? "—"}</span>
                         <span>
                           Latency: {d.latencyScore?.toFixed(3) ?? "—"}

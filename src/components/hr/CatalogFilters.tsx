@@ -29,7 +29,7 @@ export default function CatalogFilters({
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           placeholder="Search archetypes..."
-          className="w-full pl-9 pr-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+          className="w-full pl-9 pr-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
         />
       </div>
       <div className="flex items-center gap-1 bg-background/60 border border-border/40 rounded-lg p-0.5">
@@ -37,7 +37,7 @@ export default function CatalogFilters({
           <button
             key={opt.label}
             onClick={() => onTierChange(opt.value)}
-            className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
               tier === opt.value
                 ? "bg-primary/15 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground"

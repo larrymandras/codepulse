@@ -33,7 +33,7 @@ export default function QueenNode({ data }: { data: QueenNodeData }) {
       {/* Top row: Crown icon + "Queen" label */}
       <div className="flex items-center gap-2">
         <Crown className="h-4 w-4 text-amber-400 shrink-0" />
-        <span className="text-[11px] font-semibold text-amber-300 truncate">
+        <span className="text-sm font-semibold text-amber-300 truncate">
           Queen
         </span>
       </div>
@@ -43,7 +43,7 @@ export default function QueenNode({ data }: { data: QueenNodeData }) {
 
       {/* Bottom row: short goalId */}
       <div className="flex items-center">
-        <span className="text-[10px] font-mono text-amber-400/70 truncate">
+        <span className="text-xs font-mono text-amber-400/70 truncate">
           {shortGoalId}
         </span>
       </div>

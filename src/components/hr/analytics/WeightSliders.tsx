@@ -18,7 +18,7 @@ export function WeightSliders({ weights, onWeightsChange }: WeightSlidersProps) 
     <div className="flex flex-col gap-4">
       {LABELS.map((label, i) => (
         <div key={label} className="flex items-center gap-3">
-          <span className="text-xs text-muted-foreground w-28 shrink-0">
+          <span className="text-sm text-muted-foreground w-28 shrink-0">
             {label}
           </span>
           <Slider
@@ -31,7 +31,7 @@ export function WeightSliders({ weights, onWeightsChange }: WeightSlidersProps) 
             }}
             className="flex-1"
           />
-          <span className="text-xs tabular-nums w-10 text-right">
+          <span className="text-sm tabular-nums w-10 text-right">
             {weights[i]}%
           </span>
         </div>
@@ -39,7 +39,7 @@ export function WeightSliders({ weights, onWeightsChange }: WeightSlidersProps) 
       <Button
         variant="ghost"
         size="sm"
-        className="self-end text-xs"
+        className="self-end text-sm"
         onClick={() => onWeightsChange(DEFAULT_WEIGHTS)}
       >
         Reset to defaults

@@ -109,20 +109,20 @@ function PendingRow({ cmd }: { cmd: ForgeCommandRow }) {
           <ForgeStatusBadge status={cmd.status} />
           <ForgeHostBadge hostId={cmd.hostId} />
           {cmd.agent && (
-            <span className="text-xs text-muted-foreground capitalize">
+            <span className="text-sm text-muted-foreground capitalize">
               {cmd.agent}
             </span>
           )}
         </div>
-        <p className="text-xs text-foreground truncate leading-relaxed">
+        <p className="text-sm text-foreground truncate leading-relaxed">
           {cmd.prompt ?? <span className="text-muted-foreground">—</span>}
         </p>
         {isFailed && cmd.error && (
-          <p className="text-xs text-destructive" role="alert">
+          <p className="text-sm text-destructive" role="alert">
             {cmd.error}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">Just now</p>
+        <p className="text-sm text-muted-foreground">Just now</p>
       </div>
     </div>
   );
@@ -197,8 +197,8 @@ export function ForgeJobList({
         {/* Empty state — only when there are no real jobs AND no pending rows */}
         {jobs.length === 0 && pending.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full px-4 py-8 text-center gap-2">
-            <h3 className="text-sm font-semibold text-foreground">No jobs yet</h3>
-            <p className="text-xs text-muted-foreground">
+            <h3 className="text-base font-semibold text-foreground">No jobs yet</h3>
+            <p className="text-sm text-muted-foreground">
               Jobs will appear here once the Forge daemon starts syncing.
             </p>
           </div>
@@ -234,13 +234,13 @@ export function ForgeJobList({
                     <div className="flex items-center gap-2 flex-wrap">
                       <ForgeStatusBadge status={job.status} />
                       <ForgeHostBadge hostId={job.hostId} />
-                      <span className="text-xs text-muted-foreground capitalize">
+                      <span className="text-sm text-muted-foreground capitalize">
                         {job.agent}
                       </span>
                     </div>
 
                     {/* Prompt preview (1-line truncated) */}
-                    <p className="text-xs text-foreground truncate leading-relaxed">
+                    <p className="text-sm text-foreground truncate leading-relaxed">
                       {job.prompt ?? (
                         <span className="text-muted-foreground italic">
                           (no prompt)
@@ -249,7 +249,7 @@ export function ForgeJobList({
                     </p>
 
                     {/* Relative timestamp — epoch seconds (CodePulse relativeTime contract) */}
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-muted-foreground">
                       {safeRelativeTime(job.createdAt)}
                     </p>
                   </div>

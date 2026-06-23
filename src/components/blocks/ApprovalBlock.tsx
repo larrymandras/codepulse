@@ -47,7 +47,7 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
 
   if (status === "approved") {
     return (
-      <p className="text-sm text-(--muted-foreground)">
+      <p className="text-base text-(--muted-foreground)">
         Approved — sent to Ástríðr
       </p>
     );
@@ -55,7 +55,7 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
 
   if (status === "rejected") {
     return (
-      <p className="text-sm text-(--muted-foreground)">Rejected</p>
+      <p className="text-base text-(--muted-foreground)">Rejected</p>
     );
   }
 
@@ -68,7 +68,7 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
         {block.action}
       </p>
       {block.agentName && (
-        <p className="text-xs text-(--muted-foreground) mb-3">
+        <p className="text-sm text-(--muted-foreground) mb-3">
           {block.agentName}
         </p>
       )}
@@ -77,7 +77,7 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
       {Object.keys(block.details).length > 0 && (
         <div className="mb-3 space-y-1">
           {Object.entries(block.details).map(([key, val]) => (
-            <div key={key} className="flex gap-2 text-sm">
+            <div key={key} className="flex gap-2 text-base">
               <span className="text-(--muted-foreground) font-medium">{key}:</span>
               <span className="text-(--foreground)">{String(val)}</span>
             </div>
@@ -89,13 +89,13 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
       {!showRejectInput && (
         <div className="flex gap-2">
           <button
-            className="min-h-[44px] px-4 text-sm font-medium bg-(--status-ok) text-white"
+            className="min-h-[44px] px-4 text-base font-medium bg-(--status-ok) text-white"
             onClick={handleApprove}
           >
             Approve
           </button>
           <button
-            className="min-h-[44px] px-4 text-sm font-medium bg-(--destructive) text-white"
+            className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white"
             onClick={() => setShowRejectInput(true)}
           >
             Reject Request
@@ -107,7 +107,7 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
       {showRejectInput && (
         <div className="flex flex-col gap-2 mt-2">
           <textarea
-            className="w-full text-sm bg-(--muted) border border-(--border) p-2 text-(--foreground) placeholder:text-(--muted-foreground) resize-none focus:outline-none focus:ring-1 focus:ring-(--primary)"
+            className="w-full text-base bg-(--muted) border border-(--border) p-2 text-(--foreground) placeholder:text-(--muted-foreground) resize-none focus:outline-none focus:ring-1 focus:ring-(--primary)"
             rows={3}
             placeholder="Optional: explain rejection..."
             value={rejectReason}
@@ -116,13 +116,13 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
           />
           <div className="flex gap-2">
             <button
-              className="min-h-[44px] px-4 text-sm font-medium bg-(--destructive) text-white"
+              className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white"
               onClick={handleRejectSubmit}
             >
               Submit Rejection
             </button>
             <button
-              className="text-sm px-4 text-(--muted-foreground) hover:text-(--foreground)"
+              className="text-base px-4 text-(--muted-foreground) hover:text-(--foreground)"
               onClick={() => {
                 setShowRejectInput(false);
                 setRejectReason("");

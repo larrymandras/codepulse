@@ -320,15 +320,15 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   // ── Filter chip helper ────────────────────────────────────────────────────
   const chipClass = (filter: SourceFilter) =>
     sourceFilter === filter
-      ? "text-xs font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-primary/10 text-primary border border-primary/40"
-      : "text-xs font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
+      ? "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-primary/10 text-primary border border-primary/40"
+      : "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
 
   return (
     <div className={containerClass}>
       {/* ── Hero header row ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-2 px-4 pt-4 pb-2">
         {/* Left: truncation summary + per-source chips + freshness */}
-        <div className="flex items-center gap-2 flex-wrap text-xs font-mono text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap text-sm font-mono text-muted-foreground">
           <span>
             Showing {filteredData.nodes.length} of {snapshot.nodeCount} nodes
           </span>
@@ -340,7 +340,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               {src.truncated && (
                 <Badge
                   variant="outline"
-                  className="text-amber-400 border-amber-400/30 text-[10px]"
+                  className="text-amber-400 border-amber-400/30 text-xs"
                 >
                   truncated
                 </Badge>
@@ -357,12 +357,12 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               >
                 stale
               </Badge>
-              <span className="text-muted-foreground font-mono text-xs">
+              <span className="text-muted-foreground font-mono text-sm">
                 Updated {ageStr}
               </span>
             </>
           ) : (
-            <span className="text-xs font-mono text-muted-foreground">
+            <span className="text-sm font-mono text-muted-foreground">
               Updated {ageStr}
             </span>
           )}
@@ -429,7 +429,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
       {hasIntegrityWarning && (
         <div className="flex items-start gap-3 mx-4 mb-2 rounded-[var(--radius)] border border-amber-400/30 bg-amber-500/5 px-4 py-3">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-amber-400" />
-          <p className="text-xs font-mono text-muted-foreground">
+          <p className="text-sm font-mono text-muted-foreground">
             {integrityParts.join(" and ")} dropped during ingest (stored{" "}
             {snapshot.storedNodeCount}/{snapshot.nodeCount} nodes,{" "}
             {snapshot.storedLinkCount}/{snapshot.linkCount} links)
@@ -446,7 +446,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
         {/* Graph region */}
         <div className="relative">
           {/* Legend (absolute overlay — UI-SPEC Legend Spec) */}
-          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-[10px] font-mono">
+          <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono">
             <span className="flex items-center gap-2 text-muted-foreground">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
@@ -497,14 +497,14 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                     <button
                       aria-label={`Return to ${returnLabel}`}
                       onClick={() => navigate(fromParam)}
-                      className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200 shrink-0"
+                      className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground hover:text-foreground border-l-2 border-primary/40 pl-2 py-1.5 hover:border-primary/70 transition-colors duration-200 shrink-0"
                     >
                       <ChevronLeft className="h-3 w-3" />
                       {`Back to ${returnLabel}`}
                     </button>
                   </SectionErrorBoundary>
                 )}
-                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                <span className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
                   Node Details
                 </span>
               </div>
@@ -521,9 +521,9 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               <div className="space-y-3">
                 {/* 1. id — mono truncate + full id in title */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">id</p>
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">id</p>
                   <p
-                    className="font-mono text-xs text-muted-foreground truncate"
+                    className="font-mono text-sm text-muted-foreground truncate"
                     title={selectedNode.id}
                   >
                     {selectedNode.id}
@@ -532,21 +532,21 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
 
                 {/* 2. label */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">label</p>
-                  <p className="font-bold text-sm text-foreground">{selectedNode.label}</p>
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">label</p>
+                  <p className="font-bold text-base text-foreground">{selectedNode.label}</p>
                 </div>
 
                 {/* 3. type */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">type</p>
-                  <Badge variant="outline" className="text-xs">{selectedNode.type}</Badge>
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">type</p>
+                  <Badge variant="outline" className="text-sm">{selectedNode.type}</Badge>
                 </div>
 
                 {/* 4. source — color pill matching node color */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">source</p>
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">source</p>
                   <span
-                    className="inline-block text-xs font-mono px-2 py-0.5 rounded-full"
+                    className="inline-block text-sm font-mono px-2 py-0.5 rounded-full"
                     style={{
                       color: isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR,
                       border: `1px solid ${isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR}`,
@@ -561,26 +561,26 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
 
                 {/* 5. community */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-0.5">community</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-0.5">community</p>
+                  <p className="text-sm text-muted-foreground">
                     community: {selectedNode.community ?? "—"}
                   </p>
                 </div>
 
                 {/* 6. neighbors */}
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-widest mb-1">
+                  <p className="text-xs text-muted-foreground font-mono uppercase tracking-widest mb-1">
                     Neighbors ({neighborNodes.length})
                   </p>
                   {neighborNodes.length === 0 ? (
-                    <p className="text-xs text-muted-foreground/60">No direct neighbors</p>
+                    <p className="text-sm text-muted-foreground/60">No direct neighbors</p>
                   ) : neighborNodes.length > 8 ? (
                     <ScrollArea className="h-[200px]">
                       <div className="space-y-1">
                         {neighborNodes.map((n) => (
                           <button
                             key={n.id}
-                            className="w-full text-left text-xs font-mono text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-primary/5 truncate block"
+                            className="w-full text-left text-sm font-mono text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-primary/5 truncate block"
                             onClick={() => setSelectedNodeId(n.id)}
                             title={n.label}
                           >
@@ -594,7 +594,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                       {neighborNodes.map((n) => (
                         <button
                           key={n.id}
-                          className="w-full text-left text-xs font-mono text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-primary/5 truncate block"
+                          className="w-full text-left text-sm font-mono text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-primary/5 truncate block"
                           onClick={() => setSelectedNodeId(n.id)}
                           title={n.label}
                         >
@@ -612,7 +612,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                   <>
                     <Separator className="mt-6 mb-4" />
                     <div aria-label="Related across graphs navigation links">
-                      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">
+                      <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
                         RELATED ACROSS GRAPHS
                       </p>
                       <SectionErrorBoundary name="Cross-graph links">
@@ -632,7 +632,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                           }
                         >
                           <ArrowRight className="h-3 w-3 text-primary shrink-0" />
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-sm text-muted-foreground">
                             {kgCount === 1 ? "1 KG entity" : `${kgCount} KG entities`}
                           </span>
                           <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
@@ -647,7 +647,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               // (loading arrival state; also shown when focus target is absent)
               <Skeleton className="h-32 w-full rounded-[var(--radius)]" />
             ) : (
-              <p className="text-xs font-mono text-muted-foreground text-center mt-8">
+              <p className="text-sm font-mono text-muted-foreground text-center mt-8">
                 Select a node to inspect
               </p>
             )}
@@ -667,7 +667,7 @@ export function CodeVaultGraph() {
   if (snapshot === undefined) {
     return (
       <div className="h-[600px] flex items-center justify-center rounded-[var(--radius)] border border-primary/20 bg-card/50">
-        <p className="text-primary/70 font-mono text-sm animate-pulse">
+        <p className="text-primary/70 font-mono text-base animate-pulse">
           Loading graph snapshot…
         </p>
       </div>
@@ -679,10 +679,10 @@ export function CodeVaultGraph() {
     return (
       <div className="h-[600px] flex flex-col items-center justify-center gap-3 border border-primary/20 rounded-[var(--radius)] bg-[#09090b]">
         <Network className="h-8 w-8 text-primary/40" />
-        <p className="text-sm font-mono text-muted-foreground">
+        <p className="text-base font-mono text-muted-foreground">
           No graph snapshot received yet
         </p>
-        <p className="text-xs text-muted-foreground/70 max-w-md text-center">
+        <p className="text-sm text-muted-foreground/70 max-w-md text-center">
           Ástríðr's nightly graph_snapshot cron (graphify + Obsidian vault) has not
           pushed a snapshot to this deployment yet. Summary tiles above are
           independent and update on their own.

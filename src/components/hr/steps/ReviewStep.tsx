@@ -122,10 +122,10 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
             <h2 className="text-lg font-semibold text-foreground">
               Agent Deployed
             </h2>
-            <p className="text-sm text-muted-foreground text-center max-w-md">
+            <p className="text-base text-muted-foreground text-center max-w-md">
               {wizard.deployResult.message}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {isEphemeral
                 ? "The agent is now running."
                 : "The agent will appear in the roster after approval."}
@@ -137,12 +137,12 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
             <h2 className="text-lg font-semibold text-foreground">
               Deployment Failed
             </h2>
-            <p className="text-sm text-destructive text-center max-w-md">
+            <p className="text-base text-destructive text-center max-w-md">
               {wizard.deployResult.message}
             </p>
             <button
               onClick={() => wizard.setDeployResult(null)}
-              className="text-sm text-primary hover:underline"
+              className="text-base text-primary hover:underline"
             >
               Try again
             </button>
@@ -158,7 +158,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
         <h2 className="text-base font-medium text-foreground">
           Review & Deploy
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Review your agent configuration before deployment.
         </p>
       </div>
@@ -170,7 +170,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
           label={STEP_LABELS[0]}
           onEdit={() => wizard.goToStep(0)}
         >
-          <p className="text-sm text-foreground">
+          <p className="text-base text-foreground">
             {data.template.catalogEntryName || "Blank Agent"}
           </p>
         </SummaryCard>
@@ -180,10 +180,10 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
           label={STEP_LABELS[1]}
           onEdit={() => wizard.goToStep(1)}
         >
-          <p className="text-sm text-foreground font-medium">
+          <p className="text-base text-foreground font-medium">
             {data.identity.displayName || "(unnamed)"}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {data.identity.agentId || "(no id)"} --{" "}
             <span className="uppercase">{data.identity.tier}</span>
           </p>
@@ -194,14 +194,14 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
           label={STEP_LABELS[2]}
           onEdit={() => wizard.goToStep(2)}
         >
-          <p className="text-xs text-muted-foreground capitalize">
+          <p className="text-sm text-muted-foreground capitalize">
             Mode: {data.personality.mode}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {wordCount(data.personality.content ?? "")} words
           </p>
           {personalityPreview && (
-            <p className="text-xs text-foreground/60 truncate mt-1">
+            <p className="text-sm text-foreground/60 truncate mt-1">
               {personalityPreview}...
             </p>
           )}
@@ -212,10 +212,10 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
           label={STEP_LABELS[3]}
           onEdit={() => wizard.goToStep(3)}
         >
-          <p className="text-xs text-muted-foreground capitalize">
+          <p className="text-sm text-muted-foreground capitalize">
             Mode: {data.tools.mode}
           </p>
-          <p className="text-sm text-foreground">
+          <p className="text-base text-foreground">
             {toolCount} {data.tools.mode === "glob" ? "pattern" : "tool"}
             {toolCount !== 1 ? "s" : ""}
           </p>
@@ -224,7 +224,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
 
       {/* Deployment type */}
       <div className="space-y-3">
-        <h3 className="text-sm font-medium text-foreground">
+        <h3 className="text-base font-medium text-foreground">
           Deployment Type
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -246,11 +246,11 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <Shield className="h-3.5 w-3.5 text-amber-500" />
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-base font-medium text-foreground">
                   Permanent
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Creates an approval-gated agent. Persists to agent-types.yaml
                 after approval.
               </p>
@@ -274,11 +274,11 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
             <div>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-blue-500" />
-                <span className="text-sm font-medium text-foreground">
+                <span className="text-base font-medium text-foreground">
                   Ephemeral
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1">
                 Activates immediately. Runtime-only, auto-deregisters on
                 TTL/completion.
               </p>
@@ -287,7 +287,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
         </div>
 
         {!isEphemeral && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-sm">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             This agent will require approval before activation.
           </div>
@@ -295,7 +295,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
 
         {isEphemeral && (
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">
+            <label className="block text-sm font-medium text-foreground mb-1.5">
               TTL (seconds) -- optional
             </label>
             <input
@@ -309,7 +309,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
                 )
               }
               placeholder="Leave empty for no TTL"
-              className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
             />
           </div>
         )}
@@ -319,7 +319,7 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
       <div>
         <button
           onClick={() => setShowRawConfig(!showRawConfig)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {showRawConfig ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -345,14 +345,14 @@ export default function ReviewStep({ wizard }: ReviewStepProps) {
       <div className="flex items-center gap-3 pt-2 border-t border-border/30">
         <button
           onClick={() => wizard.autoSave()}
-          className="px-4 py-2 text-sm rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
+          className="px-4 py-2 text-base rounded-lg border border-border/40 text-muted-foreground hover:text-foreground hover:border-border transition-colors"
         >
           Save Draft
         </button>
         <button
           onClick={handleDeploy}
           disabled={wizard.deploying}
-          className="ml-auto px-6 py-2 text-sm font-medium rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-colors disabled:opacity-50"
+          className="ml-auto px-6 py-2 text-base font-medium rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-colors disabled:opacity-50"
         >
           {wizard.deploying ? "Deploying..." : "Deploy Agent"}
         </button>
@@ -373,12 +373,12 @@ function SummaryCard({
   return (
     <div className="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-4 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        <span className="text-sm uppercase tracking-wider text-muted-foreground">
           {label}
         </span>
         <button
           onClick={onEdit}
-          className="flex items-center gap-1 text-[11px] text-primary hover:underline"
+          className="flex items-center gap-1 text-sm text-primary hover:underline"
         >
           <Pencil className="h-3 w-3" />
           Edit

@@ -18,7 +18,7 @@ export function MemorySourceBadge({ source, className = "" }: MemorySourceBadgeP
   const style = SOURCE_STYLES[source] ?? SOURCE_STYLES.episodic;
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full ${style.bg} ${style.text} ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 text-sm font-medium rounded-full ${style.bg} ${style.text} ${className}`}
     >
       {style.label}
     </span>

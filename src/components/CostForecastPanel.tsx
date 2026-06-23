@@ -8,10 +8,10 @@ export default function CostForecastPanel() {
   if (data === undefined) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
           Cost Forecast
         </h2>
-        <p className="text-sm text-muted-foreground text-center">Loading...</p>
+        <p className="text-base text-muted-foreground text-center">Loading...</p>
       </div>
     );
   }
@@ -19,10 +19,10 @@ export default function CostForecastPanel() {
   if (data.insufficientData) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
           Cost Forecast
         </h2>
-        <p className="text-sm text-muted-foreground text-center">
+        <p className="text-base text-muted-foreground text-center">
           Insufficient data for forecast. Cost forecasting requires at least 3 days of activity.
         </p>
       </div>
@@ -54,22 +54,22 @@ export default function CostForecastPanel() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xs font-normal uppercase tracking-wide text-muted-foreground">
+      <h2 className="text-sm font-normal uppercase tracking-wide text-muted-foreground">
         Cost Forecast
       </h2>
 
       {/* Three stat boxes */}
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Daily</p>
+          <p className="text-sm text-muted-foreground uppercase tracking-wide">Projected Daily</p>
           <p className="text-2xl font-semibold tabular-nums">{formatCost(projectedDaily)}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Weekly</p>
+          <p className="text-sm text-muted-foreground uppercase tracking-wide">Projected Weekly</p>
           <p className="text-2xl font-semibold tabular-nums">{formatCost(projectedWeekly)}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Monthly</p>
+          <p className="text-sm text-muted-foreground uppercase tracking-wide">Projected Monthly</p>
           <p className="text-2xl font-semibold tabular-nums">{formatCost(projectedMonthly)}</p>
         </div>
       </div>
@@ -78,7 +78,7 @@ export default function CostForecastPanel() {
       <div className="space-y-2">
         {budgetCap != null && budgetCap > 0 ? (
           <>
-            <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">{budgetStatusLabel}</span>
               <span className="text-muted-foreground tabular-nums">
                 {formatCost(currentMonthSpend)} / {formatCost(budgetCap)}
@@ -92,9 +92,9 @@ export default function CostForecastPanel() {
             </div>
           </>
         ) : (
-          <p className="text-xs text-muted-foreground">No budget cap configured</p>
+          <p className="text-sm text-muted-foreground">No budget cap configured</p>
         )}
-        <p className="text-[10px] text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Subscription providers (claude-cli, codex, antigravity) excluded from forecast
         </p>
       </div>

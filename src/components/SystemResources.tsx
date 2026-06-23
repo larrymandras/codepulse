@@ -32,14 +32,14 @@ function ResourceBar({
   const clamped = Math.min(100, Math.max(0, percent));
   return (
     <div className="flex items-center gap-3">
-      <span className="text-xs text-gray-400 w-10 shrink-0">{label}</span>
+      <span className="text-sm text-gray-400 w-10 shrink-0">{label}</span>
       <div className="flex-1 h-2.5 bg-gray-700/50 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${barColor(clamped)}`}
           style={{ width: `${clamped}%` }}
         />
       </div>
-      <span className="text-xs text-gray-400 w-24 text-right shrink-0">
+      <span className="text-sm text-gray-400 w-24 text-right shrink-0">
         {valueLabel}
       </span>
     </div>
@@ -51,11 +51,11 @@ export default function SystemResources({ data }: SystemResourcesProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         System Resources<InfoTooltip text="System resource utilization: CPU, RAM, and disk usage" />
       </h2>
       {!hasData ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-base text-gray-500 py-6 text-center">
           Waiting for data...
         </p>
       ) : (

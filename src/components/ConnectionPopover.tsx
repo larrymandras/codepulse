@@ -180,14 +180,14 @@ export function ConnectionPopover({ forceAuthError = false }: ConnectionPopoverP
 
       <PopoverContent className="w-[280px] p-3" side="top" align="start">
         {/* Header */}
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-2">
           CONNECTION DETAILS
         </p>
         <Separator className="mb-3" />
 
         {/* Auth error (D-07, T-02-04) */}
         {showAuthError && (
-          <p className="text-xs text-(--status-error) mb-3">
+          <p className="text-sm text-(--status-error) mb-3">
             Authentication failed. Check ASTRIDR_WEB_API_KEY and restart.
           </p>
         )}
@@ -196,13 +196,13 @@ export function ConnectionPopover({ forceAuthError = false }: ConnectionPopoverP
         <div className="flex flex-col gap-2">
           {/* Row 1: URL — T-02-02: base URL only, no api_key */}
           <div className="flex items-start gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">URL</span>
-            <span className="text-xs font-mono break-all">{WS_BASE_URL}</span>
+            <span className="text-sm text-muted-foreground w-24 shrink-0">URL</span>
+            <span className="text-sm font-mono break-all">{WS_BASE_URL}</span>
           </div>
 
           {/* Row 2: Status */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">Status</span>
+            <span className="text-sm text-muted-foreground w-24 shrink-0">Status</span>
             <div className="flex items-center gap-1.5">
               <div
                 className={`w-2 h-2 rounded-full shrink-0 ${
@@ -214,36 +214,36 @@ export function ConnectionPopover({ forceAuthError = false }: ConnectionPopoverP
                 }`}
                 aria-hidden="true"
               />
-              <span className="text-xs">{statusLabel}</span>
+              <span className="text-sm">{statusLabel}</span>
             </div>
           </div>
 
           {/* Row 3: Uptime */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">Uptime</span>
-            <span className="text-xs">
+            <span className="text-sm text-muted-foreground w-24 shrink-0">Uptime</span>
+            <span className="text-sm">
               {connectedAt ? formatUptime(connectedAt) : "--"}
             </span>
           </div>
 
           {/* Row 4: Latency */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">Latency</span>
-            <span className="text-xs font-mono">
+            <span className="text-sm text-muted-foreground w-24 shrink-0">Latency</span>
+            <span className="text-sm font-mono">
               {latencyMs !== null ? `${latencyMs}ms` : "--"}
             </span>
           </div>
 
           {/* Row 5: Topics */}
           <div className="flex items-start gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">Topics</span>
-            <span className="text-xs">{ALL_TOPICS.join(", ")}</span>
+            <span className="text-sm text-muted-foreground w-24 shrink-0">Topics</span>
+            <span className="text-sm">{ALL_TOPICS.join(", ")}</span>
           </div>
 
           {/* Row 6: Last event */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-24 shrink-0">Last event</span>
-            <span className="text-xs">{formatRelative(lastEventAt)}</span>
+            <span className="text-sm text-muted-foreground w-24 shrink-0">Last event</span>
+            <span className="text-sm">{formatRelative(lastEventAt)}</span>
           </div>
         </div>
 

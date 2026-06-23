@@ -199,7 +199,7 @@ export default function MissionControl() {
                 );
               })}
               {agents.length === 0 && (
-                <div className="text-sm text-muted-foreground py-8 text-center w-full">
+                <div className="text-base text-muted-foreground py-8 text-center w-full">
                   Could not load tasks. Refresh to retry.
                 </div>
               )}

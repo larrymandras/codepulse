@@ -298,7 +298,7 @@ export function AlertRuleForm({
               )}
               {mode === "custom" && (
                 <span
-                  className={`text-xs font-medium px-1.5 py-0.5 rounded border ${severityColors[severity] ?? severityColors.info}`}
+                  className={`text-sm font-medium px-1.5 py-0.5 rounded border ${severityColors[severity] ?? severityColors.info}`}
                 >
                   {severity}
                 </span>
@@ -311,7 +311,7 @@ export function AlertRuleForm({
             {mode === "override" && (
               <>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium">
+                  <label className="text-base font-medium">
                     Threshold override
                   </label>
                   <Input
@@ -328,7 +328,7 @@ export function AlertRuleForm({
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium">Lookback window</label>
+                  <label className="text-base font-medium">Lookback window</label>
                   <Select
                     value={overrideLookback}
                     onValueChange={(v) => {
@@ -354,7 +354,7 @@ export function AlertRuleForm({
             {mode === "custom" && (
               <>
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium">Rule name</label>
+                  <label className="text-base font-medium">Rule name</label>
                   <Input
                     value={ruleName}
                     onChange={(e) => {
@@ -366,7 +366,7 @@ export function AlertRuleForm({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium">Severity</label>
+                  <label className="text-base font-medium">Severity</label>
                   <Select
                     value={severity}
                     onValueChange={(v) => {
@@ -388,7 +388,7 @@ export function AlertRuleForm({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium">Conditions</label>
+                  <label className="text-base font-medium">Conditions</label>
                   <ConditionBuilder
                     conditions={conditions}
                     conditionLogic={conditionLogic}
@@ -403,7 +403,7 @@ export function AlertRuleForm({
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium">
+                  <label className="text-base font-medium">
                     Message template{" "}
                     <span className="font-normal text-muted-foreground">
                       (optional)
@@ -422,14 +422,14 @@ export function AlertRuleForm({
 
                 {/* PagerDuty config (per D-08, D-13) */}
                 <Collapsible open={pdOpen} onOpenChange={setPdOpen}>
-                  <CollapsibleTrigger className="flex items-center justify-between w-full border border-gray-700/50 p-3 text-sm font-semibold hover:bg-gray-800/30">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full border border-gray-700/50 p-3 text-base font-semibold hover:bg-gray-800/30">
                     <div className="flex items-center gap-2">
                       <ChevronRight
                         className={`w-4 h-4 transition-transform duration-150 ${pdOpen ? "rotate-90" : ""}`}
                       />
                       PagerDuty
                     </div>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-sm text-muted-foreground">
                       {pdEnabled
                         ? `On — ...${pdRoutingKey.slice(-4)}`
                         : "Off"}
@@ -444,12 +444,12 @@ export function AlertRuleForm({
                           markDirty();
                         }}
                       />
-                      <Label className="text-sm">Send PagerDuty incident</Label>
+                      <Label className="text-base">Send PagerDuty incident</Label>
                     </div>
                     {pdEnabled && (
                       <>
                         <div>
-                          <Label className="text-sm font-semibold">
+                          <Label className="text-base font-semibold">
                             Routing Key
                           </Label>
                           <Input
@@ -462,13 +462,13 @@ export function AlertRuleForm({
                               markDirty();
                             }}
                           />
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             Events API v2 routing key for this service. Stored
                             per rule.
                           </p>
                         </div>
                         <div>
-                          <Label className="text-sm font-semibold">
+                          <Label className="text-base font-semibold">
                             Severity override
                           </Label>
                           <Select
@@ -490,7 +490,7 @@ export function AlertRuleForm({
                               <SelectItem value="info">Info</SelectItem>
                             </SelectContent>
                           </Select>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <p className="text-sm text-muted-foreground mt-1">
                             Auto-mapped from rule severity. Override only if
                             needed.
                           </p>
@@ -516,7 +516,7 @@ export function AlertRuleForm({
             {mode === "custom" && customRuleId && (
               <Button
                 variant="link"
-                className="text-destructive text-sm p-0"
+                className="text-destructive text-base p-0"
                 onClick={() => setDeleteOpen(true)}
               >
                 Delete Rule
@@ -532,7 +532,7 @@ export function AlertRuleForm({
           <DialogHeader>
             <DialogTitle>Delete this rule?</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             This cannot be undone. Active alerts triggered by this rule will
             remain in the dashboard.
           </p>

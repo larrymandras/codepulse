@@ -56,10 +56,10 @@ function SubScoreBar({ label, weight, value }: SubScoreBarProps) {
     <div className="flex items-center gap-3">
       <div className="flex-1">
         <div className="flex justify-between items-center mb-1.5">
-          <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            {label} <span className="opacity-50 text-[10px] ml-1">({weight})</span>
+          <span className="text-sm font-mono text-muted-foreground uppercase tracking-wider">
+            {label} <span className="opacity-50 text-xs ml-1">({weight})</span>
           </span>
-          <span className="text-xs font-bold tabular-nums font-mono text-foreground">
+          <span className="text-sm font-bold tabular-nums font-mono text-foreground">
             {Math.round(value)}
           </span>
         </div>
@@ -92,7 +92,7 @@ function OperatorScoreCard() {
         <div className="text-5xl font-bold tabular-nums text-muted-foreground">
           &mdash;
         </div>
-        <p className="text-sm text-muted-foreground mt-2">Loading...</p>
+        <p className="text-base text-muted-foreground mt-2">Loading...</p>
       </GlassPanel>
     );
   }
@@ -106,7 +106,7 @@ function OperatorScoreCard() {
           <span className="text-base font-bold">Operator Score</span>
         </div>
         <p className="text-lg font-bold text-muted-foreground">No score yet</p>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Operator Score is computed after the nightly audit completes. Check
           back after midnight.
         </p>
@@ -150,11 +150,11 @@ function OperatorScoreCard() {
     <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
       {/* Header row */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: color }} />
-          System Integrity <span className="text-[10px] text-muted-foreground">({label})</span>
+          System Integrity <span className="text-xs text-muted-foreground">({label})</span>
         </h2>
-        <div className="flex items-center gap-3 text-[10px] uppercase font-mono tracking-widest text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs uppercase font-mono tracking-widest text-muted-foreground">
           <span title="Day-over-day" className="flex items-center gap-1"><span className="text-primary">{dayArrow}</span> 1D</span>
           <span title="7-day trend" className="flex items-center gap-1"><span className="text-primary">{weekArrow}</span> 7D</span>
         </div>

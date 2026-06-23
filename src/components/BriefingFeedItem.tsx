@@ -40,13 +40,13 @@ export default function BriefingFeedItem({ briefing }: BriefingFeedItemProps) {
         className="flex items-center gap-3 py-3 px-4 hover:bg-muted/50 cursor-pointer border-b border-border"
         onClick={() => setExpanded((prev) => !prev)}
       >
-        <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary font-medium shrink-0">
+        <span className="text-sm px-2 py-0.5 bg-primary/10 text-primary font-medium shrink-0">
           {type === "daily_digest" ? "DIGEST" : "SESSION"}
         </span>
-        <span className="text-xs text-muted-foreground font-mono shrink-0">
+        <span className="text-sm text-muted-foreground font-mono shrink-0">
           {formatDate(generatedAt)}
         </span>
-        <span className="text-sm flex-1 truncate">
+        <span className="text-base flex-1 truncate">
           {summary || narrative.slice(0, 100)}
         </span>
         <ChevronDown
@@ -59,14 +59,14 @@ export default function BriefingFeedItem({ briefing }: BriefingFeedItemProps) {
       {/* Expanded content */}
       {expanded && (
         <div className="px-4 pb-4 pt-2 bg-muted/20">
-          <p className="text-sm whitespace-pre-wrap">{narrative}</p>
+          <p className="text-base whitespace-pre-wrap">{narrative}</p>
           {type === "session" && sessionId && (
-            <p className="font-mono text-xs text-muted-foreground mt-2">
+            <p className="font-mono text-sm text-muted-foreground mt-2">
               Session: {sessionId}
             </p>
           )}
           {totalCost !== undefined && totalCost > 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Cost: {formatCost(totalCost)}
             </p>
           )}

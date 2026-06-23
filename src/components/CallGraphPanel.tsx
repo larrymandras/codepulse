@@ -45,8 +45,8 @@ export default function CallGraphPanel() {
         <div className="p-4">
           <SectionHeader title="AGENT CALL GRAPH" />
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm font-semibold text-gray-300 mb-1">No call graph data</p>
-            <p className="text-xs text-muted-foreground max-w-xs">
+            <p className="text-base font-semibold text-gray-300 mb-1">No call graph data</p>
+            <p className="text-sm text-muted-foreground max-w-xs">
               Call graph appears here after Ástríðr agents run with call graph telemetry enabled.
             </p>
           </div>
@@ -63,7 +63,7 @@ export default function CallGraphPanel() {
           <CallGraphSVG edges={edges} />
         </div>
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           {LEGEND_ITEMS.map((item) => (
             <div key={item.label} className="flex items-center gap-1.5">
               <span

@@ -111,7 +111,7 @@ export default function AgentAnalytics() {
                   <ToggleGroupItem
                     key={w}
                     value={w}
-                    className="text-[10px] font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all shadow-[0_0_10px_rgba(16,185,129,0)_inset] data-[state=on]:shadow-[0_0_10px_rgba(16,185,129,0.2)_inset]"
+                    className="text-xs font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all shadow-[0_0_10px_rgba(16,185,129,0)_inset] data-[state=on]:shadow-[0_0_10px_rgba(16,185,129,0.2)_inset]"
                   >
                     {w}
                   </ToggleGroupItem>
@@ -127,7 +127,7 @@ export default function AgentAnalytics() {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Team selector */}
               <div className="flex flex-col gap-2 lg:w-64">
-                <label className="text-xs text-muted-foreground uppercase tracking-wide">
+                <label className="text-sm text-muted-foreground uppercase tracking-wide">
                   Team Filter
                 </label>
                 <Select
@@ -152,7 +152,7 @@ export default function AgentAnalytics() {
 
               {/* Weight sliders */}
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground uppercase tracking-wide mb-2 block">
+                <label className="text-sm text-muted-foreground uppercase tracking-wide mb-2 block">
                   Scoring Weights
                 </label>
                 <WeightSliders
@@ -176,7 +176,7 @@ export default function AgentAnalytics() {
         {/* Leaderboard */}
         <SectionErrorBoundary name="Leaderboard">
           <GlassPanel className="p-6 glow-card transition-all duration-300">
-            <h2 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
+            <h2 className="text-base font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
               Leaderboard
             </h2>
@@ -200,7 +200,7 @@ export default function AgentAnalytics() {
         {selectedTeamId && scoredRows.length > 0 && (
           <SectionErrorBoundary name="Comparison Chart">
             <GlassPanel className="p-6 glow-card transition-all duration-300">
-              <h2 className="text-sm font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
+              <h2 className="text-base font-bold font-mono tracking-wide text-foreground uppercase mb-4 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary/50" />
                 Agent Comparison
               </h2>

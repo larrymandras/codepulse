@@ -25,7 +25,7 @@ export default function OriginBadge({ origin }: OriginBadgeProps) {
 
   return (
     <span
-      className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${style.bg} ${style.text}`}
+      className={`text-xs px-1.5 py-0.5 rounded font-medium ${style.bg} ${style.text}`}
     >
       {style.label}
     </span>

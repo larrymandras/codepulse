@@ -70,7 +70,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-6 p-4 pb-0 border-b border-border/50">
             <button
               onClick={() => setChartTab("pulse")}
-              className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
+              className={`text-xs pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "pulse"
                   ? "text-primary border-primary"
                   : "text-muted-foreground border-transparent hover:text-foreground"
@@ -80,7 +80,7 @@ export default function Dashboard() {
             </button>
             <button
               onClick={() => setChartTab("timeline")}
-              className={`text-[10px] pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
+              className={`text-xs pb-3 uppercase tracking-widest font-mono transition-colors border-b-2 ${
                 chartTab === "timeline"
                   ? "text-primary border-primary"
                   : "text-muted-foreground border-transparent hover:text-foreground"

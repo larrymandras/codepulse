@@ -23,7 +23,7 @@ export default function Catalog() {
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             Agent Catalog
           </h1>
-          <p className="text-sm font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase">
+          <p className="text-base font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase">
             Browse archetypes from the Astridhr catalog and start onboarding.
           </p>
         </div>

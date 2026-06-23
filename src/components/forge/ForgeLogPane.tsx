@@ -89,7 +89,7 @@ export function ForgeLogPane({ hostId, forgeJobId }: ForgeLogPaneProps) {
         className="flex-1 overflow-y-auto p-3 bg-background"
       >
         {chunks.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
+          <p className="text-base text-muted-foreground text-center py-8">
             Waiting for logs&hellip;
           </p>
         ) : (
@@ -97,7 +97,7 @@ export function ForgeLogPane({ hostId, forgeJobId }: ForgeLogPaneProps) {
             chunk.lines.map((line, lineIdx) => (
               <div
                 key={`${chunk.id}-${lineIdx}`}
-                className="font-mono text-xs whitespace-pre text-foreground leading-5"
+                className="font-mono text-sm whitespace-pre text-foreground leading-5"
               >
                 {line}
               </div>

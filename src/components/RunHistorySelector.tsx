@@ -44,7 +44,7 @@ export function RunHistorySelector({
 
   return (
     <select
-      className="text-xs bg-(--muted) border border-(--border) text-(--foreground) rounded px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-(--primary)"
+      className="text-sm bg-(--muted) border border-(--border) text-(--foreground) rounded px-2 py-1 cursor-pointer focus:outline-none focus:ring-1 focus:ring-(--primary)"
       value={value}
       onChange={(e) => {
         const v = e.target.value;

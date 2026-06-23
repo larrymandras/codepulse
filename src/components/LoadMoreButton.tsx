@@ -16,7 +16,7 @@ export default function LoadMoreButton({ status, loadMore, pageSize = 25 }: Load
       ) : (
         <button
           onClick={() => loadMore(pageSize)}
-          className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+          className="text-base text-muted-foreground underline-offset-4 hover:underline"
         >
           Load more ({pageSize})
         </button>

@@ -231,13 +231,13 @@ export function ForgeLaunchModal({
         <div className="flex flex-col gap-4">
           {/* Host picker (D-08) — online host pre-selected; offline disabled */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="host-select" className="text-sm">
+            <label htmlFor="host-select" className="text-base">
               Host
             </label>
             {hostsLoading ? (
               <Skeleton className="h-9 w-full" />
             ) : hosts.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-2">
+              <p className="text-base text-muted-foreground py-2">
                 No hosts online — start the Forge daemon to launch jobs.
               </p>
             ) : (
@@ -272,7 +272,7 @@ export function ForgeLaunchModal({
 
           {/* Agent picker (ported, unchanged) */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="agent-select" className="text-sm">
+            <label htmlFor="agent-select" className="text-base">
               Agent
             </label>
             <Select value={agent} onValueChange={(v) => setAgent(v as Agent)}>
@@ -288,7 +288,7 @@ export function ForgeLaunchModal({
               </SelectContent>
             </Select>
             <p
-              className="text-xs text-muted-foreground"
+              className="text-sm text-muted-foreground"
               id="antigravity-disabled-note"
             >
               Antigravity is disabled — PTY spike failed on this machine
@@ -297,7 +297,7 @@ export function ForgeLaunchModal({
 
           {/* Workspace picker (ported, inline-create REMOVED — D-07) */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="workspace-select" className="text-sm">
+            <label htmlFor="workspace-select" className="text-base">
               Workspace
             </label>
             <Select
@@ -315,7 +315,7 @@ export function ForgeLaunchModal({
                       {ws.name}
                       <Badge
                         variant={ws.class === "synced" ? "default" : "outline"}
-                        className="text-xs"
+                        className="text-sm"
                       >
                         {ws.class}
                       </Badge>
@@ -325,7 +325,7 @@ export function ForgeLaunchModal({
               </SelectContent>
             </Select>
             {workspaces.length === 0 && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 No workspaces synced from this host yet.
               </p>
             )}
@@ -333,12 +333,12 @@ export function ForgeLaunchModal({
 
           {/* Mode segmented control (ported verbatim) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm">Mode</label>
+            <label className="text-base">Mode</label>
             <div className="flex rounded-md border border-input overflow-hidden">
               <button
                 type="button"
                 onClick={() => setMode("goal")}
-                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`flex-1 px-4 py-2 text-base font-medium transition-colors ${
                   mode === "goal"
                     ? "bg-primary text-primary-foreground"
                     : "bg-background text-foreground hover:bg-accent"
@@ -349,7 +349,7 @@ export function ForgeLaunchModal({
               <button
                 type="button"
                 onClick={() => setMode("chat")}
-                className={`flex-1 px-4 py-2 text-sm font-medium transition-colors border-l border-input ${
+                className={`flex-1 px-4 py-2 text-base font-medium transition-colors border-l border-input ${
                   mode === "chat"
                     ? "bg-primary text-primary-foreground"
                     : "bg-background text-foreground hover:bg-accent"
@@ -362,7 +362,7 @@ export function ForgeLaunchModal({
 
           {/* Prompt textarea (ported, unchanged) */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="prompt-input" className="text-sm">
+            <label htmlFor="prompt-input" className="text-base">
               Prompt
             </label>
             <Textarea
@@ -380,7 +380,7 @@ export function ForgeLaunchModal({
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                className="text-base text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
               >
                 {advancedOpen ? "▾" : "▸"} Advanced
               </button>
@@ -388,7 +388,7 @@ export function ForgeLaunchModal({
             <CollapsibleContent className="flex flex-col gap-3 pt-3">
               {agent === "claude" && (
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="model-select" className="text-sm">
+                  <label htmlFor="model-select" className="text-base">
                     Model
                   </label>
                   <Select value={model} onValueChange={setModel}>
@@ -407,7 +407,7 @@ export function ForgeLaunchModal({
               )}
               {agent === "codex" && (
                 <div className="flex flex-col gap-1.5">
-                  <label htmlFor="model-input" className="text-sm">
+                  <label htmlFor="model-input" className="text-base">
                     Model
                   </label>
                   <input
@@ -416,12 +416,12 @@ export function ForgeLaunchModal({
                     value={model}
                     onChange={(e) => setModel(e.target.value)}
                     placeholder="gpt-5.5"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
               )}
               <div className="flex flex-col gap-1.5">
-                <label htmlFor="max-turns-input" className="text-sm">
+                <label htmlFor="max-turns-input" className="text-base">
                   Max turns
                 </label>
                 <input
@@ -431,7 +431,7 @@ export function ForgeLaunchModal({
                   onChange={(e) => setMaxTurns(e.target.value)}
                   min={1}
                   max={500}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 />
               </div>
             </CollapsibleContent>

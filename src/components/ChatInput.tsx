@@ -181,7 +181,7 @@ export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected 
     <div className="flex flex-col border-t border-(--border)">
       {disconnected && (
         <div
-          className="px-4 py-2 text-xs"
+          className="px-4 py-2 text-sm"
           style={{
             backgroundColor: "color-mix(in oklch, var(--status-error) 10%, transparent)",
             color: "var(--status-error)",
@@ -200,7 +200,7 @@ export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected 
           disabled={disabled}
           placeholder="Message Ástríðr..."
           rows={1}
-          className="flex-1 resize-none rounded-none border border-(--border) bg-(--background) text-(--foreground) text-sm px-3 py-2 outline-none placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed focus:border-(--primary) transition-colors"
+          className="flex-1 resize-none rounded-none border border-(--border) bg-(--background) text-(--foreground) text-base px-3 py-2 outline-none placeholder:text-muted-foreground disabled:opacity-50 disabled:cursor-not-allowed focus:border-(--primary) transition-colors"
           style={{ minHeight: "40px", maxHeight: "96px" }}
           aria-label="Message input"
         />

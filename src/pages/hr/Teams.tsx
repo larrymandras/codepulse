@@ -51,11 +51,11 @@ export default function Teams() {
                 <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                 Teams
               </h1>
-              <span className="text-[10px] font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
+              <span className="text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
                 {teams.length} team{teams.length !== 1 ? "s" : ""}
               </span>
             </div>
-            <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-[10px] uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
+            <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-xs uppercase tracking-widest shadow-[0_0_10px_rgba(16,185,129,0.15)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all">
               <Plus className="h-4 w-4 mr-1" />
               New Team
             </Button>
@@ -75,10 +75,10 @@ export default function Teams() {
             <div className="flex flex-col items-center gap-4 py-12 text-center">
               <UsersRound className="h-12 w-12 text-muted-foreground/50" />
               <div>
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-base font-medium text-foreground">
                   No teams yet
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Create team presets to quickly launch war rooms with your
                   favorite agent combinations.
                 </p>

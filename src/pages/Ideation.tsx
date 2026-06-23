@@ -121,12 +121,12 @@ export default function Ideation() {
           {selectedIds.size > 0 && (
             <button
               onClick={handleBulkConvert}
-              className="text-sm px-3 py-1.5 bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
+              className="text-base px-3 py-1.5 bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
             >
               Convert Selected ({selectedIds.size})
             </button>
           )}
-          <span className="text-xs text-muted-foreground">{totalActive} findings</span>
+          <span className="text-sm text-muted-foreground">{totalActive} findings</span>
         </div>
       </div>
 
@@ -149,7 +149,7 @@ export default function Ideation() {
           <button
             key={tab}
             onClick={() => setScanTypeFilter(tab)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
               scanTypeFilter === tab
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -166,7 +166,7 @@ export default function Ideation() {
           <button
             key={tab}
             onClick={() => setSeverityFilter(tab)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
               severityFilter === tab
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -183,7 +183,7 @@ export default function Ideation() {
           <button
             key={tab}
             onClick={() => setStatusFilter(tab)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
               statusFilter === tab
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -196,23 +196,23 @@ export default function Ideation() {
 
       <SectionErrorBoundary>
         <div className="bg-card border border-border rounded-xl p-4">
-          <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
             Ideation Findings
             <InfoTooltip text="Proactive scan findings across code quality, security, performance, documentation, operational, and cost dimensions." />
-            <span className="ml-2 text-xs text-muted-foreground font-normal">{filteredFindings.length}</span>
+            <span className="ml-2 text-sm text-muted-foreground font-normal">{filteredFindings.length}</span>
           </h2>
 
           {findings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">No findings</p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-base text-muted-foreground">No findings</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Proactive scans run on a daily schedule. Check back after the next scan.
               </p>
             </div>
           ) : filteredFindings.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground">No findings match this filter</p>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-base text-muted-foreground">No findings match this filter</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Try clearing the severity or scan type filter.
               </p>
             </div>

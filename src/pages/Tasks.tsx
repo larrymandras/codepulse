@@ -106,7 +106,7 @@ export default function Tasks() {
       {rawTasks !== undefined && tasks.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-2">
           <p className="text-base font-semibold text-(--foreground)">No tasks yet</p>
-          <p className="text-sm text-(--muted-foreground)">
+          <p className="text-base text-(--muted-foreground)">
             Create a task with the + button in any column, or convert an ideation finding.
           </p>
         </div>

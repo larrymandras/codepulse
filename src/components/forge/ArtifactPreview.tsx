@@ -73,7 +73,7 @@ export function ArtifactPreview({
   // --- No file selected ---
   if (!filePath) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+      <div className="flex items-center justify-center h-full text-base text-muted-foreground">
         Select a file to preview
       </div>
     );
@@ -85,7 +85,7 @@ export function ArtifactPreview({
   if (sizeBytes > 1_048_576 || NOT_PREVIEWABLE_KINDS.includes(fileKind)) {
     return (
       <div className="flex flex-col gap-3 p-4">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Not previewable in cloud ({formatFileSize(sizeBytes)} / {fileKind})
         </p>
         <p className="text-[12px] font-mono text-muted-foreground break-all">
@@ -98,7 +98,7 @@ export function ArtifactPreview({
         >
           Open in VS Code <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           VS Code link is best-effort (same machine only)
         </p>
       </div>
@@ -167,7 +167,7 @@ export function ArtifactPreview({
   if (fileKind === "text" && textContent === undefined) {
     return (
       <div className="flex flex-col gap-3 p-4">
-        <p className="text-sm text-muted-foreground">Preview unavailable.</p>
+        <p className="text-base text-muted-foreground">Preview unavailable.</p>
         <p className="text-[12px] font-mono text-muted-foreground break-all">
           Local path: {rootPath}/{filePath}
         </p>
@@ -178,7 +178,7 @@ export function ArtifactPreview({
         >
           Open in VS Code <ExternalLink className="h-3 w-3" aria-hidden="true" />
         </a>
-        <p className="text-[10px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           VS Code link is best-effort (same machine only)
         </p>
       </div>
@@ -203,7 +203,7 @@ export function ArtifactPreview({
   // --- Image with imageUrl absent ---
   return (
     <div className="flex flex-col gap-3 p-4">
-      <p className="text-sm text-muted-foreground">Preview unavailable.</p>
+      <p className="text-base text-muted-foreground">Preview unavailable.</p>
       <p className="text-[12px] font-mono text-muted-foreground break-all">
         Local path: {rootPath}/{filePath}
       </p>
@@ -214,7 +214,7 @@ export function ArtifactPreview({
       >
         Open in VS Code <ExternalLink className="h-3 w-3" aria-hidden="true" />
       </a>
-      <p className="text-[10px] text-muted-foreground">
+      <p className="text-xs text-muted-foreground">
         VS Code link is best-effort (same machine only)
       </p>
     </div>

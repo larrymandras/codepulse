@@ -168,7 +168,7 @@ export default function MeetingBot() {
             </Button>
           </div>
           {sendResult && (
-            <p className={`text-sm mt-2 ${sendResult.ok ? "text-green-400" : "text-red-400"}`}>
+            <p className={`text-base mt-2 ${sendResult.ok ? "text-green-400" : "text-red-400"}`}>
               {sendResult.message}
             </p>
           )}
@@ -181,8 +181,8 @@ export default function MeetingBot() {
         <Separator className="my-2" />
         {activeCalls.length === 0 ? (
           <GlassPanel className="rounded-xl p-8 text-center">
-            <p className="text-sm text-muted-foreground">No active calls</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-base text-muted-foreground">No active calls</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Send a bot to a meeting to monitor it here.
             </p>
           </GlassPanel>
@@ -197,11 +197,11 @@ export default function MeetingBot() {
                 <GlassPanel className="rounded-xl p-4 hover:bg-(--accent)/50 transition-colors">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-mono text-muted-foreground">
+                      <span className="text-base font-mono text-muted-foreground">
                         {call.callId}
                       </span>
                       {call.platform && (
-                        <span className="text-xs text-muted-foreground ml-2">
+                        <span className="text-sm text-muted-foreground ml-2">
                           {call.platform}
                         </span>
                       )}
@@ -224,7 +224,7 @@ export default function MeetingBot() {
         <Separator className="my-2" />
         {sortedRecentCalls.length === 0 ? (
           <GlassPanel className="rounded-xl p-8 text-center">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-base text-muted-foreground">
               No completed calls yet.
             </p>
           </GlassPanel>
@@ -267,19 +267,19 @@ export default function MeetingBot() {
                       )
                     }
                   >
-                    <TableCell className="text-sm font-mono text-muted-foreground">
+                    <TableCell className="text-base font-mono text-muted-foreground">
                       {call.callId}
                     </TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-base">
                       {call.platform ?? "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums">
+                    <TableCell className="text-base tabular-nums">
                       {formatDuration(call.durationMs)}
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums">
+                    <TableCell className="text-base tabular-nums">
                       {call.participantCount ?? "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm tabular-nums text-right">
+                    <TableCell className="text-base tabular-nums text-right">
                       ${(call.costUsd ?? 0).toFixed(2)}
                     </TableCell>
                     <TableCell>
@@ -298,7 +298,7 @@ export default function MeetingBot() {
         <SectionErrorBoundary name="Call Detail">
           <GlassPanel className="rounded-xl p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold">
+              <h3 className="text-base font-semibold">
                 Call: {selectedCall.callId}
               </h3>
               <StatusBadge status={selectedCall.status} />

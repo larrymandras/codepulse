@@ -35,11 +35,11 @@ export function RoomListItem({ room, isSelected, onSelect }: RoomListItemProps) 
           {room.status === "active" && (
             <span className="ping-indicator inline-block w-2 h-2 rounded-full bg-[var(--speaking-ring)] mr-2" />
           )}
-          <span className="text-sm font-medium truncate">{room.name}</span>
+          <span className="text-base font-medium truncate">{room.name}</span>
         </div>
         <StatusBadge status={room.status} />
       </div>
-      <p className="text-xs text-muted-foreground mt-0.5">
+      <p className="text-sm text-muted-foreground mt-0.5">
         {room.participantIds?.length ?? 0} participants
       </p>
     </div>

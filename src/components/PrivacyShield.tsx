@@ -18,7 +18,7 @@ export default function PrivacyShield() {
       onClick={toggle}
       aria-label={titleText}
       title={titleText}
-      className={`p-1.5 rounded-lg transition-colors text-xs font-mono flex items-center gap-1.5 ${
+      className={`p-1.5 rounded-lg transition-colors text-sm font-mono flex items-center gap-1.5 ${
         level === "demo"
           ? "bg-amber-600/20 text-amber-400 hover:bg-amber-600/30"
           : level === "screenshot"
@@ -34,10 +34,10 @@ export default function PrivacyShield() {
         <LockOpen className="h-4 w-4" />
       )}
       {level === "demo" && (
-        <span className="text-[10px] font-medium">DEMO</span>
+        <span className="text-xs font-medium">DEMO</span>
       )}
       {level === "screenshot" && (
-        <span className="text-[10px] font-medium">SAFE</span>
+        <span className="text-xs font-medium">SAFE</span>
       )}
     </button>
   );

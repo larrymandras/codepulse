@@ -57,19 +57,19 @@ function AgentPicker({
         placeholder="Search agents..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="h-8 text-sm"
+        className="h-8 text-base"
         autoFocus
       />
       <div className="max-h-[200px] overflow-auto space-y-1">
         {filtered.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-2">
+          <p className="text-sm text-muted-foreground text-center py-2">
             No agents available
           </p>
         )}
         {filtered.map((agent) => (
           <button
             key={agent.id}
-            className="w-full flex items-center gap-2 rounded-md hover:bg-accent/50 p-1.5 text-left text-sm transition-colors"
+            className="w-full flex items-center gap-2 rounded-md hover:bg-accent/50 p-1.5 text-left text-base transition-colors"
             onClick={() => onSelect(agent.id)}
           >
             <AgentAvatar
@@ -84,7 +84,7 @@ function AgentPicker({
       <Button
         variant="ghost"
         size="sm"
-        className="w-full text-xs"
+        className="w-full text-sm"
         onClick={onClose}
       >
         Done
@@ -217,7 +217,7 @@ export function WarRoomLaunchDialog({
                     size="sm"
                     status="idle"
                   />
-                  <span className="text-xs font-medium">
+                  <span className="text-sm font-medium">
                     {agent?.name ?? id}
                   </span>
                   <button
@@ -232,7 +232,7 @@ export function WarRoomLaunchDialog({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-xs"
+              className="h-7 text-sm"
               onClick={() => setShowAddAgent(!showAddAgent)}
             >
               <Plus className="h-3 w-3 mr-1" />
@@ -284,7 +284,7 @@ export function WarRoomLaunchDialog({
                   setSaveAsTeam(checked === true)
                 }
               />
-              <Label htmlFor="saveAsTeam" className="text-sm cursor-pointer">
+              <Label htmlFor="saveAsTeam" className="text-base cursor-pointer">
                 Save as team preset
               </Label>
             </div>

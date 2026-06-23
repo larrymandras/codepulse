@@ -19,9 +19,9 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Security Event Feed<InfoTooltip text="Security events with severity, description, source, and acknowledge actions" /></h2>
       {events.length === 0 ? (
-        <p className="text-sm text-gray-500 py-8 text-center">No security events recorded</p>
+        <p className="text-base text-gray-500 py-8 text-center">No security events recorded</p>
       ) : (
         <div className="max-h-96 overflow-y-auto space-y-1">
           {events.map((e: any, i: number) => {
@@ -29,7 +29,7 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
             return (
               <div
                 key={e._id ?? i}
-                className={`flex items-center gap-3 px-2 py-1.5 rounded text-xs ${
+                className={`flex items-center gap-3 px-2 py-1.5 rounded text-sm ${
                   i % 2 === 0 ? "bg-gray-800/30" : ""
                 }`}
               >
@@ -47,11 +47,11 @@ export default function SecurityEventFeed({ events }: SecurityEventFeedProps) {
                 <span className="text-gray-500 whitespace-nowrap">{e.source}</span>
                 {e._id && (
                   e.mitigated ? (
-                    <span className="text-[10px] text-green-500/70 whitespace-nowrap">Reviewed</span>
+                    <span className="text-xs text-green-500/70 whitespace-nowrap">Reviewed</span>
                   ) : (
                     <button
                       onClick={() => acknowledgeEvent({ eventId: e._id })}
-                      className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
+                      className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors whitespace-nowrap"
                     >
                       Acknowledge
                     </button>

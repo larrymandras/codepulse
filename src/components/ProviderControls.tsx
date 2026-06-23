@@ -87,7 +87,7 @@ function SortableProvider({
         style={{ backgroundColor: color }}
       />
       <span
-        className={`text-sm flex-1 ${
+        className={`text-base flex-1 ${
           !enabled
             ? "line-through text-muted-foreground"
             : "text-foreground"
@@ -97,7 +97,7 @@ function SortableProvider({
       </span>
       <Badge
         variant="outline"
-        className={`text-[10px] font-mono uppercase px-1.5 py-0.5 ${
+        className={`text-xs font-mono uppercase px-1.5 py-0.5 ${
           billing === "api"
             ? "bg-yellow-500/20 text-yellow-400"
             : "bg-gray-700/50 text-gray-400"
@@ -225,18 +225,18 @@ export default function ProviderControls() {
 
   return (
     <div>
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Gateway Providers
       </h2>
       {configs.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground mb-3">
+          <p className="text-base text-muted-foreground mb-3">
             No gateway provider configuration found.
           </p>
           <button
             onClick={handleSeed}
             disabled={seeding}
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-primary/50 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 text-base border border-primary/50 text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
           >
             {seeding ? (
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -98,7 +98,7 @@ export default function Dreaming() {
                 <SectionHeader title="Cycle History" />
                 {!cycles || cycles.length === 0 ? (
                   <div className="bg-card border border-border rounded-xl p-8 text-center">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-base text-muted-foreground">
                       No dreaming cycles recorded yet. Cycles run nightly --
                       check back tomorrow, or trigger a backfill run.
                     </p>
@@ -110,16 +110,16 @@ export default function Dreaming() {
                         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
                           <div className="flex items-center gap-3">
                             <StatusBadge status={cycle.status ?? "idle"} />
-                            <span className="text-sm text-foreground">
+                            <span className="text-base text-foreground">
                               {formatTimestamp(cycle.runDate ?? cycle._creationTime / 1000)}
                             </span>
                             {cycle.isBackfill && (
-                              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-400">
+                              <span className="text-sm px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-400">
                                 Backfill
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="tabular-nums">
                               {cycle.storedCount ?? 0} stored
                             </span>
@@ -144,7 +144,7 @@ export default function Dreaming() {
                             ["Stored", cycle.storedCount],
                           ].map(([label, val]) => (
                             <div key={label as string}>
-                              <p className="text-xs text-muted-foreground">{label}</p>
+                              <p className="text-sm text-muted-foreground">{label}</p>
                               <p className="text-base font-semibold tabular-nums">
                                 {val ?? 0}
                               </p>
@@ -175,7 +175,7 @@ export default function Dreaming() {
                   <select
                     value={factCategory}
                     onChange={(e) => setFactCategory(e.target.value)}
-                    className="bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:border-indigo-500"
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-base text-foreground focus:outline-none focus:border-indigo-500"
                   >
                     <option value="">All Categories</option>
                     {allCategories.map((cat) => (
@@ -189,14 +189,14 @@ export default function Dreaming() {
 
               {!facts || facts.length === 0 ? (
                 <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-base text-muted-foreground">
                     No durable facts extracted yet. Run a dreaming cycle to
                     extract long-term facts from your conversation history.
                   </p>
                 </div>
               ) : filteredFacts.length === 0 ? (
                 <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-base text-muted-foreground">
                     No facts match your search.
                   </p>
                 </div>
@@ -214,7 +214,7 @@ export default function Dreaming() {
                     <TableBody>
                       {filteredFacts.map((fact: any) => (
                         <TableRow key={fact._id}>
-                          <TableCell className="text-sm text-foreground max-w-md">
+                          <TableCell className="text-base text-foreground max-w-md">
                             {fact.factText}
                           </TableCell>
                           <TableCell>
@@ -225,12 +225,12 @@ export default function Dreaming() {
                               />
                             )}
                           </TableCell>
-                          <TableCell className="text-right tabular-nums text-sm">
+                          <TableCell className="text-right tabular-nums text-base">
                             {fact.confidence != null
                               ? `${(fact.confidence * 100).toFixed(0)}%`
                               : "—"}
                           </TableCell>
-                          <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                          <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
                             {fact.timestamp
                               ? formatRelative(fact.timestamp)
                               : "—"}
@@ -280,7 +280,7 @@ export default function Dreaming() {
                 <SectionHeader title="Per-Run Spend" />
                 {!cycles || cycles.length === 0 ? (
                   <div className="bg-card border border-border rounded-xl p-8 text-center">
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-base text-muted-foreground">
                       No cycle data available yet.
                     </p>
                   </div>
@@ -298,17 +298,17 @@ export default function Dreaming() {
                       <TableBody>
                         {cycles.map((cycle: any) => (
                           <TableRow key={cycle._id}>
-                            <TableCell className="text-sm text-foreground whitespace-nowrap">
+                            <TableCell className="text-base text-foreground whitespace-nowrap">
                               {formatTimestamp(
                                 cycle.runDate ?? cycle._creationTime / 1000
                               )}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums text-sm">
+                            <TableCell className="text-right tabular-nums text-base">
                               {cycle.costUsd != null
                                 ? `$${cycle.costUsd.toFixed(4)}`
                                 : "—"}
                             </TableCell>
-                            <TableCell className="text-right tabular-nums text-sm">
+                            <TableCell className="text-right tabular-nums text-base">
                               {cycle.storedCount ?? 0}
                             </TableCell>
                             <TableCell>
@@ -336,13 +336,13 @@ export default function Dreaming() {
               <GlassPanel className="rounded-xl p-6">
                 <SectionHeader title="Backfill Controls" />
                 <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-base text-muted-foreground">
                     A backfill run processes your full conversation history to
                     extract durable facts — not just the last night's sessions.
                     This is useful after the first installation or after a gap
                     in nightly runs.
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Note: Backfill controls are UI-ready but require Ástríðr to
                     expose a backfill endpoint before they can be activated.
                   </p>

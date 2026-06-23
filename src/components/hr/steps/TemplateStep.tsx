@@ -62,7 +62,7 @@ export default function TemplateStep() {
         <div className="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">
+              <p className="text-sm text-muted-foreground mb-1">
                 Selected Template
               </p>
               <h3 className="text-base font-medium text-foreground">
@@ -74,7 +74,7 @@ export default function TemplateStep() {
                 form.setValue("template.catalogEntryId", undefined);
                 form.setValue("template.catalogEntryName", undefined);
               }}
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Change Template
@@ -82,11 +82,11 @@ export default function TemplateStep() {
           </div>
         </div>
         {loading && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Loading template details...
           </p>
         )}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Click "Next" to continue configuring this agent, or change the
           template above.
         </p>
@@ -100,7 +100,7 @@ export default function TemplateStep() {
         <h2 className="text-base font-medium text-foreground">
           Choose a Template
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Select an archetype to pre-fill the wizard, or start from scratch.
         </p>
       </div>
@@ -111,7 +111,7 @@ export default function TemplateStep() {
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border/40" />
         </div>
-        <div className="relative flex justify-center text-xs">
+        <div className="relative flex justify-center text-sm">
           <span className="bg-background px-2 text-muted-foreground">or</span>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function TemplateStep() {
       <button
         type="button"
         onClick={() => setShowImport(true)}
-        className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-card/40 p-4 text-sm text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
+        className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-border/60 bg-card/40 p-4 text-base text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors"
       >
         <Upload className="h-4 w-4" />
         Import from YAML file

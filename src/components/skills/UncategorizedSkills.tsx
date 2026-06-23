@@ -24,13 +24,13 @@ export function UncategorizedSkills({
     <div>
       <div className="flex items-center gap-2 mb-3">
         <span className="text-lg">📦</span>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">
+        <h2 className="text-base font-semibold text-gray-400 uppercase tracking-wider">
           Uncategorized
         </h2>
-        <span className="text-xs text-gray-500 bg-gray-800/60 rounded-full px-2 py-0.5">
+        <span className="text-sm text-gray-500 bg-gray-800/60 rounded-full px-2 py-0.5">
           {skills.length}
         </span>
-        <span className="text-xs text-gray-600 ml-2">
+        <span className="text-sm text-gray-600 ml-2">
           Drag onto a category to assign
         </span>
       </div>
@@ -50,22 +50,22 @@ export function UncategorizedSkills({
             >
               <GripVertical className="w-4 h-4 text-gray-600 group-hover:text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-white font-medium text-sm truncate">
+                <div className="text-white font-medium text-base truncate">
                   {skill.displayName}
                 </div>
                 {desc && (
-                  <div className="text-gray-500 text-xs truncate">{desc}</div>
+                  <div className="text-gray-500 text-sm truncate">{desc}</div>
                 )}
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); onEditSkill(skill.name); }}
-                className="text-xs text-gray-500 hover:text-indigo-400 transition-colors px-2 py-1"
+                className="text-sm text-gray-500 hover:text-indigo-400 transition-colors px-2 py-1"
               >
                 Edit
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); onLaunch(skill.name); }}
-                className="text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
+                className="text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg px-3 py-1.5 transition-colors flex-shrink-0"
               >
                 Launch
               </button>

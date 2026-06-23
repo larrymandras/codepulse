@@ -27,8 +27,8 @@ function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5 p-3 rounded-lg border border-primary/10 bg-primary/5 hover:bg-primary/10 transition-colors">
-      <p className="text-[9px] font-mono font-bold text-primary/70 uppercase tracking-widest">{label}</p>
-      <div className="text-xs font-mono text-foreground/90 leading-relaxed">{children}</div>
+      <p className="text-[11px] font-mono font-bold text-primary/70 uppercase tracking-widest">{label}</p>
+      <div className="text-sm font-mono text-foreground/90 leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -37,7 +37,7 @@ function SectionHeader({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4 border-b border-primary/20 pb-2">
       <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-      <h4 className="text-[11px] font-bold font-mono text-primary uppercase tracking-[0.2em] drop-shadow-sm">
+      <h4 className="text-sm font-bold font-mono text-primary uppercase tracking-[0.2em] drop-shadow-sm">
         {title}
       </h4>
     </div>
@@ -59,7 +59,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
   if (!agentDetail) {
     return (
       <div className="flex items-center justify-center p-8 border border-dashed border-primary/20 rounded-lg bg-primary/5">
-        <p className="text-xs font-mono tracking-widest uppercase text-muted-foreground animate-pulse">
+        <p className="text-sm font-mono tracking-widest uppercase text-muted-foreground animate-pulse">
           No configuration telemetry
         </p>
       </div>
@@ -107,39 +107,39 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
         <div className="absolute inset-0 pointer-events-none border border-primary/20 rounded-xl bg-primary/5" />
         <div className="grid grid-cols-2 gap-4 relative z-10 p-4">
           <div className="col-span-2">
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               ID
             </label>
-            <p className="text-xs text-muted-foreground font-mono mt-1">
+            <p className="text-sm text-muted-foreground font-mono mt-1">
               {agentDetail.id}
             </p>
           </div>
           <div className="col-span-2">
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Name
             </label>
             <Input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
+              className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
             />
           </div>
           <div className="col-span-2">
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Description
             </label>
             <Input
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
+              className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
             />
           </div>
           <div>
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Tier
             </label>
             <Select value={editTier} onValueChange={setEditTier}>
-              <SelectTrigger className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20">
+              <SelectTrigger className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -150,7 +150,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             </Select>
           </div>
           <div>
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Budget Fraction
             </label>
             <Input
@@ -160,11 +160,11 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
               max="1"
               value={editBudget}
               onChange={(e) => setEditBudget(e.target.value)}
-              className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
+              className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
             />
           </div>
           <div>
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Max Rounds
             </label>
             <Input
@@ -172,17 +172,17 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
               min="1"
               value={editMaxRounds}
               onChange={(e) => setEditMaxRounds(e.target.value)}
-              className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
+              className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
             />
           </div>
           <div className="col-span-2">
-            <label className="text-[10px] font-mono text-primary/70 uppercase tracking-widest">
+            <label className="text-xs font-mono text-primary/70 uppercase tracking-widest">
               Tools Enabled (comma-separated)
             </label>
             <Input
               value={editTools}
               onChange={(e) => setEditTools(e.target.value)}
-              className="mt-1.5 h-9 text-xs font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
+              className="mt-1.5 h-9 text-sm font-mono bg-background/50 border-primary/20 focus-visible:ring-primary/50"
             />
           </div>
         </div>
@@ -191,7 +191,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             size="sm" 
             onClick={handleSave} 
             disabled={saving}
-            className="flex-1 text-[10px] font-mono tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            className="flex-1 text-xs font-mono tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(16,185,129,0.3)]"
           >
             {saving ? (
               <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
@@ -204,7 +204,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             variant="outline" 
             size="sm" 
             onClick={cancelEdit}
-            className="flex-1 text-[10px] font-mono tracking-widest uppercase border-border/50 hover:bg-muted"
+            className="flex-1 text-xs font-mono tracking-widest uppercase border-border/50 hover:bg-muted"
           >
             <X className="h-3.5 w-3.5 mr-2" />
             Cancel
@@ -222,7 +222,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
           variant="outline" 
           size="sm" 
           onClick={startEdit}
-          className="text-[10px] font-mono tracking-widest uppercase border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+          className="text-xs font-mono tracking-widest uppercase border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
         >
           <Pencil className="h-3 w-3 mr-2" />
           Edit Config
@@ -245,7 +245,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             </Field>
           </div>
           <Field label="Tier">
-            <Badge variant="outline" className="text-[9px] border-primary/30 text-primary bg-primary/5 uppercase tracking-widest">
+            <Badge variant="outline" className="text-[11px] border-primary/30 text-primary bg-primary/5 uppercase tracking-widest">
               {agentDetail.tier}
             </Badge>
           </Field>
@@ -253,7 +253,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             {(agentDetail.profiles ?? []).length > 0 ? (
               <div className="flex gap-2 flex-wrap">
                 {agentDetail.profiles!.map((p) => (
-                  <Badge key={p} variant="outline" className="text-[9px] border-primary/20 text-foreground/80 bg-background/50">
+                  <Badge key={p} variant="outline" className="text-[11px] border-primary/20 text-foreground/80 bg-background/50">
                     {p}
                   </Badge>
                 ))}
@@ -267,7 +267,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
               {(agentDetail.channels ?? []).length > 0 ? (
                 <div className="flex gap-2 flex-wrap">
                   {agentDetail.channels!.map((c) => (
-                    <Badge key={c} variant="secondary" className="text-[9px] bg-muted/50">
+                    <Badge key={c} variant="secondary" className="text-[11px] bg-muted/50">
                       {c}
                     </Badge>
                   ))}
@@ -289,7 +289,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
               {(agentDetail.tools_enabled ?? []).length > 0 ? (
                 <div className="flex gap-1.5 flex-wrap">
                   {agentDetail.tools_enabled.map((t) => (
-                    <Badge key={t} variant="outline" className="text-[10px] font-mono border-primary/20 text-primary/90 bg-primary/5">
+                    <Badge key={t} variant="outline" className="text-xs font-mono border-primary/20 text-primary/90 bg-primary/5">
                       {t}
                     </Badge>
                   ))}
@@ -308,7 +308,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             <span className="text-lg font-bold text-primary">
               {agentDetail.budget_fraction > 0
                 ? `${Math.round(agentDetail.budget_fraction * 100)}%`
-                : <span className="text-sm font-normal text-muted-foreground/50">\u2014</span>}
+                : <span className="text-base font-normal text-muted-foreground/50">\u2014</span>}
             </span>
           </Field>
         </div>

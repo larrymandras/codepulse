@@ -51,7 +51,7 @@ export default function EventFeed() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between mb-4 pb-4 border-b border-border/30 gap-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           tail -f /var/log/events
         </h2>
@@ -62,7 +62,7 @@ export default function EventFeed() {
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`text-[10px] px-2 py-0.5 rounded-sm border font-mono transition-colors ${
+              className={`text-xs px-2 py-0.5 rounded-sm border font-mono transition-colors ${
                 filter === f
                   ? "bg-primary/20 border-primary text-primary"
                   : "bg-muted/30 border-transparent text-muted-foreground hover:text-foreground"
@@ -75,11 +75,11 @@ export default function EventFeed() {
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-xs font-mono text-muted-foreground py-8 text-center flex-1">
+        <p className="text-sm font-mono text-muted-foreground py-8 text-center flex-1">
           {events.length === 0 ? "Waiting for events..." : "No matching events"}
         </p>
       ) : (
-        <div className="max-h-[300px] overflow-y-auto font-mono text-xs space-y-1 z-20 relative flex-1 pr-2">
+        <div className="max-h-[300px] overflow-y-auto font-mono text-sm space-y-1 z-20 relative flex-1 pr-2">
           {filtered.map((event: any, i: number) => {
             const isError = filterMatchers.Error(event.eventType);
             const isTool = filterMatchers.Tool(event.eventType);
@@ -121,7 +121,7 @@ export default function EventFeed() {
         </div>
       )}
       <div className="mt-4 z-20 relative border-t border-border/30 pt-2 text-center">
-        <span className="text-xs text-muted-foreground">Showing last {events.length} events</span>
+        <span className="text-sm text-muted-foreground">Showing last {events.length} events</span>
       </div>
     </div>
   );

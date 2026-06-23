@@ -60,7 +60,7 @@ export function AgentVoiceCard({
         </div>
 
         {/* Name */}
-        <p className="text-sm font-semibold mt-2">{name}</p>
+        <p className="text-base font-semibold mt-2">{name}</p>
 
         {/* Role badge */}
         <Badge variant="secondary" className="mt-1">
@@ -69,7 +69,7 @@ export function AgentVoiceCard({
 
         {/* Current task */}
         {currentTask && (
-          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+          <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
             {currentTask}
           </p>
         )}
@@ -77,11 +77,11 @@ export function AgentVoiceCard({
         {/* Join duration and speaking state */}
         <div className="flex items-center gap-2 mt-2">
           {joinDurationMs != null && joinDurationMs > 0 && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-sm text-muted-foreground">
               {formatJoinDuration(joinDurationMs)}
             </span>
           )}
-          <span className="text-xs">
+          <span className="text-sm">
             {isSpeaking ? "Speaking" : "Listening"}
           </span>
         </div>

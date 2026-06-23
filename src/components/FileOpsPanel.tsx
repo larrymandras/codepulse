@@ -69,22 +69,22 @@ export default function FileOpsPanel({ sessionId }: FileOpsPanelProps) {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-semibold text-gray-300">File Operations</h2>
+        <h2 className="text-base font-semibold text-gray-300">File Operations</h2>
         <button
           onClick={() => setSortMode(sortMode === "recency" ? "frequency" : "recency")}
-          className="text-xs text-gray-400 hover:text-gray-200 transition-colors px-2 py-1 rounded bg-gray-700/50"
+          className="text-sm text-gray-400 hover:text-gray-200 transition-colors px-2 py-1 rounded bg-gray-700/50"
         >
           Sort: {sortMode === "recency" ? "Recent" : "Frequent"}
         </button>
       </div>
 
       {sorted.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">No file operations yet</p>
+        <p className="text-base text-gray-500 py-6 text-center">No file operations yet</p>
       ) : (
         <div className="space-y-3 max-h-[400px] overflow-y-auto">
           {Array.from(groups.entries()).map(([dir, files]) => (
             <div key={dir}>
-              <p className="text-xs text-gray-500 font-mono mb-1">{maskFilePath(truncatePath(dir, 50))}/</p>
+              <p className="text-sm text-gray-500 font-mono mb-1">{maskFilePath(truncatePath(dir, 50))}/</p>
               <div className="space-y-1 ml-2">
                 {files.map((file) => {
                   const fileName = file.filePath.split("/").pop() ?? file.filePath;
@@ -100,18 +100,18 @@ export default function FileOpsPanel({ sessionId }: FileOpsPanelProps) {
                         className="w-full flex items-center gap-2 text-left py-1 px-2 rounded hover:bg-gray-700/30 transition-colors"
                       >
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opDot(file.lastOp)}`} />
-                        <span className="text-sm text-gray-100 font-mono truncate flex-1">
+                        <span className="text-base text-gray-100 font-mono truncate flex-1">
                           {fileName}
                         </span>
-                        <span className="text-xs text-gray-400 flex-shrink-0">
+                        <span className="text-sm text-gray-400 flex-shrink-0">
                           {file.ops} op{file.ops !== 1 ? "s" : ""}
                         </span>
                         {file.linesChanged > 0 && (
-                          <span className="text-xs text-gray-500 flex-shrink-0">
+                          <span className="text-sm text-gray-500 flex-shrink-0">
                             {file.linesChanged}L
                           </span>
                         )}
-                        <span className="text-xs text-gray-600 flex-shrink-0">
+                        <span className="text-sm text-gray-600 flex-shrink-0">
                           {isExpanded ? "v" : ">"}
                         </span>
                       </button>
@@ -122,7 +122,7 @@ export default function FileOpsPanel({ sessionId }: FileOpsPanelProps) {
                             const d = new Date(op.timestamp * 1000);
                             const time = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
                             return (
-                              <div key={i} className="flex items-center gap-2 text-xs">
+                              <div key={i} className="flex items-center gap-2 text-sm">
                                 <span className={opColor(op.operation)}>{op.operation}</span>
                                 <span className="text-gray-500">{time}</span>
                                 {op.linesChanged != null && op.linesChanged > 0 && (

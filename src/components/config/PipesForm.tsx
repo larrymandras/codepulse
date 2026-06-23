@@ -118,15 +118,15 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
               {/* Collapsed row */}
               <AccordionTrigger className="px-4 py-3 hover:no-underline">
                 <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                  <span className="font-semibold text-sm">{name}</span>
+                  <span className="font-semibold text-base">{name}</span>
                   <div className="flex items-center gap-2 ml-auto mr-4">
                     <Badge
                       variant={TRIGGER_VARIANTS[trigger] ?? "outline"}
-                      className="text-[10px]"
+                      className="text-xs"
                     >
                       {trigger}
                     </Badge>
-                    <span className="text-xs text-(--muted-foreground) font-mono">
+                    <span className="text-sm text-(--muted-foreground) font-mono">
                       {steps.length} step{steps.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -138,29 +138,29 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                 <div className="space-y-6">
                   {/* Pipeline identity */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Pipeline
                     </h4>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <Label className="text-xs">Name</Label>
+                        <Label className="text-sm">Name</Label>
                         <Input
                           value={String(pipe.name ?? "")}
                           onChange={(e) =>
                             updatePipeline(pipeIdx, "name", e.target.value)
                           }
-                          className="h-8 text-sm"
+                          className="h-8 text-base"
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-xs">Trigger</Label>
+                        <Label className="text-sm">Trigger</Label>
                         <Select
                           value={trigger}
                           onValueChange={(v) =>
                             updatePipeline(pipeIdx, "trigger", v)
                           }
                         >
-                          <SelectTrigger size="sm" className="h-8 text-sm">
+                          <SelectTrigger size="sm" className="h-8 text-base">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -179,7 +179,7 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
 
                   {/* Steps */}
                   <section className="space-y-3">
-                    <h4 className="text-xs font-semibold text-(--muted-foreground) uppercase tracking-wider">
+                    <h4 className="text-sm font-semibold text-(--muted-foreground) uppercase tracking-wider">
                       Steps
                     </h4>
 
@@ -189,7 +189,7 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                         className="border border-(--border) rounded-md p-3 space-y-3"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-(--muted-foreground)">
+                          <span className="text-sm font-semibold text-(--muted-foreground)">
                             Step {stepIdx + 1}
                           </span>
                           <Button
@@ -204,7 +204,7 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <Label className="text-xs">Step name</Label>
+                            <Label className="text-sm">Step name</Label>
                             <Input
                               value={String(step.name ?? "")}
                               onChange={(e) =>
@@ -215,11 +215,11 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                                   e.target.value
                                 )
                               }
-                              className="h-8 text-sm"
+                              className="h-8 text-base"
                             />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Tool</Label>
+                            <Label className="text-sm">Tool</Label>
                             <Input
                               value={String(step.tool ?? "")}
                               onChange={(e) =>
@@ -230,13 +230,13 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                                   e.target.value
                                 )
                               }
-                              className="h-8 text-sm"
+                              className="h-8 text-base"
                             />
                           </div>
                         </div>
 
                         <div className="space-y-1">
-                          <Label className="text-xs">Args (YAML)</Label>
+                          <Label className="text-sm">Args (YAML)</Label>
                           <Textarea
                             value={dumpArgs(step.args)}
                             onChange={(e) =>
@@ -248,14 +248,14 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                               )
                             }
                             rows={3}
-                            className="text-sm font-mono"
+                            className="text-base font-mono"
                             placeholder="key: value"
                           />
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <Label className="text-xs">Timeout (ms)</Label>
+                            <Label className="text-sm">Timeout (ms)</Label>
                             <Input
                               type="number"
                               value={
@@ -273,7 +273,7 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                                     : undefined
                                 )
                               }
-                              className="h-8 text-sm"
+                              className="h-8 text-base"
                             />
                           </div>
                           <div className="flex items-center gap-2 pt-5">
@@ -291,7 +291,7 @@ export function PipesForm({ data, onChange }: PipesFormProps) {
                             />
                             <Label
                               htmlFor={`approval-${pipeIdx}-${stepIdx}`}
-                              className="text-xs font-normal"
+                              className="text-sm font-normal"
                             >
                               Approval required
                             </Label>

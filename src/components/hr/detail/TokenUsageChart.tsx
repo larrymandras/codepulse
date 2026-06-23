@@ -88,11 +88,11 @@ export function TokenUsageChart({ metrics }: TokenUsageChartProps) {
 
   return (
     <div className="rounded-lg border bg-card p-4">
-      <p className="text-xs font-normal text-muted-foreground mb-2">
+      <p className="text-sm font-normal text-muted-foreground mb-2">
         Token Usage & Cost
       </p>
       {!hasData ? (
-        <p className="text-sm text-muted-foreground text-center py-8">
+        <p className="text-base text-muted-foreground text-center py-8">
           No token data
         </p>
       ) : (
@@ -102,13 +102,13 @@ export function TokenUsageChart({ metrics }: TokenUsageChartProps) {
               <span className="font-mono text-lg font-semibold">
                 {totalTokens.toLocaleString()}
               </span>
-              <span className="text-xs text-muted-foreground ml-1">tokens</span>
+              <span className="text-sm text-muted-foreground ml-1">tokens</span>
             </div>
             <div>
               <span className="font-mono text-lg font-semibold">
                 {formatCost(totalCost)}
               </span>
-              <span className="text-xs text-muted-foreground ml-1">est. cost</span>
+              <span className="text-sm text-muted-foreground ml-1">est. cost</span>
             </div>
           </div>
           <ChartContainer config={chartConfig} className="h-[200px] w-full">

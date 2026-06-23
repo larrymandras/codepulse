@@ -24,24 +24,24 @@ export default function Briefings() {
 
       {/* Date range filter */}
       <div className="flex items-center gap-4">
-        <label className="text-xs text-muted-foreground shrink-0">From</label>
+        <label className="text-sm text-muted-foreground shrink-0">From</label>
         <input
           type="date"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
-          className="bg-background border border-input px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring/50"
+          className="bg-background border border-input px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-ring/50"
         />
-        <label className="text-xs text-muted-foreground shrink-0">To</label>
+        <label className="text-sm text-muted-foreground shrink-0">To</label>
         <input
           type="date"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
-          className="bg-background border border-input px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-ring/50"
+          className="bg-background border border-input px-2 py-1 text-base focus:outline-none focus:ring-1 focus:ring-ring/50"
         />
         {(dateFrom || dateTo) && (
           <button
             onClick={() => { setDateFrom(""); setDateTo(""); }}
-            className="text-xs text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+            className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
           >
             Clear
           </button>
@@ -52,11 +52,11 @@ export default function Briefings() {
       <SectionErrorBoundary name="Briefings Feed">
         <div className="border border-border">
           {status === "LoadingFirstPage" ? (
-            <div className="py-12 text-center text-sm text-muted-foreground">
+            <div className="py-12 text-center text-base text-muted-foreground">
               Loading briefings...
             </div>
           ) : results.length === 0 ? (
-            <div className="py-12 text-center text-sm text-muted-foreground space-y-2">
+            <div className="py-12 text-center text-base text-muted-foreground space-y-2">
               <p className="font-medium">No briefings yet</p>
               <p>
                 Daily digests generate automatically at 6:00 AM UTC. Session briefings appear here after each completed session.

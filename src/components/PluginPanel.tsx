@@ -21,13 +21,13 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Plugins
-        <span className="ml-2 text-xs text-gray-500 font-normal">{filtered.length}</span>
+        <span className="ml-2 text-sm text-gray-500 font-normal">{filtered.length}</span>
         <InfoTooltip text="Internal extensions that add memory, moderation, and other capabilities. Click a plugin to see configuration details." />
       </h2>
       {filtered.length === 0 ? (
-        <p className="text-sm text-gray-500 py-6 text-center">
+        <p className="text-base text-gray-500 py-6 text-center">
           {filter ? "No plugins match your search" : "No plugins installed"}
         </p>
       ) : (
@@ -46,7 +46,7 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span
-                      className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
+                      className={`text-sm px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${
                         p.enabled
                           ? "bg-green-400/10 text-green-400"
                           : "bg-gray-700/50 text-gray-500"
@@ -54,33 +54,33 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                     >
                       {p.enabled ? "ON" : "OFF"}
                     </span>
-                    <span className="text-sm font-mono text-gray-200 truncate">
+                    <span className="text-base font-mono text-gray-200 truncate">
                       {p.name}
                     </span>
                     <OriginBadge origin={p.origin} />
                     {p.version && (
-                      <span className="text-xs text-gray-500 flex-shrink-0">v{p.version}</span>
+                      <span className="text-sm text-gray-500 flex-shrink-0">v{p.version}</span>
                     )}
                     {category && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 flex-shrink-0">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 flex-shrink-0">
                         {category}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
                     {description && (
-                      <span className="text-xs text-gray-500 truncate max-w-[200px] hidden md:inline">
+                      <span className="text-sm text-gray-500 truncate max-w-[200px] hidden md:inline">
                         {description}
                       </span>
                     )}
-                    <span className="text-xs text-gray-500 font-mono">
+                    <span className="text-sm text-gray-500 font-mono">
                       {new Date(p.installedAt * 1000).toLocaleDateString()}
                     </span>
-                    <span className="text-gray-600 text-xs">{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                    <span className="text-gray-600 text-sm">{isExpanded ? "\u25B2" : "\u25BC"}</span>
                   </div>
                 </div>
                 {isExpanded && (
-                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-xs">
+                  <div className="ml-5 mt-1 mb-2 bg-gray-900/80 border border-gray-700/40 rounded-lg px-4 py-3 space-y-2 text-sm">
                     <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                       <div>
                         <span className="text-gray-500">Name</span>
@@ -113,7 +113,7 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                         </p>
                       </div>
                       {p.origin && (
-                        <div className="flex items-center gap-2 text-xs">
+                        <div className="flex items-center gap-2 text-sm">
                           <span className="text-muted-foreground w-24">Origin</span>
                           <OriginBadge origin={p.origin} />
                         </div>
@@ -126,7 +126,7 @@ export default function PluginPanel({ plugins, filter }: PluginPanelProps) {
                     {config && Object.keys(config).length > 0 && (
                       <div>
                         <span className="text-gray-500">Configuration</span>
-                        <pre className="mt-1 text-[11px] text-gray-400 bg-gray-950/50 rounded p-2 overflow-x-auto">
+                        <pre className="mt-1 text-sm text-gray-400 bg-gray-950/50 rounded p-2 overflow-x-auto">
                           {JSON.stringify(config, null, 2)}
                         </pre>
                       </div>

@@ -49,36 +49,36 @@ export function SkillEditPopover({
       {/* About — read-only original description */}
       <div className="bg-gray-800/60 border border-gray-700/50 rounded-lg px-3 py-2.5">
         <div className="flex items-center gap-2 mb-1">
-          <label className="text-[10px] font-mono uppercase tracking-widest text-gray-500 font-bold">About</label>
-          <span className="text-[9px] font-mono text-gray-600 border border-gray-700/50 rounded px-1.5 py-0.5">{skillName}</span>
+          <label className="text-xs font-mono uppercase tracking-widest text-gray-500 font-bold">About</label>
+          <span className="text-[11px] font-mono text-gray-600 border border-gray-700/50 rounded px-1.5 py-0.5">{skillName}</span>
         </div>
-        <p className="text-xs text-gray-300 leading-relaxed">
+        <p className="text-sm text-gray-300 leading-relaxed">
           {originalDescription || "No description available from skill registry."}
         </p>
       </div>
       <div>
-        <label className="text-xs text-gray-400 block mb-1">Display Name</label>
+        <label className="text-sm text-gray-400 block mb-1">Display Name</label>
         <input
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white focus:border-indigo-500 focus:outline-none"
         />
       </div>
       <div>
-        <label className="text-xs text-gray-400 block mb-1">Custom Description</label>
+        <label className="text-sm text-gray-400 block mb-1">Custom Description</label>
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder={originalDescription ? "Override the default..." : "Add a description..."}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white placeholder-gray-600 focus:border-indigo-500 focus:outline-none"
         />
       </div>
       <div>
-        <label className="text-xs text-gray-400 block mb-1">Category</label>
+        <label className="text-sm text-gray-400 block mb-1">Category</label>
         <select
           value={categoryName}
           onChange={(e) => setCategoryName(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-base text-white focus:border-indigo-500 focus:outline-none"
         >
           {categories.map((cat) => (
             <option key={cat.name} value={cat.name}>
@@ -88,7 +88,7 @@ export function SkillEditPopover({
         </select>
       </div>
       <div className="flex items-center justify-between">
-        <label className="text-xs text-gray-400 flex items-center gap-1.5">
+        <label className="text-sm text-gray-400 flex items-center gap-1.5">
           <Star className={`w-3.5 h-3.5 ${favorite ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} />
           Favorite
         </label>
@@ -106,7 +106,7 @@ export function SkillEditPopover({
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <label className="text-xs text-gray-400">Hidden</label>
+        <label className="text-sm text-gray-400">Hidden</label>
         <button
           onClick={() => setHidden(!hidden)}
           className={`w-10 h-5 rounded-full transition-colors ${
@@ -125,13 +125,13 @@ export function SkillEditPopover({
           onClick={() =>
             onSave({ displayName, description, categoryName, hidden, favorite })
           }
-          className="flex-1 bg-indigo-600 text-white text-sm py-1.5 rounded-lg hover:bg-indigo-500 transition-colors"
+          className="flex-1 bg-indigo-600 text-white text-base py-1.5 rounded-lg hover:bg-indigo-500 transition-colors"
         >
           Save
         </button>
         <button
           onClick={onCancel}
-          className="flex-1 bg-gray-800 text-gray-300 text-sm py-1.5 rounded-lg hover:bg-gray-700 transition-colors"
+          className="flex-1 bg-gray-800 text-gray-300 text-base py-1.5 rounded-lg hover:bg-gray-700 transition-colors"
         >
           Cancel
         </button>

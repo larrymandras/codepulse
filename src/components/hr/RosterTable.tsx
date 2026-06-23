@@ -132,7 +132,7 @@ export function RosterTable({
         {agents.length === 0 && (
           <TableRow>
             <TableCell colSpan={6} className="text-center py-12">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-base text-muted-foreground">
                 No agents match your filters.
               </span>
             </TableCell>
@@ -168,11 +168,11 @@ export function RosterTable({
                     size="sm"
                   />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="text-base font-medium text-foreground truncate">
                       {agent.name}
                     </p>
                     {agent.description && (
-                      <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      <p className="text-sm text-muted-foreground truncate max-w-[200px]">
                         {agent.description}
                       </p>
                     )}
@@ -182,7 +182,7 @@ export function RosterTable({
               <TableCell>
                 <Badge
                   variant="secondary"
-                  className={`text-[10px] ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
+                  className={`text-xs ${TIER_BADGE_COLOR[agent.tier] ?? TIER_BADGE_COLOR.shared}`}
                 >
                   {agent.tier}
                 </Badge>
@@ -191,12 +191,12 @@ export function RosterTable({
                 <StatusBadge status={agent.status} />
               </TableCell>
               <TableCell>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-base text-muted-foreground">
                   {agent.model ?? "\u2014"}
                 </span>
               </TableCell>
               <TableCell>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-base text-muted-foreground">
                   {agent.budget_fraction > 0
                     ? `${Math.round(agent.budget_fraction * 100)}%`
                     : "\u2014"}

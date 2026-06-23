@@ -97,7 +97,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
   if (executions.length === 0) {
     return (
-      <p className="text-sm text-gray-500 py-6 text-center">
+      <p className="text-base text-gray-500 py-6 text-center">
         {hasActiveFilters
           ? "No executions match these filters."
           : "No executions recorded yet. Tool calls will appear here as Astridr runs."}
@@ -108,7 +108,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
   return (
     <div className="max-h-[360px] overflow-y-auto">
       {/* Sticky header */}
-      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-1.5 text-[10px] text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80 sticky top-0 z-10">
+      <div className="grid grid-cols-[100px_1fr_80px_80px_80px_70px_100px_80px_60px_140px] items-center gap-2 px-3 py-1.5 text-xs text-gray-500 uppercase tracking-wider border-b border-gray-700/30 bg-gray-800/80 sticky top-0 z-10">
         <span>Time</span>
         <span>Command</span>
         <span>Origin</span>
@@ -137,32 +137,32 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
               onClick={() => handleRowClick(row._id)}
             >
               {/* Time */}
-              <span className="text-xs text-gray-500 font-mono truncate">
+              <span className="text-sm text-gray-500 font-mono truncate">
                 {formatTime(row.queuedAt)}
               </span>
 
               {/* Command */}
-              <span className="text-xs text-gray-200 font-mono truncate">
+              <span className="text-sm text-gray-200 font-mono truncate">
                 {row.toolName}
               </span>
 
               {/* Origin */}
-              <span className="text-xs text-gray-400 truncate">
+              <span className="text-sm text-gray-400 truncate">
                 {row.origin}
               </span>
 
               {/* Channel */}
-              <span className="text-xs text-gray-400 truncate">
+              <span className="text-sm text-gray-400 truncate">
                 {row.channelId ?? "—"}
               </span>
 
               {/* Profile */}
-              <span className="text-xs text-gray-400 truncate">
+              <span className="text-sm text-gray-400 truncate">
                 {row.profileId}
               </span>
 
               {/* Duration */}
-              <span className="text-xs text-gray-400">
+              <span className="text-sm text-gray-400">
                 {formatDuration(row.durationMs)}
               </span>
 
@@ -176,20 +176,20 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 {modeData?.mode ? (
                   <StatusBadge status={modeData.mode} />
                 ) : (
-                  <span className="text-xs text-gray-600">—</span>
+                  <span className="text-sm text-gray-600">—</span>
                 )}
                 {(modeData?.fillerCount ?? 0) > 0 && (
-                  <span className="text-[10px]" style={{ color: "var(--status-warn)" }}>
+                  <span className="text-xs" style={{ color: "var(--status-warn)" }}>
                     {modeData!.fillerCount} fillers
                   </span>
                 )}
                 {modeData?.stalledAt != null && (
-                  <span className="text-[10px]" style={{ color: "var(--status-error)" }}>stalled</span>
+                  <span className="text-xs" style={{ color: "var(--status-error)" }}>stalled</span>
                 )}
               </span>
 
               {/* Rounds depth */}
-              <span className="tabular-nums text-xs text-muted-foreground">
+              <span className="tabular-nums text-sm text-muted-foreground">
                 {modeData?.roundsDepth != null ? `${modeData.roundsDepth}r` : "—"}
               </span>
 
@@ -215,22 +215,22 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
             {isExpanded && (
               <div className="bg-gray-900/40 rounded-lg p-4 ml-6 mr-3 mb-1 space-y-2 border border-gray-700/20">
                 <div>
-                  <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Command</span>
-                  <pre className="text-xs font-mono text-gray-200 mt-0.5 whitespace-pre-wrap break-all">
+                  <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Command</span>
+                  <pre className="text-sm font-mono text-gray-200 mt-0.5 whitespace-pre-wrap break-all">
                     {row.toolName}
                   </pre>
                 </div>
 
                 {row.contextSnapshot?.kwargs && (
                   <div>
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Arguments</span>
-                    <pre className="text-xs font-mono text-gray-400 mt-0.5 whitespace-pre-wrap break-all">
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Arguments</span>
+                    <pre className="text-sm font-mono text-gray-400 mt-0.5 whitespace-pre-wrap break-all">
                       {JSON.stringify(row.contextSnapshot.kwargs, null, 2)}
                     </pre>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-500">Origin: </span>
                     <span className="text-gray-300">{row.origin}</span>
@@ -243,7 +243,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="text-gray-500">Queued: </span>
                     <span className="text-gray-300">{formatTs(row.queuedAt)}</span>
@@ -259,7 +259,7 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
                 </div>
 
                 {modeData && (
-                  <div className="grid grid-cols-3 gap-2 text-xs border-t border-gray-700/30 pt-2">
+                  <div className="grid grid-cols-3 gap-2 text-sm border-t border-gray-700/30 pt-2">
                     <div>
                       <span className="text-gray-500">Mode: </span>
                       <span className="text-gray-300 capitalize">{modeData.mode}</span>
@@ -285,8 +285,8 @@ export default function ExecutionTable({ executions, hasActiveFilters }: Executi
 
                 {row.errorMessage && (
                   <div>
-                    <span className="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Error</span>
-                    <p className="text-xs text-red-300 mt-0.5">{row.errorMessage}</p>
+                    <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Error</span>
+                    <p className="text-sm text-red-300 mt-0.5">{row.errorMessage}</p>
                   </div>
                 )}
               </div>

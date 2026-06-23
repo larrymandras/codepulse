@@ -41,7 +41,7 @@ function statusDescription(status: string, component: string): string {
 export default function BuildActivityFeed({ entries }: { entries: ActivityEntry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-sm">
+      <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 text-center text-gray-500 text-base">
         No recent activity
       </div>
     );
@@ -49,7 +49,7 @@ export default function BuildActivityFeed({ entries }: { entries: ActivityEntry[
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h3 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Recent Activity</h3>
+      <h3 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Recent Activity</h3>
       <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
         {entries.slice(0, 20).map((entry) => (
           <div
@@ -60,17 +60,17 @@ export default function BuildActivityFeed({ entries }: { entries: ActivityEntry[
               className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${STATUS_DOT[entry.status] ?? STATUS_DOT.pending}`}
             />
             <div className="flex-1 min-w-0">
-              <p className={`text-sm ${STATUS_COLORS[entry.status] ?? "text-gray-400"}`}>
+              <p className={`text-base ${STATUS_COLORS[entry.status] ?? "text-gray-400"}`}>
                 {statusDescription(entry.status, entry.component)}
               </p>
               {entry.message && (
-                <p className="text-xs text-gray-500 truncate">{entry.message}</p>
+                <p className="text-sm text-gray-500 truncate">{entry.message}</p>
               )}
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-xs text-gray-600">
+                <span className="text-sm text-gray-600">
                   {formatTimestamp(entry.updatedAt)}
                 </span>
-                <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
+                <span className="text-sm px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400">
                   {entry.phase}
                 </span>
               </div>

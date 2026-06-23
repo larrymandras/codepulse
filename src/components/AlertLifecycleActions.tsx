@@ -134,7 +134,7 @@ export function AlertLifecycleActions({
         <Button
           variant="ghost"
           size="sm"
-          className="text-sm"
+          className="text-base"
           onClick={handleAcknowledge}
         >
           Acknowledge
@@ -146,7 +146,7 @@ export function AlertLifecycleActions({
         <Button
           variant="ghost"
           size="sm"
-          className="text-sm"
+          className="text-base"
           onClick={handleUnmute}
         >
           Unmute
@@ -155,7 +155,7 @@ export function AlertLifecycleActions({
         <MuteDurationPicker
           onSelect={handleMuteSelect}
           trigger={
-            <Button variant="ghost" size="sm" className="text-sm">
+            <Button variant="ghost" size="sm" className="text-base">
               Mute
             </Button>
           }
@@ -166,7 +166,7 @@ export function AlertLifecycleActions({
       <Button
         variant="ghost"
         size="sm"
-        className="text-sm"
+        className="text-base"
         onClick={() => {
           setTaskTitle(alertTitle);
           setTaskDescription("");
@@ -176,7 +176,7 @@ export function AlertLifecycleActions({
         disabled={linkedToTask}
       >
         {linkedToTask ? (
-          <span className="text-xs bg-muted px-2 inline rounded">
+          <span className="text-sm bg-muted px-2 inline rounded">
             Linked to task
           </span>
         ) : (
@@ -193,7 +193,7 @@ export function AlertLifecycleActions({
 
           <div className="flex flex-col gap-3 py-2">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Task title</label>
+              <label className="text-base font-medium">Task title</label>
               <Input
                 value={taskTitle}
                 onChange={(e) => setTaskTitle(e.target.value)}
@@ -202,7 +202,7 @@ export function AlertLifecycleActions({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">
+              <label className="text-base font-medium">
                 Description{" "}
                 <span className="font-normal text-muted-foreground">
                   (optional)
@@ -217,7 +217,7 @@ export function AlertLifecycleActions({
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium">Priority</label>
+              <label className="text-base font-medium">Priority</label>
               <Select value={taskPriority} onValueChange={setTaskPriority}>
                 <SelectTrigger className="w-full">
                   <SelectValue />

@@ -147,7 +147,7 @@ export default function Security() {
     <div ref={flashRef} className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Security Dashboard</h1>
-        <span className="text-xs text-muted-foreground">{mergedEvents.length} events</span>
+        <span className="text-sm text-muted-foreground">{mergedEvents.length} events</span>
       </div>
 
       <Tabs defaultValue="overview">
@@ -168,7 +168,7 @@ export default function Security() {
               <button
                 key={tab}
                 onClick={() => setSeverityFilter(tab)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors capitalize ${
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors capitalize ${
                   severityFilter === tab
                     ? "bg-muted text-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent"
@@ -187,14 +187,14 @@ export default function Security() {
 
           {/* Audit & Compliance */}
           <div className="bg-card border border-border rounded-xl p-4">
-            <h2 className="text-sm font-semibold text-muted-foreground mb-4">Audit & Compliance<InfoTooltip text="Security audit metrics: RLS isolation tests, audit chain integrity, human-in-the-loop status, webhook validation, and credential vault access" /></h2>
+            <h2 className="text-base font-semibold text-muted-foreground mb-4">Audit & Compliance<InfoTooltip text="Security audit metrics: RLS isolation tests, audit chain integrity, human-in-the-loop status, webhook validation, and credential vault access" /></h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {/* RLS Isolation */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   RLS Isolation
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last test</span>
                     <span className="text-muted-foreground">
@@ -212,10 +212,10 @@ export default function Security() {
 
               {/* Audit Chain */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Audit Chain
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Chain integrity</span>
                     <span className="text-green-400">Valid</span>
@@ -229,10 +229,10 @@ export default function Security() {
 
               {/* HITL Status */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   HITL Status
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pending confirmations</span>
                     <span className={hitlStats ? statusColor(hitlStats.pending, { warn: 3, danger: 10 }) : "text-muted-foreground"}>
@@ -248,10 +248,10 @@ export default function Security() {
 
               {/* Webhook Validation */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Webhook Validation
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Received</span>
                     <span className="text-muted-foreground">{webhookStats?.totalReceived ?? 0}</span>
@@ -273,10 +273,10 @@ export default function Security() {
 
               {/* Vault Status */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Credential Vault
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total accesses</span>
                     <span className="text-muted-foreground">{vaultStats?.totalAccesses ?? 0}</span>
@@ -298,10 +298,10 @@ export default function Security() {
 
               {/* Sandbox Enforcement */}
               <div className="bg-background border border-border rounded-lg p-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Sandbox Enforcement
                 </p>
-                <div className="space-y-1 text-xs">
+                <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total violations</span>
                     <span className={sandboxOverview ? statusColor(sandboxOverview.totalViolations, { warn: 5, danger: 20 }) : "text-muted-foreground"}>
@@ -328,21 +328,21 @@ export default function Security() {
           {/* Sandbox Violations Feed */}
           {(recentViolations ?? []).length > 0 && (
             <div className="bg-card border border-border rounded-xl p-4">
-              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                 Sandbox Violations
                 <InfoTooltip text="Tool capability manifest violations — tools accessing resources beyond their declared permissions" />
               </h2>
               <div className="max-h-64 overflow-y-auto space-y-1">
                 {(recentViolations ?? []).map((v: any, i: number) => (
-                  <div key={v._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${i % 2 === 0 ? "bg-card" : ""}`}>
+                  <div key={v._id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-sm ${i % 2 === 0 ? "bg-card" : ""}`}>
                     <span className={`w-2 h-2 rounded-full ${v.strict ? "bg-red-400" : "bg-yellow-400"}`} />
                     <span className="text-muted-foreground font-mono w-16 shrink-0">{formatRelativeTime(v.timestamp)}</span>
                     <span className="text-foreground font-mono">{v.toolName}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
+                    <span className={`text-xs px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
                       {v.permission}
                     </span>
                     {v.detail && <span className="text-muted-foreground truncate">{v.detail}</span>}
-                    <span className={`ml-auto text-[10px] px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
+                    <span className={`ml-auto text-xs px-1.5 py-0.5 rounded ${v.strict ? "bg-red-400/10 text-red-400" : "bg-yellow-400/10 text-yellow-400"}`}>
                       {v.strict ? "BLOCKED" : "warned"}
                     </span>
                   </div>
@@ -358,28 +358,28 @@ export default function Security() {
             {/* Summary cards */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">URLs Blocked</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">URLs Blocked</p>
                 <p className="text-2xl font-semibold tabular-nums" style={{ color: bgBlocked > 0 ? "var(--status-error)" : undefined }}>
                   {bgBlocked}
                 </p>
               </div>
               <div className="bg-card border border-border rounded-lg p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">URLs Allowed</p>
+                <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-1">URLs Allowed</p>
                 <p className="text-2xl font-semibold tabular-nums text-foreground">{bgAllowed}</p>
               </div>
             </div>
 
             {/* Browser Guard event table */}
             <div className="bg-card border border-border rounded-xl p-4">
-              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">URL Evaluation Log</h2>
+              <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">URL Evaluation Log</h2>
               {browserGuardEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
+                <p className="text-base text-muted-foreground py-6 text-center">
                   No URL blocks recorded. Browser Guard is active and logging will appear here as URLs are evaluated.
                 </p>
               ) : (
                 <div className="max-h-[400px] overflow-y-auto">
                   {/* Header */}
-                  <div className="grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border bg-card sticky top-0">
+                  <div className="grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider border-b border-border bg-card sticky top-0">
                     <span>Timestamp</span>
                     <span>URL</span>
                     <span>Action</span>
@@ -388,7 +388,7 @@ export default function Security() {
                   {browserGuardEvents.map((e: any, i: number) => (
                     <div
                       key={e._id ?? i}
-                      className={`grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-2 text-xs ${i % 2 === 0 ? "bg-card" : ""}`}
+                      className={`grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-2 text-sm ${i % 2 === 0 ? "bg-card" : ""}`}
                     >
                       <span className="text-muted-foreground font-mono truncate">
                         {formatRelativeTime(e.timestamp)}
@@ -416,35 +416,35 @@ export default function Security() {
           <SectionErrorBoundary name="Network Policy">
             {/* Allowlist placeholder */}
             <div className="bg-card border border-border rounded-xl p-4">
-              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
                 Provider Allowlist
                 <InfoTooltip text="Per-provider network allowlist entries from config.yaml network_policy section" />
               </h2>
-              <p className="text-xs text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground mb-4">
                 Allowlist entries are configured in <span className="font-mono text-muted-foreground">config.yaml</span> under <span className="font-mono text-muted-foreground">network_policy</span>.
               </p>
-              <div className="grid grid-cols-[1fr_1fr_60px_80px] items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border bg-card">
+              <div className="grid grid-cols-[1fr_1fr_60px_80px] items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider border-b border-border bg-card">
                 <span>Provider</span>
                 <span>Host</span>
                 <span>Port</span>
                 <span>Type</span>
               </div>
               {/* Empty state — real data comes from config ingest (future plan) */}
-              <p className="text-sm text-muted-foreground py-6 text-center">
+              <p className="text-base text-muted-foreground py-6 text-center">
                 No network policy rules configured. Add allowlist entries in config.yaml under network_policy.
               </p>
             </div>
 
             {/* Network access log */}
             <div className="bg-card border border-border rounded-xl p-4">
-              <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Network Access Log</h2>
+              <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Network Access Log</h2>
               {networkPolicyEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
+                <p className="text-base text-muted-foreground py-6 text-center">
                   No network policy events recorded. Access log will appear here as providers make outbound requests.
                 </p>
               ) : (
                 <div className="max-h-[300px] overflow-y-auto">
-                  <div className="grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-1.5 text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border bg-card sticky top-0">
+                  <div className="grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider border-b border-border bg-card sticky top-0">
                     <span>Timestamp</span>
                     <span>Host</span>
                     <span>Action</span>
@@ -453,7 +453,7 @@ export default function Security() {
                   {networkPolicyEvents.map((e: any, i: number) => (
                     <div
                       key={e._id ?? i}
-                      className={`grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-2 text-xs ${i % 2 === 0 ? "bg-card" : ""}`}
+                      className={`grid grid-cols-[120px_1fr_80px_1fr] items-center gap-2 px-3 py-2 text-sm ${i % 2 === 0 ? "bg-card" : ""}`}
                     >
                       <span className="text-muted-foreground font-mono truncate">{formatRelativeTime(e.timestamp)}</span>
                       <span className="font-mono text-muted-foreground truncate">{e.details?.host ?? e.description}</span>

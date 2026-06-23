@@ -313,19 +313,19 @@ export default function WhatsApp() {
       <GlassPanel className="p-4">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+            <p className="text-sm text-muted-foreground uppercase tracking-wider font-medium">
               Connection Status
             </p>
             <div className="flex items-center gap-2">
               <ConnectionStatusBadge />
               {connectionStatus === "connected" && phoneNumber && (
-                <span className="text-sm text-muted-foreground">
+                <span className="text-base text-muted-foreground">
                   {maskPhone(phoneNumber)}
                 </span>
               )}
             </div>
             {connectionStatus === "connected" && connectedAt && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Connected since {formatTimestamp(connectedAt)}
               </p>
             )}
@@ -359,7 +359,7 @@ export default function WhatsApp() {
             >
               <div className="space-y-2">
                 <h2 className="text-base font-semibold">WhatsApp not connected</h2>
-                <p className="text-sm text-muted-foreground max-w-sm">
+                <p className="text-base text-muted-foreground max-w-sm">
                   Pair your WhatsApp account to start receiving messages through
                   Ástríðr.
                 </p>
@@ -387,7 +387,7 @@ export default function WhatsApp() {
               className="flex flex-col items-center gap-4 py-4"
             >
               <Skeleton className="w-64 h-64" />
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 Generating QR code...
               </p>
               <Progress value={0} className="w-64" />
@@ -436,7 +436,7 @@ export default function WhatsApp() {
                 />
                 {countdown < 10 && (
                   <p
-                    className="text-xs text-center"
+                    className="text-sm text-center"
                     style={{
                       color:
                         countdown < 5
@@ -452,7 +452,7 @@ export default function WhatsApp() {
               </div>
 
               {/* Instructions */}
-              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside text-left">
+              <ol className="text-base text-muted-foreground space-y-1 list-decimal list-inside text-left">
                 <li>Open WhatsApp on your phone</li>
                 <li>Tap Menu (⋮) → Linked Devices</li>
                 <li>Tap Link a Device and scan</li>
@@ -495,12 +495,12 @@ export default function WhatsApp() {
               <div className="space-y-1">
                 <StatusBadge status="ok" label="Connected" />
                 {phoneNumber && (
-                  <p className="text-sm text-foreground font-medium mt-2">
+                  <p className="text-base text-foreground font-medium mt-2">
                     Connected as {maskPhone(phoneNumber)}
                   </p>
                 )}
                 {connectedAt && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-sm text-muted-foreground">
                     Since {formatTimestamp(connectedAt)}
                   </p>
                 )}

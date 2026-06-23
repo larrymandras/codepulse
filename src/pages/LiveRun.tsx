@@ -216,23 +216,23 @@ export default function LiveRun() {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("timeline")}
-            className={`px-3 py-1 text-sm ${activeTab === "timeline" ? "bg-(--primary) text-(--primary-foreground)" : "bg-(--secondary) text-(--foreground)"}`}
+            className={`px-3 py-1 text-base ${activeTab === "timeline" ? "bg-(--primary) text-(--primary-foreground)" : "bg-(--secondary) text-(--foreground)"}`}
           >Timeline</button>
           <button
             onClick={() => setActiveTab("summary")}
-            className={`px-3 py-1 text-sm ${activeTab === "summary" ? "bg-(--primary) text-(--primary-foreground)" : "bg-(--secondary) text-(--foreground)"}`}
+            className={`px-3 py-1 text-base ${activeTab === "summary" ? "bg-(--primary) text-(--primary-foreground)" : "bg-(--secondary) text-(--foreground)"}`}
           >Summary</button>
         </div>
         <button
           onClick={handleStop}
           disabled={!hasActiveRun}
-          className="flex items-center gap-1 px-3 py-1 text-sm bg-(--destructive) text-white disabled:opacity-50"
+          className="flex items-center gap-1 px-3 py-1 text-base bg-(--destructive) text-white disabled:opacity-50"
           title="Stop Run"
         ><Square className="h-4 w-4" />Stop</button>
       </div>
       {isLive && liveSessionId && (
         <div className="px-4 py-1.5 border-b border-(--border) shrink-0">
-          <span className="text-xs text-(--muted-foreground) font-mono">
+          <span className="text-sm text-(--muted-foreground) font-mono">
             Session: {liveSessionId.slice(0, 16)}…{runDone ? " — completed" : " — live"}
           </span>
         </div>
@@ -241,7 +241,7 @@ export default function LiveRun() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4" onScroll={handleScroll}>
           {displayBlocks.length === 0 && !displayStreaming ? (
             <div className="flex items-center justify-center h-64">
-              <p className="text-sm text-(--muted-foreground) text-center">
+              <p className="text-base text-(--muted-foreground) text-center">
                 {isLive ? "No active run. Start a task from Agent Chat." : "No blocks found for this session."}
               </p>
             </div>
@@ -266,7 +266,7 @@ export default function LiveRun() {
       {activeTab === "timeline" && !autoScroll && (
         <div className="flex justify-center py-2 shrink-0">
           <button
-            className="text-xs px-3 py-1 bg-(--primary) text-(--primary-foreground) rounded-full"
+            className="text-sm px-3 py-1 bg-(--primary) text-(--primary-foreground) rounded-full"
             onClick={() => { setAutoScroll(true); scrollToBottom(); }}
           >↓ Latest</button>
         </div>

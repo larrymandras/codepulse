@@ -26,18 +26,18 @@ export default function CostTrendChart() {
   if (data.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Cost Trend
           <InfoTooltip text="Hourly API spend trend broken down by provider over the last 24 hours" />
         </h2>
-        <p className="text-gray-500 text-sm">No API cost data yet.</p>
+        <p className="text-gray-500 text-base">No API cost data yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         Cost Trend (Hourly by Provider)
         <InfoTooltip text="Hourly API spend trend broken down by provider over the last 24 hours" />
       </h2>

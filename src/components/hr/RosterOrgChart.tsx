@@ -85,11 +85,11 @@ function RosterNode({ data }: NodeProps<Node<RosterNodeData>>) {
           size="sm"
         />
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-foreground truncate">
+          <p className="text-sm font-medium text-foreground truncate">
             {data.name}
           </p>
           {data.description && (
-            <p className="text-[9px] text-muted-foreground truncate">
+            <p className="text-[11px] text-muted-foreground truncate">
               {data.description}
             </p>
           )}
@@ -98,7 +98,7 @@ function RosterNode({ data }: NodeProps<Node<RosterNodeData>>) {
       <div className="flex items-center gap-1.5">
         <Badge
           variant="secondary"
-          className={`text-[9px] px-1 py-0 text-white ${TIER_COLOR[data.tier] ?? "bg-gray-600"}`}
+          className={`text-[11px] px-1 py-0 text-white ${TIER_COLOR[data.tier] ?? "bg-gray-600"}`}
         >
           {data.tier}
         </Badge>
@@ -208,7 +208,7 @@ export function RosterOrgChart({ agents, onAgentClick }: RosterOrgChartProps) {
 
   if (agents.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground text-center py-12">
+      <p className="text-base text-muted-foreground text-center py-12">
         No agents to display.
       </p>
     );

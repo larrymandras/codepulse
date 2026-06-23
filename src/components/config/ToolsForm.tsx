@@ -57,7 +57,7 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
       {/* Built-in Tools */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Built-in Tools</CardTitle>
+          <CardTitle className="text-base">Built-in Tools</CardTitle>
         </CardHeader>
         <CardContent>
           <TagChipInput
@@ -72,18 +72,18 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm">Optional Tools</CardTitle>
+            <CardTitle className="text-base">Optional Tools</CardTitle>
             <Button variant="ghost" size="sm" className="h-7 px-2" onClick={addOptionalTool}>
               <Plus className="h-3.5 w-3.5 mr-1" />
-              <span className="text-xs">Add</span>
+              <span className="text-sm">Add</span>
             </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-0">
           {optionalTools.length > 0 && (
             <div className="grid grid-cols-[1fr_1fr_36px] gap-x-2 gap-y-1 items-center mb-2">
-              <Label className="text-xs text-(--muted-foreground)">Name</Label>
-              <Label className="text-xs text-(--muted-foreground)">Requires Env</Label>
+              <Label className="text-sm text-(--muted-foreground)">Name</Label>
+              <Label className="text-sm text-(--muted-foreground)">Requires Env</Label>
               <span />
               {optionalTools.map((tool, idx) => (
                 <>
@@ -92,14 +92,14 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
                     value={String(tool.name ?? "")}
                     onChange={(e) => updateOptionalTool(idx, "name", e.target.value)}
                     placeholder="tool_name"
-                    className="h-8 text-sm font-mono"
+                    className="h-8 text-base font-mono"
                   />
                   <Input
                     key={`env-${idx}`}
                     value={String(tool.requires_env ?? "")}
                     onChange={(e) => updateOptionalTool(idx, "requires_env", e.target.value)}
                     placeholder="ENV_VAR_KEY"
-                    className="h-8 text-sm font-mono"
+                    className="h-8 text-base font-mono"
                   />
                   <Button
                     key={`del-${idx}`}
@@ -115,7 +115,7 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
             </div>
           )}
           {optionalTools.length === 0 && (
-            <p className="text-xs text-(--muted-foreground)">No optional tools configured.</p>
+            <p className="text-sm text-(--muted-foreground)">No optional tools configured.</p>
           )}
         </CardContent>
       </Card>
@@ -123,25 +123,25 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
       {/* Skills & Plugins */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Skills & Plugins</CardTitle>
+          <CardTitle className="text-base">Skills & Plugins</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs">Skills root</Label>
+            <Label className="text-sm">Skills root</Label>
             <Input
               value={String(skills.root ?? "")}
               onChange={(e) => updateSkillsRoot(e.target.value)}
               placeholder="~/.astridr/skills"
-              className="h-8 text-sm font-mono"
+              className="h-8 text-base font-mono"
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Plugins root</Label>
+            <Label className="text-sm">Plugins root</Label>
             <Input
               value={String(plugins.root ?? "")}
               onChange={(e) => updatePluginsRoot(e.target.value)}
               placeholder="~/.astridr/plugins"
-              className="h-8 text-sm font-mono"
+              className="h-8 text-base font-mono"
             />
           </div>
         </CardContent>
@@ -150,21 +150,21 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
       {/* Claude Code */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">Claude Code</CardTitle>
+          <CardTitle className="text-base">Claude Code</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label className="text-xs">Default working directory</Label>
+            <Label className="text-sm">Default working directory</Label>
             <Input
               value={String(claudeCode.default_working_dir ?? "")}
               onChange={(e) => updateClaudeCode("default_working_dir", e.target.value)}
               placeholder="/path/to/project"
-              className="h-8 text-sm font-mono"
+              className="h-8 text-base font-mono"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">Max turns</Label>
+              <Label className="text-sm">Max turns</Label>
               <Input
                 type="number"
                 value={claudeCode.max_turns != null ? String(claudeCode.max_turns) : ""}
@@ -172,11 +172,11 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
                   updateClaudeCode("max_turns", e.target.value ? parseInt(e.target.value) : undefined)
                 }
                 placeholder="25"
-                className="h-8 text-sm"
+                className="h-8 text-base"
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Timeout (seconds)</Label>
+              <Label className="text-sm">Timeout (seconds)</Label>
               <Input
                 type="number"
                 value={claudeCode.timeout_seconds != null ? String(claudeCode.timeout_seconds) : ""}
@@ -184,12 +184,12 @@ export function ToolsForm({ data, onChange }: ToolsFormProps) {
                   updateClaudeCode("timeout_seconds", e.target.value ? parseInt(e.target.value) : undefined)
                 }
                 placeholder="300"
-                className="h-8 text-sm"
+                className="h-8 text-base"
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-xs">Allowed working directories</Label>
+            <Label className="text-sm">Allowed working directories</Label>
             <TagChipInput
               values={(claudeCode.allowed_working_dirs as string[]) ?? []}
               onChange={(v) => updateClaudeCode("allowed_working_dirs", v)}

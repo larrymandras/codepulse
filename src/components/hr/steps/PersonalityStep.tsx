@@ -41,7 +41,7 @@ export default function PersonalityStep() {
     <div className="space-y-5 max-w-2xl">
       <div>
         <h2 className="text-base font-medium text-foreground">Personality</h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-base text-muted-foreground mt-1">
           Define the agent's soul variant -- its personality, instructions, and
           behavioral guidelines.
         </p>
@@ -53,7 +53,7 @@ export default function PersonalityStep() {
           <button
             key={m.value}
             onClick={() => setValue("personality.mode", m.value)}
-            className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
               mode === m.value
                 ? "bg-primary/15 text-primary font-medium"
                 : "text-muted-foreground hover:text-foreground"
@@ -66,12 +66,12 @@ export default function PersonalityStep() {
 
       {/* Info banners */}
       {mode === "template" && content && (
-        <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+        <div className="text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
           Pre-filled from template. Edit below to customize.
         </div>
       )}
       {mode === "import" && importedFile && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
           <FileUp className="h-3.5 w-3.5" />
           Imported: {importedFile}
         </div>
@@ -82,7 +82,7 @@ export default function PersonalityStep() {
         <div>
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-4 py-3 text-sm border-2 border-dashed border-border/50 rounded-lg text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
+            className="flex items-center gap-2 px-4 py-3 text-base border-2 border-dashed border-border/50 rounded-lg text-muted-foreground hover:border-primary/40 hover:text-foreground transition-colors"
           >
             <FileUp className="h-4 w-4" />
             Choose a .md file to import
@@ -108,7 +108,7 @@ export default function PersonalityStep() {
           placeholder="Write the agent's personality and behavioral instructions in markdown..."
         />
       </div>
-      <p className="text-[11px] text-muted-foreground">
+      <p className="text-sm text-muted-foreground">
         {wordCount(content)} words
       </p>
 
@@ -116,7 +116,7 @@ export default function PersonalityStep() {
       <div>
         <button
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           {showAdvanced ? (
             <ChevronUp className="h-3.5 w-3.5" />
@@ -130,7 +130,7 @@ export default function PersonalityStep() {
           <div className="mt-3 space-y-4 pl-4 border-l-2 border-border/30">
             {/* System Prompt Override */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 System Prompt Override
               </label>
               <textarea
@@ -140,13 +140,13 @@ export default function PersonalityStep() {
                 }
                 rows={4}
                 placeholder="Raw system_prompt that overrides personality content..."
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none font-mono"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 resize-none font-mono"
               />
             </div>
 
             {/* Soul Variant Path */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 Soul Variant Path
               </label>
               <input
@@ -155,13 +155,13 @@ export default function PersonalityStep() {
                   setValue("personality.soulVariantPath", e.target.value)
                 }
                 placeholder="souls/my-variant.md"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
 
             {/* Memory paths */}
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 L1 Index Path
               </label>
               <input
@@ -170,11 +170,11 @@ export default function PersonalityStep() {
                   setValue("personality.l1Index", e.target.value)
                 }
                 placeholder="memory/l1/index.md"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 L2 Topics Directory
               </label>
               <input
@@ -183,11 +183,11 @@ export default function PersonalityStep() {
                   setValue("personality.l2TopicsDir", e.target.value)
                 }
                 placeholder="memory/l2/topics/"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-sm font-medium text-foreground mb-1.5">
                 L3 Logs Directory
               </label>
               <input
@@ -196,7 +196,7 @@ export default function PersonalityStep() {
                   setValue("personality.l3LogsDir", e.target.value)
                 }
                 placeholder="memory/l3/logs/"
-                className="w-full px-3 py-2 text-sm bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                className="w-full px-3 py-2 text-base bg-background/60 border border-border/40 rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
               />
             </div>
           </div>

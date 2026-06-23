@@ -367,7 +367,7 @@ export default function Inbox() {
       {/* Offline banner */}
       {status !== "connected" && (
         <div className="px-4 py-2 bg-(--muted) border-b border-(--border) shrink-0">
-          <p className="text-xs text-(--muted-foreground)">
+          <p className="text-sm text-(--muted-foreground)">
             Offline. Approval actions unavailable until reconnected.
           </p>
         </div>
@@ -377,7 +377,7 @@ export default function Inbox() {
       <InboxFilterBar filter={filter} counts={counts} onChange={setFilter} />
 
       {/* Keyboard hints caption */}
-      <p className="text-xs text-(--muted-foreground) px-4 mt-1">
+      <p className="text-sm text-(--muted-foreground) px-4 mt-1">
         ↑↓ navigate · Enter expand · A approve · R reject
       </p>
 
@@ -385,7 +385,7 @@ export default function Inbox() {
       <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
         {filteredItems.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <p className="text-sm text-(--muted-foreground) text-center">
+            <p className="text-base text-(--muted-foreground) text-center">
               {emptyText[filter]}
             </p>
           </div>

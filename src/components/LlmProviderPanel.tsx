@@ -23,24 +23,24 @@ export default function LlmProviderPanel() {
   if (raw.length === 0) {
     return (
       <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-        <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           LLM by Provider
           <InfoTooltip text="Token consumption grouped by provider then model" />
         </h2>
-        <p className="text-sm text-muted-foreground">No LLM metrics yet.</p>
+        <p className="text-base text-muted-foreground">No LLM metrics yet.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
-      <h2 className="text-xs font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
+      <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
         LLM by Provider
         <InfoTooltip text="Token consumption grouped by provider then model" />
       </h2>
       {Object.entries(byProvider).map(([provider, models]) => (
         <div key={provider} className="space-y-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+          <p className="text-sm text-muted-foreground uppercase tracking-wide">
             {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
           </p>
           <FlexBarChart
