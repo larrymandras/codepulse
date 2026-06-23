@@ -17,6 +17,8 @@ const LENSES: { id: KgLens; label: string; hint: string }[] = [
   { id: "entity", label: "Entity (ego)", hint: "Search an entity → its ego graph" },
   { id: "temporal", label: "Temporal", hint: "Scrub an as-of date; superseded facts dashed" },
   { id: "contradiction", label: "Contradictions", hint: "Conflicting current beliefs" },
+  // 5th lens — Phase 86 KG-08 full-text search
+  { id: "search", label: "Search", hint: "Full-text across fact text + relationship labels" },
 ];
 
 const ALL = "__all__";
@@ -103,6 +105,20 @@ export default function KGControls({
                 aria-label="ego hops"
               />
             </div>
+          </div>
+        )}
+
+        {/* Full-text search input — search lens only (SC#1: mutually exclusive with entity-name input) */}
+        {lens === "search" && (
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={filters.searchQuery}
+              onChange={(e) => setFilter("searchQuery", e.target.value)}
+              placeholder="Search facts & relationships…"
+              className="pl-8 w-64 font-mono text-sm"
+              aria-label="full-text knowledge graph search"
+            />
           </div>
         )}
 

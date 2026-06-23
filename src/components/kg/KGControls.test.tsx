@@ -1,7 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import KGControls from "./KGControls";
 import type { KgLens, KgFilters } from "../../hooks/useKnowledgeGraph";
+
+// Radix UI Slider uses ResizeObserver internally; jsdom doesn't provide it.
+beforeAll(() => {
+  if (typeof window.ResizeObserver === "undefined") {
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  }
+});
 
 const defaultFilters: KgFilters = {
   entityType: null,

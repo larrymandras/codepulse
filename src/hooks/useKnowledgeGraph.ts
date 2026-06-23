@@ -18,7 +18,7 @@ import {
   type KgViewFilters,
 } from "../lib/kg-graph";
 
-export type KgLens = "overview" | "entity" | "temporal" | "contradiction";
+export type KgLens = "overview" | "entity" | "temporal" | "contradiction" | "search";
 
 export interface KgFilters {
   entityType: string | null;
@@ -31,6 +31,8 @@ export interface KgFilters {
   asOf: string | null;
   /** overview/temporal limit */
   limit: number;
+  /** search lens: full-text query. Ephemeral — NOT persisted to idb (RESEARCH Pitfall 6). */
+  searchQuery: string;
 }
 
 const DEFAULT_FILTERS: KgFilters = {
@@ -41,6 +43,7 @@ const DEFAULT_FILTERS: KgFilters = {
   hops: 1,
   asOf: null,
   limit: 100,
+  searchQuery: "",
 };
 
 const PERSIST_KEY = "kg-explorer-state-v1";
@@ -121,7 +124,9 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
       try {
         const saved = (await idbGet(PERSIST_KEY)) as PersistedState | undefined;
         if (!cancelled && saved) {
-          if (saved.lens) setLensState(saved.lens);
+          // Do not restore the "search" lens — it is ephemeral and a stale query
+          // is poor UX (RESEARCH Pitfall 6 / Open Q3). Fall back to "overview".
+          if (saved.lens && saved.lens !== "search") setLensState(saved.lens);
           if (saved.filters)
             setFilters((f) => ({ ...f, ...saved.filters }));
         }
@@ -137,9 +142,12 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
   }, []);
 
   // Persist lens + filters (after hydration so we don't write defaults over saved).
+  // Strip searchQuery — it is ephemeral and must not be persisted (RESEARCH Pitfall 6).
   useEffect(() => {
     if (!hydrated) return;
-    idbSet(PERSIST_KEY, { lens, filters } as PersistedState).catch(() => {});
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { searchQuery: _sq, ...persistableFilters } = filters;
+    idbSet(PERSIST_KEY, { lens, filters: persistableFilters } as PersistedState).catch(() => {});
   }, [lens, filters, hydrated]);
 
   const setLens = useCallback((l: KgLens) => {
@@ -198,6 +206,10 @@ export function useKnowledgeGraph(): UseKnowledgeGraph {
         } else if (lens === "contradiction") {
           const resp = await fetchContradictions();
           next = toGraphData(normalizeContradictions(resp));
+        } else if (lens === "search") {
+          // Search results live in separate page-level state (KnowledgeGraph.tsx).
+          // The hook manages lens/filter plumbing only; rawGraph stays empty in this lens.
+          next = EMPTY_GRAPH;
         }
 
         if (!cancelled && token === reqRef.current) {
