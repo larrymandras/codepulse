@@ -26,13 +26,13 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 
 ## Current Position
 
-Phase: 86 (kg-full-text-search-clustering-layout) — EXECUTING
-Plan: 3 of 3
-Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09 — carries the Ástríðr `/api/kg/search` cross-repo delta) OR Phase 88 (Analytics Rollup Table — prod-impacting). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
-Status: Phase complete — ready for verification
+Phase: 86 (kg-full-text-search-clustering-layout) — COMPLETE (3/3), code-verified 7/7; human UAT pending
+Plan: 3 of 3 (all complete)
+Next: Phase 87 (Saved Views + Temporal Diff, KG-10/KG-11) — the next `[ ]` phase. Run `/gsd-discuss-phase 87`. Before that, optionally run the 3 live-UI UAT checks for Phase 86 (see below).
+Status: Phase 86 code-complete + automated verification PASS (7/7 must-haves, file:line evidence). 3 live-UI UAT items pending: (1) community halos/clustering render on `/graphs` with real snapshot data, (2) Search lens shows amber "not available" degrade copy (not a red error), (3) Communities legend absent on today's community-null dataset.
 Last activity: 2026-06-23
 
-Progress bar: `██████░░░░` 60% (3/5 v8.0 phases: 83, 84, 85 complete)
+Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83, 84, 85, 86)
 
 ## Milestone v8.0 Roadmap (2026-06-18)
 
