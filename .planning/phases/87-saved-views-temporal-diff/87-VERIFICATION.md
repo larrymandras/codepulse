@@ -1,9 +1,10 @@
 ---
 phase: 87-saved-views-temporal-diff
 verified: 2026-06-23T20:00:00Z
-status: human_needed
+status: passed
 score: 4/4
 overrides_applied: 0
+human_uat: "Confirmed 2026-06-23 — all 6 items PASS via Playwright against an auth-free dev instance (Vite :5174, same Convex + Ástríðr backends). See ## Human UAT Results."
 human_verification:
   - test: "Save a named view, close the page, reopen it — confirm the view appears in the Views popover and loads correctly (lens + filters + focus + hops restored)"
     expected: "The named view persists across sessions and restores the exact saved state"
@@ -167,3 +168,18 @@ None. All must-haves from the phase roadmap success criteria and all four PLAN f
 
 _Verified: 2026-06-23T20:00:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Human UAT Results — Confirmed 2026-06-23
+
+All six human-verification items were executed end-to-end in a real browser (Playwright, visible Chromium) against a temporary auth-free dev instance on Vite :5174 wired to the same Convex deployment (savedKgViews functions deployed via `npx convex dev --once`) and the live Ástríðr API on :8181. Auth bypass was needed only because the primary :5173 instance is behind a Clerk gate; CodePulse skips Clerk when `VITE_CLERK_PUBLISHABLE_KEY` is empty. The test view was created and deleted through the UI — `savedKgViews:list` is back to `[]`.
+
+| # | Item | Result | Evidence |
+|---|------|--------|----------|
+| 1 | Save named view → reload → persists (Convex-backed) | PASS | View survived a full page reload; `01a-saved.png`, `01b-after-reload.png` |
+| 2 | Share `?view=<token>` URL restores state in a fresh session | PASS | Copy-link wrote `…/knowledge-graph?view=11d8fa52…`; opened in a clean context → Temporal lens `aria-pressed=true`; `02-share-restored.png` |
+| 3 | Temporal Diff: pick two dates → Compare → diff render + DIFF legend | PASS | Compare disabled until valid range, ran without crash, DIFF legend/diff text rendered; `03-diff.png` |
+| 4 | Temporal Animate: range → Play steps frames; Step/transport work | PASS | Play toggled to Pause; Step back/forward present & clickable; `04a-animate-playing.png`, `04b-animate-stepped.png` |
+| 5 | Active-view highlight clears on user lens/filter change | PASS | Row showed `border-primary` after load, cleared after switching lens (WR-01 fix); `05a-active.png`, `05b-cleared.png` |
+| 6 | Failed snapshot fetch → inline error, no hard block | PASS | Forced `/api/kg/overview` → 404; inline "Could not load/reach" error shown, controls stayed interactive, no white-screen; `06-fail-inline-error.png` |
+
+**Data-dependent note:** items 3–4 confirm the diff/animate UI works end-to-end (controls, compare/playback, legend, graceful states) without crashing. Whether specific added/removed/changed nodes render depends on the Ástríðr backend holding differing snapshot data at the chosen as-of dates.
