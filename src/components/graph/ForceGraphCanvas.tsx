@@ -1,11 +1,13 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
 } from "react";
 import ForceGraph2D from "react-force-graph-2d";
+import { forceX, forceY, forceCollide } from "d3-force-3d";
 
 /**
  * Generic force-graph canvas extracted from ObsidianGraph (Phase 74).
@@ -29,6 +31,10 @@ export interface ForceGraphHandle {
   centerAt: (x: number, y: number, ms?: number) => void;
   zoom: (k: number, ms?: number) => void;
   zoomToFit: (ms?: number, padding?: number) => void;
+  /** Get/set/remove a named d3 force on the running simulation. */
+  d3Force: (name: string, force?: any) => any;
+  /** Restart the force simulation (call after injecting new forces). */
+  d3ReheatSimulation: () => void;
 }
 
 export interface ForceGraphCanvasProps {
@@ -63,6 +69,12 @@ export interface ForceGraphCanvasProps {
   className?: string;
   /** show the radial dark-space backdrop (default true). */
   backdrop?: boolean;
+  /** When true and nodes carry community, inject forceX/forceY cluster forces.
+   *  No-op when no node has a non-null community (SC#4 no-regression). */
+  clusterForce?: boolean;
+  /** When supplied, draws a halo arc around each node where this returns non-null.
+   *  Halo sits between the fill and the selection ring (caller's paintNode owns the selection ring). */
+  communityColorFn?: (node: any) => string | null;
 }
 
 const DEFAULT_COLOR = "#10b981";
@@ -88,6 +100,8 @@ export const ForceGraphCanvas = forwardRef<
     nodeRelSize = 1,
     className,
     backdrop = true,
+    clusterForce,
+    communityColorFn,
   } = props;
 
   const fgRef = useRef<any>(null);
@@ -97,7 +111,70 @@ export const ForceGraphCanvas = forwardRef<
     centerAt: (x, y, ms) => fgRef.current?.centerAt(x, y, ms),
     zoom: (k, ms) => fgRef.current?.zoom(k, ms),
     zoomToFit: (ms, padding) => fgRef.current?.zoomToFit(ms, padding),
+    d3Force: (name, force) => fgRef.current?.d3Force(name, force),
+    d3ReheatSimulation: () => fgRef.current?.d3ReheatSimulation(),
   }));
+
+  // ── Cluster force injection (KG-09 SC#3 / SC#4) ──────────────────────────
+  // Gate on community data presence; remove forces when absent (SC#4 no-regression).
+  useEffect(() => {
+    if (!clusterForce) return;
+    const fg = fgRef.current;
+    if (!fg) return;
+
+    const hasCommunity = data.nodes.some((n: any) => n.community != null);
+    if (!hasCommunity) {
+      // SC#4: no community data — remove forces so layout is unchanged.
+      fg.d3Force("clusterX", null);
+      fg.d3Force("clusterY", null);
+      fg.d3Force("clusterCollide", null);
+      return;
+    }
+
+    // Compute dynamic centroids on a ring for each unique community id.
+    const communities = [
+      ...new Set(
+        data.nodes
+          .filter((n: any) => n.community != null)
+          .map((n: any) => n.community as number),
+      ),
+    ];
+    const R = 150;
+    const centroids = new Map(
+      communities.map((c, i) => {
+        const angle = (i / communities.length) * 2 * Math.PI;
+        return [c, { x: Math.cos(angle) * R, y: Math.sin(angle) * R }];
+      }),
+    );
+
+    // Honor prefers-reduced-motion: skip reheating the simulation (static halo colors suffice).
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    fg.d3Force(
+      "clusterX",
+      forceX((node: any) =>
+        node.community != null
+          ? (centroids.get(node.community)?.x ?? 0)
+          : undefined,
+      ).strength(reducedMotion ? 0 : 0.15),
+    );
+    fg.d3Force(
+      "clusterY",
+      forceY((node: any) =>
+        node.community != null
+          ? (centroids.get(node.community)?.y ?? 0)
+          : undefined,
+      ).strength(reducedMotion ? 0 : 0.15),
+    );
+    fg.d3Force(
+      "clusterCollide",
+      forceCollide((node: any) => (node.val ?? 3) + 2).strength(0.7),
+    );
+
+    if (!reducedMotion) {
+      fg.d3ReheatSimulation();
+    }
+  }, [data.nodes, clusterForce]);
 
   const color = colorFn ?? (() => DEFAULT_COLOR);
 
@@ -140,16 +217,36 @@ export const ForceGraphCanvas = forwardRef<
 
   const paint = useCallback(
     (node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+      const dimmed = isDimmed(node.id);
       if (paintNode) {
         paintNode(node, ctx, globalScale, {
           hovered: node.id === hoverId,
-          dimmed: isDimmed(node.id),
+          dimmed,
         });
       } else {
         defaultPaint(node, ctx, globalScale);
       }
+      // Community halo — drawn after the node fill/ring, before labels.
+      // Sits under the selection ring (caller's paintNode owns that layer).
+      if (communityColorFn) {
+        const haloColor = communityColorFn(node);
+        if (haloColor) {
+          const size = Math.max(node.val ?? 3, 2);
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, size + 3, 0, 2 * Math.PI, false);
+          ctx.strokeStyle = haloColor;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = dimmed ? 0.08 : 0.7;
+          ctx.shadowColor = haloColor;
+          ctx.shadowBlur = 6;
+          ctx.stroke();
+          // Reset to avoid bleeding state into the next node's paint.
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        }
+      }
     },
-    [paintNode, defaultPaint, hoverId, isDimmed],
+    [paintNode, defaultPaint, hoverId, isDimmed, communityColorFn],
   );
 
   return (
