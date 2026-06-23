@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v8.0
 milestone_name: Graph/KG Consolidation
-status: executing
-stopped_at: Phase 86 Plan 02 complete — KG Explorer community clustering wired
-last_updated: "2026-06-23T12:34:20.826Z"
+status: verifying
+stopped_at: Phase 86 Plan 03 complete — KG-08 full-text Search lens shipped (gated; endpoint absent → SC#2 graceful-degrade confirmed)
+last_updated: "2026-06-23T12:54:48.309Z"
 last_activity: 2026-06-23
 progress:
   total_phases: 7
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 13
-  completed_plans: 12
-  percent: 43
+  completed_plans: 13
+  percent: 57
 ---
 
 # Project State
@@ -29,7 +29,7 @@ See: .planning/PROJECT.md (updated 2026-06-18)
 Phase: 86 (kg-full-text-search-clustering-layout) — EXECUTING
 Plan: 3 of 3
 Next: Phase 86 (KG Full-Text Search + Clustering Layout, KG-08/KG-09 — carries the Ástríðr `/api/kg/search` cross-repo delta) OR Phase 88 (Analytics Rollup Table — prod-impacting). Run `/gsd-discuss-phase 86` or `/gsd-discuss-phase 88`.
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-06-23
 
 Progress bar: `██████░░░░` 60% (3/5 v8.0 phases: 83, 84, 85 complete)
@@ -41,7 +41,7 @@ Progress bar: `██████░░░░` 60% (3/5 v8.0 phases: 83, 84, 85 
 | 83 | Graph Snapshot Receiver | GH-01 | ✅ Complete + verified (2026-06-18) |
 | 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | ✅ Complete + UAT passed (2026-06-22) |
 | 85 | Cross-Graph Navigation | GH-04 | ✅ Complete (4/4, 2026-06-22) |
-| 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | Not started |
+| 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | ✅ Complete (3/3, 2026-06-23) — KG-09 (community cluster renderer, Plans 01-02) + KG-08 (full-text Search lens, Plan 03, gated on Ástríðr /api/kg/search SEED) |
 | 87 | Saved Views + Temporal Diff | KG-10, KG-11 | Not started |
 
 **Key sequencing constraint:** Phase 83 (receiver) must land before any rendering phase. Phase 86 (full-text search) carries a cross-repo dependency on a net-new Ástríðr `/api/kg/search` endpoint — flag at plan time.
@@ -79,6 +79,15 @@ See PROJECT.md Key Decisions table for full history.
 
 - **KG Explorer single halo path** — `communityColorFn` prop on `<ForceGraphCanvas>` used on the KG call site; the page's `paintNode` is not modified. Avoids double-stroke and keeps the halo implementation in one place (shared paint wrapper from Plan 01).
 - **Communities legend auto-hide** — `presentCommunities.length > 0` conditional; no "no clusters" copy rendered when community-less (Q4-A). Mirrors the `legendTypes` useMemo pattern for consistency.
+
+**Phase 86 Plan 03 decisions (2026-06-23):**
+
+- **KG-08 search results in page-local state** — Hook manages only lens/filter plumbing; results live in `KnowledgeGraph.tsx` so `rawGraph` (used by the canvas) doesn't conflict with search hits.
+- **searchQuery ephemeral** — Stripped from idb persist; `lens=search` not restored on hydration (stale query UX). RESEARCH Pitfall 6 / Open Q3.
+- **D-01 gate in consumer (KnowledgeGraph.tsx)** — `kgApi.fetchSearch` / `kgGet` throws `AstridrApiError` on any non-2xx; the page inspects `e.status` for 404/501 → not-deployed informational copy vs red error banner.
+- **subjectName verbatim** — No normalization between search hit's `subjectName` and `buildFocusUrl`. Exact-match is correct for `useFocusParam`; normalization would cause silent focus misses (RESEARCH Pitfall 4).
+- **Results-only Search lens layout** — No mini subgraph in Search lens; click-to-ego via `buildFocusUrl` is the graph exploration path (RESEARCH Pattern 4).
+- **Cross-repo SEED for Ástríðr** — `/api/kg/search` must include `subjectName` in each hit (A2); default GET with query params; 404/501 used as the endpoint-not-deployed signal.
 
 **v7.0 Forge Integration decisions:**
 
@@ -168,7 +177,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-23T12:34:20.815Z
+Last session: 2026-06-23T12:54:48.298Z
 Stopped at: Phase 86 UI-SPEC approved + context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
 Resume file: None

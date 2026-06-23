@@ -178,7 +178,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
  (3/3 plans; 7/7 must-haves + human UAT passed via Playwright on real Convex data; completed 2026-06-22 — see 84-HUMAN-UAT.md)
 - [x] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
  (completed 2026-06-22)
-- [ ] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
+- [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout (completed 2026-06-23)
 - [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
 
 ## Phase Details
@@ -240,7 +240,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans**: 3 plans (3 waves)
 - [x] 86-01-PLAN.md — Clustering core: community palette + KgNode.community + ForceGraphCanvas cluster force/halo + code/vault graph wiring (KG-09, SC#3/SC#4)
 - [x] 86-02-PLAN.md — KG Explorer clustering: halo paint + clusterForce wiring + auto-hide Communities legend (KG-09, SC#3/SC#4)
-- [ ] 86-03-PLAN.md — Search lens (cross-repo gated): fetchSearch + graceful-degrade gate + 5th Search lens + KGSearchResults + result-click ego focus (KG-08, SC#1/SC#2)
+- [x] 86-03-PLAN.md — Search lens (cross-repo gated): fetchSearch + graceful-degrade gate + 5th Search lens + KGSearchResults + result-click ego focus (KG-08, SC#1/SC#2)
 **UI hint**: yes
 
 ### Phase 87: Saved Views + Temporal Diff
@@ -275,7 +275,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
-| 86. KG Full-Text Search + Clustering | v8.0 | 2/3 | In Progress|  |
+| 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete   | 2026-06-23 |
 | 87. Saved Views + Temporal Diff | v8.0 | 0/? | Not started | — |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
