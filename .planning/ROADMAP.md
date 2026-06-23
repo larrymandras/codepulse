@@ -7,7 +7,7 @@
 - ✅ **v6.0 Agentic OS Front-End** — Phases 71-77 (71/72/73/74 shipped light; 77 complete 2026-06-18; **75 Agent Console superseded by v7.0 Forge** 2026-06-18; **76 Unified Graph Hub NOT shipped → deferred to v8.0** per 2026-06-18 reconciliation)
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 - ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**shipped 2026-06-23**) — unified Graphs hub + KG depth features — [archive](milestones/v8.0-ROADMAP.md)
-- 🌱 **v9.0 Readability & Experience (seed)** — Phase 89 (**created 2026-06-22**) — readable theme system + editorial skin toggle (Matrix-Emerald is hard to read); Agent Room + 3D galaxy are candidate follow-ons
+- 🌱 **v9.0 Readability & Experience** — Phases 88-91 (**active, started 2026-06-23**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy
 
 ## Phases
 
@@ -196,6 +196,79 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 </details>
 
+---
+
+## v9.0 Readability & Experience — ACTIVE (started 2026-06-23)
+
+**Milestone goal:** Make CodePulse readable and richer to operate — a readability-first, fully token-driven theme system with the "Midnight Aubergine" editorial skin, a durable Convex analytics rollup, the Agent Room completed into a real multi-persona surface, and an opt-in 3D render mode for the code/vault/KG graph.
+
+**Phase summary:**
+
+- [ ] **Phase 88 — Analytics Rollup** — Durable Convex 16 MiB read-limit fix via ingest-time rollups
+- [ ] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
+- [ ] **Phase 90 — Agent Room / War Room** — Wire live participant identity + bounded listing + real operator Join + transcript robustness
+- [ ] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware
+
+**Execution order:** 88 → 89 → 90 → 91 (88 is independent; 89 token cleanup gates 91's theme-aware node colors; 90 cross-repo audit recommended before 91 starts but can run in parallel with 91 if audit clears fast)
+
+## Phase Details
+
+### Phase 88: Analytics Rollup
+**Goal**: Analytics queries read pre-aggregated rollup buckets instead of scanning raw event documents — eliminating the Convex 16 MiB/exec read-limit risk permanently.
+**Depends on**: Nothing — Convex-only, no UI surface, lowest regression risk.
+**Requirements**: AR-01, AR-02, AR-03
+**Success Criteria** (what must be TRUE):
+  1. Every analytics query (`activityHeatmap`, `toolFlowSankey`, `errorRateTrend`, `tokenSunburst`, `tokenWaterfall`) reads well under 16 MiB at any event volume — no `.take()` count caps remain once rollups are authoritative.
+  2. Rollup increments are idempotent: at-least-once ingest retries do not double-count; a one-time historical backfill action populates rollups for pre-existing events.
+  3. Heatmap, sankey, and error-trend data fidelity is no longer bounded by the capped `.take()` limits restored after the quick-unblock (heatmap ≤1000, sankey ≤1000, errorRateTrend ≤300×3).
+  4. Archival/retention sweeps in `dataRetention.ts` do not inflate or corrupt rollup counts (rollups remain consistent after events are archived or deleted).
+**Plans**: TBD
+
+---
+
+### Phase 89: Readable Themes & Editorial Skin Toggle
+**Goal**: Operators can switch between a readable WCAG-AA theme, the Midnight Aubergine editorial skin, and Matrix Emerald — with zero flash on hard refresh and full token coverage across every surface including canvas-rendered graphs.
+**Depends on**: Phase 71 design tokens (foundation exists; TH-01 token cleanup is the internal first step).
+**Requirements**: TH-01, TH-02, TH-03, TH-04, TH-05, TH-06
+**Success Criteria** (what must be TRUE):
+  1. The saved skin (Electric Cyan / Matrix Emerald / Midnight Aubergine) applies before first paint on hard refresh — no visible flash of unstyled or wrong-theme content (FOUC eliminated; blocking inline `<script>` in `index.html`; the two stale localStorage keys consolidated into one).
+  2. `axe-core/playwright` reports zero WCAG-AA contrast violations on the five highest-traffic pages (Dashboard, Live Run, Analytics, Forge, Graphs) for every shipped theme.
+  3. Canvas-rendered graphs (`ForceGraphCanvas`, `CodeVaultGraph`, KG Explorer) respect the active theme — no hardcoded `#06b6d4` cyan or `#10b981` emerald nodes remain; node colors read CSS custom properties via `useThemeColors()`.
+  4. The Midnight Aubergine editorial skin renders with its full token set (warm aubergine background, cream text, gold/emerald/plum accents, paper-grain overlay) — distinct from and coexisting with the other two skins via `[data-theme="aubergine"]`.
+  5. Scanline / matrix-grid / heavy glow animations are disabled for users with `prefers-reduced-motion` enabled; the default skin remains Electric Cyan (readable theme is opt-in).
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 90: Agent Room / War Room
+**Goal**: The War Room surface shows real agent identity and gives the operator a genuine Join pathway — completing the ~70-75% built scaffolding into a usable, bounded, robust multi-persona room.
+**Depends on**: Phase 88 (recommended — no hard dependency, but analytics stability reduces noise). Cross-repo: `astridr-repo` `POST /api/war-room` existence confirmed; participant-join surface must be audited before planning.
+**Requirements**: ROOM-01, ROOM-02, ROOM-03, ROOM-04
+**Success Criteria** (what must be TRUE):
+  1. The War Room renders real participant identity — agent names, avatars, colors, and role badges sourced from `useRosterAgents()` data, not the four hardcoded placeholder props in `WarRoom.tsx`.
+  2. Room listing is bounded (no unbounded `.collect()` on `warRooms`) and rooms are visibly populated from real Ástríðr→Convex ingest events (the `warRooms` ingest path confirmed live).
+  3. The operator's "Join" button sends a real signal to Ástríðr (not cosmetic) — confirmed against the `astridr-repo` participant-join/voice surface; if real-time voice is unavailable in this phase, observer mode ships with an honest label.
+  4. Each room has a stable deep-link URL (`/war-room/:roomId`) and transcript chunks render in deterministic order via a `seq` field (no out-of-order rendering under concurrent ingest).
+**Plans**: TBD
+
+---
+
+### Phase 91: 3D Memory Galaxy
+**Goal**: Operators can toggle an opt-in 3D render mode on `CodeVaultGraph` that renders the full ~4,038-node production graph at acceptable frame rates — without shipping three.js to users who stay in 2D mode.
+**Depends on**: Phase 89 (TH-01 `useThemeColors()` resolver required for G3D-02 theme-aware node colors — hard dependency; 91 must come after 89 is complete).
+**Requirements**: G3D-01, G3D-02
+**Success Criteria** (what must be TRUE):
+  1. The 3D toggle is visible on `CodeVaultGraph`; switching to 3D renders the graph using `react-force-graph-3d` and switching back to 2D restores `ForceGraphCanvas` — the 2D render path is unchanged and no regression exists on the default 2D view.
+  2. The 2D bundle does not include three.js — `vite build` chunk manifest confirms `three` is isolated to its own lazy chunk; the 2D path loads zero three.js code.
+  3. The 3D mode renders the ~4,038-node production graph at ≥30 FPS (validated against the live snapshot from the Convex `graphSnapshots` table before shipping).
+  4. Toggling 2D↔3D disposes the WebGL context cleanly — no memory leak on repeated toggle (verified via DevTools memory snapshot or equivalent); the toggle state persists across page reloads via `idb-keyval`.
+  5. 3D node colors respect the active theme — colors read from the Phase 89 `useThemeColors()` resolver, not hardcoded hex values.
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -208,59 +281,17 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 77. CI & Prod Hardening | v6.0 | 3/3 | ✅ Complete | 2026-06-18 |
 | 78. Forge Emitter + Schema | v7.0 | ✅ | Complete | 2026-06-13 |
 | 79. Forge UI Tab (read-only) | v7.0 | 3/3 | Complete (PR #20) | 2026-06-15 |
-| 80. Command Bridge | v7.0 | 4/4 | Complete    | 2026-06-16 |
-| 81. Live Log Streaming | v7.0 | 4/4 | Complete   | 2026-06-17 |
+| 80. Command Bridge | v7.0 | 4/4 | Complete | 2026-06-16 |
+| 81. Live Log Streaming | v7.0 | 4/4 | Complete | 2026-06-17 |
 | 82. Files + Preview + Hardening | v7.0 | 4/4 | Complete | 2026-06-17 |
-| 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete   | 2026-06-18 |
-| 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
-| 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
-| 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete   | 2026-06-23 |
-| 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete   | 2026-06-23 |
-| 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
-| 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
+| 83. Graph Snapshot Receiver | v8.0 | 3/3 | Complete | 2026-06-18 |
+| 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete | 2026-06-22 |
+| 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete | 2026-06-22 |
+| 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete | 2026-06-23 |
+| 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
+| 88. Analytics Rollup | v9.0 | 0/? | Not started | — |
+| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 0/? | Not started | — |
+| 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
+| 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 
-### Phase 88: Analytics Rollup Table — durable fix for Convex 16 MiB read-limit in analytics aggregation queries
-
-**Goal:** Eliminate the Convex per-execution read-limit risk in `convex/analytics.ts` by reading pre-aggregated rollups instead of scanning raw `events` rows. The analytics queries (`activityHeatmap`, `toolFlowSankey`, `errorRateTrend`, `tokenSunburst`, `tokenWaterfall`) currently read full `events` documents whose `payload: v.any()` blobs are fat (~9 KB/row), just to aggregate `timestamp`/`eventType`. `activityHeatmap` hit the 16 MiB/exec read limit in prod (`tidy-whale-981`) and was quick-patched 2026-06-20 by lowering `.take()` caps (heatmap 5000→1000, sankey 2000→1000, errorRateTrend 500→300×3, llmMetrics `.collect()`→`.take(30000)`). That patch is fragile and count-caps fidelity — it regresses as payload sizes grow.
-
-**Context:** Convex always reads whole documents (no column projection) and `.filter()` runs post-index-scan, so every analytics read pays the full `payload` byte cost. Quick unblock shipped to dev; this phase is the durable replacement.
-
-**Approach (to refine in planning):** Maintain slim pre-aggregated rollup table(s) updated at ingest time (`convex/ingest.ts` / `runtimeIngest.ts`) — e.g. day-hour activity buckets, error-type counts per hour, llm token/cost totals per provider/model. Analytics queries then read O(buckets) instead of O(events). Once rollups are authoritative, restore full-fidelity analytics and remove the `.take()` caps.
-
-**Acceptance:**
-
-- All analytics queries read well under 16 MiB regardless of total event volume (verify via `npx convex run` byte WARN absence at scale).
-- Heatmap / sankey / error-trend fidelity no longer bounded by `.take()` count caps.
-- Rollups stay correct under ingest, archival, and backfill.
-
-**Requirements**: TBD
-**Depends on:** None — standalone observability hardening, independent of the v8.0 Graph/KG milestone (83–87).
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (run /gsd-plan-phase 88 to break down)
-
----
-
-### Phase 89: Readable Themes & Editorial Skin Toggle — v9.0 seed
-
-**Status:** 🌱 SEED (created 2026-06-22 from the Agent OS mining initiative — vault `agent-os-mining-initiative.md`). **UI phase** → run `/gsd-ui-phase 89` (UI-SPEC required) then `/gsd-plan-phase 89`.
-
-**Goal:** Give the operator a theme toggle with a **readability-first** theme — the shipped **Matrix-Emerald cyberpunk** skin is hard to read in places (low contrast, CRT/glow noise over text). Add a warm **"Midnight Aubergine" editorial** theme as a premium alternative; keep Matrix-Emerald as an option.
-
-**Why:** Direct operator feedback (Larry, 2026-06-22). Readability is the priority; "cooler" is secondary. Pairs with the unfinished Phase 71 token cleanup (themes must be 100% token-driven).
-
-**Proposed Requirements:** TH-01 (token-driven theming, finish Phase 71 audit), TH-02 (readability-first WCAG-AA theme, reduced glow/scanline over text), TH-03 (Midnight Aubergine editorial theme as tokens), TH-04 (keep Matrix-Emerald), TH-05 (no-flash persisted switcher + prefers-reduced-motion), TH-06 (a11y/contrast pass via Playwright/axe). Full detail + open questions in `phases/89-readable-themes-editorial-skin-toggle/89-CONTEXT.md`.
-
-**Depends on:** Phase 71 design tokens (recommended to finish first). **UI hint:** yes.
-
-**Candidate follow-ons (v9.0):** Agent Room (multi-persona live group chat over `/room`+`/war-room`), 3D Memory Galaxy (React Three Fiber mode for CodeVaultGraph). Tracked here, not yet phased.
-
-**Provenance** (re-implement, do NOT copy): pack `src/app/globals.css` (Midnight Aubergine tokens, paper-grain `body::before`, ambient `body::after`, editorial primitives). Ground truth: `phases/071-unified-design-system/UI-SPEC.md`, `src/index.css`.
-
-**Plans:** 0 plans.
-
----
-
-*Last updated: 2026-06-20 — **Phase 88 (Analytics Rollup Table) added** as standalone observability hardening after `analytics.ts` hit Convex's 16 MiB/exec read limit; quick unblock shipped + deployed (`edb614c`). v8.0 Graph/KG in progress (83 complete; 84-87 pending). Next: `/gsd-plan-phase 84` or `/gsd-plan-phase 88`.*
+*Last updated: 2026-06-23 — v9.0 Readability & Experience roadmap defined (Phases 88-91). Execution order: 88 → 89 → 90 → 91. Phase 88 (AR-01..03) and Phase 89 (TH-01..06) already scaffolded. Phase 90 (ROOM-01..04) and Phase 91 (G3D-01..02) are new. Phase 89 TH-01 token cleanup gates Phase 91's theme-aware node colors (hard dependency). Phase 90 requires a cross-repo Ástríðr audit before planning (confirm `POST /api/war-room` ingest path + participant-join surface). Next: `/gsd-plan-phase 88`.*

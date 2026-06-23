@@ -6,7 +6,7 @@ status: planning
 last_updated: "2026-06-23T21:17:15.400Z"
 last_activity: 2026-06-23
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,174 +17,56 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-18)
+See: .planning/PROJECT.md (updated 2026-06-23)
 
-**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** v8.0 Graph/KG Consolidation — COMPLETE (phases 83-87 all shipped + verified). Ready to close via `/gsd-complete-milestone`; next active milestone is v9.0 Readability & Experience (Phase 89 seed).
-**Last completed:** Phase 87 — Saved Views + Temporal Diff (KG-10, KG-11), 4/4 plans, 2026-06-23. KG-10: global-scope `savedKgViews` Convex table (`by_shareToken`/`by_createdAt`) + `useSavedViews` hook (strips `searchQuery`, client `crypto.randomUUID()` token) + `KGViewsPopover` + one-shot `?view=<token>` share-link hydration (four-guard race protection). KG-11: `Point | Diff | Animate` temporal sub-mode toggle (Point unchanged, no regression); `useKgDiff`/`computeDiff` client-side set-arithmetic + `paintNodeDiff` green/red/amber/dimmed + DIFF legend; `useKgAnimation` client-synth frames + 20-entry LRU + transport. Code review found 1 BLOCKER (CR-01: animation prefetch shared the display token → stuck frame) + 4 warnings — **all fixed** (`bd58402`) with a renderHook regression test. Verifier: 4/4 code-level; **all 6 human UAT items confirmed PASS in a real browser** (Playwright vs auth-free :5174 + live Convex/Ástríðr). **Deployed to prod `tidy-whale-981`** (`npx convex deploy --yes`; `savedKgViews:list --prod` → `[]`). Also fixed 2 stale pre-existing test assertions (SwarmTaskNode 260→300px, KanbanCard text-xs selector) surfaced by the regression gate. **Prior:** Phase 85 — Cross-Graph Navigation (GH-04), 4/4 plans, 2026-06-22. Shared `src/lib/focus-url.ts` (`buildFocusUrl`, normalized-EXACT `focusKeysMatch`, same-origin `decodeFromParam` guard) + `src/hooks/useFocusParam.ts` one-shot focus hook; forward links + `?from` return chips wired into Tool Galaxy (tool→owning-agent), CodeVaultGraph (agent→KG entities), KnowledgeGraph (destination). Code review fixed CR-01 (`?from` double-decode), WR-01 (backslash guard), WR-03 (hops clamp), WR-02 (centering rAF-retry via `src/lib/graph-center.ts`), WR-04 (KG reactive hydration). UAT demonstrated live in Playwright on the real graph: `telegram_tool → "Owning agent: Hildr" → /graphs?focus=vault:Hildr&from=… → "Back to Tool Galaxy"` round-trip; SC#2 gate confirmed (41 KG entities for agent_id=astridr). **Ingest hardening (same session):** `/runtime-ingest` now summarizes `graph_snapshot` in legacy `runtime_events` (`convex/ingestSummary.ts` `legacyEventData`) — was rejecting >1 MiB graphs at the legacy insert and silently capping the production cron; **deployed to `tidy-whale-981`**, and the full ~4,038-node real snapshot (astridr-repo 1500 + codepulse 1500 + vault 1038) is now live via the Phase 83 receiver. **Prior:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
+**Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
+**Current focus:** v9.0 Readability & Experience — 4 phases (88-91) defined, none started. Start with Phase 88 (Analytics Rollup — independent, Convex-only, lowest risk).
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (Phase 88 is next)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-06-23 — Milestone v9.0 started
+Status: Ready to plan Phase 88
+Last activity: 2026-06-23 — v9.0 roadmap defined (Phases 88-91, 15 requirements mapped)
 
-## Milestone v8.0 Roadmap (2026-06-18)
+Progress: [░░░░░░░░░░] 0%
+
+## v9.0 Roadmap
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 83 | Graph Snapshot Receiver | GH-01 | ✅ Complete + verified (2026-06-18) |
-| 84 | Graphs Hub + Code/Vault Render | GH-02, GH-03 | ✅ Complete + UAT passed (2026-06-22) |
-| 85 | Cross-Graph Navigation | GH-04 | ✅ Complete (4/4, 2026-06-22) |
-| 86 | KG Full-Text Search + Clustering Layout | KG-08, KG-09 | ✅ Complete (3/3, 2026-06-23) — KG-09 (community cluster renderer, Plans 01-02) + KG-08 (full-text Search lens, Plan 03, gated on Ástríðr /api/kg/search SEED) |
-| 87 | Saved Views + Temporal Diff | KG-10, KG-11 | ✅ Complete + verified + UAT (4/4 code, 6/6 in-browser) + deployed to prod (2026-06-23) |
+| 88 | Analytics Rollup | AR-01, AR-02, AR-03 | Not started |
+| 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | Not started |
+| 90 | Agent Room / War Room | ROOM-01..ROOM-04 | Not started |
+| 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
 
-**Key sequencing constraint:** Phase 83 (receiver) must land before any rendering phase. Phase 86 (full-text search) carries a cross-repo dependency on a net-new Ástríðr `/api/kg/search` endpoint — flag at plan time.
-
-## Milestone Status (2026-06-18)
-
-**v7.0 Forge Integration — COMPLETE (2026-06-17).** Promoted 2026-06-13 from backlog 999.1, activated 2026-06-16, all 5 phases (78-82) shipped + verified by 2026-06-17. Surface-Substrate fold-in of Forge into CodePulse. Forge engine stays LOCAL; cloud-frontend ↔ local-daemon bridge via Convex ingest (up) + command queue (down). Ready to close via `/gsd-complete-milestone`.
-
-| Phase | Name | Status |
-|-------|------|--------|
-| 78 | Forge Emitter + Convex Schema | ✅ Shipped (2026-06-13) |
-| 79 | Forge UI Tab (read-only) | ✅ Shipped — PR #20 (2026-06-15) |
-| 80 | Command Bridge (launch + stop) | ✅ Complete (4/4, verified live 2026-06-16) — FI-06/07/08 |
-| 81 | Live Log Streaming | ✅ Complete (4/4, verified live 2026-06-17) — FI-09/10/11 |
-| 82 | Files + Artifact Preview + Hardening | ✅ Complete (4/4, 2026-06-17) — FI-12/13/14; listing bridge verified live; preview-bytes ACL fix applied (forge a31dca4 + dbfad91) but live preview round-trip pending operator verify; ingest key rotated; daemon auto-started |
-
-**v6.0 Agentic OS Front-End — RESOLVED (closed 2026-06-18).** 71/72/73/74/76 shipped (light-mode); **77 (CI & Prod Hardening) ✅ complete (3/3, verified 2026-06-18 — OPS-01/02 done, OPS-03 N/A).** **75 (Agent Console) SUPERSEDED by v7.0 Forge (2026-06-18):** its gates — Ástríðr M1.P0 (scoped token) + M1.P3 (gateway browse) — cleared 2026-06-10, but the launch/stop + live-logs + file-preview capability was delivered through the Forge daemon + Convex bridge (v7.0 phases 80-82) instead of browser-direct-to-`:8200`. The two remaining cross-repo gateway deltas (CORS POST/DELETE + `TaskRequest.model`) are no longer needed. 6 planned Phase 75 plans retired — see `phases/75-agent-console/75-SUPERSEDED.md`. Requirements retained in REQUIREMENTS.md.
+**Execution order:** 88 → 89 → 90 → 91. Phase 89 TH-01 (`useThemeColors()`) gates Phase 91 (hard dependency). Phase 90 requires cross-repo Ástríðr audit before planning.
 
 ## Accumulated Context
-
-### Roadmap Evolution
-
-- Phase 88 added (2026-06-20): Analytics Rollup Table — durable fix for the Convex 16 MiB/exec read-limit hit by `analytics.ts` aggregation queries. Standalone observability hardening, independent of v8.0. Prod-impacting quick unblock (lowered `.take()` caps) shipped same day; this phase replaces it with ingest-time rollups.
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
 
-**Phase 87 Plan 03 decisions (2026-06-23):**
-
-- **paintNodeDiff closes over `diff` state** — avoids changing `ForceGraphCanvas` paintNode signature; closes over diff sets via `useCallback([selectedNodeId, diff])`.
-- **linkColorDiffFn/linkLineDashDiffFn as factory fns + useMemo([diff])** — prevents `ForceGraphCanvas` re-mounts on every render; diff edge fns recreated only when `diff` changes.
-- **isDiffActive flag drives canvas fork** — diff mode uses `diffGraphB` + diff paint fns; Point mode uses original `paintNode`/`linkColorFn` (no regression SC).
-- **diffEdgeKey duplicated in KnowledgeGraph.tsx** — avoids circular import with `useKgDiff`; comment documents sync invariant.
-
-**Phase 86 Plan 01 decisions (2026-06-23):**
-
-- **KG-09 halo architecture** — drawn in `ForceGraphCanvas` shared `paint` wrapper via new `communityColorFn` prop, not in each caller's `paintNode`. Single implementation serves both KG and CodeVaultGraph without duplication.
-- **COMMUNITY_PALETTE hex overlap** — slots 1/4/5 intentionally share values with ENTITY_TYPE_COLORS. The plan's "none present in ENTITY_TYPE_COLORS" behavior spec conflicted with the locked UI-SPEC hex values. Exact UI-SPEC values take precedence; semantic distinctness preserved by different visual roles (halo ring vs. node fill).
-
-**Phase 86 Plan 02 decisions (2026-06-23):**
-
-- **KG Explorer single halo path** — `communityColorFn` prop on `<ForceGraphCanvas>` used on the KG call site; the page's `paintNode` is not modified. Avoids double-stroke and keeps the halo implementation in one place (shared paint wrapper from Plan 01).
-- **Communities legend auto-hide** — `presentCommunities.length > 0` conditional; no "no clusters" copy rendered when community-less (Q4-A). Mirrors the `legendTypes` useMemo pattern for consistency.
-
-**Phase 86 Plan 03 decisions (2026-06-23):**
-
-- **KG-08 search results in page-local state** — Hook manages only lens/filter plumbing; results live in `KnowledgeGraph.tsx` so `rawGraph` (used by the canvas) doesn't conflict with search hits.
-- **searchQuery ephemeral** — Stripped from idb persist; `lens=search` not restored on hydration (stale query UX). RESEARCH Pitfall 6 / Open Q3.
-- **D-01 gate in consumer (KnowledgeGraph.tsx)** — `kgApi.fetchSearch` / `kgGet` throws `AstridrApiError` on any non-2xx; the page inspects `e.status` for 404/501 → not-deployed informational copy vs red error banner.
-- **subjectName verbatim** — No normalization between search hit's `subjectName` and `buildFocusUrl`. Exact-match is correct for `useFocusParam`; normalization would cause silent focus misses (RESEARCH Pitfall 4).
-- **Results-only Search lens layout** — No mini subgraph in Search lens; click-to-ego via `buildFocusUrl` is the graph exploration path (RESEARCH Pattern 4).
-- **Cross-repo SEED for Ástríðr** — `/api/kg/search` must include `subjectName` in each hit (A2); default GET with query params; 404/501 used as the endpoint-not-deployed signal.
-
-**v7.0 Forge Integration decisions:**
-
-- **Surface-Substrate bridge** — Forge runs as a local daemon; state goes UP via `/forge-ingest` httpAction, commands come DOWN via a Convex `forgeCommands` queue the daemon long-polls. Rejected: a cloud tab calling `http://localhost` directly (mixed-content blocked).
-- **Read-only, one-way until Phase 80** — Forge is source of truth for job state; Convex is a replica. Idempotent upserts keyed by `(hostId, forgeJobId)`, last-writer-wins on `updatedAt` (D-05, Phase 78).
-- **Shared bearer auth** — `FORGE_INGEST_API_KEY`, server-to-server only, never in the browser (D-03, Phase 78). Phase 81 log-ingest reuses the same key (081-SPEC D-3).
-- **Phase 81 design locked (081-SPEC, 2026-06-15)** — supersedes the original HIGH-risk SSE/WebSocket spike. Logs: `POST /forge-log-ingest` → append-only `forgeLogChunks` (monotonic per-job `seq` for ordering + idempotency, D-1) → reactive `forge.listJobLogs` query. Convex reactivity IS the live tail (no transport to build). Retention: 7-day TTL cron + per-job byte cap, drop-oldest, with a test (D-2). Risk: HIGH → LOW.
-
-**Phase 81 Plan 01 implementation notes (2026-06-16):**
-
-- `appendLogChunk` is `internalMutation` (not `mutation`) — httpActions have no Clerk identity (81-SPEC §Locked design 3). Same rule as `upsertJob`.
-- `sentAt` uses `v.optional(v.string())` in both schema and mutation args. At the call site in `forgeLogIngest.ts`: `body.sentAt ?? undefined` (coerce absent/null → undefined to satisfy `v.optional`; never pass `null`).
-- D-1 idempotency: `by_host_job_seq` three-field index + `.unique()` check before insert; existing `(hostId,forgeJobId,seq)` → `return` (no-op, no patch — append-only invariant preserved).
-- `listJobLogs` orders `.order("asc")` — oldest chunk first (terminal top-to-bottom display), unlike `listJobs` desc.
-- `LOG_CHUNK_LIMIT = 5000` placed near `JOB_LIST_LIMIT = 1000` per file convention (D-03: retention bounds real set to ~1 MB/job).
-
-**Phase 81 Plan 02 implementation notes (2026-06-16):**
-
-- `sweepForgeLogChunks` is `internalMutation` (same rule — cron scheduler, no Clerk identity). Two-pass: TTL first, then per-job byte cap.
-- Pure helpers exported from `forge.ts` (`chunkByteSize`, `selectTtlDeletes`, `selectCapDeletes`) so the retention test can exercise deletion logic without a Convex runtime — mirrors the `simulateForgeLogIngestDispatch` pattern from plan 01.
-- `LOG_BYTE_CAP_PER_JOB = 1_000_000` (~1 MB, D-01 discretion) and `SEVEN_DAYS_MS` defined as module-level consts in the Phase 81 section.
-- `selectCapDeletes` iterates chunks in ascending seq order (oldest first) and accumulates deletes until `total <= capBytes` — newest chunks always survive by construction.
-- `crons.daily` at `hourUTC:3 minuteUTC:30` — 30 min offset from `evaluate-memory-quality` (03:00) to avoid scheduler contention.
-
-**Phase 81 Plan 03 implementation notes (2026-06-16):**
-
-- `useForgeJobLogs` uses `useMemo([raw])` — referential stability prevents render-loop churn under live data (Phase 80 lesson applied).
-- `isAutoScrollingRef` initialized to `true` — log pane is always live; no replay mode (unlike TranscriptPanel which uses a `live` prop).
-- Scroll viewport is a plain `<div data-testid="forge-log-viewport" onScroll={handleScroll}>` — owned directly, not via ScrollArea, for jsdom testability and to match TranscriptPanel pattern.
-- Tab strip uses local `useState<'details'|'logs'>` (not shadcn Tabs) — simpler two-state switch; default `'details'` preserves Phase 79/80 ForgeMetadataPanel behavior.
-- `ForgeLogPane.test.tsx` simulates scroll via `Object.defineProperty` on `scrollHeight`/`clientHeight`/`scrollTop` — jsdom does not lay out, so real scrolling must be manually constructed.
-
-**Phase 82 Plan 01 implementation notes (2026-06-17):**
-
-- New tables `forgeFiles` + `forgeArtifacts` inserted between `forgeLogChunks` and `forgeWorkspaces` in schema.ts. NO `seq` field — idempotency key is `(hostId, forgeJobId, path)` via `by_host_job_path` index (Pitfall 6). `createdAt` is an explicit ISO string for TTL (not `_creationTime`).
-- `upsertFileEntries` is last-writer-wins PATCH on re-push (file size may change), unlike append-only `appendLogChunk` no-op. `upsertArtifacts` calls `ctx.storage.delete(existing.storageId)` BEFORE patch when overwriting an image with a different storageId (D-05 blob leak prevention).
-- `artifactByteSize` checks `textContent !== undefined` (NOT truthiness) — empty-string textContent must count as 0 bytes, not fall through to sizeBytes. Caught by a RED test.
-- `getJobArtifact` resolves `ctx.storage.getUrl(storageId)` inside the QueryCtx (available per Convex serve-files docs) and returns `{...artifact, imageUrl}`; text artifacts return `imageUrl: null`.
-- httpAction (`forgeFileIngest`) decodes base64 image bytes via `atob` (Buffer.from fallback), `new Blob([bytes.buffer as ArrayBuffer])` (tsc requires ArrayBuffer not Uint8Array for BlobPart), `ctx.storage.store(blob)` in ActionCtx — `imageBase64` is stripped from the dispatched artifact, never persisted (Pitfall 3 / T-82-06).
-- Pure helpers (`artifactByteSize`, `selectFileTtlDeletes`, `selectFileCapDeletes`) exported from forge.ts so retention tests run without a Convex runtime. `sweepForgeFileRecords` two-pass (TTL + per-job cap), storage.delete BEFORE db.delete in both passes (D-05). Cron registration deferred to 82-02.
-
-**Phase 82 Plan 04 implementation notes (2026-06-17):**
-
-- `enumerateWorkspace` in `forge/src/workspace/enumerate.ts` applies two layers of guard before any byte read: (1) `guardPath` (lexical, T-82-14) catches `..`-style traversal via PathTraversalError; (2) `fs.realpathSync.native` containment check (physical, T-82-15) catches symlink/junction escapes that pass lexical check.
-- `FORGE_FILE_INGEST_URL` stores the FULL endpoint URL including `/forge-file-ingest` path. `emitFiles` passes it directly as the POST target — no path appended (Pitfall 5). Mirrors FORGE_LOG_INGEST_URL convention from log-forwarder.ts.
-- `FullEmitCfg = EmitCfg & { fileIngestUrl?: string }` exported from `config.ts`. Widened through `createGoalJob`, `handleChatJob`, `registerJobRoutes`, `createApiServer` via intersection type — no breaking change to existing EmitCfg consumers.
-- `void emitFiles(...)` wired AFTER `promoteWorkspace` in both terminal paths (chat: `handleChatJob` in jobs.ts; goal: `createGoalJob` exit handler in manager.ts). Output files land in `workspace.rootPath` only after promotion — placing the call before promotion would enumerate zero files.
-- ESM-sealed `fs.readdirSync` (non-configurable module namespace): spy-based synthetic dirent injection not possible. Tests use real temp dirs + direct guardPath assertion (Test B) and `fs.realpathSync.native` sub-property spy (Test C, which IS configurable as a function property).
-- Live round-trip: PENDING OPERATOR VERIFICATION. See 82-04-SUMMARY.md § CHECKPOINT.
-
-**Phase 82 Plan 03 implementation notes (2026-06-17):**
-
-- `useForgeJobFilesRaw` returns `undefined | ForgeFileRow[]` (mirrors `useForgeJobsRaw` pattern) so `ForgeFilesPane` can distinguish loading from genuinely-empty terminal result and show the spinner. `useForgeJobFiles` coalesces `undefined → []` for callers that don't need the distinction.
-- `useForgeWorkspace(hostId, workspaceId)` resolves `rootPath` from `listWorkspaces({hostId})` — `ForgeJobRow` carries `workspaceId` not `rootPath`, so the lookup is needed (A7). Falls back to the passed `workspace.rootPath` prop.
-- `ForgeFilesPane` split into outer shell (terminal-state gate before any hook, early return safe) and `ForgeFilesPaneContent` (all hooks called unconditionally) to satisfy React rules of hooks — hooks cannot be called after a conditional return in the same component.
-- Security audit grep (`grep -rE "allow-same-origin|dangerouslySetInnerHTML"`) catches comment strings explaining invariants. Fixed by rewriting comments to use equivalent phrasing that doesn't include the exact audit strings; `ArtifactPreview.test.tsx` uses regex to test JSX attribute usage not comments.
-- `ForgeJobDetail` passes `workspace={{ rootPath: "" }}` (fallback) + `workspaceId={job.workspaceId}` — resolved to real rootPath inside `ForgeFilesPaneContent` via `useForgeWorkspace`.
-- `SectionErrorBoundary` is a default export; import as `import SectionErrorBoundary from "@/components/SectionErrorBoundary"`.
-
-**Phase 79 implementation notes (carried):**
-
-- JobStatus/JobMode inline in useForge.ts for path isolation.
-- ForgeStatusBadge uses Tailwind tokens; SC#4 amber≠red preserved.
-- ForgeJobList card is a single button (delete-X stripped per D-01).
-- ForgePage derives isLoading from `useForgeJobsRaw() === undefined`; detail renders from the loaded list row — no getJob round-trip.
-- Flame icon for the Forge CONSOLE nav entry (no collision with hammer, D-06).
-
-**Phase 80 implementation notes (carried):**
-
-- 80-03 (B2): optimistic "Queued" row owned by ForgePage-local `pendingLocal` useState (NOT `withOptimisticUpdate`) — a Convex optimistic write keyed by `{hostId}` would land in a different cache entry than ForgePage's `listForgeCommands({})` subscription, so the row would not paint until the round-trip. Modal reports the row up via `onLaunched`/`onLaunchFailed`; a reconciliation effect drops it once `resolvedForgeJobId` appears in `jobs`.
-- 80-03 (W2): `useUser()` throws outside a `<ClerkProvider/>`, and `main.tsx` omits the provider when Clerk is unconfigured. ForgePage calls `useUser` only inside `ClerkAuthProbe`, mounted exclusively when `VITE_CLERK_PUBLISHABLE_KEY` is set (mirrors `AuthGuard`); `isAuthenticated` defaults to `false` (fail-closed, never crashes).
-- 80-03 (D-06/D-07): ForgeLaunchModal port drops dangerous-mode and inline workspace creation entirely; capabilities never include `dangerous`.
-- 80-03: relative Convex API import from `src/components/forge/` is `../../../convex/_generated/api` (three levels), not `../../`.
-- 80-04 (D-03): Stop is a two-step shadcn `AlertDialog` confirm (`ForgeStopConfirmDialog`) — trigger → dialog → "Yes, stop the job"; copy surfaces `taskkill /T /F` hard-kill + work-discard + irreversibility verbatim from the UI-SPEC. No one-click stop.
-- 80-04 (D-04 / Pitfall 2): `isStoppingLocal` lives on the Stop BUTTON only (`useState` in `ForgeJobDetail`). The `forgeJobs` status badge NEVER flips optimistically — there is NO `setQuery` terminal patch. It stays `Stopping…` until a `useEffect` keyed on `job.status` clears it when the reactive query delivers a non-running status. Mutation error resets it + `sonner` toast.
-- 80-04: Stop button rendered ONLY when `job.status === "running"` (hidden on all terminal states); `commandId` via `crypto.randomUUID()`. Added a pending/expired/failed command-row detail pane (D-10/D-11) — branches on a status sentinel + "no real metadata" guard since `ForgeJobRow` has no `_type` discriminant.
+**v9.0 scoping decisions (2026-06-23):**
+- **Reverse "3D out of scope"** — opt-in mode on `CodeVaultGraph` only (not a new page); `react-force-graph-3d` not R3F (near-identical prop API, manages own WebGLRenderer).
+- **Phase 89 sub-sequence** — token cleanup (77 hex sites) → no-flash script → key consolidation → Aubergine tokens → WCAG-AA axe audit. `class="dark"` stays permanent (all v9.0 themes are dark variants).
+- **Phase 90 cross-repo gate** — confirm `POST /api/war-room` ingest path and `warRooms` Convex population before writing any ROOM code. If Join isn't feasible, ship observer mode with honest label.
+- **Phase 88 quick-unblock** — `.take()` caps deployed `edb614c` are fragile; this phase replaces them with ingest-time rollups in `convex/analyticsRollup.ts` (new file) + wired from `ingest.ts` / `runtimeIngest.ts`.
 
 ### Pending Todos
 
-- **Phase 82 preview round-trip:** PENDING OPERATOR VERIFICATION — see 82-04-SUMMARY.md § CHECKPOINT. Forge daemon preview-bytes ACL fix (dbfad91) applied but live verification not yet confirmed.
-- **v8.0 Phase 84 (next):** Discuss + plan + execute Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), consuming Phase 83's `getProjectGraph`. Run `/gsd-discuss-phase 84`.
+- **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
+- **Archive-name collision:** Before `/gsd-complete-milestone`, rename `milestones/v9.0-*.md` etc. (stale archives from a different Astridhr track) to `astridhr-adversarial-v9.0-*` so the completion step doesn't clobber them.
 
 ### Blockers/Concerns
 
-- **KG-08 cross-repo dependency:** Phase 86 requires a net-new Ástríðr `/api/kg/search` endpoint for full-text fact search. This is the one confirmed Ástríðr-side delta in v8.0. Must be flagged and coordinated at plan time.
-- **Phase 82 preview verification (open):** Live end-to-end preview round-trip not yet confirmed by operator (per 82-04-SUMMARY § CHECKPOINT). Not a blocker for v8.0 but should close before declaring v7.0 fully done.
+- **Phase 90 cross-repo dependency (ROOM-03):** Real operator Join requires extending the Ástríðr participant-join/voice surface. If not ready, observer mode is the fallback. Must audit before Phase 90 plan.
+- **Phase 91 FPS at 4,038 nodes:** No controlled benchmark yet. FPS ≥30 is a blocking acceptance criterion — validate against the live `graphSnapshots` snapshot before shipping.
 
 ## Session Continuity
 
-Last session: 2026-06-23T18:37:15.851Z
-Stopped at: Phase 87 context gathered
-Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
+Last session: 2026-06-23
+Stopped at: v9.0 roadmap written (ROADMAP.md + STATE.md + REQUIREMENTS.md traceability)
+Next action: `/gsd-plan-phase 88` — Analytics Rollup (AR-01..03)
 Resume file: None
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone

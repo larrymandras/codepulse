@@ -66,4 +66,18 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _filled by roadmap_ | | |
+| TH-01 | Phase 89 | Pending |
+| TH-02 | Phase 89 | Pending |
+| TH-03 | Phase 89 | Pending |
+| TH-04 | Phase 89 | Pending |
+| TH-05 | Phase 89 | Pending |
+| TH-06 | Phase 89 | Pending |
+| AR-01 | Phase 88 | Pending |
+| AR-02 | Phase 88 | Pending |
+| AR-03 | Phase 88 | Pending |
+| ROOM-01 | Phase 90 | Pending |
+| ROOM-02 | Phase 90 | Pending |
+| ROOM-03 | Phase 90 | Pending |
+| ROOM-04 | Phase 90 | Pending |
+| G3D-01 | Phase 91 | Pending |
+| G3D-02 | Phase 91 | Pending |
