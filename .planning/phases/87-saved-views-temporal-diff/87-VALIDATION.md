@@ -1,8 +1,8 @@
 ---
 phase: 87
 slug: saved-views-temporal-diff
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-23
 ---
@@ -38,7 +38,15 @@ created: 2026-06-23
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 87-01-01 | 01 | 1 | KG-10 | — | N/A | unit | `npx vitest run` | ❌ W0 | ⬜ pending |
+| 87-01-01 | 01 | 1 | KG-10 | T-87-01/02/03/04 | name length 1..100; exact-match token lookup | unit (tsc) | `npx tsc --noEmit` | ✅ existing | ⬜ pending |
+| 87-01-02 | 01 | 1 | KG-10 | — | searchQuery excluded from persisted view | unit | `npx vitest run src/hooks/useSavedViews.test.ts` | ❌ W0 | ⬜ pending |
+| 87-02-01 | 02 | 2 | KG-10 | — | trash stopPropagation; empty-name no-op | unit | `npx vitest run src/components/kg/KGViewsPopover.test.tsx` | ❌ W0 | ⬜ pending |
+| 87-02-02 | 02 | 2 | KG-10 | T-87-05/06/07 | ?view exact-match + silent fallback; ?focus suppressed | unit (tsc + existing) | `npx tsc --noEmit && npx vitest run src/components/kg/KGControls.test.tsx` | ✅ existing | ⬜ pending |
+| 87-03-01 | 03 | 3 | KG-11 | T-87-10 | 404 sets error, no throw | unit | `npx vitest run src/hooks/useKgDiff.test.ts` | ❌ W0 | ⬜ pending |
+| 87-03-02 | 03 | 3 | KG-11 | T-87-08 | Compare disabled unless From < To | unit (extend) | `npx vitest run src/components/kg/KGControls.test.tsx` | ✅ existing | ⬜ pending |
+| 87-03-03 | 03 | 3 | KG-11 | T-87-09 | monotonic token drops stale; Point unchanged | unit (full) | `npx tsc --noEmit && npm test` | ✅ existing | ⬜ pending |
+| 87-04-01 | 04 | 4 | KG-11 | T-87-11/12 | frame cap 60; LRU cap 20; client-synth (no endpoint) | unit | `npx vitest run src/hooks/useKgAnimation.test.ts` | ❌ W0 | ⬜ pending |
+| 87-04-02 | 04 | 4 | KG-11 | T-87-13 | per-frame error inline, no hard block | unit (full) | `npx tsc --noEmit && npm test` | ✅ existing | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -46,10 +54,12 @@ created: 2026-06-23
 
 ## Wave 0 Requirements
 
-- [ ] Diff computation pure-function tests (set arithmetic for added/removed/changed)
-- [ ] Saved-view config round-trip (URL encode/decode) tests
+- [ ] `src/hooks/useSavedViews.test.ts` — searchQuery exclusion (D-06) + buildShareUrl shape (D-03) [Plan 01]
+- [ ] `src/components/kg/KGViewsPopover.test.tsx` — save/load/delete/copy-link/empty-state [Plan 02]
+- [ ] `src/hooks/useKgDiff.test.ts` — computeDiff added/removed/changed node sets + independent edge classification (D-10/D-11) + composite-key fallback (Pitfall 6) + 404 degrade (D-08) [Plan 03]
+- [ ] `src/hooks/useKgAnimation.test.ts` — frame synthesis from range+interval (D-07) + LRU eviction at 20 (D-09) [Plan 04]
 
-*Planner refines this table during planning.*
+Existing test files extended (not created): `src/components/kg/KGControls.test.tsx` (sub-mode toggle assertions).
 
 ---
 
@@ -57,19 +67,19 @@ created: 2026-06-23
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Animation scrubbing over render layer | KG-11 | Visual/timing behavior over React Flow/R3F | Step through timeline, observe graph evolution |
-
-*Planner refines this table during planning.*
+| Open a `?view=<token>` share link in a fresh tab → restores lens/filters/focus/hops | KG-10 (SC#2) | URL hydration + Convex resolution timing over the live page | Save a view, copy link, open in a new tab, confirm lens + filters + focus + hops are restored; open a bogus `?view=xxx` and confirm silent fallback to default (no error banner) |
+| Diff visual treatment over the render layer | KG-11 (SC#3) | Canvas color/alpha distinction is visual | Switch to Temporal → Diff, pick two dates, Compare; confirm green/red/amber/dimmed nodes + DIFF legend |
+| Animation scrubbing over render layer | KG-11 (SC#4) | Visual/timing behavior over the force-graph canvas | Switch to Temporal → Animate, set range + interval, Play; observe graph evolution; scrub backward (no re-fetch flicker) |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planner-set (pending execution)

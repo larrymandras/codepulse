@@ -178,7 +178,8 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
  (3/3 plans; 7/7 must-haves + human UAT passed via Playwright on real Convex data; completed 2026-06-22 — see 84-HUMAN-UAT.md)
 - [x] **Phase 85: Cross-Graph Navigation** — deep-link tool → agent → KG entity across graph surfaces
  (completed 2026-06-22)
-- [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout (completed 2026-06-23)
+- [x] **Phase 86: KG Full-Text Search + Clustering Layout** — fact/relationship search backed by Ástríðr endpoint + community-aware graph layout
+ (completed 2026-06-23)
 - [ ] **Phase 87: Saved Views + Temporal Diff** — named shareable graph views + KG diff/animation between two as-of points
 
 ## Phase Details
@@ -252,7 +253,12 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   2. A saved view can be shared via a URL or link that restores the same lens/filter/focus/hops configuration when opened
   3. Operator selects two as-of dates and sees nodes/edges that were added, removed, or changed between those dates rendered with distinct visual treatment (added/removed/changed)
   4. Operator can animate the KG forward through time, observing how the graph evolves — or step through manually
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 87-01-PLAN.md — savedKgViews Convex table + useSavedViews hook (KG-10 data layer)
+- [ ] 87-02-PLAN.md — KGViewsPopover + KGControls/KnowledgeGraph wiring + ?view share-link hydration (KG-10 UI)
+- [ ] 87-03-PLAN.md — Temporal Diff: useKgDiff + Point|Diff|Animate toggle + paintNodeDiff + DIFF legend (KG-11)
+- [ ] 87-04-PLAN.md — Temporal Animate: useKgAnimation (client-synth frames + LRU) + KGAnimateControls (KG-11)
 **UI hint**: yes
 
 ---
