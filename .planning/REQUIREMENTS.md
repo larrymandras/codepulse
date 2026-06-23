@@ -22,7 +22,7 @@
 
 - [x] **KG-08**: Operator searches the KG by full-text across fact text/values and relationship labels (not just entity name), backed by an Ástríðr `/api/kg/search` endpoint *(likely the one net-new Ástríðr-side delta this milestone)*
 - [x] **KG-09**: Large KG (and code/vault) graphs render with a clustering / community-detection layout so the bounded overview stays legible at scale, leveraging the `community` field already present in the snapshot payload
-- [ ] **KG-10**: Operator saves named, reusable graph views (lens + filters + focus + hops) and shares them via a link — beyond the existing last-state idb auto-persist
+- [x] **KG-10**: Operator saves named, reusable graph views (lens + filters + focus + hops) and shares them via a link — beyond the existing last-state idb auto-persist
 - [ ] **KG-11**: Operator diffs the KG between two as-of points and/or animates its evolution over time, building on the existing single-point as-of "temporal" lens
 
 ---

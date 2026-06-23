@@ -4,13 +4,13 @@ milestone: v8.0
 milestone_name: Graph/KG Consolidation
 status: executing
 stopped_at: Phase 87 context gathered
-last_updated: "2026-06-23T17:52:17.430Z"
-last_activity: 2026-06-23 -- Phase 87 planning complete
+last_updated: "2026-06-23T18:02:39.688Z"
+last_activity: 2026-06-23
 progress:
   total_phases: 7
   completed_phases: 4
   total_plans: 17
-  completed_plans: 13
+  completed_plans: 14
   percent: 57
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-18)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it. v8.0 unifies all of Ástríðr's graphs (KG, tool galaxy, MCP, code/vault) into one Graphs hub and deepens the KG explorer.
-**Current focus:** Phase 86 — kg-full-text-search-clustering-layout
+**Current focus:** Phase 87 — saved-views-temporal-diff
 **Last completed:** Phase 85 — Cross-Graph Navigation (GH-04), 4/4 plans, 2026-06-22. Shared `src/lib/focus-url.ts` (`buildFocusUrl`, normalized-EXACT `focusKeysMatch`, same-origin `decodeFromParam` guard) + `src/hooks/useFocusParam.ts` one-shot focus hook; forward links + `?from` return chips wired into Tool Galaxy (tool→owning-agent), CodeVaultGraph (agent→KG entities), KnowledgeGraph (destination). Code review fixed CR-01 (`?from` double-decode), WR-01 (backslash guard), WR-03 (hops clamp), WR-02 (centering rAF-retry via `src/lib/graph-center.ts`), WR-04 (KG reactive hydration). UAT demonstrated live in Playwright on the real graph: `telegram_tool → "Owning agent: Hildr" → /graphs?focus=vault:Hildr&from=… → "Back to Tool Galaxy"` round-trip; SC#2 gate confirmed (41 KG entities for agent_id=astridr). **Ingest hardening (same session):** `/runtime-ingest` now summarizes `graph_snapshot` in legacy `runtime_events` (`convex/ingestSummary.ts` `legacyEventData`) — was rejecting >1 MiB graphs at the legacy insert and silently capping the production cron; **deployed to `tidy-whale-981`**, and the full ~4,038-node real snapshot (astridr-repo 1500 + codepulse 1500 + vault 1038) is now live via the Phase 83 receiver. **Prior:** Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03), 3/3 plans, 2026-06-22. **Prior:** Phase 83 — Graph Snapshot Receiver (GH-01), 3/3 plans, 2026-06-18. Three row-based Convex tables + `convex/graphSnapshots.ts` receiver (versioned-swap upsert, dangling-link drop D-05, retention cron keep-7 @ 04:30 UTC, public `getProjectGraph`/`listSnapshots`) + `case graph_snapshot` dispatch + 30 unit tests. **Live round-trip verified vs `tidy-whale-981`**: POST→200, storedNode=3/storedLink=2 (dangling dropped), community:null OK, re-POST→activeVersion 1→2 idempotent, unauth→401. Verifier ACHIEVED 7/7. `getProjectGraph` is the read API Phase 84 consumes.
 
 ## Current Position
 
-Phase: 86 (kg-full-text-search-clustering-layout) — COMPLETE (3/3), code-verified 7/7; human UAT pending
-Plan: 3 of 3 (all complete)
+Phase: 87 (saved-views-temporal-diff) — EXECUTING
+Plan: 2 of 4
 Next: Phase 87 (Saved Views + Temporal Diff, KG-10/KG-11) — the next `[ ]` phase. Run `/gsd-discuss-phase 87`. Before that, optionally run the 3 live-UI UAT checks for Phase 86 (see below).
 Status: Ready to execute
-Last activity: 2026-06-23 -- Phase 87 planning complete
+Last activity: 2026-06-23
 
 Progress bar: `██████░░░░` 57% (4/7 v8.0 phases complete: 83, 84, 85, 86)
 
@@ -177,7 +177,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-23T16:48:53.783Z
+Last session: 2026-06-23T18:02:39.676Z
 Stopped at: Phase 87 context gathered
 Next action: Run `/gsd-discuss-phase 84` to begin Phase 84 — Graphs Hub + Code/Vault Render (GH-02, GH-03)
-Resume file: .planning/phases/87-saved-views-temporal-diff/87-CONTEXT.md
+Resume file: None
