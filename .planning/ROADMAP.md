@@ -302,7 +302,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 87-02-PLAN.md — KGViewsPopover + KGControls/KnowledgeGraph wiring + ?view share-link hydration (KG-10 UI)
+- [x] 87-02-PLAN.md — KGViewsPopover + KGControls/KnowledgeGraph wiring + ?view share-link hydration (KG-10 UI)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -335,7 +335,7 @@ Plans:
 | 84. Graphs Hub + Code/Vault Render | v8.0 | 3/3 | Complete    | 2026-06-22 |
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete    | 2026-06-22 |
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete   | 2026-06-23 |
-| 87. Saved Views + Temporal Diff | v8.0 | 1/4 | In Progress|  |
+| 87. Saved Views + Temporal Diff | v8.0 | 2/4 | In Progress|  |
 | 88. Analytics Rollup Table | standalone | 0/? | Not started — quick unblock shipped + deployed 2026-06-20 (`edb614c`, branch `fix/analytics-convex-read-limit`) | — |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 (seed) | 0/? | 🌱 Seed — not started (created 2026-06-22) | — |
 
