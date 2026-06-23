@@ -6,6 +6,7 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import OnboardingGuide from "../components/OnboardingGuide";
 import UserMenu from "../components/UserMenu";
 import PrivacyShield from "../components/PrivacyShield";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
 import { useAudioEvents } from "../hooks/useAudioEvents";
 import { Toaster } from "sonner";
@@ -703,6 +704,7 @@ export default function DashboardLayout() {
             <div className="w-px h-4 bg-primary/20 mx-1" />
             <NotificationBell />
             <PrivacyShield />
+            <ThemeSwitcher />
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
             <div className="w-px h-4 bg-primary/20 mx-1" />
