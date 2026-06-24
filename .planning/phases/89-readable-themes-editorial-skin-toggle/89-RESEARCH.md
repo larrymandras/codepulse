@@ -218,7 +218,8 @@ export interface ThemeColors {
   primary: string;          // var(--primary)
   primaryAlpha18: string;   // var(--primary) at 18% opacity — for graph edges
   primaryAlpha55: string;   // var(--primary) at 55% opacity — for KG current node
-  accent: string;           // var(--accent) — for vault nodes (CodeVaultGraph)
+  accent: string;           // var(--accent)
+  vaultNode: string;        // var(--vault-node-color) — vault nodes (LOCKED: NOT --accent)
   chartBar: string;         // var(--chart-bar)
   chartBarAccent: string;   // var(--chart-bar-accent)
   statusOk: string;         // var(--status-ok)
@@ -239,6 +240,7 @@ function resolveColors(): ThemeColors {
     primaryAlpha18: hexToRgba(primary, 0.18),
     primaryAlpha55: hexToRgba(primary, 0.55),
     accent: get('--accent'),
+    vaultNode: get('--vault-node-color'),
     chartBar: get('--chart-bar'),
     chartBarAccent: get('--chart-bar-accent'),
     statusOk: get('--status-ok'),
@@ -670,19 +672,21 @@ await expect(page.locator('.matrix-bg')).toBeHidden();
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`VAULT_COLOR` identity after migration**
+> All three resolved during `/gsd-plan-phase` on 2026-06-24 (user-confirmed). Resolutions annotated inline below and implemented across plans 89-01/02/03/04/05/06.
+
+1. **`VAULT_COLOR` identity after migration** — **RESOLVED:** add a dedicated `--vault-node-color` token to all four theme blocks (default violet `#8b5cf6`); vault nodes read `colors.vaultNode`, NOT `--accent`.
    - What we know: `CodeVaultGraph` uses fixed `#8b5cf6` (violet) for vault nodes. This color does not correspond to any theme token.
    - What's unclear: Should vault nodes track `--accent` (which changes per theme) or a fixed violet identity that doesn't change?
    - Recommendation: Add a `--vault-node-color` token to all theme blocks defaulting to `#8b5cf6`, so vault node color is theme-declared but consistent. Decide before the canvas migration wave.
 
-2. **Provider color maps — migrate or preserve?**
+2. **Provider color maps — migrate or preserve?** — **RESOLVED:** preserve as-is; provider/chart identity colors (and skills category swatches) are EXEMPT from the TH-01 migration.
    - What we know: `ProviderComparisonChart`, `GanttTimeline`, `providers.ts` use `#10b981` and `#06b6d4` as per-provider identity colors.
    - What's unclear: Should "claude-sdk" always be emerald regardless of active theme, or should it use `var(--primary)` / `var(--chart-bar-accent)`?
    - Recommendation: Preserve per-provider identity colors as-is (they are semantic to provider identity, not chrome). Only the glow/shadow instances need migration.
 
-3. **`animate-scanline` — define or remove?**
+3. **`animate-scanline` — define or remove?** — **RESOLVED:** remove the dead no-op `animate-scanline`/`.crt-overlay` references; suppress the static CRT bar + `.matrix-bg` under `[data-theme="readable"]`/`[data-theme="aubergine"]`; do NOT implement a new scanline animation.
    - What we know: Used in two places, never defined in CSS. Currently a no-op (the element is visible but not animated).
    - What's unclear: Was this intentional (animation removed for performance) or an oversight?
    - Recommendation: Define `@keyframes scanline` in `src/index.css` scoped to `[data-theme="cyan"]` and `[data-theme="emerald"]` only, so the scanline animation is a cyberpunk-only feature. Or remove the class and rely on the `crt-overlay` mechanism. Decide before DashboardLayout changes.
@@ -760,7 +764,7 @@ await expect(page.locator('.matrix-bg')).toBeHidden();
 | axe-core test shape | MEDIUM | API shape standard; version unverified until install |
 | CRT/scanline state | HIGH | Verified: animate-scanline and .crt-overlay are both no-ops |
 
-### Open Questions
-- `VAULT_COLOR` fate after canvas migration (track `--accent` or new `--vault-node-color` token)
-- Provider/provider-chart identity colors — migrate to tokens or preserve as data-driven identity
-- `animate-scanline` — define properly (scoped to cyberpunk themes) or remove
+### Open Questions (RESOLVED — see `## Open Questions (RESOLVED)` above)
+- `VAULT_COLOR` → **RESOLVED:** new `--vault-node-color` token on all themes (default violet); vault nodes use `colors.vaultNode`, not `--accent`
+- Provider/provider-chart identity colors → **RESOLVED:** preserve as-is (EXEMPT from migration)
+- `animate-scanline` → **RESOLVED:** remove dead classes, suppress CRT bar/matrix-grid in readable/aubergine, no new animation
