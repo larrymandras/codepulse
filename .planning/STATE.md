@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: Readability & Experience
 status: executing
 stopped_at: Phase 92 context gathered
-last_updated: "2026-06-24T18:11:28.929Z"
-last_activity: 2026-06-24 -- Phase 89 planning complete
+last_updated: "2026-06-24T18:28:36.220Z"
+last_activity: 2026-06-24
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 11
-  completed_plans: 4
+  completed_plans: 5
   percent: 20
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 88 — analytics-rollup-table-durable-fix-for-convex-16-mib-read-li
+**Current focus:** Phase 89 — readable-themes-editorial-skin-toggle
 
 ## Current Position
 
-Phase: 88 (analytics-rollup-table-durable-fix-for-convex-16-mib-read-li) — COMPLETE
-Plan: 4 of 4 (all complete)
+Phase: 89 (readable-themes-editorial-skin-toggle) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-06-24 -- Phase 89 planning complete
+Last activity: 2026-06-24
 
-Progress: [██████████] 100%
+Progress: [█████░░░░░] 45%
 
 ## v9.0 Roadmap
 
@@ -70,6 +70,14 @@ See PROJECT.md Key Decisions table for full history.
 - **Ran `npx convex codegen` (offline, NOT a deploy)** to regenerate `_generated/api.d.ts` for the new `analyticsRollup` module; annotated `backfillHistorical`'s runQuery result as `PaginationResult<Doc<"events">>` to break a tsc TS7022 inference cycle (events↔rollup cross-import).
 - **2 remaining RED tests** in `analytics.test.ts` are the Plan-04 read-path targets (`activityHeatmapFromAggregates`/`errorRateTrendFromAggregates`), documented RED-pending Plan 04 — NOT regressions from Plan 02.
 
+**Phase 89 Plan 01 decisions (2026-06-24, Wave 0):**
+
+- **`@axe-core/playwright` operator-approved legitimacy gate** — installed at 4.12.1 after operator confirmed npmjs.com listing (Deque Systems `@axe-core` org, dequelabs/axe-core-npm, millions weekly downloads). Required for TH-06 WCAG-AA contrast audit.
+- **`resolveThemeColors` exported module-level** (not inside hook) — shared by the lazy `useState` initializer and the MutationObserver callback; avoids creating a new closure on each render.
+- **`waitFor()` required for MutationObserver test** — jsdom fires MutationObserver callbacks asynchronously; `act()` alone does not flush them. Added `await waitFor(() => expect(...))` in the re-resolve test.
+- **ThemeSwitcher amber option removed; readable + aubergine added** — per PATTERNS.md §ThemeSwitcher changes; trigger width widened to `w-[160px]`.
+- **e2e specs seeded RED-pending** — all 3 e2e specs (contrast, no-fouc, reduced-motion) are scaffolded with `RED-pending: <plan>` comments; they correctly fail until Plans 02-04 ship token blocks, inline script, and CSS suppression rules.
+
 ### Pending Todos
 
 - **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
@@ -82,7 +90,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-24T17:44:16.446Z
-Stopped at: Phase 92 context gathered
-Next action: Operator completes 88-04 Task 3 UI verification (deploy + eyeball Analytics), then the orchestrator finalizes 88-04-SUMMARY.md and marks the plan/phase complete.
-Resume file: .planning/phases/92-voice-activated-command-palette-jarvis-mode/92-CONTEXT.md
+Last session: 2026-06-24T18:28:36.211Z
+Stopped at: Completed 89-01-PLAN.md
+Next action: Execute 89-02-PLAN.md (readable + aubergine token blocks in src/index.css)
+Resume file: None
