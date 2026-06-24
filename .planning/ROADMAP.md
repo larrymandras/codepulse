@@ -241,7 +241,14 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   3. Canvas-rendered graphs (`ForceGraphCanvas`, `CodeVaultGraph`, KG Explorer) respect the active theme — no hardcoded `#06b6d4` cyan or `#10b981` emerald nodes remain; node colors read CSS custom properties via `useThemeColors()`.
   4. The Midnight Aubergine editorial skin renders with its full token set (warm aubergine background, cream text, gold/emerald/plum accents, paper-grain overlay) — distinct from and coexisting with the other two skins via `[data-theme="aubergine"]`.
   5. Scanline / matrix-grid / heavy glow animations are disabled for users with `prefers-reduced-motion` enabled; the default skin remains Electric Cyan (readable theme is opt-in).
-**Plans**: TBD
+**Plans**: 7 plans (waves 0-3)
+- [ ] 89-01-PLAN.md — Wave 0: install @axe-core/playwright, useThemeColors() hook + hexToRgba, seed e2e/unit test scaffolds (TH-01, TH-06)
+- [ ] 89-02-PLAN.md — Wave 1: Readable + Aubergine token blocks, --vault-node-color on all themes, aubergine surface effects, effect suppression, in-CSS chrome tokenization (TH-01..04)
+- [ ] 89-03-PLAN.md — Wave 1: migrate glow/shadow to glow tokens in 14 top-level components (TH-01)
+- [ ] 89-04-PLAN.md — Wave 1: migrate glow/shadow in 9 hr/skills components + 7 pages (TH-01)
+- [ ] 89-05-PLAN.md — Wave 2: no-FOUC pre-paint script, 4-theme switcher, key consolidation, remove dark/light toggle + dead classes (TH-05, TH-01)
+- [ ] 89-06-PLAN.md — Wave 2: route useThemeColors() into ForceGraphCanvas/CodeVaultGraph/KnowledgeGraph; violet vault token (TH-01)
+- [ ] 89-07-PLAN.md — Wave 3: axe WCAG-AA contrast (20 cases) + no-FOUC + reduced-motion e2e + operator manual sign-off (TH-06, TH-02..05)
 **UI hint**: yes
 
 ---
@@ -309,7 +316,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete | 2026-06-23 |
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
 | 88. Analytics Rollup | v9.0 | 4/4 | Complete   | 2026-06-24 |
-| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 0/? | Not started | — |
+| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 0/7 | Planned (7 plans, waves 0-3) | — |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 0/? | Not started | — |
