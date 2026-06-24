@@ -1,8 +1,3 @@
-// RED-pending: This spec will fail until Plan 03 (89-03) adds the blocking
-// inline pre-paint script to index.html. Until that script exists, data-theme
-// is only set by ThemeSwitcher's useEffect (post-React-hydration), so the
-// attribute is absent on domcontentloaded. Plan 03 turns this green.
-
 import { test, expect } from "@playwright/test";
 
 test.describe("No-FOUC pre-paint script", () => {

@@ -1,10 +1,3 @@
-// RED-pending: This spec will fail until:
-// - Plan 02 (89-02): aubergine token block added + .matrix-bg / .crt-scanline-bar
-//   display:none CSS rules added to src/index.css
-// - Plan 03 (89-03): crt-scanline-bar class added to the DashboardLayout scanline div
-// Once those plans land, emulateMedia({ reducedMotion: 'reduce' }) +
-// the theme CSS rules together suppress both elements. Plan 02/03 turns this green.
-
 import { test, expect } from "@playwright/test";
 
 test.describe("prefers-reduced-motion suppression", () => {
