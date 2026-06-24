@@ -377,7 +377,7 @@ body {
   left: -50%;
   width: 200%;
   height: 200%;
-  background: radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.15) 0%, transparent 50%);
+  background: radial-gradient(circle at 50% 100%, oklch(from var(--primary) l c h / 0.15) 0%, transparent 50%);
   pointer-events: none;
   z-index: 0;
 }
@@ -470,15 +470,15 @@ code, pre, .font-mono {
 }
 ::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.2);
-  border-left: 1px solid rgba(6, 182, 212, 0.1);
+  border-left: 1px solid oklch(from var(--primary) l c h / 0.1);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(6, 182, 212, 0.3);
+  background: oklch(from var(--primary) l c h / 0.3);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.6);
-  box-shadow: 0 0 8px rgba(6, 182, 212, 0.8);
+  background: oklch(from var(--primary) l c h / 0.6);
+  box-shadow: 0 0 8px oklch(from var(--primary) l c h / 0.8);
 }
 
 /* Glitch effect */
@@ -501,7 +501,7 @@ code, pre, .font-mono {
 
 .glitch-text:hover::before {
   left: 2px;
-  text-shadow: -1px 0 rgba(6, 182, 212, 0.8);
+  text-shadow: -1px 0 oklch(from var(--primary) l c h / 0.8);
   animation: glitch-anim-1 2s infinite linear alternate-reverse;
 }
 
@@ -535,9 +535,9 @@ code, pre, .font-mono {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(6, 182, 212, 0.08), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.08), transparent 25%);
+  background-image:
+    radial-gradient(circle at 15% 50%, oklch(from var(--primary) l c h / 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, oklch(from var(--accent) l c h / 0.08), transparent 25%);
   background-size: cover;
   opacity: 1;
 }
