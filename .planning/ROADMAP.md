@@ -316,7 +316,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete | 2026-06-23 |
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
 | 88. Analytics Rollup | v9.0 | 4/4 | Complete   | 2026-06-24 |
-| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete   | 2026-06-24 |
+| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete    | 2026-06-24 |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 0/? | Not started | — |
