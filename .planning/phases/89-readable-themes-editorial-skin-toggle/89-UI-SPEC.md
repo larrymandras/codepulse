@@ -272,11 +272,15 @@ This phase does not change the type scale. All type rules inherited from Phase 7
 | Role | Family | Size | Weight | Line Height | Usage |
 |------|--------|------|--------|-------------|-------|
 | Body | Geist Variable | 14px (`text-sm`) | 400 regular | 1.5 | All prose, descriptions, list rows |
-| Label / operational chrome | JetBrains Mono | 10–12px (`text-xs`, `text-[10px]`) | 400 regular | 1 (single-line) | Nav labels, metric labels, status pills — mono ONLY |
+| Label / operational chrome | JetBrains Mono | 12px (`text-xs`) | 400 regular | 1 (single-line) | Nav labels, metric labels, status pills — mono ONLY |
 | Metric value | Geist Variable | 30px (`text-3xl`) | 500 medium | 1.2 | Large numeric readouts in MetricCard |
 | Heading / page H1 | Geist Variable | 24px (`text-2xl`) | 700 bold | 1.2 | Page titles |
 
 Font smoothing: `subpixel-antialiased` on body (existing, `src/index.css:234`). No change.
+
+Size scale (exactly 4 tiers): 12px (label/chrome), 14px (body), 24px (heading), 30px (metric value).
+
+**One-off exception (not a scale tier):** A few dense chrome elements (e.g. collapsed-sidebar micro-labels, the latency/uptime status strip) render at 10px (`text-[10px]`). This is an explicit per-element override for space-constrained operational chrome, NOT a declared typography tier — it is justified only where 12px would overflow the available width and the text is supplementary (never primary content). Do not introduce new 10px usages outside these established cases.
 
 **Readability theme typography note:** In `[data-theme="readable"]`, do NOT increase font sizes (the spec is already legible at 14px body). The readability win comes from higher contrast tokens and disabled glow-over-text — not from larger type. Do not alter the type scale per-theme.
 
