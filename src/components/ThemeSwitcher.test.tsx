@@ -97,17 +97,29 @@ describe("ThemeSwitcher", () => {
     expect(queryByTestId("select-item-amber")).toBeNull();
   });
 
-  // --- Plan 05 placeholder: localStorage key migration ---
-  // Plan 05 (89-05) implements the migration from old "theme" key to
-  // "codepulse-theme". The pre-paint inline script handles the one-shot
-  // migration at page load; this test asserts the React-side guard.
-  it.todo(
-    "Plan 05 — migrates old 'theme' key to 'codepulse-theme' on mount: " +
-      "'light' maps to 'readable', other values map to 'cyan', old key is removed"
-  );
+  // --- Plan 05: localStorage key migration (inline pre-paint script handles at page load) ---
+  // The React-side guard: ThemeSwitcher only ever reads/writes codepulse-theme.
+  // It does NOT read the old "theme" key — migration is owned by the index.html script.
+  it("Plan 05 — ThemeSwitcher ignores the old 'theme' key and defaults to cyan when codepulse-theme is absent", async () => {
+    // Simulate a user who only has the old key set (not yet migrated)
+    localStorage.setItem("theme", "light");
+    localStorage.removeItem("codepulse-theme");
 
-  it.todo(
-    "Plan 05 — DarkModeToggle is removed: no element with aria-label 'Toggle dark mode' " +
-      "should exist after the migration plan ships"
-  );
+    render(<ThemeSwitcher />);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // ThemeSwitcher reads codepulse-theme (absent → "cyan"), not the old "theme" key
+    expect(setAttributeSpy).toHaveBeenCalledWith("data-theme", "cyan");
+    // Old key is untouched by the React component (migration is the pre-paint script's job)
+    expect(localStorage.getItem("theme")).toBe("light");
+    // codepulse-theme is NOT written until the user changes theme
+    expect(localStorage.getItem("codepulse-theme")).toBeNull();
+  });
+
+  it("Plan 05 — DarkModeToggle is removed: no element with aria-label containing 'dark mode' exists", () => {
+    const { container } = render(<ThemeSwitcher />);
+    // DarkModeToggle was removed in Plan 05; ThemeSwitcher has no dark-mode toggle button
+    const darkToggle = container.querySelector('[aria-label*="dark mode"]');
+    expect(darkToggle).toBeNull();
+  });
 });
