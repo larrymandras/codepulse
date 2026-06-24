@@ -205,7 +205,8 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Phase summary:**
 
 - [x] **Phase 88 — Analytics Rollup** — Durable Convex 16 MiB read-limit fix via ingest-time rollups (completed 2026-06-24)
-- [x] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass (completed 2026-06-24)
+- [x] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
+ (completed 2026-06-24)
 - [ ] **Phase 90 — Agent Room / War Room** — Wire live participant identity + bounded listing + real operator Join + transcript robustness
 - [ ] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware
 - [ ] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (Porcupine) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply spoken in a Norse persona voice
@@ -262,7 +263,12 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   2. Room listing is bounded (no unbounded `.collect()` on `warRooms`) and rooms are visibly populated from real Ástríðr→Convex ingest events (the `warRooms` ingest path confirmed live).
   3. The operator's "Join" button sends a real signal to Ástríðr (not cosmetic) — confirmed against the `astridr-repo` participant-join/voice surface; if real-time voice is unavailable in this phase, observer mode ships with an honest label.
   4. Each room has a stable deep-link URL (`/war-room/:roomId`) and transcript chunks render in deterministic order via a `seq` field (no out-of-order rendering under concurrent ingest).
-**Plans**: TBD
+**Plans**: 5 plans in 4 waves
+- [ ] 92-01-PLAN.md — Foundation: onnxruntime-web install + Vite WASM config + mel-normalization pure util + jsdom voice mocks (VOX-01)
+- [ ] 92-02-PLAN.md — Extract shared useSpeechRecognition + useTtsPlayback hooks; refactor ChatInput/Chat to consume them (VOX-02, VOX-03)
+- [ ] 92-03-PLAN.md — Wake-word engine: AudioWorklet capture + Web Worker ONNX pipeline + useWakeWord (graceful degradation) (VOX-01, VOX-04)
+- [ ] 92-04-PLAN.md — Palette voice mode: pure 6-state machine + VoiceModePanel turn loop + feedback guard + chat.send wiring (VOX-02, VOX-03)
+- [ ] 92-05-PLAN.md — Shell integration: MicToggle + ListeningIndicatorPill + wake handler + OFF-by-default persistence (VOX-01, VOX-04)
 
 ---
 
@@ -321,4 +327,4 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 0/? | Not started | — |
 
-*Last updated: 2026-06-24 — Phase 92 (VOX-01..04) added to v9.0: browser-side voice-activated command palette (Porcupine wake word + Web Speech STT → existing chat.send → persona TTS). Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Requires operator-supplied Picovoice Web-target .ppn + porcupine_params.pv in public/ and VITE_PICOVOICE_ACCESS_KEY. Execution order: 88 → 89 → 90 → 91 → 92. Next: `/gsd-discuss-phase 92` (in progress) → `/gsd-plan-phase 92`.*
+*Last updated: 2026-06-24 — Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*
