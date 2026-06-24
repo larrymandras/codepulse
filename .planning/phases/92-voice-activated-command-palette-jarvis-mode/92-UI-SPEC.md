@@ -38,7 +38,7 @@ Standard 8-point scale inherited from the project. No new scale values introduce
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon gap within the listening indicator pill; inline mic icon gap |
+| xs | 4px | Icon gap within the listening indicator pill; inline mic icon gap; listening pill vertical padding |
 | sm | 8px | Gap between top-bar control elements |
 | md | 16px | Transcript area internal padding; palette voice-mode section padding |
 | lg | 24px | Reply stream section top margin inside palette |
@@ -48,7 +48,7 @@ Standard 8-point scale inherited from the project. No new scale values introduce
 
 Exceptions:
 - Mic toggle button in top bar: 36px × 36px touch target (fits within the existing `h-14` header; matches adjacent `EStopButton`/`ThemeSwitcher` icon button sizing). This is not a spacing token — it is a minimum interactive area.
-- Listening indicator pill: `px-3 py-1.5` (12px/6px) — matches the existing "Astridr Runtime Telemetry" pill at `DashboardLayout.tsx:651`.
+- Listening indicator pill: `px-3 py-1` (12px / 4px). The new voice pill conforms to the 4-point grid. **Note:** the existing "Astridr Runtime Telemetry" pill at `DashboardLayout.tsx:651` uses `py-1.5` (6px), which is a pre-existing off-grid deviation — the new voice pill intentionally does NOT copy it.
 
 ---
 
@@ -59,11 +59,11 @@ All values align with existing project type scale from `src/index.css` and live 
 | Role | Size | Weight | Line Height | Font | Usage |
 |------|------|--------|-------------|------|-------|
 | Body | 14px (`text-sm`) | 400 (regular) | 1.5 | Geist | Streamed reply text in palette voice mode |
-| Label | 12px (`text-xs`) | 500 (medium) | 1.4 | Geist | State labels ("Listening…", "Processing…"); palette section headings |
+| Label | 12px (`text-xs`) | 600 (semibold) | 1.4 | Geist | State labels ("Listening…", "Processing…"); palette section headings |
 | Mono label | 10px (`text-[10px]`) | 600 (semibold) | 1.2 | JetBrains Mono | Live transcript text; top-bar listening indicator text (`uppercase tracking-widest`) |
 | Caption | 12px (`text-xs`) | 400 (regular) | 1.4 | Geist | Error reason copy below disabled toggle; end-phrase hint |
 
-Exactly 3 size steps: 10px mono / 12px / 14px. Weights: regular (400) + semibold (600).
+Exactly 3 size steps: 10px mono / 12px / 14px. Exactly 2 weights: regular (400) + semibold (600). Label vs Caption (both 12px) differ by **weight + case/tracking**, not by an intermediate weight: Label is `font-semibold` (emphasis); Caption is `font-normal`. Mono labels add `uppercase tracking-widest`.
 
 ---
 
@@ -155,7 +155,7 @@ When voice mode is active (palette opened by wake word), the palette renders in 
 
 **Reply stream area:**
 - Container: `px-4 py-3 border-t border-border`
-- Label row: `text-xs text-muted-foreground font-mono uppercase tracking-widest mb-2` — "ÁSTRÍÐR"
+- Label row: `text-xs text-muted-foreground font-semibold font-mono uppercase tracking-widest mb-2` — "ÁSTRÍÐR"
 - Streamed text: `text-sm text-foreground leading-relaxed` (14px / 1.5)
 - aria: `aria-live="polite" aria-atomic="false"` — announces tokens as they stream in
 
@@ -196,13 +196,13 @@ Rendered immediately left of the mic toggle button, inside the same `flex` row. 
 
 | Property | Value |
 |----------|-------|
-| Shape | `px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[var(--glow-xs)]` |
+| Shape | `px-3 py-1 rounded bg-primary/10 border border-primary/20 shadow-[var(--glow-xs)]` (4-point-grid padding) |
 | Dot | `w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-md)]` |
-| Text | `text-[10px] font-mono tracking-widest text-primary uppercase` — "VOICE ACTIVE" |
+| Text | `text-[10px] font-semibold font-mono tracking-widest text-primary uppercase` — "VOICE ACTIVE" |
 | prefers-reduced-motion | dot `animate-pulse` removed; static dot at 60% opacity |
 | aria-label | `aria-live="polite"` on a visually-hidden span: "Voice mode active, listening for Hey Ástríðr" |
 
-Pattern source: matches existing "Astridr Runtime Telemetry" pill at `DashboardLayout.tsx:651-656`.
+Pattern source: based on the existing "Astridr Runtime Telemetry" pill at `DashboardLayout.tsx:651-656`, but with `py-1` instead of the existing pill's off-grid `py-1.5`.
 
 ### Error-disabled state (top bar)
 
@@ -317,7 +317,7 @@ New components this phase. All compose from existing shadcn/ui primitives — no
 | `VoiceReplyStream` | Inline subcomponent | `<div>` + Tailwind | Streamed reply tokens; aria-live="polite" |
 | `VoiceWaveform` | Inline subcomponent | Reuse `.eq-bar-*` CSS classes from `src/index.css` | 3 bars; hidden in reduced-motion |
 | `MicToggle` (top-bar) | New React component | shadcn `Tooltip` + Lucide `Mic`/`MicVocal`/`MicOff` | Inserted into DashboardLayout header control group |
-| `ListeningIndicatorPill` | New React component | `<div>` + Tailwind | Matches existing Telemetry pill pattern exactly; only visible when voice ON |
+| `ListeningIndicatorPill` | New React component | `<div>` + Tailwind | Based on the existing Telemetry pill pattern but on-grid (`py-1`); only visible when voice ON |
 
 Existing components modified (not rebuilt):
 - `CommandPalette.tsx` — adds `voiceMode: boolean` prop + conditional `VoiceModePanel` render
