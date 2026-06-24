@@ -7,7 +7,7 @@
  *   object    → live force graph with filter/truncation/freshness/integrity/detail panel
  *
  * Owns:
- *   - colorFn / labelFn (code=emerald #10b981, vault=violet #8b5cf6)
+ *   - colorFn / labelFn (code=primary token, vault=vault-node-color token — theme-aware via useThemeColors)
  *   - source filter (Code | Vault | Both) — client-side, no reload
  *   - truncation header + per-source chips + freshness badge + integrity banner
  *   - node-click detail panel (id/label/type/source/community/neighbors)
@@ -39,6 +39,7 @@ import {
 import { communityColor } from "../../lib/kg-graph";
 import { useProjectGraph, type ProjectGraphData } from "../../hooks/useProjectGraph";
 import { useKnowledgeGraph } from "../../hooks/useKnowledgeGraph";
+import { useThemeColors } from "../../hooks/useThemeColors";
 import { centerNodeWhenReady } from "../../lib/graph-center";
 import { useFocusParam } from "../../hooks/useFocusParam";
 import { buildFocusUrl, normalizeFocusKey } from "../../lib/focus-url";
@@ -54,11 +55,6 @@ import {
 } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
 import SectionErrorBoundary from "../SectionErrorBoundary";
-
-// ── Palette constants (D-04 / D-05) ─────────────────────────────────────────
-
-const CODE_COLOR = "#10b981";  // Matrix Emerald — graphify:* nodes
-const VAULT_COLOR = "#8b5cf6"; // Violet-500 — vault:* nodes
 
 // ── Freshness threshold (D-09) ───────────────────────────────────────────────
 
@@ -103,31 +99,10 @@ function isVaultNode(node: { id?: string }): boolean {
   return node.id?.startsWith("vault:") ?? false;
 }
 
-// ── colorFn (D-04 / D-05) ────────────────────────────────────────────────────
-
-function colorFn(node: any): string {
-  return isVaultNode(node) ? VAULT_COLOR : CODE_COLOR;
-}
-
-// ── labelFn (D-11) ───────────────────────────────────────────────────────────
+// ── labelFn (D-11) — static, no color dependency ────────────────────────────
 
 function labelFn(node: any): string {
   return `${node.label} · ${node.type} · ${node.source}`;
-}
-
-// ── linkColorFn (UI-SPEC Edge colors) ────────────────────────────────────────
-
-function linkColorFn(link: any): string {
-  const srcIsVault = typeof link.source === "string"
-    ? link.source.startsWith("vault:")
-    : link.source?.source?.startsWith("vault:") ?? false;
-  const tgtIsVault = typeof link.target === "string"
-    ? link.target.startsWith("vault:")
-    : link.target?.source?.startsWith("vault:") ?? false;
-
-  if (srcIsVault && tgtIsVault) return "rgba(139, 92, 246, 0.18)";
-  if (!srcIsVault && !tgtIsVault) return "rgba(16, 185, 129, 0.18)";
-  return "rgba(255, 255, 255, 0.08)";
 }
 
 // ── GraphContent — rendered when snapshot is available ───────────────────────
@@ -138,6 +113,38 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("both");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // ── Theme-aware canvas colors (TH-01) ─────────────────────────────────────
+  // Canvas APIs cannot read CSS variables — useThemeColors() resolves them to
+  // hex/rgba at render time and re-resolves on data-theme switch.
+  const colors = useThemeColors();
+
+  // ── colorFn (D-04 / D-05): code nodes=primary, vault nodes=vaultNode token ─
+  // Wrapped in useCallback([colors]) so it re-creates on theme switch (same
+  // pattern as useFocusParam onFocus below, ~line 147).
+  const colorFn = useCallback(
+    (node: any): string => isVaultNode(node) ? colors.vaultNode : colors.primary,
+    [colors],
+  );
+
+  // ── linkColorFn (UI-SPEC Edge colors) ─────────────────────────────────────
+  // vault↔vault links use vaultNodeAlpha18, code↔code links use primaryAlpha18,
+  // cross-source links use a dim white. Wrapped in useCallback([colors]).
+  const linkColorFn = useCallback(
+    (link: any): string => {
+      const srcIsVault = typeof link.source === "string"
+        ? link.source.startsWith("vault:")
+        : link.source?.source?.startsWith("vault:") ?? false;
+      const tgtIsVault = typeof link.target === "string"
+        ? link.target.startsWith("vault:")
+        : link.target?.source?.startsWith("vault:") ?? false;
+
+      if (srcIsVault && tgtIsVault) return colors.vaultNodeAlpha18;
+      if (!srcIsVault && !tgtIsVault) return colors.primaryAlpha18;
+      return "rgba(255, 255, 255, 0.08)";
+    },
+    [colors],
+  );
 
   // ── Inbound focus param (Plan 01 hook — one-shot, SC#3-safe) ─────────────
   // snapshotNodes is already the full node list; pass as-is so the hook can
@@ -305,7 +312,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
       }
       ctx.globalAlpha = 1;
     },
-    [selectedNodeId]
+    [selectedNodeId, colorFn]
   );
 
   // ── Canvas className (Pitfall 6 — always explicit, fullscreen switch) ─────
@@ -451,14 +458,14 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             <span className="flex items-center gap-2 text-muted-foreground">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: CODE_COLOR }}
+                style={{ backgroundColor: colors.primary }}
               />
               Code (graphify)
             </span>
             <span className="flex items-center gap-2 text-muted-foreground">
               <span
                 className="inline-block h-2.5 w-2.5 rounded-full"
-                style={{ backgroundColor: VAULT_COLOR }}
+                style={{ backgroundColor: colors.vaultNode }}
               />
               Vault (Obsidian)
             </span>
@@ -475,6 +482,8 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             labelFn={labelFn}
             paintNode={paintNode}
             linkColorFn={linkColorFn}
+            defaultNodeColor={colors.primary}
+            defaultLinkColor={colors.primaryAlpha18}
             onNodeClick={(node: any) => setSelectedNodeId(node.id)}
             onBackgroundClick={() => setSelectedNodeId(null)}
             onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
@@ -551,11 +560,11 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
                   <span
                     className="inline-block text-sm font-mono px-2 py-0.5 rounded-full"
                     style={{
-                      color: isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR,
-                      border: `1px solid ${isVaultNode(selectedNode) ? VAULT_COLOR : CODE_COLOR}`,
+                      color: isVaultNode(selectedNode) ? colors.vaultNode : colors.primary,
+                      border: `1px solid ${isVaultNode(selectedNode) ? colors.vaultNode : colors.primary}`,
                       backgroundColor: isVaultNode(selectedNode)
-                        ? "rgba(139, 92, 246, 0.1)"
-                        : "rgba(16, 185, 129, 0.1)",
+                        ? colors.vaultNodeAlpha18
+                        : colors.primaryAlpha18,
                     }}
                   >
                     {sourceLabel(selectedNode.source ?? "")}
