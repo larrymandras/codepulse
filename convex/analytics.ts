@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import { categoryOf, outcomeOf } from "./lib/sankeyClassify";
 
 export const activityHeatmap = query({
   args: {},
@@ -50,24 +51,10 @@ export const toolFlowSankey = query({
     const nodeSet = new Set<string>();
     const linkMap: Record<string, number> = {};
 
-    const categoryOf = (eventType: string): string => {
-      if (eventType.startsWith("tool_")) return "Tool Use";
-      if (eventType.startsWith("llm_") || eventType.startsWith("model_")) return "LLM";
-      if (eventType.startsWith("file_")) return "File Ops";
-      if (eventType.startsWith("agent_")) return "Agents";
-      return "Other";
-    };
-
-    const outcomeOf = (e: { eventType: string; payload: any }): string => {
-      if (e.eventType.includes("error") || e.eventType.includes("fail")) return "Error";
-      if (e.eventType.includes("hitl") || e.eventType.includes("review")) return "HITL";
-      return "Success";
-    };
-
     for (const e of events) {
       const category = categoryOf(e.eventType);
       const tool = e.toolName ?? e.eventType;
-      const outcome = outcomeOf(e);
+      const outcome = outcomeOf(e.eventType);
 
       nodeSet.add(category);
       nodeSet.add(tool);
