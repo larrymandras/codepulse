@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 Phase: 88 (analytics-rollup-table-durable-fix-for-convex-16-mib-read-li) — EXECUTING
 Plan: 3 of 4
-Status: Plan 88-02 complete (Wave 1 — rollup write path landed atomically) — Plan 88-03 ready (deploy + run backfillHistorical)
-Last activity: 2026-06-24 -- Plan 88-02 executed (Wave 1)
+Status: Plan 88-03 Task 1 complete (D-12 dataRetention regression GREEN, aggregates-safe) — Task 2 (operator-gated backfillHistorical checkpoint) PENDING. Plan 88-03 NOT complete until operator runs the one-time backfill.
+Last activity: 2026-06-24 -- Plan 88-03 Task 1 executed (dataRetention D-12 invariant locked); Task 2 backfill awaiting operator
 
 Progress: [█████░░░░░] 50%
 
