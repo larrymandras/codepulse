@@ -2,7 +2,11 @@ import { internalMutation } from "./_generated/server";
 
 const BATCH_SIZE = 500;
 
-// Delete telemetry events older than 30 days
+// Delete telemetry events older than 30 days.
+// D-12 (archival consistency): this purge deletes ONLY from the raw "events" table.
+// The durable "aggregates" rollups are immutable historical buckets and are
+// intentionally never read, patched, or deleted here — purging raw events must
+// never corrupt or deflate the rollup counts. Do not add any "aggregates" access.
 export const purgeOldTelemetryEvents = internalMutation({
   args: {},
   handler: async (ctx) => {
