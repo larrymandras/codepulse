@@ -82,7 +82,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-24T13:03:46.610Z
-Stopped at: Completed 88-02-PLAN.md (Wave 1 — rollup write path: dedup + ingest-time increments + cron branch removal + paginated cost reads + backfill action + httpAction key pass-through)
-Next action: Execute 88-03-PLAN.md (Wave 2 — operator-gated: `npx convex deploy` then run analyticsRollup:backfillHistorical to populate historical event/sankey buckets)
+Last session: 2026-06-24
+Stopped at: 88-04-PLAN.md Tasks 1-2 DONE (commit 3077b76 — read-path rewrite: the 4 analytics queries read aggregates buckets via by_type_period_bucket, all quick-unblock .take caps removed, tokenWaterfall/sessionDurations untouched; tsc clean, full convex/ suite green incl. the 2 formerly-RED *FromAggregates tests). 88-03 (backfill, Wave 2) already complete. Plan 88-04 is NOT yet complete — Task 3 (checkpoint:human-verify) is pending operator: deploy + visually verify the live Analytics page (heatmap/sankey/error-trend/sunburst render full-fidelity, no 16 MiB read-limit error).
+Next action: Operator completes 88-04 Task 3 UI verification (deploy + eyeball Analytics), then the orchestrator finalizes 88-04-SUMMARY.md and marks the plan/phase complete.
 Resume file: None
