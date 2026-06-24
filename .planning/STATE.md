@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience
 status: executing
-stopped_at: Phase 88 context gathered
-last_updated: "2026-06-24T12:51:45.301Z"
+stopped_at: Completed 88-01-PLAN.md (Wave 0 — classifier extraction + Nyquist test scaffolds)
+last_updated: "2026-06-24T13:03:59.682Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 0
 ---
 
 # Project State
@@ -26,17 +26,17 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 88 (analytics-rollup-table-durable-fix-for-convex-16-mib-read-li) — EXECUTING
-Plan: 2 of 4
-Status: Plan 88-01 complete (classifier extraction + Nyquist test scaffolds) — Plan 88-02 ready
-Last activity: 2026-06-24 -- Plan 88-01 executed (Wave 0)
+Plan: 3 of 4
+Status: Plan 88-02 complete (Wave 1 — rollup write path landed atomically) — Plan 88-03 ready (deploy + run backfillHistorical)
+Last activity: 2026-06-24 -- Plan 88-02 executed (Wave 1)
 
-Progress: [███░░░░░░░] 25%
+Progress: [█████░░░░░] 50%
 
 ## v9.0 Roadmap
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 88 | Analytics Rollup | AR-01, AR-02, AR-03 | In Progress (1/4 plans) |
+| 88 | Analytics Rollup | AR-01, AR-02, AR-03 | In Progress (2/4 plans) |
 | 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | Not started |
 | 90 | Agent Room / War Room | ROOM-01..ROOM-04 | Not started |
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
@@ -62,6 +62,14 @@ See PROJECT.md Key Decisions table for full history.
 - **Cross-plan RED-scaffold pattern** — not-yet-built Convex modules are loaded behind a non-literal `@vite-ignore` dynamic import + a loose local module type, so dependent tests RED cleanly without breaking Vite transform or `tsc --noEmit`. Used for the Plan-02 (`incrementEventBucket`/dedup) and Plan-04 (aggregates-backed queries) targets.
 - **AR-01/02/03 NOT marked complete** — they are phase-level and only complete at Plan 04; Plan 01 is scaffolding + extraction only.
 
+**Phase 88 Plan 02 decisions (2026-06-24, Wave 1):**
+
+- **Rollup WRITE PATH landed atomically.** `events.ingest` now dedups on `by_idempotencyKey` (early return) and, on a fresh insert, increments the `"events"` + two `"sankey_edge"` buckets — all in ONE OCC mutation (D-01/D-04). Un-keyed events always counted (D-05). The 4 write-path RED tests from Plan 01 (idempotency / no-key-counted / patch-or-insert / backfill-count-equality) are now GREEN.
+- **`computeHourly` event-count + error-count branches DELETED (D-02)** in the same wave that adds ingest-time increments — Convex per-deploy atomicity means co-locating them is the only way to avoid a double-count transition tick (Pitfall 1 / T-88-04). Cost read replaced unbounded `.collect()` with a paginated cursor loop (`LLM_PAGE_SIZE 500`, D-03/T-88-05, 16 MiB-safe).
+- **`incrementBatch` is `internalMutation`, never public** (T-88-03 — a public increment endpoint = unauthenticated tampering). `backfillHistorical` action exists but is NOT run here (run = Plan 03, operator-gated). `idempotencyKey = body/d.idempotencyKey ?? event_id` wired through both httpActions; neither writes `ctx.db` rollups.
+- **Ran `npx convex codegen` (offline, NOT a deploy)** to regenerate `_generated/api.d.ts` for the new `analyticsRollup` module; annotated `backfillHistorical`'s runQuery result as `PaginationResult<Doc<"events">>` to break a tsc TS7022 inference cycle (events↔rollup cross-import).
+- **2 remaining RED tests** in `analytics.test.ts` are the Plan-04 read-path targets (`activityHeatmapFromAggregates`/`errorRateTrendFromAggregates`), documented RED-pending Plan 04 — NOT regressions from Plan 02.
+
 ### Pending Todos
 
 - **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
@@ -74,7 +82,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-24T12:51:37.938Z
-Stopped at: Completed 88-01-PLAN.md (Wave 0 — classifier extraction + Nyquist test scaffolds)
-Next action: Execute 88-02-PLAN.md (Wave 1 — ingest-time rollup write path: incrementEventBucket / incrementSankeyBuckets + events.ingest idempotencyKey dedup)
+Last session: 2026-06-24T13:03:46.610Z
+Stopped at: Completed 88-02-PLAN.md (Wave 1 — rollup write path: dedup + ingest-time increments + cron branch removal + paginated cost reads + backfill action + httpAction key pass-through)
+Next action: Execute 88-03-PLAN.md (Wave 2 — operator-gated: `npx convex deploy` then run analyticsRollup:backfillHistorical to populate historical event/sankey buckets)
 Resume file: None
