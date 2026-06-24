@@ -205,7 +205,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Phase summary:**
 
 - [x] **Phase 88 — Analytics Rollup** — Durable Convex 16 MiB read-limit fix via ingest-time rollups (completed 2026-06-24)
-- [ ] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
+- [x] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass (completed 2026-06-24)
 - [ ] **Phase 90 — Agent Room / War Room** — Wire live participant identity + bounded listing + real operator Join + transcript robustness
 - [ ] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware
 - [ ] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (Porcupine) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply spoken in a Norse persona voice
@@ -248,7 +248,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 89-04-PLAN.md — Wave 1: migrate glow/shadow in 9 hr/skills components + 7 pages (TH-01)
 - [x] 89-05-PLAN.md — Wave 2: no-FOUC pre-paint script, 4-theme switcher, key consolidation, remove dark/light toggle + dead classes (TH-05, TH-01)
 - [x] 89-06-PLAN.md — Wave 2: route useThemeColors() into ForceGraphCanvas/CodeVaultGraph/KnowledgeGraph; violet vault token (TH-01)
-- [ ] 89-07-PLAN.md — Wave 3: axe WCAG-AA contrast (20 cases) + no-FOUC + reduced-motion e2e + operator manual sign-off (TH-06, TH-02..05)
+- [x] 89-07-PLAN.md — Wave 3: axe WCAG-AA contrast (20 cases) + no-FOUC + reduced-motion e2e + operator manual sign-off (TH-06, TH-02..05)
 **UI hint**: yes
 
 ---
@@ -316,7 +316,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete | 2026-06-23 |
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
 | 88. Analytics Rollup | v9.0 | 4/4 | Complete   | 2026-06-24 |
-| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 6/7 | In Progress|  |
+| 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete   | 2026-06-24 |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 0/? | Not started | — |
