@@ -18,7 +18,7 @@
 - [x] **TH-02**: A readability-first theme meeting **WCAG-AA** contrast for body + secondary text; CRT-scanline + matrix-grid + heavy glow disabled/reduced over text regions; a readable (non-mono) body font with mono reserved for code/metrics.
 - [x] **TH-03**: **Midnight Aubergine** editorial theme as a `[data-theme="aubergine"]` token block (warm aubergine bg, cream text, gold/emerald/plum accents, paper-grain overlay, ambient radial gradients, editorial primitives) — re-implemented from the pack pattern and **approximated with the existing Geist stack (no new font dependency)**.
 - [x] **TH-04**: **Matrix-Emerald** and **Electric Cyan** are retained as theme options; all skins coexist behind the switcher (nothing removed).
-- [ ] **TH-05**: A **no-flash persisted switcher** in `DashboardLayout` — a blocking inline pre-paint `<script>` in `index.html` applies the saved skin before first paint (no FOUC); the two localStorage keys (`theme`, `codepulse-theme`) are consolidated; `class="dark"` stays permanent (all skins are dark variants); `prefers-reduced-motion` disables scanline/tick/glow animation. **Default skin remains Electric Cyan** (the readable theme is opt-in).
+- [x] **TH-05**: A **no-flash persisted switcher** in `DashboardLayout` — a blocking inline pre-paint `<script>` in `index.html` applies the saved skin before first paint (no FOUC); the two localStorage keys (`theme`, `codepulse-theme`) are consolidated; `class="dark"` stays permanent (all skins are dark variants); `prefers-reduced-motion` disables scanline/tick/glow animation. **Default skin remains Electric Cyan** (the readable theme is opt-in).
 - [x] **TH-06**: **A11y pass** — every theme verified for WCAG-AA contrast on the highest-traffic surfaces (Dashboard, Live Run, Analytics, Forge, Graphs) via `@axe-core/playwright` in the existing Playwright path.
 
 ### Analytics Rollup (AR) — Phase 88
@@ -70,7 +70,7 @@
 | TH-02 | Phase 89 | Complete |
 | TH-03 | Phase 89 | Complete |
 | TH-04 | Phase 89 | Complete |
-| TH-05 | Phase 89 | Pending |
+| TH-05 | Phase 89 | Complete |
 | TH-06 | Phase 89 | Complete |
 | AR-01 | Phase 88 | Complete |
 | AR-02 | Phase 88 | Complete |
