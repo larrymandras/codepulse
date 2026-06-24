@@ -225,7 +225,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans**: 4 plans (4 waves)
   - [x] 88-01-PLAN.md — Wave 0: extract shared sankey classifier (convex/lib/sankeyClassify.ts) + scaffold 3 Nyquist test files (AR-01/02/03)
   - [x] 88-02-PLAN.md — Wave 1 (atomic deploy): idempotencyKey schema+index, in-mutation dedup + ingest-time event/sankey increments, remove computeHourly event/error branches, paginate cost cron, backfill action, httpAction key pass-through (AR-01, AR-02)
-  - [ ] 88-03-PLAN.md — Wave 2: run one-time historical backfill (operator checkpoint) + dataRetention aggregates-safety verify/test (AR-02)
+  - [x] 88-03-PLAN.md — Wave 2: run one-time historical backfill (operator checkpoint) + dataRetention aggregates-safety verify/test (AR-02)
   - [ ] 88-04-PLAN.md — Wave 3: rewrite heatmap/sankey/error-trend/sunburst to read aggregates, remove all .take() count caps, keep tokenWaterfall raw-bounded + render verify (AR-01, AR-03)
 
 ---
@@ -293,7 +293,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 85. Cross-Graph Navigation | v8.0 | 4/4 | Complete | 2026-06-22 |
 | 86. KG Full-Text Search + Clustering | v8.0 | 3/3 | Complete | 2026-06-23 |
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
-| 88. Analytics Rollup | v9.0 | 2/4 | In Progress|  |
+| 88. Analytics Rollup | v9.0 | 3/4 | In Progress|  |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 0/? | Not started | — |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
