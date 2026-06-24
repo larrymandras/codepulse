@@ -273,7 +273,7 @@ This phase does not change the type scale. All type rules inherited from Phase 7
 |------|--------|------|--------|-------------|-------|
 | Body | Geist Variable | 14px (`text-sm`) | 400 regular | 1.5 | All prose, descriptions, list rows |
 | Label / operational chrome | JetBrains Mono | 12px (`text-xs`) | 400 regular | 1 (single-line) | Nav labels, metric labels, status pills — mono ONLY |
-| Metric value | Geist Variable | 30px (`text-3xl`) | 500 medium | 1.2 | Large numeric readouts in MetricCard |
+| Metric value | Geist Variable | 30px (`text-3xl`) | 700 bold | 1.2 | Large numeric readouts in MetricCard |
 | Heading / page H1 | Geist Variable | 24px (`text-2xl`) | 700 bold | 1.2 | Page titles |
 
 Font smoothing: `subpixel-antialiased` on body (existing, `src/index.css:234`). No change.
