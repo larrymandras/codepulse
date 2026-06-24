@@ -75,9 +75,15 @@ export interface ForceGraphCanvasProps {
   /** When supplied, draws a halo arc around each node where this returns non-null.
    *  Halo sits between the fill and the selection ring (caller's paintNode owns the selection ring). */
   communityColorFn?: (node: any) => string | null;
+  /** Default node fill color when no colorFn is provided. Parent supplies a
+   *  theme-resolved value (e.g. from useThemeColors().primary). Falls back to
+   *  reading --primary from the document if omitted. */
+  defaultNodeColor?: string;
+  /** Default link color when no linkColorFn is provided. Parent supplies a
+   *  theme-resolved value (e.g. from useThemeColors().primaryAlpha18). Falls
+   *  back to reading --primary@0.18 from the document if omitted. */
+  defaultLinkColor?: string;
 }
-
-const DEFAULT_COLOR = "#10b981";
 
 export const ForceGraphCanvas = forwardRef<
   ForceGraphHandle,
@@ -102,7 +108,36 @@ export const ForceGraphCanvas = forwardRef<
     backdrop = true,
     clusterForce,
     communityColorFn,
+    defaultNodeColor,
+    defaultLinkColor,
   } = props;
+
+  // Resolve the fallback node color: prefer parent-supplied defaultNodeColor (theme-aware),
+  // then try reading --primary from the live CSSOM, then fall back to a safe neutral.
+  // This path is only hit when no colorFn AND no defaultNodeColor is supplied.
+  const resolvedDefaultNodeColor =
+    defaultNodeColor ??
+    (typeof document !== "undefined"
+      ? getComputedStyle(document.documentElement).getPropertyValue("--primary").trim() || "#6b7280"
+      : "#6b7280");
+
+  // Resolve the fallback link color: prefer parent-supplied defaultLinkColor (theme-aware).
+  // When no defaultLinkColor is supplied, read --primary from CSSOM and build an alpha variant.
+  // Falls back to a transparent zinc if CSSOM is unavailable or returns an unsupported format.
+  const resolvedDefaultLinkColor =
+    defaultLinkColor ??
+    (typeof document !== "undefined"
+      ? (() => {
+          const primary = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+          if (primary && primary.startsWith("#") && primary.length >= 7) {
+            const r = parseInt(primary.slice(1, 3), 16);
+            const g = parseInt(primary.slice(3, 5), 16);
+            const b = parseInt(primary.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, 0.18)`;
+          }
+          return "rgba(107, 114, 128, 0.18)"; // zinc neutral fallback (never emerald)
+        })()
+      : "rgba(107, 114, 128, 0.18)");
 
   const fgRef = useRef<any>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
@@ -176,7 +211,7 @@ export const ForceGraphCanvas = forwardRef<
     }
   }, [data.nodes, clusterForce]);
 
-  const color = colorFn ?? (() => DEFAULT_COLOR);
+  const color = colorFn ?? (() => resolvedDefaultNodeColor);
 
   const isDimmed = useCallback(
     (nodeId: string) => !!focusSet && !focusSet.has(nodeId),
@@ -269,7 +304,7 @@ export const ForceGraphCanvas = forwardRef<
         nodeRelSize={nodeRelSize}
         nodeCanvasObject={paint}
         linkColor={
-          linkColorFn ?? (() => "rgba(16, 185, 129, 0.18)")
+          linkColorFn ?? (() => resolvedDefaultLinkColor)
         }
         linkWidth={linkWidthFn ?? (() => 0.6)}
         linkLineDash={
