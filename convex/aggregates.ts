@@ -32,12 +32,18 @@ export const computeHourly = internalMutation({
     }
 
     const costByDim: Record<string, number> = {};
+    // Phase 88 token-fidelity follow-up: sum totalTokens per IDENTICAL dimension
+    // key alongside cost so the sunburst can render real per-provider/model token
+    // counts (the "cost" buckets carry no token data). Written as its own
+    // metric_type "tokens" hourly bucket below, behind its own idempotency guard.
+    const tokensByDim: Record<string, number> = {};
     for (const r of llmRows) {
       const billingType = (r as any).billingType ?? getBillingType(r.provider);
       // PULSE-02: extend key with goalId (4th segment) so hourly aggregates are goal-scoped.
       // goalId is "" for non-swarm rows — that is a valid bucket, not a missing value.
       const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
       costByDim[key] = (costByDim[key] ?? 0) + (r.cost ?? 0);
+      tokensByDim[key] = (tokensByDim[key] ?? 0) + ((r as any).totalTokens ?? 0);
     }
 
     // PULSE-02 / Phase 67: Per-dimension-key idempotency guard.
@@ -62,6 +68,36 @@ export const computeHourly = internalMutation({
       const [provider, model, billingType, goalId] = dim.split("::");
       await ctx.db.insert("aggregates", {
         metric_type: "cost",
+        period: "hourly",
+        bucket_start: hourStart,
+        value,
+        dimensions: { provider, model, billingType, goalId },
+      });
+    }
+
+    // Phase 88 token-fidelity follow-up: parallel "tokens" hourly buckets.
+    // Same {provider, model, billingType, goalId} dimensions and the same
+    // 4-segment key/defaults as the cost block, behind their OWN per-dimension-key
+    // idempotency guard so a re-run of the cron does not double-count tokens.
+    const existingTokenRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "tokens").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingTokenKeys = new Set(
+      existingTokenRows.map((r) => {
+        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+        // Reconstruct the identical 4-segment key — same defaults as the cost guard.
+        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+      })
+    );
+
+    for (const [dim, value] of Object.entries(tokensByDim)) {
+      if (existingTokenKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [provider, model, billingType, goalId] = dim.split("::");
+      await ctx.db.insert("aggregates", {
+        metric_type: "tokens",
         period: "hourly",
         bucket_start: hourStart,
         value,

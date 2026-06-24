@@ -23,6 +23,7 @@ import type * as alertRulesConfig from "../alertRulesConfig.js";
 import type * as alerts from "../alerts.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsRollup from "../analyticsRollup.js";
+import type * as analyticsRollupQueries from "../analyticsRollupQueries.js";
 import type * as anomalyDetection from "../anomalyDetection.js";
 import type * as apiErrors from "../apiErrors.js";
 import type * as approvalQueue from "../approvalQueue.js";
@@ -163,6 +164,7 @@ declare const fullApi: ApiFromModules<{
   alerts: typeof alerts;
   analytics: typeof analytics;
   analyticsRollup: typeof analyticsRollup;
+  analyticsRollupQueries: typeof analyticsRollupQueries;
   anomalyDetection: typeof anomalyDetection;
   apiErrors: typeof apiErrors;
   approvalQueue: typeof approvalQueue;

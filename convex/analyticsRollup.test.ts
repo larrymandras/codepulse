@@ -76,6 +76,18 @@ type RollupModule = {
     e: { eventType: string; toolName?: string; timestamp: number },
     cutoffHour: number
   ) => void;
+  accumulateLlmTokens?: (
+    acc: Map<string, any>,
+    r: {
+      provider: string;
+      model: string;
+      billingType: string;
+      goalId: string;
+      totalTokens: number;
+      timestamp: number;
+    },
+    cutoffHour: number
+  ) => void;
 };
 let rollup: RollupModule | null = null;
 beforeAll(async () => {
@@ -280,6 +292,74 @@ describe("analyticsRollup", () => {
       const edges = [...sankeyAcc.values()].map((r) => `${r.dimensions.source}>${r.dimensions.target}`);
       expect(edges).toContain(`${categoryOf("tool_use")}>Bash`);
       expect(edges).toContain(`Bash>${outcomeOf("tool_use")}`);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 88 token-fidelity follow-up (gap-closure): the "tokens" rollup
+  // backfill. accumulateLlmTokens folds llmMetrics rows into token-sum bucket
+  // accumulators with a current-hour cutoff so the backfill never double-counts
+  // current-hour rows the cron owns. Mirrors accumulateEvent.
+  // -------------------------------------------------------------------------
+  describe("backfill aggregation (accumulateLlmTokens)", () => {
+    const CUTOFF = 1_700_010_000; // arbitrary "current hour" boundary for tests
+
+    test("sums totalTokens per {provider,model} for pre-cutoff rows", () => {
+      if (!rollup || typeof rollup.accumulateLlmTokens !== "function") {
+        throw new Error("accumulateLlmTokens not implemented (token backfill)");
+      }
+      const acc = new Map<string, any>();
+      const seeded = [
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 100, timestamp: 1_700_000_000 },
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 50, timestamp: 1_700_000_500 }, // same hour+dim → summed
+        { provider: "openai", model: "gpt-4", billingType: "api", goalId: "", totalTokens: 200, timestamp: 1_700_000_100 },
+      ];
+      for (const r of seeded) rollup.accumulateLlmTokens(acc, r, CUTOFF);
+
+      const hour = Math.floor(1_700_000_000 / 3600) * 3600;
+      const opusBucket = [...acc.values()].find(
+        (b) => b.bucket_start === hour && b.dimensions.provider === "anthropic" && b.dimensions.model === "opus"
+      );
+      expect(opusBucket?.value).toBe(150); // 100 + 50 collapsed into one bucket
+      const gptBucket = [...acc.values()].find(
+        (b) => b.dimensions.provider === "openai" && b.dimensions.model === "gpt-4"
+      );
+      expect(gptBucket?.value).toBe(200);
+    });
+
+    test("rows at/after the cutoff hour are SKIPPED (live cron owns them)", () => {
+      if (!rollup || typeof rollup.accumulateLlmTokens !== "function") {
+        throw new Error("accumulateLlmTokens not implemented (token backfill)");
+      }
+      const acc = new Map<string, any>();
+      rollup.accumulateLlmTokens(
+        acc,
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 100, timestamp: CUTOFF },
+        CUTOFF
+      );
+      rollup.accumulateLlmTokens(
+        acc,
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 100, timestamp: CUTOFF + 5000 },
+        CUTOFF
+      );
+      expect(acc.size).toBe(0);
+    });
+
+    test("sum of bucket values === sum of pre-cutoff totalTokens", () => {
+      if (!rollup || typeof rollup.accumulateLlmTokens !== "function") {
+        throw new Error("accumulateLlmTokens not implemented (token backfill)");
+      }
+      const acc = new Map<string, any>();
+      const seeded = [
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 100, timestamp: 1_700_000_000 },
+        { provider: "anthropic", model: "sonnet", billingType: "api", goalId: "", totalTokens: 40, timestamp: 1_700_003_700 }, // next hour
+        { provider: "openai", model: "gpt-4", billingType: "api", goalId: "g1", totalTokens: 200, timestamp: 1_700_000_100 },
+        { provider: "anthropic", model: "opus", billingType: "api", goalId: "", totalTokens: 999, timestamp: CUTOFF + 1 }, // post-cutoff, skipped
+      ];
+      for (const r of seeded) rollup.accumulateLlmTokens(acc, r, CUTOFF);
+
+      const sum = [...acc.values()].reduce((a, b) => a + b.value, 0);
+      expect(sum).toBe(100 + 40 + 200); // post-cutoff 999 excluded
     });
   });
 });
