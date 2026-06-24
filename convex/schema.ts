@@ -31,11 +31,13 @@ export default defineSchema({
     timestamp: v.float64(),
     goalId: v.optional(v.string()),    // Phase 149 PULSE-01
     archived: v.optional(v.boolean()),
+    idempotencyKey: v.optional(v.string()),   // Phase 88 D-04: producer dedup key
   })
     .index("by_session", ["sessionId", "timestamp"])
     .index("by_type", ["eventType", "timestamp"])
     .index("by_tool", ["toolName", "timestamp"])
-    .index("by_timestamp", ["timestamp"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_idempotencyKey", ["idempotencyKey"]),
 
   sessions: defineTable({
     sessionId: v.string(),
