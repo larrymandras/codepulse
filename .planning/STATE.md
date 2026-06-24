@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: Readability & Experience
 status: executing
 stopped_at: Completed 89-01-PLAN.md
-last_updated: "2026-06-24T18:44:30.938Z"
+last_updated: "2026-06-24T18:52:27.288Z"
 last_activity: 2026-06-24
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 20
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 89 (readable-themes-editorial-skin-toggle) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-06-24
 
-Progress: [██████░░░░] 64%
+Progress: [███████░░░] 73%
 
 ## v9.0 Roadmap
 
@@ -77,6 +77,8 @@ See PROJECT.md Key Decisions table for full history.
 - **`waitFor()` required for MutationObserver test** — jsdom fires MutationObserver callbacks asynchronously; `act()` alone does not flush them. Added `await waitFor(() => expect(...))` in the re-resolve test.
 - **ThemeSwitcher amber option removed; readable + aubergine added** — per PATTERNS.md §ThemeSwitcher changes; trigger width widened to `w-[160px]`.
 - **e2e specs seeded RED-pending** — all 3 e2e specs (contrast, no-fouc, reduced-motion) are scaffolded with `RED-pending: <plan>` comments; they correctly fail until Plans 02-04 ship token blocks, inline script, and CSS suppression rules.
+- [Phase ?]: AgentCard amber shadow preserved as status identity
+- [Phase ?]: CategoryGrid COLOR_HEX map EXEMPT
 
 ### Pending Todos
 
@@ -90,7 +92,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-24T18:44:30.927Z
+Last session: 2026-06-24T18:52:20.658Z
 Stopped at: Completed 89-01-PLAN.md
 Next action: Execute 89-02-PLAN.md (readable + aubergine token blocks in src/index.css)
 Resume file: None
