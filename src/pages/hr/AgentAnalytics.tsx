@@ -99,7 +99,7 @@ export default function AgentAnalytics() {
             <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
             <div className="flex items-center justify-between flex-wrap gap-4 relative z-10">
               <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
                 Agent Analytics
               </h1>
               <ToggleGroup
@@ -111,7 +111,7 @@ export default function AgentAnalytics() {
                   <ToggleGroupItem
                     key={w}
                     value={w}
-                    className="text-xs font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all shadow-[0_0_10px_rgba(16,185,129,0)_inset] data-[state=on]:shadow-[0_0_10px_rgba(16,185,129,0.2)_inset]"
+                    className="text-xs font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all data-[state=on]:shadow-[var(--glow-xs)]"
                   >
                     {w}
                   </ToggleGroupItem>

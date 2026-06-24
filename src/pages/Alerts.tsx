@@ -204,14 +204,14 @@ export default function Alerts() {
 
       {/* Alert List */}
       {filtered.length === 0 ? (
-        <div className="relative overflow-hidden bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20 rounded-2xl p-12 text-center backdrop-blur-sm shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+        <div className="relative overflow-hidden bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20 rounded-2xl p-12 text-center backdrop-blur-sm shadow-[var(--glow-md)]">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
           <div className="relative z-10 flex flex-col items-center justify-center space-y-4">
-            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
-              <span className="text-3xl text-green-400 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]">&#10003;</span>
+            <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center border border-green-500/30 shadow-[var(--glow-sm)]">
+              <span className="text-3xl text-green-400 drop-shadow-[var(--glow-xs)]">&#10003;</span>
             </div>
             <div>
-              <p className="text-green-400 text-xl font-medium tracking-wide mb-1 drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">No active alerts</p>
+              <p className="text-green-400 text-xl font-medium tracking-wide mb-1 drop-shadow-[var(--glow-xs)]">No active alerts</p>
               <p className="text-muted-foreground text-base">All monitored thresholds are within normal range.</p>
             </div>
           </div>

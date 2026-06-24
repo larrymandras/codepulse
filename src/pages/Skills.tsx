@@ -195,7 +195,7 @@ export default function Skills() {
                 placeholder="Search all skills..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[inset_0_0_10px_rgba(16,185,129,0.05)]"
+                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[var(--glow-xs)]"
               />
             </div>
             <select
@@ -214,7 +214,7 @@ export default function Skills() {
             
             <div className="flex flex-col gap-2">
               <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
                 Categories
               </h2>
               <CategoryGrid

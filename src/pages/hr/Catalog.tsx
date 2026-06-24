@@ -20,7 +20,7 @@ export default function Catalog() {
         <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
         <div className="mb-6 flex flex-col items-start relative z-10">
           <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
             Agent Catalog
           </h1>
           <p className="text-base font-mono tracking-widest text-muted-foreground/80 mt-1 uppercase">
