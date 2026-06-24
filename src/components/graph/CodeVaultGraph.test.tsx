@@ -43,6 +43,26 @@ vi.mock("../../convex/_generated/api", () => ({
   },
 }));
 
+// useThemeColors (added in Phase 89-06) resolves CSS custom properties via
+// getComputedStyle. jsdom returns empty strings for custom properties, so stub
+// the hook with known test values that match the default Matrix Emerald theme.
+vi.mock("../../hooks/useThemeColors", () => ({
+  useThemeColors: () => ({
+    primary: "#10b981",
+    primaryAlpha18: "rgba(16, 185, 129, 0.18)",
+    primaryAlpha55: "rgba(16, 185, 129, 0.55)",
+    accent: "#059669",
+    vaultNode: "#8b5cf6",
+    vaultNodeAlpha18: "rgba(139, 92, 246, 0.18)",
+    chartBar: "#10b981",
+    chartBarAccent: "#059669",
+    statusOk: "#10b981",
+    statusWarn: "#f59e0b",
+    statusError: "#ef4444",
+    statusInfo: "#3b82f6",
+  }),
+}));
+
 // useKnowledgeGraph (added in Phase 85) persists via idb-keyval — IndexedDB is
 // absent in jsdom. Stub it so the cross-graph KG link gate sees zero entities
 // (no link section renders — SC#3-safe degrade) without touching IndexedDB.
@@ -349,9 +369,13 @@ describe("CodeVaultGraph", () => {
     expect(screen.queryByRole("button", { name: "Close node details" })).toBeNull();
   });
 
-  // ── Test 9: colorFn returns correct colors ─────────────────────────────────
+  // ── Test 9: colorFn discriminates code vs vault nodes ────────────────────────
+  // After TH-01 (Plan 89-06), colorFn returns theme-resolved colors from
+  // useThemeColors() (mocked above with Matrix Emerald defaults). Asserts that:
+  // (a) code nodes get colors.primary, (b) vault nodes get colors.vaultNode,
+  // (c) the discriminator is the `vault:` id prefix (not the bare source field).
 
-  it("colorFn returns #10b981 for code nodes and #8b5cf6 for vault nodes (by id prefix, bare source)", () => {
+  it("colorFn returns colors.primary for code nodes and colors.vaultNode for vault nodes (id-prefix discriminator)", () => {
     const fixture = makeProjectGraphFixture();
     mockGetProjectGraph(fixture);
 
@@ -362,12 +386,12 @@ describe("CodeVaultGraph", () => {
     const capturedColorFn = lastForceGraphProps.colorFn;
     expect(typeof capturedColorFn).toBe("function");
 
-    // code node (graphify: id prefix, bare "codepulse" source) → #10b981
+    // code node (graphify: id prefix, bare "codepulse" source) → colors.primary
     const codeNode = { source: "codepulse", id: "graphify:codepulse:src/a.ts" };
-    expect(capturedColorFn(codeNode)).toBe("#10b981");
+    expect(capturedColorFn(codeNode)).toBe("#10b981"); // mocked useThemeColors().primary
 
-    // vault node (vault: id prefix, bare "vault" source) → #8b5cf6
+    // vault node (vault: id prefix, bare "vault" source) → colors.vaultNode
     const vaultNode = { source: "vault", id: "vault:Note.md" };
-    expect(capturedColorFn(vaultNode)).toBe("#8b5cf6");
+    expect(capturedColorFn(vaultNode)).toBe("#8b5cf6"); // mocked useThemeColors().vaultNode
   });
 });

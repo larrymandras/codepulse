@@ -12,6 +12,7 @@ import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
 import KGSearchResults from "../components/kg/KGSearchResults";
 import { useKnowledgeGraph } from "../hooks/useKnowledgeGraph";
+import { useThemeColors } from "../hooks/useThemeColors";
 import { useSavedViews } from "../hooks/useSavedViews";
 import { useKgDiff } from "../hooks/useKgDiff";
 import { useKgAnimation } from "../hooks/useKgAnimation";
@@ -33,15 +34,10 @@ import {
 } from "../lib/kg-graph";
 
 // ── Edge styling (KG-07): current solid / superseded dashed+dim / contradiction red.
+// COLOR_CURRENT is resolved from useThemeColors().primaryAlpha55 inside the component
+// so it follows the active theme. COLOR_CONTRA and COLOR_SUPERSEDED are fixed semantics.
 const COLOR_CONTRA = "#ef4444";
-const COLOR_CURRENT = "rgba(16, 185, 129, 0.55)";
 const COLOR_SUPERSEDED = "rgba(148, 163, 184, 0.3)";
-
-function linkColorFn(l: any): string {
-  const link = l as KgLink;
-  if (link.contradictionFlag) return COLOR_CONTRA;
-  return link.current ? COLOR_CURRENT : COLOR_SUPERSEDED;
-}
 function linkWidthFn(l: any): number {
   return (l as KgLink).width ?? 1;
 }
@@ -97,6 +93,11 @@ function originLabel(fromPath: string): string {
 }
 
 export default function KnowledgeGraph() {
+  // ── Theme-aware canvas colors (TH-01) ─────────────────────────────────────
+  // Canvas APIs cannot read CSS variables — resolves them to hex/rgba at render
+  // time and re-resolves on data-theme switch via MutationObserver.
+  const colors = useThemeColors();
+
   const kg = useKnowledgeGraph();
   const savedViews = useSavedViews();
   const fgRef = useRef<ForceGraphHandle>(null);
@@ -528,10 +529,23 @@ export default function KnowledgeGraph() {
     }`;
   }, []);
 
+  // ── linkColorFn — theme-aware current-edge color (TH-01) ────────────────────
+  // COLOR_CURRENT is resolved from colors.primaryAlpha55 (--primary @ 0.55 opacity)
+  // so it follows the active theme. Wrapped in useCallback([colors]) to re-create
+  // on theme switch.
+  const linkColorFn = useCallback(
+    (l: any): string => {
+      const link = l as KgLink;
+      if (link.contradictionFlag) return COLOR_CONTRA;
+      return link.current ? colors.primaryAlpha55 : COLOR_SUPERSEDED;
+    },
+    [colors],
+  );
+
   // ── Diff edge style functions (memoized on diff.edges) ─────────────────────
   const linkColorDiffFn = useMemo(
     () => (diff ? makeLinkColorDiffFn(diff.edges) : linkColorFn),
-    [diff],
+    [diff, linkColorFn],
   );
   const linkLineDashDiffFn = useMemo(
     () =>

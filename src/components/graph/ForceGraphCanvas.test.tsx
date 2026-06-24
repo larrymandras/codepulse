@@ -105,9 +105,20 @@ describe("ForceGraphCanvas", () => {
     expect(h.props!.nodeColor({ id: "b" })).toBe("#222222");
   });
 
-  it("uses the default emerald color when no colorFn supplied", () => {
+  it("uses a theme-resolved color when no colorFn supplied", () => {
+    // defaultNodeColor is now prop-driven (from parent's useThemeColors() call) rather
+    // than a hardcoded emerald constant. When no defaultNodeColor prop is provided and
+    // jsdom has no CSS custom properties set, the component falls back to CSSOM read or
+    // a safe neutral — the key invariant is that a non-empty string is always returned.
     render(<ForceGraphCanvas data={data} />);
-    expect(h.props!.nodeColor({ id: "a" })).toBe("#10b981");
+    const color = h.props!.nodeColor({ id: "a" });
+    expect(typeof color).toBe("string");
+    expect(color.length).toBeGreaterThan(0);
+  });
+
+  it("uses the supplied defaultNodeColor when no colorFn provided", () => {
+    render(<ForceGraphCanvas data={data} defaultNodeColor="#00ff00" />);
+    expect(h.props!.nodeColor({ id: "a" })).toBe("#00ff00");
   });
 
   it("dims a node outside the focus set via globalAlpha", () => {
