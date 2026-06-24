@@ -88,6 +88,39 @@ describe("SwarmTaskNode — legibility (readable-hive redesign)", () => {
   });
 });
 
+describe("SwarmTaskNode — agent avatar", () => {
+  it("renders an avatar when the task has a claiming agent", () => {
+    const { container } = render(
+      <SwarmTaskNode data={makeData({ state: "running", claimedBy: "harvor" })} />
+    );
+    // AgentAvatar's root carries the ring-2 marker class
+    expect(container.querySelector(".ring-2")).not.toBeNull();
+  });
+
+  it("renders the agent's emoji avatar when avatarData is provided", () => {
+    render(
+      <SwarmTaskNode
+        data={makeData({
+          claimedBy: "harvor",
+          avatarData: { name: "Harvor", emoji: "🛠️" },
+        })}
+      />
+    );
+    expect(screen.getByText("🛠️")).toBeInTheDocument();
+  });
+
+  it("falls back to the agent initial when no avatarData resolves", () => {
+    render(<SwarmTaskNode data={makeData({ claimedBy: "skuld" })} />);
+    // AgentAvatar uppercases the first char of the name fallback
+    expect(screen.getByText("S")).toBeInTheDocument();
+  });
+
+  it("renders NO avatar when the task is unclaimed", () => {
+    const { container } = render(<SwarmTaskNode data={makeData()} />);
+    expect(container.querySelector(".ring-2")).toBeNull();
+  });
+});
+
 describe("SwarmTaskNode — regression: existing states unchanged", () => {
   it("state='done' renders the 'Done' label", () => {
     render(<SwarmTaskNode data={makeData({ state: "done" })} />);

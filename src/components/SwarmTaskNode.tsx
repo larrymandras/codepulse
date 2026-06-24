@@ -19,6 +19,8 @@ import {
   Ban,
 } from "lucide-react";
 import { modelBadgeClass } from "./AgentNode";
+import AgentAvatar from "./AgentAvatar";
+import type { AvatarData } from "../hooks/useRosterAgents";
 
 export interface SwarmTaskNodeData {
   subtaskId: string;
@@ -28,7 +30,21 @@ export interface SwarmTaskNodeData {
   claimedBy?: string;
   model?: string;
   agentId?: string;
+  /** Resolved avatar for the claiming agent (injected by SwarmGraph). */
+  avatarData?: AvatarData;
 }
+
+// Map subtask state → AgentAvatar status ring (reuses AgentAvatar's vocabulary).
+const stateAvatarStatus: Record<string, "active" | "working" | "idle" | "completed" | "error"> = {
+  pending: "idle",
+  claimed: "active",
+  running: "working",
+  verifying: "active",
+  done: "completed",
+  failed: "error",
+  verify_rejected: "error",
+  cancelled: "idle",
+};
 
 // 8-state border class map (UI-SPEC State vocabulary table + cancelled)
 const stateBorder: Record<string, string> = {
@@ -134,6 +150,8 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
     : data.claimedBy
       ? data.claimedBy.slice(0, 12)
       : "—";
+  const hasAgent = Boolean(data.agentId || data.claimedBy);
+  const avatarStatus = stateAvatarStatus[state] ?? "idle";
 
   // aria-label for screen readers (UI-SPEC Accessibility)
   const ariaLabel = `Subtask: ${data.subtask}, State: ${label}, Claimed by: ${agentDisplay}`;
@@ -176,10 +194,17 @@ export default function SwarmTaskNode({ data }: { data: SwarmTaskNodeData }) {
 
       {/* Bottom row: dot + STATE • agentId + model badge */}
       <div className="flex items-center gap-1.5 flex-wrap">
-        <span className="flex items-center gap-1 min-w-0">
+        <span className="flex items-center gap-1.5 min-w-0">
           <span
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${stateDot[state] ?? "bg-muted-foreground/50"}`}
           />
+          {hasAgent && (
+            <AgentAvatar
+              avatar={data.avatarData ?? { name: data.agentId ?? data.claimedBy ?? "?" }}
+              status={avatarStatus}
+              size="sm"
+            />
+          )}
           <span className="text-xs font-mono text-muted-foreground truncate">
             {label} • {agentDisplay}
           </span>

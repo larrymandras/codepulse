@@ -26,6 +26,7 @@ import type { SwarmTaskDetailData } from "./SwarmTaskDetail";
 import QueenNode from "./QueenNode";
 import SwarmEdgeParticle from "./SwarmEdgeParticle";
 import { useSwarmGraph } from "../hooks/useSwarmGraph";
+import { useAgentAvatarResolver } from "../hooks/useAgentAvatarResolver";
 import { computeSwarmLayout } from "../lib/swarmLayout";
 
 // Node types registered with React Flow (D-04)
@@ -103,6 +104,7 @@ interface SwarmGraphProps {
 
 export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
   const taskRows = useSwarmGraph(goalId);
+  const resolveAvatar = useAgentAvatarResolver();
 
   // Click a subtask node → open the detail panel. Queen node has no detail.
   const handleNodeClick: NodeMouseHandler = useCallback(
@@ -130,6 +132,18 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
     () => computeSwarmLayout(goalId ?? "", taskRows),
     [goalId, taskRows]
   );
+
+  // Decorate swarmTask nodes with the claiming agent's resolved avatar.
+  // Layout stays pure (no avatar dependency); enrichment happens here so the
+  // node renders the agent's picture (image → emoji → colored initial fallback).
+  const decoratedNodes = useMemo(() => {
+    return layoutNodes.map((n) => {
+      if (n.type !== "swarmTask") return n;
+      const d = n.data as unknown as SwarmTaskNodeData;
+      const avatarData = resolveAvatar(d.agentId) ?? resolveAvatar(d.claimedBy);
+      return avatarData ? { ...n, data: { ...d, avatarData } } : n;
+    });
+  }, [layoutNodes, resolveAvatar]);
 
   // Enrich edges with state-driven style + animation
   const enrichedEdges: Edge[] = useMemo(() => {
@@ -201,7 +215,7 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
       tabIndex={0}
     >
       <ReactFlow
-        nodes={layoutNodes as Node[]}
+        nodes={decoratedNodes as Node[]}
         edges={enrichedEdges}
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
