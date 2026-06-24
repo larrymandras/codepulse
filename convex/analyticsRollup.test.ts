@@ -70,6 +70,12 @@ function eventBucket(aggregates: Row[], eventType: string): Row | undefined {
 // real safety; the dependent tests RED until the module lands.
 type RollupModule = {
   incrementEventBucket?: (ctx: any, eventType: string, timestamp: number) => Promise<void>;
+  accumulateEvent?: (
+    eventsAcc: Map<string, any>,
+    sankeyAcc: Map<string, any>,
+    e: { eventType: string; toolName?: string; timestamp: number },
+    cutoffHour: number
+  ) => void;
 };
 let rollup: RollupModule | null = null;
 beforeAll(async () => {
@@ -209,6 +215,71 @@ describe("analyticsRollup", () => {
         .filter((r) => r.metric_type === "events")
         .reduce((acc, r) => acc + (r.value as number), 0);
       expect(sum).toBe(seeded.length);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Backfill rewrite (gap-closure): amplification-free in-memory aggregation.
+  // accumulateEvent folds events into bucket accumulators with a current-hour
+  // cutoff so the backfill never double-counts live-ingested current-hour events.
+  // -------------------------------------------------------------------------
+  describe("backfill aggregation (accumulateEvent)", () => {
+    const CUTOFF = 1_700_010_000; // arbitrary "current hour" boundary for tests
+
+    test("sum of 'events' bucket values === number of pre-cutoff events", () => {
+      if (!rollup || typeof rollup.accumulateEvent !== "function") {
+        throw new Error("accumulateEvent not implemented (backfill rewrite)");
+      }
+      const eventsAcc = new Map<string, any>();
+      const sankeyAcc = new Map<string, any>();
+      const seeded = [
+        { eventType: "tool_use", timestamp: 1_700_000_000 },
+        { eventType: "tool_use", timestamp: 1_700_000_500 }, // same hour+type → +1
+        { eventType: "llm_call", timestamp: 1_700_003_700 }, // next hour
+        { eventType: "file_write", timestamp: 1_700_000_100 },
+      ];
+      for (const e of seeded) rollup.accumulateEvent(eventsAcc, sankeyAcc, e, CUTOFF);
+
+      const sum = [...eventsAcc.values()].reduce((a, r) => a + r.value, 0);
+      expect(sum).toBe(seeded.length);
+      // same-hour same-type collapsed into ONE bucket of value 2
+      const toolUseHour = Math.floor(1_700_000_000 / 3600) * 3600;
+      const toolUseBucket = [...eventsAcc.values()].find(
+        (r) => r.bucket_start === toolUseHour && r.dimensions.event_type === "tool_use"
+      );
+      expect(toolUseBucket?.value).toBe(2);
+    });
+
+    test("events at/after the cutoff hour are SKIPPED (live ingest owns them)", () => {
+      if (!rollup || typeof rollup.accumulateEvent !== "function") {
+        throw new Error("accumulateEvent not implemented (backfill rewrite)");
+      }
+      const eventsAcc = new Map<string, any>();
+      const sankeyAcc = new Map<string, any>();
+      rollup.accumulateEvent(eventsAcc, sankeyAcc, { eventType: "tool_use", timestamp: CUTOFF }, CUTOFF);
+      rollup.accumulateEvent(eventsAcc, sankeyAcc, { eventType: "tool_use", timestamp: CUTOFF + 5000 }, CUTOFF);
+      expect(eventsAcc.size).toBe(0);
+      expect(sankeyAcc.size).toBe(0);
+    });
+
+    test("each event writes exactly two sankey edges (category→tool, tool→outcome)", () => {
+      if (!rollup || typeof rollup.accumulateEvent !== "function") {
+        throw new Error("accumulateEvent not implemented (backfill rewrite)");
+      }
+      const eventsAcc = new Map<string, any>();
+      const sankeyAcc = new Map<string, any>();
+      rollup.accumulateEvent(
+        eventsAcc,
+        sankeyAcc,
+        { eventType: "tool_use", toolName: "Bash", timestamp: 1_700_000_000 },
+        CUTOFF
+      );
+      const sankeySum = [...sankeyAcc.values()].reduce((a, r) => a + r.value, 0);
+      expect(sankeySum).toBe(2);
+      // edges use the SAME classifier as the read path (categoryOf/outcomeOf)
+      const edges = [...sankeyAcc.values()].map((r) => `${r.dimensions.source}>${r.dimensions.target}`);
+      expect(edges).toContain(`${categoryOf("tool_use")}>Bash`);
+      expect(edges).toContain(`Bash>${outcomeOf("tool_use")}`);
     });
   });
 });
