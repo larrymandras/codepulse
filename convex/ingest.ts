@@ -30,6 +30,11 @@ export const buildIngest = httpAction(async (ctx, request) => {
       hookType,
     } = body;
     const timestamp = body.timestamp ?? Date.now() / 1000;
+    // Phase 88 D-04: pass the producer dedup key through to the mutation. The
+    // rollup increments happen INSIDE api.events.ingest (one OCC transaction) —
+    // this httpAction is non-transactional and must never write ctx.db rollups.
+    // D-05: undefined when absent → the event is treated as unique (always counted).
+    const idempotencyKey: string | undefined = body.idempotencyKey ?? body.event_id;
 
     // 1. Store in events table
     await ctx.runMutation(api.events.ingest, {
@@ -40,6 +45,7 @@ export const buildIngest = httpAction(async (ctx, request) => {
       payload: payload ?? body,
       hookType,
       timestamp,
+      idempotencyKey,
     });
 
     // 2. Upsert session (extract cwd/model from payload if present)

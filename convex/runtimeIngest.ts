@@ -903,6 +903,8 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             eventType: "gateway.routing_decision",
             payload: d,
             timestamp,
+            // Phase 88 D-04: pass producer dedup key (D-05: undefined → counted as unique)
+            idempotencyKey: d.idempotencyKey ?? d.event_id,
           });
           break;
         }

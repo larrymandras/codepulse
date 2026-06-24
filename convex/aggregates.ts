@@ -1,4 +1,5 @@
 import { internalMutation, query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getBillingType } from "./lib/providers";
 
@@ -11,13 +12,24 @@ export const computeHourly = internalMutation({
     const hourEnd = hourStart + 3600;
 
     // --- Cost aggregation: group by provider+model ---
-    const llmRows = await ctx.db
-      .query("llmMetrics")
-      .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", hourStart).lt("timestamp", hourEnd)
-      )
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+    // D-03 / Pitfall: paginate the llmMetrics read instead of an unbounded
+    // .collect(). A high-volume hour can exceed the 16 MiB/exec read limit and
+    // silently fail the cron; cursor pages keep each read bounded.
+    const LLM_PAGE_SIZE = 500; // tunable batch size for the cost-read pagination
+    const llmRows: Array<Doc<"llmMetrics">> = [];
+    let llmCursor: string | null = null;
+    while (true) {
+      const page = await ctx.db
+        .query("llmMetrics")
+        .withIndex("by_timestamp", (q) =>
+          q.gte("timestamp", hourStart).lt("timestamp", hourEnd)
+        )
+        .filter((q) => q.neq(q.field("archived"), true))
+        .paginate({ numItems: LLM_PAGE_SIZE, cursor: llmCursor });
+      llmRows.push(...page.page);
+      if (page.isDone) break;
+      llmCursor = page.continueCursor;
+    }
 
     const costByDim: Record<string, number> = {};
     for (const r of llmRows) {
@@ -57,89 +69,12 @@ export const computeHourly = internalMutation({
       });
     }
 
-    // --- Event count aggregation: group by eventType ---
-    const eventRows = await ctx.db
-      .query("events")
-      .withIndex("by_timestamp", (q) =>
-        q.gte("timestamp", hourStart).lt("timestamp", hourEnd)
-      )
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-
-    const countByType: Record<string, number> = {};
-    for (const e of eventRows) {
-      countByType[e.eventType] = (countByType[e.eventType] ?? 0) + 1;
-    }
-
-    // Idempotency guard: check existing event rows for this hour
-    const existingEventRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_type_period_bucket", (q) =>
-        q.eq("metric_type", "events").eq("period", "hourly").eq("bucket_start", hourStart)
-      )
-      .collect();
-    const existingEventKeys = new Set(
-      existingEventRows.map((r) => {
-        const dims = r.dimensions as { event_type?: string } | null;
-        return dims?.event_type ?? "unknown";
-      })
-    );
-
-    for (const [eventType, value] of Object.entries(countByType)) {
-      if (existingEventKeys.has(eventType)) continue;
-      await ctx.db.insert("aggregates", {
-        metric_type: "events",
-        period: "hourly",
-        bucket_start: hourStart,
-        value,
-        dimensions: { event_type: eventType },
-      });
-    }
-
-    // --- Error rate aggregation: count errors by category ---
-    const errorRows = eventRows.filter(
-      (e) => e.eventType === "Error" || e.eventType === "ToolError" || e.eventType === "PostToolUseFailure"
-    );
-    const errorByCategory: Record<string, number> = {};
-    for (const e of errorRows) {
-      errorByCategory[e.eventType] = (errorByCategory[e.eventType] ?? 0) + 1;
-    }
-
-    // Idempotency guard: check existing error rows for this hour
-    const existingErrorRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_type_period_bucket", (q) =>
-        q.eq("metric_type", "errors").eq("period", "hourly").eq("bucket_start", hourStart)
-      )
-      .collect();
-    const existingErrorKeys = new Set(
-      existingErrorRows.map((r) => {
-        const dims = r.dimensions as { error_category?: string } | null;
-        return dims?.error_category ?? "unknown";
-      })
-    );
-
-    // Also count total errors as a single aggregate for trend charts
-    const totalErrors = errorRows.length;
-    if (totalErrors > 0 && !existingErrorKeys.has("all")) {
-      await ctx.db.insert("aggregates", {
-        metric_type: "errors",
-        period: "hourly",
-        bucket_start: hourStart,
-        value: totalErrors,
-        dimensions: { error_category: "all" },
-      });
-    }
-    for (const [category, value] of Object.entries(errorByCategory)) {
-      if (existingErrorKeys.has(category)) continue;
-      await ctx.db.insert("aggregates", {
-        metric_type: "errors",
-        period: "hourly",
-        bucket_start: hourStart,
-        value,
-        dimensions: { error_category: category },
-      });
-    }
+    // Phase 88 (D-02): the event-count ("events") and error-count ("errors")
+    // aggregation branches were REMOVED here. Those metrics are now maintained
+    // authoritatively at ingest time in events.ingest → incrementEventBucket /
+    // incrementSankeyBuckets (convex/analyticsRollup.ts). Re-deriving them from a
+    // raw events scan in the cron would double-count every event already counted
+    // at ingest time (Pitfall 1). The cron now only aggregates cost.
   },
 });
 
