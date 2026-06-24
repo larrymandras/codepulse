@@ -18,6 +18,9 @@ import { EmailDigestConfig } from "../components/EmailDigestConfig";
 import { DeliveryHistory } from "../components/DeliveryHistory";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../components/ui/sheet";
+import { ScrollArea } from "../components/ui/scroll-area";
 import type { AgentProfile } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -267,8 +270,17 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
 
-      {/* Connection Status */}
-      <SectionErrorBoundary name="Connection Status">
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="mb-6 bg-muted/50 w-full justify-start overflow-x-auto flex-nowrap rounded-lg p-1">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="agents">Agents</TabsTrigger>
+          <TabsTrigger value="providers">LLM Providers</TabsTrigger>
+          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general" className="space-y-6 mt-0">
+          {/* Connection Status */}
+          <SectionErrorBoundary name="Connection Status">
       <div className="bg-card border border-border rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Connection Status<InfoTooltip text="Backend connection details and environment configuration" />
@@ -612,70 +624,80 @@ export default function Settings() {
       </div>
       </SectionErrorBoundary>
 
-      {/* Agent Profiles Section */}
-      <SectionErrorBoundary name="Agent Profiles">
+        </TabsContent>
+
+        <TabsContent value="agents" className="space-y-6 mt-0">
+          {/* Agent Profiles Section */}
+          <SectionErrorBoundary name="Agent Profiles">
       <div className="bg-card border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-muted-foreground">Agent Profiles<InfoTooltip text="Manage registered agent team profiles — edit names, models, avatars, and capabilities" /></h2>
-          {!creatingProfile && !editingProfile && (
             <button
               onClick={() => setCreatingProfile(true)}
               className="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm"
             >
               New Profile
             </button>
-          )}
         </div>
 
-        {creatingProfile && (
-          <AgentProfileEditor
-            onSave={() => setCreatingProfile(false)}
-            onCancel={() => setCreatingProfile(false)}
-          />
-        )}
-
-        {editingProfile && (
-          <AgentProfileEditor
-            profile={editingProfile}
-            onSave={() => setEditingProfile(null)}
-            onCancel={() => setEditingProfile(null)}
-          />
-        )}
-
-        {!creatingProfile && !editingProfile && (
-          <div className="space-y-2">
-            {profiles.length === 0 ? (
-              <p className="text-base text-muted-foreground py-4 text-center">
-                No agent profiles yet. Create one to get started.
-              </p>
-            ) : (
-              profiles.map((p) => (
-                <div
-                  key={p._id}
-                  className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
-                >
-                  <AgentAvatar avatar={getAvatar(p.avatarId)} size="sm" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-base text-foreground truncate">
-                      {p.displayName || p.name}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      {p.profileId} {p.model ? `/ ${p.model}` : ""}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setEditingProfile(p)}
-                    className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
+        <div className="space-y-2 mt-4">
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-2">
+              {profiles.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic text-center py-4">
+                  No custom agent profiles registered.
+                </p>
+              ) : (
+                profiles.map((p) => (
+                  <div
+                    key={p._id}
+                    className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
                   >
-                    Edit
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        )}
+                    <AgentAvatar avatar={getAvatar(p.avatarId)} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base text-foreground truncate">
+                        {p.displayName || p.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {p.profileId} {p.model ? `/ ${p.model}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setEditingProfile(p)}
+                      className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </div>
-      </SectionErrorBoundary>
+
+        <Sheet open={creatingProfile || editingProfile !== null} onOpenChange={(open) => { if (!open) { setCreatingProfile(false); setEditingProfile(null); } }}>
+          <SheetContent side="right" className="w-[400px] sm:w-[540px] overflow-y-auto">
+            <SheetHeader className="mb-4">
+              <SheetTitle>{creatingProfile ? "New Profile" : "Edit Profile"}</SheetTitle>
+              <SheetDescription>Update the details and capabilities of this agent profile.</SheetDescription>
+            </SheetHeader>
+            {creatingProfile && (
+              <AgentProfileEditor
+                onSave={() => setCreatingProfile(false)}
+                onCancel={() => setCreatingProfile(false)}
+              />
+            )}
+            {editingProfile && (
+              <AgentProfileEditor
+                profile={editingProfile!}
+                onSave={() => setEditingProfile(null)}
+                onCancel={() => setEditingProfile(null)}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+        </SectionErrorBoundary>
 
       <SectionErrorBoundary name="Hooks">
       <div className="bg-card border border-border rounded-xl p-4">
@@ -704,15 +726,21 @@ export default function Settings() {
       </div>
       </SectionErrorBoundary>
 
-      {/* Gateway Providers */}
-      <SectionErrorBoundary name="Gateway Providers">
+        </TabsContent>
+
+        <TabsContent value="providers" className="space-y-6 mt-0">
+          {/* Gateway Providers */}
+          <SectionErrorBoundary name="Gateway Providers">
       <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <ProviderControls />
       </div>
       </SectionErrorBoundary>
 
-      {/* Notification Channels */}
-      <SectionErrorBoundary name="Notification Channels">
+        </TabsContent>
+
+        <TabsContent value="notifications" className="space-y-6 mt-0">
+          {/* Notification Channels */}
+          <SectionErrorBoundary name="Notification Channels">
       <div className="bg-card border border-border rounded-xl p-4 mt-12">
         <NotificationChannels />
       </div>
@@ -743,6 +771,8 @@ export default function Settings() {
       <SectionErrorBoundary name="Intelligence">
         <IntelligenceSettings />
       </SectionErrorBoundary>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

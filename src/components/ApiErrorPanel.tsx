@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import InfoTooltip from "./InfoTooltip";
+import { ScrollArea } from "./ui/scroll-area";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -69,38 +70,40 @@ export default function ApiErrorPanel() {
       )}
 
       {/* Error list */}
-      <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-        {errors.slice(0, 20).map((err: any) => (
-          <div
-            key={err._id}
-            className="bg-gray-900/30 rounded-lg px-3 py-2"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              {err.statusCode && (
-                <span className="text-xs font-mono font-semibold text-red-400 bg-red-600/10 rounded px-1.5 py-0.5">
-                  {err.statusCode}
+      <ScrollArea className="h-[300px] pr-4">
+        <div className="space-y-1.5">
+          {errors.slice(0, 20).map((err: any) => (
+            <div
+              key={err._id}
+              className="bg-gray-900/30 rounded-lg px-3 py-2"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                {err.statusCode && (
+                  <span className="text-xs font-mono font-semibold text-red-400 bg-red-600/10 rounded px-1.5 py-0.5">
+                    {err.statusCode}
+                  </span>
+                )}
+                {err.model && (
+                  <span className="text-xs text-gray-400 font-mono">
+                    {err.model}
+                  </span>
+                )}
+                {err.attempt != null && (
+                  <span className="text-xs text-gray-500">
+                    attempt #{err.attempt}
+                  </span>
+                )}
+                <span className="text-xs text-gray-500 ml-auto shrink-0">
+                  {relativeTime(err.timestamp)}
                 </span>
-              )}
-              {err.model && (
-                <span className="text-xs text-gray-400 font-mono">
-                  {err.model}
-                </span>
-              )}
-              {err.attempt != null && (
-                <span className="text-xs text-gray-500">
-                  attempt #{err.attempt}
-                </span>
-              )}
-              <span className="text-xs text-gray-500 ml-auto shrink-0">
-                {relativeTime(err.timestamp)}
-              </span>
+              </div>
+              <p className="text-sm text-gray-300 truncate">
+                {err.errorMessage}
+              </p>
             </div>
-            <p className="text-sm text-gray-300 truncate">
-              {err.errorMessage}
-            </p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -74,244 +74,271 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between col-span-12 mb-6">
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
         <div className="flex items-center gap-3">
           <TokenSavingsIndicator savedTokens={0} totalTokens={0} />
           <LangfuseTraceLink />
         </div>
       </div>
-
-      {/* Cost Forecast */}
-      <SectionErrorBoundary name="Cost Forecast">
-        <GlassPanel className="p-4">
-          <CostForecastPanel />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* SDK Spend Cap per D-04 */}
-      <SectionErrorBoundary name="SDK Spend Cap">
-        <GlassPanel className="p-4">
-          <SDKSpendGuard />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Phase 68 D-04: Gateway Quota Panel */}
-      <SectionErrorBoundary name="Gateway Quota">
-        <GlassPanel className="p-4">
-          <GatewayQuotaPanel />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Summary row */}
-      <GlassPanel className="p-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex items-start gap-2">
-            <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
-            {anomalies.errors && (
-              <AnomalyBadge
-                severity={anomalies.errors.severity as "warning" | "critical"}
-                metric="errors"
-                value={anomalies.errors.value}
-                mean={anomalies.errors.mean}
-                zScore={anomalies.errors.zScore}
-              />
-            )}
-          </div>
-          <MetricCard label="LLM Calls" value={llmCalls.length} />
-          <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
-          {/* Phase 67 D-01: API Spend / Subscription Usage split view */}
-          <div className="flex items-start gap-2">
-            <MetricCard label="API Spend" value={formatCost(totalApiSpend)} />
-            {anomalies.cost && (
-              <AnomalyBadge
-                severity={anomalies.cost.severity as "warning" | "critical"}
-                metric="cost"
-                value={anomalies.cost.value}
-                mean={anomalies.cost.mean}
-                zScore={anomalies.cost.zScore}
-              />
-            )}
-          </div>
-          <MetricCard
-            label="Subscription Usage"
-            value={`${subscriptionUsage.calls.toLocaleString()} calls / ${subscriptionUsage.tokens.toLocaleString()} tokens`}
-          />
+      
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+        {/* Top Row */}
+        <div className="md:col-span-8">
+          <SectionErrorBoundary name="Cost Forecast">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <CostForecastPanel />
+             </GlassPanel>
+          </SectionErrorBoundary>
         </div>
-      </GlassPanel>
-
-      {/* Cost Trend — full width */}
-      <GlassPanel className="p-4">
-        <CostTrendChart />
-      </GlassPanel>
-
-      {/* Two-column: LLM Analytics + Capability Growth */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassPanel className="p-4">
-          <LlmAnalyticsPanel />
-        </GlassPanel>
-        <GlassPanel className="p-4">
-          <CapabilityGrowthChart />
-        </GlassPanel>
-      </div>
-
-      {/* Session Comparison — full width */}
-      <GlassPanel className="p-4">
-        <SessionComparison />
-      </GlassPanel>
-
-      {/* Advanced Visualizations */}
-      <SectionHeader title="Advanced Visualizations" />
-
-      {/* Activity Heatmap — full width */}
-      <GlassPanel className="p-4">
-        <ActivityHeatmap />
-      </GlassPanel>
-
-      {/* Sankey + Sunburst — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassPanel className="p-4">
-          <SankeyFlow />
-        </GlassPanel>
-        <GlassPanel className="p-4">
-          <TokenSunburst />
-        </GlassPanel>
-      </div>
-
-      {/* Error Rate + Session Duration — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <GlassPanel className="p-4">
-          <ErrorRateTrend />
-        </GlassPanel>
-        <GlassPanel className="p-4">
-          <SessionDurationHistogram />
-        </GlassPanel>
-      </div>
-
-      {/* Token Waterfall — full width */}
-      <GlassPanel className="p-4">
-        <TokenWaterfall />
-      </GlassPanel>
-
-      {/* Agent Telemetry */}
-      <SectionHeader title="Agent Telemetry" />
-
-      {/* Prompt Activity — full width */}
-      <SectionErrorBoundary name="Prompt Activity">
-        <GlassPanel className="p-4">
-          <PromptActivityChart />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Phase 68: LLM by Provider + Provider Comparison — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionErrorBoundary name="LLM by Provider">
-          <GlassPanel className="p-4">
-            <LlmProviderPanel />
-          </GlassPanel>
-        </SectionErrorBoundary>
-        <SectionErrorBoundary name="Provider Comparison">
-          <GlassPanel className="p-4">
-            <ProviderComparisonChart />
-          </GlassPanel>
-        </SectionErrorBoundary>
-      </div>
-
-      {/* Phase 68: Routing Decisions — full width */}
-      <SectionErrorBoundary name="Routing Decisions">
-        <GlassPanel className="p-4">
-          <RoutingDecisionsTable />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Phase 68: Gateway Tasks — full width */}
-      <SectionErrorBoundary name="Gateway Tasks">
-        <GlassPanel className="p-4">
-          <GatewayTasksPanel />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Permission Decisions + Active Time — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <SectionErrorBoundary name="Permission Decisions">
-          <GlassPanel className="p-4">
-            <PermissionDecisionsChart />
-          </GlassPanel>
-        </SectionErrorBoundary>
-        <SectionErrorBoundary name="Active Time">
-          <GlassPanel className="p-4">
-            <ActiveTimeChart />
-          </GlassPanel>
-        </SectionErrorBoundary>
-      </div>
-
-      {/* API Errors — full width */}
-      <SectionErrorBoundary name="API Errors">
-        <GlassPanel className="p-4">
-          <ApiErrorPanel />
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Execution Depth Distribution (CPUX-09) */}
-      <SectionErrorBoundary name="Execution Depth">
-        <SectionHeader title="Execution Depth Distribution" />
-        <GlassPanel className="p-4">
-          {depthHistogram && depthHistogram.length > 0 ? (
-            <FlexBarChart
-              data={depthHistogram.map(d => ({ label: d.label, value: d.count }))}
-              height={120}
-            />
-          ) : (
-            <p className="text-base text-muted-foreground">No execution depth data yet.</p>
-          )}
-        </GlassPanel>
-      </SectionErrorBoundary>
-
-      {/* Advisor Strategy (CPUX-09) */}
-      <SectionErrorBoundary name="Advisor Strategy">
-        <SectionHeader title="Advisor Strategy" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <GlassPanel className="p-4">
-            <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Savings</p>
-            <p className="text-2xl font-semibold tabular-nums mt-1">
-              ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
-            </p>
-          </GlassPanel>
-          <GlassPanel className="p-4">
-            <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
-            <p className="text-2xl font-semibold tabular-nums mt-1">
-              {advisorRecent && advisorRecent.length > 0
-                ? `${Math.round((advisorRecent.filter(e => e.used).length / advisorRecent.length) * 100)}%`
-                : "—"}
-            </p>
-          </GlassPanel>
+        <div className="md:col-span-4">
+           {/* SDK Spend Cap */}
+           <SectionErrorBoundary name="SDK Spend Cap">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <SDKSpendGuard />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
-        {/* Cost comparison table */}
-        <GlassPanel className="p-4 mt-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Provider</TableHead>
-                <TableHead>Advisor Cost</TableHead>
-                <TableHead>Standard Cost</TableHead>
-                <TableHead>Saved</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(advisorRecent ?? []).slice(0, 10).map((evt, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-mono text-sm">{evt.provider}</TableCell>
-                  <TableCell className="tabular-nums">${evt.costUsd.toFixed(4)}</TableCell>
-                  <TableCell className="tabular-nums">${evt.standardCostUsd.toFixed(4)}</TableCell>
-                  <TableCell className="tabular-nums" style={{ color: "var(--status-ok)" }}>
-                    ${(evt.standardCostUsd - evt.costUsd).toFixed(4)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </GlassPanel>
-      </SectionErrorBoundary>
+        
+        {/* Summary Row */}
+        <div className="md:col-span-12">
+           <GlassPanel className="p-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="flex items-start gap-2">
+                    <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />
+                    {anomalies.errors && (
+                      <AnomalyBadge
+                        severity={anomalies.errors.severity as "warning" | "critical"}
+                        metric="errors"
+                        value={anomalies.errors.value}
+                        mean={anomalies.errors.mean}
+                        zScore={anomalies.errors.zScore}
+                      />
+                    )}
+                  </div>
+                  <MetricCard label="LLM Calls" value={llmCalls.length} />
+                  <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+                  <div className="flex items-start gap-2">
+                    <MetricCard label="API Spend" value={formatCost(totalApiSpend)} />
+                    {anomalies.cost && (
+                      <AnomalyBadge
+                        severity={anomalies.cost.severity as "warning" | "critical"}
+                        metric="cost"
+                        value={anomalies.cost.value}
+                        mean={anomalies.cost.mean}
+                        zScore={anomalies.cost.zScore}
+                      />
+                    )}
+                  </div>
+              </div>
+           </GlassPanel>
+        </div>
+        
+        {/* Cost Trend & Gateway Quota */}
+        <div className="md:col-span-8">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <CostTrendChart />
+           </GlassPanel>
+        </div>
+        <div className="md:col-span-4">
+           <SectionErrorBoundary name="Gateway Quota">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <GatewayQuotaPanel />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+        
+        {/* LLM Analytics & Capability Growth */}
+        <div className="md:col-span-6">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <LlmAnalyticsPanel />
+           </GlassPanel>
+        </div>
+        <div className="md:col-span-6">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <CapabilityGrowthChart />
+           </GlassPanel>
+        </div>
+
+        {/* Session Comparison */}
+        <div className="md:col-span-12">
+           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <SessionComparison />
+           </GlassPanel>
+        </div>
+
+        <div className="md:col-span-12 mt-4">
+          <SectionHeader title="Advanced Visualizations" />
+        </div>
+
+        {/* Heatmap */}
+        <div className="md:col-span-12">
+           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <ActivityHeatmap />
+           </GlassPanel>
+        </div>
+
+        {/* Sankey & Sunburst */}
+        <div className="md:col-span-8">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <SankeyFlow />
+           </GlassPanel>
+        </div>
+        <div className="md:col-span-4">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <TokenSunburst />
+           </GlassPanel>
+        </div>
+        
+        {/* Error Rate & Session Duration */}
+        <div className="md:col-span-6">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <ErrorRateTrend />
+           </GlassPanel>
+        </div>
+        <div className="md:col-span-6">
+           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+             <SessionDurationHistogram />
+           </GlassPanel>
+        </div>
+
+        {/* Token Waterfall */}
+        <div className="md:col-span-12">
+           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+             <TokenWaterfall />
+           </GlassPanel>
+        </div>
+        
+        <div className="md:col-span-12 mt-4">
+          <SectionHeader title="Agent Telemetry" />
+        </div>
+        
+        <div className="md:col-span-12">
+           <SectionErrorBoundary name="Prompt Activity">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <PromptActivityChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        <div className="md:col-span-6">
+           <SectionErrorBoundary name="LLM by Provider">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <LlmProviderPanel />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+        <div className="md:col-span-6">
+           <SectionErrorBoundary name="Provider Comparison">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <ProviderComparisonChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        <div className="md:col-span-12">
+           <SectionErrorBoundary name="Routing Decisions">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <RoutingDecisionsTable />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        <div className="md:col-span-12">
+           <SectionErrorBoundary name="Gateway Tasks">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <GatewayTasksPanel />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        <div className="md:col-span-8">
+           <SectionErrorBoundary name="Permission Decisions">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <PermissionDecisionsChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+        <div className="md:col-span-4">
+           <SectionErrorBoundary name="Active Time">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <ActiveTimeChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+        
+        <div className="md:col-span-12">
+           <SectionErrorBoundary name="API Errors">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <ApiErrorPanel />
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        {/* Depth Histogram & Advisor Strategy */}
+        <div className="md:col-span-12 mt-4">
+           <SectionErrorBoundary name="Execution Depth">
+             <SectionHeader title="Execution Depth Distribution" />
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               {depthHistogram && depthHistogram.length > 0 ? (
+                 <FlexBarChart
+                   data={depthHistogram.map(d => ({ label: d.label, value: d.count }))}
+                   height={120}
+                 />
+               ) : (
+                 <p className="text-base text-muted-foreground">No execution depth data yet.</p>
+               )}
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+
+        <div className="md:col-span-12 mt-4">
+           <SectionErrorBoundary name="Advisor Strategy">
+             <SectionHeader title="Advisor Strategy" />
+             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+               <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+                 <p className="text-sm text-muted-foreground uppercase tracking-wide">Total Savings</p>
+                 <p className="text-2xl font-semibold tabular-nums mt-1">
+                   ${(advisorSavings?.totalSavings ?? 0).toFixed(2)}
+                 </p>
+               </GlassPanel>
+               <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+                 <p className="text-sm text-muted-foreground uppercase tracking-wide">Escalation Rate</p>
+                 <p className="text-2xl font-semibold tabular-nums mt-1">
+                   {advisorRecent && advisorRecent.length > 0
+                     ? `${Math.round((advisorRecent.filter(e => e.used).length / advisorRecent.length) * 100)}%`
+                     : "—"}
+                 </p>
+               </GlassPanel>
+             </div>
+             {/* Cost comparison table */}
+             <GlassPanel className="p-4 mt-4 hover:scale-[1.01] transition-transform duration-300">
+               <Table>
+                 <TableHeader>
+                   <TableRow>
+                     <TableHead>Provider</TableHead>
+                     <TableHead>Advisor Cost</TableHead>
+                     <TableHead>Standard Cost</TableHead>
+                     <TableHead>Saved</TableHead>
+                   </TableRow>
+                 </TableHeader>
+                 <TableBody>
+                   {(advisorRecent ?? []).slice(0, 10).map((evt, i) => (
+                     <TableRow key={i}>
+                       <TableCell className="font-mono text-sm">{evt.provider}</TableCell>
+                       <TableCell className="tabular-nums">${evt.costUsd.toFixed(4)}</TableCell>
+                       <TableCell className="tabular-nums">${evt.standardCostUsd.toFixed(4)}</TableCell>
+                       <TableCell className="tabular-nums" style={{ color: "var(--status-ok)" }}>
+                         ${(evt.standardCostUsd - evt.costUsd).toFixed(4)}
+                       </TableCell>
+                     </TableRow>
+                   ))}
+                 </TableBody>
+               </Table>
+             </GlassPanel>
+           </SectionErrorBoundary>
+        </div>
+      </div>
     </div>
   );
 }

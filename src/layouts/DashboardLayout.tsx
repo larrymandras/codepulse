@@ -61,7 +61,9 @@ import {
   Share2,
   Flame,
   Hexagon,
+  Search,
 } from "lucide-react";
+import { ScrollArea } from "../components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -664,6 +666,19 @@ export default function DashboardLayout() {
                 </span>
               </div>
             </div>
+          </div>
+
+          <div className="flex-1 max-w-sm mx-4 hidden md:flex">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-muted-foreground bg-accent/50 hover:bg-accent hover:text-foreground rounded-md border border-border/50 transition-colors"
+            >
+              <Search className="w-4 h-4" />
+              <span className="flex-1 text-left">Search / Command...</span>
+              <kbd className="hidden sm:inline-flex h-5 items-center gap-1 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-medium opacity-100">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </button>
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">

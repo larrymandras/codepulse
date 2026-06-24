@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Check, ArrowLeftRight } from "lucide-react";
+import { ScrollArea } from "./ui/scroll-area";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -31,8 +32,9 @@ export default function RecentGitActivity() {
       <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
         Recent Git Activity
       </h2>
-      <div className="space-y-1.5 max-h-[400px] overflow-y-auto">
-        {commits.map((c: any) => {
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-1.5">
+          {commits.map((c: any) => {
           const isSelfHealing =
             c.author === "astridr-self-healing" ||
             c.message.startsWith("[self-healing]");
@@ -79,7 +81,8 @@ export default function RecentGitActivity() {
             </div>
           );
         })}
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }

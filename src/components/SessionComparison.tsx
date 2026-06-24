@@ -3,6 +3,15 @@ import { api } from "../../convex/_generated/api";
 import { formatDuration } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 import { useNavigate } from "react-router-dom";
+import { ScrollArea } from "./ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 
 export default function SessionComparison() {
   const rawSessions = useQuery(api.sessions.listAll, { limit: 50 });
@@ -34,48 +43,48 @@ export default function SessionComparison() {
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Session Comparison</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full text-base">
-          <thead>
-            <tr className="text-gray-400 border-b border-gray-700">
-              <th className="text-left py-2 pr-3 font-medium">Session ID</th>
-              <th className="text-left py-2 px-3 font-medium">Model</th>
-              <th className="text-right py-2 px-3 font-medium">Events</th>
-              <th className="text-right py-2 px-3 font-medium">Duration</th>
-              <th className="text-left py-2 pl-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
+      <ScrollArea className="h-[400px] border border-gray-700/50 rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-gray-700/50 hover:bg-transparent">
+              <TableHead className="w-[120px]">Session ID</TableHead>
+              <TableHead>Model</TableHead>
+              <TableHead className="text-right">Events</TableHead>
+              <TableHead className="text-right">Duration</TableHead>
+              <TableHead className="pl-3">Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sessions.map((session) => {
               const duration = session.lastEventAt - session.startedAt;
               const isTop = session.eventCount === maxEvents;
               return (
-                <tr
+                <TableRow
                   key={session.sessionId}
-                  className={`border-b border-gray-700/50 cursor-pointer transition-colors ${
+                  className={`cursor-pointer transition-colors border-gray-700/50 ${
                     isTop
                       ? "bg-blue-900/20 hover:bg-blue-900/30"
                       : "hover:bg-gray-700/20"
                   }`}
                   onClick={() => navigate(`/sessions/${session.sessionId}`)}
                 >
-                  <td className="py-2 pr-3 text-gray-200 font-mono text-sm">
+                  <TableCell className="font-mono text-gray-200">
                     {session.sessionId.length > 12
                       ? session.sessionId.slice(0, 12) + "..."
                       : session.sessionId}
-                  </td>
-                  <td className="py-2 px-3 text-gray-300 text-sm">
-                    {session.model ? session.model : <span className="text-muted-foreground italic text-sm">untagged</span>}
-                  </td>
-                  <td className="py-2 px-3 text-right text-gray-300">
+                  </TableCell>
+                  <TableCell className="text-gray-300">
+                    {session.model ? session.model : <span className="text-muted-foreground italic">untagged</span>}
+                  </TableCell>
+                  <TableCell className="text-right text-gray-300">
                     {session.eventCount}
-                  </td>
-                  <td className="py-2 px-3 text-right text-gray-300 font-mono">
+                  </TableCell>
+                  <TableCell className="text-right text-gray-300 font-mono">
                     {formatDuration(duration)}
-                  </td>
-                  <td className="py-2 pl-3">
+                  </TableCell>
+                  <TableCell className="pl-3">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded text-sm font-medium ${
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${
                         session.status === "active"
                           ? "bg-green-900/40 text-green-400"
                           : session.status === "completed"
@@ -85,13 +94,13 @@ export default function SessionComparison() {
                     >
                       {session.status}
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </ScrollArea>
     </div>
   );
 }

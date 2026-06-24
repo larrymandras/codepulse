@@ -11,6 +11,7 @@ import {
   TableHead,
   TableCell,
 } from "./ui/table";
+import { ScrollArea } from "./ui/scroll-area";
 
 export default function RoutingDecisionsTable() {
   const { decisions, status, loadMore } = useRoutingDecisionsPaginated(25);
@@ -76,84 +77,86 @@ export default function RoutingDecisionsTable() {
           </button>
         ))}
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Task ID</TableHead>
-            <TableHead>Requested Provider</TableHead>
-            <TableHead>Selected Provider</TableHead>
-            <TableHead>Fallback</TableHead>
-            <TableHead>Score</TableHead>
-            <TableHead>Timestamp</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredDecisions.map((d) => {
-            const ago = Math.round((Date.now() / 1000 - d.timestamp) / 60);
-            const timeStr =
-              ago < 60
-                ? `${ago}m ago`
-                : ago < 1440
-                  ? `${Math.round(ago / 60)}h ago`
-                  : `${Math.round(ago / 1440)}d ago`;
+      <ScrollArea className="h-[400px] pr-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Task ID</TableHead>
+              <TableHead>Requested Provider</TableHead>
+              <TableHead>Selected Provider</TableHead>
+              <TableHead>Fallback</TableHead>
+              <TableHead>Score</TableHead>
+              <TableHead>Timestamp</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredDecisions.map((d) => {
+              const ago = Math.round((Date.now() / 1000 - d.timestamp) / 60);
+              const timeStr =
+                ago < 60
+                  ? `${ago}m ago`
+                  : ago < 1440
+                    ? `${Math.round(ago / 60)}h ago`
+                    : `${Math.round(ago / 1440)}d ago`;
 
-            return (
-              <Fragment key={d._id}>
-                <TableRow
-                  className={`cursor-pointer hover:bg-muted/50 ${d.fallbackUsed ? "border-l-2 border-yellow-500/70" : ""}`}
-                  onClick={() =>
-                    setExpanded(expanded === d._id ? null : d._id)
-                  }
-                >
-                  <TableCell className="font-mono text-sm" title={d.taskId}>
-                    {d.taskId.slice(0, 8)}
-                  </TableCell>
-                  <TableCell>
-                    {PROVIDER_DISPLAY_NAMES[d.requestedProvider] ??
-                      d.requestedProvider}
-                  </TableCell>
-                  <TableCell>
-                    {PROVIDER_DISPLAY_NAMES[d.selectedProvider] ??
-                      d.selectedProvider}
-                  </TableCell>
-                  <TableCell>
-                    {d.fallbackUsed ? (
-                      <span className="text-sm px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-mono uppercase">
-                        FALLBACK
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-500">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm tabular-nums text-gray-400">
-                    {d.finalScore?.toFixed(3) ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {timeStr}
-                  </TableCell>
-                </TableRow>
-                {expanded === d._id && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="bg-gray-900/30 px-4 py-2"
-                    >
-                      <div className="grid grid-cols-4 gap-2 text-sm text-gray-400 font-mono tabular-nums">
-                        <span>Quota: {d.quotaScore?.toFixed(3) ?? "—"}</span>
-                        <span>
-                          Latency: {d.latencyScore?.toFixed(3) ?? "—"}
+              return (
+                <Fragment key={d._id}>
+                  <TableRow
+                    className={`cursor-pointer hover:bg-muted/50 ${d.fallbackUsed ? "border-l-2 border-yellow-500/70" : ""}`}
+                    onClick={() =>
+                      setExpanded(expanded === d._id ? null : d._id)
+                    }
+                  >
+                    <TableCell className="font-mono text-sm" title={d.taskId}>
+                      {d.taskId.slice(0, 8)}
+                    </TableCell>
+                    <TableCell>
+                      {PROVIDER_DISPLAY_NAMES[d.requestedProvider] ??
+                        d.requestedProvider}
+                    </TableCell>
+                    <TableCell>
+                      {PROVIDER_DISPLAY_NAMES[d.selectedProvider] ??
+                        d.selectedProvider}
+                    </TableCell>
+                    <TableCell>
+                      {d.fallbackUsed ? (
+                        <span className="text-sm px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-mono uppercase">
+                          FALLBACK
                         </span>
-                        <span>Cost: {d.costScore?.toFixed(3) ?? "—"}</span>
-                        <span>Final: {d.finalScore?.toFixed(3) ?? "—"}</span>
-                      </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm tabular-nums text-gray-400">
+                      {d.finalScore?.toFixed(3) ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {timeStr}
                     </TableCell>
                   </TableRow>
-                )}
-              </Fragment>
-            );
-          })}
-        </TableBody>
-      </Table>
+                  {expanded === d._id && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="bg-gray-900/30 px-4 py-2"
+                      >
+                        <div className="grid grid-cols-4 gap-2 text-sm text-gray-400 font-mono tabular-nums">
+                          <span>Quota: {d.quotaScore?.toFixed(3) ?? "—"}</span>
+                          <span>
+                            Latency: {d.latencyScore?.toFixed(3) ?? "—"}
+                          </span>
+                          <span>Cost: {d.costScore?.toFixed(3) ?? "—"}</span>
+                          <span>Final: {d.finalScore?.toFixed(3) ?? "—"}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </Fragment>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </ScrollArea>
       <LoadMoreButton status={status} loadMore={loadMore} pageSize={25} />
     </div>
   );

@@ -1,4 +1,4 @@
-import { FlexBarChart } from "./FlexBarChart";
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, YAxis, CartesianGrid } from "recharts";
 import InfoTooltip from "./InfoTooltip";
 
 interface PulseChartProps {
@@ -30,7 +30,43 @@ export default function PulseChart({ events }: PulseChartProps) {
         {data.length === 0 ? (
           <p className="text-sm font-mono text-muted-foreground py-12 text-center">No activity data yet</p>
         ) : (
-          <FlexBarChart data={data} height={200} />
+          <ResponsiveContainer width="100%" height={250}>
+            <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorPulse" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+              <XAxis 
+                dataKey="label" 
+                stroke="#666" 
+                fontSize={12} 
+                tickLine={false}
+                axisLine={false}
+                minTickGap={30}
+              />
+              <YAxis 
+                stroke="#666" 
+                fontSize={12} 
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.8)', borderColor: '#374151', backdropFilter: 'blur(8px)', borderRadius: '0.5rem', color: '#fff' }}
+                itemStyle={{ color: '#10b981' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#10b981" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorPulse)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         )}
       </div>
     </div>

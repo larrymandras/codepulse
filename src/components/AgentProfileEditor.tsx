@@ -171,11 +171,7 @@ export default function AgentProfileEditor({ profile, onSave, onCancel }: AgentP
   const currentAvatar = avatarId ? avatars.find((a) => a._id === avatarId) : undefined;
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4 space-y-4">
-      <h3 className="text-base font-semibold text-gray-300">
-        {isNew ? "New Agent Profile" : "Edit Profile"}
-      </h3>
-
+    <div className="space-y-4 pt-2 pb-6">
       <div className="flex items-start gap-4">
         <div className="flex flex-col items-center gap-2">
           <button onClick={() => { setShowGallery(!showGallery); setShowUploader(false); }} title="Pick emoji avatar">

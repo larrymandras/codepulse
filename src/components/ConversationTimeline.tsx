@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { FlexBarChart } from "./FlexBarChart";
+import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, YAxis, CartesianGrid } from "recharts";
 import { useConversationTimeline } from "../hooks/useConversationTimeline";
 
 type ZoomLevel = "1h" | "6h" | "24h" | "7d";
@@ -55,7 +55,43 @@ export default function ConversationTimeline() {
             No message activity in this time range
           </p>
         ) : (
-          <FlexBarChart data={aggregated} height={180} />
+          <ResponsiveContainer width="100%" height={230}>
+            <AreaChart data={aggregated} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTimeline" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+              <XAxis 
+                dataKey="label" 
+                stroke="#666" 
+                fontSize={12} 
+                tickLine={false}
+                axisLine={false}
+                minTickGap={30}
+              />
+              <YAxis 
+                stroke="#666" 
+                fontSize={12} 
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.8)', borderColor: '#374151', backdropFilter: 'blur(8px)', borderRadius: '0.5rem', color: '#fff' }}
+                itemStyle={{ color: '#f97316' }}
+              />
+              <Area 
+                type="monotone" 
+                dataKey="value" 
+                stroke="#f97316" 
+                strokeWidth={2}
+                fillOpacity={1} 
+                fill="url(#colorTimeline)" 
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         )}
       </div>
     </div>

@@ -4,6 +4,8 @@ import { FlexBarChart } from "./FlexBarChart";
 import { PROVIDER_DISPLAY_NAMES } from "../lib/providers";
 import InfoTooltip from "./InfoTooltip";
 
+import { ScrollArea } from "./ui/scroll-area";
+
 export default function LlmProviderPanel() {
   const raw = useQuery(api.analytics.tokenWaterfall) ?? [];
 
@@ -38,17 +40,21 @@ export default function LlmProviderPanel() {
         LLM by Provider
         <InfoTooltip text="Token consumption grouped by provider then model" />
       </h2>
-      {Object.entries(byProvider).map(([provider, models]) => (
-        <div key={provider} className="space-y-2">
-          <p className="text-sm text-muted-foreground uppercase tracking-wide">
-            {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
-          </p>
-          <FlexBarChart
-            data={models.map((m) => ({ label: m.model, value: m.tokens }))}
-            height={80}
-          />
+      <ScrollArea className="h-[400px] pr-4">
+        <div className="space-y-4">
+          {Object.entries(byProvider).map(([provider, models]) => (
+            <div key={provider} className="space-y-2">
+              <p className="text-sm text-muted-foreground uppercase tracking-wide">
+                {PROVIDER_DISPLAY_NAMES[provider] ?? provider}
+              </p>
+              <FlexBarChart
+                data={models.map((m) => ({ label: m.model, value: m.tokens }))}
+                height={80}
+              />
+            </div>
+          ))}
         </div>
-      ))}
+      </ScrollArea>
     </div>
   );
 }
