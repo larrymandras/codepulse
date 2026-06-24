@@ -12,6 +12,10 @@ vi.mock("../../convex/_generated/api", () => ({
       byGoal: "swarmTasks:byGoal",
       listGoals: "swarmTasks:listGoals",
     },
+    // useAgentAvatarResolver (Queen/agent avatars) queries these; useQuery is
+    // mocked to return undefined → resolver sees empty lists → no avatarData.
+    avatars: { list: "avatars:list" },
+    agentProfiles: { list: "agentProfiles:list" },
   },
 }));
 
