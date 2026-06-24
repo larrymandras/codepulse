@@ -28,13 +28,14 @@ export function ThemeSwitcher() {
     <div className="flex items-center gap-2">
       <Paintbrush className="w-4 h-4 text-muted-foreground" />
       <Select value={theme} onValueChange={handleThemeChange}>
-        <SelectTrigger className="w-[140px] h-8 bg-card/50 border-border/50 text-sm">
+        <SelectTrigger className="w-[160px] h-8 bg-card/50 border-border/50 text-sm">
           <SelectValue placeholder="Theme" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="cyan">Electric Cyan</SelectItem>
           <SelectItem value="emerald">Matrix Emerald</SelectItem>
-          <SelectItem value="amber">Warning Amber</SelectItem>
+          <SelectItem value="readable">Readable Dark</SelectItem>
+          <SelectItem value="aubergine">Midnight Aubergine</SelectItem>
         </SelectContent>
       </Select>
     </div>
