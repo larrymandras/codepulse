@@ -1,10 +1,11 @@
 ---
 phase: 92
 slug: voice-activated-command-palette-jarvis-mode
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / neutral / cssVariables / lucide"
 created: 2026-06-24
+reviewed_at: 2026-06-24
 ---
 
 # Phase 92 — UI Design Contract
