@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { FlexBarChart } from "./FlexBarChart";
 import InfoTooltip from "./InfoTooltip";
+import { ScrollArea } from "./ui/scroll-area";
 
 function relativeTime(ts: number): string {
   const diff = Math.max(0, Date.now() / 1000 - ts);
@@ -123,15 +124,15 @@ export default function ToolExecutionPanel() {
 
   if (executions.length === 0) {
     return (
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
           Tool Executions
           <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
         </h2>
         
         <div className="flex-1 flex flex-col items-center justify-center opacity-70 min-h-[200px]">
-          <div className="w-12 h-12 border border-primary/20 rounded-full border-t-primary animate-spin mb-4 shadow-[0_0_15px_rgba(16,185,129,0.2)]" />
+          <div className="w-12 h-12 border border-primary/20 rounded-full border-t-primary animate-spin mb-4 shadow-[var(--glow-sm)]" />
           <p className="text-xs font-mono tracking-widest text-primary uppercase animate-pulse">Awaiting Telemetry</p>
           <div className="mt-4 text-[11px] font-mono text-primary/40 flex flex-col items-center gap-1.5">
             <span className="bg-primary/10 px-2 py-0.5 rounded border border-primary/20">[ SYSTEM STANDBY ]</span>
@@ -143,7 +144,7 @@ export default function ToolExecutionPanel() {
   }
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Tool Executions
@@ -228,8 +229,9 @@ export default function ToolExecutionPanel() {
           No executions match filters.
         </p>
       ) : (
-        <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-          {filteredExecutions.slice(0, 20).map((exec) => {
+        <ScrollArea className="h-[300px] pr-2">
+          <div className="space-y-1.5">
+            {filteredExecutions.slice(0, 20).map((exec) => {
             const isExpanded = expandedId === exec._id;
             return (
               <div key={exec._id}>
@@ -330,7 +332,8 @@ export default function ToolExecutionPanel() {
               </div>
             );
           })}
-        </div>
+          </div>
+        </ScrollArea>
       )}
     </div>
   );

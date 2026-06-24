@@ -61,12 +61,12 @@ const stateBorder: Record<string, string> = {
 // 8-state glow/shadow map
 const stateGlow: Record<string, string> = {
   pending: "shadow-md",
-  claimed: "shadow-[0_4px_12px_rgba(6,182,212,0.1)]",
-  running: "shadow-[0_4px_24px_rgba(6,182,212,0.25)]",
-  verifying: "shadow-[0_4px_20px_rgba(139,92,246,0.25)]",
-  done: "shadow-[0_2px_8px_rgba(6,182,212,0.05)]",
-  failed: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]",
-  verify_rejected: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]",
+  claimed: "shadow-[var(--glow-xs)]",
+  running: "shadow-[var(--glow-md)]",
+  verifying: "shadow-[0_4px_20px_rgba(139,92,246,0.25)]",  // violet — state identity color, exempt
+  done: "shadow-[var(--glow-xs)]",
+  failed: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]",     // red — state identity color, exempt
+  verify_rejected: "shadow-[0_4px_15px_rgba(239,68,68,0.25)]", // red — state identity color, exempt
   cancelled: "shadow-sm",
 };
 

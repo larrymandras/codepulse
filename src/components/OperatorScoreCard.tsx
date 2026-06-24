@@ -147,7 +147,7 @@ function OperatorScoreCard() {
   const weekArrow = WEEK_ARROWS[weekTrend] ?? "->";
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       {/* Header row */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
@@ -162,7 +162,7 @@ function OperatorScoreCard() {
 
       <div className="flex items-end gap-6 mb-8">
         {/* Score number */}
-        <div className="text-5xl font-bold tabular-nums drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" style={{ color }}>
+        <div className="text-5xl font-bold tabular-nums drop-shadow-[var(--glow-sm)]" style={{ color }}>
           <AnimatedNumber
             value={score}
             format={(v: number) => Math.round(v).toString()}

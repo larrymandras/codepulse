@@ -48,8 +48,8 @@ export function WarRoomKanbanColumn({
     <div
       className={`flex flex-col w-full max-h-[80vh] flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300 ${
         isOver
-          ? "border-2 border-dashed border-primary bg-primary/10 shadow-[0_0_30px_rgba(16,185,129,0.2)]"
-          : "border border-border/50 glow-card hover:border-primary/50 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.15)]"
+          ? "border-2 border-dashed border-primary bg-primary/10 shadow-[var(--glow-md)]"
+          : "border border-border/50 glow-card hover:border-primary/50 shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]"
       }`}
     >
       {/* Column header */}
@@ -67,7 +67,7 @@ export function WarRoomKanbanColumn({
             </span>
           )}
           <span className="text-xs text-primary/70 uppercase font-mono tracking-widest mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
             Online
           </span>
         </div>

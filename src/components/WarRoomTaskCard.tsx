@@ -41,7 +41,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className={`group relative p-4 rounded-lg border-l-[3px] ${PRIORITY_BORDER[task.priority] ?? ""} bg-card/80 backdrop-blur border border-border/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:border-primary/50 transition-all duration-300 ${isDragging ? "opacity-50 scale-95 shadow-xl" : "hover:-translate-y-1 hover:shadow-[0_8px_24px_rgba(16,185,129,0.15)]"}`}
+      className={`group relative p-4 rounded-lg border-l-[3px] ${PRIORITY_BORDER[task.priority] ?? ""} bg-card/80 backdrop-blur border border-border/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:border-primary/50 transition-all duration-300 ${isDragging ? "opacity-50 scale-95 shadow-xl" : "hover:-translate-y-1 hover:shadow-[var(--glow-sm)]"}`}
       onClick={() => onClick?.(task)}
     >
       {/* Drag handle */}
@@ -92,7 +92,7 @@ export function WarRoomTaskCard({ task, onClick }: WarRoomTaskCardProps) {
         {task.progress !== undefined && (
           <div className="h-1.5 bg-muted/50 mt-3 rounded-full overflow-hidden shadow-inner">
             <div
-              className="h-full bg-primary rounded-full relative shadow-[0_0_10px_rgba(16,185,129,0.8)]"
+              className="h-full bg-primary rounded-full relative shadow-[var(--glow-xs)]"
               style={{ width: `${Math.min(task.progress, 100)}%` }}
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full animate-scanline" />
