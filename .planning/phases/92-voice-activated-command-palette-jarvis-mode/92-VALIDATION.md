@@ -1,8 +1,8 @@
 ---
 phase: 92
 slug: voice-activated-command-palette-jarvis-mode
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-06-24
 ---
@@ -47,9 +47,21 @@ created: 2026-06-24
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------|-------------------|--------|
-| 92-XX-XX | XX | N | VOX-0X | unit | `npx vitest run <file>` | ⬜ pending |
+| 92-01-T0 | 01 | 1 | VOX-01 | manual (checkpoint) | — (train + place `hey_astrid.onnx`; "hey jarvis" stand-in for code/tests) | ⬜ pending |
+| 92-01-T1 | 01 | 1 | VOX-01 | config | `npx tsc --noEmit && grep -c "viteStaticCopy" vite.config.ts` | ⬜ pending |
+| 92-01-T2 | 01 | 1 | VOX-01 | unit (tdd) | `npx vitest run src/lib/melNormalize.test.ts` | ⬜ pending |
+| 92-01-T3 | 01 | 1 | VOX-01 | unit+config | `npx vitest run src/lib/melNormalize.test.ts && grep -c "SpeechRecognition" src/test/setup.ts` | ⬜ pending |
+| 92-02-T1 | 02 | 1 | VOX-02 | unit (tdd) | `npx vitest run src/hooks/useSpeechRecognition.test.ts src/components/ChatInput.test.tsx` | ⬜ pending |
+| 92-02-T2 | 02 | 1 | VOX-03 | unit (tdd) | `npx vitest run src/hooks/useTtsPlayback.test.ts` | ⬜ pending |
+| 92-03-T1 | 03 | 2 | VOX-01 | config | `npx tsc --noEmit && grep -c "registerProcessor" src/worklets/micCapture.worklet.ts` | ⬜ pending |
+| 92-03-T2 | 03 | 2 | VOX-01, VOX-04 | unit | `npx vitest run src/hooks/useWakeWord.test.ts src/workers/wakeWordWorker.test.ts` | ⬜ pending |
+| 92-04-T1 | 04 | 3 | VOX-02 | unit (tdd) | `npx vitest run src/components/voice/voiceState.test.ts` | ⬜ pending |
+| 92-04-T2 | 04 | 3 | VOX-02, VOX-03 | unit (tdd) | `npx vitest run src/components/voice/VoiceModePanel.test.tsx` | ⬜ pending |
+| 92-04-T3 | 04 | 3 | VOX-02 | config | `npx tsc --noEmit && grep -c "VoiceModePanel" src/components/CommandPalette.tsx` | ⬜ pending |
+| 92-05-T1 | 05 | 4 | VOX-04 | unit (tdd) | `npx vitest run src/components/MicToggle.test.tsx` | ⬜ pending |
+| 92-05-T2 | 05 | 4 | VOX-01, VOX-04 | config | `npx tsc --noEmit && grep -c "useWakeWord\|codepulse-voice-mode\|MicToggle" src/layouts/DashboardLayout.tsx` | ⬜ pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Live wake detection, real STT, and audible TTS are validated via the Manual-Only table below — not in jsdom.*
 
 ---
 
@@ -76,11 +88,11 @@ created: 2026-06-24
 
 ## Validation Sign-Off
 
-- [ ] All tasks have an automated verify command OR a Wave 0 dependency OR a justified Manual-Only row
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers onnxruntime-web install + mocks + mel-normalization extraction
-- [ ] No watch-mode flags in any verify command
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter once map is filled
+- [x] All tasks have an automated verify command OR a Wave 0 dependency OR a justified Manual-Only row
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers onnxruntime-web install + mocks + mel-normalization extraction
+- [x] No watch-mode flags in any verify command
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter once map is filled
 
-**Approval:** pending
+**Approval:** approved 2026-06-24

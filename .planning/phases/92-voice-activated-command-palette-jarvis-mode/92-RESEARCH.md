@@ -708,27 +708,33 @@ async function openMicAt16kHz(): Promise<MediaStream> {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Each question below carries an inline `RESOLVED:` line stating how Phase 92 planning addresses it. These are planning-time resolutions; items A1–A6 in the Assumptions table above remain runtime-verifiable during execution (and have explicit fallbacks in the plans), which is expected for a hardware/browser-dependent feature.
 
 1. **hey_astrid.onnx training timeline**
    - What we know: Training takes 30–60 min on Colab GPU; requires Colab access (free tier available)
    - What's unclear: Has this been trained yet? The `public/openwakeword/README.md` marks it `⏳ PENDING`
    - Recommendation: Make this Wave 0 task 0 ("train and place hey_astrid.onnx") with "hey jarvis" as integration-test stand-in. Block VOX-01 QA sign-off on its presence.
+   - **RESOLVED:** Surfaced as the blocking human checkpoint **92-01 T0** (train + place `hey_astrid.onnx`); all surrounding code/tests build against the bundled "hey jarvis" stand-in (named explicitly in 92-03 T1), and VOX-01 live-detection sign-off is gated on the custom model per 92-VALIDATION.md Manual-Only row.
 
 2. **Barge-in in MVP scope**
    - What we know: D-02 defers to planner assessment; UI-SPEC covers both cases (dim mic to 30% during speaking if deferred)
    - What's unclear: Does the added complexity of `recognition.start()` while `isPlaying=true` introduce race conditions?
    - Recommendation: Defer barge-in. "Mic dims during speaking" is simpler, avoids feedback race, and still delivers the Jarvis feel. Flag as follow-on in plan.
+   - **RESOLVED:** Barge-in is **deferred** (within CONTEXT.md Claude's Discretion). 92-04 T2 implements the simpler feedback guard (pause recognition while `useTtsPlayback.isPlaying`, resume after) and the UI-SPEC "mic dims during speaking" affordance; barge-in is documented as a follow-on.
 
 3. **AudioContext sample rate on Windows**
    - What we know: macOS Chrome locks all AudioContexts to same rate; Windows behavior may differ when Tone.js ambient audio is also active
    - What's unclear: Tone.js uses its own AudioContext (from `audioEngine.ts`). Creating a second AudioContext for wake detection at 16kHz may conflict if the browser enforces a single sample rate for all contexts
    - Recommendation: Test locally before committing to native 16kHz path. Worklet decimation fallback is reliable.
+   - **RESOLVED:** Handled procedurally in **92-03 T1** — prefer native `sampleRate: 16000`, fall back to in-worklet decimation if the browser refuses a second rate (covers the Tone.js coexistence case). Runtime-verifiable (assumption A1/A2) with the decimation fallback as the reliable path.
 
 4. **run.tts session_id routing in voice mode**
    - What we know: Chat.tsx:272 routes `run.tts` events to messages by `sessionId`; the voice palette won't have a message list in the same structure
    - What's unclear: `useTtsPlayback` needs to know WHICH `run.tts` event to play — the one matching the active session
    - Recommendation: `useWakeWord`/palette voice mode tracks `activeSessionId` (from `sendCommand` ack, same as Chat.tsx:149–151); `useTtsPlayback` accepts a `sessionId` filter param.
+   - **RESOLVED:** 92-02 T2 gives `useTtsPlayback` a `sessionId` filter param; 92-04 T2 tracks `activeSessionId` from the `sendCommand` ack (per PATTERNS §sendCommand+session_id) so the palette plays only the matching `run.tts` event.
 
 ---
 
