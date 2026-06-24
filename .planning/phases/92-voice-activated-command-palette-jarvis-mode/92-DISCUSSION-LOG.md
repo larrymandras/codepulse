@@ -106,9 +106,30 @@
 **User's choice:** Continue with Picovoice — will open a new account
 **Notes:** Clarified that ElevenLabs already provides voice-out (server-side TTS via run.tts) but has NO wake-word product. User opts to recreate Picovoice rather than switch engines, so the Porcupine plan stands unchanged.
 
+## Wake-word engine (re-revisited — Picovoice account DENIED) — SUPERSEDES the entries above
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| openWakeWord (in-browser ONNX) | Open-source/Apache-2.0; no account/key/quota; real trained model; local detection; same engine as Ástríðr server-side; built-in "hey jarvis" available | ✓ |
+| Vosk offline (vosk-browser) | Fully offline WASM wake+STT; best privacy; ~40-50MB model | |
+| Web Speech continuous | Free phrase-match; ~60s restart babysitting; audio to Google | |
+
+**User's choice:** openWakeWord via `onnxruntime-web` (no account)
+**Notes:** Picovoice **denied** the new account, so Porcupine is fully dropped (no `.ppn`, no `porcupine_params.pv`, no `VITE_PICOVOICE_ACCESS_KEY`). Confirmed ElevenLabs has no wake-word product (only the voice-out already in place). openWakeWord chosen for zero-account robustness + parity with Ástríðr's server-side `openwakeword` backend.
+
+### Trigger phrase (openWakeWord)
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Built-in "Hey Jarvis" now | Pre-trained model, ships immediately | |
+| Train custom "Hey Astrid" first | Free synthetic-data (TTS) training before MVP; on-brand from day one | ✓ |
+
+**User's choice:** Train custom "Hey Astrid" model first
+**Notes:** Use openWakeWord's synthetic-data pipeline (Piper/TTS positive samples → trained classifier `.onnx`). "hey jarvis" kept only as a validation reference, not the shipped trigger. This adds a pre-MVP training+validation step (planner should sequence it as Wave 0).
+
 ## Claude's Discretion
 
-- Web Worker wiring for `@picovoice/porcupine-web`; listening-state visual treatment inside the palette; end-phrase list; silence-timeout value (~30s start); whether barge-in lands in MVP or a follow-on.
+- Web Worker / AudioWorklet wiring for openWakeWord on `onnxruntime-web` (WASM vs WebGPU, frame buffering, threshold/debounce); listening-state visual treatment inside the palette; end-phrase list; silence-timeout value (~30s start); whether barge-in lands in MVP or a follow-on; Vite static-asset/header config for `.onnx`/`.wasm`.
 
 ## Deferred Ideas
 
