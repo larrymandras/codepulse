@@ -259,10 +259,14 @@
   --metric-error: #f87171;
   --metric-info: #60a5fa;
   --info: #60a5fa;
-  --glow-xs: none;
-  --glow-sm: none;
-  --glow-md: none;
-  --glow-lg: none;
+  /* Readable theme disables glow. Use a valid no-op shadow (not `none`) so the
+     tokens compose safely inside comma-separated box-shadow lists, e.g.
+     `.glow-card { box-shadow: inset ..., var(--glow-sm); }` — `, none` is invalid
+     CSS and would drop the whole declaration (Phase 89 WR-03). */
+  --glow-xs: 0 0 0 transparent;
+  --glow-sm: 0 0 0 transparent;
+  --glow-md: 0 0 0 transparent;
+  --glow-lg: 0 0 0 transparent;
   --glass-bg: rgba(24, 28, 36, 0.85);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur: 8px;

@@ -8,15 +8,27 @@ import {
   SelectValue,
 } from "./ui/select";
 
+const VALID_THEMES = ["cyan", "emerald", "readable", "aubergine"];
+
+function readSavedTheme(): string {
+  if (typeof localStorage === "undefined") return "cyan";
+  const saved = localStorage.getItem("codepulse-theme");
+  return saved && VALID_THEMES.includes(saved) ? saved : "cyan";
+}
+
 export function ThemeSwitcher() {
-  const [theme, setTheme] = useState<string>("cyan");
+  // Lazy initializer: the pre-paint script in index.html already applied the saved
+  // theme to <html data-theme> before React mounted, so read the same key here. This
+  // makes the Select render the correct value on first paint instead of flashing
+  // "cyan" and correcting in an effect (Phase 89 WR-02).
+  const [theme, setTheme] = useState<string>(readSavedTheme);
 
   useEffect(() => {
-    // Load saved theme
-    const saved = localStorage.getItem("codepulse-theme") || "cyan";
-    setTheme(saved);
-    document.documentElement.setAttribute("data-theme", saved);
-  }, []);
+    // Idempotent reassertion of the resolved theme on <html> (pre-paint already did
+    // this; harmless if it runs again, and keeps behavior correct if mounted without
+    // the pre-paint script).
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   const handleThemeChange = (value: string) => {
     setTheme(value);
