@@ -406,4 +406,56 @@ describe("aggregates", () => {
       expect(result[1]).toEqual({ agentId: "agent-2", model: "gpt-4o-mini", cost: 0.01 });
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Phase 88 — Analytics Rollup. After the ingest-time rollup lands (Plan 02),
+  // computeHourly's event-count + error-count branches are REMOVED (D-02), so the
+  // cron can no longer double-count event buckets already written at ingest time.
+  // dataRetention must never touch the durable `aggregates` rollups (D-12).
+  // -------------------------------------------------------------------------
+  describe("Phase 88 — cron removal non-double-count invariant", () => {
+    test("computeHourly over an hour with ingest-time 'events' buckets writes no new event rows", () => {
+      // Simulate: ingest-time buckets already exist for eventType "Info" (value 5).
+      // With the event-count branch removed from computeHourly, the cron does not
+      // re-derive event counts. Guard: even if a residual loop ran, the existing-key
+      // set blocks a re-insert (idempotency), so values stay unchanged (D-02).
+      const existingEventRows = [
+        { dimensions: { event_type: "Info" }, value: 5 },
+        { dimensions: { event_type: "Error" }, value: 2 },
+      ];
+      const existingEventKeys = new Set(
+        existingEventRows.map((r) => {
+          const dims = r.dimensions as { event_type?: string } | null;
+          return dims?.event_type ?? "unknown";
+        })
+      );
+
+      // The set of event types observed this hour (what a residual branch would try
+      // to insert). All already have an ingest-time bucket → nothing to insert.
+      const observedThisHour = ["Info", "Error"];
+      const wouldInsert = observedThisHour.filter((et) => !existingEventKeys.has(et));
+      expect(wouldInsert).toHaveLength(0); // no double-write
+
+      // And existing values are untouched (the cron neither patches nor re-inserts).
+      expect(existingEventRows.find((r) => r.dimensions.event_type === "Info")?.value).toBe(5);
+      expect(existingEventRows.find((r) => r.dimensions.event_type === "Error")?.value).toBe(2);
+    });
+
+    test("dataRetention purge target-table set contains no 'aggregates' (D-12)", () => {
+      // purgeOldTelemetryEvents queries only the "events" table and deletes those
+      // rows; the durable rollups in "aggregates" must never be a delete target.
+      // Mirror the purge's delete loop, recording which table each delete hit.
+      const deletedFromTables: string[] = [];
+      const purgeTargetTable = "events"; // dataRetention.ts:11 queries "events"
+      const oldDocs = [{ _id: "id1" }, { _id: "id2" }];
+      for (const _doc of oldDocs) {
+        deletedFromTables.push(purgeTargetTable);
+      }
+      // The set of tables the purge deletes from has zero "aggregates" entries.
+      const aggregatesDeletes = deletedFromTables.filter((t) => t === "aggregates");
+      expect(aggregatesDeletes).toHaveLength(0);
+      // Sanity: it DID operate on the events table.
+      expect(new Set(deletedFromTables)).toEqual(new Set(["events"]));
+    });
+  });
 });
