@@ -9,10 +9,14 @@
 
 import { Handle, Position } from "@xyflow/react";
 import { Crown } from "lucide-react";
+import AgentAvatar from "./AgentAvatar";
+import type { AvatarData } from "../hooks/useRosterAgents";
 
 export interface QueenNodeData {
   goalId: string;
   label?: string;
+  /** Resolved avatar for the Queen (Ástríðr), injected by SwarmGraph. */
+  avatarData?: AvatarData;
 }
 
 export default function QueenNode({ data }: { data: QueenNodeData }) {
@@ -30,11 +34,15 @@ export default function QueenNode({ data }: { data: QueenNodeData }) {
     >
       {/* No target Handle — Queen is the root, no incoming edges */}
 
-      {/* Top row: Crown icon + "Queen" label */}
+      {/* Top row: Ástríðr avatar (or crown fallback) + "Queen" label */}
       <div className="flex items-center gap-2">
-        <Crown className="h-4 w-4 text-amber-400 shrink-0" />
+        {data.avatarData ? (
+          <AgentAvatar avatar={data.avatarData} status="active" size="sm" />
+        ) : (
+          <Crown className="h-4 w-4 text-amber-400 shrink-0" />
+        )}
         <span className="text-sm font-semibold text-amber-300 truncate">
-          Queen
+          {data.avatarData?.name ?? "Queen"}
         </span>
       </div>
 

@@ -138,6 +138,12 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
   // node renders the agent's picture (image → emoji → colored initial fallback).
   const decoratedNodes = useMemo(() => {
     return layoutNodes.map((n) => {
+      if (n.type === "queen") {
+        // The Queen IS Ástríðr — resolve her avatar by persona name.
+        const avatarData =
+          resolveAvatar("Ástríðr") ?? resolveAvatar("astridr");
+        return avatarData ? { ...n, data: { ...n.data, avatarData } } : n;
+      }
       if (n.type !== "swarmTask") return n;
       const d = n.data as unknown as SwarmTaskNodeData;
       const avatarData = resolveAvatar(d.agentId) ?? resolveAvatar(d.claimedBy);
