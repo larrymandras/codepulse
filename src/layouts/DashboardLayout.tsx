@@ -48,7 +48,6 @@ import {
   Radio,
   Video,
   LayoutGrid,
-  Sun,
   X,
   Menu,
   BookOpen,
@@ -216,27 +215,6 @@ const navItems = (() => {
   return flat;
 })();
 
-function DarkModeToggle() {
-  const [dark, setDark] = useState(() =>
-    document.documentElement.classList.contains("dark")
-  );
-  const toggle = () => {
-    const next = !dark;
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-    setDark(next);
-  };
-  return (
-    <button
-      onClick={toggle}
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-    >
-      {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-    </button>
-  );
-}
-
 function NavGroup({
   label,
   items,
@@ -253,7 +231,7 @@ function NavGroup({
       {!collapsed && (
         <div className="px-3 pt-4 pb-2 flex items-center gap-2">
           <span className="w-1 h-1 rounded-full bg-primary/50 animate-pulse" />
-          <p className="text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_rgba(16,185,129,0.3)]">
+          <p className="text-xs uppercase tracking-widest text-primary/60 font-mono font-bold drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.3)]">
             {label}
           </p>
         </div>
@@ -309,16 +287,16 @@ function NavGroup({
               className={({ isActive }) =>
                 `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                   isActive
-                    ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
-                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
+                    ? "is-active text-primary bg-primary/10 nav-active-shadow"
+                    : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 nav-hover-shadow"
                 }`
               }
             >
-              <IconComponent 
-                className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] group-hover:drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+              <IconComponent
+                className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]"
               />
               {!collapsed && (
-                <span className="group-[.is-active]:drop-shadow-[0_0_5px_rgba(16,185,129,0.4)]">
+                <span className="group-[.is-active]:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.4)]">
                   {item.label}
                 </span>
               )}
@@ -328,7 +306,7 @@ function NavGroup({
             return (
               <Tooltip key={item.to}>
                 <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[var(--glow-sm)]">
                   {item.label}
                 </TooltipContent>
               </Tooltip>
@@ -384,8 +362,8 @@ function SidebarContent({
             <>
               <div className="flex items-center gap-3 w-full">
                 {/* Avatar Slot */}
-                <div 
-                  className="w-10 h-10 rounded-sm border-[1.5px] border-primary/50 overflow-hidden shadow-[0_0_10px_rgba(16,185,129,0.3)] shrink-0 relative group cursor-pointer hover:border-primary transition-all hover:shadow-[0_0_20px_rgba(16,185,129,0.6)]"
+                <div
+                  className="w-10 h-10 rounded-sm border-[1.5px] border-primary/50 overflow-hidden avatar-glow shrink-0 relative group cursor-pointer hover:border-primary transition-all"
                   onClick={() => setIsAvatarUploadOpen(true)}
                 >
                   <div className="absolute inset-0 bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors pointer-events-none">
@@ -400,17 +378,16 @@ function SidebarContent({
                   )}
                   {/* Subtle scanline effect on hover */}
                   <div className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-full h-[1px] bg-primary/40 animate-scanline" />
+                    <div className="w-full h-[1px] bg-primary/40" />
                   </div>
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
-                    <DarkModeToggle />
+                    <h1 className="text-base font-bold text-foreground font-mono tracking-wider shadow-primary drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.5)] glitch-text" data-text="CodePulse">CodePulse</h1>
                   </div>
                   <div className="text-[11px] text-primary/80 uppercase font-mono tracking-wider mt-0.5 flex items-start gap-1.5 leading-tight">
-                    <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)] mt-0.5" />
+                    <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-primary animate-pulse shadow-[var(--glow-md)] mt-0.5" />
                     <span className="break-words">Operator: Larry Mandras</span>
                   </div>
                 </div>
@@ -442,19 +419,19 @@ function SidebarContent({
                 className={({ isActive }) =>
                   `group flex items-center ${collapsed ? "justify-center px-2" : "gap-3 px-3"} py-2 text-sm font-mono tracking-wider transition-all relative overflow-hidden ${
                     isActive
-                      ? "is-active text-primary bg-primary/10 shadow-[inset_2px_0_15px_rgba(16,185,129,0.15),inset_3px_0_0_rgba(16,185,129,1)]"
-                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 hover:shadow-[inset_2px_0_10px_rgba(16,185,129,0.1),inset_3px_0_0_rgba(16,185,129,0.5)]"
+                      ? "is-active text-primary bg-primary/10 nav-active-shadow"
+                      : "text-muted-foreground/80 hover:text-primary hover:bg-primary/5 nav-hover-shadow"
                   }`
                 }
               >
-                <Settings className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_rgba(16,185,129,0.8)] group-hover:drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                <Settings className="h-4 w-4 shrink-0 transition-all duration-300 group-[.is-active]:drop-shadow-[0_0_8px_oklch(from_var(--primary)_l_c_h_/_0.8)] group-hover:drop-shadow-[0_0_5px_oklch(from_var(--primary)_l_c_h_/_0.5)]" />
                 {!collapsed && <span>Settings</span>}
               </NavLink>
             );
             return collapsed ? (
               <Tooltip>
                 <TooltipTrigger asChild>{settingsLink}</TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                <TooltipContent side="right" sideOffset={8} className="font-mono text-xs uppercase tracking-widest border-primary/30 bg-card text-primary shadow-[var(--glow-sm)]">
                   Settings
                 </TooltipContent>
               </Tooltip>
@@ -488,7 +465,7 @@ function SidebarContent({
       </div>
 
       <Dialog open={isAvatarUploadOpen} onOpenChange={setIsAvatarUploadOpen}>
-        <DialogContent className="border border-primary/30 bg-card/95 backdrop-blur shadow-[0_0_40px_rgba(16,185,129,0.15)] sm:max-w-md">
+        <DialogContent className="border border-primary/30 bg-card/95 backdrop-blur shadow-[var(--glow-sm)] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-primary font-mono uppercase tracking-widest">Update Operator Avatar</DialogTitle>
           </DialogHeader>
@@ -560,16 +537,6 @@ export default function DashboardLayout() {
     }
   });
 
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "light") {
-      document.documentElement.classList.remove("dark");
-    } else {
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
   useEffect(() => {
     const handler = () => {
       try {
@@ -622,7 +589,7 @@ export default function DashboardLayout() {
       <div className="matrix-bg" />
       {/* CRT Scanline Overlay */}
       <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden mix-blend-overlay">
-        <div className="w-full h-[5px] bg-primary/40 animate-scanline shadow-[0_0_20px_rgba(16,185,129,0.8)]" />
+        <div className="crt-scanline-bar w-full h-[5px] bg-primary/40 shadow-[var(--glow-md)]" />
       </div>
       
       {/* Sidebar Navigation */}
@@ -679,8 +646,8 @@ export default function DashboardLayout() {
             </button>
             
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded bg-primary/10 border border-primary/20 shadow-[var(--glow-xs)]">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-md)]" />
                 <span className="text-xs font-mono tracking-widest text-primary uppercase">
                   Astridr Runtime Telemetry
                 </span>
@@ -723,9 +690,6 @@ export default function DashboardLayout() {
 
       {/* Onboarding Guide */}
       <OnboardingGuide />
-
-      {/* CRT Overlay */}
-      {crtEnabled && <div className="crt-overlay" />}
 
       {/* Toast Notifications */}
       <Toaster position="bottom-right" richColors visibleToasts={3} />
