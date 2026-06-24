@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience
-status: planning
+status: executing
 stopped_at: Phase 88 context gathered
-last_updated: "2026-06-23T22:45:42.296Z"
-last_activity: 2026-06-23 — v9.0 roadmap defined (Phases 88-91, 15 requirements mapped)
+last_updated: "2026-06-24T12:51:45.301Z"
+last_activity: 2026-06-24
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 25
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v9.0 Readability & Experience — 4 phases (88-91) defined, none started. Start with Phase 88 (Analytics Rollup — independent, Convex-only, lowest risk).
+**Current focus:** Phase 88 — analytics-rollup-table-durable-fix-for-convex-16-mib-read-li
 
 ## Current Position
 
-Phase: Not started (Phase 88 is next)
-Plan: —
-Status: Ready to plan Phase 88
-Last activity: 2026-06-23 — v9.0 roadmap defined (Phases 88-91, 15 requirements mapped)
+Phase: 88 (analytics-rollup-table-durable-fix-for-convex-16-mib-read-li) — EXECUTING
+Plan: 2 of 4
+Status: Plan 88-01 complete (classifier extraction + Nyquist test scaffolds) — Plan 88-02 ready
+Last activity: 2026-06-24 -- Plan 88-01 executed (Wave 0)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 25%
 
 ## v9.0 Roadmap
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 88 | Analytics Rollup | AR-01, AR-02, AR-03 | Not started |
+| 88 | Analytics Rollup | AR-01, AR-02, AR-03 | In Progress (1/4 plans) |
 | 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | Not started |
 | 90 | Agent Room / War Room | ROOM-01..ROOM-04 | Not started |
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
@@ -56,6 +56,12 @@ See PROJECT.md Key Decisions table for full history.
 - **Phase 90 cross-repo gate** — confirm `POST /api/war-room` ingest path and `warRooms` Convex population before writing any ROOM code. If Join isn't feasible, ship observer mode with honest label.
 - **Phase 88 quick-unblock** — `.take()` caps deployed `edb614c` are fragile; this phase replaces them with ingest-time rollups in `convex/analyticsRollup.ts` (new file) + wired from `ingest.ts` / `runtimeIngest.ts`.
 
+**Phase 88 Plan 01 decisions (2026-06-24, Wave 0):**
+
+- **Classifier extracted VERBATIM** into shared `convex/lib/sankeyClassify.ts` (sole source of `categoryOf`/`outcomeOf`, read+write paths; `payload` param dropped per OQ-2). The plan's `<behavior>` examples assumed case-INSENSITIVE `outcomeOf` (`"ToolError"→"Error"`); the real code is case-SENSITIVE (`.includes("error")`), so capitalized forms classify as `"Success"`. Kept the classifier byte-identical (T-88-01) and corrected the TEST expectations instead (`tool_error`/`tool_fail`→`"Error"`).
+- **Cross-plan RED-scaffold pattern** — not-yet-built Convex modules are loaded behind a non-literal `@vite-ignore` dynamic import + a loose local module type, so dependent tests RED cleanly without breaking Vite transform or `tsc --noEmit`. Used for the Plan-02 (`incrementEventBucket`/dedup) and Plan-04 (aggregates-backed queries) targets.
+- **AR-01/02/03 NOT marked complete** — they are phase-level and only complete at Plan 04; Plan 01 is scaffolding + extraction only.
+
 ### Pending Todos
 
 - **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
@@ -68,7 +74,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-23T22:45:42.287Z
-Stopped at: Phase 88 context gathered
-Next action: `/gsd-plan-phase 88` — Analytics Rollup (AR-01..03)
-Resume file: .planning/phases/88-analytics-rollup-table-durable-fix-for-convex-16-mib-read-li/88-CONTEXT.md
+Last session: 2026-06-24T12:51:37.938Z
+Stopped at: Completed 88-01-PLAN.md (Wave 0 — classifier extraction + Nyquist test scaffolds)
+Next action: Execute 88-02-PLAN.md (Wave 1 — ingest-time rollup write path: incrementEventBucket / incrementSankeyBuckets + events.ingest idempotencyKey dedup)
+Resume file: None
