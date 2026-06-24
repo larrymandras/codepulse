@@ -568,6 +568,28 @@ code, pre, .font-mono {
   }
 }
 
+/* Phase 89 — Category E: nav-active / avatar glow utility classes (consumed by Plan 05) */
+/* Colors driven exclusively by var(--primary) / var(--glow-*) — no emerald literals */
+.nav-active-shadow {
+  box-shadow:
+    inset 2px 0 15px oklch(from var(--primary) l c h / 0.15),
+    inset 3px 0 0 var(--primary);
+}
+
+.nav-hover-shadow {
+  box-shadow:
+    inset 2px 0 10px oklch(from var(--primary) l c h / 0.1),
+    inset 3px 0 0 oklch(from var(--primary) l c h / 0.5);
+}
+
+.avatar-glow {
+  box-shadow: 0 0 10px oklch(from var(--primary) l c h / 0.3);
+}
+
+.avatar-glow:hover {
+  box-shadow: 0 0 20px oklch(from var(--primary) l c h / 0.6);
+}
+
 /* Phase 89 — Aubergine editorial surface effects */
 [data-theme="aubergine"] body::before {
   content: '';
