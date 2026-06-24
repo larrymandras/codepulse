@@ -2,6 +2,12 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <!-- THEME PRE-PAINT: blocking inline script — sets data-theme before first paint, no FOUC.
+         NOTE: If a CSP with script-src 'self' is added in future, this inline script will need
+         a nonce attribute or 'unsafe-inline' allowance. No CSP exists today. -->
+    <script>
+(function(){var t=localStorage.getItem('codepulse-theme'),v=['cyan','emerald','readable','aubergine'];if(!t){var o=localStorage.getItem('theme');if(o==='light')t='readable';localStorage.removeItem('theme');}if(!t||!v.includes(t))t='cyan';document.documentElement.setAttribute('data-theme',t);document.documentElement.classList.add('dark');}());
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CodePulse</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
