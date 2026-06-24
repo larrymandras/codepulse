@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTokenSunburst } from "../hooks/useAdvancedAnalytics";
 import InfoTooltip from "./InfoTooltip";
 
@@ -52,9 +52,8 @@ export default function TokenSunburst() {
           </thead>
           <tbody>
             {(displayTree.children ?? []).map((provider: any) => (
-              <>
+              <Fragment key={provider.name}>
                 <tr
-                  key={provider.name}
                   className="border-b border-gray-700/50 hover:bg-gray-700/20 cursor-pointer"
                   onClick={() =>
                     provider.children?.length > 0
@@ -81,7 +80,7 @@ export default function TokenSunburst() {
                       </td>
                     </tr>
                   ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
