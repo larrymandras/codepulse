@@ -128,49 +128,63 @@ export { categoryOf, outcomeOf };
 
 // ---- tokenSunburst ----
 //
-// "cost" buckets carry dimensions { provider, model, billingType, goalId } and a
-// `value` that is summed COST (computeHourly/rollupDaily). The sunburst groups by
-// provider → model. cost buckets carry NO token counts, so the prompt/completion
-// leaves and totalTokens are 0 — matching what the current consumer tolerates
-// (the old llmMetrics-backed query split tokens, but the UI renders cost-weighted
-// arcs; totalTokens is informational). totalCost is the sum of bucket values.
-export function sunburstFromAggregates(buckets: AggBucket[]): {
+// Two bucket streams, both keyed by dimensions { provider, model, billingType,
+// goalId } at period "hourly":
+//   - "cost" buckets (value = summed cost)   → totalCost
+//   - "tokens" buckets (value = summed totalTokens, Phase 88 token-fidelity
+//     follow-up) → the per-provider/model token counts the UI renders.
+//
+// The TokenSunburst.tsx contract reads provider.value (Tokens column) and
+// model.value (Tokens column) plus top-level totalTokens/totalCost. So the tree
+// sets provider.value = sum of that provider's model tokens, model.value = that
+// model's token count, and totalTokens = grand sum of token values. totalCost is
+// kept as the sum of the cost buckets (separate, informational header).
+export function sunburstFromAggregates(
+  costBuckets: AggBucket[],
+  tokenBuckets: AggBucket[]
+): {
   tree: {
     name: string;
     children: Array<{
       name: string;
-      children: Array<{
-        name: string;
-        children: Array<{ name: string; value: number }>;
-      }>;
+      value: number;
+      children: Array<{ name: string; value: number }>;
     }>;
   };
   totalCost: number;
   totalTokens: number;
 } {
   let totalCost = 0;
-  const grouped: Record<string, Record<string, number>> = {};
+  for (const b of costBuckets) totalCost += b.value ?? 0;
 
-  for (const b of buckets) {
+  // Group token buckets by provider → model, summing token counts.
+  let totalTokens = 0;
+  const grouped: Record<string, Record<string, number>> = {};
+  for (const b of tokenBuckets) {
     const dims = b.dimensions as { provider?: string; model?: string } | null;
     const provider = dims?.provider ?? "unknown";
     const model = dims?.model ?? "unknown";
-    const cost = b.value ?? 0;
-    totalCost += cost;
+    const tokens = b.value ?? 0;
+    totalTokens += tokens;
     if (!grouped[provider]) grouped[provider] = {};
-    grouped[provider][model] = (grouped[provider][model] ?? 0) + cost;
+    grouped[provider][model] = (grouped[provider][model] ?? 0) + tokens;
   }
 
   const tree = {
     name: "All Providers",
-    children: Object.entries(grouped).map(([provider, models]) => ({
-      name: provider,
-      children: Object.entries(models).map(([model, cost]) => ({
+    children: Object.entries(grouped).map(([provider, models]) => {
+      const modelChildren = Object.entries(models).map(([model, tokens]) => ({
         name: model,
-        children: [{ name: "Cost", value: cost }],
-      })),
-    })),
+        value: tokens,
+      }));
+      return {
+        name: provider,
+        // provider.value = sum of its model tokens (TokenSunburst.tsx contract)
+        value: modelChildren.reduce((sum, m) => sum + m.value, 0),
+        children: modelChildren,
+      };
+    }),
   };
 
-  return { tree, totalCost, totalTokens: 0 };
+  return { tree, totalCost, totalTokens };
 }

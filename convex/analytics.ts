@@ -57,22 +57,30 @@ export const toolFlowSankey = query({
 export const tokenSunburst = query({
   args: {},
   handler: async (ctx) => {
-    // 30-day window of "cost" HOURLY buckets (dimensions { provider, model,
-    // billingType, goalId }; value = summed cost). Read hourly only — daily is a
-    // rollup OF hourly, so mixing both would double-count (costByPeriod takes a
-    // single period for the same reason). Grouped provider → model, cost-weighted.
-    // cost buckets carry no token counts, so token leaves / totalTokens are 0
-    // (the consumer renders cost-weighted arcs; totalTokens is informational).
+    // 30-day window of HOURLY buckets (dimensions { provider, model, billingType,
+    // goalId }). Read hourly only — daily is a rollup OF hourly, so mixing both
+    // would double-count (costByPeriod takes a single period for the same reason).
+    // Two streams:
+    //   - "cost" buckets (value = summed cost) → totalCost header.
+    //   - "tokens" buckets (Phase 88 token-fidelity follow-up; value = summed
+    //     totalTokens) → the real per-provider/model token counts the UI renders.
     const cutoff = Date.now() / 1000 - 30 * 86400;
-    const buckets = await ctx.db
+    const costBuckets = await ctx.db
       .query("aggregates")
       .withIndex("by_type_period_bucket", (q) =>
         q.eq("metric_type", "cost").eq("period", "hourly").gte("bucket_start", cutoff)
       )
       .collect();
+    const tokenBuckets = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "tokens").eq("period", "hourly").gte("bucket_start", cutoff)
+      )
+      .collect();
 
     return sunburstFromAggregates(
-      buckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
+      costBuckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions })),
+      tokenBuckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
     );
   },
 });

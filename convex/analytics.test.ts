@@ -132,8 +132,18 @@ describe("analytics", () => {
         nodes: Array<{ name: string }>;
         links: Array<{ source: number; target: number; value: number }>;
       };
-      sunburstFromAggregates?: (b: AggBucket[]) => {
-        tree: { name: string; children: unknown[] };
+      sunburstFromAggregates?: (
+        costBuckets: AggBucket[],
+        tokenBuckets: AggBucket[]
+      ) => {
+        tree: {
+          name: string;
+          children: Array<{
+            name: string;
+            value: number;
+            children: Array<{ name: string; value: number }>;
+          }>;
+        };
         totalCost: number;
         totalTokens: number;
       };
@@ -204,16 +214,38 @@ describe("analytics", () => {
       expect(tuRead?.value).toBe(5);
     });
 
-    test("sunburstFromAggregates groups cost buckets by provider→model", () => {
-      const { tree, totalCost, totalTokens } = analytics!.sunburstFromAggregates!([
+    test("sunburstFromAggregates: provider/model value = tokens, totalCost from cost buckets, totalTokens grand sum", () => {
+      const costBuckets: AggBucket[] = [
         { bucket_start: 1_700_000_000, value: 1.5, dimensions: { provider: "anthropic", model: "opus" } },
         { bucket_start: 1_700_003_600, value: 0.5, dimensions: { provider: "anthropic", model: "opus" } },
         { bucket_start: 1_700_000_000, value: 2.0, dimensions: { provider: "openai", model: "gpt-4" } },
-      ]);
+      ];
+      const tokenBuckets: AggBucket[] = [
+        { bucket_start: 1_700_000_000, value: 100, dimensions: { provider: "anthropic", model: "opus" } },
+        { bucket_start: 1_700_003_600, value: 50, dimensions: { provider: "anthropic", model: "opus" } },
+        { bucket_start: 1_700_000_000, value: 200, dimensions: { provider: "openai", model: "gpt-4" } },
+      ];
+      const { tree, totalCost, totalTokens } = analytics!.sunburstFromAggregates!(costBuckets, tokenBuckets);
+
+      // totalCost still sums the cost buckets (unchanged source)
       expect(totalCost).toBeCloseTo(4.0);
-      expect(totalTokens).toBe(0); // cost buckets carry no token counts
+      // totalTokens is the grand sum of token bucket values
+      expect(totalTokens).toBe(350);
       expect(tree.name).toBe("All Providers");
       expect(tree.children).toHaveLength(2); // anthropic + openai
+
+      // provider.value === sum of its model tokens (the TokenSunburst.tsx contract)
+      const anthropic = tree.children.find((p) => p.name === "anthropic")!;
+      expect(anthropic.value).toBe(150); // opus 100 + 50
+      const openai = tree.children.find((p) => p.name === "openai")!;
+      expect(openai.value).toBe(200);
+
+      // model.value === that model's token count; tree shape is provider→model
+      const opus = anthropic.children.find((m) => m.name === "opus")!;
+      expect(opus.value).toBe(150);
+      expect(typeof opus.value).toBe("number");
+      const gpt4 = openai.children.find((m) => m.name === "gpt-4")!;
+      expect(gpt4.value).toBe(200);
     });
   });
 });
