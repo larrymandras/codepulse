@@ -208,8 +208,9 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [ ] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
 - [ ] **Phase 90 — Agent Room / War Room** — Wire live participant identity + bounded listing + real operator Join + transcript robustness
 - [ ] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware
+- [ ] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (Porcupine) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply spoken in a Norse persona voice
 
-**Execution order:** 88 → 89 → 90 → 91 (88 is independent; 89 token cleanup gates 91's theme-aware node colors; 90 cross-repo audit recommended before 91 starts but can run in parallel with 91 if audit clears fast)
+**Execution order:** 88 → 89 → 90 → 91 → 92 (88 is independent; 89 token cleanup gates 91's theme-aware node colors; 90 cross-repo audit recommended before 91 starts but can run in parallel with 91 if audit clears fast; 92 is independent — reuses shipped Phase 2 WebSocket sender + Phase 3 command palette, no hard dependency on 89/90/91)
 
 ## Phase Details
 
@@ -273,6 +274,20 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 ---
 
+### Phase 92: Voice-Activated Command Palette (Jarvis Mode)
+**Goal**: An operator can summon Ástríðr hands-free from anywhere in CodePulse by speaking a wake word, speak a command, and hear the streamed reply in a Norse persona voice — entirely through the existing command palette and WebSocket `chat.send` path, with zero Ástríðr backend changes.
+**Depends on**: Phase 2 (WebSocket command sender — shipped) and Phase 3 (Command Palette — shipped). No hard dependency on 89/90/91. Requires a browser-target Picovoice Porcupine `.ppn` keyword + `porcupine_params.pv` placed in `public/` (operator-supplied via Picovoice Console; same AccessKey as Ástríðr server-side, exposed as `VITE_PICOVOICE_ACCESS_KEY`).
+**Requirements**: VOX-01, VOX-02, VOX-03, VOX-04
+**Success Criteria** (what must be TRUE):
+  1. With voice mode enabled, speaking the wake word anywhere in the app reliably opens the command palette in a "listening" voice mode within ~1s — detection runs continuously in a Web Worker via `@picovoice/porcupine-web` and does not require the palette to already be open (`DashboardLayout.tsx` wake handler + existing ⌘K toggle coexist).
+  2. After wake, the operator's spoken command is transcribed via the browser Web Speech API (reusing the recognition logic in `ChatInput.tsx`), shown as a live transcript, and on a final result is sent verbatim through the existing `sendCommand({type:"chat.send", message})` over `AstridrWSContext` — no new transport.
+  3. The streamed reply renders in the palette (`run.text`) and the `run.tts` `audio_url` auto-plays in the selected Norse persona's ElevenLabs voice via a shared `useTtsPlayback` hook extracted from `Chat.tsx` (Chat and palette share one playback path; no duplicate logic). Persona→voice resolution remains Ástríðr-side (`VoiceIdentityResolver`) — no CodePulse voice config.
+  4. Voice mode is privacy-honest: always-on listening is OFF by default, requires an explicit operator toggle, shows a persistent "listening" indicator while active, and a missing/invalid `.ppn`/AccessKey degrades gracefully (clear disabled state, no crash, no silent always-on mic).
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -297,5 +312,6 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 0/? | Not started | — |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
+| 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 0/? | Not started | — |
 
-*Last updated: 2026-06-23 — v9.0 Readability & Experience roadmap defined (Phases 88-91). Execution order: 88 → 89 → 90 → 91. Phase 88 (AR-01..03) and Phase 89 (TH-01..06) already scaffolded. Phase 90 (ROOM-01..04) and Phase 91 (G3D-01..02) are new. Phase 89 TH-01 token cleanup gates Phase 91's theme-aware node colors (hard dependency). Phase 90 requires a cross-repo Ástríðr audit before planning (confirm `POST /api/war-room` ingest path + participant-join surface). Next: `/gsd-plan-phase 88`.*
+*Last updated: 2026-06-24 — Phase 92 (VOX-01..04) added to v9.0: browser-side voice-activated command palette (Porcupine wake word + Web Speech STT → existing chat.send → persona TTS). Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Requires operator-supplied Picovoice Web-target .ppn + porcupine_params.pv in public/ and VITE_PICOVOICE_ACCESS_KEY. Execution order: 88 → 89 → 90 → 91 → 92. Next: `/gsd-discuss-phase 92` (in progress) → `/gsd-plan-phase 92`.*
