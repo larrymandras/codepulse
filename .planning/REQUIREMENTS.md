@@ -23,9 +23,9 @@
 
 ### Analytics Rollup (AR) — Phase 88
 
-- [ ] **AR-01**: Ingest-time **rollup tables** (reusing the existing `aggregates` table where its `{metric_type, period, bucket_start, value, dimensions}` shape fits) are maintained from `ingest.ts` / `runtimeIngest.ts`, so `analytics.ts` queries read O(buckets) instead of O(events).
-- [ ] **AR-02**: Rollups are **correct under real ingest** — idempotent on at-least-once retries (no double-count), archival-consistent (retention/archival never inflates counts), with a one-time **historical backfill** action for pre-rollup data.
-- [ ] **AR-03**: All `.take()` count caps are **removed** from `analytics.ts` once rollups are authoritative; heatmap/sankey/error-trend fidelity is no longer bounded by caps, and every analytics query reads well under Convex's **16 MiB/exec** limit regardless of total event volume.
+- [x] **AR-01**: Ingest-time **rollup tables** (reusing the existing `aggregates` table where its `{metric_type, period, bucket_start, value, dimensions}` shape fits) are maintained from `ingest.ts` / `runtimeIngest.ts`, so `analytics.ts` queries read O(buckets) instead of O(events).
+- [x] **AR-02**: Rollups are **correct under real ingest** — idempotent on at-least-once retries (no double-count), archival-consistent (retention/archival never inflates counts), with a one-time **historical backfill** action for pre-rollup data.
+- [x] **AR-03**: All `.take()` count caps are **removed** from `analytics.ts` once rollups are authoritative; heatmap/sankey/error-trend fidelity is no longer bounded by caps, and every analytics query reads well under Convex's **16 MiB/exec** limit regardless of total event volume.
 
 ### Agent Room / War Room (ROOM) — Phase 90
 
@@ -72,9 +72,9 @@
 | TH-04 | Phase 89 | Pending |
 | TH-05 | Phase 89 | Pending |
 | TH-06 | Phase 89 | Pending |
-| AR-01 | Phase 88 | Pending |
-| AR-02 | Phase 88 | Pending |
-| AR-03 | Phase 88 | Pending |
+| AR-01 | Phase 88 | Complete |
+| AR-02 | Phase 88 | Complete |
+| AR-03 | Phase 88 | Complete |
 | ROOM-01 | Phase 90 | Pending |
 | ROOM-02 | Phase 90 | Pending |
 | ROOM-03 | Phase 90 | Pending |
