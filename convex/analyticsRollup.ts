@@ -11,7 +11,12 @@
 // v.any() object-equality filter on `dimensions` (Pitfall 3). aggregates rows
 // carry no payload: v.any(), so the per-bucket collect stays small.
 
+import { action, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import { internal, api } from "./_generated/api";
+import { v } from "convex/values";
+import type { PaginationResult } from "convex/server";
 import { categoryOf, outcomeOf } from "./lib/sankeyClassify";
 
 // ---- Ingest-time increment helpers (called inside events.ingest) ----
@@ -99,3 +104,65 @@ async function incrementSankeyEdge(
     });
   }
 }
+
+// ---- Backfill: re-derive ingest-time buckets from existing events ----
+
+// internalMutation (NEVER a public mutation): callable only via
+// internal.analyticsRollup.incrementBatch from the backfillHistorical action.
+// A public increment endpoint would be an unauthenticated tampering surface
+// (T-88-03). Loops the two ingest-time helpers per event.
+export const incrementBatch = internalMutation({
+  args: {
+    events: v.array(
+      v.object({
+        eventType: v.string(),
+        toolName: v.optional(v.string()),
+        timestamp: v.float64(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    for (const e of args.events) {
+      await incrementEventBucket(ctx, e.eventType, e.timestamp);
+      await incrementSankeyBuckets(ctx, e.eventType, e.toolName, e.timestamp);
+    }
+  },
+});
+
+// One-shot backfill action: cursor-loop over every event and (re)build the
+// ingest-time "events" + "sankey_edge" buckets. Run is Plan 03 (operator-gated).
+// Actions cannot touch ctx.db directly — read via ctx.runQuery, write via
+// ctx.runMutation(internal.analyticsRollup.incrementBatch).
+export const backfillHistorical = action({
+  args: {},
+  handler: async (ctx) => {
+    let cursor: string | null = null;
+    let processed = 0;
+
+    while (true) {
+      // Explicit annotation breaks the type-inference cycle: events.ingest imports
+      // these rollup helpers, and listRecentPaginated lives in the same events
+      // module, so leaving `result` inferred makes tsc fail with TS7022.
+      const result: PaginationResult<Doc<"events">> = await ctx.runQuery(
+        api.events.listRecentPaginated,
+        { paginationOpts: { numItems: 200, cursor } }
+      );
+
+      if (result.page.length > 0) {
+        await ctx.runMutation(internal.analyticsRollup.incrementBatch, {
+          events: result.page.map((e) => ({
+            eventType: e.eventType,
+            toolName: e.toolName,
+            timestamp: e.timestamp,
+          })),
+        });
+        processed += result.page.length;
+      }
+
+      if (result.isDone) break;
+      cursor = result.continueCursor;
+    }
+
+    return { processed };
+  },
+});

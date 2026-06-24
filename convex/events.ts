@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { incrementEventBucket, incrementSankeyBuckets } from "./analyticsRollup";
 
 // ---- NEW events table functions ----
 
@@ -13,8 +14,21 @@ export const ingest = mutation({
     payload: v.any(),
     hookType: v.optional(v.string()),
     timestamp: v.float64(),
+    idempotencyKey: v.optional(v.string()),   // Phase 88 D-04: producer dedup key
   },
   handler: async (ctx, args) => {
+    // D-04/D-05: dedup on idempotencyKey when present (at-least-once retry safety).
+    // Un-keyed events are ALWAYS counted (no lossy hash, no silent drop — D-05).
+    if (args.idempotencyKey) {
+      const existing = await ctx.db
+        .query("events")
+        .withIndex("by_idempotencyKey", (q) =>
+          q.eq("idempotencyKey", args.idempotencyKey!)
+        )
+        .first();
+      if (existing) return; // idempotent no-op
+    }
+
     await ctx.db.insert("events", {
       sessionId: args.sessionId,
       eventType: args.eventType,
@@ -23,7 +37,13 @@ export const ingest = mutation({
       payload: args.payload,
       hookType: args.hookType,
       timestamp: args.timestamp,
+      idempotencyKey: args.idempotencyKey,
     });
+
+    // D-01/D-02: maintain ingest-time rollup buckets inside the SAME OCC mutation
+    // so the hourly cron no longer scans raw events for these counts (Pitfall 1).
+    await incrementEventBucket(ctx, args.eventType, args.timestamp);
+    await incrementSankeyBuckets(ctx, args.eventType, args.toolName, args.timestamp);
   },
 });
 
