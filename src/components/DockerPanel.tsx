@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDockerHealth } from "../hooks/useDockerHealth";
 import InfoTooltip from "./InfoTooltip";
+import { ScrollArea } from "./ui/scroll-area";
 
 export default function DockerPanel() {
   const containers = useDockerHealth();
@@ -35,7 +36,7 @@ export default function DockerPanel() {
   };
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -57,11 +58,12 @@ export default function DockerPanel() {
       {containers.length === 0 ? (
         <p className="text-sm font-mono text-muted-foreground py-6 text-center">Docker monitoring active — waiting for container data</p>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[300px] overflow-y-auto pr-2">
-          {containers.map((c: any) => (
+        <ScrollArea className="h-[300px] pr-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {containers.map((c: any) => (
             <div
               key={c._id}
-              className="bg-background/80 border-l-2 border-l-primary border border-border/30 rounded-r-lg p-3 hover:border-primary/50 hover:bg-card/80 transition-all hover-glitch shadow-[0_0_10px_rgba(0,0,0,0.3)] hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+              className="bg-background/80 border-l-2 border-l-primary border border-border/30 rounded-r-lg p-3 hover:border-primary/50 hover:bg-card/80 transition-all hover-glitch shadow-[0_0_10px_rgba(0,0,0,0.3)] hover:shadow-[var(--glow-sm)]"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -85,7 +87,8 @@ export default function DockerPanel() {
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        </ScrollArea>
       )}
     </div>
   );

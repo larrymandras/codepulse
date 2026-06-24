@@ -187,7 +187,7 @@ export default function AgentTopology() {
 
   if (allAgents.length === 0) {
     return (
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Agent Topology
@@ -199,7 +199,7 @@ export default function AgentTopology() {
   }
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4 border-b border-border/30 pb-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
@@ -216,7 +216,7 @@ export default function AgentTopology() {
               onClick={() => setStatusFilter(f.value)}
               className={`flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest px-2.5 py-1 rounded-sm transition-colors ${
                 statusFilter === f.value
-                  ? "bg-primary/20 text-primary border border-primary/40 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                  ? "bg-primary/20 text-primary border border-primary/40 shadow-[var(--glow-xs)]"
                   : "text-muted-foreground border border-transparent hover:text-foreground hover:bg-muted/50"
               }`}
             >
@@ -254,7 +254,7 @@ export default function AgentTopology() {
             minZoom={0.3}
             maxZoom={2}
           >
-            <Background color="#10b981" gap={20} size={1} />
+            <Background color="var(--primary)" gap={20} size={1} />
             <Controls
               showInteractive={false}
               className="!bg-background !border-border !shadow-md [&>button]:!bg-background/80 [&>button]:!border-border/50 [&>button]:!text-primary [&>button:hover]:!bg-primary/20 [&>button:hover]:!text-primary"

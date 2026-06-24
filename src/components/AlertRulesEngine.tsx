@@ -87,13 +87,13 @@ function StaticRuleRow({
       <button
         onClick={onToggle}
         className={`relative z-10 w-8 rounded-full transition-all shrink-0 border ${
-          isDisabled ? "bg-background/50 border-muted-foreground/30" : "bg-primary/20 border-primary shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+          isDisabled ? "bg-background/50 border-muted-foreground/30" : "bg-primary/20 border-primary shadow-[var(--glow-xs)]"
         }`}
         style={{ minHeight: "16px", minWidth: "30px", height: "16px" }}
       >
         <span
           className={`absolute top-0.5 w-2.5 h-2.5 rounded-full transition-all ${
-            isDisabled ? "left-0.5 bg-muted-foreground/50" : "left-[17px] bg-primary shadow-[0_0_5px_rgba(16,185,129,1)]"
+            isDisabled ? "left-0.5 bg-muted-foreground/50" : "left-[17px] bg-primary shadow-[var(--glow-xs)]"
           }`}
         />
       </button>
@@ -349,7 +349,7 @@ export default function AlertRulesEngine() {
             <button
               onClick={handleEvaluate}
               disabled={evaluating}
-              className="text-sm font-medium uppercase tracking-wider text-primary-foreground border border-primary/30 bg-primary hover:bg-primary/80 hover:border-primary rounded-md px-5 py-2 transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+              className="text-sm font-medium uppercase tracking-wider text-primary-foreground border border-primary/30 bg-primary hover:bg-primary/80 hover:border-primary rounded-md px-5 py-2 transition-all disabled:opacity-50 shadow-[var(--glow-sm)]"
             >
               {evaluating ? "EVALUATING..." : "EVALUATE NOW"}
             </button>
@@ -365,7 +365,7 @@ export default function AlertRulesEngine() {
                 onClick={() => setCategory(cat.value)}
                 className={`text-sm font-medium tracking-wider uppercase px-4 py-2 rounded-md transition-all border ${
                   category === cat.value
-                    ? "bg-primary/20 border-primary text-primary shadow-[inset_0_0_10px_rgba(16,185,129,0.2)]"
+                    ? "bg-primary/20 border-primary text-primary shadow-[var(--glow-xs)]"
                     : "bg-transparent border-transparent text-muted-foreground hover:text-primary hover:border-primary/30 hover:bg-primary/5"
                 }`}
               >

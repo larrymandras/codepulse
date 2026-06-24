@@ -127,7 +127,7 @@ export default function DriftTimeline() {
   };
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 border-b border-border/30 pb-4">
         <div className="flex items-center gap-3">

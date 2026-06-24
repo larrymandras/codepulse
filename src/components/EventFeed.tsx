@@ -6,6 +6,7 @@ import { formatTimestamp } from "../lib/formatters";
 import { EntityRow } from "./EntityRow";
 import { SectionHeader } from "./SectionHeader";
 import InfoTooltip from "./InfoTooltip";
+import { ScrollArea } from "./ui/scroll-area";
 
 const EVENT_FILTERS = ["All", "Tool", "LLM", "File", "Error", "Agent"] as const;
 type EventFilter = (typeof EVENT_FILTERS)[number];
@@ -44,7 +45,7 @@ export default function EventFeed() {
   }, [filtered.length]);
 
   return (
-    <div className="glow-card bg-[#09090b] border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+    <div className="glow-card bg-[#09090b] border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
       {/* Scanline specifically for this terminal */}
       <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden mix-blend-overlay opacity-30">
         <div className="w-full h-[2px] bg-primary/40 animate-scanline" />
@@ -79,25 +80,26 @@ export default function EventFeed() {
           {events.length === 0 ? "Waiting for events..." : "No matching events"}
         </p>
       ) : (
-        <div className="max-h-[300px] overflow-y-auto font-mono text-sm space-y-1 z-20 relative flex-1 pr-2">
-          {filtered.map((event: any, i: number) => {
-            const isError = filterMatchers.Error(event.eventType);
-            const isTool = filterMatchers.Tool(event.eventType);
-            const eventColor = isError ? "text-red-500" : isTool ? "text-primary" : "text-muted-foreground";
-            
-            return (
-              <div
-                key={event._id ?? i}
-                onClick={
-                  event.sessionId
-                    ? () => navigate(`/sessions/${event.sessionId}`)
-                    : undefined
-                }
-                className={`flex items-start gap-3 p-1.5 hover:bg-white/5 cursor-pointer rounded transition-colors group ${
-                  i < newCount && newCount > 0 ? "activity-entry-new" : ""
-                }`}
-              >
-                <span className="text-muted-foreground/50 shrink-0 mt-0.5">
+        <ScrollArea className="h-[300px] z-20 relative flex-1 pr-2">
+          <div className="font-mono text-sm space-y-1">
+            {filtered.map((event: any, i: number) => {
+              const isError = filterMatchers.Error(event.eventType);
+              const isTool = filterMatchers.Tool(event.eventType);
+              const eventColor = isError ? "text-red-500" : isTool ? "text-primary" : "text-muted-foreground";
+              
+              return (
+                <div
+                  key={event._id ?? i}
+                  onClick={
+                    event.sessionId
+                      ? () => navigate(`/sessions/${event.sessionId}`)
+                      : undefined
+                  }
+                  className={`flex items-start gap-3 p-1.5 hover:bg-white/5 cursor-pointer rounded transition-colors group ${
+                    i < newCount && newCount > 0 ? "activity-entry-new" : ""
+                  }`}
+                >
+                  <span className="text-muted-foreground/50 shrink-0 mt-0.5">
                   {formatTimestamp(event.timestamp)}
                 </span>
                 <span className={`shrink-0 w-4 text-center ${eventColor}`}>
@@ -119,6 +121,7 @@ export default function EventFeed() {
             );
           })}
         </div>
+      </ScrollArea>
       )}
       <div className="mt-4 z-20 relative border-t border-border/30 pt-2 text-center">
         <span className="text-sm text-muted-foreground">Showing last {events.length} events</span>
