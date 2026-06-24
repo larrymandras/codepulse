@@ -36,7 +36,7 @@ function Field({
 function SectionHeader({ title }: { title: string }) {
   return (
     <div className="flex items-center gap-2 mb-4 border-b border-primary/20 pb-2">
-      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+      <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
       <h4 className="text-sm font-bold font-mono text-primary uppercase tracking-[0.2em] drop-shadow-sm">
         {title}
       </h4>
@@ -191,7 +191,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
             size="sm" 
             onClick={handleSave} 
             disabled={saving}
-            className="flex-1 text-xs font-mono tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            className="flex-1 text-xs font-mono tracking-widest uppercase bg-primary hover:bg-primary/90 text-primary-foreground shadow-[var(--glow-sm)]"
           >
             {saving ? (
               <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
@@ -222,7 +222,7 @@ export function DetailConfigTab({ agentId, agentDetail }: DetailConfigTabProps) 
           variant="outline" 
           size="sm" 
           onClick={startEdit}
-          className="text-xs font-mono tracking-widest uppercase border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+          className="text-xs font-mono tracking-widest uppercase border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[var(--glow-xs)] hover:shadow-[var(--glow-md)]"
         >
           <Pencil className="h-3 w-3 mr-2" />
           Edit Config

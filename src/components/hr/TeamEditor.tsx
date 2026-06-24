@@ -350,7 +350,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
           {/* Left panel — Available Agents */}
-          <div className="border border-border/50 rounded-xl p-5 flex flex-col gap-4 bg-card/80 backdrop-blur glow-card shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.1)] transition-all">
+          <div className="border border-border/50 rounded-xl p-5 flex flex-col gap-4 bg-card/80 backdrop-blur glow-card shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-sm)] transition-all">
             <h3 className="text-base font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary/50" />
               Available Agents
@@ -403,7 +403,7 @@ export function TeamEditor({ teamId }: TeamEditorProps) {
           </div>
 
           {/* Right panel — Team Members */}
-          <div className="border border-primary/20 rounded-xl p-5 flex flex-col gap-4 bg-primary/5 backdrop-blur glow-card shadow-[inset_0_0_20px_rgba(16,185,129,0.05)] hover:shadow-[inset_0_0_30px_rgba(16,185,129,0.1)] transition-all relative overflow-hidden">
+          <div className="border border-primary/20 rounded-xl p-5 flex flex-col gap-4 bg-primary/5 backdrop-blur glow-card shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] transition-all relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
             <h3 className="text-base font-bold font-mono tracking-wide text-primary uppercase flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />

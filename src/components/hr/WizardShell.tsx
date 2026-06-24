@@ -43,7 +43,7 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
       {/* Header with stepper */}
       <div className="px-6 pt-5 pb-3 border-b border-border/30 relative z-10">
         <h1 className="text-lg font-bold font-mono tracking-wide text-foreground mb-3 uppercase flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
           Agent Initialization
         </h1>
         <WizardStepper
@@ -94,14 +94,14 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
             <button
               onClick={goNext}
               disabled={deploying}
-              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-50"
+              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] disabled:opacity-50"
             >
               Deploy
             </button>
           ) : (
             <button
               onClick={goNext}
-              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+              className="px-5 py-2 font-mono font-bold tracking-wider text-sm uppercase rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground transition-all shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]"
             >
               Next
             </button>

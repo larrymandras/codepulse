@@ -25,7 +25,7 @@ interface CatalogCardProps {
 
 export function CatalogCard({ entry, onSelect, onPreview }: CatalogCardProps) {
   return (
-    <div className="bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-300 group shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.15)] hover:-translate-y-1">
+    <div className="bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-300 group shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-sm)] hover:-translate-y-1">
       <div className="flex items-start gap-4">
         <span className="text-3xl filter drop-shadow-md group-hover:scale-110 transition-transform duration-300">{categoryEmoji(entry.category)}</span>
         <div className="flex-1 min-w-0">
@@ -49,7 +49,7 @@ export function CatalogCard({ entry, onSelect, onPreview }: CatalogCardProps) {
         </button>
         <button
           onClick={() => onSelect(entry)}
-          className="ml-auto text-sm font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-3 py-1.5 rounded-md transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+          className="ml-auto text-sm font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/20 hover:bg-primary hover:text-primary-foreground text-primary px-3 py-1.5 rounded-md transition-all shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]"
         >
           Onboard This Agent
         </button>
@@ -74,10 +74,10 @@ export function BlankAgentCard({ onSelect }: BlankAgentCardProps) {
   return (
     <div
       onClick={() => onSelect(BLANK_ENTRY)}
-      className="bg-primary/5 backdrop-blur-sm border-2 border-dashed border-primary/30 rounded-xl p-5 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-primary/10 transition-all duration-300 cursor-pointer min-h-[220px] shadow-inner hover:shadow-[0_0_30px_rgba(16,185,129,0.15)] group hover:-translate-y-1"
+      className="bg-primary/5 backdrop-blur-sm border-2 border-dashed border-primary/30 rounded-xl p-5 flex flex-col items-center justify-center gap-3 hover:border-primary hover:bg-primary/10 transition-all duration-300 cursor-pointer min-h-[220px] shadow-inner hover:shadow-[var(--glow-md)] group hover:-translate-y-1"
     >
       <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors group-hover:scale-110 duration-300">
-        <Plus className="h-6 w-6 text-primary drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+        <Plus className="h-6 w-6 text-primary drop-shadow-[var(--glow-xs)]" />
       </div>
       <div className="text-center">
         <h3 className="text-base font-bold font-mono tracking-wide text-foreground group-hover:text-primary transition-colors">Blank Agent</h3>

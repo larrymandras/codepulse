@@ -57,7 +57,7 @@ export function AgentCard({ agent, onClick }: AgentCardProps) {
       className={`group bg-card/60 backdrop-blur-md rounded-xl overflow-hidden cursor-pointer transition-all duration-500 relative border ${
         isPending
           ? "border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]"
-          : "border-border/50 glow-card hover:border-primary/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_32px_rgba(16,185,129,0.2)] hover:-translate-y-1.5"
+          : "border-border/50 glow-card hover:border-primary/50 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-md)] hover:-translate-y-1.5"
       }`}
     >
       {/* Background ambient tier glow */}

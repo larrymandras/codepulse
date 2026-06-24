@@ -161,7 +161,7 @@ export function AgentDetailSheet({
       <Sheet open={!!agentId} onOpenChange={(open) => { if (!open) { onClose(); setShowAvatarUpload(false); } }}>
         <SheetContent
           side="right"
-          className="w-[480px] sm:max-w-[480px] overflow-y-auto bg-background/95 backdrop-blur-xl border-l border-primary/20 shadow-[-10px_0_30px_rgba(16,185,129,0.1)]"
+          className="w-[480px] sm:max-w-[480px] overflow-y-auto bg-background/95 backdrop-blur-xl border-l border-primary/20 shadow-[var(--glow-sm)]"
         >
           {loading && (
             <div className="space-y-4 pt-4">
@@ -237,7 +237,7 @@ export function AgentDetailSheet({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs font-mono tracking-widest uppercase border-primary/30 bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all flex-1"
+                    className="text-xs font-mono tracking-widest uppercase border-primary/30 bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[var(--glow-sm)] transition-all flex-1"
                     onClick={handleExpand}
                   >
                     <Maximize2 className="h-3.5 w-3.5 mr-2" />
@@ -246,7 +246,7 @@ export function AgentDetailSheet({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-xs font-mono tracking-widest uppercase border-primary/30 bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all flex-1"
+                    className="text-xs font-mono tracking-widest uppercase border-primary/30 bg-primary/5 hover:bg-primary hover:text-primary-foreground hover:shadow-[var(--glow-sm)] transition-all flex-1"
                     onClick={handleClone}
                     disabled={cloning}
                   >
@@ -276,22 +276,22 @@ export function AgentDetailSheet({
               {/* Tabs */}
               <Tabs defaultValue="config" className="mt-2">
                 <TabsList className="w-full bg-muted/20 border border-border/30 p-1 overflow-x-auto hide-scrollbar flex justify-start">
-                  <TabsTrigger value="config" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="config" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Config
                   </TabsTrigger>
-                  <TabsTrigger value="runtime" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="runtime" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Runtime
                   </TabsTrigger>
-                  <TabsTrigger value="topology" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="topology" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Topology
                   </TabsTrigger>
-                  <TabsTrigger value="security" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="security" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Security
                   </TabsTrigger>
-                  <TabsTrigger value="activity" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="activity" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Activity
                   </TabsTrigger>
-                  <TabsTrigger value="versions" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
+                  <TabsTrigger value="versions" className="text-xs font-mono tracking-widest uppercase flex-1 min-w-fit data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:shadow-[var(--glow-xs)]">
                     Versions
                   </TabsTrigger>
                 </TabsList>

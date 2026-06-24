@@ -23,7 +23,7 @@ function formatRelativeTime(epochSeconds: number): string {
 
 export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
   return (
-    <div className="group bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-4 hover:border-primary/50 transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_24px_rgba(16,185,129,0.15)] hover:-translate-y-1 relative overflow-hidden">
+    <div className="group bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-4 hover:border-primary/50 transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-sm)] hover:-translate-y-1 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -68,7 +68,7 @@ export function TeamCard({ team, agents, onLaunch, onEdit }: TeamCardProps) {
 
       {/* Launch button */}
       <Button
-        className="w-full mt-2 font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/30 hover:bg-primary hover:text-primary-foreground text-primary transition-all shadow-[0_0_10px_rgba(16,185,129,0.1)] hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+        className="w-full mt-2 font-bold font-mono tracking-wider uppercase bg-primary/10 border border-primary/30 hover:bg-primary hover:text-primary-foreground text-primary transition-all shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]"
         size="sm"
         onClick={() => onLaunch(team)}
       >
