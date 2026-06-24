@@ -1,132 +1,79 @@
 import { query } from "./_generated/server";
-import { categoryOf, outcomeOf } from "./lib/sankeyClassify";
+import {
+  heatmapFromAggregates,
+  errorRateTrendFromAggregates,
+  sankeyFromAggregates,
+  sunburstFromAggregates,
+} from "./analyticsRollupQueries";
+
+// Phase 88 Plan 04: the four heavy analytics queries now read the slim,
+// index-bounded `aggregates` rollup buckets (authoritative as of Plan 02/03)
+// instead of scanning the fat `events`/`llmMetrics` tables. Reads are O(buckets)
+// — permanently under the 16 MiB/exec limit — so the quick-unblock .take() caps
+// are gone (AR-03). The JS folding lives in ./analyticsRollupQueries so it stays
+// auditable and unit-testable. tokenWaterfall stays raw-but-bounded (not a rollup
+// candidate). Return shapes are unchanged (consumed by the existing UI).
 
 export const activityHeatmap = query({
   args: {},
   handler: async (ctx) => {
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      // Quick unblock: capped to stay under Convex's 16 MiB/exec read limit.
-      // `events.payload` is v.any() (fat), so each row is costly to read even
-      // though we only use `timestamp`. Durable fix tracked in Phase: analytics rollup table.
-      // 1000 ≈ 9 MiB at current payload sizes (~56% of limit); leaves headroom for payload growth.
-      .take(1000);
+    // 90-day window of "events" hourly buckets (one slim row per {event_type, hour}).
+    const cutoff = Date.now() / 1000 - 90 * 86400;
+    const buckets = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "events").eq("period", "hourly").gte("bucket_start", cutoff)
+      )
+      .collect();
 
-    const cells: Record<string, number> = {};
-    let maxCount = 0;
-
-    for (const e of events) {
-      const d = new Date(e.timestamp * 1000);
-      const day = d.getDay(); // 0=Sun … 6=Sat
-      const hour = d.getHours();
-      const key = `${day}-${hour}`;
-      cells[key] = (cells[key] ?? 0) + 1;
-      if (cells[key] > maxCount) maxCount = cells[key];
-    }
-
-    return {
-      cells: Object.entries(cells).map(([key, count]) => {
-        const [day, hour] = key.split("-").map(Number);
-        return { day, hour, count };
-      }),
-      maxCount: maxCount || 1,
-    };
+    return heatmapFromAggregates(
+      buckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
+    );
   },
 });
 
 export const toolFlowSankey = query({
   args: {},
   handler: async (ctx) => {
-    const events = await ctx.db
-      .query("events")
-      .withIndex("by_timestamp")
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      // Quick unblock: capped under the 16 MiB/exec read limit (fat events.payload). See heatmap note.
-      .take(1000);
+    // 90-day window of "sankey_edge" hourly buckets (one slim row per
+    // {source, target} edge). Edges were written at ingest time with the SAME
+    // categoryOf/outcomeOf classifier the read path reconstructs through
+    // (./analyticsRollupQueries → ./lib/sankeyClassify) — no drift possible
+    // (Pitfall 2 / T-88-09). Node set is the unique edge endpoints.
+    const cutoff = Date.now() / 1000 - 90 * 86400;
+    const buckets = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "sankey_edge").eq("period", "hourly").gte("bucket_start", cutoff)
+      )
+      .collect();
 
-    const nodeSet = new Set<string>();
-    const linkMap: Record<string, number> = {};
-
-    for (const e of events) {
-      const category = categoryOf(e.eventType);
-      const tool = e.toolName ?? e.eventType;
-      const outcome = outcomeOf(e.eventType);
-
-      nodeSet.add(category);
-      nodeSet.add(tool);
-      nodeSet.add(outcome);
-
-      const linkA = `${category}::${tool}`;
-      linkMap[linkA] = (linkMap[linkA] ?? 0) + 1;
-
-      const linkB = `${tool}::${outcome}`;
-      linkMap[linkB] = (linkMap[linkB] ?? 0) + 1;
-    }
-
-    const nodes = [...nodeSet];
-    const nodeIndex = Object.fromEntries(nodes.map((n, i) => [n, i]));
-
-    const links = Object.entries(linkMap).map(([key, value]) => {
-      const [source, target] = key.split("::");
-      return { source: nodeIndex[source], target: nodeIndex[target], value };
-    });
-
-    return {
-      nodes: nodes.map((name) => ({ name })),
-      links,
-    };
+    return sankeyFromAggregates(
+      buckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
+    );
   },
 });
 
 export const tokenSunburst = query({
   args: {},
   handler: async (ctx) => {
+    // 30-day window of "cost" HOURLY buckets (dimensions { provider, model,
+    // billingType, goalId }; value = summed cost). Read hourly only — daily is a
+    // rollup OF hourly, so mixing both would double-count (costByPeriod takes a
+    // single period for the same reason). Grouped provider → model, cost-weighted.
+    // cost buckets carry no token counts, so token leaves / totalTokens are 0
+    // (the consumer renders cost-weighted arcs; totalTokens is informational).
     const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db.query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      // Defensive cap: llmMetrics rows are slim, but unbounded .collect() is a latent read-limit risk.
-      .take(30000);
+    const buckets = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "cost").eq("period", "hourly").gte("bucket_start", cutoff)
+      )
+      .collect();
 
-    let totalCost = 0;
-    let totalTokens = 0;
-    const grouped: Record<
-      string,
-      Record<string, { prompt: number; completion: number; cost: number }>
-    > = {};
-
-    for (const r of all) {
-      totalCost += r.cost ?? 0;
-      totalTokens += r.totalTokens;
-
-      if (!grouped[r.provider]) grouped[r.provider] = {};
-      if (!grouped[r.provider][r.model])
-        grouped[r.provider][r.model] = { prompt: 0, completion: 0, cost: 0 };
-
-      grouped[r.provider][r.model].prompt += r.promptTokens;
-      grouped[r.provider][r.model].completion += r.completionTokens;
-      grouped[r.provider][r.model].cost += r.cost ?? 0;
-    }
-
-    const tree = {
-      name: "All Providers",
-      children: Object.entries(grouped).map(([provider, models]) => ({
-        name: provider,
-        children: Object.entries(models).map(([model, data]) => ({
-          name: model,
-          children: [
-            { name: "Prompt", value: data.prompt },
-            { name: "Completion", value: data.completion },
-          ],
-        })),
-      })),
-    };
-
-    return { tree, totalCost, totalTokens };
+    return sunburstFromAggregates(
+      buckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
+    );
   },
 });
 
@@ -136,46 +83,20 @@ export const errorRateTrend = query({
     const now = Date.now() / 1000;
     const dayAgo = now - 86400;
 
-    // Fetch recent error-type events from the events table
-    const errors = await ctx.db
-      .query("events")
-      .withIndex("by_type", (q) => q.eq("eventType", "Error"))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      // Quick unblock: 3 fat-payload reads run in one execution; cap each (fits 16 MiB/exec).
-      .take(300);
+    // Read the same slim "events" hourly buckets and filter to the error
+    // event_types in JS. All 24 hour slots are initialised to 0 in the pure
+    // derivation (Pitfall 7) so empty hours render errors: 0, never absent.
+    const buckets = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "events").eq("period", "hourly").gte("bucket_start", dayAgo)
+      )
+      .collect();
 
-    const toolErrors = await ctx.db
-      .query("events")
-      .withIndex("by_type", (q) => q.eq("eventType", "ToolError"))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(300);
-
-    const toolUseFailures = await ctx.db
-      .query("events")
-      .withIndex("by_type", (q) => q.eq("eventType", "PostToolUseFailure"))
-      .order("desc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .take(300);
-
-    const allErrors = [...errors, ...toolErrors, ...toolUseFailures];
-    const recentErrors = allErrors.filter((e) => e.timestamp >= dayAgo);
-
-    // Bucket by hour (0 = oldest, 23 = most recent)
-    const buckets: Record<number, number> = {};
-    for (let h = 0; h < 24; h++) {
-      const bucketStart = dayAgo + h * 3600;
-      buckets[h] = recentErrors.filter(
-        (e) => e.timestamp >= bucketStart && e.timestamp < bucketStart + 3600
-      ).length;
-    }
-
-    return Object.entries(buckets).map(([hour, count]) => ({
-      hour: Number(hour),
-      label: `${24 - Number(hour)}h ago`,
-      errors: count,
-    }));
+    return errorRateTrendFromAggregates(
+      dayAgo,
+      buckets.map((b) => ({ bucket_start: b.bucket_start, value: b.value, dimensions: b.dimensions }))
+    );
   },
 });
 
@@ -222,7 +143,10 @@ export const tokenWaterfall = query({
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .order("asc")
       .filter((q) => q.neq(q.field("archived"), true))
-      // Defensive cap (30-min window is small, but avoid unbounded .collect()).
+      // Phase 88 (Pitfall 5): tokenWaterfall is INTENTIONALLY raw, not a rollup
+      // candidate — it's a live 30-min llmMetrics time-series. The 30-min window
+      // over slim llmMetrics rows (no v.any() payload) keeps this read well under
+      // the 16 MiB/exec limit, so the .take(30000) defensive cap stays.
       .take(30000);
 
     return all.map((r) => ({

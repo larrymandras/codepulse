@@ -113,12 +113,30 @@ describe("analytics", () => {
   });
 
   // -------------------------------------------------------------------------
-  // RED until Plan 04 — the rewritten queries read the `aggregates` rollup table.
+  // GREEN as of Plan 04 — the rewritten queries read the `aggregates` rollup
+  // table and delegate their JS folding to convex/analyticsRollupQueries.ts.
+  // These tests exercise the real exported derivation functions.
   // -------------------------------------------------------------------------
   describe("aggregates-backed query derivation", () => {
+    type AggBucket = { bucket_start: number; value: number; dimensions: unknown };
     type AnalyticsModule = {
-      heatmapFromAggregates?: unknown;
-      errorRateTrendFromAggregates?: unknown;
+      heatmapFromAggregates?: (b: AggBucket[]) => {
+        cells: Array<{ day: number; hour: number; count: number }>;
+        maxCount: number;
+      };
+      errorRateTrendFromAggregates?: (
+        dayAgo: number,
+        b: AggBucket[]
+      ) => Array<{ hour: number; label: string; errors: number }>;
+      sankeyFromAggregates?: (b: AggBucket[]) => {
+        nodes: Array<{ name: string }>;
+        links: Array<{ source: number; target: number; value: number }>;
+      };
+      sunburstFromAggregates?: (b: AggBucket[]) => {
+        tree: { name: string; children: unknown[] };
+        totalCost: number;
+        totalTokens: number;
+      };
     };
     let analytics: AnalyticsModule | null = null;
     beforeAll(async () => {
@@ -131,12 +149,71 @@ describe("analytics", () => {
     });
 
     test("rewritten heatmap query reads aggregates buckets (Plan 04)", () => {
-      // RED until Plan 04 ships the aggregates-backed heatmap derivation.
       expect(analytics && typeof analytics.heatmapFromAggregates !== "undefined").toBe(true);
     });
 
     test("rewritten errorRateTrend query reads aggregates buckets (Plan 04)", () => {
       expect(analytics && typeof analytics.errorRateTrendFromAggregates !== "undefined").toBe(true);
+    });
+
+    test("heatmapFromAggregates sums event-count buckets per {day,hour} cell", () => {
+      const bucketStart = 1_700_000_000;
+      const cell = bucketToCell(bucketStart);
+      const result = analytics!.heatmapFromAggregates!([
+        { bucket_start: bucketStart, value: 3, dimensions: { event_type: "tool_use" } },
+        { bucket_start: bucketStart, value: 5, dimensions: { event_type: "llm_call" } },
+      ]);
+      const target = result.cells.find((c) => c.day === cell.day && c.hour === cell.hour);
+      expect(target?.count).toBe(8);
+      expect(result.maxCount).toBe(8);
+    });
+
+    test("errorRateTrendFromAggregates returns 24 slots, error types only, empty=0", () => {
+      const dayAgo = 1_700_000_000;
+      const slots = analytics!.errorRateTrendFromAggregates!(dayAgo, [
+        { bucket_start: dayAgo + 2 * 3600, value: 4, dimensions: { event_type: "Error" } },
+        { bucket_start: dayAgo + 2 * 3600, value: 9, dimensions: { event_type: "tool_use" } }, // non-error, ignored
+        { bucket_start: dayAgo + 5 * 3600, value: 1, dimensions: { event_type: "ToolError" } },
+      ]);
+      expect(slots).toHaveLength(24);
+      expect(slots.find((s) => s.hour === 2)?.errors).toBe(4); // only the Error bucket counted
+      expect(slots.find((s) => s.hour === 5)?.errors).toBe(1);
+      expect(slots.find((s) => s.hour === 7)?.errors).toBe(0); // present and zero
+      expect(slots.every((s) => typeof s.errors === "number")).toBe(true);
+    });
+
+    test("sankeyFromAggregates reconstructs connected nodes/links from edge buckets", () => {
+      const { nodes, links } = analytics!.sankeyFromAggregates!([
+        { bucket_start: 1_700_000_000, value: 3, dimensions: { source: "Tool Use", target: "Read" } },
+        { bucket_start: 1_700_003_600, value: 2, dimensions: { source: "Tool Use", target: "Read" } },
+        { bucket_start: 1_700_000_000, value: 4, dimensions: { source: "Read", target: "Success" } },
+      ]);
+      const names = nodes.map((n) => n.name);
+      expect(names).toEqual(expect.arrayContaining(["Tool Use", "Read", "Success"]));
+      // Every link points at a valid node index (no isolated/dangling endpoints).
+      for (const l of links) {
+        expect(l.source).toBeGreaterThanOrEqual(0);
+        expect(l.source).toBeLessThan(nodes.length);
+        expect(l.target).toBeGreaterThanOrEqual(0);
+        expect(l.target).toBeLessThan(nodes.length);
+      }
+      // The two same-edge buckets summed to value 5.
+      const tuRead = links.find(
+        (l) => nodes[l.source].name === "Tool Use" && nodes[l.target].name === "Read"
+      );
+      expect(tuRead?.value).toBe(5);
+    });
+
+    test("sunburstFromAggregates groups cost buckets by provider→model", () => {
+      const { tree, totalCost, totalTokens } = analytics!.sunburstFromAggregates!([
+        { bucket_start: 1_700_000_000, value: 1.5, dimensions: { provider: "anthropic", model: "opus" } },
+        { bucket_start: 1_700_003_600, value: 0.5, dimensions: { provider: "anthropic", model: "opus" } },
+        { bucket_start: 1_700_000_000, value: 2.0, dimensions: { provider: "openai", model: "gpt-4" } },
+      ]);
+      expect(totalCost).toBeCloseTo(4.0);
+      expect(totalTokens).toBe(0); // cost buckets carry no token counts
+      expect(tree.name).toBe("All Providers");
+      expect(tree.children).toHaveLength(2); // anthropic + openai
     });
   });
 });
