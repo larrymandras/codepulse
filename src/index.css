@@ -567,3 +567,44 @@ code, pre, .font-mono {
     transition-duration: 0ms !important;
   }
 }
+
+/* Phase 89 — Aubergine editorial surface effects */
+[data-theme="aubergine"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.025;
+}
+
+[data-theme="aubergine"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(192, 132, 252, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 90%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+}
+
+/* Phase 89 — suppress matrix-bg and CRT scanline bar under readable + aubergine */
+[data-theme="readable"] .matrix-bg,
+[data-theme="aubergine"] .matrix-bg {
+  display: none;
+}
+
+[data-theme="readable"] .crt-scanline-bar,
+[data-theme="aubergine"] .crt-scanline-bar {
+  display: none;
+}
+
+/* Phase 89 — suppress aubergine pseudo-elements under prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="aubergine"] body::before,
+  [data-theme="aubergine"] body::after {
+    opacity: 0;
+  }
+}
