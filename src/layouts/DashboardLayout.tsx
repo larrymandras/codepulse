@@ -583,15 +583,18 @@ export default function DashboardLayout() {
     },
   });
 
-  // Drive mic start/stop from the persisted toggle (VOX-04 — no mic unless explicitly enabled)
-  // start() only fires when voiceModeEnabled AND the engine is not in error-disabled state.
+  // Drive mic start/stop from the persisted toggle (VOX-04 — no mic unless explicitly enabled).
+  // Start only from a clean 'idle' state. Critically, do NOT call stop() on 'error-disabled':
+  // stop() resets status to 'idle', which re-triggers start() → fail → error-disabled → idle …
+  // an infinite retry storm. On error we leave the engine disabled until the user toggles off
+  // (which resets to idle) and back on. Recovery: turn the mic off, then on again.
   useEffect(() => {
-    if (voiceModeEnabled && wakeWordStatus !== 'error-disabled') {
-      void wakeWordStart();
-    } else {
+    if (!voiceModeEnabled) {
       wakeWordStop();
+    } else if (wakeWordStatus === 'idle') {
+      void wakeWordStart();
     }
-    // wakeWordStart/wakeWordStop are stable useCallback refs; wakeWordStatus gating is intentional.
+    // loading / ready / error-disabled while enabled → do nothing (no auto-retry).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [voiceModeEnabled, wakeWordStatus]);
 

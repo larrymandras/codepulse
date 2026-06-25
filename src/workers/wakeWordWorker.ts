@@ -30,18 +30,17 @@ import { normalizeMelFrame } from '../lib/melNormalize';
 
 // ---[ ONNX runtime config — must be set BEFORE any InferenceSession.create ]---
 // numThreads=1: prevents COOP/COEP requirement (no SharedArrayBuffer needed).
-// wasmPaths: ort 1.17+ loads a paired .wasm + .mjs loader per backend.
-//   - PROD: viteStaticCopy emits ort-wasm-*.{wasm,mjs} at the dist/ root → '/'.
-//   - DEV: viteStaticCopy does NOT serve those files (Vite's SPA fallback + the
-//     .mjs?import module transform shadow them), so a bare '/' yields the HTML
-//     fallback and ort reports "no available backend found". Point dev at the
-//     pinned jsDelivr CDN, which serves the static runtime as plain assets.
-//   Only the WASM binary is fetched from the CDN — captured audio never leaves
-//   the browser, so the in-browser privacy model is unchanged.
+// wasmPaths: ort 1.17+ loads a paired .wasm + .mjs loader per backend. Self-hosting
+// these through Vite is unreliable in BOTH modes: in dev, vite-plugin-static-copy
+// doesn't serve them (the SPA fallback + .mjs?import transform shadow them → "no
+// available backend found"); in prod, Vite's asset pipeline emits a content-hashed
+// copy under /assets that a fixed wasmPaths='/' can never resolve. So load the pinned
+// runtime from jsDelivr — a static, CORS-enabled CDN — in every mode. Only the WASM
+// binary is fetched; captured audio never leaves the browser, so the in-browser
+// privacy model is unchanged. (Fully self-hosted alternative: copy
+// onnxruntime-web/dist/ort-wasm-* into public/ort/ via a prebuild script, wasmPaths='/ort/'.)
 ort.env.wasm.numThreads = 1;
-ort.env.wasm.wasmPaths = import.meta.env.DEV
-  ? 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
-  : '/';
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/';
 
 // ---[ Detection constants ]---
 export const THRESHOLD = 0.5;

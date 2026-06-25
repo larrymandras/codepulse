@@ -116,7 +116,10 @@ describe('MicToggle', () => {
       expect(onToggle).not.toHaveBeenCalled();
     });
 
-    it('also renders disabled when enabled=true but status=error-disabled', () => {
+    it('stays clickable (to turn OFF) when enabled=true and status=error-disabled, so the operator can recover', () => {
+      // Regression guard: an errored engine must NOT lock the operator out of
+      // disabling voice mode. Previously this rendered disabled, trapping the user
+      // (only a manual localStorage edit could clear it). Now it's clickable → off.
       const onToggle = vi.fn();
       renderMicToggle({
         enabled: true,
@@ -124,7 +127,10 @@ describe('MicToggle', () => {
         errorReason: 'init failed',
         onToggle,
       });
-      expect(screen.getByRole('button', { name: /voice mode unavailable/i })).toBeDisabled();
+      const btn = screen.getByRole('button', { name: /turn off voice mode/i });
+      expect(btn).not.toBeDisabled();
+      fireEvent.click(btn);
+      expect(onToggle).toHaveBeenCalledWith(false);
     });
   });
 

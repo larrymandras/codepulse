@@ -34,8 +34,11 @@ interface MicToggleProps {
 }
 
 export function MicToggle({ enabled, status, errorReason, onToggle }: MicToggleProps) {
-  const isDisabled = status === 'error-disabled';
-  const isOn = enabled && !isDisabled;
+  const isErrored = status === 'error-disabled';
+  const isOn = enabled && !isErrored;
+  // The operator can ALWAYS turn voice mode off (even when the engine errored — so they
+  // can clear the preference and retry); they can only turn it on when not errored.
+  const canInteract = enabled || !isErrored;
 
   // --- Derived values per state ---
   let ariaLabel: string;
@@ -43,7 +46,16 @@ export function MicToggle({ enabled, status, errorReason, onToggle }: MicToggleP
   let buttonClassName: string;
   let Icon: typeof Mic;
 
-  if (isDisabled) {
+  if (isErrored && enabled) {
+    // Errored but still enabled — keep it clickable so the operator can turn it off
+    // (toggling off resets the engine to idle; toggling back on retries).
+    ariaLabel = 'Turn off voice mode (engine error)';
+    tooltipText = `Voice mode error: ${errorReason ?? 'unknown error'} — click to turn off`;
+    buttonClassName =
+      'w-9 h-9 rounded-md flex items-center justify-center transition-colors bg-destructive/10 border border-destructive/30 hover:bg-destructive/20';
+    Icon = MicOff;
+  } else if (isErrored) {
+    // Errored and already off — nothing actionable; disabled.
     ariaLabel = 'Voice mode unavailable';
     tooltipText = `Voice mode unavailable: ${errorReason ?? 'unknown error'}`;
     buttonClassName =
@@ -51,24 +63,25 @@ export function MicToggle({ enabled, status, errorReason, onToggle }: MicToggleP
     Icon = MicOff;
   } else if (isOn) {
     ariaLabel = 'Disable voice mode';
-    tooltipText = "Voice mode active — click to disable";
+    tooltipText = 'Voice mode active — click to disable';
     buttonClassName =
       'w-9 h-9 rounded-md flex items-center justify-center transition-colors bg-primary/10 border border-primary/30 shadow-[var(--glow-xs)]';
     Icon = MicVocal;
   } else {
     ariaLabel = 'Enable voice mode';
-    tooltipText = "Voice mode — say ‘Hey Ástríðr’";
+    tooltipText = "Voice mode — say ‘Hey Astrid’";
     buttonClassName =
       'w-9 h-9 rounded-md flex items-center justify-center transition-colors bg-transparent hover:bg-accent/50';
     Icon = Mic;
   }
 
   // --- Icon class per state ---
-  const iconClassName = isDisabled
-    ? 'h-4 w-4 text-muted-foreground'
-    : isOn
-      ? 'h-4 w-4 text-primary'
-      : 'h-4 w-4 text-muted-foreground';
+  const iconClassName =
+    isErrored && enabled
+      ? 'h-4 w-4 text-destructive'
+      : isOn
+        ? 'h-4 w-4 text-primary'
+        : 'h-4 w-4 text-muted-foreground';
 
   return (
     <Tooltip>
@@ -76,11 +89,11 @@ export function MicToggle({ enabled, status, errorReason, onToggle }: MicToggleP
         <button
           type="button"
           onClick={() => {
-            if (!isDisabled) {
+            if (canInteract) {
               onToggle(!enabled);
             }
           }}
-          disabled={isDisabled}
+          disabled={!canInteract}
           aria-label={ariaLabel}
           className={buttonClassName}
         >
