@@ -267,7 +267,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 92-01-PLAN.md — Foundation: onnxruntime-web install + Vite WASM config + mel-normalization pure util + jsdom voice mocks (VOX-01)
 - [x] 92-02-PLAN.md — Extract shared useSpeechRecognition + useTtsPlayback hooks; refactor ChatInput/Chat to consume them (VOX-02, VOX-03)
 - [x] 92-03-PLAN.md — Wake-word engine: AudioWorklet capture + Web Worker ONNX pipeline + useWakeWord (graceful degradation) (VOX-01, VOX-04)
-- [ ] 92-04-PLAN.md — Palette voice mode: pure 6-state machine + VoiceModePanel turn loop + feedback guard + chat.send wiring (VOX-02, VOX-03)
+- [x] 92-04-PLAN.md — Palette voice mode: pure 6-state machine + VoiceModePanel turn loop + feedback guard + chat.send wiring (VOX-02, VOX-03)
 - [ ] 92-05-PLAN.md — Shell integration: MicToggle + ListeningIndicatorPill + wake handler + OFF-by-default persistence (VOX-01, VOX-04)
 
 ---
@@ -325,6 +325,6 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete    | 2026-06-24 |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
-| 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 3/5 | In Progress|  |
+| 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 4/5 | In Progress|  |
 
 *Last updated: 2026-06-24 — Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*
