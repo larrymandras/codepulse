@@ -8,36 +8,12 @@
  * - Mic button for voice input via Web Speech API (hidden if unsupported)
  *
  * Phase 56, Plan 02: CPCC-01 chat UI.
+ * Phase 92, Plan 02: Refactored to consume useSpeechRecognition hook.
  */
 
 import { useState, useRef, useCallback, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
 import { Send, Mic, MicOff } from "lucide-react";
-
-// ─── Web Speech API types ────────────────────────────────────────────────────
-
-interface SpeechRecognitionEvent {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-interface SpeechRecognitionInstance extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: { error: string }) => void) | null;
-}
-
-declare global {
-  interface Window {
-    SpeechRecognition?: new () => SpeechRecognitionInstance;
-    webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
-  }
-}
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,19 +25,11 @@ export interface ChatInputProps {
   initialValue?: string;
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function getSpeechRecognitionClass(): (new () => SpeechRecognitionInstance) | null {
-  return window.SpeechRecognition ?? window.webkitSpeechRecognition ?? null;
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected = false, initialValue }: ChatInputProps) {
   const [value, setValue] = useState("");
-  const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const isVoiceInputRef = useRef(false);
   const initialAppliedRef = useRef(false);
 
@@ -72,18 +40,34 @@ export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected 
     }
   }, [initialValue]);
 
-  const speechAvailable = typeof window !== "undefined" && getSpeechRecognitionClass() !== null;
   const canSend = value.trim().length > 0 && !disabled;
 
-  // Cleanup recognition on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.abort();
-        recognitionRef.current = null;
+  // ─── Voice: handler called when speech recognition produces a final result ───
+
+  const handleVoiceResult = useCallback(
+    (transcript: string) => {
+      isVoiceInputRef.current = true;
+      setValue(transcript);
+
+      // Auto-send if onVoiceSend is provided (hands-free flow)
+      if (onVoiceSend) {
+        onVoiceSend(transcript);
+        setValue("");
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "40px";
+        }
       }
-    };
-  }, []);
+    },
+    [onVoiceSend]
+  );
+
+  const { start: startListening, stop: stopListening, isListening, speechAvailable } = useSpeechRecognition({
+    continuous: false,
+    interimResults: false,
+    onFinalResult: handleVoiceResult,
+  });
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
 
   const handleSend = useCallback(() => {
     const trimmed = value.trim();
@@ -115,59 +99,6 @@ export function ChatInput({ onSend, onVoiceSend, disabled = false, disconnected 
     el.style.height = "40px";
     el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
   }, []);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-  }, []);
-
-  const startListening = useCallback(() => {
-    const SpeechRecognitionClass = getSpeechRecognitionClass();
-    if (!SpeechRecognitionClass) return;
-
-    const recognition = new SpeechRecognitionClass();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[event.resultIndex]?.[0]?.transcript;
-      if (transcript) {
-        isVoiceInputRef.current = true;
-        setValue(transcript);
-
-        // Auto-send if onVoiceSend is provided (hands-free flow)
-        if (onVoiceSend) {
-          onVoiceSend(transcript);
-          setValue("");
-          if (textareaRef.current) {
-            textareaRef.current.style.height = "40px";
-          }
-        }
-      }
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognition.onerror = (event: { error: string }) => {
-      // "aborted" and "no-speech" are non-error situations
-      if (event.error !== "aborted" && event.error !== "no-speech") {
-        console.warn("Speech recognition error:", event.error);
-      }
-      setIsListening(false);
-      recognitionRef.current = null;
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
-  }, [onVoiceSend]);
 
   const toggleListening = useCallback(() => {
     if (isListening) {

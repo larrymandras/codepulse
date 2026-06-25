@@ -3,22 +3,20 @@
  * markdown rendering, auto-scroll with manual override, and TTS playback.
  *
  * Phase 56, Plan 02: CPCC-01 and CPCC-02.
+ * Phase 92, Plan 02: Refactored to consume useTtsPlayback hook.
  */
 
 import { useState, useEffect, useRef, useCallback, type UIEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
+import { useTtsPlayback } from "@/hooks/useTtsPlayback";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
 import { Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const ASTRIDR_API_URL = import.meta.env.VITE_ASTRIDR_API_URL ?? "http://localhost:8181";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -50,40 +48,13 @@ export default function Chat() {
 
   // TTS state
   const [ttsEnabled, setTtsEnabled] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { play: playAudio, stop: stopAudio, isPlaying: ttsIsPlaying } = useTtsPlayback();
 
   // Track active session for routing streaming events
   const activeSessionRef = useRef<string | null>(null);
 
   // Scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // ─── Audio helpers ───────────────────────────────────────────────────────
-
-  const playAudio = useCallback((url: string) => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    audio.play().catch((err) => {
-      console.warn("TTS playback failed:", err);
-    });
-    audio.onended = () => {
-      audioRef.current = null;
-    };
-  }, []);
-
-  // Cleanup audio on unmount
-  useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
 
   // ─── Scroll helpers ──────────────────────────────────────────────────────
 
@@ -249,7 +220,7 @@ export default function Chat() {
       });
     });
 
-    // run.tts — attach audio URL to the matching assistant message
+    // run.tts — attach audio URL to the matching assistant message and auto-play
     const unsubTts = subscribeEvent("run.tts", (event) => {
       const data = event.data as {
         session_id?: string;
@@ -258,12 +229,8 @@ export default function Chat() {
 
       if (!data?.audio_url) return;
 
-      // Build full URL — audio_url may be relative like /api/audio/file.mp3
-      const fullUrl = data.audio_url.startsWith("http")
-        ? data.audio_url
-        : `${ASTRIDR_API_URL}${data.audio_url}`;
-
-      // Attach audioUrl to the matching message by sessionId
+      // Attach audioUrl to the matching message by sessionId.
+      // URL normalization (relative → absolute) is handled inside useTtsPlayback.
       setMessages((prev) =>
         prev.map((msg) => {
           if (
@@ -271,18 +238,16 @@ export default function Chat() {
             msg.sessionId &&
             msg.sessionId === data.session_id
           ) {
-            return { ...msg, audioUrl: fullUrl };
+            return { ...msg, audioUrl: data.audio_url };
           }
           return msg;
         })
       );
 
-      // Auto-play if TTS is enabled
-      // Read ttsEnabled via ref-like pattern: we close over nothing,
-      // the setter callback gives us current state
+      // Auto-play if TTS is enabled (ttsEnabled guard stays in Chat — the hook is transport-agnostic)
       setTtsEnabled((current) => {
         if (current) {
-          playAudio(fullUrl);
+          playAudio(data.audio_url!);
         }
         return current;
       });
@@ -370,9 +335,8 @@ export default function Chat() {
             onClick={() => {
               setTtsEnabled((prev) => {
                 const next = !prev;
-                if (!next && audioRef.current) {
-                  audioRef.current.pause();
-                  audioRef.current = null;
+                if (!next && ttsIsPlaying) {
+                  stopAudio();
                 }
                 return next;
               });
