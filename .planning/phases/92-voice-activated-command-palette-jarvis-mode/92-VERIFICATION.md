@@ -7,7 +7,7 @@ overrides_applied: 0
 human_verification:
   - test: "Speaking the wake word ('Hey Astrid' or 'Hey Jarvis' stand-in) opens the palette in listening mode"
     expected: "Within ~1s of speaking the wake phrase, CommandPalette opens with VoiceModePanel visible (listening state badge, transcript area, close button)"
-    why_human: "Requires real mic + live ONNX inference in AudioWorklet/Worker — not reproducible in jsdom. Structural validation 2026-06-25 (python scripts/validate_wakeword_model.py, VERDICT FAIL) found hey_astrid.onnx was exported with external weight storage: the required hey_astrid.onnx.data file is missing from public/openwakeword/. The model graph structure IS contract-compatible (declared input [1,16,96], 50,403 params from dims) but onnxruntime cannot load it. The worker falls back to hey_jarvis_v0.1.onnx which IS loadable. VOX-01 live-detection QA is RE-OPENED pending re-export of hey_astrid.onnx with inline (non-external) weights."
+    why_human: "Requires real mic + live ONNX inference in AudioWorklet/Worker — not reproducible in jsdom. Structural model dependency RESOLVED 2026-06-25: hey_astrid.onnx was retrained and re-exported self-contained (214 KB, opset 18, 50,403 inline params, no .data sidecar); python scripts/validate_wakeword_model.py returns VERDICT PASS — input [1,16,96] matches wakeWordWorker.ts, single-score output, non-degenerate (8-sample stdev 0.319). Training metrics: accuracy 0.732 / recall 0.470 / FP 0.177/hr. The ~0.47 recall means live-mic field reliability still needs human QA (missed triggers plausible; tune the 0.5 threshold in useWakeWord). This item stays human_needed for the real-mic behavior only — the 'is the model real/loadable' blocker is closed."
   - test: "Spoken command transcribes live and fires chat.send"
     expected: "Interim transcript updates in the palette as the operator speaks; on silence the final text appears, then sendCommand({type:'chat.send', message}) fires over the AstridrWSContext WS."
     why_human: "Web Speech API requires real audio input — cannot simulate in jsdom."
@@ -75,7 +75,7 @@ human_verification:
 | `src/components/MicToggle.tsx` | Three-state toggle (OFF/ON/DISABLED) with tooltip | VERIFIED | 95 lines; three icon states (Mic/MicVocal/MicOff); `disabled` attribute on error-disabled; shadcn Tooltip with 3 tooltip strings; 11 tests green |
 | `src/components/ListeningIndicatorPill.tsx` | "VOICE ACTIVE" pill with aria-live | VERIFIED | 43 lines; renders "VOICE ACTIVE" text; `aria-live="polite"` sr-only span |
 | `src/layouts/DashboardLayout.tsx` | `useWakeWord` wired; toggle + pill in header; OFF-by-default persistence | VERIFIED | `useWakeWord` at line 578; `codepulse-voice-mode` localStorage read (line 543) + write (line 737); `MicToggle` + guarded `ListeningIndicatorPill` at lines 730-739; voiceMode props to CommandPalette at lines 775-779 |
-| `public/openwakeword/` | ONNX model files present | VERIFIED (3 of 3 present) / LOAD FAIL (hey_astrid) | `melspectrogram.onnx` + `embedding_model.onnx` + `hey_jarvis_v0.1.onnx` all loadable. `hey_astrid.onnx` is present (13.8 KB, graph OK, 50,403 params from dims) but was exported with external weight storage — `hey_astrid.onnx.data` missing; onnxruntime FAIL. Structural validation 2026-06-25: VERDICT FAIL. See `scripts/validate_wakeword_model.py` and "Gaps Summary" below. |
+| `public/openwakeword/` | ONNX model files present | VERIFIED (4 of 4 loadable) | All four models load: `melspectrogram.onnx` + `embedding_model.onnx` + `hey_jarvis_v0.1.onnx` (fallback) + `hey_astrid.onnx`. `hey_astrid.onnx` retrained + re-exported self-contained 2026-06-25 (214 KB, opset 18, 50,403 inline params, no `.data` sidecar). Structural validation 2026-06-25: **VERDICT PASS** — input `[1,16,96]`, single-score output, non-degenerate (stdev 0.319). See `scripts/validate_wakeword_model.py` and "Gaps Summary" below. |
 
 ---
 
@@ -179,10 +179,10 @@ The following require a live browser with real mic, real ONNX inference, and a r
 
 #### 1. Live Wake Detection (VOX-01 primary)
 
-**Test:** Enable voice mode via MicToggle; navigate to any page; speak "Hey Astrid" (once hey_astrid.onnx is re-exported with inline weights) or "Hey Jarvis" (current loadable stand-in).
+**Test:** Enable voice mode via MicToggle; navigate to any page; speak "Hey Astrid" (now the live trigger) or "Hey Jarvis" (fallback stand-in).
 **Expected:** CommandPalette opens in listening mode (VoiceModePanel visible) within approximately 1 second. State badge shows "Listening...".
 **Why human:** Requires real mic + live ONNX inference in AudioWorklet/Web Worker.
-**Structural validation 2026-06-25 — RE-OPENED:** `python scripts/validate_wakeword_model.py` returned VERDICT: FAIL. hey_astrid.onnx was exported with external weight storage (`hey_astrid.onnx.data` missing from repo). Graph structure is contract-compatible: declared input `[1, 16, 96]` (seqLen=16, embDim=96 — matches worker), 50,403 params (from dims), ops: Gemm/LayerNormalization/Relu/Reshape/Sigmoid. But onnxruntime session creation fails. The worker correctly falls back to `hey_jarvis_v0.1.onnx` (316,738 params, self-contained, PASS). To resolve: re-export hey_astrid.onnx from Colab with inline weights (no .data file), re-commit, re-run the validation script. Structural dependency is NOT YET RESOLVED — see also `public/openwakeword/README.md` "Structural validation" note.
+**Structural validation 2026-06-25 — RESOLVED:** `python scripts/validate_wakeword_model.py` returns VERDICT: PASS (exit 0). hey_astrid.onnx was retrained and re-exported self-contained (214 KB, opset 18, 50,403 inline params, no `.data` sidecar) — loads cleanly in onnxruntime. Contract verified: input `[1, 16, 96]` (seqLen=16, embDim=96 — matches worker), single-score `[1,1]` output, non-degenerate (8 random inputs → stdev 0.319, min 0.004 / max 0.81). Training metrics: accuracy 0.732 / recall 0.470 / FP 0.177/hr. The live-mic field reliability (esp. the ~0.47 recall → possible missed triggers) still needs human QA below; the structural "is the model real/loadable" blocker is closed.
 
 #### 2. Spoken Command Transcription and chat.send (VOX-02)
 
@@ -232,19 +232,20 @@ The following require a live browser with real mic, real ONNX inference, and a r
 
 No automated gaps found. All 4 ROADMAP success criteria are verified at the code and unit-test level. The 8 human verification items above are all live-audio/browser behaviors that the validation strategy (`92-VALIDATION.md`) explicitly classified as Manual-Only from the outset. They are not defects in the implementation — they are the expected QA boundary for browser voice features.
 
-**hey_astrid.onnx structural dependency — RE-OPENED (2026-06-25):**
-Structural validation (`python scripts/validate_wakeword_model.py`, VERDICT: FAIL, exit=1) confirmed that
-`hey_astrid.onnx` was exported from Colab with external weight storage. The companion
-`hey_astrid.onnx.data` weight file was not committed. The model's graph structure IS contract-compatible
-(declared input `[1, 16, 96]`, seqLen=16, embDim=96, 50,403 params from dims, correct op set) but
-onnxruntime cannot load the file, so the browser worker falls back to `hey_jarvis_v0.1.onnx` (which
-passes all validation checks). This is NOT a training failure — the Colab run produced a valid model,
-but the export step created a split file that was only partially committed.
+**hey_astrid.onnx structural dependency — RESOLVED (2026-06-25):**
+Structural validation (`python scripts/validate_wakeword_model.py`, **VERDICT: PASS, exit=0**) confirms
+`hey_astrid.onnx` is a real, contract-compatible, non-degenerate classifier. The model was retrained on
+the openWakeWord Colab pipeline (phrase `hey astrid`, 1000 positive samples, 10k steps; metrics accuracy
+0.732 / recall 0.470 / FP 0.177/hr) and re-exported **self-contained** via
+`onnx.save_model(..., save_as_external_data=False)` — 214 KB, opset 18, all 50,403 weights inline, no
+`.onnx.data` sidecar. Validation confirms: input `[1, 16, 96]` (matches wakeWordWorker.ts), single-score
+output, non-zero trained weights, and non-constant output across 8 random inputs (stdev 0.319 > 1e-6).
+The prior FAIL (missing external-data sidecar) is fully closed; `hey_astrid` is now the live VOX-01 trigger
+with `hey_jarvis_v0.1.onnx` retained as fallback.
 
-To close this dependency: re-run the Colab training notebook and export `hey_astrid.onnx` with inline
-weights (pass `--save-as-external-data=False` or equivalent to the ONNX export step), commit ONLY the
-single `.onnx` file, then run `python scripts/validate_wakeword_model.py` and confirm VERDICT: PASS.
 The remaining open items (live mic QA, browser toggle, etc.) still require a running browser as before.
+Note the ~0.47 recall: live-mic QA must confirm field reliability and tune the 0.5 threshold in
+`useWakeWord` (raise to cut false fires, lower to catch more triggers).
 
 ---
 
