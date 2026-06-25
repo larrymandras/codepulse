@@ -209,7 +209,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
  (completed 2026-06-24)
 - [ ] **Phase 90 — Agent Room / War Room** — Wire live participant identity + bounded listing + real operator Join + transcript robustness
 - [ ] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware
-- [x] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (Porcupine) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply spoken in a Norse persona voice (completed 2026-06-25)
+- [x] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (openWakeWord ONNX on `onnxruntime-web`, Apache-2.0, no Picovoice/account/key) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply auto-played via shared `useTtsPlayback` (completed 2026-06-25)
 
 **Execution order:** 88 → 89 → 90 → 91 → 92 (88 is independent; 89 token cleanup gates 91's theme-aware node colors; 90 cross-repo audit recommended before 91 starts but can run in parallel with 91 if audit clears fast; 92 is independent — reuses shipped Phase 2 WebSocket sender + Phase 3 command palette, no hard dependency on 89/90/91)
 
