@@ -7,10 +7,10 @@ overrides_applied: 0
 human_verification:
   - test: "Speaking the wake word ('Hey Astrid' or 'Hey Jarvis' stand-in) opens the palette in listening mode"
     expected: "Within ~1s of speaking the wake phrase, CommandPalette opens with VoiceModePanel visible (listening state badge, transcript area, close button)"
-    why_human: "Requires real mic + live ONNX inference in AudioWorklet/Worker — not reproducible in jsdom. Structural model dependency RESOLVED 2026-06-25: hey_astrid.onnx was retrained and re-exported self-contained (214 KB, opset 18, 50,403 inline params, no .data sidecar); python scripts/validate_wakeword_model.py returns VERDICT PASS — input [1,16,96] matches wakeWordWorker.ts, single-score output, non-degenerate (8-sample stdev 0.319). Training metrics: accuracy 0.732 / recall 0.470 / FP 0.177/hr. The ~0.47 recall means live-mic field reliability still needs human QA (missed triggers plausible; tune the 0.5 threshold in useWakeWord). This item stays human_needed for the real-mic behavior only — the 'is the model real/loadable' blocker is closed."
+    why_human: "Requires real mic + live ONNX inference in AudioWorklet/Worker — not reproducible in jsdom. **LIVE-VERIFIED 2026-06-25 in Chrome: saying 'Hey Astrid' opens the CommandPalette in voice mode (listening badge + transcript), and re-waking after a completed conversation works.** Reaching this required fixing 6 first-run integration bugs the jsdom-mocked tests structurally could not catch (commit bd60501) — see Gaps Summary 'Live QA'. Structural model dependency also RESOLVED 2026-06-25: hey_astrid.onnx retrained + re-exported self-contained (214 KB, opset 18, 50,403 inline params); validate_wakeword_model.py = VERDICT PASS. Training metrics accuracy 0.732 / recall 0.470 / FP 0.177/hr — the ~0.47 recall means missed triggers are plausible in the field; tune the 0.5 THRESHOLD in wakeWordWorker.ts if needed."
   - test: "Spoken command transcribes live and fires chat.send"
     expected: "Interim transcript updates in the palette as the operator speaks; on silence the final text appears, then sendCommand({type:'chat.send', message}) fires over the AstridrWSContext WS."
-    why_human: "Web Speech API requires real audio input — cannot simulate in jsdom."
+    why_human: "Web Speech API requires real audio input — cannot simulate in jsdom. **LIVE-VERIFIED 2026-06-25 in Chrome: 'show me the agent list' transcribed in the panel and was sent; Ástríðr streamed a reply back into the panel.** (The reply itself was an Ástríðr-side tool error — 'error with the tool lookup' — i.e. the agent's list-agents tool failed; that is an astridr-repo issue, NOT a CodePulse voice bug. The voice STT→chat.send→reply path worked.)"
   - test: "Streamed reply renders in the palette and TTS auto-plays in the persona voice"
     expected: "run.text chunks append to the ASTRIDHR reply stream visible in VoiceModePanel; run.tts audio_url auto-plays audibly once in Astridhr's ElevenLabs voice via useTtsPlayback (same hook used by Chat.tsx)."
     why_human: "Audible TTS and live WebSocket stream require a running Astridhr backend."
@@ -246,6 +246,32 @@ with `hey_jarvis_v0.1.onnx` retained as fallback.
 The remaining open items (live mic QA, browser toggle, etc.) still require a running browser as before.
 Note the ~0.47 recall: live-mic QA must confirm field reliability and tune the 0.5 threshold in
 `useWakeWord` (raise to cut false fires, lower to catch more triggers).
+
+**Live browser QA performed — 2026-06-25 (Chrome, real mic + Ástríðr backend up):**
+
+The "Manual-Only" path was actually run, and exposed (then fixed) **8 first-run integration bugs**
+invisible to the 83 jsdom tests because they mock onnxruntime, the AudioWorklet, and the MessagePorts:
+
+| # | Bug | Fix (commit) |
+|---|-----|--------------|
+| 1 | onnxruntime-web WASM runtime not served (dev) / content-hashed away (prod) → "no available backend" | Load pinned runtime from jsDelivr CDN in all modes; drop vite-plugin-static-copy (`bd60501`, `b80e681`) |
+| 2 | melspectrogram input rank-1 `[1280]` vs model rank-2 `[batch, samples]` | `[1, 1280]` (`bd60501`) |
+| 3 | embedding input rank-3 `[76,32,1]` vs model rank-4 `[batch,76,32,1]` | `[1, 76, 32, 1]` (`bd60501`) |
+| 4 | MessagePort passed via `processorOptions` (not transferable) → "could not be cloned" | transfer via node `.port` (`bd60501`) |
+| 5 | Worker had no `{type:'port'}` handler → every mic frame silently dropped | wire port → processChunk (`bd60501`) |
+| 6 | AudioWorkletNode never connected to destination → `process()` never called | `connect(destination)` (silent) (`bd60501`) |
+| 7 | init-failure retry storm (error-disabled→stop→idle→start→…) flooded the console | start only from idle; no auto-retry on error (`b80e681`) |
+| 8 | MicToggle locked `disabled` when errored-while-enabled — operator couldn't turn it off | errored+enabled stays clickable to recover; regression test added (`b80e681`) |
+
+**Confirmed live:** VOX-01 wake ("Hey Astrid" → palette opens, re-wake works), VOX-02 (STT transcript →
+`chat.send`), VOX-03 reply streamed into the panel, and turn-loop exit ("stop" closes the panel).
+
+**Still to spot-check (not blocking, all human/external):** audible TTS playback in the persona voice
+(reply text rendered; audio output not explicitly confirmed); the VOX-03 feedback guard; a follow-up turn
+without re-waking. **Two non-voice items observed and NOT Phase-92 defects:** (a) Ástríðr's list-agents
+tool returned "error with the tool lookup" — an astridr-repo agent/tool issue; (b)
+`ws://127.0.0.1:8181/ws/telemetry` is down — a separate Ástríðr telemetry endpoint, unrelated to the
+chat/voice WS path which works.
 
 ---
 
