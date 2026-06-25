@@ -18,7 +18,7 @@ export default function CallGraphPanel() {
   // Loading state
   if (rawEdges === undefined) {
     return (
-      <GlassPanel>
+      <GlassPanel className="hover:scale-[1.01] transition-transform duration-300">
         <div className="p-4">
           <SectionHeader title="AGENT CALL GRAPH" />
           <div className="space-y-3">
@@ -41,7 +41,7 @@ export default function CallGraphPanel() {
   // Empty state
   if (edges.length === 0) {
     return (
-      <GlassPanel>
+      <GlassPanel className="hover:scale-[1.01] transition-transform duration-300">
         <div className="p-4">
           <SectionHeader title="AGENT CALL GRAPH" />
           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -56,7 +56,7 @@ export default function CallGraphPanel() {
   }
 
   return (
-    <GlassPanel>
+    <GlassPanel className="hover:scale-[1.01] transition-transform duration-300">
       <div className="p-4">
         <SectionHeader title="AGENT CALL GRAPH" />
         <div className="overflow-auto" style={{ maxHeight: "600px" }}>

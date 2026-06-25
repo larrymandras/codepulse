@@ -88,7 +88,7 @@ export default function Dreaming() {
           <SectionErrorBoundary name="Dreaming Timeline">
             <div className="space-y-6 mt-4">
               {/* Extraction Funnel */}
-              <GlassPanel className="rounded-xl p-4">
+              <GlassPanel className="rounded-xl p-4 hover:scale-[1.01] transition-transform duration-300">
                 <SectionHeader title="Latest Cycle Funnel" />
                 <ExtractionFunnel steps={funnelSteps} />
               </GlassPanel>
@@ -105,7 +105,7 @@ export default function Dreaming() {
                   </div>
                 ) : (
                   cycles.map((cycle: any) => (
-                    <GlassPanel key={cycle._id} className="rounded-xl">
+                    <GlassPanel key={cycle._id} className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                       <details>
                         <summary className="flex items-center justify-between px-4 py-3 cursor-pointer list-none">
                           <div className="flex items-center gap-3">
@@ -201,7 +201,7 @@ export default function Dreaming() {
                   </p>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden">
+                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -251,7 +251,7 @@ export default function Dreaming() {
             <div className="space-y-6 mt-4">
               {/* Total cost card */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GlassPanel className="rounded-xl">
+                <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                   <MetricCard
                     label="Total Cost (USD)"
                     value={`$${(costData?.totalCostUsd ?? 0).toFixed(4)}`}
@@ -259,14 +259,14 @@ export default function Dreaming() {
                     format={(v) => `$${v.toFixed(4)}`}
                   />
                 </GlassPanel>
-                <GlassPanel className="rounded-xl">
+                <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                   <MetricCard
                     label="Cycles Tracked"
                     value={costData?.totalCycles ?? 0}
                     numericValue={costData?.totalCycles ?? 0}
                   />
                 </GlassPanel>
-                <GlassPanel className="rounded-xl">
+                <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                   <MetricCard
                     label="Cycles with Cost"
                     value={costData?.cyclesWithCost ?? 0}
@@ -285,7 +285,7 @@ export default function Dreaming() {
                     </p>
                   </div>
                 ) : (
-                  <GlassPanel className="rounded-xl overflow-hidden">
+                  <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -333,7 +333,7 @@ export default function Dreaming() {
         <TabsContent value="backfill">
           <SectionErrorBoundary name="Dreaming Backfill">
             <div className="space-y-6 mt-4">
-              <GlassPanel className="rounded-xl p-6">
+              <GlassPanel className="rounded-xl p-6 hover:scale-[1.01] transition-transform duration-300">
                 <SectionHeader title="Backfill Controls" />
                 <div className="space-y-4">
                   <p className="text-base text-muted-foreground">

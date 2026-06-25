@@ -307,8 +307,9 @@ export default function Agents() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      {/* Header */}
+      <div className="md:col-span-12 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agents</h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -326,20 +327,22 @@ export default function Agents() {
       </div>
 
       {/* Summary Metrics */}
-      <SectionErrorBoundary name="Agent Status">
-        <div ref={agentFlashRef} className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <MetricCard label="Registered Teams" value={profiles.length} />
-          <MetricCard label="Runtime Agents" value={allAgents.length} />
-          <MetricCard
-            label="Running"
-            value={isLive && liveState.agentStatus === "running" ? counts.running : counts.running}
-          />
-          <MetricCard label="Failed" value={counts.failed} />
-        </div>
-      </SectionErrorBoundary>
+      <div className="md:col-span-12">
+        <SectionErrorBoundary name="Agent Status">
+          <div ref={agentFlashRef} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <MetricCard label="Registered Teams" value={profiles.length} />
+            <MetricCard label="Runtime Agents" value={allAgents.length} />
+            <MetricCard
+              label="Running"
+              value={isLive && liveState.agentStatus === "running" ? counts.running : counts.running}
+            />
+            <MetricCard label="Failed" value={counts.failed} />
+          </div>
+        </SectionErrorBoundary>
+      </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-border pb-px">
+      <div className="md:col-span-12 flex items-center gap-1 border-b border-border pb-px">
         {tabs.map((t) => (
           <button
             key={t.value}
@@ -362,6 +365,7 @@ export default function Agents() {
 
       {/* === REGISTRY TAB === */}
       {tab === "registry" && (
+        <div className="md:col-span-12">
         <SectionErrorBoundary name="Agent Registry">
         <div className="space-y-4">
           {creatingProfile && (
@@ -450,12 +454,14 @@ export default function Agents() {
           )}
         </div>
         </SectionErrorBoundary>
+        </div>
       )}
 
       {/* === RUNTIME TAB === */}
       {tab === "runtime" && (
+        <div className="md:col-span-12">
         <SectionErrorBoundary name="Runtime Agents">
-        <div className="bg-card border border-border rounded-xl p-4">
+        <div className="bg-card border border-border rounded-xl p-4 hover:scale-[1.01] transition-transform duration-300">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 className="text-base font-semibold text-muted-foreground">
               Runtime Instances<InfoTooltip text="Live agent instances currently running or recently completed — click to view details" />
@@ -578,19 +584,23 @@ export default function Agents() {
           <LoadMoreButton status={agentStatus} loadMore={loadMoreAgents} />
         </div>
         </SectionErrorBoundary>
+        </div>
       )}
 
       {/* === TOPOLOGY TAB === */}
       {tab === "topology" && (
+        <div className="md:col-span-12">
         <SectionErrorBoundary name="Agent Topology">
           <AgentTopology />
         </SectionErrorBoundary>
+        </div>
       )}
 
       {/* === SECURITY SCAN TAB === */}
       {tab === "security" && (
+        <div className="md:col-span-12">
         <SectionErrorBoundary name="Security Scan">
-          <div className="bg-card border border-border rounded-xl p-4">
+          <div className="bg-card border border-border rounded-xl p-4 hover:scale-[1.01] transition-transform duration-300">
             <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
               Security Scan Results
               <InfoTooltip text="Active tool scan findings from Ástríðr's proactive ideation scanner. Dismiss findings to clear them (they will reappear if the tool is re-scanned)." />
@@ -655,6 +665,7 @@ export default function Agents() {
             )}
           </div>
         </SectionErrorBoundary>
+        </div>
       )}
     </div>
   );

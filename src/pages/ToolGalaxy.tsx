@@ -508,8 +508,8 @@ export default function ToolGalaxy() {
   const servers = useMemo(() => deriveMcpServers(mcpServers), [mcpServers]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      <div className="md:col-span-12 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Boxes className="h-6 w-6 text-primary" />
@@ -559,9 +559,11 @@ export default function ToolGalaxy() {
         </div>
       </div>
 
-      <SectionErrorBoundary name="Tool Galaxy">
-        <GalaxyCanvas agentFilter={agentFilter} mcpFilter={mcpFilter} />
-      </SectionErrorBoundary>
+      <div className="md:col-span-12">
+        <SectionErrorBoundary name="Tool Galaxy">
+          <GalaxyCanvas agentFilter={agentFilter} mcpFilter={mcpFilter} />
+        </SectionErrorBoundary>
+      </div>
     </div>
   );
 }

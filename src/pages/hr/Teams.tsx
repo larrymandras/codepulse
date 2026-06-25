@@ -31,7 +31,7 @@ export default function Teams() {
   if (teamId) {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
-        <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto">
+        <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto hover:scale-[1.01] transition-transform duration-300">
           <TeamEditor teamId={teamId === "new" ? undefined : teamId} />
         </GlassPanel>
       </div>
@@ -41,7 +41,7 @@ export default function Teams() {
   // Card grid mode
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative">
+      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative hover:scale-[1.01] transition-transform duration-300">
         <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
         <div className="flex flex-col gap-6 relative z-10">
           {/* Header */}

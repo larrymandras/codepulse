@@ -12,6 +12,13 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
+import { Skeleton } from "../components/ui/skeleton";
 import MemoryIndexHealth from "../components/MemoryIndexHealth";
 import InfoTooltip from "../components/InfoTooltip";
 import MemoryQualityTab from "../components/MemoryQualityTab";
@@ -39,11 +46,13 @@ function formatRelative(ts: number): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function StatCard({ label, value }: { label: string; value: React.ReactNode | number | undefined }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4">
       <p className="text-sm text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-semibold text-foreground">{value}</p>
+      <div className="text-2xl font-semibold text-foreground">
+        {value === undefined ? <Skeleton className="h-8 w-16 bg-primary/10" /> : value}
+      </div>
     </div>
   );
 }
@@ -144,9 +153,12 @@ export default function Memory() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Memory Browser</h1>
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      <div className="md:col-span-12">
+        <h1 className="text-2xl font-bold">Memory Browser</h1>
+      </div>
 
+      <div className="md:col-span-12">
       <Tabs defaultValue="episodic">
         <TabsList>
           <TabsTrigger value="episodic">Episodic</TabsTrigger>
@@ -164,21 +176,28 @@ export default function Memory() {
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Total Memories" value={overview?.total ?? 0} />
-              <StatCard label="Event Types" value={eventTypes.length} />
-              <StatCard label="Agents" value={agents.length} />
+              <StatCard label="Total Memories" value={overview === undefined ? undefined : (overview?.total ?? 0)} />
+              <StatCard label="Event Types" value={overview === undefined ? undefined : eventTypes.length} />
+              <StatCard label="Agents" value={overview === undefined ? undefined : agents.length} />
               <StatCard
                 label="Recent (24h)"
                 value={
-                  overview?.recent?.filter(
+                  overview === undefined ? undefined :
+                  (overview?.recent?.filter(
                     (e: any) => e.timestamp > Date.now() / 1000 - 86400
-                  ).length ?? 0
+                  ).length ?? 0)
                 }
               />
             </div>
 
-            {/* Tier Stats Summary */}
-            {tierOverview && tierOverview.totalMemories > 0 && (
+            {tierOverview === undefined ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <StatCard label="Tiered Memories" value={undefined} />
+                <StatCard label="Avg Token Savings" value={undefined} />
+                <StatCard label="LLM Summarized" value={undefined} />
+                <StatCard label="Heuristic" value={undefined} />
+              </div>
+            ) : tierOverview && tierOverview.totalMemories > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <StatCard
                   label="Tiered Memories"
@@ -197,21 +216,21 @@ export default function Memory() {
                   value={tierOverview.heuristicSummarized}
                 />
               </div>
-            )}
+            ) : null}
 
             {/* Quality Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <StatCard
                 label="Dedup Rate"
-                value={`${((quality?.deduplicationRate ?? 0) * 100).toFixed(1)}%`}
+                value={quality === undefined ? undefined : `${((quality?.deduplicationRate ?? 0) * 100).toFixed(1)}%`}
               />
               <StatCard
                 label="Stale Memories"
-                value={quality?.staleCount ?? 0}
+                value={quality === undefined ? undefined : (quality?.staleCount ?? 0)}
               />
               <StatCard
                 label="Contradictions"
-                value={quality?.contradictionCount ?? 0}
+                value={quality === undefined ? undefined : (quality?.contradictionCount ?? 0)}
               />
             </div>
 
@@ -583,7 +602,7 @@ export default function Memory() {
                 <>
                   {/* Stats row */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <GlassPanel className="rounded-xl">
+                    <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                       <MetricCard
                         label="Hit Rate"
                         value={`${((preflightStats?.hitRate ?? 0) * 100).toFixed(1)}%`}
@@ -596,7 +615,7 @@ export default function Memory() {
                         }}
                       />
                     </GlassPanel>
-                    <GlassPanel className="rounded-xl">
+                    <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
                       <MetricCard
                         label="Avg Latency (ms)"
                         value={`${(preflightStats?.avgLatencyMs ?? 0).toFixed(0)}ms`}
@@ -617,7 +636,7 @@ export default function Memory() {
                         </p>
                       </div>
                     ) : (
-                      <GlassPanel className="rounded-xl overflow-hidden">
+                      <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
                         <Table>
                           <TableHeader>
                             <TableRow>
@@ -694,7 +713,7 @@ export default function Memory() {
                   </p>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden">
+                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -757,7 +776,7 @@ export default function Memory() {
                   </p>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden">
+                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -836,7 +855,7 @@ export default function Memory() {
                   </Button>
                 </div>
               ) : (
-                <GlassPanel className="rounded-xl overflow-hidden p-0 relative">
+                <GlassPanel className="rounded-xl overflow-hidden p-0 relative hover:scale-[1.01] transition-transform duration-300">
                   <div className="absolute top-4 left-4 z-10 flex gap-2">
                     <Button variant="secondary" size="sm" onClick={handleConnectVault}>
                       Change Vault
@@ -855,6 +874,7 @@ export default function Memory() {
           </SectionErrorBoundary>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

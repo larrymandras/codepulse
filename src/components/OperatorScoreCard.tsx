@@ -84,7 +84,7 @@ function OperatorScoreCard() {
   // Loading state
   if (latest === undefined) {
     return (
-      <GlassPanel className="p-6">
+      <GlassPanel className="p-6 hover:scale-[1.01] transition-transform duration-300">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-3 h-3 rounded-full bg-muted animate-pulse" />
           <span className="text-base font-bold">Operator Score</span>
@@ -100,7 +100,7 @@ function OperatorScoreCard() {
   // Empty state — no scores yet
   if (latest === null) {
     return (
-      <GlassPanel className="p-6">
+      <GlassPanel className="p-6 hover:scale-[1.01] transition-transform duration-300">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-3 h-3 rounded-full bg-muted" />
           <span className="text-base font-bold">Operator Score</span>
@@ -147,7 +147,7 @@ function OperatorScoreCard() {
   const weekArrow = WEEK_ARROWS[weekTrend] ?? "->";
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
       {/* Header row */}
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">

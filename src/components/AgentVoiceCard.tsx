@@ -42,7 +42,7 @@ export function AgentVoiceCard({
   const shouldReduce = useReducedMotion();
 
   return (
-    <GlassPanel className="min-h-[160px] p-4 rounded-xl">
+    <GlassPanel className="min-h-[160px] p-4 rounded-xl hover:scale-[1.01] transition-transform duration-300">
       <div className="flex flex-col items-center text-center">
         {/* Avatar with speaking ring overlay */}
         <div className="relative inline-block">

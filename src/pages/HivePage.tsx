@@ -42,7 +42,7 @@ export default function HivePage() {
 
       {/* Region 1: Swarm Graph hero */}
       <SectionErrorBoundary name="Swarm Graph">
-        <GlassPanel className="rounded-xl p-5 min-h-[520px]">
+        <GlassPanel className="rounded-xl p-5 min-h-[520px] hover:scale-[1.01] transition-transform duration-300">
           <SwarmGraph goalId={goalId} onSelectTask={setSelectedTask} />
         </GlassPanel>
       </SectionErrorBoundary>
@@ -50,12 +50,12 @@ export default function HivePage() {
       {/* Regions 2 + 3: Blackboard + Cost — side-by-side on ≥1280px, stacked below */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <SectionErrorBoundary name="Blackboard">
-          <GlassPanel className="rounded-xl p-5">
+          <GlassPanel className="rounded-xl p-5 hover:scale-[1.01] transition-transform duration-300">
             <BlackboardPanel goalId={goalId} onSelectTask={setSelectedTask} />
           </GlassPanel>
         </SectionErrorBoundary>
         <SectionErrorBoundary name="Cost">
-          <GlassPanel className="rounded-xl p-5">
+          <GlassPanel className="rounded-xl p-5 hover:scale-[1.01] transition-transform duration-300">
             <CostBreakdown goalId={goalId} />
           </GlassPanel>
         </SectionErrorBoundary>

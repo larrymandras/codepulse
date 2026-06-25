@@ -22,6 +22,7 @@ import {
   TableHead,
   TableCell,
 } from "../components/ui/table";
+import { Skeleton } from "../components/ui/skeleton";
 import { useSystemResources } from "../hooks/useSystemResources";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
@@ -72,9 +73,14 @@ export default function Infrastructure() {
   }, [subscribeEvent, triggerFlash]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Infrastructure</h1>
-      <OrbitalStatusRings />
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      <div className="md:col-span-12">
+        <h1 className="text-2xl font-bold">Infrastructure</h1>
+      </div>
+      <div className="md:col-span-12">
+        <OrbitalStatusRings />
+      </div>
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Infrastructure Health">
         <div ref={flashRef} className="space-y-6">
           <SectionErrorBoundary name="Channel Health">
@@ -89,22 +95,34 @@ export default function Infrastructure() {
           </div>
         </div>
       </SectionErrorBoundary>
+      </div>
+      <div className="md:col-span-12">
       <SystemResources data={resourceData} />
+      </div>
+      <div className="md:col-span-12">
       <IntegrationHealth />
+      </div>
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="GitHub Actions">
         <GithubActionsPanel />
       </SectionErrorBoundary>
+      </div>
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Agent Call Graph">
         <CallGraphPanel />
       </SectionErrorBoundary>
+      </div>
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Compaction Timeline">
         <CompactionTimeline />
       </SectionErrorBoundary>
+      </div>
 
       {/* Startup Waterfall (CPUX-12) — wired to startupEvents Convex query */}
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Startup Waterfall">
         <SectionHeader title="Startup Waterfall" />
-        <GlassPanel className="p-4">
+        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
           {startupEvents && startupEvents.length > 0 ? (
             <div className="space-y-2">
               {startupEvents
@@ -141,6 +159,12 @@ export default function Infrastructure() {
                 </span>
               </div>
             </div>
+          ) : startupEvents === undefined ? (
+            <div className="space-y-4">
+              <Skeleton className="h-5 w-full bg-primary/10" />
+              <Skeleton className="h-5 w-full bg-primary/10" />
+              <Skeleton className="h-5 w-full bg-primary/10" />
+            </div>
           ) : (
             <p className="text-base text-muted-foreground">
               No startup events recorded yet. Events appear after the runtime emits startup telemetry via /startup-ingest.
@@ -148,11 +172,13 @@ export default function Infrastructure() {
           )}
         </GlassPanel>
       </SectionErrorBoundary>
+      </div>
 
       {/* Auth Aliases (CPUX-12) — wired to authAliases Convex query */}
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Auth Aliases">
         <SectionHeader title="Auth Aliases" />
-        <GlassPanel className="p-4">
+        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
           <Table>
             <TableHeader>
               <TableRow>
@@ -174,6 +200,15 @@ export default function Infrastructure() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : authAliases === undefined ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-4 w-24 bg-primary/10" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32 bg-primary/10" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-40 bg-primary/10" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20 bg-primary/10" /></TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="text-base text-muted-foreground text-center py-8">
@@ -185,13 +220,23 @@ export default function Infrastructure() {
           </Table>
         </GlassPanel>
       </SectionErrorBoundary>
+      </div>
 
       {/* Advisor Provider Metrics (CPUX-12) */}
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Advisor Providers">
         <SectionHeader title="Advisor Providers" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {(providerMetrics ?? []).map(pm => (
-            <GlassPanel key={pm.provider} className="p-4">
+          {providerMetrics === undefined ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <GlassPanel key={`skeleton-${i}`} className="p-4 flex flex-col gap-2">
+                <Skeleton className="h-4 w-24 bg-primary/10" />
+                <Skeleton className="h-8 w-20 bg-primary/10" />
+                <Skeleton className="h-4 w-32 bg-primary/10" />
+              </GlassPanel>
+            ))
+          ) : (providerMetrics ?? []).map(pm => (
+            <GlassPanel key={pm.provider} className="p-4 hover:scale-[1.01] transition-transform duration-300">
               <p className="text-sm text-muted-foreground uppercase tracking-wide">{pm.provider}</p>
               <p className="text-2xl font-semibold tabular-nums mt-1">{pm.count} calls</p>
               <p className="text-sm text-muted-foreground mt-1">
@@ -200,21 +245,24 @@ export default function Infrastructure() {
               </p>
             </GlassPanel>
           ))}
-          {(!providerMetrics || providerMetrics.length === 0) && (
+          {providerMetrics !== undefined && (!providerMetrics || providerMetrics.length === 0) && (
             <p className="text-base text-muted-foreground col-span-full">No advisor events recorded yet.</p>
           )}
         </div>
       </SectionErrorBoundary>
+      </div>
 
       {/* Network Policy per Provider (CPUX-12) */}
+      <div className="md:col-span-12">
       <SectionErrorBoundary name="Network Policy">
         <SectionHeader title="Network Policy" />
-        <GlassPanel className="p-4">
+        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
           <p className="text-base text-muted-foreground">
             Per-provider network policy rules will appear here once policy configuration is ingested.
           </p>
         </GlassPanel>
       </SectionErrorBoundary>
+      </div>
     </div>
   );
 }

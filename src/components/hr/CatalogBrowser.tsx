@@ -91,7 +91,7 @@ export default function CatalogBrowser({
       {/* Preview dialog */}
       {previewId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <GlassPanel className="relative w-full max-w-lg mx-4 rounded-xl p-6 max-h-[80vh] overflow-auto">
+          <GlassPanel className="relative w-full max-w-lg mx-4 rounded-xl p-6 max-h-[80vh] overflow-auto hover:scale-[1.01] transition-transform duration-300">
             <button
               onClick={() => setPreviewId(null)}
               className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"

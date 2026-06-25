@@ -586,9 +586,9 @@ export default function KnowledgeGraph() {
     lens === "entity" && !filters.entityName.trim();
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <div className="md:col-span-12 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Share2 className="h-6 w-6 text-primary" />
@@ -602,128 +602,139 @@ export default function KnowledgeGraph() {
       </div>
 
       {/* KG-01: always-on summary cards (Convex kgSummary) */}
-      <SectionErrorBoundary name="KG Summary">
-        <KGSummaryCards />
-      </SectionErrorBoundary>
+      <div className="md:col-span-12">
+        <SectionErrorBoundary name="KG Summary">
+          <KGSummaryCards />
+        </SectionErrorBoundary>
+      </div>
 
       {/* Controls */}
-      <SectionErrorBoundary name="KG Controls">
-        <KGControls
-          lens={lens}
-          onLens={handleUserLens}
-          filters={filters}
-          setFilter={handleUserFilter}
-          entityTypes={entityTypes}
-          predicates={predicates}
-          loading={loading}
-          onRefresh={refresh}
-          views={savedViews.views}
-          activeViewId={activeViewId}
-          onLoadView={handleLoadView}
-          onDeleteView={handleDeleteView}
-          onCopyLink={handleCopyLink}
-          onSaveView={handleSaveView}
-          temporalSubMode={temporalSubMode}
-          onSubMode={setTemporalSubMode}
-          diffDateA={diffDateA}
-          diffDateB={diffDateB}
-          onChangeDiffDateA={setDiffDateA}
-          onChangeDiffDateB={setDiffDateB}
-          onCompare={compare}
-          diffLoading={diffLoading}
-          animRangeStart={animRangeStart}
-          animRangeEnd={animRangeEnd}
-          animInterval={animInterval}
-          onChangeAnimRange={(start, end) => {
-            setAnimRangeStart(start);
-            setAnimRangeEnd(end);
-          }}
-          onChangeAnimInterval={setAnimInterval}
-          animFrames={anim.frames}
-          animCurrentFrameIndex={anim.currentFrameIndex}
-          animIsPlaying={anim.isPlaying}
-          animFps={anim.fps}
-          animFrameError={anim.frameError}
-          onAnimPlay={anim.play}
-          onAnimPause={anim.pause}
-          onAnimStepBack={anim.stepBack}
-          onAnimStepForward={anim.stepForward}
-          onAnimSetFrameIndex={anim.setFrameIndex}
-          onAnimSetFps={anim.setFps}
-        />
-      </SectionErrorBoundary>
+      <div className="md:col-span-12">
+        <SectionErrorBoundary name="KG Controls">
+          <KGControls
+            lens={lens}
+            onLens={handleUserLens}
+            filters={filters}
+            setFilter={handleUserFilter}
+            entityTypes={entityTypes}
+            predicates={predicates}
+            loading={loading}
+            onRefresh={refresh}
+            views={savedViews.views}
+            activeViewId={activeViewId}
+            onLoadView={handleLoadView}
+            onDeleteView={handleDeleteView}
+            onCopyLink={handleCopyLink}
+            onSaveView={handleSaveView}
+            temporalSubMode={temporalSubMode}
+            onSubMode={setTemporalSubMode}
+            diffDateA={diffDateA}
+            diffDateB={diffDateB}
+            onChangeDiffDateA={setDiffDateA}
+            onChangeDiffDateB={setDiffDateB}
+            onCompare={compare}
+            diffLoading={diffLoading}
+            animRangeStart={animRangeStart}
+            animRangeEnd={animRangeEnd}
+            animInterval={animInterval}
+            onChangeAnimRange={(start, end) => {
+              setAnimRangeStart(start);
+              setAnimRangeEnd(end);
+            }}
+            onChangeAnimInterval={setAnimInterval}
+            animFrames={anim.frames}
+            animCurrentFrameIndex={anim.currentFrameIndex}
+            animIsPlaying={anim.isPlaying}
+            animFps={anim.fps}
+            animFrameError={anim.frameError}
+            onAnimPlay={anim.play}
+            onAnimPause={anim.pause}
+            onAnimStepBack={anim.stepBack}
+            onAnimStepForward={anim.stepForward}
+            onAnimSetFrameIndex={anim.setFrameIndex}
+            onAnimSetFps={anim.setFps}
+          />
+        </SectionErrorBoundary>
+      </div>
 
       {/* Error / truncation banners */}
-      {error && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
-          <div className="text-sm font-mono leading-relaxed">
-            <p className="text-foreground">Could not reach the KG read API.</p>
-            <p className="text-muted-foreground mt-0.5">{error}</p>
-            <p className="text-muted-foreground/70 mt-0.5">
-              The summary cards above still reflect the last pushed telemetry.
-            </p>
+      <div className="md:col-span-12 space-y-4">
+        {error && (
+          <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+            <div className="text-sm font-mono leading-relaxed">
+              <p className="text-foreground">Could not reach the KG read API.</p>
+              <p className="text-muted-foreground mt-0.5">{error}</p>
+              <p className="text-muted-foreground/70 mt-0.5">
+                The summary cards above still reflect the last pushed telemetry.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Diff error banner — inline, non-blocking (D-08 graceful-degrade) */}
-      {diffError && temporalSubMode === "diff" && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
-          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
-          <div className="text-sm font-mono leading-relaxed">
-            <p className="text-foreground">{diffError}</p>
-            <p className="text-muted-foreground/70 mt-0.5">
-              Check that Ástríðr is running and the date is within the stored snapshot range.
-            </p>
+        {/* Diff error banner — inline, non-blocking (D-08 graceful-degrade) */}
+        {diffError && temporalSubMode === "diff" && (
+          <div className="flex items-start gap-3 rounded-[var(--radius)] border border-red-500/30 bg-red-500/5 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-red-500" />
+            <div className="text-sm font-mono leading-relaxed">
+              <p className="text-foreground">{diffError}</p>
+              <p className="text-muted-foreground/70 mt-0.5">
+                Check that Ástríðr is running and the date is within the stored snapshot range.
+              </p>
+            </div>
           </div>
-        </div>
-      )}
-      {truncated?.truncated && (
-        <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-sm font-mono">
-          <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
-          <span className="text-muted-foreground">
-            Showing {graph.stats.nodeCount} of {truncated.total} entities
-            (bounded). Narrow by type/agent or raise the limit to see more.
-          </span>
-        </div>
-      )}
+        )}
+        {truncated?.truncated && (
+          <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-sm font-mono">
+            <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+            <span className="text-muted-foreground">
+              Showing {graph.stats.nodeCount} of {truncated.total} entities
+              (bounded). Narrow by type/agent or raise the limit to see more.
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Graph + details panel — layout forks on the Search lens (KG-08) */}
-      <SectionErrorBoundary name="KG Graph">
-        {lens === "search" ? (
-          /* Search lens: left pane = KGSearchResults, right pane = KGDetailsPanel */
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-            <SectionErrorBoundary name="KG Search Results">
-              <KGSearchResults
-                results={searchResults}
-                query={filters.searchQuery}
-                loading={searchLoading}
-                gateState={searchGateState}
-                errorMessage={searchErrorMessage}
-                onSelectResult={handleSearchResultClick}
-              />
-            </SectionErrorBoundary>
+      <div className="md:col-span-12">
+        <SectionErrorBoundary name="KG Graph">
+          {lens === "search" ? (
+            /* Search lens: left pane = KGSearchResults, right pane = KGDetailsPanel */
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-8">
+                <SectionErrorBoundary name="KG Search Results">
+                  <KGSearchResults
+                    results={searchResults}
+                    query={filters.searchQuery}
+                    loading={searchLoading}
+                    gateState={searchGateState}
+                    errorMessage={searchErrorMessage}
+                    onSelectResult={handleSearchResultClick}
+                  />
+                </SectionErrorBoundary>
+              </div>
 
-            {/* Details panel reused — shows selected entity after a result-click ego-load */}
-            <KGDetailsPanel
-              graph={graph}
-              selectedNodeId={selectedNodeId}
-              selectedEdgeId={selectedEdgeId}
-              onClose={() => {
-                selectNode(null);
-                selectEdge(null);
-              }}
-              onSelectNode={selectNode}
-              returnTo={fromParam}
-              returnLabel={returnLabel}
-              onReturnNav={(url) => navigate(url)}
-            />
-          </div>
+              {/* Details panel reused — shows selected entity after a result-click ego-load */}
+              <div className="md:col-span-4">
+                <KGDetailsPanel
+                  graph={graph}
+                  selectedNodeId={selectedNodeId}
+                  selectedEdgeId={selectedEdgeId}
+                  onClose={() => {
+                    selectNode(null);
+                    selectEdge(null);
+                  }}
+                  onSelectNode={selectNode}
+                  returnTo={fromParam}
+                  returnLabel={returnLabel}
+                  onReturnNav={(url) => navigate(url)}
+                />
+              </div>
+            </div>
         ) : (
           /* All other lenses: existing graph + details layout unchanged */
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="relative md:col-span-8">
               {/* Legend */}
               <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5 bg-card/70 backdrop-blur border border-border rounded-[var(--radius-sm)] px-3 py-2 text-xs font-mono max-h-[60%] overflow-y-auto custom-scrollbar">
                 {legendTypes.length > 0 ? (
@@ -967,6 +978,7 @@ export default function KnowledgeGraph() {
           </div>
         )}
       </SectionErrorBoundary>
+      </div>
     </div>
   );
 }

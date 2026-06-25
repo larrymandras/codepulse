@@ -87,7 +87,7 @@ export default function Roster() {
   if (error && agents.length === 0) {
     return (
       <div className="flex-1 overflow-auto">
-        <GlassPanel className="m-6 p-8">
+        <GlassPanel className="m-6 p-8 hover:scale-[1.01] transition-transform duration-300">
           <div className="flex flex-col items-center gap-4 py-12 text-center">
             <p className="text-base text-destructive">
               Failed to load agents — check that Astridhr is running and
@@ -105,7 +105,7 @@ export default function Roster() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative">
+      <GlassPanel className="m-6 p-6 flex-1 overflow-y-auto flex flex-col gap-6 relative hover:scale-[1.01] transition-transform duration-300">
         <div className="flex flex-col gap-6 relative z-10">
           {/* Header row */}
           <div className="flex items-center justify-between flex-wrap gap-4">

@@ -102,7 +102,7 @@ export default function Analytics() {
         
         {/* Summary Row */}
         <div className="md:col-span-12">
-           <GlassPanel className="p-4">
+           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <div className="flex items-start gap-2">
                     <MetricCard label="Total Events" value={totalAggregateEvents || events.length} />

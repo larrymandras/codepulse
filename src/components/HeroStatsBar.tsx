@@ -121,7 +121,7 @@ export default function HeroStatsBar() {
   return (
     <div className="flex flex-col gap-6">
       {/* Top Section: Progress Bar and Global Controls */}
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)]">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative group overflow-hidden hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
         <div className="absolute top-4 right-4 flex items-center gap-2">
           <span className="text-xs text-muted-foreground uppercase tracking-widest font-mono">Status</span>
           <span className={`w-2 h-2 rounded-full shadow-[0_0_8px_currentColor] ${hc.bg} text-${hc.bg.replace('bg-', '')}`} />

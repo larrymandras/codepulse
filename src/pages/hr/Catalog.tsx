@@ -16,7 +16,7 @@ export default function Catalog() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <GlassPanel className="m-6 p-6 flex-1 flex flex-col min-h-0 overflow-y-auto relative">
+      <GlassPanel className="m-6 p-6 flex-1 flex flex-col min-h-0 overflow-y-auto relative hover:scale-[1.01] transition-transform duration-300">
         <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
         <div className="mb-6 flex flex-col items-start relative z-10">
           <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">

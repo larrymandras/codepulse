@@ -30,7 +30,7 @@ export function CallStatsBar({
 }: CallStatsBarProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <GlassPanel className="rounded-xl">
+      <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
         <MetricCard
           label="Duration"
           value={formatDuration(durationMs ?? 0)}
@@ -38,21 +38,21 @@ export function CallStatsBar({
           format={(v) => formatDuration(v * 1000)}
         />
       </GlassPanel>
-      <GlassPanel className="rounded-xl">
+      <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
         <MetricCard
           label="Participants"
           value={String(participantCount ?? 0)}
           numericValue={participantCount ?? 0}
         />
       </GlassPanel>
-      <GlassPanel className="rounded-xl">
+      <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
         <MetricCard
           label="Words"
           value={String(wordCount ?? 0)}
           numericValue={wordCount ?? 0}
         />
       </GlassPanel>
-      <GlassPanel className="rounded-xl">
+      <GlassPanel className="rounded-xl hover:scale-[1.01] transition-transform duration-300">
         <MetricCard
           label="Cost"
           value={`$${(costUsd ?? 0).toFixed(2)}`}

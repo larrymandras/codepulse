@@ -135,7 +135,7 @@ export function CommandTryItForm({
   };
 
   return (
-    <GlassPanel className="p-4 mt-2 space-y-4">
+    <GlassPanel className="p-4 mt-2 space-y-4 hover:scale-[1.01] transition-transform duration-300">
       {propertyNames.length > 0 ? (
         <form onSubmit={handleSubmit} className="space-y-3">
           {propertyNames.map((key) => (

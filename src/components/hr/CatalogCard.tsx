@@ -25,7 +25,7 @@ interface CatalogCardProps {
 
 export function CatalogCard({ entry, onSelect, onPreview }: CatalogCardProps) {
   return (
-    <div className="bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-300 group shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-sm)] hover:-translate-y-1">
+    <div className="bg-card/80 backdrop-blur border border-border/50 glow-card rounded-xl p-5 flex flex-col gap-3 hover:border-primary/50 transition-all duration-300 group shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[var(--glow-sm)] hover:-translate-y-1 hover:scale-[1.01] transition-transform duration-300">
       <div className="flex items-start gap-4">
         <span className="text-3xl filter drop-shadow-md group-hover:scale-110 transition-transform duration-300">{categoryEmoji(entry.category)}</span>
         <div className="flex-1 min-w-0">

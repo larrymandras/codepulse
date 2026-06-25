@@ -70,7 +70,7 @@ function GroupDivider({ label }: { label: string }) {
 
 export function ForgeMetadataPanel({ job }: ForgeMetadataPanelProps) {
   return (
-    <GlassPanel className="m-0 rounded-none border-0 h-full">
+    <GlassPanel className="m-0 rounded-none border-0 h-full hover:scale-[1.01] transition-transform duration-300">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 px-4 py-3">
 
         {/* ── Identity ── */}

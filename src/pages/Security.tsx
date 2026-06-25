@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useSecurityEventsPaginated } from "../hooks/useSecurityEvents";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLiveFlash } from "../hooks/useLiveFlash";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import SecurityStats from "../components/SecurityStats";
@@ -144,12 +145,13 @@ export default function Security() {
   }, [subscribeEvent, triggerFlash]);
 
   return (
-    <div ref={flashRef} className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div ref={flashRef} className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      <div className="md:col-span-12 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Security Dashboard</h1>
         <span className="text-sm text-muted-foreground">{mergedEvents.length} events</span>
       </div>
 
+      <div className="md:col-span-12">
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -198,13 +200,13 @@ export default function Security() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last test</span>
                     <span className="text-muted-foreground">
-                      {rlsStats ? formatRelativeTime(rlsStats.lastTest) : "--"}
+                      {rlsStats === undefined ? <Skeleton className="h-4 w-16" /> : rlsStats ? formatRelativeTime(rlsStats.lastTest) : "--"}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Cross-profile blocked</span>
                     <span className={rlsStats ? statusColor(rlsStats.crossProfileBlocked, { warn: 1, danger: 5 }) : "text-muted-foreground"}>
-                      {rlsStats?.crossProfileBlocked ?? 0}
+                      {rlsStats === undefined ? <Skeleton className="h-4 w-8" /> : (rlsStats?.crossProfileBlocked ?? 0)}
                     </span>
                   </div>
                 </div>
@@ -236,12 +238,14 @@ export default function Security() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Pending confirmations</span>
                     <span className={hitlStats ? statusColor(hitlStats.pending, { warn: 3, danger: 10 }) : "text-muted-foreground"}>
-                      {hitlStats?.pending ?? 0}
+                      {hitlStats === undefined ? <Skeleton className="h-4 w-8" /> : (hitlStats?.pending ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Resolved today</span>
-                    <span className="text-muted-foreground">{hitlStats?.resolvedToday ?? 0}</span>
+                    <span className="text-muted-foreground">
+                      {hitlStats === undefined ? <Skeleton className="h-4 w-8" /> : (hitlStats?.resolvedToday ?? 0)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -254,18 +258,20 @@ export default function Security() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Received</span>
-                    <span className="text-muted-foreground">{webhookStats?.totalReceived ?? 0}</span>
+                    <span className="text-muted-foreground">
+                      {webhookStats === undefined ? <Skeleton className="h-4 w-8" /> : (webhookStats?.totalReceived ?? 0)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Forged / blocked</span>
                     <span className={webhookStats ? statusColor(webhookStats.forgedBlocked, { warn: 1, danger: 3 }) : "text-muted-foreground"}>
-                      {webhookStats?.forgedBlocked ?? 0}
+                      {webhookStats === undefined ? <Skeleton className="h-4 w-8" /> : (webhookStats?.forgedBlocked ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last received</span>
                     <span className="text-muted-foreground">
-                      {webhookStats ? formatRelativeTime(webhookStats.lastReceived) : "--"}
+                      {webhookStats === undefined ? <Skeleton className="h-4 w-16" /> : webhookStats ? formatRelativeTime(webhookStats.lastReceived) : "--"}
                     </span>
                   </div>
                 </div>
@@ -279,18 +285,20 @@ export default function Security() {
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total accesses</span>
-                    <span className="text-muted-foreground">{vaultStats?.totalAccesses ?? 0}</span>
+                    <span className="text-muted-foreground">
+                      {vaultStats === undefined ? <Skeleton className="h-4 w-8" /> : (vaultStats?.totalAccesses ?? 0)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Denied</span>
                     <span className={vaultStats ? statusColor(vaultStats.denied, { warn: 1, danger: 3 }) : "text-muted-foreground"}>
-                      {vaultStats?.denied ?? 0}
+                      {vaultStats === undefined ? <Skeleton className="h-4 w-8" /> : (vaultStats?.denied ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last access</span>
                     <span className="text-muted-foreground">
-                      {vaultStats ? formatRelativeTime(vaultStats.lastAccess) : "--"}
+                      {vaultStats === undefined ? <Skeleton className="h-4 w-16" /> : vaultStats ? formatRelativeTime(vaultStats.lastAccess) : "--"}
                     </span>
                   </div>
                 </div>
@@ -305,19 +313,19 @@ export default function Security() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Total violations</span>
                     <span className={sandboxOverview ? statusColor(sandboxOverview.totalViolations, { warn: 5, danger: 20 }) : "text-muted-foreground"}>
-                      {sandboxOverview?.totalViolations ?? 0}
+                      {sandboxOverview === undefined ? <Skeleton className="h-4 w-8" /> : (sandboxOverview?.totalViolations ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Strict blocked</span>
                     <span className={sandboxOverview ? statusColor(sandboxOverview.strictBlocked, { warn: 1, danger: 5 }) : "text-muted-foreground"}>
-                      {sandboxOverview?.strictBlocked ?? 0}
+                      {sandboxOverview === undefined ? <Skeleton className="h-4 w-8" /> : (sandboxOverview?.strictBlocked ?? 0)}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last violation</span>
                     <span className="text-muted-foreground">
-                      {sandboxOverview ? formatRelativeTime(sandboxOverview.lastViolation) : "--"}
+                      {sandboxOverview === undefined ? <Skeleton className="h-4 w-16" /> : sandboxOverview ? formatRelativeTime(sandboxOverview.lastViolation) : "--"}
                     </span>
                   </div>
                 </div>
@@ -472,6 +480,7 @@ export default function Security() {
           </SectionErrorBoundary>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   );
 }

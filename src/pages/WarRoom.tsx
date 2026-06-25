@@ -134,7 +134,7 @@ export default function WarRoom() {
       <SectionErrorBoundary name="War Room">
         <div className="flex gap-4 h-[calc(100vh-140px)]">
           {/* Left panel — room list */}
-          <GlassPanel className="w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col">
+          <GlassPanel className="w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300">
             <div className="p-3">
               <SectionHeader title="Active Rooms" />
             </div>
@@ -171,7 +171,7 @@ export default function WarRoom() {
           </GlassPanel>
 
           {/* Right panel — room detail */}
-          <GlassPanel className="flex-1 flex flex-col rounded-xl overflow-hidden">
+          <GlassPanel className="flex-1 flex flex-col rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
             {selectedRoom ? (
               <>
                 {/* Room header */}

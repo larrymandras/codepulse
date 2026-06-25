@@ -145,7 +145,7 @@ export default function ForgePage() {
       <h1 className="text-2xl font-bold text-foreground shrink-0">Forge</h1>
 
       {/* Master-detail body — GlassPanel wraps the list+detail row (D-11) */}
-      <GlassPanel className="flex-1 flex overflow-hidden min-h-0">
+      <GlassPanel className="flex-1 flex overflow-hidden min-h-0 hover:scale-[1.01] transition-transform duration-300">
         {/* List panel — fixed ~280px, scrollable (D-11) */}
         <div className="w-[280px] shrink-0 border-r border-border overflow-hidden">
           <SectionErrorBoundary name="Forge Job List">

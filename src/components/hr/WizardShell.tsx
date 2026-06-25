@@ -38,7 +38,7 @@ export default function WizardShell({ children, wizard }: WizardShellProps) {
   };
 
   return (
-    <GlassPanel className="m-6 rounded-xl flex flex-col flex-1 overflow-hidden relative">
+    <GlassPanel className="m-6 rounded-xl flex flex-col flex-1 overflow-hidden relative hover:scale-[1.01] transition-transform duration-300">
       <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
       {/* Header with stepper */}
       <div className="px-6 pt-5 pb-3 border-b border-border/30 relative z-10">

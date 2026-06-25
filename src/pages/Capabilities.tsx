@@ -356,8 +356,8 @@ export default function Capabilities() {
   }, [searchParams]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+      <div className="md:col-span-12 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Capabilities Registry</h1>
         {/* Global search */}
         <div className="relative w-64">
@@ -381,7 +381,7 @@ export default function Capabilities() {
       </div>
 
       {/* 1. Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+      <div className="md:col-span-12 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         <MetricCard label="MCP Servers" value={summary?.mcpServers ?? 0} />
         <MetricCard label="Plugins" value={summary?.plugins ?? 0} />
         <MetricCard label="Skills" value={summary?.skills ?? 0} />
@@ -393,7 +393,7 @@ export default function Capabilities() {
       </div>
 
       {/* 2. Config Change Feed */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="md:col-span-12 bg-card border border-border rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           Configuration Changes
           <InfoTooltip text="Tracks additions, removals, and modifications to your registry — MCP servers, plugins, skills, and hooks." />
@@ -439,13 +439,17 @@ export default function Capabilities() {
       </div>
 
       {/* 3. MCP Servers */}
-      <McpServerPanel servers={servers} filter={filter} />
+      <div className="md:col-span-12">
+        <McpServerPanel servers={servers} filter={filter} />
+      </div>
 
       {/* 4. Plugins */}
-      <PluginPanel plugins={plugins} filter={filter} />
+      <div className="md:col-span-12">
+        <PluginPanel plugins={plugins} filter={filter} />
+      </div>
 
       {/* 5. CLI Tools */}
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="md:col-span-12 bg-card border border-border rounded-xl p-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
           CLI Tools
           <span className="ml-2 text-sm text-muted-foreground font-normal">{cliTools.length}</span>
@@ -485,17 +489,22 @@ export default function Capabilities() {
       </div>
 
       {/* 6. Skills, Hooks & Slash Commands */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="md:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-4">
         <SkillsPanel skills={skills} filter={filter} />
         <HooksPanel hooks={hooks} filter={filter} />
       </div>
 
-      <SlashCommandsPanel commands={slashCommands} filter={filter} />
+      <div className="md:col-span-12">
+        <SlashCommandsPanel commands={slashCommands} filter={filter} />
+      </div>
 
       {/* 6. Discovered Tools */}
-      <DiscoveredToolsTable tools={tools} filter={filter} />
+      <div className="md:col-span-12">
+        <DiscoveredToolsTable tools={tools} filter={filter} />
+      </div>
 
       {/* 7. Commands (WebSocket catalog) */}
+      <div className="md:col-span-12 space-y-6">
       {wsStatus === "disconnected" && (
         <div className="bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3 text-base text-amber-400">
           WebSocket disconnected. Command execution unavailable. Reconnecting...
@@ -525,6 +534,7 @@ export default function Capabilities() {
           </SectionErrorBoundary>
         )}
       />
+      </div>
     </div>
   );
 }
