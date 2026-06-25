@@ -642,3 +642,44 @@ code, pre, .font-mono {
     opacity: 0;
   }
 }
+
+/* Phase 92 — Voice mode keyframes and reduced-motion overrides (additive) */
+
+/* Voice listening dot pulse — separate from Tailwind animate-pulse so it can be
+   individually disabled under prefers-reduced-motion without touching other pulses */
+@keyframes voice-listen-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--glow-md); }
+  50%       { opacity: 0.7; box-shadow: 0 0 0 4px transparent; }
+}
+
+.voice-listening-dot {
+  animation: voice-listen-pulse 1.5s ease-in-out infinite;
+}
+
+/* Faster eq-bar variant for the transcribing state (0.4s cycle per UI-SPEC) */
+.eq-bar-fast-1 { animation: eq-bounce-1 0.4s ease-in-out infinite; }
+.eq-bar-fast-2 { animation: eq-bounce-2 0.4s ease-in-out infinite; }
+.eq-bar-fast-3 { animation: eq-bounce-3 0.4s ease-in-out infinite; }
+
+/* prefers-reduced-motion overrides for voice UI */
+@media (prefers-reduced-motion: reduce) {
+  /* Disable voice listening dot pulse; static dot at full opacity */
+  .voice-listening-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  /* Static waveform bars at fixed height (4px each) */
+  .eq-bar-fast-1,
+  .eq-bar-fast-2,
+  .eq-bar-fast-3 {
+    animation: none;
+    height: 4px;
+  }
+
+  /* Reply stream fade-in → instant */
+  .voice-reply-fade-in {
+    transition: none;
+    opacity: 1;
+  }
+}
