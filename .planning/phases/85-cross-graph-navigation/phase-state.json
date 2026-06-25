@@ -1,0 +1,58 @@
+{
+  "phase": 85,
+  "phaseName": "cross-graph-navigation",
+  "created": "2026-06-22T19:26:58.906Z",
+  "history": [
+    {
+      "timestamp": "2026-06-22T19:26:58.907Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-06-22T19:26:58.906Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "85-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "85-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "85-UI-SPEC.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "85-01-PLAN.md",
+        "85-02-PLAN.md",
+        "85-03-PLAN.md",
+        "85-04-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 4,
+      "files": [
+        "85-01-SUMMARY.md",
+        "85-02-SUMMARY.md",
+        "85-03-SUMMARY.md",
+        "85-04-SUMMARY.md"
+      ]
+    }
+  }
+}
