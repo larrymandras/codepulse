@@ -14,8 +14,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from "vitest";
-import { render, screen, act, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, act, waitFor, fireEvent } from "@testing-library/react";
 import { VoiceModePanel } from "./VoiceModePanel";
 
 // ─── AstridrWSContext mock ────────────────────────────────────────────────────
@@ -138,9 +137,10 @@ describe("VoiceModePanel", () => {
   });
 
   it("calls onClose when close button clicked", async () => {
-    const user = userEvent.setup();
     render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
-    await user.click(screen.getByRole("button", { name: /close voice mode/i }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /close voice mode/i }));
+    });
     expect(onClose).toHaveBeenCalled();
   });
 
