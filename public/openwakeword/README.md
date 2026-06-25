@@ -9,20 +9,21 @@ melspectrogram → embedding → classifier ONNX chain. No account/key/quota.
 |------|------|--------|--------|
 | `melspectrogram.onnx` | Shared audio front-end (mel features) | openWakeWord v0.5.1 release | present (1.04 MB) |
 | `embedding_model.onnx` | Shared speech embedding | openWakeWord v0.5.1 release | present (1.27 MB) |
-| `hey_astrid.onnx` | **Custom wake-word classifier** | Trained via openWakeWord auto-training notebook | **PENDING — train in Colab before VOX-01 QA sign-off** |
+| `hey_astrid.onnx` | **Custom wake-word classifier (SHIPPED)** | Trained via openWakeWord auto-training (Colab) 2026-06-25 | ✅ present (13.8 KB) — the live VOX-01 trigger |
+| `hey_jarvis_v0.1.onnx` | Built-in reference model | openWakeWord v0.5.1 release | present (1.24 MB) — kept as fallback/reference only, NOT the shipped trigger |
 
 The two shared models are used unchanged by every openWakeWord wake word.
-Only `hey_astrid.onnx` is custom and must be trained.
+`hey_astrid.onnx` is the custom-trained classifier and is the **live** wake word.
 
-## Dev / Integration Stand-in
+## Model provenance
 
-All Phase 92 code and tests use the built-in `hey_jarvis_v0.1.onnx` model
-(same v0.5.1 release) as the development and integration-testing stand-in
-while `hey_astrid.onnx` is PENDING training.
+`hey_astrid.onnx` trained 2026-06-25 via openWakeWord's automatic-training
+notebook (phrase `hey astrid`, 2000 positive samples, 10k steps).
+**Validation metrics:** accuracy 0.78 · recall 0.55 · false-positives ~1.33/hr.
+Backup copy in Google Drive at `MyDrive/openwakeword/hey_astrid.onnx`.
 
-**Live VOX-01 detection with the "Hey Astrid" wake phrase is blocked on
-`hey_astrid.onnx` being trained and placed in this directory.** All other
-code, tests, and CI checks pass using the "hey jarvis" stand-in.
+Detection threshold is tunable at inference in `useWakeWord` — start ~0.5 and
+raise if false triggers are too frequent, lower if it misses the phrase.
 
 ## Training `hey_astrid.onnx` (one-time, free, Colab)
 

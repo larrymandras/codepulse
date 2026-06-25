@@ -25,7 +25,7 @@ Hands-free voice interaction with Ástríðr, surfaced through CodePulse's **exi
 - **D-03b:** Detection runs in a Web Worker / AudioWorklet feeding 16 kHz frames to the ONNX graph. The three ONNX assets (melspectrogram, shared embedding, "Hey Astrid" classifier) live in `public/`.
 
 ### Wake phrase + answering persona
-- **D-03:** Wake phrase is **"Hey Astrid"** — clean English phonemes detect reliably; 2+ syllables beat single short words. UI label may display "Ástríðr"; the model/files use the ASCII "hey astrid" spelling. **Custom model trained first** (before MVP ships) via openWakeWord's free synthetic-data pipeline (Piper/TTS-generated positive samples → trained classifier ONNX). The built-in "hey jarvis" model is the fallback/validation reference but is NOT the shipped trigger.
+- **D-03:** Wake phrase is **"Hey Astrid"** — clean English phonemes detect reliably; 2+ syllables beat single short words. UI label may display "Ástríðr"; the model/files use the ASCII "hey astrid" spelling. **Custom model — ✅ TRAINED & PLACED 2026-06-25** at `public/openwakeword/hey_astrid.onnx` (13.8 KB; acc 0.78 / recall 0.55 / FP ~1.33/hr; backup in Drive `MyDrive/openwakeword/`). Trained via openWakeWord's synthetic-data pipeline (Piper TTS positives → classifier ONNX) on Colab. The built-in "hey jarvis" model remains as fallback/reference only, NOT the shipped trigger. Detection threshold tunable in `useWakeWord`.
 - **D-04:** Replies are spoken in **Ástríðr's own ElevenLabs voice** (the namesake/default persona) — one identity end-to-end. The persona is resolved server-side; CodePulse does not pick or configure voices. Single wake word, single voice for this phase (multi-persona selection deferred).
 
 ### Voice surface
