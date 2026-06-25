@@ -22,6 +22,16 @@ notebook (phrase `hey astrid`, 2000 positive samples, 10k steps).
 **Validation metrics:** accuracy 0.78 · recall 0.55 · false-positives ~1.33/hr.
 Backup copy in Google Drive at `MyDrive/openwakeword/hey_astrid.onnx`.
 
+**Structural validation 2026-06-25 (`python scripts/validate_wakeword_model.py`):** NEEDS RE-EXPORT
+— Graph structure is contract-compatible (declared input `[1, 16, 96]`, seqLen=16, embDim=96 matches
+wakeWordWorker.ts; 50,403 params from dims; ops: Gemm/LayerNormalization/Relu/Reshape/Sigmoid;
+opset 18) but the model was exported with external weight storage: weights reference
+`hey_astrid.onnx.data` which was not committed to the repo. onnxruntime cannot load the model and
+the browser worker falls back to `hey_jarvis_v0.1.onnx` (316,738 params, self-contained, opset 13).
+To fix: re-run the Colab training notebook and export with inline weights (no external data file)
+before placing in this directory. Re-validate with `python scripts/validate_wakeword_model.py`
+after re-export. For comparison: hey_jarvis passes all checks (VERDICT: PASS — self-contained).
+
 Detection threshold is tunable at inference in `useWakeWord` — start ~0.5 and
 raise if false triggers are too frequent, lower if it misses the phrase.
 
