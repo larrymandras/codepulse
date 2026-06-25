@@ -12,6 +12,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useCommandPaletteSearch } from "@/hooks/useCommandPaletteSearch";
+import { VoiceModePanel } from "@/components/voice/VoiceModePanel";
+import type { VoiceState } from "@/components/voice/voiceState";
 import {
   Bot,
   Clock,
@@ -80,9 +82,21 @@ const NAV_PAGES = [
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When true, renders VoiceModePanel instead of the text search UI. */
+  voiceMode?: boolean;
+  /** Voice state passed through to VoiceModePanel. Defaults to 'listening'. */
+  voiceState?: VoiceState;
+  /** Called when VoiceModePanel requests close (end-phrase / X / silence). */
+  onVoiceClose?: () => void;
 }
 
-export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onOpenChange,
+  voiceMode = false,
+  voiceState,
+  onVoiceClose,
+}: CommandPaletteProps) {
   const navigate = useNavigate();
   const { sendCommand } = useAstridrWS();
   const { agents, sessions, alerts, cronJobs } = useCommandPaletteSearch();
@@ -95,6 +109,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
+      {voiceMode ? (
+        <VoiceModePanel
+          voiceState={voiceState ?? "listening"}
+          onClose={() => {
+            onVoiceClose?.();
+            onOpenChange(false);
+          }}
+        />
+      ) : (
+      <>
       <CommandInput placeholder="Search pages, agents, sessions, commands..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
@@ -241,6 +265,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           )}
         </CommandGroup>
       </CommandList>
+      </>
+      )}
     </CommandDialog>
   );
 }
