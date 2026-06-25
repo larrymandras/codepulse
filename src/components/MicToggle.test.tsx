@@ -128,7 +128,4 @@ describe('MicToggle', () => {
     });
   });
 
-  describe('ListeningIndicatorPill (imported from ListeningIndicatorPill.tsx)', () => {
-    // Import the pill and test it here — it is a simple presentational component
-  });
 });
