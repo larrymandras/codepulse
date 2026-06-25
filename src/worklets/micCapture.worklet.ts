@@ -50,11 +50,17 @@ class MicCaptureProcessor extends AudioWorkletProcessor {
   constructor(options?: AudioWorkletNodeOptions) {
     super(options);
 
-    // The Worker's MessagePort is passed via processorOptions so the worklet can
-    // post frames directly to the Worker without routing through the main thread.
-    // useWakeWord.ts: AudioWorkletNode('mic-capture', { processorOptions: { workerPort } })
-    this._workerPort =
-      (options?.processorOptions?.workerPort as MessagePort | undefined) ?? null;
+    // A MessagePort cannot be passed through processorOptions (structured-cloned,
+    // not transferable). useWakeWord transfers the Worker-bound port through the
+    // node's .port AFTER construction; capture it here. Frames are dropped (process()
+    // no-ops) until it arrives, which is a single tick later.
+    this._workerPort = null;
+    this.port.onmessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; port?: MessagePort };
+      if (data?.type === 'workerPort' && data.port) {
+        this._workerPort = data.port;
+      }
+    };
 
     this._buffer = new Float32Array(FRAME_SIZE);
     this._bufferIndex = 0;

@@ -30,9 +30,18 @@ import { normalizeMelFrame } from '../lib/melNormalize';
 
 // ---[ ONNX runtime config — must be set BEFORE any InferenceSession.create ]---
 // numThreads=1: prevents COOP/COEP requirement (no SharedArrayBuffer needed).
-// wasmPaths='/': Vite's viteStaticCopy puts *.wasm files at the dist/ root.
+// wasmPaths: ort 1.17+ loads a paired .wasm + .mjs loader per backend.
+//   - PROD: viteStaticCopy emits ort-wasm-*.{wasm,mjs} at the dist/ root → '/'.
+//   - DEV: viteStaticCopy does NOT serve those files (Vite's SPA fallback + the
+//     .mjs?import module transform shadow them), so a bare '/' yields the HTML
+//     fallback and ort reports "no available backend found". Point dev at the
+//     pinned jsDelivr CDN, which serves the static runtime as plain assets.
+//   Only the WASM binary is fetched from the CDN — captured audio never leaves
+//   the browser, so the in-browser privacy model is unchanged.
 ort.env.wasm.numThreads = 1;
-ort.env.wasm.wasmPaths = '/';
+ort.env.wasm.wasmPaths = import.meta.env.DEV
+  ? 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/'
+  : '/';
 
 // ---[ Detection constants ]---
 export const THRESHOLD = 0.5;
@@ -88,7 +97,8 @@ async function loadModels(baseUrl: string): Promise<void> {
   const melOutputInfo = melSession.outputNames;
   if (!melOutputInfo.length) throw new Error('melspectrogram.onnx has no output names');
   // Run a dummy inference to get output shape
-  const dummyInput = new ort.Tensor('float32', new Float32Array(1280), [1280]);
+  // melspectrogram input is rank-2 [batch, samples] — onnxruntime-web 1.27 rejects rank-1.
+  const dummyInput = new ort.Tensor('float32', new Float32Array(1280), [1, 1280]);
   const dummyMelOut = await melSession.run({ [melSession.inputNames[0]]: dummyInput });
   const melOutputTensor = dummyMelOut[melSession.outputNames[0]];
   // dims is e.g. [5, 32] — extract mel_bins from last dim
@@ -100,7 +110,8 @@ async function loadModels(baseUrl: string): Promise<void> {
   // Embedding output: [1, 1, 1, 96] — extract embedding dim from last dim
   const MEL_WINDOW = 76; // standard openWakeWord embedding window
   const dummyMelArr = new Float32Array(MEL_WINDOW * melBins);
-  const dummyEmbInput = new ort.Tensor('float32', dummyMelArr, [MEL_WINDOW, melBins, 1]);
+  // embedding input is rank-4 [batch, 76, mel_bins, 1] — prepend the batch dim.
+  const dummyEmbInput = new ort.Tensor('float32', dummyMelArr, [1, MEL_WINDOW, melBins, 1]);
   const dummyEmbOut = await embeddingSession.run({ [embeddingSession.inputNames[0]]: dummyEmbInput });
   const embOutputTensor = dummyEmbOut[embeddingSession.outputNames[0]];
   const embDims = embOutputTensor.dims;
@@ -150,7 +161,7 @@ export async function processChunk(samples: Float32Array): Promise<number> {
   if (!melBins || !embDim || !classifierSeqLen) return 0;
 
   // ---[ Stage 1: melspectrogram ]---
-  const melInput = new ort.Tensor('float32', samples, [1280]);
+  const melInput = new ort.Tensor('float32', samples, [1, 1280]);
   const melOut = await melSession.run({ [melSession.inputNames[0]]: melInput });
   const rawMel = Array.from(melOut[melSession.outputNames[0]].data as Float32Array);
 
@@ -165,7 +176,7 @@ export async function processChunk(samples: Float32Array): Promise<number> {
   if (melBuffer.length < MEL_WINDOW * melBins) return 0;
 
   const melSlice = new Float32Array(melBuffer.slice(0, MEL_WINDOW * melBins));
-  const embInput = new ort.Tensor('float32', melSlice, [MEL_WINDOW, melBins, 1]);
+  const embInput = new ort.Tensor('float32', melSlice, [1, MEL_WINDOW, melBins, 1]);
   const embOut = await embeddingSession.run({ [embeddingSession.inputNames[0]]: embInput });
   const embedding = Array.from(embOut[embeddingSession.outputNames[0]].data as Float32Array);
   // Advance sliding window by 8 frames
@@ -185,10 +196,29 @@ export async function processChunk(samples: Float32Array): Promise<number> {
   return score;
 }
 
+// ---[ Frame handling — one 1280-sample chunk → score → maybe 'wake' ]---
+async function handleFrame(samples: Float32Array): Promise<void> {
+  try {
+    const score = await processChunk(samples);
+    const now = Date.now();
+    if (score >= THRESHOLD && now - lastDetectTime > COOLDOWN_MS) {
+      lastDetectTime = now;
+      self.postMessage({ type: 'wake', score });
+    }
+  } catch (err) {
+    // Swallow per-frame errors — do not crash the Worker on transient ONNX failures.
+    console.warn('[wakeWordWorker] processChunk error:', err);
+  }
+}
+
 // ---[ Message handler ]---
+// Mic frames do NOT arrive on self — the AudioWorklet posts them down a
+// MessageChannel whose other end is transferred to us via { type: 'port' }. We
+// must listen on that port (self.onmessage never sees the worklet's frames).
 self.onmessage = async (e: MessageEvent) => {
   const msg = e.data as
     | { type: 'init'; baseUrl: string }
+    | { type: 'port'; port: MessagePort }
     | { type: 'frame'; samples: Float32Array };
 
   if (msg.type === 'init') {
@@ -201,17 +231,15 @@ self.onmessage = async (e: MessageEvent) => {
     return;
   }
 
-  if (msg.type === 'frame') {
-    try {
-      const score = await processChunk(msg.samples);
-      const now = Date.now();
-      if (score >= THRESHOLD && now - lastDetectTime > COOLDOWN_MS) {
-        lastDetectTime = now;
-        self.postMessage({ type: 'wake', score });
-      }
-    } catch (err) {
-      // Swallow per-frame errors — do not crash the Worker on transient ONNX failures
-      console.warn('[wakeWordWorker] processChunk error:', err);
-    }
+  if (msg.type === 'port') {
+    msg.port.onmessage = (fe: MessageEvent) => {
+      const fmsg = fe.data as { type?: string; samples?: Float32Array };
+      if (fmsg?.type === 'frame' && fmsg.samples) void handleFrame(fmsg.samples);
+    };
+    msg.port.start?.();
+    return;
   }
+
+  // Back-compat: frames posted directly to the worker (unit tests use this path).
+  if (msg.type === 'frame') void handleFrame(msg.samples);
 };

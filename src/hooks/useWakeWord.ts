@@ -187,18 +187,27 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       // Transfer workerPort to the Worker so it receives frames via port1
       worker.postMessage({ type: 'port', port: workerPort }, [workerPort]);
 
-      // Create AudioWorkletNode passing the worklet's end (port2)
+      // Create the AudioWorkletNode, then hand the worklet its end of the channel.
+      // A MessagePort CANNOT be passed through processorOptions — that path is
+      // structured-cloned and ports aren't cloneable ("could not be cloned because
+      // it was not transferred"). Transfer it through the node's own .port instead.
       const workletNode = new AudioWorkletNode(audioCtx, 'mic-capture', {
-        processorOptions: { workerPort: workletPort },
         channelCount: 1,
         channelCountMode: 'explicit' as ChannelCountMode,
       });
       workletNodeRef.current = workletNode;
+      workletNode.port.postMessage({ type: 'workerPort', port: workletPort }, [
+        workletPort,
+      ]);
 
       // Connect mic stream → worklet node (worklet's process() fires with mic data)
       const micSource = audioCtx.createMediaStreamSource(stream);
       micSource.connect(workletNode);
-      // Do NOT connect workletNode to audioCtx.destination — we don't want mic playback
+      // REQUIRED: an AudioWorkletNode that doesn't reach the destination is not part
+      // of the render graph, so its process() is never called (→ no frames, no wake).
+      // This worklet writes NOTHING to its outputs (it only reads mic input and posts
+      // frames to the worker), so this connection is silent — there is no mic playback.
+      workletNode.connect(audioCtx.destination);
 
       setStatus('ready');
     } catch (err) {
