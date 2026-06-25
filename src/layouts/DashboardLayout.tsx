@@ -14,6 +14,9 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
+import { MicToggle } from "../components/MicToggle";
+import { ListeningIndicatorPill } from "../components/ListeningIndicatorPill";
+import { useWakeWord } from "../hooks/useWakeWord";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AvatarUploader from "../components/AvatarUploader";
@@ -530,6 +533,18 @@ export default function DashboardLayout() {
     }
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
+  // Voice mode — whether the palette opened in voice mode (set by wake callback or cleared by ⌘K)
+  const [voiceMode, setVoiceMode] = useState(false);
+
+  // Persisted voice-mode-enabled toggle — OFF by default (D-06 / VOX-04)
+  // Copied from the crtEnabled initializer pattern (lines 555-560)
+  const [voiceModeEnabled, setVoiceModeEnabled] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codepulse-voice-mode") ?? "false");
+    } catch {
+      return false;
+    }
+  });
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
     try {
@@ -554,12 +569,40 @@ export default function DashboardLayout() {
     };
   }, []);
 
+  // Wake-word engine — onWake opens the command palette in voice mode (VOX-01)
+  const {
+    status: wakeWordStatus,
+    errorReason: wakeWordErrorReason,
+    start: wakeWordStart,
+    stop: wakeWordStop,
+  } = useWakeWord({
+    baseUrl: '/openwakeword',
+    onWake: () => {
+      setPaletteOpen(true);
+      setVoiceMode(true);
+    },
+  });
+
+  // Drive mic start/stop from the persisted toggle (VOX-04 — no mic unless explicitly enabled)
+  // start() only fires when voiceModeEnabled AND the engine is not in error-disabled state.
+  useEffect(() => {
+    if (voiceModeEnabled && wakeWordStatus !== 'error-disabled') {
+      void wakeWordStart();
+    } else {
+      wakeWordStop();
+    }
+    // wakeWordStart/wakeWordStop are stable useCallback refs; wakeWordStatus gating is intentional.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceModeEnabled, wakeWordStatus]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Cmd+K / Ctrl+K: open command palette — allowed even from input fields (VS Code behavior)
+      // Cmd+K / Ctrl+K: open command palette in text mode — allowed even from input fields (VS Code behavior)
+      // Voice mode is NOT set here — ⌘K always opens text mode (VOX-01 criterion: coexist with wake)
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        setVoiceMode(false);
         setPaletteOpen((prev) => !prev);
         return;
       }
@@ -681,7 +724,19 @@ export default function DashboardLayout() {
             </button>
           </div>
 
+          <TooltipProvider delayDuration={300}>
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
+            {/* Voice mode controls — ListeningIndicatorPill only when engine is ready and voice is ON */}
+            {voiceModeEnabled && wakeWordStatus === 'ready' && <ListeningIndicatorPill />}
+            <MicToggle
+              enabled={voiceModeEnabled}
+              status={wakeWordStatus}
+              errorReason={wakeWordErrorReason}
+              onToggle={(v) => {
+                setVoiceModeEnabled(v);
+                localStorage.setItem('codepulse-voice-mode', JSON.stringify(v));
+              }}
+            />
             <EStopButton />
             <div className="w-px h-4 bg-primary/20 mx-1" />
             <NotificationBell />
@@ -692,6 +747,7 @@ export default function DashboardLayout() {
             <div className="w-px h-4 bg-primary/20 mx-1" />
             <UserMenu />
           </div>
+          </TooltipProvider>
         </header>
 
         {/* Page Content */}
@@ -709,8 +765,20 @@ export default function DashboardLayout() {
       {/* Toast Notifications */}
       <Toaster position="bottom-right" richColors visibleToasts={3} />
 
-      {/* Global Command Palette — Cmd+K / Ctrl+K from any page */}
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      {/* Global Command Palette — Cmd+K / Ctrl+K (text mode) or wake-word (voice mode) */}
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={(open) => {
+          setPaletteOpen(open);
+          if (!open) setVoiceMode(false);
+        }}
+        voiceMode={voiceMode}
+        voiceState={voiceMode ? 'listening' : undefined}
+        onVoiceClose={() => {
+          setVoiceMode(false);
+          setPaletteOpen(false);
+        }}
+      />
     </div>
   );
 }
