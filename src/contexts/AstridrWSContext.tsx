@@ -121,6 +121,34 @@ interface QueuedCommand {
   reject: (reason: Error) => void;
 }
 
+// ─── Module-level singleton guard ─────────────────────────────────────────────
+// Reconnect state lives at MODULE scope (not per-component-instance) so that:
+//   - duplicate AstridrWSProvider mounts share ONE connection, not N parallel
+//     retry chains, and
+//   - an in-flight/open socket is never duplicated by a re-entrant connect().
+// Without this, remounts (or, in dev, accumulated HMR module versions) each ran
+// their own unbounded chain → hundreds of sockets → "Insufficient resources".
+let moduleSocket: WebSocket | null = null;
+let moduleConnecting = false;
+
+// In dev, when Vite swaps this module, tear down the old module's socket so it
+// can't keep reconnecting as a zombie behind the replacement module.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    moduleConnecting = false;
+    if (moduleSocket) {
+      moduleSocket.onclose = null;
+      moduleSocket.onerror = null;
+      try {
+        moduleSocket.close();
+      } catch {
+        /* already closing */
+      }
+      moduleSocket = null;
+    }
+  });
+}
+
 export function AstridrWSProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<WSStatus>("reconnecting");
 
@@ -165,6 +193,18 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
+    // Singleton guard: never open a second socket while one is already connecting
+    // or open. This is the core storm-stopper — re-entrant connect() calls (from
+    // duplicate mounts / fast retries) become no-ops instead of new sockets.
+    if (moduleConnecting) return;
+    if (
+      moduleSocket &&
+      (moduleSocket.readyState === WebSocket.CONNECTING ||
+        moduleSocket.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
+    moduleConnecting = true;
 
     const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8181";
     const url = `${wsUrl}/ws/telemetry`;
@@ -178,13 +218,16 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     try {
       ws = new WebSocket(url, protocols);
     } catch {
+      moduleConnecting = false;
       scheduleRetry();
       return;
     }
 
     wsRef.current = ws;
+    moduleSocket = ws;
 
     ws.onopen = () => {
+      moduleConnecting = false;
       if (!mountedRef.current) { ws.close(); return; }
       retryCountRef.current = 0;
 
@@ -249,6 +292,8 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     };
 
     ws.onclose = () => {
+      moduleConnecting = false;
+      if (moduleSocket === ws) moduleSocket = null;
       if (!mountedRef.current) return;
       rejectAllPending("connection closed");
       scheduleRetry();
@@ -298,6 +343,12 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
         wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
+      }
+      moduleConnecting = false;
+      if (moduleSocket) {
+        moduleSocket.onclose = null;
+        moduleSocket.close();
+        moduleSocket = null;
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -364,6 +415,8 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
       wsRef.current.close();
       wsRef.current = null;
     }
+    moduleConnecting = false;
+    moduleSocket = null;
     // Clear any pending retry timer
     if (retryTimerRef.current) {
       clearTimeout(retryTimerRef.current);
