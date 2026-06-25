@@ -325,6 +325,6 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete    | 2026-06-24 |
 | 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
-| 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 5/5 | Complete   | 2026-06-25 |
+| 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 5/5 | Complete    | 2026-06-25 |
 
 *Last updated: 2026-06-24 — Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*

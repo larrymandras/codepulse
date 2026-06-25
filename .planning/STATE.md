@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience
-status: executing
-stopped_at: Phase 92 UI-SPEC approved
-last_updated: "2026-06-24T22:48:48.179Z"
-last_activity: 2026-06-24 -- Phase 92 planning complete
+status: ready_to_plan
+stopped_at: Phase 92 complete (5/5 plans) — Phases 90, 91 remain in v9.0
+last_updated: 2026-06-25T00:56:59.687Z
+last_activity: 2026-06-25 -- Phase 92 complete (execute-phase, 5/5 plans)
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 11
-  percent: 40
+  completed_plans: 16
+  percent: 60
 ---
 
 # Project State
@@ -21,27 +21,28 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 92 — voice activated command palette jarvis mode
+**Current focus:** v9.0 in progress — Phase 92 complete; Phases 90, 91 remain
 
 ## Current Position
 
-Phase: 92
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-24 -- Phase 92 planning complete
+Phase: 92 complete (5/5 plans, code-verified; 8 manual-only live audio checks pending)
+Plan: —
+Status: Ready to plan next phase (90)
+Last activity: 2026-06-25 -- Phase 92 complete via execute-phase
 
-Progress: [██████████] 100%
+Progress: [██████░░░░] 60% (3/5 phases)
 
 ## v9.0 Roadmap
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 88 | Analytics Rollup | AR-01, AR-02, AR-03 | ✅ Complete (4/4 plans) |
-| 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | Not started |
+| 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | ✅ Complete (7/7 plans) |
 | 90 | Agent Room / War Room | ROOM-01..ROOM-04 | Not started |
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
+| 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (5/5 plans) |
 
-**Execution order:** 88 → 89 → 90 → 91. Phase 89 TH-01 (`useThemeColors()`) gates Phase 91 (hard dependency). Phase 90 requires cross-repo Ástríðr audit before planning.
+**Execution order:** 88 → 89 → 92 (done) → 90 → 91. Phase 90 requires cross-repo Ástríðr audit before planning (confirm `POST /api/war-room` ingest path). Phase 91 needs the FPS≥30 benchmark at ~4k nodes before shipping.
 
 ## Accumulated Context
 
