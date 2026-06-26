@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
-stopped_at: Phase 90 UI-SPEC approved
-last_updated: "2026-06-26T20:14:07.133Z"
+stopped_at: Completed 90-06-PLAN.md
+last_updated: "2026-06-26T20:34:03Z"
 last_activity: 2026-06-26
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 25
-  completed_plans: 22
-  percent: 60
+  completed_plans: 23
+  percent: 92
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 90 (agent-room-war-room) — EXECUTING
-Plan: 6 of 8
+Plan: 7 of 8
 Status: Ready to execute
 Last activity: 2026-06-26
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 92%
 
 ## v9.0 Roadmap
 
@@ -89,6 +89,14 @@ See PROJECT.md Key Decisions table for full history.
 - **idle treated as closed** — `listRooms` queries both `status="closed"` and `status="idle"` via `by_status`, merges and sorts by `createdAt` desc, bounded to `closedLimit` (default 20, cap 200). Critical Note N6 / Open Question 2 resolved.
 - **seq NOT a public arg** — `insertWarRoomEvent` computes `seq` server-side via OCC read-max-then-insert (mirrors `forge.ts:634-641`); clients cannot forge ordering (T-90-INJ accepted disposition confirmed).
 
+**Phase 90 Plan 06 decisions (2026-06-26, Wave 4):**
+
+- **Deep-link auto-select race guard** — `useEffect` fires only when `allRooms.length > 0 && !selectedRoomId`; prevents premature setSelectedRoomId before Convex resolves the room list (Pitfall 6). Dep list uses `allRooms.length` not `allRooms` to avoid re-firing on reference changes.
+- **agentsRef stable-closure pattern** — `agentsRef.current = agents` kept in sync each render; WebSocket transcript event callback reads `agentsRef.current` instead of capturing `agents` in closure, avoiding resubscription on every 30 s roster poll cycle.
+- **Operator identity constant "operator"** — `pid === "operator"` is the isOperatorSelf check, matching the LiveKit join identity set in Plan 04 token request body.
+- **Rule 3: useRosterAgents api-namespace guard** — `(api as any).ns?.list` optional chaining prevents TypeError when partial test mocks omit namespaces (approvalQueue, agentConfigVersions, agentProfiles); production unaffected since all namespaces exist there.
+- **listRooms normalization in component** — WarRoom.tsx normalizes the `useQuery` result with `Array.isArray` check to support both the real `{active,closed,hasMore}` Convex shape and the flat-array test mock, without modifying test file or Convex layer.
+
 ### Pending Todos
 
 - **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
@@ -101,7 +109,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-26T20:14:07.121Z
-Stopped at: Phase 90 UI-SPEC approved
-Next action: After operator approves checkpoint (or reports defects), continuation agent writes 89-07-SUMMARY.md and updates ROADMAP/STATE
+Last session: 2026-06-26T20:35:41.418Z
+Stopped at: Completed 90-06-PLAN.md — deep-link route, real identity, bounded listing UI
+Next action: Execute 90-07-PLAN.md (voice join + closed-room read-only state; turns remaining 3 RED WarRoom.test.tsx cases GREEN)
 Resume file: None
