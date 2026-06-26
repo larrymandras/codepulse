@@ -20,7 +20,8 @@ import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
-import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Plus, Loader2 } from "lucide-react";
 import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 
@@ -30,6 +31,7 @@ export default function WarRoom() {
 
   // ─── State & queries ─────────────────────────────────────────────────────────
   const [closedLimit, setClosedLimit] = useState(20);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Real participant identity (ROOM-01)
   const { agents } = useRosterAgents();
@@ -52,6 +54,11 @@ export default function WarRoom() {
         hasMore: false,
       }
     : _rooms;
+
+  // Clear the loading-more flag once a new query result arrives (ROOM-02)
+  useEffect(() => {
+    if (_rawRooms !== undefined) setIsLoadingMore(false);
+  }, [_rawRooms]);
 
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const allRooms = [...roomsData.active, ...roomsData.closed];
@@ -155,7 +162,10 @@ export default function WarRoom() {
   const activeRooms = roomsData.active;
   const closedRooms = roomsData.closed;
   const hasMore = roomsData.hasMore;
-  const handleShowMore = () => setClosedLimit((prev) => prev + 20);
+  const handleShowMore = useCallback(() => {
+    setIsLoadingMore(true);
+    setClosedLimit((prev) => prev + 20);
+  }, []);
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
   const handleJoin = useCallback(() => setIsJoined(true), []);
@@ -196,11 +206,16 @@ export default function WarRoom() {
                   onSelect={() => setSelectedRoomId(room.roomId)}
                 />
               ))}
-              {activeRooms.length === 0 && (
+              {/* Empty states — mutually exclusive (ROOM-02 / UI-SPEC copywriting) */}
+              {activeRooms.length === 0 && closedRooms.length === 0 ? (
+                <p className="text-sm text-muted-foreground px-4 py-2">
+                  No rooms yet. Launch a new room to bring agents together.
+                </p>
+              ) : activeRooms.length === 0 ? (
                 <p className="text-sm text-muted-foreground px-4 py-2">
                   No active rooms
                 </p>
-              )}
+              ) : null}
               {closedRooms.length > 0 && (
                 <>
                   <div className="p-3 pt-4">
@@ -214,6 +229,24 @@ export default function WarRoom() {
                       onSelect={() => setSelectedRoomId(room.roomId)}
                     />
                   ))}
+                  {/* Surface E: Show older rooms pagination (ROOM-02) */}
+                  {hasMore && (
+                    isLoadingMore ? (
+                      <div className="flex items-center justify-center gap-1.5 py-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading…
+                      </div>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-sm text-muted-foreground w-full justify-center"
+                        onClick={handleShowMore}
+                      >
+                        Show older rooms
+                      </Button>
+                    )
+                  )}
                 </>
               )}
             </div>
