@@ -52,6 +52,7 @@ created: 2026-06-26
 | voice-toggle-mute | — | ROOM-03 | T-90-MIC | `toggleMute()` calls `setMicrophoneEnabled` | unit | `npx vitest run src/hooks/useWarRoomVoice.test.ts` | ❌ W0 | ⬜ pending |
 | seq-assign | — | ROOM-04 | — | `seq = max(roomId)+1` race-free in mutation | unit | `npx vitest run convex/v6Mutations.test.ts` | ❌ W0 | ⬜ pending |
 | seq-unique | — | ROOM-04 | — | Concurrent inserts → unique seq | unit | `npx vitest run convex/v6Mutations.test.ts` | ❌ W0 | ⬜ pending |
+| seq-read-order | — | ROOM-04 | — | `getRoomEvents` returns events ascending by seq (by_room_seq read switch) | unit | `npx vitest run convex/warRoom.test.ts` | ❌ W0 | ⬜ pending |
 | deeplink-select | — | ROOM-04 | — | `/war-room/:roomId` auto-selects room | unit (RTL) | `npx vitest run src/pages/WarRoom.test.tsx` | ❌ W0 | ⬜ pending |
 | deeplink-closed | — | ROOM-04 | — | Closed/invalid → "Room Ended", Join disabled | unit (RTL) | `npx vitest run src/pages/WarRoom.test.tsx` | ❌ W0 | ⬜ pending |
 

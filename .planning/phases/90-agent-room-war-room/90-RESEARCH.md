@@ -672,22 +672,20 @@ useEffect(() => {
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **`participantId` format in `warRooms`**
+1. **`participantId` format in `warRooms`** — **RESOLVED (planning): assume match; runtime-confirm in Plan 08.**
    - What we know: `warRooms.participantIds` is `string[]`; `useRosterAgents()` agents have `.id` (from API) and `.name`.
    - What's unclear: Are the `participantIds` values the same strings as agent `.id` (e.g., `"astridr"`, `"hervor"`) or LiveKit-specific identities? In `dispatcher.py`, the `user_identity` passed to `generate_participant_token` is `"codepulse-user"`, not a roster ID. Agent identities in LiveKit are the `agent_name` values (`"astridr"`, `"hervor"`, etc.) which do match the roster.
-   - Recommendation: Assume match on `.id` / `.name` since agent_name == roster key. Verify with a real war room run; if mismatch, the D-05 fallback will handle it gracefully (all agents appear as "Agent #xxxx").
+   - **Resolution:** Assume match on `.id` / `.name` since agent_name == roster key; the D-05 fallback ("Agent #xxxx") handles any mismatch gracefully. **Residual risk (Assumption A2):** if `participantIds` are LiveKit-specific identities that don't match roster `.id`/`.name`, ROOM-01 success criterion 1 degrades to deterministic-but-unnamed cards. This is explicitly confirmed at runtime in **Plan 90-08, Task 1, manual check step 2** (operator confirms at least one card shows a real roster name, not "Agent #xxxx").
 
-2. **`idle` room status in listing**
-   - What we know: Schema allows `"active" | "idle" | "closed"`. D-08 says "all active + last N closed."
-   - What's unclear: Should `"idle"` rooms appear in the closed section or have a separate section?
-   - Recommendation: Treat `"idle"` as closed for Phase 90. Show in the closed section, bounded.
+2. **`idle` room status in listing** — **RESOLVED: treat `idle` as closed.**
+   - Schema allows `"active" | "idle" | "closed"`. D-08 says "all active + last N closed."
+   - **Resolution:** Treat `"idle"` as closed for Phase 90 — show in the bounded closed section. Implemented in Plan 90-03 Task 1 (queries both `"closed"` and `"idle"` via `by_status`).
 
-3. **Whether existing `warRoomEvents` rows need seq backfill**
-   - What we know: Existing rows have no `seq` field. Using `seq: v.optional(v.number())` lets them exist; they just sort before seq=0 events.
-   - What's unclear: Are there existing rooms with meaningful transcripts that need to be usable?
-   - Recommendation: Wave 0 decision — make `seq` optional, treat null seq as `seq = -1` for sorting. Skip backfill for Phase 90. Historical transcripts still display (just ordered by `by_room` timestamp index as before, or appended before all seq events).
+3. **Whether existing `warRoomEvents` rows need seq backfill** — **RESOLVED: optional field, no backfill.**
+   - Existing rows have no `seq`. Using `seq: v.optional(v.number())` lets them exist; they sort before seq=0 events.
+   - **Resolution:** Make `seq` optional (Plan 90-01 Task 3), treat null seq as `seq = -1` for sorting, skip backfill for Phase 90. Historical transcripts still display.
 
 ---
 
