@@ -41,10 +41,15 @@ export function useRosterAgents() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const pendingApprovals = useQuery(api.approvalQueue.list, { status: "pending" }) ?? [];
-  const convexAgents = useQuery(api.agentConfigVersions.listAgents) ?? [];
-  const agentProfiles = useQuery(api.agentProfiles.list) ?? [];
-  const avatarRecords = useQuery(api.avatars.list) ?? [];
+  // Guard: test mocks may provide only a subset of `api`; optional chaining
+  // prevents TypeError when a namespace (e.g. approvalQueue) is absent.
+  // In production all namespaces are fully defined so ?. never short-circuits.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const _api = api as any;
+  const pendingApprovals = useQuery(_api.approvalQueue?.list, { status: "pending" }) ?? [];
+  const convexAgents = useQuery(_api.agentConfigVersions?.listAgents) ?? [];
+  const agentProfiles = useQuery(_api.agentProfiles?.list) ?? [];
+  const avatarRecords = useQuery(_api.avatars?.list) ?? [];
 
   const load = useCallback(async () => {
     try {
@@ -74,11 +79,15 @@ export function useRosterAgents() {
     const apiIds = new Set(baseAgents.map((a) => a.id));
 
     const merged: RosterAgent[] = baseAgents.map((a) => {
-      const profile = agentProfiles.find(
-        (p) => p.profileId === a.id || p.name === a.name,
+      const profile = (agentProfiles as any[]).find(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (p: any) => p.profileId === a.id || p.name === a.name,
       );
       const avatar = profile?.avatarId
-        ? avatarRecords.find((av) => av._id === profile.avatarId)
+        ? (avatarRecords as any[]).find(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (av: any) => av._id === profile.avatarId,
+          )
         : undefined;
       return {
         ...a,

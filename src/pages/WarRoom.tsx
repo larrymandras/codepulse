@@ -5,7 +5,7 @@
  * Phase 72, Plan 03: D-01
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -21,6 +21,8 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { Separator } from "@/components/ui/separator";
 import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
 import { Plus } from "lucide-react";
+import { useRosterAgents } from "@/hooks/useRosterAgents";
+import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 
 export default function WarRoom() {
   // ─── Deep-link param (ROOM-04) ────────────────────────────────────────────
@@ -28,6 +30,13 @@ export default function WarRoom() {
 
   // ─── State & queries ─────────────────────────────────────────────────────────
   const [closedLimit, setClosedLimit] = useState(20);
+
+  // Real participant identity (ROOM-01)
+  const { agents } = useRosterAgents();
+  // Stable ref so transcript event callbacks always read latest agents without
+  // needing to resubscribe the WebSocket listener on every roster change.
+  const agentsRef = useRef(agents);
+  agentsRef.current = agents;
 
   // Normalize to {active, closed, hasMore}. The Convex API returns this shape;
   // test mocks may return a legacy flat array — normalize for compatibility.
@@ -82,16 +91,18 @@ export default function WarRoom() {
     if (!selectedRoomId) return;
     const unsub = subscribeEvent("transcript.chunk", (event: Record<string, unknown>) => {
       if (event.roomId !== selectedRoomId) return;
+      const speakerId = event.speakerId as string | undefined;
       setLiveChunks((prev) => [
         ...prev,
         {
-          id: `${event.timestamp}-${(event.speakerId as string) ?? "unknown"}`,
+          id: `${event.timestamp}-${speakerId ?? "unknown"}`,
           speaker: (event.speakerName as string) ?? "Unknown",
-          speakerId: event.speakerId as string | undefined,
+          speakerId,
           text: (event.text as string) ?? "",
           timestamp: (event.timestamp as number) ?? Date.now(),
           isUser: event.speakerId === "user",
-          agentColor: undefined,
+          // Resolved via ref — no need to resubscribe when roster changes (ROOM-01)
+          agentColor: resolveAgentColor(speakerId, agentsRef.current),
         },
       ]);
     });
@@ -124,14 +135,19 @@ export default function WarRoom() {
   const transcriptChunks: TranscriptChunk[] = [
     ...roomEvents
       .filter((e) => e.eventType === "transcript.chunk")
-      .map((e) => ({
-        id: e._id,
-        speaker: (e as Record<string, unknown>).speakerName as string ?? "Unknown",
-        speakerId: (e as Record<string, unknown>).speakerId as string | undefined,
-        text: (e as Record<string, unknown>).text as string ?? "",
-        timestamp: e.timestamp,
-        isUser: (e as Record<string, unknown>).speakerId === "user",
-      })),
+      .map((e) => {
+        const speakerId = (e as Record<string, unknown>).speakerId as string | undefined;
+        return {
+          id: e._id,
+          speaker: (e as Record<string, unknown>).speakerName as string ?? "Unknown",
+          speakerId,
+          text: (e as Record<string, unknown>).text as string ?? "",
+          timestamp: e.timestamp,
+          isUser: (e as Record<string, unknown>).speakerId === "user",
+          // Resolved identity color for transcript bubble styling (ROOM-01)
+          agentColor: resolveAgentColor(speakerId, agents),
+        };
+      }),
     ...liveChunks,
   ];
 
@@ -220,16 +236,17 @@ export default function WarRoom() {
 
                 {/* Agent cards grid */}
                 <div className="p-4 grid grid-cols-2 gap-4">
-                  {(selectedRoom.participantIds ?? []).map((pid: string) => (
-                    <AgentVoiceCard
-                      key={pid}
-                      profileId={pid}
-                      name={pid}
-                      avatar={null}
-                      roleBadge="Agent"
-                      isSpeaking={speakingAgents.has(pid)}
-                    />
-                  ))}
+                  {(selectedRoom.participantIds ?? []).map((pid: string) => {
+                    // Operator self-card when pid matches the join identity (ROOM-01, D-05)
+                    const identity = resolveParticipant(pid, agents, pid === "operator");
+                    return (
+                      <AgentVoiceCard
+                        key={pid}
+                        {...identity}
+                        isSpeaking={speakingAgents.has(pid)}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Transcript */}
