@@ -114,6 +114,15 @@ const BASE_BACKOFF_MS = 2000;
 const MAX_BACKOFF_MS = 15000;
 const ACK_TIMEOUT_MS = 10000;
 const MAX_QUEUE_DEPTH = 50;
+// Storm guards (Phase 157 fix). A connection must stay OPEN at least this long before
+// its success is allowed to reset the backoff counter. Without this, a flapping server
+// (accept → quick drop, e.g. during agent restarts/rebuilds) resets retryCount on every
+// onopen, so the backoff never grows and the client reconnects forever at BASE_BACKOFF
+// spacing → the console connection storm.
+const STABLE_RESET_MS = 10000;
+// Hard floor between socket-creation attempts — a structural storm-stopper even if
+// multiple provider instances or accumulated HMR module versions slip past the singleton.
+const MIN_CONNECT_INTERVAL_MS = 1500;
 
 interface QueuedCommand {
   cmd: Record<string, unknown>;
@@ -130,12 +139,21 @@ interface QueuedCommand {
 // their own unbounded chain → hundreds of sockets → "Insufficient resources".
 let moduleSocket: WebSocket | null = null;
 let moduleConnecting = false;
+// Reconnect/backoff state at MODULE scope (not per-component-instance) so duplicate
+// provider mounts and accumulated HMR module versions share ONE retry chain — not N
+// parallel chains, which was a primary multiplier of the connection storm.
+let moduleRetryCount = 0;
+let moduleRetryTimer: ReturnType<typeof setTimeout> | null = null;
+let moduleStableTimer: ReturnType<typeof setTimeout> | null = null;
+let moduleLastAttemptAt = 0;
 
 // In dev, when Vite swaps this module, tear down the old module's socket so it
 // can't keep reconnecting as a zombie behind the replacement module.
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     moduleConnecting = false;
+    if (moduleRetryTimer) { clearTimeout(moduleRetryTimer); moduleRetryTimer = null; }
+    if (moduleStableTimer) { clearTimeout(moduleStableTimer); moduleStableTimer = null; }
     if (moduleSocket) {
       moduleSocket.onclose = null;
       moduleSocket.onerror = null;
@@ -158,8 +176,6 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
   const topicSubsRef = useRef<Map<string, Set<TopicCallback>>>(new Map());
   const eventSubsRef = useRef<Map<string, Set<TopicCallback>>>(new Map());
   const commandQueueRef = useRef<QueuedCommand[]>([]);
-  const retryCountRef = useRef(0);
-  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
 
   // Use refs for callbacks to avoid stale closures
@@ -204,7 +220,12 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     ) {
       return;
     }
+    // Hard min-interval floor: drop redundant connect() calls (duplicate mounts,
+    // reconnect spam) that arrive within MIN_CONNECT_INTERVAL_MS of the last attempt.
+    // The legitimate retry chain (scheduleRetry, ≥ BASE_BACKOFF_MS apart) is never blocked.
+    if (Date.now() - moduleLastAttemptAt < MIN_CONNECT_INTERVAL_MS) return;
     moduleConnecting = true;
+    moduleLastAttemptAt = Date.now();
 
     const wsUrl = (import.meta.env.VITE_ASTRIDR_WS_URL as string | undefined) ?? "ws://localhost:8181";
     const url = `${wsUrl}/ws/telemetry`;
@@ -229,7 +250,15 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     ws.onopen = () => {
       moduleConnecting = false;
       if (!mountedRef.current) { ws.close(); return; }
-      retryCountRef.current = 0;
+      // Stability-gated backoff reset: only clear the retry counter once the connection
+      // has stayed OPEN for STABLE_RESET_MS. A flapping socket that drops sooner leaves
+      // the counter climbing, so the backoff grows and MAX_RETRIES eventually caps it
+      // (→ "disconnected") instead of an infinite tight reconnect loop / console storm.
+      if (moduleStableTimer) clearTimeout(moduleStableTimer);
+      moduleStableTimer = setTimeout(() => {
+        moduleStableTimer = null;
+        moduleRetryCount = 0;
+      }, STABLE_RESET_MS);
 
       setStatusSync("connected");
 
@@ -294,6 +323,9 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     ws.onclose = () => {
       moduleConnecting = false;
       if (moduleSocket === ws) moduleSocket = null;
+      // Cancel the pending stability reset — this socket did not survive long enough,
+      // so its backoff counter must keep climbing (no reset).
+      if (moduleStableTimer) { clearTimeout(moduleStableTimer); moduleStableTimer = null; }
       if (!mountedRef.current) return;
       rejectAllPending("connection closed");
       scheduleRetry();
@@ -306,10 +338,10 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
 
   const scheduleRetry = useCallback(() => {
     if (!mountedRef.current) return;
-    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    if (moduleRetryTimer) clearTimeout(moduleRetryTimer);
 
-    retryCountRef.current += 1;
-    if (retryCountRef.current > MAX_RETRIES) {
+    moduleRetryCount += 1;
+    if (moduleRetryCount > MAX_RETRIES) {
       console.warn(
         "Ástríðr backend unavailable — live telemetry disabled. Restart to reconnect."
       );
@@ -319,10 +351,11 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
 
     setStatusSync("reconnecting");
     const delay = Math.min(
-      BASE_BACKOFF_MS * Math.pow(2, retryCountRef.current - 1),
+      BASE_BACKOFF_MS * Math.pow(2, moduleRetryCount - 1),
       MAX_BACKOFF_MS
     );
-    retryTimerRef.current = setTimeout(() => {
+    moduleRetryTimer = setTimeout(() => {
+      moduleRetryTimer = null;
       if (mountedRef.current) connect();
     }, delay);
   }, [connect, setStatusSync]);
@@ -337,7 +370,8 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     return () => {
       mountedRef.current = false;
       clearTimeout(connectTimer);
-      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (moduleRetryTimer) { clearTimeout(moduleRetryTimer); moduleRetryTimer = null; }
+      if (moduleStableTimer) { clearTimeout(moduleStableTimer); moduleStableTimer = null; }
       rejectAllPending("component unmounted");
       if (wsRef.current) {
         wsRef.current.onclose = null;
@@ -417,13 +451,13 @@ export function AstridrWSProvider({ children }: { children: ReactNode }) {
     }
     moduleConnecting = false;
     moduleSocket = null;
-    // Clear any pending retry timer
-    if (retryTimerRef.current) {
-      clearTimeout(retryTimerRef.current);
-      retryTimerRef.current = null;
-    }
-    // Reset retry count so reconnect gets full backoff budget
-    retryCountRef.current = 0;
+    // Clear any pending retry/stability timers
+    if (moduleRetryTimer) { clearTimeout(moduleRetryTimer); moduleRetryTimer = null; }
+    if (moduleStableTimer) { clearTimeout(moduleStableTimer); moduleStableTimer = null; }
+    // Reset retry count + attempt clock so a user-initiated reconnect gets a fresh
+    // full backoff budget and is not dropped by the min-interval floor.
+    moduleRetryCount = 0;
+    moduleLastAttemptAt = 0;
     // Signal reconnecting state then open fresh connection
     setStatusSync("reconnecting");
     connect();
