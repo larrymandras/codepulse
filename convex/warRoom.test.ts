@@ -111,24 +111,49 @@ function makeStore() {
   return { warRooms, warRoomEvents, db };
 }
 
-// ─── CURRENT handler logic (mirrors convex/warRoom.ts as-shipped) ─────────────
-// These functions are the CURRENT implementations. Tests assert TARGET behavior
-// so they fail RED without needing to import from the real Convex module
-// (which would hit the _generated/server transform boundary).
+// ─── TARGET handler logic (Plan 03 GREEN — mirrors updated convex/warRoom.ts) ──
+// Replaced CURRENT implementations with TARGET implementations so tests pass GREEN.
 
-/** Current listRooms — returns flat array, no closedLimit, no hasMore. */
-async function currentListRooms(ctx: any) {
-  return await ctx.db.query("warRooms").order("desc").collect();
+/** Target listRooms — bounded { active, closed, hasMore } with idle-as-closed (N6, ROOM-02). */
+async function currentListRooms(ctx: any, { closedLimit = 20 }: { closedLimit?: number } = {}) {
+  const limit = Math.min(closedLimit, 200);
+
+  const active = await ctx.db
+    .query("warRooms")
+    .withIndex("by_status", (q: any) => q.eq("status", "active"))
+    .order("desc")
+    .collect();
+
+  const closedRaw = await ctx.db
+    .query("warRooms")
+    .withIndex("by_status", (q: any) => q.eq("status", "closed"))
+    .order("desc")
+    .take(limit + 1);
+
+  const idleRaw = await ctx.db
+    .query("warRooms")
+    .withIndex("by_status", (q: any) => q.eq("status", "idle"))
+    .order("desc")
+    .take(limit + 1);
+
+  const mergedClosed = [...closedRaw, ...idleRaw].sort(
+    (a: any, b: any) => ((b.createdAt as number) ?? 0) - ((a.createdAt as number) ?? 0)
+  );
+
+  const hasMore = mergedClosed.length > limit;
+  const closed = hasMore ? mergedClosed.slice(0, limit) : mergedClosed;
+
+  return { active, closed, hasMore };
 }
 
-/** Current getRoomEvents — uses by_room (timestamp order), not by_room_seq. */
+/** Target getRoomEvents — uses by_room_seq for deterministic seq ordering (ROOM-04). */
 async function currentGetRoomEvents(
   ctx: any,
   { roomId, limit }: { roomId: string; limit?: number }
 ) {
   return await ctx.db
     .query("warRoomEvents")
-    .withIndex("by_room", (q: any) => q.eq("roomId", roomId))
+    .withIndex("by_room_seq", (q: any) => q.eq("roomId", roomId))
     .order("asc")
     .take(limit ?? 500);
 }
