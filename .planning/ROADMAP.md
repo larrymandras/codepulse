@@ -263,12 +263,15 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   2. Room listing is bounded (no unbounded `.collect()` on `warRooms`) and rooms are visibly populated from real Ástríðr→Convex ingest events (the `warRooms` ingest path confirmed live).
   3. The operator's "Join" button sends a real signal to Ástríðr (not cosmetic) — confirmed against the `astridr-repo` participant-join/voice surface; if real-time voice is unavailable in this phase, observer mode ships with an honest label.
   4. Each room has a stable deep-link URL (`/war-room/:roomId`) and transcript chunks render in deterministic order via a `seq` field (no out-of-order rendering under concurrent ingest).
-**Plans**: 5 plans in 4 waves
-- [x] 92-01-PLAN.md — Foundation: onnxruntime-web install + Vite WASM config + mel-normalization pure util + jsdom voice mocks (VOX-01)
-- [x] 92-02-PLAN.md — Extract shared useSpeechRecognition + useTtsPlayback hooks; refactor ChatInput/Chat to consume them (VOX-02, VOX-03)
-- [x] 92-03-PLAN.md — Wake-word engine: AudioWorklet capture + Web Worker ONNX pipeline + useWakeWord (graceful degradation) (VOX-01, VOX-04)
-- [x] 92-04-PLAN.md — Palette voice mode: pure 6-state machine + VoiceModePanel turn loop + feedback guard + chat.send wiring (VOX-02, VOX-03)
-- [x] 92-05-PLAN.md — Shell integration: MicToggle + ListeningIndicatorPill + wake handler + OFF-by-default persistence (VOX-01, VOX-04)
+**Plans**: 8 plans in 6 waves
+- [ ] 90-01-PLAN.md — Wave 1: pin livekit-client@2.20.0 (legitimacy gate) + warRoomEvents.seq + by_room_seq index + Convex redeploy (ROOM-03, ROOM-04)
+- [ ] 90-02-PLAN.md — Wave 2: livekit mock + getColor export + warRoomIdentity/useWarRoomVoice skeletons + 5 RED test files (ROOM-01..04)
+- [ ] 90-03-PLAN.md — Wave 3: bounded listRooms {active,closed,hasMore} + seq-assigning insertWarRoomEvent + seq-ordered getRoomEvents (ROOM-02, ROOM-04)
+- [ ] 90-04-PLAN.md — Wave 3: astridr POST /{room}/token (validated) + useWarRoomVoice LiveKit hook (join muted) + VoiceControlBar connection-state UI (ROOM-03)
+- [ ] 90-05-PLAN.md — Wave 3: resolveParticipant + resolveAgentColor identity helper (ROOM-01)
+- [ ] 90-06-PLAN.md — Wave 4: WarRoom deep-link route + auto-select + real identity wiring + bounded listing UI (ROOM-01, ROOM-02, ROOM-04)
+- [ ] 90-07-PLAN.md — Wave 5: WarRoom real Join wiring + room-change disconnect + Room Ended state + seq transcript merge (ROOM-03, ROOM-04)
+- [ ] 90-08-PLAN.md — Wave 6: operator manual verification (live token endpoint, two-way audio, concurrent-ingest ordering) (ROOM-03, ROOM-04)
 
 ---
 
