@@ -1,10 +1,11 @@
 ---
 phase: 92
 slug: voice-activated-command-palette-jarvis-mode
-status: approved
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-06-24
+validated: 2026-06-26
 ---
 
 # Phase 92 — Validation Strategy
@@ -47,30 +48,33 @@ created: 2026-06-24
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | Status |
 |---------|------|------|-------------|-----------|-------------------|--------|
-| 92-01-T0 | 01 | 1 | VOX-01 | manual (checkpoint) | — (train + place `hey_astrid.onnx`; "hey jarvis" stand-in for code/tests) | ⬜ pending |
-| 92-01-T1 | 01 | 1 | VOX-01 | config | `npx tsc --noEmit && grep -c "viteStaticCopy" vite.config.ts` | ⬜ pending |
-| 92-01-T2 | 01 | 1 | VOX-01 | unit (tdd) | `npx vitest run src/lib/melNormalize.test.ts` | ⬜ pending |
-| 92-01-T3 | 01 | 1 | VOX-01 | unit+config | `npx vitest run src/lib/melNormalize.test.ts && grep -c "SpeechRecognition" src/test/setup.ts` | ⬜ pending |
-| 92-02-T1 | 02 | 1 | VOX-02 | unit (tdd) | `npx vitest run src/hooks/useSpeechRecognition.test.ts src/components/ChatInput.test.tsx` | ⬜ pending |
-| 92-02-T2 | 02 | 1 | VOX-03 | unit (tdd) | `npx vitest run src/hooks/useTtsPlayback.test.ts` | ⬜ pending |
-| 92-03-T1 | 03 | 2 | VOX-01 | config | `npx tsc --noEmit && grep -c "registerProcessor" src/worklets/micCapture.worklet.ts` | ⬜ pending |
-| 92-03-T2 | 03 | 2 | VOX-01, VOX-04 | unit | `npx vitest run src/hooks/useWakeWord.test.ts src/workers/wakeWordWorker.test.ts` | ⬜ pending |
-| 92-04-T1 | 04 | 3 | VOX-02 | unit (tdd) | `npx vitest run src/components/voice/voiceState.test.ts` | ⬜ pending |
-| 92-04-T2 | 04 | 3 | VOX-02, VOX-03 | unit (tdd) | `npx vitest run src/components/voice/VoiceModePanel.test.tsx` | ⬜ pending |
-| 92-04-T3 | 04 | 3 | VOX-02 | config | `npx tsc --noEmit && grep -c "VoiceModePanel" src/components/CommandPalette.tsx` | ⬜ pending |
-| 92-05-T1 | 05 | 4 | VOX-04 | unit (tdd) | `npx vitest run src/components/MicToggle.test.tsx` | ⬜ pending |
-| 92-05-T2 | 05 | 4 | VOX-01, VOX-04 | config | `npx tsc --noEmit && grep -c "useWakeWord\|codepulse-voice-mode\|MicToggle" src/layouts/DashboardLayout.tsx` | ⬜ pending |
+| 92-01-T0 | 01 | 1 | VOX-01 | manual (checkpoint) | — (`hey_astrid.onnx` present: 214 KB self-contained, git-tracked, validate_wakeword_model.py PASS) | ✅ done |
+| 92-01-T1 | 01 | 1 | VOX-01 | config | `npx tsc --noEmit` (✓); `viteStaticCopy` grep obsolete² | ✅ green² |
+| 92-01-T2 | 01 | 1 | VOX-01 | unit (tdd) | `npx vitest run src/lib/melNormalize.test.ts` (4) | ✅ green |
+| 92-01-T3 | 01 | 1 | VOX-01 | unit+config | `npx vitest run src/lib/melNormalize.test.ts` + `grep SpeechRecognition src/test/setup.ts` (=7) | ✅ green |
+| 92-02-T1 | 02 | 1 | VOX-02 | unit (tdd) | `npx vitest run src/hooks/useSpeechRecognition.test.ts` (8)³ | ✅ green³ |
+| 92-02-T2 | 02 | 1 | VOX-03 | unit (tdd) | `npx vitest run src/hooks/useTtsPlayback.test.ts` (6) | ✅ green |
+| 92-03-T1 | 03 | 2 | VOX-01 | config | `npx tsc --noEmit` + `grep registerProcessor src/worklets/micCapture.worklet.ts` (=2) | ✅ green |
+| 92-03-T2 | 03 | 2 | VOX-01, VOX-04 | unit | `npx vitest run src/hooks/useWakeWord.test.ts src/workers/wakeWordWorker.test.ts` (8+5) | ✅ green |
+| 92-04-T1 | 04 | 3 | VOX-02 | unit (tdd) | `npx vitest run src/components/voice/voiceState.test.ts` (24) | ✅ green |
+| 92-04-T2 | 04 | 3 | VOX-02, VOX-03 | unit (tdd) | `npx vitest run src/components/voice/VoiceModePanel.test.tsx` (17) | ✅ green |
+| 92-04-T3 | 04 | 3 | VOX-02 | config | `npx tsc --noEmit` + `grep VoiceModePanel src/components/CommandPalette.tsx` (=5) | ✅ green |
+| 92-05-T1 | 05 | 4 | VOX-04 | unit (tdd) | `npx vitest run src/components/MicToggle.test.tsx` (11) | ✅ green |
+| 92-05-T2 | 05 | 4 | VOX-01, VOX-04 | config | `npx tsc --noEmit` + `grep useWakeWord\|codepulse-voice-mode\|MicToggle src/layouts/DashboardLayout.tsx` (=6) | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky. Live wake detection, real STT, and audible TTS are validated via the Manual-Only table below — not in jsdom.*
+
+> ² **Deviation (in-scope):** `vite-plugin-static-copy` self-hosting "proved unreliable in dev and prod" (`vite.config.ts:29`) and was replaced by a `drop-unused-ort-wasm` inline plugin + serving ONNX/wasm from `public/openwakeword/`. The `viteStaticCopy` grep invariant is obsolete; `tsc --noEmit` is the surviving automated check for this task.
+> ³ **Deviation (in-scope):** Web Speech logic was *extracted* from `ChatInput.tsx` into the shared `useSpeechRecognition` hook (92-02-SUMMARY), so the planned `src/components/ChatInput.test.tsx` was never created — its VOX-02 behavior is covered by `useSpeechRecognition.test.ts` (8 tests). `ChatInput.tsx` is now a thin consumer.
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] `onnxruntime-web` installed + Vite config (`optimizeDeps.exclude`, `vite-plugin-static-copy` for `*.wasm`) — gates all wake-detection tests.
-- [ ] Mel-normalization helper extracted as a pure function so the `(value/10)+2` transform is unit-assertable without running ONNX.
-- [ ] Vitest mocks for `AudioWorkletNode` / `Worker` / `SpeechRecognition` / `HTMLAudioElement.play` (extend `src/test/setup.ts`).
-- [ ] Custom `hey_astrid.onnx` classifier trained (Colab, ~30–60 min) — until then, dev/integration uses bundled "hey jarvis" model as a stand-in. **Blocks the live-detection manual checks, not the unit suite.**
+- [x] `onnxruntime-web ^1.27.0` installed; Vite ONNX/wasm serving resolved via `drop-unused-ort-wasm` plugin + `public/openwakeword/` (the `vite-plugin-static-copy` route was dropped as unreliable — see deviation ²).
+- [x] Mel-normalization helper extracted as a pure function (`src/lib/melNormalize.ts`) — `(value/10)+2` transform unit-assertable without ONNX (4 tests green).
+- [x] Vitest mocks for `AudioWorkletNode` / `Worker` / `SpeechRecognition` / `HTMLAudioElement.play` present in `src/test/setup.ts` (SpeechRecognition grep = 7).
+- [x] Custom `hey_astrid.onnx` classifier trained + committed (214 KB self-contained, opset 18, 50,403 inline params; `validate_wakeword_model.py` = VERDICT PASS, 2026-06-25). Live-detection manual checks unblocked.
 
 ---
 
@@ -95,4 +99,28 @@ created: 2026-06-24
 - [x] Feedback latency < 60s
 - [x] `nyquist_compliant: true` set in frontmatter once map is filled
 
-**Approval:** approved 2026-06-24
+**Approval:** validated 2026-06-26 — all 13 task invariants green (83 unit tests), Wave 0 complete, no gaps.
+
+---
+
+## Validation Audit 2026-06-26
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+**Result:** Phase 92 is **Nyquist-compliant**. All VOX-01–VOX-04 invariants have automated verification that runs green.
+
+| Suite | Result | Runtime |
+|-------|--------|---------|
+| `npx vitest run` (melNormalize, useSpeechRecognition, useTtsPlayback, useWakeWord, wakeWordWorker, voiceState, VoiceModePanel, MicToggle) | 83/83 passed (8 files) | ~2.6s |
+
+**Two in-scope plan deviations** (not gaps) reconciled — see footnotes ² and ³ in the Per-Task Map:
+- `vite-plugin-static-copy` replaced by `drop-unused-ort-wasm` + `public/` serving → `viteStaticCopy` grep obsolete.
+- `ChatInput.test.tsx` never created; its VOX-02 logic was extracted to `useSpeechRecognition.test.ts`.
+
+**Wake-model discrepancy reconciled:** the v9.0 milestone audit flagged (via the integration checker) that `hey_astrid.onnx` falls back to `hey_jarvis` due to a missing `.data` sidecar. **This was a false positive** — `public/openwakeword/hey_astrid.onnx` is present (214,398 bytes), self-contained (no `.data` sidecar), and git-tracked, matching 92-VERIFICATION.md. The primary wake model loads; no fallback. The milestone audit's VOX-01 warning is retracted.
+
+The 5 Manual-Only items (live wake detection, real STT, audible TTS, feedback guard, graceful degradation) remain genuinely browser-only and were live-verified 2026-06-25 in Chrome per 92-VERIFICATION.md. Field note: training recall ~0.47 → missed triggers plausible; tune the `0.5` THRESHOLD in `wakeWordWorker.ts` if needed (quality tuning, not a coverage gap).
