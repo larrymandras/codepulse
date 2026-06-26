@@ -20,6 +20,19 @@ created: 2026-06-26
 
 ---
 
+## Layout & Focal Point
+
+Primary focal point: the selected room's **agent voice-card grid** in the right/main panel — the
+largest, brightest, motion-bearing region (speaking rings draw the eye). The **sidebar room
+list** (left, 256px) is the secondary navigation anchor. The **VoiceControlBar** docked at the
+bottom of the main panel is the persistent action region. When no room is selected, the main
+panel shows a centered empty prompt, shifting focus to the sidebar to drive room selection.
+
+Hierarchy order (most to least emphasis): agent voice cards → transcript stream → room header /
+status → sidebar list → voice controls (low-chrome until joined).
+
+---
+
 ## Design System
 
 | Property | Value |
@@ -68,10 +81,11 @@ Exceptions:
 | Display | 20px (`text-xl`) | 600 (`font-semibold`) | 1.2 | Page H1 "War Room", major section headings |
 | Heading | 18px (`text-lg`) | 600 (`font-semibold`) | 1.2 | Selected room name in detail panel header |
 | Body | 16px (`text-base`) | 400 (`font-normal`) | 1.5 | Participant names, transcript bubbles, CTA labels |
-| Label | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Participant count, muted-foreground secondary text, status sublines, pagination button text |
+| Label | 14px (`text-sm`) | 400 (`font-normal`) | 1.5 | Participant count, muted-foreground secondary text, status sublines, pre-join "You'll join muted" sub-label, pagination/loading text |
 
 Mono (`font-mono`) is reserved for code, metrics, and operational chrome — not used on War Room
-text surfaces in this phase.
+text surfaces in this phase. The smallest size used in this phase is 14px (`text-sm`); no
+`text-xs` (12px) is permitted, to hold the scale at exactly 4 sizes.
 
 ---
 
@@ -88,7 +102,7 @@ surface works correctly across all Phase 89 themes.
 | Secondary (30%) | `var(--card)` / `var(--muted)` | `#0a0a0c` / `#1e1e24` | GlassPanel cards, sidebar fills, borders |
 | Accent (10%) | `var(--primary)` | `#06b6d4` (Electric Cyan) | See accent reserved-for list below |
 | Speaking ring | `var(--speaking-ring)` | `#06b6d4` | Speaking animation ring only |
-| Destructive | `var(--destructive)` | `oklch(0.704 0.191 22.216)` | Leave button, failed-connection indicator |
+| Destructive | `var(--destructive)` | `oklch(0.704 0.191 22.216)` | Leave Room button, failed-connection indicator |
 
 Connection-state semantic colors:
 
@@ -120,8 +134,8 @@ Connection-state semantic colors:
 | Element | Copy |
 |---------|------|
 | Primary CTA (pre-join) | "Join Voice" |
-| Pre-join sub-label | "You'll join muted" (12px, `text-muted-foreground`, centered below button) |
-| Post-join danger CTA | "Leave" |
+| Pre-join sub-label | "You'll join muted" (14px / `text-sm`, Label role, `text-muted-foreground`, centered below button) |
+| Post-join danger CTA | "Leave Room" |
 | Post-join confirm CTA | "Confirm Leave" (shown after first click; auto-resets after 3 s) |
 | Mute toggle aria-label (muted) | "Unmute microphone" |
 | Mute toggle aria-label (live) | "Mute microphone" |
@@ -135,7 +149,7 @@ Connection-state semantic colors:
 | Connection: connected | (no text — status dot only) |
 | Connection: reconnecting | "Reconnecting…" |
 | Connection: failed | "Connection failed — check your network and try again" |
-| Connection: failed retry | "Retry" |
+| Connection: failed retry | "Retry Connection" |
 | Unknown participant display name | "Agent #[last-4-chars-of-participantId]" (e.g. "Agent #a3f2") |
 | Operator self card name | "You" |
 | Operator self card role badge | "Operator" |
@@ -146,7 +160,7 @@ Connection-state semantic colors:
 
 | Action | Confirmation approach |
 |--------|-----------------------|
-| Leave voice session | Two-step inline confirm in `VoiceControlBar`: first click changes button to "Confirm Leave" (destructive styling); second click within 3 s executes. Auto-resets if not confirmed. No modal. |
+| Leave voice session | Two-step inline confirm in `VoiceControlBar`: first click changes the "Leave Room" button to "Confirm Leave" (destructive styling); second click within 3 s executes. Auto-resets if not confirmed. No modal. |
 
 No other destructive actions in Phase 90.
 
@@ -169,10 +183,12 @@ the mute toggle. Mute + leave buttons remain right-anchored.
 
 | State | Icon | Text | Color | Controls |
 |-------|------|------|-------|----------|
-| `connecting` | `Loader2` + `animate-spin` h-4 w-4 | "Connecting to voice…" | `text-muted-foreground` | Mute + Leave disabled (`opacity-50 pointer-events-none`) |
+| `connecting` | `Loader2` + `animate-spin` h-4 w-4 | "Connecting to voice…" | `text-muted-foreground` | Mute + Leave Room disabled (`opacity-50 pointer-events-none`) |
 | `connected` | w-2 h-2 filled dot (`rounded-full bg-(--status-ok)`) | none | `var(--status-ok)` | All enabled |
 | `reconnecting` | w-2 h-2 filled dot + `animate-pulse` | "Reconnecting…" | `text-(--status-warn)` dot + `text-muted-foreground` text | All enabled (user can leave) |
-| `failed` | `AlertCircle` h-4 w-4 | "Connection failed — check your network and try again" + "Retry" ghost button | `text-(--status-error)` | Retry resets `isJoined → false`; all controls disabled |
+| `failed` | `AlertCircle` h-4 w-4 | "Connection failed — check your network and try again" + "Retry Connection" ghost button | `text-(--status-error)` | Retry Connection resets `isJoined → false`; all controls disabled |
+
+Text in this surface uses the Label role (14px / `text-sm`).
 
 `prefers-reduced-motion`: replace `animate-spin` with static `Loader2`; replace `animate-pulse`
 dot with static dot.
@@ -185,7 +201,8 @@ Join happens with `isMuted=true` (D-03). Three visual sub-states:
 
 **Pre-join:**
 - `VoiceControlBar` shows "Join Voice" button (primary variant, full-width centered)
-- Immediately below: "You'll join muted" in `text-xs text-muted-foreground` centered
+- Immediately below: "You'll join muted" in `text-sm text-muted-foreground` (Label role, 14px)
+  centered
 - Icon: none on the sub-label (copy alone is sufficient)
 
 **Post-join, first 5 seconds (initial-muted highlight window):**
@@ -262,9 +279,10 @@ Renders the full archive view.
 - Closed rooms: initial query returns first 20, ordered by most-recently-closed descending
 - If `hasMore: true` returned from Convex query:
   - After last `RoomListItem` in closed section: `Button` variant="ghost" size="sm" with
-    `text-muted-foreground w-full justify-center py-2` and label "Show older rooms"
+    `text-muted-foreground w-full justify-center py-2` (Label role, 14px) and label "Show older
+    rooms"
   - On click: increment page / cursor, re-query; replace button with `Loader2 animate-spin h-4
-    w-4 mx-auto` + "Loading…" in `text-xs text-muted-foreground`
+    w-4 mx-auto` + "Loading…" in `text-sm text-muted-foreground`
   - On load complete: append new items and restore button (if still more) or remove it
 - If `hasMore: false` or unset: "Show older rooms" button is absent (no empty sentinel)
 
