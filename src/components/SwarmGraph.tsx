@@ -9,7 +9,7 @@
  * goalId set but no tasks yet → "Waiting for decomposition" empty state.
  */
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useRef, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -195,6 +195,31 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
     return m;
   }, [layoutNodes]);
 
+  // ── Container-size gate ──────────────────────────────────────────────────────
+  // React Flow v12 logs "parent container needs a width and a height" when it
+  // mounts before the browser has laid out its wrapper (here: behind the lazy
+  // /hive route + GlassPanel transition). Render <ReactFlow> only once the wrapper
+  // has a measured non-zero box. In environments without ResizeObserver (jsdom /
+  // tests) there is no layout to wait on, so render immediately.
+  const [graphReady, setGraphReady] = useState(false);
+  const sizeObserverRef = useRef<ResizeObserver | null>(null);
+  const attachGraphWrapper = useCallback((el: HTMLDivElement | null) => {
+    sizeObserverRef.current?.disconnect();
+    sizeObserverRef.current = null;
+    if (!el) return;
+    if (typeof ResizeObserver === "undefined") {
+      setGraphReady(true);
+      return;
+    }
+    const check = () => {
+      if (el.offsetWidth > 0 && el.offsetHeight > 0) setGraphReady(true);
+    };
+    check(); // offsetHeight forces layout — usually non-zero immediately
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    sizeObserverRef.current = ro;
+  }, []);
+
   // ── Empty states ───────────────────────────────────────────────────────────
   if (!goalId) {
     return (
@@ -215,11 +240,13 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
   // ── Render React Flow DAG ──────────────────────────────────────────────────
   return (
     <div
+      ref={attachGraphWrapper}
       className="w-full h-[min(64vh,620px)] rounded-xl overflow-hidden
                  border border-border/30 bg-background/30
                  focus:outline-none focus:ring-1 focus:ring-primary/40"
       tabIndex={0}
     >
+      {graphReady && (
       <ReactFlow
         nodes={decoratedNodes as Node[]}
         edges={enrichedEdges}
@@ -269,6 +296,7 @@ export default function SwarmGraph({ goalId, onSelectTask }: SwarmGraphProps) {
           })}
         </EdgeLabelRenderer>
       </ReactFlow>
+      )}
     </div>
   );
 }
