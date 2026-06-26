@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
-stopped_at: Phase 90 context gathered
-last_updated: "2026-06-26T15:45:12.249Z"
-last_activity: 2026-06-25
+stopped_at: Phase 90 UI-SPEC approved
+last_updated: "2026-06-26T18:46:04.819Z"
+last_activity: 2026-06-26
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 17
-  completed_plans: 17
+  total_plans: 25
+  completed_plans: 18
   percent: 60
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 92 — voice-activated-command-palette-jarvis-mode
+**Current focus:** Phase 90 — agent-room-war-room
 
 ## Current Position
 
-Phase: 92 (voice-activated-command-palette-jarvis-mode) — EXECUTING
-Plan: 2 of 6
+Phase: 90 (agent-room-war-room) — EXECUTING
+Plan: 2 of 8
 Status: Ready to execute
-Last activity: 2026-06-25
+Last activity: 2026-06-26
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 72%
 
 ## v9.0 Roadmap
 
@@ -81,6 +81,8 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase ?]: AgentCard amber shadow preserved as status identity
 - [Phase ?]: CategoryGrid COLOR_HEX map EXEMPT
 - [Phase 89]: Canvas legibility, aubergine grain, vault-node violet, and no-flash classified as manual-only (axe cannot audit canvas/perceptual behaviors); T-89-15 repudiation mitigated — operator sign-off received 2026-06-24 — Per 89-VALIDATION §Manual-Only Verifications; five checks approved by operator; no axe exclusions applied across all 20 WCAG-AA contrast cases
+- [Phase ?]: seq optionality for backcompat
+- [Phase ?]: livekit-client exact pin + audit clean
 
 ### Pending Todos
 
@@ -94,7 +96,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-26T15:45:12.241Z
-Stopped at: Phase 90 context gathered
+Last session: 2026-06-26T18:46:04.810Z
+Stopped at: Phase 90 UI-SPEC approved
 Next action: After operator approves checkpoint (or reports defects), continuation agent writes 89-07-SUMMARY.md and updates ROADMAP/STATE
-Resume file: .planning/phases/90-agent-room-war-room/90-CONTEXT.md
+Resume file: None

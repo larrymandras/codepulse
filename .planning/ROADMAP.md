@@ -264,7 +264,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
   3. The operator's "Join" button sends a real signal to Ástríðr (not cosmetic) — confirmed against the `astridr-repo` participant-join/voice surface; if real-time voice is unavailable in this phase, observer mode ships with an honest label.
   4. Each room has a stable deep-link URL (`/war-room/:roomId`) and transcript chunks render in deterministic order via a `seq` field (no out-of-order rendering under concurrent ingest).
 **Plans**: 8 plans in 6 waves
-- [ ] 90-01-PLAN.md — Wave 1: pin livekit-client@2.20.0 (legitimacy gate) + warRoomEvents.seq + by_room_seq index + Convex redeploy (ROOM-03, ROOM-04)
+- [x] 90-01-PLAN.md — Wave 1: pin livekit-client@2.20.0 (legitimacy gate) + warRoomEvents.seq + by_room_seq index + Convex redeploy (ROOM-03, ROOM-04)
 - [ ] 90-02-PLAN.md — Wave 2: livekit mock + getColor export + warRoomIdentity/useWarRoomVoice skeletons + 5 RED test files (ROOM-01..04)
 - [ ] 90-03-PLAN.md — Wave 3: bounded listRooms {active,closed,hasMore} + seq-assigning insertWarRoomEvent + seq-ordered getRoomEvents (ROOM-02, ROOM-04)
 - [ ] 90-04-PLAN.md — Wave 3: astridr POST /{room}/token (validated) + useWarRoomVoice LiveKit hook (join muted) + VoiceControlBar connection-state UI (ROOM-03)
@@ -326,7 +326,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
 | 88. Analytics Rollup | v9.0 | 4/4 | Complete   | 2026-06-24 |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete    | 2026-06-24 |
-| 90. Agent Room / War Room | v9.0 | 0/? | Not started | — |
+| 90. Agent Room / War Room | v9.0 | 1/8 | In Progress|  |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
 

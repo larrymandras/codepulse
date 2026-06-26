@@ -33,8 +33,8 @@
 
 - [ ] **ROOM-01**: The War Room renders **real participant identity** — agent names, avatars, colors, and role badges from `useRosterAgents` (the four hardcoded props in `WarRoom.tsx` — name/avatar/agentColor/roleBadge — wired to live roster data).
 - [ ] **ROOM-02**: Room listing is **bounded** (replace `warRoom.ts listRooms` unbounded `.collect()`), and the `warRooms` Ástríðr→Convex ingest path is confirmed to populate rooms.
-- [ ] **ROOM-03**: The operator can **really Join** a live war room as a participant — a genuine join/voice signal to Ástríðr (beyond the cosmetic button). *Cross-repo:* confirm/extend the Ástríðr participant-join + voice surface alongside the existing `/api/war-room` create endpoint.
-- [ ] **ROOM-04**: **Transcript robustness** — a per-room deep-link (`/war-room/:roomId`) and deterministic transcript ordering (a `seq` field on transcript-chunk events prevents out-of-order rendering).
+- [x] **ROOM-03**: The operator can **really Join** a live war room as a participant — a genuine join/voice signal to Ástríðr (beyond the cosmetic button). *Cross-repo:* confirm/extend the Ástríðr participant-join + voice surface alongside the existing `/api/war-room` create endpoint.
+- [x] **ROOM-04**: **Transcript robustness** — a per-room deep-link (`/war-room/:roomId`) and deterministic transcript ordering (a `seq` field on transcript-chunk events prevents out-of-order rendering).
 
 ### 3D Memory Galaxy (G3D) — Phase 91
 
@@ -86,8 +86,8 @@
 | AR-03 | Phase 88 | Complete |
 | ROOM-01 | Phase 90 | Pending |
 | ROOM-02 | Phase 90 | Pending |
-| ROOM-03 | Phase 90 | Pending |
-| ROOM-04 | Phase 90 | Pending |
+| ROOM-03 | Phase 90 | Complete |
+| ROOM-04 | Phase 90 | Complete |
 | G3D-01 | Phase 91 | Pending |
 | G3D-02 | Phase 91 | Pending |
 | VOX-01 | Phase 92 | Complete |
