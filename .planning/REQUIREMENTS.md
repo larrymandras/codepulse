@@ -31,8 +31,8 @@
 
 > Finish-existing (War Room is ~70-75% built: 6 components, Convex schema, ingest endpoints, launch dialog). Cross-repo backend confirmed present: `astridr-repo` ships `POST /api/war-room` (`war_room_routes.py`).
 
-- [ ] **ROOM-01**: The War Room renders **real participant identity** — agent names, avatars, colors, and role badges from `useRosterAgents` (the four hardcoded props in `WarRoom.tsx` — name/avatar/agentColor/roleBadge — wired to live roster data).
-- [ ] **ROOM-02**: Room listing is **bounded** (replace `warRoom.ts listRooms` unbounded `.collect()`), and the `warRooms` Ástríðr→Convex ingest path is confirmed to populate rooms.
+- [x] **ROOM-01**: The War Room renders **real participant identity** — agent names, avatars, colors, and role badges from `useRosterAgents` (the four hardcoded props in `WarRoom.tsx` — name/avatar/agentColor/roleBadge — wired to live roster data).
+- [x] **ROOM-02**: Room listing is **bounded** (replace `warRoom.ts listRooms` unbounded `.collect()`), and the `warRooms` Ástríðr→Convex ingest path is confirmed to populate rooms.
 - [x] **ROOM-03**: The operator can **really Join** a live war room as a participant — a genuine join/voice signal to Ástríðr (beyond the cosmetic button). *Cross-repo:* confirm/extend the Ástríðr participant-join + voice surface alongside the existing `/api/war-room` create endpoint.
 - [x] **ROOM-04**: **Transcript robustness** — a per-room deep-link (`/war-room/:roomId`) and deterministic transcript ordering (a `seq` field on transcript-chunk events prevents out-of-order rendering).
 
@@ -84,8 +84,8 @@
 | AR-01 | Phase 88 | Complete |
 | AR-02 | Phase 88 | Complete |
 | AR-03 | Phase 88 | Complete |
-| ROOM-01 | Phase 90 | Pending |
-| ROOM-02 | Phase 90 | Pending |
+| ROOM-01 | Phase 90 | Complete |
+| ROOM-02 | Phase 90 | Complete |
 | ROOM-03 | Phase 90 | Complete |
 | ROOM-04 | Phase 90 | Complete |
 | G3D-01 | Phase 91 | Pending |
