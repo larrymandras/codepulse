@@ -241,7 +241,7 @@ describe("getRoomEvents — ROOM-04: ascending seq ordering (RED gate, Plan 03)"
 
     // RED: current returns [seq=2, seq=1, seq=0] (timestamp ascending).
     // Target: [seq=0, seq=1, seq=2].
-    expect(events.map((e) => e.seq)).toEqual([0, 1, 2]);
+    expect(events.map((e: Record<string, unknown>) => e.seq)).toEqual([0, 1, 2]);
   });
 
   it("filters events to the requested roomId only", async () => {
