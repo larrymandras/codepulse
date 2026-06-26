@@ -79,9 +79,8 @@ function makeEventStore() {
   return { warRoomEvents, db };
 }
 
-// ─── CURRENT handler logic (mirrors v6Mutations.ts insertWarRoomEvent shipped) ─
-// Does NOT compute seq — all inserted rows have seq: undefined.
-// Tests assert TARGET behavior → all assertions fail RED.
+// ─── TARGET handler logic (Plan 03 GREEN — mirrors updated convex/v6Mutations.ts) ─
+// Computes monotonic per-room seq via by_room_seq read-max-then-insert (ROOM-04).
 
 async function currentInsertWarRoomEvent(
   ctx: any,
@@ -95,8 +94,14 @@ async function currentInsertWarRoomEvent(
     payload?: unknown;
   }
 ) {
-  // Current implementation: no seq computation.
-  await ctx.db.insert("warRoomEvents", args);
+  // Target implementation: read max seq for room, assign seq = max + 1 (OCC pattern).
+  const lastEvent = await ctx.db
+    .query("warRoomEvents")
+    .withIndex("by_room_seq", (q: any) => q.eq("roomId", args.roomId))
+    .order("desc")
+    .first();
+  const seq = (lastEvent?.seq ?? -1) + 1;
+  await ctx.db.insert("warRoomEvents", { ...args, seq });
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────

@@ -157,9 +157,17 @@ export const insertWarRoomEvent = mutation({
     text: v.optional(v.string()),
     payload: v.optional(v.any()),
     timestamp: v.float64(),
+    // seq is NOT an input arg — computed server-side for race-free monotonic ordering (ROOM-04).
+    // Mirror of forge.ts OCC read-max-then-insert pattern (convex/forge.ts:634-641).
   },
   handler: async (ctx, args) => {
-    await ctx.db.insert("warRoomEvents", args);
+    const lastEvent = await ctx.db
+      .query("warRoomEvents")
+      .withIndex("by_room_seq", (q) => q.eq("roomId", args.roomId))
+      .order("desc")
+      .first();
+    const seq = (lastEvent?.seq ?? -1) + 1;
+    await ctx.db.insert("warRoomEvents", { ...args, seq });
   },
 });
 

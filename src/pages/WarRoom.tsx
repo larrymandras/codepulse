@@ -23,9 +23,11 @@ import { Plus } from "lucide-react";
 
 export default function WarRoom() {
   // ─── State & queries ─────────────────────────────────────────────────────────
-  const rooms = useQuery(api.warRoom.listRooms) ?? [];
+  const [closedLimit, setClosedLimit] = useState(20);
+  const roomsData = useQuery(api.warRoom.listRooms, { closedLimit }) ?? { active: [], closed: [], hasMore: false };
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
-  const selectedRoom = rooms.find((r) => r.roomId === selectedRoomId);
+  const allRooms = [...roomsData.active, ...roomsData.closed];
+  const selectedRoom = allRooms.find((r) => r.roomId === selectedRoomId);
   const roomEvents =
     useQuery(
       api.warRoom.getRoomEvents,
@@ -105,8 +107,10 @@ export default function WarRoom() {
   ];
 
   // ─── Room lists ──────────────────────────────────────────────────────────────
-  const activeRooms = rooms.filter((r) => r.status === "active");
-  const closedRooms = rooms.filter((r) => r.status !== "active");
+  const activeRooms = roomsData.active;
+  const closedRooms = roomsData.closed;
+  const hasMore = roomsData.hasMore;
+  const handleShowMore = () => setClosedLimit((prev) => prev + 20);
 
   // ─── Handlers ────────────────────────────────────────────────────────────────
   const handleJoin = useCallback(() => setIsJoined(true), []);
