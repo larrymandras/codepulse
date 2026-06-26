@@ -1,26 +1,22 @@
 /**
- * warRoomIdentity.ts — Interface skeleton (Phase 90, Plan 02).
+ * warRoomIdentity.ts — Pure identity-resolution helpers (Phase 90, Plan 05).
  *
- * SKELETON ONLY — bodies throw "not implemented".
- * Real implementation ships in Plan 05.
+ * Maps a LiveKit participantId → AgentVoiceCard props + transcript color.
+ * Pure helpers: no React imports, no hook calls — accepts roster data as params
+ * so the module stays unit-testable in isolation.
  *
- * Contracts exposed here so downstream tests (AgentVoiceCard.test.tsx) can
- * import and fail RED on behavior rather than on a missing module.
+ * Exports:
+ *   resolveParticipant  — pid + roster → AgentVoiceCardProps
+ *   resolveAgentColor   — speakerId + roster → hex color string
+ *   getColor            — re-exported from AgentAvatar for convenience
  *
- * resolveParticipant: maps a LiveKit participant id → AgentVoiceCardProps
- *   - Known participant (id matches an agent): agent.name, agent.avatarData, tier roleBadge
- *   - Unknown participant: "Agent #" + pid.slice(-4), { name: pid } avatar, "Agent" roleBadge
- *   - Operator self: "You", styled avatar, "Operator" roleBadge
- *
- * resolveAgentColor: maps a speakerId → hex color string
- *   - Known agent: agent.avatarData.color
- *   - Unknown: deterministic hash via getColor(speakerId)
+ * Security note (T-90-ID): unknown participants NEVER expose the raw pid as
+ * their display name. Unknown ids map to "Agent #" + last-4 chars.
  */
 
 import type { AgentVoiceCardProps } from '@/components/AgentVoiceCard';
 import type { RosterAgent } from '@/hooks/useRosterAgents';
-// getColor will be used in the real implementation (Plan 05).
-import { getColor as _getColor } from '@/components/AgentAvatar'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { getColor } from '@/components/AgentAvatar';
 
 // Re-export getColor so callers of warRoomIdentity can access it without
 // reaching into AgentAvatar directly.
@@ -29,30 +25,68 @@ export { getColor } from '@/components/AgentAvatar';
 /**
  * Resolve a LiveKit participant id to the props needed by AgentVoiceCard.
  *
- * @param pid         LiveKit participant identity string.
- * @param agents      Roster agent list from useRosterAgents.
+ * @param pid             LiveKit participant identity string.
+ * @param agents          Roster agent list (from useRosterAgents — passed in, not called here).
  * @param isOperatorSelf  True when pid corresponds to the local operator.
+ * @returns               AgentVoiceCardProps with isSpeaking defaulted to false;
+ *                        caller should override isSpeaking based on live state.
  */
 export function resolveParticipant(
   pid: string,
   agents: RosterAgent[],
   isOperatorSelf: boolean,
 ): AgentVoiceCardProps {
-  // Satisfy TypeScript — parameters are used in the real implementation.
-  void pid;
-  void agents;
-  void isOperatorSelf;
-  throw new Error('resolveParticipant: not implemented (Plan 05)');
+  // Operator-self case: dedicated "You" card with accent color and Operator badge.
+  if (isOperatorSelf) {
+    return {
+      profileId: pid,
+      name: "You",
+      avatar: { name: "You", color: "var(--primary)" },
+      roleBadge: "Operator",
+      isSpeaking: false,
+    };
+  }
+
+  // Known participant: match by agent id first, then by name.
+  const agent = agents.find((a) => a.id === pid || a.name === pid);
+  if (agent) {
+    return {
+      profileId: pid,
+      name: agent.name,
+      // avatarData is undefined when the agent has no configured avatar;
+      // fall back to name-based avatar so getColor can produce a stable color.
+      avatar: agent.avatarData ?? { name: agent.name },
+      roleBadge: agent.tier ?? "Agent",
+      isSpeaking: false,
+    };
+  }
+
+  // Unknown participant (D-05): deterministic avatar keyed on pid for stable
+  // color hash; display name is "Agent #<last4>" — never the raw pid.
+  return {
+    profileId: pid,
+    name: "Agent #" + pid.slice(-4),
+    avatar: { name: pid }, // avatar.name = pid drives getColor's deterministic hash
+    roleBadge: "Agent",
+    isSpeaking: false,
+  };
 }
 
 /**
- * Resolve a speaker id to a deterministic hex color for transcript coloring.
+ * Resolve a speaker id to a deterministic hex color for transcript chunk coloring.
  *
- * @param speakerId  LiveKit participant identity or agent id.
- * @param agents     Roster agent list from useRosterAgents.
+ * Known agent: returns agent.avatarData.color if set, else getColor(speakerId).
+ * Unknown / undefined speakerId: returns getColor(speakerId ?? "").
+ *
+ * @param speakerId  LiveKit participant identity or agent id (may be undefined for system events).
+ * @param agents     Roster agent list (from useRosterAgents — passed in, not called here).
  */
-export function resolveAgentColor(speakerId: string, agents: RosterAgent[]): string {
-  void speakerId;
-  void agents;
-  throw new Error('resolveAgentColor: not implemented (Plan 05)');
+export function resolveAgentColor(speakerId: string | undefined, agents: RosterAgent[]): string {
+  if (speakerId) {
+    const agent = agents.find((a) => a.id === speakerId || a.name === speakerId);
+    if (agent) {
+      return agent.avatarData?.color ?? getColor(speakerId);
+    }
+  }
+  return getColor(speakerId ?? "");
 }
