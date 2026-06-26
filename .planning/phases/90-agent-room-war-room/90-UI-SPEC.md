@@ -1,10 +1,11 @@
 ---
 phase: 90
 slug: agent-room-war-room
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york"
 created: 2026-06-26
+reviewed_at: 2026-06-26
 ---
 
 # Phase 90 — UI Design Contract
