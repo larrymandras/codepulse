@@ -18,6 +18,13 @@ export default defineConfig({
     // When the key is set, Clerk-gated code paths (e.g. ForgePage's ClerkAuthProbe)
     // mount and call useUser()/useAuth(), which throw outside a <ClerkProvider/>.
     // Tests are written for the unconfigured "dev mode" path; force it here.
-    env: { VITE_CLERK_PUBLISHABLE_KEY: '' },
+    //
+    // VITE_ASTRIDR_API_KEY: set a sentinel value so authHeaders() includes the
+    // Authorization: Bearer header in tests (required by T-90-AUTH assertions in
+    // useWarRoomVoice.test.ts). The value is not a real credential.
+    env: {
+      VITE_CLERK_PUBLISHABLE_KEY: '',
+      VITE_ASTRIDR_API_KEY: 'test-api-key',
+    },
   },
 });

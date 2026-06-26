@@ -92,36 +92,47 @@ if (typeof AudioContext !== 'undefined') {
 //    Provides deterministic Room/RoomEvent/Track/ConnectionState stubs so
 //    War Room tests (useWarRoomVoice, AgentVoiceCard, WarRoom page) run in
 //    jsdom without any WebRTC / media-device APIs.
-vi.mock('livekit-client', () => ({
-  ConnectionState: {
-    Disconnected: 'Disconnected',
-    Connecting: 'Connecting',
-    Connected: 'Connected',
-    Reconnecting: 'Reconnecting',
-    SignalReconnecting: 'SignalReconnecting',
-  },
-  RoomEvent: {
-    ConnectionStateChanged: 'connectionStateChanged',
-    TrackSubscribed: 'trackSubscribed',
-    TrackUnsubscribed: 'trackUnsubscribed',
-    Disconnected: 'disconnected',
-  },
-  Track: { Kind: { Audio: 'audio', Video: 'video' } },
+//
+//    Room is wrapped in vi.fn() so Room.mock.instances tracks constructed
+//    instances — required by T-90-MIC and ROOM-03 test assertions.
+vi.mock('livekit-client', () => {
+  // vi.fn() with mockImplementation so `this` is correctly bound when called
+  // as `new Room(...)` — vi.fn(fn) does NOT call fn as a constructor, so
+  // instance properties set on `this` would be lost. mockImplementation is the
+  // correct API to set constructor behaviour and still track instances.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Room: class MockRoom {
-    connect = vi.fn(() => Promise.resolve());
-    disconnect = vi.fn(() => Promise.resolve());
-    localParticipant = {
+  const MockRoomClass = vi.fn().mockImplementation(function(this: any) {
+    this.connect = vi.fn(() => Promise.resolve());
+    this.disconnect = vi.fn(() => Promise.resolve());
+    this.localParticipant = {
       setMicrophoneEnabled: vi.fn(() => Promise.resolve()),
     };
-    _listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
-    on(event: string, handler: (...args: unknown[]) => void) {
+    this._listeners = {} as Record<string, ((...args: unknown[]) => void)[]>;
+    this.on = function(this: any, event: string, handler: (...args: unknown[]) => void) {
       (this._listeners[event] ??= []).push(handler);
       return this;
-    }
-    off = vi.fn();
-    emit(event: string, ...args: unknown[]) {
-      this._listeners[event]?.forEach(h => h(...args));
-    }
-  },
-}));
+    };
+    this.off = vi.fn();
+    this.emit = function(this: any, event: string, ...args: unknown[]) {
+      (this._listeners[event] ?? []).forEach((h: (...a: unknown[]) => void) => h(...args));
+    };
+  });
+
+  return {
+    ConnectionState: {
+      Disconnected: 'Disconnected',
+      Connecting: 'Connecting',
+      Connected: 'Connected',
+      Reconnecting: 'Reconnecting',
+      SignalReconnecting: 'SignalReconnecting',
+    },
+    RoomEvent: {
+      ConnectionStateChanged: 'connectionStateChanged',
+      TrackSubscribed: 'trackSubscribed',
+      TrackUnsubscribed: 'trackUnsubscribed',
+      Disconnected: 'disconnected',
+    },
+    Track: { Kind: { Audio: 'audio', Video: 'video' } },
+    Room: MockRoomClass,
+  };
+});
