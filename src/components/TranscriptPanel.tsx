@@ -20,6 +20,8 @@ export interface TranscriptChunk {
   speakerId?: string;
   text: string;
   timestamp: number;
+  /** Monotonic seq number assigned server-side; present on persisted events, absent on live chunks. */
+  seq?: number;
   isUser: boolean;
   agentColor?: string;
 }
