@@ -41,6 +41,15 @@
 - [ ] **G3D-01**: An **opt-in 3D render mode** toggle on `CodeVaultGraph`, backed by `react-force-graph-3d` + `three`, **lazy-loaded** (`React.lazy`/`Suspense`) so the 2D default path never bundles three.js. Reuses the existing `ProjectGraphData` / `useProjectGraph` data (no Convex change); the toggle state persists to `idb-keyval`.
 - [ ] **G3D-02**: The 3D mode renders the **~4,038-node production graph** at an acceptable frame rate (≥30 FPS target), **disposes the WebGL context cleanly** on 2D↔3D toggling (no leak), and colors nodes via the TH-01 `useThemeColors()` resolver so 3D is **theme-aware**. The 2D render path is unchanged (no regression).
 
+### Voice Command Palette / Jarvis Mode (VOX) — Phase 92
+
+> Added to v9.0 after the milestone was originally scoped (88–91); back-filled into traceability 2026-06-26. All four shipped + verified 2026-06-25.
+
+- [x] **VOX-01**: **Local in-browser wake-word detection** — openWakeWord ONNX (`onnxruntime-web`, Apache-2.0; no Picovoice/account/key) runs in a Web Worker fed by an AudioWorklet mic-capture pipeline; saying the wake phrase opens the CommandPalette in voice mode. Custom `hey_astrid.onnx` classifier (self-contained, committed) is the production model; bundled "hey jarvis" is the dev stand-in.
+- [x] **VOX-02**: **Spoken-command transcription** — Web Speech STT extracted to the shared `useSpeechRecognition` hook (reused by ChatInput); live transcript renders and the final text is sent verbatim via the existing `chat.send` WebSocket path (no new transport).
+- [x] **VOX-03**: **Streamed reply + persona TTS** — `run.text` renders in the palette and `run.tts` auto-plays once in Ástríðr's voice via the shared `useTtsPlayback` hook (no duplicated audio logic); recognition is paused during playback (feedback guard) so the agent's own voice is not self-transcribed.
+- [x] **VOX-04**: **Safe-by-default toggle** — voice mode is OFF by default with a persistent toggle and a visible listening indicator; an ONNX/model load failure degrades to a disabled state with a reason tooltip — no crash, no silent hot mic.
+
 ---
 
 ## Future Requirements (deferred)
@@ -81,3 +90,7 @@
 | ROOM-04 | Phase 90 | Pending |
 | G3D-01 | Phase 91 | Pending |
 | G3D-02 | Phase 91 | Pending |
+| VOX-01 | Phase 92 | Complete |
+| VOX-02 | Phase 92 | Complete |
+| VOX-03 | Phase 92 | Complete |
+| VOX-04 | Phase 92 | Complete |
