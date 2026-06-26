@@ -30,7 +30,7 @@ const DEFAULT_COLORS = [
   "#22c55e", "#06b6d4", "#f59e0b", "#ef4444",
 ];
 
-function getColor(name: string, override?: string): string {
+export function getColor(name: string, override?: string): string {
   if (override) return override;
   let hash = 0;
   for (let i = 0; i < name.length; i++) {

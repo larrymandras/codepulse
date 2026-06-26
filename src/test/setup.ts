@@ -87,3 +87,41 @@ if (typeof AudioContext !== 'undefined') {
     proto.audioWorklet.addModule = vi.fn(() => Promise.resolve());
   }
 }
+
+// 5. livekit-client stub — Phase 90 (Agent Room / War Room voice integration)
+//    Provides deterministic Room/RoomEvent/Track/ConnectionState stubs so
+//    War Room tests (useWarRoomVoice, AgentVoiceCard, WarRoom page) run in
+//    jsdom without any WebRTC / media-device APIs.
+vi.mock('livekit-client', () => ({
+  ConnectionState: {
+    Disconnected: 'Disconnected',
+    Connecting: 'Connecting',
+    Connected: 'Connected',
+    Reconnecting: 'Reconnecting',
+    SignalReconnecting: 'SignalReconnecting',
+  },
+  RoomEvent: {
+    ConnectionStateChanged: 'connectionStateChanged',
+    TrackSubscribed: 'trackSubscribed',
+    TrackUnsubscribed: 'trackUnsubscribed',
+    Disconnected: 'disconnected',
+  },
+  Track: { Kind: { Audio: 'audio', Video: 'video' } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Room: class MockRoom {
+    connect = vi.fn(() => Promise.resolve());
+    disconnect = vi.fn(() => Promise.resolve());
+    localParticipant = {
+      setMicrophoneEnabled: vi.fn(() => Promise.resolve()),
+    };
+    _listeners: Record<string, ((...args: unknown[]) => void)[]> = {};
+    on(event: string, handler: (...args: unknown[]) => void) {
+      (this._listeners[event] ??= []).push(handler);
+      return this;
+    }
+    off = vi.fn();
+    emit(event: string, ...args: unknown[]) {
+      this._listeners[event]?.forEach(h => h(...args));
+    }
+  },
+}));
