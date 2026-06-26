@@ -116,6 +116,8 @@ export default function App() {
               <Route path="/channels/whatsapp" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading WhatsApp...</div>}><WhatsApp /></Suspense>} />
               {/* Phase 72: War Room & Meeting Suite pages */}
               <Route path="/war-room" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
+              {/* Phase 90: deep-link route — same component, roomId drives auto-select */}
+              <Route path="/war-room/:roomId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
               <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
               <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
               {/* Phase 84: Graphs Hub (GRAPHS cluster — hub first) */}

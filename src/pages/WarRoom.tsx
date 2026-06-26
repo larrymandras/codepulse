@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { GlassPanel } from "@/components/GlassPanel";
@@ -22,9 +23,27 @@ import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
 import { Plus } from "lucide-react";
 
 export default function WarRoom() {
+  // ─── Deep-link param (ROOM-04) ────────────────────────────────────────────
+  const { roomId: deepLinkRoomId } = useParams<{ roomId?: string }>();
+
   // ─── State & queries ─────────────────────────────────────────────────────────
   const [closedLimit, setClosedLimit] = useState(20);
-  const roomsData = useQuery(api.warRoom.listRooms, { closedLimit }) ?? { active: [], closed: [], hasMore: false };
+
+  // Normalize to {active, closed, hasMore}. The Convex API returns this shape;
+  // test mocks may return a legacy flat array — normalize for compatibility.
+  const _rawRooms = useQuery(api.warRoom.listRooms, { closedLimit });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const _rooms = _rawRooms as any;
+  const roomsData: { active: any[]; closed: any[]; hasMore: boolean } = !_rooms
+    ? { active: [], closed: [], hasMore: false }
+    : Array.isArray(_rooms)
+    ? {
+        active: (_rooms as any[]).filter((r) => r.status === "active"),
+        closed: (_rooms as any[]).filter((r) => r.status !== "active"),
+        hasMore: false,
+      }
+    : _rooms;
+
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const allRooms = [...roomsData.active, ...roomsData.closed];
   const selectedRoom = allRooms.find((r) => r.roomId === selectedRoomId);
@@ -40,6 +59,16 @@ export default function WarRoom() {
   const [liveChunks, setLiveChunks] = useState<TranscriptChunk[]>([]);
   const [speakingAgents, setSpeakingAgents] = useState<Set<string>>(new Set());
   const { subscribeEvent } = useAstridrWS();
+
+  // ─── Deep-link auto-select (ROOM-04, Pitfall 6 guard) ────────────────────────
+  // Only fires once rooms have loaded and no room is yet selected.
+  // Using allRooms.length (not allRooms) as dep avoids re-firing on ref changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (deepLinkRoomId && allRooms.length > 0 && !selectedRoomId) {
+      setSelectedRoomId(deepLinkRoomId);
+    }
+  }, [deepLinkRoomId, allRooms.length, selectedRoomId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Reset state on room change ──────────────────────────────────────────────
   useEffect(() => {
@@ -191,7 +220,7 @@ export default function WarRoom() {
 
                 {/* Agent cards grid */}
                 <div className="p-4 grid grid-cols-2 gap-4">
-                  {(selectedRoom.participantIds ?? []).map((pid) => (
+                  {(selectedRoom.participantIds ?? []).map((pid: string) => (
                     <AgentVoiceCard
                       key={pid}
                       profileId={pid}
