@@ -1295,8 +1295,10 @@ export default defineSchema({
     text: v.optional(v.string()),
     payload: v.optional(v.any()),
     timestamp: v.float64(),
+    seq: v.optional(v.number()),  // D-07: monotonic per room; optional for backcompat with existing rows
   })
-    .index("by_room", ["roomId", "timestamp"])
+    .index("by_room", ["roomId", "timestamp"])        // kept — legacy reads / backcompat
+    .index("by_room_seq", ["roomId", "seq"])           // ADDED — deterministic ordering (ROOM-04)
     .index("by_timestamp", ["timestamp"]),
 
   voiceCalls: defineTable({
