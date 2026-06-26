@@ -266,7 +266,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans**: 8 plans in 6 waves
 - [x] 90-01-PLAN.md — Wave 1: pin livekit-client@2.20.0 (legitimacy gate) + warRoomEvents.seq + by_room_seq index + Convex redeploy (ROOM-03, ROOM-04)
 - [x] 90-02-PLAN.md — Wave 2: livekit mock + getColor export + warRoomIdentity/useWarRoomVoice skeletons + 5 RED test files (ROOM-01..04)
-- [ ] 90-03-PLAN.md — Wave 3: bounded listRooms {active,closed,hasMore} + seq-assigning insertWarRoomEvent + seq-ordered getRoomEvents (ROOM-02, ROOM-04)
+- [x] 90-03-PLAN.md — Wave 3: bounded listRooms {active,closed,hasMore} + seq-assigning insertWarRoomEvent + seq-ordered getRoomEvents (ROOM-02, ROOM-04)
 - [ ] 90-04-PLAN.md — Wave 3: astridr POST /{room}/token (validated) + useWarRoomVoice LiveKit hook (join muted) + VoiceControlBar connection-state UI (ROOM-03)
 - [ ] 90-05-PLAN.md — Wave 3: resolveParticipant + resolveAgentColor identity helper (ROOM-01)
 - [ ] 90-06-PLAN.md — Wave 4: WarRoom deep-link route + auto-select + real identity wiring + bounded listing UI (ROOM-01, ROOM-02, ROOM-04)
@@ -326,7 +326,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 87. Saved Views + Temporal Diff | v8.0 | 4/4 | Complete | 2026-06-23 |
 | 88. Analytics Rollup | v9.0 | 4/4 | Complete   | 2026-06-24 |
 | 89. Readable Themes & Editorial Skin Toggle | v9.0 | 7/7 | Complete    | 2026-06-24 |
-| 90. Agent Room / War Room | v9.0 | 2/8 | In Progress|  |
+| 90. Agent Room / War Room | v9.0 | 3/8 | In Progress|  |
 | 91. 3D Memory Galaxy | v9.0 | 0/? | Not started | — |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
 

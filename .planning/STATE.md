@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
 stopped_at: Phase 90 UI-SPEC approved
-last_updated: "2026-06-26T19:20:39.252Z"
+last_updated: "2026-06-26T19:29:32.747Z"
 last_activity: 2026-06-26
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 25
-  completed_plans: 19
+  completed_plans: 20
   percent: 60
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 90 (agent-room-war-room) — EXECUTING
-Plan: 3 of 8
+Plan: 4 of 8
 Status: Ready to execute
 Last activity: 2026-06-26
 
-Progress: [████████░░] 76%
+Progress: [████████░░] 80%
 
 ## v9.0 Roadmap
 
@@ -84,6 +84,11 @@ See PROJECT.md Key Decisions table for full history.
 - [Phase ?]: seq optionality for backcompat
 - [Phase ?]: livekit-client exact pin + audit clean
 
+**Phase 90 Plan 03 decisions (2026-06-26, Wave 3):**
+
+- **idle treated as closed** — `listRooms` queries both `status="closed"` and `status="idle"` via `by_status`, merges and sorts by `createdAt` desc, bounded to `closedLimit` (default 20, cap 200). Critical Note N6 / Open Question 2 resolved.
+- **seq NOT a public arg** — `insertWarRoomEvent` computes `seq` server-side via OCC read-max-then-insert (mirrors `forge.ts:634-641`); clients cannot forge ordering (T-90-INJ accepted disposition confirmed).
+
 ### Pending Todos
 
 - **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
@@ -96,7 +101,7 @@ See PROJECT.md Key Decisions table for full history.
 
 ## Session Continuity
 
-Last session: 2026-06-26T19:20:39.243Z
+Last session: 2026-06-26T19:29:32.738Z
 Stopped at: Phase 90 UI-SPEC approved
 Next action: After operator approves checkpoint (or reports defects), continuation agent writes 89-07-SUMMARY.md and updates ROADMAP/STATE
 Resume file: None
