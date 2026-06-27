@@ -25,6 +25,7 @@ import React from "react";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
+  useMutation: vi.fn(() => vi.fn()),
 }));
 
 vi.mock("../../convex/_generated/api", () => ({
@@ -33,6 +34,7 @@ vi.mock("../../convex/_generated/api", () => ({
       listRooms: "warRoom:listRooms",
       getRoomEvents: "warRoom:getRoomEvents",
     },
+    v6Mutations: { deleteWarRoom: "v6Mutations:deleteWarRoom" },
     avatars: { getImageUrl: "avatars:getImageUrl" },
   },
 }));

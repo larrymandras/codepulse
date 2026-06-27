@@ -135,6 +135,9 @@ export const upsertWarRoom = mutation({
     participantIds: v.optional(v.array(v.string())),
     createdAt: v.optional(v.float64()),
     updatedAt: v.float64(),
+    // When false, a non-existent room is NOT created (patch-only). Used by
+    // room.updated so a late close event can't resurrect a deleted room.
+    insertIfMissing: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db
@@ -153,7 +156,7 @@ export const upsertWarRoom = mutation({
           ? { participantIds: args.participantIds }
           : {}),
       });
-    } else {
+    } else if (args.insertIfMissing !== false) {
       // Insert path: schema requires name + createdAt, so fall back to roomId/now.
       await ctx.db.insert("warRooms", {
         roomId: args.roomId,
@@ -164,6 +167,29 @@ export const upsertWarRoom = mutation({
         updatedAt: args.updatedAt,
       });
     }
+  },
+});
+
+/**
+ * Delete a war room and all of its transcript/lifecycle events.
+ * Operator-initiated removal from the War Room list.
+ */
+export const deleteWarRoom = mutation({
+  args: { roomId: v.string() },
+  handler: async (ctx, { roomId }) => {
+    const room = await ctx.db
+      .query("warRooms")
+      .withIndex("by_roomId", (q) => q.eq("roomId", roomId))
+      .first();
+    if (room) await ctx.db.delete(room._id);
+
+    const events = await ctx.db
+      .query("warRoomEvents")
+      .withIndex("by_room_seq", (q) => q.eq("roomId", roomId))
+      .collect();
+    for (const e of events) await ctx.db.delete(e._id);
+
+    return { roomDeleted: !!room, eventsDeleted: events.length };
   },
 });
 

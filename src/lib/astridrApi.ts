@@ -255,6 +255,13 @@ export async function createWarRoom(
   });
 }
 
+/** Tear down a live war room (deletes the LiveKit room + dispatched agents). */
+export async function closeWarRoom(roomId: string): Promise<void> {
+  await apiRequest<unknown>(`/api/war-room/${encodeURIComponent(roomId)}`, {
+    method: "DELETE",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Meeting Bot: Send / Leave / Status
 // ---------------------------------------------------------------------------

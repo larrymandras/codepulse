@@ -15,7 +15,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { GlassPanel } from "@/components/GlassPanel";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -34,6 +34,8 @@ import { Plus, Loader2, AlertCircle } from "lucide-react";
 import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 import { useWarRoomVoice } from "@/hooks/useWarRoomVoice";
+import { closeWarRoom } from "@/lib/astridrApi";
+import { toast } from "sonner";
 
 // Stable empty reference — passing an inline `[]` would change identity every
 // render and (combined with the dialog's open-effect) churn the launch form.
@@ -75,6 +77,39 @@ export default function WarRoom() {
   }, [_rawRooms]);
 
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const deleteWarRoom = useMutation(api.v6Mutations.deleteWarRoom);
+
+  const handleDeleteRoom = useCallback(
+    async (room: { roomId: string; status: string; name: string }) => {
+      if (
+        !window.confirm(
+          `Delete war room "${room.name}"? This removes it and its transcript.`,
+        )
+      ) {
+        return;
+      }
+      try {
+        // Tear down the live LiveKit room + agents first (best-effort — a room
+        // seeded via ingest may have no live LiveKit room behind it).
+        if (room.status === "active") {
+          try {
+            await closeWarRoom(room.roomId);
+          } catch {
+            /* no live room to close — proceed to remove the record */
+          }
+        }
+        await deleteWarRoom({ roomId: room.roomId });
+        setSelectedRoomId((cur) => (cur === room.roomId ? null : cur));
+        toast.success(`Deleted "${room.name}"`);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to delete room",
+        );
+      }
+    },
+    [deleteWarRoom],
+  );
+
   const allRooms = [...roomsData.active, ...roomsData.closed];
   const selectedRoom = allRooms.find((r) => r.roomId === selectedRoomId);
   const roomEvents =
@@ -243,6 +278,7 @@ export default function WarRoom() {
                   room={room}
                   isSelected={room.roomId === selectedRoomId}
                   onSelect={() => setSelectedRoomId(room.roomId)}
+                  onDelete={() => handleDeleteRoom(room)}
                 />
               ))}
               {/* Empty states — mutually exclusive (ROOM-02 / UI-SPEC copywriting) */}
@@ -266,6 +302,7 @@ export default function WarRoom() {
                       room={room}
                       isSelected={room.roomId === selectedRoomId}
                       onSelect={() => setSelectedRoomId(room.roomId)}
+                      onDelete={() => handleDeleteRoom(room)}
                     />
                   ))}
                   {/* Surface E: Show older rooms pagination (ROOM-02) */}

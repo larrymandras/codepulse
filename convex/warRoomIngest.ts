@@ -37,6 +37,8 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
         participantIds: body.participantIds as string[] | undefined,
         createdAt: body.createdAt as number | undefined,
         updatedAt: (body.updatedAt as number) ?? Date.now(),
+        // room.updated must not recreate a room the operator deleted.
+        insertIfMissing: eventType === "room.created",
       });
     } else if (eventType === "participant.joined" || eventType === "participant.left") {
       await ctx.runMutation(api.v6Mutations.insertWarRoomEvent, {
