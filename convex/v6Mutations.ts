@@ -128,10 +128,12 @@ export const upsertAuthAlias = mutation({
 export const upsertWarRoom = mutation({
   args: {
     roomId: v.string(),
-    name: v.string(),
+    // name/createdAt optional: lifecycle updates (e.g. room.updated on close) only
+    // know the roomId + new status. Omitting them preserves the original values.
+    name: v.optional(v.string()),
     status: v.string(),
     participantIds: v.optional(v.array(v.string())),
-    createdAt: v.float64(),
+    createdAt: v.optional(v.float64()),
     updatedAt: v.float64(),
   },
   handler: async (ctx, args) => {
@@ -141,9 +143,26 @@ export const upsertWarRoom = mutation({
       .first();
 
     if (existing) {
-      await ctx.db.patch(existing._id, { ...args, updatedAt: Date.now() });
+      // Update path: never reset createdAt (it anchors the by_status sort);
+      // only overwrite name/participantIds when the event actually provides them.
+      await ctx.db.patch(existing._id, {
+        status: args.status,
+        updatedAt: Date.now(),
+        ...(args.name !== undefined ? { name: args.name } : {}),
+        ...(args.participantIds !== undefined
+          ? { participantIds: args.participantIds }
+          : {}),
+      });
     } else {
-      await ctx.db.insert("warRooms", args);
+      // Insert path: schema requires name + createdAt, so fall back to roomId/now.
+      await ctx.db.insert("warRooms", {
+        roomId: args.roomId,
+        name: args.name ?? args.roomId,
+        status: args.status,
+        participantIds: args.participantIds,
+        createdAt: args.createdAt ?? Date.now(),
+        updatedAt: args.updatedAt,
+      });
     }
   },
 });

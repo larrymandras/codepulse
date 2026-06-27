@@ -28,12 +28,14 @@ export const warRoomIngest = httpAction(async (ctx, request) => {
     const eventType = body.type as string;
 
     if (eventType === "room.created" || eventType === "room.updated") {
+      // Forward name/createdAt/participantIds only when present so a room.updated
+      // event (close) doesn't clobber the original name/createdAt with defaults.
       await ctx.runMutation(api.v6Mutations.upsertWarRoom, {
         roomId: body.roomId as string,
-        name: body.name as string,
+        name: body.name as string | undefined,
         status: body.status as string,
         participantIds: body.participantIds as string[] | undefined,
-        createdAt: (body.createdAt as number) ?? Date.now(),
+        createdAt: body.createdAt as number | undefined,
         updatedAt: (body.updatedAt as number) ?? Date.now(),
       });
     } else if (eventType === "participant.joined" || eventType === "participant.left") {
