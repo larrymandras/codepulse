@@ -116,7 +116,10 @@ export function WarRoomLaunchDialog({
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamDescription, setNewTeamDescription] = useState("");
 
-  // Reset state when dialog opens
+  // Reset state only when the dialog transitions OPEN. We intentionally depend on
+  // `open` alone: parents pass a fresh `initialParticipantIds` array literal on every
+  // render, so including it here would re-fire this effect on each parent re-render
+  // and wipe the participants/topic the user is entering (and keep Launch disabled).
   useEffect(() => {
     if (open) {
       setParticipantIds([...initialParticipantIds]);
@@ -128,7 +131,8 @@ export function WarRoomLaunchDialog({
       setNewTeamName("");
       setNewTeamDescription("");
     }
-  }, [open, initialParticipantIds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Agent lookup map
   const agentMap = useMemo(() => {

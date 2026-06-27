@@ -35,6 +35,10 @@ import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 import { useWarRoomVoice } from "@/hooks/useWarRoomVoice";
 
+// Stable empty reference — passing an inline `[]` would change identity every
+// render and (combined with the dialog's open-effect) churn the launch form.
+const EMPTY_IDS: string[] = [];
+
 export default function WarRoom() {
   // ─── Deep-link param (ROOM-04) ────────────────────────────────────────────
   const { roomId: deepLinkRoomId } = useParams<{ roomId?: string }>();
@@ -222,7 +226,7 @@ export default function WarRoom() {
       <WarRoomLaunchDialog
         open={launchOpen}
         onOpenChange={setLaunchOpen}
-        initialParticipantIds={[]}
+        initialParticipantIds={EMPTY_IDS}
         showSaveAsTeam
       />
       <SectionErrorBoundary name="War Room">
