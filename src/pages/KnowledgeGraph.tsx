@@ -378,6 +378,12 @@ export default function KnowledgeGraph() {
   // from "search" to "entity" automatically when the URL is navigated to.
   const handleSearchResultClick = useCallback(
     (subjectName: string) => {
+      // Reset the one-shot inbound-focus guard so THIS click re-applies the
+      // entity-lens override. Without this, appliedFocusRef stays true after the
+      // first ?focus (deep-link hydration or a prior click left in the URL on
+      // reload), and every subsequent search-result click is silently ignored —
+      // the URL changes (return chip appears) but setLens("entity") never fires.
+      appliedFocusRef.current = false;
       const url = buildFocusUrl(
         { surface: "knowledge-graph", entityName: subjectName, hops: 1 },
         window.location.pathname + window.location.search,
