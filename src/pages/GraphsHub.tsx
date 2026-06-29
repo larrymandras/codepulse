@@ -3,8 +3,9 @@
  *
  * Route: /graphs
  *
- * Composes three live summary tiles (Tool Galaxy, MCP Inventory, KG Explorer)
- * above the CodeVaultGraph hero. Follows the HivePage thin-composition pattern.
+ * Composes six live summary tiles (Tool Galaxy, MCP Inventory, KG Explorer,
+ * Capabilities, 3D Memory Galaxy, Hive/Swarm) above the CodeVaultGraph hero.
+ * Follows the HivePage thin-composition pattern.
  * Each tile and the hero are independently wrapped in SectionErrorBoundary so
  * a single surface failure does not take down the page (D-12 — tiles are
  * independent of the snapshot state).
@@ -12,7 +13,9 @@
 
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "convex/react";
 import { Network } from "lucide-react";
+import { api } from "../../convex/_generated/api";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { GlassPanel } from "../components/GlassPanel";
 import MetricCard from "../components/MetricCard";
@@ -21,6 +24,8 @@ import { CodeVaultGraph } from "../components/graph/CodeVaultGraph";
 import { useToolGalaxySources } from "../hooks/useToolGalaxy";
 import { useMcpHealthSources } from "../hooks/useMcpHealth";
 import { useKgSummary } from "../hooks/useKgSummary";
+import { useCapabilitySummary } from "../hooks/useCapabilities";
+import { useGoalList } from "../hooks/useSwarmGraph";
 import { buildGalaxy } from "../lib/tool-galaxy";
 
 // ---------------------------------------------------------------------------
@@ -87,6 +92,51 @@ function KgExplorerTile() {
   );
 }
 
+function CapabilitiesTile() {
+  const navigate = useNavigate();
+  const summary = useCapabilitySummary();
+
+  const skills = summary?.skills ?? 0;
+  const tools = summary?.tools ?? 0;
+
+  return (
+    <MetricCard
+      label="CAPABILITIES"
+      value={`${skills} skills · ${tools} tools`}
+      onClick={() => navigate("/capabilities")}
+    />
+  );
+}
+
+function MemoryGalaxyTile() {
+  const navigate = useNavigate();
+  const overview = useQuery(api.memory.overview);
+
+  const events = overview?.total ?? 0;
+  const agents = overview ? Object.keys(overview.byAgent).length : 0;
+
+  return (
+    <MetricCard
+      label="3D MEMORY GALAXY"
+      value={`${events} events · ${agents} agents`}
+      onClick={() => navigate("/memory")}
+    />
+  );
+}
+
+function HiveSwarmTile() {
+  const navigate = useNavigate();
+  const goals = useGoalList();
+
+  return (
+    <MetricCard
+      label="HIVE / SWARM"
+      value={`${goals.length} goals`}
+      onClick={() => navigate("/hive")}
+    />
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -103,7 +153,7 @@ export default function GraphsHub() {
         </h1>
       </div>
 
-      {/* Summary tile row — three independent tiles */}
+      {/* Summary tile row — six independent tiles, one per graph surface */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <SectionErrorBoundary name="Tool Galaxy tile">
           <ToolGalaxyTile />
@@ -113,6 +163,15 @@ export default function GraphsHub() {
         </SectionErrorBoundary>
         <SectionErrorBoundary name="KG Explorer tile">
           <KgExplorerTile />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="Capabilities tile">
+          <CapabilitiesTile />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="3D Memory Galaxy tile">
+          <MemoryGalaxyTile />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="Hive / Swarm tile">
+          <HiveSwarmTile />
         </SectionErrorBoundary>
       </div>
 

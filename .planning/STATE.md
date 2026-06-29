@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 Phase: Milestone v9.0 complete (tagged v9.0)
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-29 — Milestone v9.0 completed and archived
+Last activity: 2026-06-29 — Completed quick task 260629-nnf: Graphs Hub tile index
 
 ## Deferred Items
 
@@ -148,6 +148,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 - **Phase 90 cross-repo dependency (ROOM-03):** ✅ RESOLVED — real operator Join is live (astridr token endpoint + LiveKit profile + room/transcript ingest all built and verified this session). Remaining: operator live sign-off (90-08).
 - **Phase 91 FPS at 4,038 nodes:** No controlled benchmark yet. FPS ≥30 is a blocking acceptance criterion — validate against the live `graphSnapshots` snapshot before shipping.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260629-nnf | Complete Graphs Hub tile index — Capabilities, 3D Memory Galaxy, Hive/Swarm tiles | 2026-06-29 | 2d9df13 | [260629-nnf-graphs-hub-tile-index](./quick/260629-nnf-graphs-hub-tile-index/) |
 
 ## Session Continuity
 
