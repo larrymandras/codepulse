@@ -320,6 +320,72 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     return filteredData.nodes.filter((n) => neighborIds.has(n.id));
   }, [filteredData, selectedNodeId]);
 
+  // ── 3D: neighborIds as Set for O(1) colorFn3D membership check ──────────
+  // Structurally identical to neighborNodes above but returns a Set<string>
+  // instead of an array — colorFn3D uses .has() for the dim logic.
+  const neighborIds = useMemo(() => {
+    if (!selectedNodeId) return new Set<string>();
+    const ids = new Set<string>();
+    filteredData.links.forEach((l) => {
+      const srcId = typeof l.source === "string" ? l.source : (l.source as any)?.id;
+      const tgtId = typeof l.target === "string" ? l.target : (l.target as any)?.id;
+      if (srcId === selectedNodeId && tgtId) ids.add(tgtId);
+      if (tgtId === selectedNodeId && srcId) ids.add(srcId);
+    });
+    return ids;
+  }, [filteredData, selectedNodeId]);
+
+  // ── 3D color/size callbacks (hex-only — Pitfall 1: rgba dropped by Three.js)
+  //
+  // colorFn3D encodes four node states: selected (white), hovered (white),
+  // dimmed non-neighbor (zinc-800 #27272a), normal (primary/vaultNode hex).
+  // All deps must be listed so the callback re-creates when selection/theme changes.
+  const colorFn3D = useCallback(
+    (node: any): string => {
+      if (node.id === selectedNodeId) return "#ffffff"; // selection: bright white
+      if (node.id === hoveredNodeId) return "#ffffff";  // hover: bright white
+      // Dim all non-neighbors when a selection is active (#27272a zinc-800 hex,
+      // NOT rgba — rgba is silently dropped by Three.js Color, producing black).
+      if (selectedNodeId && !neighborIds.has(node.id)) return "#27272a";
+      return isVaultNode(node) ? colors.vaultNode : colors.primary;
+    },
+    [selectedNodeId, hoveredNodeId, neighborIds, colors],
+  );
+
+  // nodeValFn3D: selected node sphere is 3× the normal size (UI-SPEC Node State Encoding).
+  const nodeValFn3D = useCallback(
+    (node: any): number =>
+      node.id === selectedNodeId ? (node.val ?? 1) * 3 : (node.val ?? 1),
+    [selectedNodeId],
+  );
+
+  // linkColorFn3D: hex-only (alpha via linkOpacity={0.2} on ForceGraph3D props).
+  const linkColorFn3D = useCallback(
+    (link: any): string => {
+      const srcIsVault = typeof link.source === "string"
+        ? link.source.startsWith("vault:")
+        : link.source?.source?.startsWith("vault:") ?? false;
+      const tgtIsVault = typeof link.target === "string"
+        ? link.target.startsWith("vault:")
+        : link.target?.source?.startsWith("vault:") ?? false;
+      if (srcIsVault && tgtIsVault) return colors.vaultNode; // hex — alpha via linkOpacity
+      if (!srcIsVault && !tgtIsVault) return colors.primary;  // hex — alpha via linkOpacity
+      return "#94a3b8"; // muted-foreground neutral for cross-source links
+    },
+    [colors],
+  );
+
+  // ── Post-settle 3D redraw (RESEARCH Pattern 4 / Pitfall 4) ───────────────
+  // When selection/hover/theme changes, Three.js materials are already cached.
+  // refresh() signals the renderer to re-apply nodeColor/linkColor.
+  // RESEARCH Open Question 1 note: if refresh() does not re-apply colors to
+  // existing materials, the fallback is nodeThreeObject material-mutation;
+  // verify empirically in the dev app after this plan ships.
+  useEffect(() => {
+    if (renderMode !== "3d") return;
+    fgRef3d.current?.refresh();
+  }, [selectedNodeId, hoveredNodeId, colors, renderMode]);
+
   // ── paintNode — selection ring (KnowledgeGraph L59-103 pattern) ──────────
   const paintNode = useCallback(
     (
@@ -550,28 +616,55 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             </span>
           </div>
 
-          {/* ForceGraphCanvas — explicit className prop (Pitfall 6).
-              ref + onEngineStop frame the graph to the viewport once the
-              simulation settles (and after filter/fullscreen reheats) so a
-              small node set never strands in a corner (IN-01).
-              NOTE: 2D/3D swap point lives here — Task 2 (Plan 03) wraps this in
-              a renderMode conditional and adds the Suspense/LazyForceGraph3D branch. */}
-          <ForceGraphCanvas
-            ref={fgRef2d}
-            data={filteredData}
-            colorFn={colorFn}
-            labelFn={labelFn}
-            paintNode={paintNode}
-            linkColorFn={linkColorFn}
-            defaultNodeColor={colors.primary}
-            defaultLinkColor={colors.primaryAlpha18}
-            onNodeClick={(node: any) => setSelectedNodeId(node.id)}
-            onBackgroundClick={() => setSelectedNodeId(null)}
-            onEngineStop={() => fgRef2d.current?.zoomToFit(400, 60)}
-            className={canvasClass}
-            clusterForce={true}
-            communityColorFn={(node: any) => communityColor(node.community)}
-          />
+          {/* ── Render surface swap (Phase 91, G3D-01 / SC#2) ──────────────
+              2D branch: ForceGraphCanvas props are byte-identical to the
+              pre-plan-03 mount (only fgRef→fgRef2d rename) — SC#1 no regression.
+              3D branch: lazily loaded so three.js stays in a separate chunk (SC#2);
+              Suspense fallback mirrors canvasClass sizing so layout doesn't shift. */}
+          {renderMode === "2d" ? (
+            <ForceGraphCanvas
+              ref={fgRef2d}
+              data={filteredData}
+              colorFn={colorFn}
+              labelFn={labelFn}
+              paintNode={paintNode}
+              linkColorFn={linkColorFn}
+              defaultNodeColor={colors.primary}
+              defaultLinkColor={colors.primaryAlpha18}
+              onNodeClick={(node: any) => setSelectedNodeId(node.id)}
+              onBackgroundClick={() => setSelectedNodeId(null)}
+              onEngineStop={() => fgRef2d.current?.zoomToFit(400, 60)}
+              className={canvasClass}
+              clusterForce={true}
+              communityColorFn={(node: any) => communityColor(node.community)}
+            />
+          ) : (
+            <Suspense
+              fallback={
+                <div className={canvasClass}>
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-primary/70 font-mono text-base animate-pulse">
+                      Loading 3D render…
+                    </p>
+                  </div>
+                </div>
+              }
+            >
+              <LazyForceGraph3D
+                ref={fgRef3d}
+                data={filteredData}
+                colorFn={colorFn3D}
+                nodeValFn={nodeValFn3D}
+                linkColorFn={linkColorFn3D}
+                labelFn={labelFn}
+                onNodeClick={(node: any) => setSelectedNodeId(node.id)}
+                onNodeHover={(node: any) => setHoveredNodeId(node?.id ?? null)}
+                onBackgroundClick={() => setSelectedNodeId(null)}
+                onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                className={canvasClass}
+              />
+            </Suspense>
+          )}
         </div>
 
         {/* Detail panel (D-10) — also renders with just the return chip when
