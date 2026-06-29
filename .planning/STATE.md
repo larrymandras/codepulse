@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
-status: executing
-stopped_at: Phase 90 (Agent Room / War Room) COMPLETE — 8/8 plans; 90-08 operator live sign-off received 2026-06-29 (token endpoint, two-way muted-default audio + real identity, seq-ordered transcript all verified live). v9.0 now 4/5 phases; only Phase 91 (3D Memory Galaxy) remains.
-last_updated: "2026-06-29T12:00:00.000Z"
+status: completed
+stopped_at: Phase 91 context gathered
+last_updated: "2026-06-29T12:58:58.781Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 5
@@ -129,7 +129,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29
-Stopped at: Phase 90 COMPLETE — 8/8 plans, operator live sign-off received ("approved" 2026-06-29). Cross-repo live integration built + verified end-to-end (LiveKit war-room profile, Convex deploy, astridr room+transcript ingest, delete-room feature, dialog/upsert fixes). All automated tests green, tsc clean.
+Last session: 2026-06-29T12:58:58.771Z
+Stopped at: Phase 91 context gathered
 Next action: Phase 91 (3D Memory Galaxy) — run `/gsd-discuss-phase 91` (or plan it); validate FPS≥30 at ~4,038 nodes before shipping. It's the last v9.0 phase before `/gsd-complete-milestone`.
-Resume file: None (Phase 90 closed; see 90-INTEGRATION-NOTES.md + 90-08-SUMMARY.md for the record)
+Resume file: .planning/phases/91-3d-memory-galaxy/91-CONTEXT.md
