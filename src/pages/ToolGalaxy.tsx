@@ -33,6 +33,8 @@ import { buildFocusUrl, focusKeysMatch } from "../lib/focus-url";
 import { centerNodeWhenReady } from "../lib/graph-center";
 import { useProjectGraph } from "../hooks/useProjectGraph";
 import { useFocusParam } from "../hooks/useFocusParam";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 // Phase 71 token-aligned palette (emerald primary, info blue, violet).
 const COLORS = {
@@ -75,6 +77,8 @@ function surfaceLabel(fromUrl: string): string {
   if (path.startsWith("/graphs")) return "Code/Vault Graph";
   if (path.startsWith("/knowledge-graph")) return "KG Explorer";
   if (path.startsWith("/tool-galaxy")) return "Tool Galaxy";
+  if (path.startsWith("/hive")) return "Hive";
+  if (path.startsWith("/memory")) return "Memory";
   return "previous graph";
 }
 
@@ -162,6 +166,15 @@ function GalaxyCanvas({
     return [...toolNodes].sort((a, b) => a.name.localeCompare(b.name));
   }, [selectedNode, graph.links, graph.nodes]);
   const firstTool = agentTools.length > 0 ? agentTools[0] : null;
+
+  // Inbound cross-graph: swarm goals this agent participated in (Tool Galaxy
+  // agent → Hive). Skipped for non-agent nodes. Newest goal is the jump target.
+  const agentGoals =
+    useQuery(
+      api.swarmTasks.goalsByAgent,
+      selectedNode?.kind === "agent" ? { agentId: selectedNode.name } : "skip",
+    ) ?? [];
+  const firstGoal = agentGoals.length > 0 ? agentGoals[0] : null;
 
   // Inbound focus param handling (Task 2) — one-shot on mount
   const { fromParam } = useFocusParam({
@@ -433,10 +446,11 @@ function GalaxyCanvas({
                   </div>
                 )}
 
-                {/* RELATED ACROSS GRAPHS — forward tool→agent (ownerMatch) and
-                    reverse agent→tools (firstTool). A node is either a tool or an
-                    agent, so at most one link renders. (SC#3/D-04 + GH-04 round-trip) */}
-                {(ownerMatch || firstTool) && (
+                {/* RELATED ACROSS GRAPHS — forward tool→agent (ownerMatch),
+                    reverse agent→tools (firstTool), and agent→Hive swarm goals
+                    (firstGoal). Tools/agent are mutually exclusive; an agent may
+                    show both tools + swarm-goals. (SC#3/D-04 + GH-04 round-trip) */}
+                {(ownerMatch || firstTool || firstGoal) && (
                   <>
                     <Separator className="mt-6 mb-4" />
                     <div
@@ -494,6 +508,27 @@ function GalaxyCanvas({
                             </span>
                             <span className="text-sm font-semibold text-foreground truncate">
                               {firstTool.name}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+                          </button>
+                        )}
+                        {firstGoal && (
+                          <button
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            onClick={() =>
+                              navigate(
+                                "/hive?goal=" + encodeURIComponent(firstGoal),
+                              )
+                            }
+                          >
+                            <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-sm text-muted-foreground">
+                              {agentGoals.length === 1
+                                ? "1 swarm goal"
+                                : `${agentGoals.length} swarm goals`}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              Hive
                             </span>
                             <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
                           </button>

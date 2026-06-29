@@ -103,3 +103,26 @@ export const listGoals = query({
       .collect();
   },
 });
+
+/**
+ * goalsByAgent: distinct goalIds an agent participated in (claimed or assigned),
+ * newest-first by the agent's most-recent task in each goal. Powers the inbound
+ * cross-graph link (Tool Galaxy agent → its Hive swarm goals). No agent index
+ * exists, so this scans swarmTasks — fine at swarm scale.
+ */
+export const goalsByAgent = query({
+  args: { agentId: v.string() },
+  handler: async (ctx, args) => {
+    const tasks = await ctx.db.query("swarmTasks").collect();
+    const latestByGoal = new Map<string, number>();
+    for (const t of tasks) {
+      if (t.agentId === args.agentId || t.claimedBy === args.agentId) {
+        const prev = latestByGoal.get(t.goalId) ?? 0;
+        if (t.timestamp > prev) latestByGoal.set(t.goalId, t.timestamp);
+      }
+    }
+    return [...latestByGoal.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([goalId]) => goalId);
+  },
+});

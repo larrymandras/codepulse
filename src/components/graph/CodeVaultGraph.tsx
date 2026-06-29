@@ -284,6 +284,8 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     if (path.startsWith("/tool-galaxy")) return "Tool Galaxy";
     if (path.startsWith("/knowledge-graph")) return "KG Explorer";
     if (path.startsWith("/graphs")) return "Code/Vault Graph";
+    if (path.startsWith("/hive")) return "Hive";
+    if (path.startsWith("/memory")) return "Memory";
     return "previous graph";
   }, [fromParam]);
 
