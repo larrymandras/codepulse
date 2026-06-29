@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
 stopped_at: Completed 91-02-PLAN.md — ForceGraph3D component + centerNode3DWhenReady
-last_updated: "2026-06-29T15:36:09.838Z"
+last_updated: "2026-06-29T15:40:46.854Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 30
-  completed_plans: 28
+  completed_plans: 29
   percent: 80
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 91 (3d-memory-galaxy) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Next: Phase 91 (3D Memory Galaxy) — the last v9.0 phase before /gsd-complete-milestone
 Status: Ready to execute
 Last activity: 2026-06-29
 
-Progress: [█████████░] 93%
+Progress: [██████████] 97%
 
 ## v9.0 Roadmap
 
@@ -121,6 +121,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - **ForceGraph3DLib is the sole react-force-graph-3d import site** — `ForceGraph3D.tsx` is the only file allowed to import `react-force-graph-3d`, `three`, or `3d-force-graph`; the `React.lazy` boundary in `CodeVaultGraph.tsx` keeps Three.js out of the main chunk (SC#2). Verified: `grep -rl "react-force-graph-3d" src` returns only this file.
 - **cooldownTicks=150** — the library default is `Infinity`; a finite value is required so `onEngineStop` fires and `zoomToFit(400, 60)` runs on simulation settle (Pitfall 3). Value 150 matches ForceGraphCanvas's 120 ticks with a small buffer for 3D physics.
 - **centerNode3DWhenReady appended without touching 2D path** — `centerNodeWhenReady` (L30-61) is byte-unchanged; the 3D function mirrors its RAF/cancel/frames/maxFrames structure exactly. `lookAt` passed as explicit node coords to prevent camera aiming at scene origin for off-center nodes (Pitfall 6).
+- [Phase ?]: SC#2 PASS: three.js/react-force-graph-3d confined to ForceGraph3D-[hash].js lazy chunk; zero three.js markers in any of the 3 main index chunks
 
 ### Pending Todos
 
@@ -136,7 +137,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29T15:36:09.829Z
+Last session: 2026-06-29T15:39:57.481Z
 Stopped at: Completed 91-02-PLAN.md — ForceGraph3D component + centerNode3DWhenReady
 Next action: Execute Phase 91 Plan 03 (Wave 2) — CodeVaultGraph toggle UI + lazy 3D swap
 Resume file: None
