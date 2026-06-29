@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
-status: executing
-stopped_at: Completed 91-02-PLAN.md — ForceGraph3D component + centerNode3DWhenReady
-last_updated: "2026-06-29T15:40:46.854Z"
+status: milestone_complete
+stopped_at: v9.0 complete (5/5 phases, 30/30 plans) — ready for /gsd-complete-milestone
+last_updated: 2026-06-29T16:50:02.104Z
 last_activity: 2026-06-29
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 30
-  completed_plans: 29
-  percent: 80
+  completed_plans: 30
+  percent: 100
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 91 — 3d-memory-galaxy
+**Current focus:** v9.0 COMPLETE (5/5 phases) — ready for /gsd-complete-milestone
 
 ## Current Position
 
-Phase: 91 (3d-memory-galaxy) — EXECUTING
-Plan: 5 of 5
-Next: Phase 91 (3D Memory Galaxy) — the last v9.0 phase before /gsd-complete-milestone
-Status: Ready to execute
+Phase: 91 (3D Memory Galaxy) — ✅ COMPLETE (5/5 plans; verifier PASSED, operator GPU sign-off 2026-06-29)
+Plan: all complete
+Next: `/gsd-complete-milestone` v9.0 (all 5 phases done). NOTE: before running it, rename the stale `milestones/v9.0-*.md` archives (different Astridhr track) to `astridhr-adversarial-v9.0-*` to avoid clobbering.
+Status: Milestone complete — ready to ship/close
 Last activity: 2026-06-29
 
-Progress: [██████████] 97%
+Progress: [██████████] 100% (v9.0: 5/5 phases, 30/30 plans)
 
 ## v9.0 Roadmap
 
@@ -40,10 +40,10 @@ Progress: [██████████] 97%
 | 88 | Analytics Rollup | AR-01, AR-02, AR-03 | ✅ Complete (4/4 plans) |
 | 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | ✅ Complete (7/7 plans) |
 | 90 | Agent Room / War Room | ROOM-01..ROOM-04 | ✅ Complete (8/8 plans; live sign-off 2026-06-29) |
-| 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
-| 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (5/5 plans) |
+| 91 | 3D Memory Galaxy | G3D-01, G3D-02 | ✅ Complete (5/5 plans; FPS≥30 + WebGL-leak operator sign-off 2026-06-29) |
+| 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (6/6 plans) |
 
-**Execution order:** 88 → 89 → 92 (done) → 90 → 91. Phase 90 requires cross-repo Ástríðr audit before planning (confirm `POST /api/war-room` ingest path). Phase 91 needs the FPS≥30 benchmark at ~4k nodes before shipping.
+**Execution order:** 88 → 89 → 92 → 90 → 91 (all done). All five v9.0 phases complete; milestone ready to close.
 
 ## Accumulated Context
 
@@ -137,7 +137,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29T15:39:57.481Z
-Stopped at: Completed 91-02-PLAN.md — ForceGraph3D component + centerNode3DWhenReady
-Next action: Execute Phase 91 Plan 03 (Wave 2) — CodeVaultGraph toggle UI + lazy 3D swap
+Last session: 2026-06-29T16:50:02.104Z
+Stopped at: Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases.
+Next action: `/gsd-complete-milestone` v9.0 — rename stale `milestones/v9.0-*.md` archives to `astridhr-adversarial-v9.0-*` FIRST to avoid clobber (see Pending Todos).
 Resume file: None
