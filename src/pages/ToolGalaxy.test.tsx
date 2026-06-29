@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render as rtlRender, screen } from "@testing-library/react";
+import { render as rtlRender, screen, within, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement } from "react";
 import type {
@@ -100,6 +100,20 @@ describe("ToolGalaxy page", () => {
     const ids = h.props!.graphData.nodes.map((n: any) => n.id);
     expect(ids).toContain("tool:Read");
     expect(ids).toContain("agent:skuld");
+  });
+
+  it("shows an agent's tools as a reverse cross-graph link when an agent node is selected", () => {
+    sources.tools = [tool("Read")];
+    sources.edges = [edge("skuld", "Read")];
+    render(<ToolGalaxy />);
+    expect(h.props).not.toBeNull();
+    // Select the agent node via the captured force-graph onNodeClick handler.
+    act(() => {
+      h.props!.onNodeClick({ id: "agent:skuld" });
+    });
+    expect(screen.getByText("RELATED ACROSS GRAPHS")).toBeInTheDocument();
+    const toolsLink = screen.getByText("1 tool").closest("button")!;
+    expect(within(toolsLink).getByText("Read")).toBeInTheDocument();
   });
 
   it("colors an orphan tool amber and a healthy tool emerald-ish", () => {
