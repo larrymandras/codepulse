@@ -194,10 +194,10 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     (link: any): string => {
       const srcIsVault = typeof link.source === "string"
         ? link.source.startsWith("vault:")
-        : link.source?.source?.startsWith("vault:") ?? false;
+        : link.source?.id?.startsWith("vault:") ?? false;
       const tgtIsVault = typeof link.target === "string"
         ? link.target.startsWith("vault:")
-        : link.target?.source?.startsWith("vault:") ?? false;
+        : link.target?.id?.startsWith("vault:") ?? false;
 
       if (srcIsVault && tgtIsVault) return colors.vaultNodeAlpha18;
       if (!srcIsVault && !tgtIsVault) return colors.primaryAlpha18;
@@ -379,10 +379,10 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     (link: any): string => {
       const srcIsVault = typeof link.source === "string"
         ? link.source.startsWith("vault:")
-        : link.source?.source?.startsWith("vault:") ?? false;
+        : link.source?.id?.startsWith("vault:") ?? false;
       const tgtIsVault = typeof link.target === "string"
         ? link.target.startsWith("vault:")
-        : link.target?.source?.startsWith("vault:") ?? false;
+        : link.target?.id?.startsWith("vault:") ?? false;
       if (srcIsVault && tgtIsVault) return colors.vaultNode; // hex — alpha via linkOpacity
       if (!srcIsVault && !tgtIsVault) return colors.primary;  // hex — alpha via linkOpacity
       return "#94a3b8"; // muted-foreground neutral for cross-source links
