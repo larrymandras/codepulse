@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "convex/react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -62,6 +63,7 @@ export default function Memory() {
   const [filterAgent, setFilterAgent] = useState("");
   const [filterType, setFilterType] = useState("");
   const [activeTab, setActiveTab] = useState<TabId>("timeline");
+  const [searchParams] = useSearchParams();
   const [durableSearch, setDurableSearch] = useState("");
   const [durableCategory, setDurableCategory] = useState("");
 
@@ -130,6 +132,23 @@ export default function Memory() {
   const displayEvents = searchText.length >= 2 ? searchResults : timeline;
   const agents = overview ? Object.keys(overview.byAgent) : [];
   const eventTypes = overview ? Object.keys(overview.byType) : [];
+
+  // Deep-link: ?event=<id> arrives from KG provenance links (KGDetailsPanel —
+  // "Open the episodic memory that taught this fact"). Focus + scroll to that
+  // event in the timeline so the cross-nav lands on the right memory.
+  const focusEventId = searchParams.get("event");
+  const focusedEventRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (focusEventId) setActiveTab("timeline");
+  }, [focusEventId]);
+  useEffect(() => {
+    if (focusEventId && focusedEventRef.current) {
+      focusedEventRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [focusEventId, displayEvents]);
 
   // Durable facts filtering
   const allDurableCategories = durableFacts
@@ -352,15 +371,25 @@ export default function Memory() {
                       <div className="absolute left-[11px] top-4 bottom-4 w-px bg-indigo-500/20" />
                       
                       <div className="space-y-4">
-                        {displayEvents.map((event: any) => (
+                        {displayEvents.map((event: any) => {
+                          const isFocused =
+                            !!focusEventId && event._id === focusEventId;
+                          return (
                           <div
                             key={event._id}
+                            ref={isFocused ? focusedEventRef : undefined}
+                            data-event-id={event._id}
+                            data-focused={isFocused ? "true" : undefined}
                             className="relative pl-8 group"
                           >
                             {/* Dot on the timeline */}
                             <div className="absolute left-[11px] top-3.5 -translate-x-1/2 w-2 h-2 rounded-full bg-indigo-500 ring-4 ring-background group-hover:bg-indigo-400 group-hover:shadow-[0_0_8px_rgba(99,102,241,0.6)] transition-all" />
-                            
-                            <div className="bg-card border border-border hover:bg-accent hover:border-indigo-500/30 transition-colors rounded-lg p-3">
+
+                            <div className={`bg-card border transition-colors rounded-lg p-3 ${
+                              isFocused
+                                ? "border-indigo-500 ring-2 ring-indigo-500/50"
+                                : "border-border hover:bg-accent hover:border-indigo-500/30"
+                            }`}>
                               <div className="flex items-start justify-between gap-3">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-baseline gap-2">
@@ -390,7 +419,8 @@ export default function Memory() {
                               </div>
                             </div>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
