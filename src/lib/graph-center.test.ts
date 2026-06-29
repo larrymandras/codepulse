@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { centerNodeWhenReady } from "./graph-center";
+import { centerNodeWhenReady, centerNode3DWhenReady } from "./graph-center";
 
 function makeRef() {
   return { current: { centerAt: vi.fn(), zoom: vi.fn() } };
+}
+
+function makeRef3d() {
+  return { current: { cameraPosition: vi.fn(), zoomToFit: vi.fn() } };
 }
 
 describe("centerNodeWhenReady", () => {
@@ -76,5 +80,82 @@ describe("centerNodeWhenReady", () => {
     centerNodeWhenReady(ref, null);
     expect(ref.current.centerAt).not.toHaveBeenCalled();
     expect(rafCbs.length).toBe(0);
+  });
+});
+
+describe("centerNode3DWhenReady", () => {
+  let rafCbs3d: Array<() => void>;
+  beforeEach(() => {
+    rafCbs3d = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      rafCbs3d.push(cb);
+      return rafCbs3d.length;
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+  const flush = () => {
+    const batch = rafCbs3d;
+    rafCbs3d = [];
+    batch.forEach((cb) => cb());
+  };
+
+  it("calls cameraPosition with z+150 pull-back and node coords as lookAt", () => {
+    const ref = makeRef3d();
+    centerNode3DWhenReady(ref, { x: 10, y: 20, z: 5 }, 800);
+    expect(ref.current.cameraPosition).toHaveBeenCalledOnce();
+    expect(ref.current.cameraPosition).toHaveBeenCalledWith(
+      { x: 10, y: 20, z: 155 }, // z(5) + 150 pull-back
+      { x: 10, y: 20, z: 5 },   // lookAt = node coords (Pitfall 6)
+      800
+    );
+    expect(rafCbs3d.length).toBe(0); // no retry scheduled
+  });
+
+  it("uses z=0 when node.z is undefined: position z=150, lookAt z=0", () => {
+    const ref = makeRef3d();
+    centerNode3DWhenReady(ref, { x: 10, y: 20 }, 800);
+    expect(ref.current.cameraPosition).toHaveBeenCalledWith(
+      { x: 10, y: 20, z: 150 }, // 0 + 150
+      { x: 10, y: 20, z: 0 },   // lookAt z = 0
+      800
+    );
+  });
+
+  it("retries via scheduler until x/y are assigned, then fires cameraPosition once", () => {
+    const ref = makeRef3d();
+    const node: { x?: number; y?: number; z?: number } = {};
+    centerNode3DWhenReady(ref, node, 500);
+    // coords not ready → nothing yet, a retry is queued
+    expect(ref.current.cameraPosition).not.toHaveBeenCalled();
+    expect(rafCbs3d.length).toBe(1);
+
+    flush(); // still not ready
+    expect(ref.current.cameraPosition).not.toHaveBeenCalled();
+
+    node.x = 5;
+    node.y = 7;
+    node.z = 3;
+    flush(); // coords appear
+    expect(ref.current.cameraPosition).toHaveBeenCalledOnce();
+    expect(ref.current.cameraPosition).toHaveBeenCalledWith(
+      { x: 5, y: 7, z: 153 }, // 3 + 150
+      { x: 5, y: 7, z: 3 },
+      500
+    );
+    flush(); // no further calls after success
+    expect(ref.current.cameraPosition).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancel() prevents cameraPosition from firing on a pending retry", () => {
+    const ref = makeRef3d();
+    const node: { x?: number; y?: number; z?: number } = {};
+    const cancel = centerNode3DWhenReady(ref, node, 800);
+    cancel();
+    node.x = 1;
+    node.y = 2;
+    flush();
+    expect(ref.current.cameraPosition).not.toHaveBeenCalled();
   });
 });
