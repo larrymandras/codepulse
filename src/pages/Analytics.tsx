@@ -3,7 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { useRecentEvents } from "../hooks/useRecentEvents";
 import { useLlmMetrics } from "../hooks/useLlmMetrics";
 import { formatCost } from "../lib/formatters";
-import MetricCard from "../components/MetricCard";
+import MetricCard, { thresholdColor } from "../components/MetricCard";
 import CostTrendChart from "../components/CostTrendChart";
 import LlmAnalyticsPanel from "../components/LlmAnalyticsPanel";
 import CapabilityGrowthChart from "../components/CapabilityGrowthChart";
@@ -51,7 +51,7 @@ export default function Analytics() {
   }) ?? {};
   const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0 };
   // Prompt-cache hit rate (Anthropic) — verifies caching is actually being hit
-  const cacheStats = useQuery(api.llm.cacheStats);
+  const cacheStats = useQuery(api.llm.cacheStats, {});
   // Keep total cost (all types) for backward compat with existing components
   const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
   // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
@@ -121,9 +121,9 @@ export default function Analytics() {
                   <MetricCard label="LLM Calls" value={llmCalls.length} />
                   <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
                   <MetricCard
-                    label="Cache Hit Rate"
-                    value={cacheStats ? `${(cacheStats.hitRate * 100).toFixed(1)}%` : "--"}
-                    numericValue={cacheStats ? cacheStats.hitRate * 100 : undefined}
+                    label="Cache Hit Rate (24h)"
+                    value={cacheStats ? `${(cacheStats.overall.hitRate * 100).toFixed(1)}%` : "--"}
+                    numericValue={cacheStats ? cacheStats.overall.hitRate * 100 : undefined}
                     format={(v) => `${v.toFixed(1)}%`}
                     threshold={{ ok: 50, warn: 20, invertDirection: true }}
                   />
@@ -142,7 +142,60 @@ export default function Analytics() {
               </div>
            </GlassPanel>
         </div>
-        
+
+        {/* Prompt Cache by Model (24h) — main agent caches a large stable prefix; the haiku classifier's prefix is below the cache minimum */}
+        <div className="md:col-span-12">
+          <SectionErrorBoundary name="Prompt Cache">
+            <GlassPanel className="p-4">
+              <div className="flex items-baseline justify-between mb-3">
+                <h3 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
+                  Prompt Cache by Model — last 24h
+                </h3>
+                <span className="text-xs text-muted-foreground">
+                  cache reads bill at ~0.1× input
+                </span>
+              </div>
+              {!cacheStats || cacheStats.byModel.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No Anthropic calls in the last 24h.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border/50">
+                        <th className="py-1 pr-4 font-medium">Model</th>
+                        <th className="py-1 pr-4 font-medium text-right">Calls</th>
+                        <th className="py-1 pr-4 font-medium text-right">Hit Rate</th>
+                        <th className="py-1 pr-4 font-medium text-right">Cache Read</th>
+                        <th className="py-1 font-medium text-right">Total Prompt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cacheStats.byModel.map((m) => (
+                        <tr key={m.model} className="border-b border-border/30 last:border-0">
+                          <td className="py-1.5 pr-4 font-mono">{m.model}</td>
+                          <td className="py-1.5 pr-4 text-right tabular-nums">{m.calls.toLocaleString()}</td>
+                          <td
+                            className="py-1.5 pr-4 text-right tabular-nums font-medium"
+                            style={{ color: thresholdColor(m.hitRate * 100, { ok: 50, warn: 20, invertDirection: true }) }}
+                          >
+                            {(m.hitRate * 100).toFixed(1)}%
+                          </td>
+                          <td className="py-1.5 pr-4 text-right tabular-nums text-muted-foreground">
+                            {m.cacheReadInputTokens.toLocaleString()}
+                          </td>
+                          <td className="py-1.5 text-right tabular-nums text-muted-foreground">
+                            {m.totalPromptTokens.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </GlassPanel>
+          </SectionErrorBoundary>
+        </div>
+
         {/* Cost Trend & Gateway Quota */}
         <div className="md:col-span-8">
            <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">

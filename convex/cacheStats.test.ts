@@ -16,31 +16,44 @@ function coalesceCacheFields(d: Record<string, any>) {
   };
 }
 
-// (b) mirrors llm.ts cacheStats handler
+// (b) mirrors llm.ts cacheStats handler (overall + per-model)
 type Row = {
   provider: string;
+  model?: string;
   promptTokens?: number;
   cacheReadInputTokens?: number;
   cacheCreationInputTokens?: number;
 };
+type Acc = { calls: number; read: number; creation: number; uncached: number };
+function shape(a: Acc) {
+  const total = a.read + a.creation + a.uncached;
+  return {
+    calls: a.calls,
+    cacheReadInputTokens: a.read,
+    cacheCreationInputTokens: a.creation,
+    uncachedInputTokens: a.uncached,
+    totalPromptTokens: total,
+    hitRate: total > 0 ? a.read / total : 0,
+  };
+}
 function cacheStats(rows: Row[]) {
-  let read = 0, creation = 0, uncached = 0, calls = 0;
+  const overall: Acc = { calls: 0, read: 0, creation: 0, uncached: 0 };
+  const perModel: Record<string, Acc> = {};
   for (const r of rows) {
     if (!r.provider.startsWith("anthropic")) continue;
-    calls++;
-    read += r.cacheReadInputTokens ?? 0;
-    creation += r.cacheCreationInputTokens ?? 0;
-    uncached += r.promptTokens ?? 0;
+    const read = r.cacheReadInputTokens ?? 0;
+    const creation = r.cacheCreationInputTokens ?? 0;
+    const uncached = r.promptTokens ?? 0;
+    overall.calls++; overall.read += read; overall.creation += creation; overall.uncached += uncached;
+    const key = r.model ?? "unknown";
+    if (!perModel[key]) perModel[key] = { calls: 0, read: 0, creation: 0, uncached: 0 };
+    const m = perModel[key];
+    m.calls++; m.read += read; m.creation += creation; m.uncached += uncached;
   }
-  const totalPrompt = read + creation + uncached;
-  return {
-    calls,
-    cacheReadInputTokens: read,
-    cacheCreationInputTokens: creation,
-    uncachedInputTokens: uncached,
-    totalPromptTokens: totalPrompt,
-    hitRate: totalPrompt > 0 ? read / totalPrompt : 0,
-  };
+  const byModel = Object.entries(perModel)
+    .map(([model, a]) => ({ model, ...shape(a) }))
+    .sort((x, y) => y.totalPromptTokens - x.totalPromptTokens);
+  return { overall: shape(overall), byModel };
 }
 
 describe("llm_call cache-field coalescing", () => {
@@ -61,21 +74,33 @@ describe("llm_call cache-field coalescing", () => {
 });
 
 describe("cacheStats hit rate", () => {
-  it("computes read / total-prompt and ignores non-anthropic providers", () => {
+  it("computes overall read / total-prompt and ignores non-anthropic providers", () => {
     const s = cacheStats([
-      { provider: "anthropic_advisor", promptTokens: 20, cacheReadInputTokens: 8402, cacheCreationInputTokens: 0 },
-      { provider: "anthropic_direct", promptTokens: 100, cacheReadInputTokens: 0, cacheCreationInputTokens: 1000 },
-      { provider: "openrouter", promptTokens: 5000 }, // ignored — no Anthropic caching
+      { provider: "anthropic_advisor", model: "claude-sonnet-4-6", promptTokens: 20, cacheReadInputTokens: 8402, cacheCreationInputTokens: 0 },
+      { provider: "anthropic_direct", model: "claude-sonnet-4-6", promptTokens: 100, cacheReadInputTokens: 0, cacheCreationInputTokens: 1000 },
+      { provider: "openrouter", model: "gpt-4.1", promptTokens: 5000 }, // ignored — no Anthropic caching
     ]);
-    expect(s.calls).toBe(2);
-    expect(s.cacheReadInputTokens).toBe(8402);
-    expect(s.cacheCreationInputTokens).toBe(1000);
-    expect(s.uncachedInputTokens).toBe(120);
-    expect(s.totalPromptTokens).toBe(9522);
-    expect(s.hitRate).toBeCloseTo(8402 / 9522, 6);
+    expect(s.overall.calls).toBe(2);
+    expect(s.overall.cacheReadInputTokens).toBe(8402);
+    expect(s.overall.cacheCreationInputTokens).toBe(1000);
+    expect(s.overall.uncachedInputTokens).toBe(120);
+    expect(s.overall.totalPromptTokens).toBe(9522);
+    expect(s.overall.hitRate).toBeCloseTo(8402 / 9522, 6);
+  });
+  it("breaks down per model, sorted by total prompt tokens desc", () => {
+    const s = cacheStats([
+      { provider: "anthropic_advisor", model: "claude-sonnet-4-6", promptTokens: 100, cacheReadInputTokens: 9000 },
+      { provider: "anthropic_advisor", model: "claude-haiku-4-5", promptTokens: 6000, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+    ]);
+    expect(s.byModel.map((m) => m.model)).toEqual(["claude-sonnet-4-6", "claude-haiku-4-5"]);
+    const sonnet = s.byModel.find((m) => m.model === "claude-sonnet-4-6")!;
+    const haiku = s.byModel.find((m) => m.model === "claude-haiku-4-5")!;
+    expect(sonnet.hitRate).toBeCloseTo(9000 / 9100, 6); // main agent caches
+    expect(haiku.hitRate).toBe(0); // classifier: prefix below cache minimum
   });
   it("is 0 with no anthropic traffic (no divide-by-zero)", () => {
-    expect(cacheStats([{ provider: "openrouter", promptTokens: 100 }]).hitRate).toBe(0);
-    expect(cacheStats([]).hitRate).toBe(0);
+    expect(cacheStats([{ provider: "openrouter", model: "gpt-4.1", promptTokens: 100 }]).overall.hitRate).toBe(0);
+    expect(cacheStats([]).overall.hitRate).toBe(0);
+    expect(cacheStats([]).byModel).toEqual([]);
   });
 });

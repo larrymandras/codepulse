@@ -43,41 +43,64 @@ export const recordCall = mutation({
 });
 
 /**
- * Prompt-cache hit rate over the last 30 days, for Anthropic providers
- * (cache_control only applies there). hitRate = cache_read / total prompt
- * tokens, where total = uncached input + cache writes + cache reads.
+ * Prompt-cache hit rate for Anthropic providers (cache_control only applies
+ * there), windowed (default 24h so it stays responsive instead of being diluted
+ * by historical pre-fix rows) and broken down per-model — the main agent
+ * (sonnet/opus) caches a large stable system prefix, while the haiku classifier
+ * has too small a prefix to cache, so a single org-wide number hides the win.
+ *
+ * hitRate = cache_read / total prompt tokens, where
+ * total = uncached input + cache writes + cache reads.
  */
+type CacheAcc = { calls: number; read: number; creation: number; uncached: number };
+
+function shapeCacheAcc(a: CacheAcc) {
+  const total = a.read + a.creation + a.uncached;
+  return {
+    calls: a.calls,
+    cacheReadInputTokens: a.read,
+    cacheCreationInputTokens: a.creation,
+    uncachedInputTokens: a.uncached,
+    totalPromptTokens: total,
+    hitRate: total > 0 ? a.read / total : 0,
+  };
+}
+
 export const cacheStats = query({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
+  args: { windowHours: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    const hours = args.windowHours ?? 24;
+    const cutoff = Date.now() / 1000 - hours * 3600;
     const all = await ctx.db
       .query("llmMetrics")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
-    let read = 0;
-    let creation = 0;
-    let uncached = 0;
-    let calls = 0;
+    const overall: CacheAcc = { calls: 0, read: 0, creation: 0, uncached: 0 };
+    const perModel: Record<string, CacheAcc> = {};
     for (const r of all) {
       if (!r.provider.startsWith("anthropic")) continue; // cache only applies to Anthropic
-      calls++;
-      read += r.cacheReadInputTokens ?? 0;
-      creation += r.cacheCreationInputTokens ?? 0;
-      uncached += r.promptTokens ?? 0;
+      const read = r.cacheReadInputTokens ?? 0;
+      const creation = r.cacheCreationInputTokens ?? 0;
+      const uncached = r.promptTokens ?? 0;
+      overall.calls++;
+      overall.read += read;
+      overall.creation += creation;
+      overall.uncached += uncached;
+      if (!perModel[r.model]) perModel[r.model] = { calls: 0, read: 0, creation: 0, uncached: 0 };
+      const m = perModel[r.model];
+      m.calls++;
+      m.read += read;
+      m.creation += creation;
+      m.uncached += uncached;
     }
-    const totalPrompt = read + creation + uncached;
-    return {
-      windowDays: 30,
-      calls,
-      cacheReadInputTokens: read,
-      cacheCreationInputTokens: creation,
-      uncachedInputTokens: uncached,
-      totalPromptTokens: totalPrompt,
-      hitRate: totalPrompt > 0 ? read / totalPrompt : 0,
-    };
+
+    const byModel = Object.entries(perModel)
+      .map(([model, a]) => ({ model, ...shapeCacheAcc(a) }))
+      .sort((x, y) => y.totalPromptTokens - x.totalPromptTokens);
+
+    return { windowHours: hours, overall: shapeCacheAcc(overall), byModel };
   },
 });
 
