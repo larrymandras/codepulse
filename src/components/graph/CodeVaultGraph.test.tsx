@@ -18,7 +18,7 @@
  */
 
 import { describe, it, vi, beforeEach, expect, afterEach } from "vitest";
-import { render as rtlRender, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, cleanup, act, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement } from "react";
 import {
@@ -69,6 +69,22 @@ vi.mock("../../hooks/useThemeColors", () => ({
 vi.mock("idb-keyval", () => ({
   get: vi.fn().mockResolvedValue(undefined),
   set: vi.fn().mockResolvedValue(undefined),
+}));
+
+// graph-center — spy on which centering branch the ?focus= one-shot takes. The
+// real RAF/camera polling is unit-tested in graph-center.test.ts; here we only
+// assert mode-correct branch selection (WR-02). No 2D test triggers ?focus=, so
+// these spies stay uncalled outside the focus tests below.
+vi.mock("../../lib/graph-center", () => ({
+  centerNodeWhenReady: vi.fn(),
+  centerNode3DWhenReady: vi.fn(),
+}));
+
+// ./ForceGraph3D — stub the lazy 3D surface so restoring 3d mode doesn't load
+// real react-force-graph-3d (no WebGL in jsdom). The type-only ForceGraph3DHandle
+// import in the component is erased, so this runtime stub is sufficient.
+vi.mock("./ForceGraph3D", () => ({
+  ForceGraph3D: () => <div data-testid="force-graph-3d" />,
 }));
 
 // useKnowledgeGraph (added in Phase 85) persists via idb-keyval — IndexedDB is
@@ -126,6 +142,18 @@ import { CodeVaultGraph } from "./CodeVaultGraph";
 
 // Render inside a Router so router hooks (useNavigate/useSearchParams) resolve.
 const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
+
+// Mocked idb get + graph-center spies for the ?focus= centering tests (WR-02).
+import { get as idbGet } from "idb-keyval";
+import { centerNodeWhenReady, centerNode3DWhenReady } from "../../lib/graph-center";
+
+// Render at a specific URL so ?focus= resolves through useFocusParam.
+const renderAt = (ui: ReactElement, entry: string) =>
+  rtlRender(ui, {
+    wrapper: ({ children }: { children: React.ReactNode }) => (
+      <MemoryRouter initialEntries={[entry]}>{children}</MemoryRouter>
+    ),
+  });
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -401,5 +429,51 @@ describe("CodeVaultGraph", () => {
     // vault node (vault: id prefix, bare "vault" source) → colors.vaultNode
     const vaultNode = { source: "vault", id: "vault:Note.md" };
     expect(capturedColorFn(vaultNode)).toBe("#8b5cf6"); // mocked useThemeColors().vaultNode
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WR-02 — ?focus= centering must run in the FINAL initial render mode, not the
+// default 2d that precedes idb hydration.
+// ---------------------------------------------------------------------------
+
+describe("CodeVaultGraph — ?focus= mode-aware centering (WR-02)", () => {
+  beforeEach(() => {
+    vi.mocked(centerNodeWhenReady).mockClear();
+    vi.mocked(centerNode3DWhenReady).mockClear();
+    vi.mocked(idbGet).mockReset();
+    mockGetProjectGraph(makeProjectGraphFixture());
+  });
+
+  afterEach(() => cleanup());
+
+  it("persisted-3d deep-link applies focus via the 3D centering branch, not 2D", async () => {
+    // idb restores "3d" AFTER first render — the one-shot must wait for hydration
+    // (focusReady) so onFocus closes over renderMode "3d", not the default "2d".
+    vi.mocked(idbGet).mockResolvedValue("3d");
+
+    renderAt(<CodeVaultGraph />, "/graphs?focus=vault:Note.md");
+
+    await waitFor(() =>
+      expect(centerNode3DWhenReady).toHaveBeenCalledTimes(1),
+    );
+    // 2D branch must NOT have fired — that was the WR-02 dead-path bug.
+    expect(centerNodeWhenReady).not.toHaveBeenCalled();
+    // The matched node is threaded through to the 3D centering helper.
+    expect(vi.mocked(centerNode3DWhenReady).mock.calls[0][1]).toMatchObject({
+      id: "vault:Note.md",
+    });
+  });
+
+  it("default-2d deep-link still applies focus via the 2D centering branch (SC#1 no-regression)", async () => {
+    // No persisted mode (get → undefined) → stays 2d after hydration settles.
+    vi.mocked(idbGet).mockResolvedValue(undefined);
+
+    renderAt(<CodeVaultGraph />, "/graphs?focus=graphify:codepulse:src/a.ts");
+
+    await waitFor(() =>
+      expect(centerNodeWhenReady).toHaveBeenCalledTimes(1),
+    );
+    expect(centerNode3DWhenReady).not.toHaveBeenCalled();
   });
 });

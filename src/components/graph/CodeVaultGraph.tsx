@@ -132,6 +132,11 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   const [renderMode, setRenderMode] = useState<"2d" | "3d">("2d");
   // hoveredNodeId for 3D colorFn3D dim logic (no 2D analog — paintNode handles 2D hover)
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  // focusReady gates the ?focus= one-shot (useFocusParam) until idb render-mode
+  // hydration settles, so focus is applied in the FINAL initial mode. Without it,
+  // the one-shot fires in the default 2d before idb restores 3d, leaving the 3d
+  // centering branch a dead path on persisted-3d deep-link sessions (WR-02).
+  const [focusReady, setFocusReady] = useState(false);
 
   // ── idb-keyval render-mode persistence (Phase 91, G3D-01) ─────────────────
   // Hydrate on mount — only the literal "3d" value flips to 3D (V5 coercion;
@@ -139,6 +144,11 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   // update after unmount. .catch swallowed for private-browsing / IDB unavailable.
   useEffect(() => {
     let cancelled = false;
+    // settle() flips focusReady once hydration resolves/rejects/throws so the
+    // ?focus= one-shot runs against the final initial render mode (WR-02).
+    const settle = () => {
+      if (!cancelled) setFocusReady(true);
+    };
     // idb-keyval's get() touches the `indexedDB` global synchronously (to open the
     // default store) — that global is undefined under jsdom/SSR and can throw on
     // open in private browsing, BEFORE any promise exists. The try/catch keeps the
@@ -151,9 +161,11 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
         })
         .catch(() => {
           /* private browsing / IDB unavailable — stay on 2d */
-        });
+        })
+        .finally(settle);
     } catch {
       /* synchronous IDB-open failure (jsdom/SSR/private browsing) — stay on 2d */
+      settle();
     }
     return () => {
       cancelled = true;
@@ -207,10 +219,12 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   );
 
   // ── Inbound focus param (Plan 01 hook — one-shot, SC#3-safe) ─────────────
-  // snapshotNodes is already the full node list; pass as-is so the hook can
-  // wait for data (snapshot is non-null here, so nodes are already resolved).
+  // Gate `nodes` on focusReady: the hook waits for nodes !== undefined, so this
+  // defers the one-shot until idb render-mode hydration settles. That guarantees
+  // onFocus closes over the final initial renderMode, so a persisted-3d deep-link
+  // takes the 3d centering branch instead of the stale 2d one (WR-02).
   const { fromParam } = useFocusParam({
-    nodes: snapshot.nodes,
+    nodes: focusReady ? snapshot.nodes : undefined,
     getId: (n) => n.id,
     onFocus: (node) => {
       setSelectedNodeId(node.id);
