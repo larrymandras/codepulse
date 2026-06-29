@@ -70,7 +70,12 @@ export default function HivePage() {
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         onAgentNav={(agent) =>
-          navigate(buildFocusUrl({ surface: "graphs", nodeId: agent }, "/hive"))
+          navigate(
+            buildFocusUrl(
+              { surface: "tool-galaxy", nodeId: `agent:${agent}` },
+              "/hive",
+            ),
+          )
         }
       />
     </div>

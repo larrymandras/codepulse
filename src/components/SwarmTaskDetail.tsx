@@ -87,7 +87,7 @@ export default function SwarmTaskDetail({ task, onClose, onAgentNav }: SwarmTask
                     <button
                       type="button"
                       onClick={() => onAgentNav(agent)}
-                      title="Open this agent on the Code/Vault graph"
+                      title="Focus this agent in Tool Galaxy"
                       className="inline-flex items-center gap-1.5 font-mono break-all text-foreground hover:text-primary transition-colors"
                     >
                       {agent}

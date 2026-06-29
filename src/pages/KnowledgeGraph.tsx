@@ -737,7 +737,7 @@ export default function KnowledgeGraph() {
                   onAgentNav={(agentId, entityName) =>
                     navigate(
                       buildFocusUrl(
-                        { surface: "graphs", nodeId: agentId },
+                        { surface: "tool-galaxy", nodeId: `agent:${agentId}` },
                         "/knowledge-graph?focus=" +
                           encodeURIComponent(entityName) +
                           "&lens=entity&hops=1",
