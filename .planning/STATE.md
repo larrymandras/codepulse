@@ -4,13 +4,13 @@ milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
 stopped_at: Phase 91 planned (5 plans, 4 waves) — checker PASSED
-last_updated: "2026-06-29T15:04:02.379Z"
+last_updated: "2026-06-29T15:17:27.323Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 30
-  completed_plans: 26
+  completed_plans: 27
   percent: 80
 ---
 
@@ -26,12 +26,12 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 ## Current Position
 
 Phase: 91 (3d-memory-galaxy) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Next: Phase 91 (3D Memory Galaxy) — the last v9.0 phase before /gsd-complete-milestone
 Status: Ready to execute
 Last activity: 2026-06-29
 
-Progress: [█████████░] 87%
+Progress: [█████████░] 90%
 
 ## v9.0 Roadmap
 
@@ -116,6 +116,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 **Also learned:** rebuilding the `war-room-*` workers **evicts agents from any already-open room** (agents only join at dispatch/creation; a restarted worker does not auto-rejoin) — a live room goes silent after a worker rebuild; launch a fresh room. The astridr `POST /api/war-room/{room}/token` endpoint (commit `4093aec`) is live, Bearer-enforced, malformed-name→400.
 
+**Phase 91 Plan 02 decisions (2026-06-29, Wave 1):**
+
+- **ForceGraph3DLib is the sole react-force-graph-3d import site** — `ForceGraph3D.tsx` is the only file allowed to import `react-force-graph-3d`, `three`, or `3d-force-graph`; the `React.lazy` boundary in `CodeVaultGraph.tsx` keeps Three.js out of the main chunk (SC#2). Verified: `grep -rl "react-force-graph-3d" src` returns only this file.
+- **cooldownTicks=150** — the library default is `Infinity`; a finite value is required so `onEngineStop` fires and `zoomToFit(400, 60)` runs on simulation settle (Pitfall 3). Value 150 matches ForceGraphCanvas's 120 ticks with a small buffer for 3D physics.
+- **centerNode3DWhenReady appended without touching 2D path** — `centerNodeWhenReady` (L30-61) is byte-unchanged; the 3D function mirrors its RAF/cancel/frames/maxFrames structure exactly. `lookAt` passed as explicit node coords to prevent camera aiming at scene origin for off-center nodes (Pitfall 6).
+
 ### Pending Todos
 
 - **Phase 90:** ✅ COMPLETE — 90-08 operator live sign-off received 2026-06-29 (`90-08-SUMMARY.md`); all 4 ROOM reqs verified live.
@@ -130,7 +136,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29T15:04:02.369Z
-Stopped at: Phase 91 planned (5 plans, 4 waves) — checker PASSED
-Next action: Phase 91 (3D Memory Galaxy) — run `/gsd-discuss-phase 91` (or plan it); validate FPS≥30 at ~4,038 nodes before shipping. It's the last v9.0 phase before `/gsd-complete-milestone`.
+Last session: 2026-06-29T15:16:00Z
+Stopped at: Completed 91-02-PLAN.md — ForceGraph3D component + centerNode3DWhenReady
+Next action: Execute Phase 91 Plan 03 (Wave 2) — CodeVaultGraph toggle UI + lazy 3D swap
 Resume file: None
