@@ -309,6 +309,8 @@ export default defineSchema({
     toolName: v.optional(v.string()),   // Phase 59 SCH-02
     billingType: v.optional(v.string()),  // "api" | "subscription" — Phase 67
     goalId: v.optional(v.string()),     // Phase 149 PULSE-01 — swarm cost join
+    cacheReadInputTokens: v.optional(v.float64()),      // prompt-cache hit monitoring
+    cacheCreationInputTokens: v.optional(v.float64()),  // prompt-cache write monitoring
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])

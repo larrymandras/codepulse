@@ -50,6 +50,8 @@ export default function Analytics() {
     billingType: "api",
   }) ?? {};
   const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0 };
+  // Prompt-cache hit rate (Anthropic) — verifies caching is actually being hit
+  const cacheStats = useQuery(api.llm.cacheStats);
   // Keep total cost (all types) for backward compat with existing components
   const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
   // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
@@ -118,6 +120,13 @@ export default function Analytics() {
                   </div>
                   <MetricCard label="LLM Calls" value={llmCalls.length} />
                   <MetricCard label="Total Tokens" value={totalTokens.toLocaleString()} />
+                  <MetricCard
+                    label="Cache Hit Rate"
+                    value={cacheStats ? `${(cacheStats.hitRate * 100).toFixed(1)}%` : "--"}
+                    numericValue={cacheStats ? cacheStats.hitRate * 100 : undefined}
+                    format={(v) => `${v.toFixed(1)}%`}
+                    threshold={{ ok: 50, warn: 20, invertDirection: true }}
+                  />
                   <div className="flex items-start gap-2">
                     <MetricCard label="API Spend" value={formatCost(totalApiSpend)} />
                     {anomalies.cost && (

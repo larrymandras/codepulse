@@ -17,6 +17,8 @@ export const recordCall = mutation({
     agentId: v.optional(v.string()),
     toolName: v.optional(v.string()),
     goalId: v.optional(v.string()),   // Phase 149 PULSE-01 — swarm cost join
+    cacheReadInputTokens: v.optional(v.float64()),      // prompt-cache hit monitoring
+    cacheCreationInputTokens: v.optional(v.float64()),  // prompt-cache write monitoring
   },
   handler: async (ctx, args) => {
     const billingType = getBillingType(args.provider);
@@ -34,7 +36,48 @@ export const recordCall = mutation({
       toolName: args.toolName,
       billingType,
       goalId: args.goalId,
+      cacheReadInputTokens: args.cacheReadInputTokens,
+      cacheCreationInputTokens: args.cacheCreationInputTokens,
     });
+  },
+});
+
+/**
+ * Prompt-cache hit rate over the last 30 days, for Anthropic providers
+ * (cache_control only applies there). hitRate = cache_read / total prompt
+ * tokens, where total = uncached input + cache writes + cache reads.
+ */
+export const cacheStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() / 1000 - 30 * 86400;
+    const all = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
+
+    let read = 0;
+    let creation = 0;
+    let uncached = 0;
+    let calls = 0;
+    for (const r of all) {
+      if (!r.provider.startsWith("anthropic")) continue; // cache only applies to Anthropic
+      calls++;
+      read += r.cacheReadInputTokens ?? 0;
+      creation += r.cacheCreationInputTokens ?? 0;
+      uncached += r.promptTokens ?? 0;
+    }
+    const totalPrompt = read + creation + uncached;
+    return {
+      windowDays: 30,
+      calls,
+      cacheReadInputTokens: read,
+      cacheCreationInputTokens: creation,
+      uncachedInputTokens: uncached,
+      totalPromptTokens: totalPrompt,
+      hitRate: totalPrompt > 0 ? read / totalPrompt : 0,
+    };
   },
 });
 

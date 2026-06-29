@@ -69,6 +69,8 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             agentId: d.agentId ?? d.agent_id,
             toolName: d.toolName ?? d.tool_name,
             goalId: d.goalId ?? d.goal_id,            // Phase 149 PULSE-01 — cost-by-goal join
+            cacheReadInputTokens: d.cacheReadInputTokens ?? d.cache_read_input_tokens,
+            cacheCreationInputTokens: d.cacheCreationInputTokens ?? d.cache_creation_input_tokens,
           });
           break;
         }
