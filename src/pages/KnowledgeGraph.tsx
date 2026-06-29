@@ -734,6 +734,16 @@ export default function KnowledgeGraph() {
                   returnTo={fromParam}
                   returnLabel={returnLabel}
                   onReturnNav={(url) => navigate(url)}
+                  onAgentNav={(agentId, entityName) =>
+                    navigate(
+                      buildFocusUrl(
+                        { surface: "graphs", nodeId: agentId },
+                        "/knowledge-graph?focus=" +
+                          encodeURIComponent(entityName) +
+                          "&lens=entity&hops=1",
+                      ),
+                    )
+                  }
                 />
               </div>
             </div>

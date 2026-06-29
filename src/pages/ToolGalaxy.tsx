@@ -147,6 +147,22 @@ function GalaxyCanvas({
     );
   }, [owningAgentName, codeVaultNodes]);
 
+  // Reverse link (GH-04 round-trip): when an AGENT node is selected, list the
+  // tools it owns via the same agent-tool edges (source === agent), sorted by
+  // name. Jump target is the first tool, mirroring the forward "N KG entities"
+  // jump-to-first pattern.
+  const agentTools = useMemo(() => {
+    if (!selectedNode || selectedNode.kind !== "agent") return [];
+    const toolIds = graph.links
+      .filter((l) => l.kind === "agent-tool" && l.source === selectedNode.id)
+      .map((l) => l.target);
+    const toolNodes = toolIds
+      .map((id) => graph.nodes.find((n) => n.id === id))
+      .filter((n): n is GalaxyNode => !!n && n.kind === "tool");
+    return [...toolNodes].sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedNode, graph.links, graph.nodes]);
+  const firstTool = agentTools.length > 0 ? agentTools[0] : null;
+
   // Inbound focus param handling (Task 2) — one-shot on mount
   const { fromParam } = useFocusParam({
     nodes: loading ? undefined : graph.nodes,
@@ -417,8 +433,10 @@ function GalaxyCanvas({
                   </div>
                 )}
 
-                {/* RELATED ACROSS GRAPHS section — only when ownerMatch resolves (SC#3/D-04) */}
-                {ownerMatch && (
+                {/* RELATED ACROSS GRAPHS — forward tool→agent (ownerMatch) and
+                    reverse agent→tools (firstTool). A node is either a tool or an
+                    agent, so at most one link renders. (SC#3/D-04 + GH-04 round-trip) */}
+                {(ownerMatch || firstTool) && (
                   <>
                     <Separator className="mt-6 mb-4" />
                     <div
@@ -428,29 +446,58 @@ function GalaxyCanvas({
                         RELATED ACROSS GRAPHS
                       </p>
                       <SectionErrorBoundary name="Cross-graph links">
-                        <button
-                          className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
-                          onClick={() => {
-                            const fromGalaxyUrl =
-                              "/tool-galaxy?focus=" +
-                              encodeURIComponent(selectedNode.id);
-                            navigate(
-                              buildFocusUrl(
-                                { surface: "graphs", nodeId: ownerMatch.id },
-                                fromGalaxyUrl,
-                              ),
-                            );
-                          }}
-                        >
-                          <ArrowRight className="h-3 w-3 text-primary shrink-0" />
-                          <span className="text-sm text-muted-foreground">
-                            Owning agent:
-                          </span>
-                          <span className="text-sm font-semibold text-foreground truncate">
-                            {ownerMatch.label}
-                          </span>
-                          <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
-                        </button>
+                        {ownerMatch && (
+                          <button
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            onClick={() => {
+                              const fromGalaxyUrl =
+                                "/tool-galaxy?focus=" +
+                                encodeURIComponent(selectedNode.id);
+                              navigate(
+                                buildFocusUrl(
+                                  { surface: "graphs", nodeId: ownerMatch.id },
+                                  fromGalaxyUrl,
+                                ),
+                              );
+                            }}
+                          >
+                            <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-sm text-muted-foreground">
+                              Owning agent:
+                            </span>
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {ownerMatch.label}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+                          </button>
+                        )}
+                        {firstTool && (
+                          <button
+                            className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                            onClick={() => {
+                              const fromGalaxyUrl =
+                                "/tool-galaxy?focus=" +
+                                encodeURIComponent(selectedNode.id);
+                              navigate(
+                                buildFocusUrl(
+                                  { surface: "tool-galaxy", nodeId: firstTool.id },
+                                  fromGalaxyUrl,
+                                ),
+                              );
+                            }}
+                          >
+                            <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                            <span className="text-sm text-muted-foreground">
+                              {agentTools.length === 1
+                                ? "1 tool"
+                                : `${agentTools.length} tools`}
+                            </span>
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {firstTool.name}
+                            </span>
+                            <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+                          </button>
+                        )}
                       </SectionErrorBoundary>
                     </div>
                   </>

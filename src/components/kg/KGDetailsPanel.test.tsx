@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import KGDetailsPanel from "./KGDetailsPanel";
 import { toGraphData, type KgPayload } from "../../lib/kg-graph";
@@ -117,5 +117,44 @@ describe("KGDetailsPanel", () => {
     renderPanel(g, { node: "a" });
     const rels = screen.getByText(/Relationships \(1\)/).parentElement!;
     expect(within(rels).getByText(/superseded/i)).toBeTruthy();
+  });
+
+  it("renders an owning-agent reverse cross-graph link and calls onAgentNav on click", () => {
+    const onAgentNav = vi.fn();
+    const g = build([{ ...ent("a"), agentId: "hervor" }], []);
+    render(
+      <MemoryRouter>
+        <KGDetailsPanel
+          graph={g}
+          selectedNodeId="a"
+          selectedEdgeId={null}
+          onClose={() => {}}
+          onSelectNode={() => {}}
+          onAgentNav={onAgentNav}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("RELATED ACROSS GRAPHS")).toBeTruthy();
+    const btn = screen.getByText("hervor").closest("button")!;
+    fireEvent.click(btn);
+    // entity name is id.toUpperCase() === "A"
+    expect(onAgentNav).toHaveBeenCalledWith("hervor", "A");
+  });
+
+  it("omits the owning-agent link when the entity has no agentId", () => {
+    const g = build([ent("a")], []); // ent() default agentId ""
+    render(
+      <MemoryRouter>
+        <KGDetailsPanel
+          graph={g}
+          selectedNodeId="a"
+          selectedEdgeId={null}
+          onClose={() => {}}
+          onSelectNode={() => {}}
+          onAgentNav={() => {}}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText("RELATED ACROSS GRAPHS")).toBeNull();
   });
 });

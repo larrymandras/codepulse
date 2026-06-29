@@ -17,6 +17,12 @@ export interface KGDetailsPanelProps {
   returnLabel?: string | null;
   /** Navigate handler injected by the page (avoids importing useNavigate in a presentational panel). */
   onReturnNav?: (url: string) => void;
+  /**
+   * Reverse cross-graph link (GH-04 round-trip): jump from the selected entity
+   * to its owning agent on the Code/Vault graph. The page builds the focus URL
+   * (keeps this panel presentational). Receives the entity's agentId + name.
+   */
+  onAgentNav?: (agentId: string, entityName: string) => void;
 }
 
 /** Deep-link into the episodic Memory view for a fact's source event (KG-06). */
@@ -194,6 +200,7 @@ export default function KGDetailsPanel({
   returnTo,
   returnLabel,
   onReturnNav,
+  onAgentNav,
 }: KGDetailsPanelProps) {
   if (!selectedNodeId && !selectedEdgeId) {
     // No selection — show placeholder. If ?from is present keep the return chip
@@ -298,6 +305,32 @@ export default function KGDetailsPanel({
             ))
           )}
         </section>
+
+        {/* RELATED ACROSS GRAPHS — reverse link: entity → owning agent (GH-04
+            round-trip). Renders only when the entity carries an agentId and the
+            page injected a navigate handler. */}
+        {node.agentId && onAgentNav && (
+          <section className="space-y-1.5">
+            <h4 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
+              RELATED ACROSS GRAPHS
+            </h4>
+            <SectionErrorBoundary name="Cross-graph links">
+              <button
+                className="flex items-center gap-2 w-full text-left px-2 py-1.5 rounded hover:bg-primary/5 cursor-pointer transition-colors duration-200"
+                onClick={() => onAgentNav(node.agentId, node.name)}
+              >
+                <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                <span className="text-sm text-muted-foreground">
+                  Owning agent:
+                </span>
+                <span className="text-sm font-semibold text-foreground truncate">
+                  {node.agentId}
+                </span>
+                <ExternalLink className="h-3 w-3 text-muted-foreground/50 ml-auto shrink-0" />
+              </button>
+            </SectionErrorBoundary>
+          </section>
+        )}
       </PanelShell>
     );
   }
