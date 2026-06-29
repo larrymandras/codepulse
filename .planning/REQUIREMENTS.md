@@ -38,8 +38,8 @@
 
 ### 3D Memory Galaxy (G3D) — Phase 91
 
-- [ ] **G3D-01**: An **opt-in 3D render mode** toggle on `CodeVaultGraph`, backed by `react-force-graph-3d` + `three`, **lazy-loaded** (`React.lazy`/`Suspense`) so the 2D default path never bundles three.js. Reuses the existing `ProjectGraphData` / `useProjectGraph` data (no Convex change); the toggle state persists to `idb-keyval`.
-- [ ] **G3D-02**: The 3D mode renders the **~4,038-node production graph** at an acceptable frame rate (≥30 FPS target), **disposes the WebGL context cleanly** on 2D↔3D toggling (no leak), and colors nodes via the TH-01 `useThemeColors()` resolver so 3D is **theme-aware**. The 2D render path is unchanged (no regression).
+- [x] **G3D-01**: An **opt-in 3D render mode** toggle on `CodeVaultGraph`, backed by `react-force-graph-3d` + `three`, **lazy-loaded** (`React.lazy`/`Suspense`) so the 2D default path never bundles three.js. Reuses the existing `ProjectGraphData` / `useProjectGraph` data (no Convex change); the toggle state persists to `idb-keyval`.
+- [x] **G3D-02**: The 3D mode renders the **~4,038-node production graph** at an acceptable frame rate (≥30 FPS target), **disposes the WebGL context cleanly** on 2D↔3D toggling (no leak), and colors nodes via the TH-01 `useThemeColors()` resolver so 3D is **theme-aware**. The 2D render path is unchanged (no regression).
 
 ### Voice Command Palette / Jarvis Mode (VOX) — Phase 92
 
@@ -88,8 +88,8 @@
 | ROOM-02 | Phase 90 | Complete |
 | ROOM-03 | Phase 90 | Complete |
 | ROOM-04 | Phase 90 | Complete |
-| G3D-01 | Phase 91 | Pending |
-| G3D-02 | Phase 91 | Pending |
+| G3D-01 | Phase 91 | Complete |
+| G3D-02 | Phase 91 | Complete |
 | VOX-01 | Phase 92 | Complete |
 | VOX-02 | Phase 92 | Complete |
 | VOX-03 | Phase 92 | Complete |
