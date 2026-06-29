@@ -59,3 +59,72 @@ export function centerNodeWhenReady(
     cancelled = true;
   };
 }
+
+// ---------------------------------------------------------------------------
+// 3D centering helper (Phase 91, D-01b)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal handle surface required by centerNode3DWhenReady. Matches the
+ * relevant subset of ForceGraph3DHandle from ForceGraph3D.tsx so callers
+ * don't need to import the full handle type.
+ */
+export interface Centerable3DHandle {
+  cameraPosition: (
+    position: { x: number; y: number; z: number },
+    lookAt?: { x: number; y: number; z: number } | null,
+    ms?: number
+  ) => void;
+  zoomToFit: (ms?: number, px?: number) => void;
+}
+
+/**
+ * 3D analog of centerNodeWhenReady for the `?focus=` deep-link branch.
+ *
+ * Polls the live node object (react-force-graph-3d mutates x/y/z in place)
+ * via requestAnimationFrame until coordinates are assigned, then calls
+ * `cameraPosition` exactly once with:
+ *   - position: { x, y, z: (node.z ?? 0) + 150 }  — pull the camera back
+ *   - lookAt:   { x, y, z: node.z ?? 0 }           — aim at the node
+ *
+ * The explicit lookAt prevents the camera from defaulting to scene origin
+ * when the node is far from (0,0,0) (Pitfall 6).
+ *
+ * Returns a cancel fn for callers that want to abort (e.g. on unmount or
+ * before the effect deps change).
+ */
+export function centerNode3DWhenReady(
+  fgRef: { current: Centerable3DHandle | null },
+  node: { x?: number; y?: number; z?: number } | null | undefined,
+  ms = 800,
+  maxFrames = 90,
+): () => void {
+  let cancelled = false;
+  let frames = 0;
+
+  const schedule: (cb: () => void) => void =
+    typeof requestAnimationFrame === "function"
+      ? (cb) => requestAnimationFrame(() => cb())
+      : (cb) => {
+          setTimeout(cb, 16);
+        };
+
+  const tick = () => {
+    if (cancelled || !node) return;
+    if (node.x != null && node.y != null) {
+      fgRef.current?.cameraPosition(
+        { x: node.x, y: node.y, z: (node.z ?? 0) + 150 },
+        { x: node.x, y: node.y, z: node.z ?? 0 },
+        ms,
+      );
+      return;
+    }
+    if (frames++ < maxFrames) schedule(tick);
+  };
+
+  tick();
+
+  return () => {
+    cancelled = true;
+  };
+}
