@@ -71,6 +71,11 @@ export interface ForceGraph3DProps {
 // Component
 // ---------------------------------------------------------------------------
 
+/**
+ * Default export allows `React.lazy(() => import("./ForceGraph3D"))` to work
+ * correctly in CodeVaultGraph.tsx (lazy() requires a default export). The named
+ * export is preserved for type imports (e.g. `import type { ForceGraph3DHandle }`).
+ */
 export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
   function ForceGraph3D(props, ref) {
     const {
@@ -143,3 +148,7 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
     );
   }
 );
+
+// Default export for React.lazy() in CodeVaultGraph.tsx (lazy() requires default export).
+// Named export is preserved above for type imports.
+export default ForceGraph3D;

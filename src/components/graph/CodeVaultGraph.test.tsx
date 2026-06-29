@@ -63,6 +63,14 @@ vi.mock("../../hooks/useThemeColors", () => ({
   }),
 }));
 
+// idb-keyval — IndexedDB absent in jsdom. CodeVaultGraph uses it directly for
+// render-mode persistence (Phase 91, G3D-01: "codepulse:render-mode" key).
+// Default get → undefined so renderMode stays "2d" (2D regression tests unaffected).
+vi.mock("idb-keyval", () => ({
+  get: vi.fn().mockResolvedValue(undefined),
+  set: vi.fn().mockResolvedValue(undefined),
+}));
+
 // useKnowledgeGraph (added in Phase 85) persists via idb-keyval — IndexedDB is
 // absent in jsdom. Stub it so the cross-graph KG link gate sees zero entities
 // (no link section renders — SC#3-safe degrade) without touching IndexedDB.

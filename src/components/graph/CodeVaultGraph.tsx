@@ -15,6 +15,8 @@
  */
 
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useMemo,
@@ -36,12 +38,14 @@ import {
   ForceGraphCanvas,
   type ForceGraphHandle,
 } from "./ForceGraphCanvas";
+import { type ForceGraph3DHandle } from "./ForceGraph3D";
 import { communityColor } from "../../lib/kg-graph";
 import { useProjectGraph, type ProjectGraphData } from "../../hooks/useProjectGraph";
 import { useKnowledgeGraph } from "../../hooks/useKnowledgeGraph";
 import { useThemeColors } from "../../hooks/useThemeColors";
-import { centerNodeWhenReady } from "../../lib/graph-center";
+import { centerNodeWhenReady, centerNode3DWhenReady } from "../../lib/graph-center";
 import { useFocusParam } from "../../hooks/useFocusParam";
+import { get as idbGet, set as idbSet } from "idb-keyval";
 import { buildFocusUrl, normalizeFocusKey } from "../../lib/focus-url";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -55,6 +59,14 @@ import {
 } from "../ui/tooltip";
 import { ScrollArea } from "../ui/scroll-area";
 import SectionErrorBoundary from "../SectionErrorBoundary";
+
+// ── Lazy-load 3D render surface so three.js stays in a separate chunk (SC#2) ─
+// Module-level declaration — avoids "lazy inside component" React warning. The
+// dynamic import boundary keeps `react-force-graph-3d` / `three` out of the
+// main bundle until the user switches to 3D mode.
+const LazyForceGraph3D = lazy(() =>
+  import("./ForceGraph3D").then((m) => ({ default: m.ForceGraph3D }))
+);
 
 // ── Freshness threshold (D-09) ───────────────────────────────────────────────
 
@@ -108,11 +120,44 @@ function labelFn(node: any): string {
 // ── GraphContent — rendered when snapshot is available ───────────────────────
 
 function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
-  const fgRef = useRef<ForceGraphHandle>(null);
+  // ── Refs — 2D canvas (fgRef2d) and 3D scene (fgRef3d) ────────────────────
+  const fgRef2d = useRef<ForceGraphHandle>(null);
+  const fgRef3d = useRef<ForceGraph3DHandle>(null);
   const navigate = useNavigate();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("both");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+  // Render mode: "2d" is the default; "3d" opts into the WebGL galaxy view.
+  // Persisted to IndexedDB so the user's choice survives a page reload (G3D-01).
+  const [renderMode, setRenderMode] = useState<"2d" | "3d">("2d");
+  // hoveredNodeId for 3D colorFn3D dim logic (no 2D analog — paintNode handles 2D hover)
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  // ── idb-keyval render-mode persistence (Phase 91, G3D-01) ─────────────────
+  // Hydrate on mount — only the literal "3d" value flips to 3D (V5 coercion;
+  // tampered / garbage / undefined → stays "2d"). cancel guard prevents state
+  // update after unmount. .catch swallowed for private-browsing / IDB unavailable.
+  useEffect(() => {
+    let cancelled = false;
+    idbGet("codepulse:render-mode")
+      .then((saved) => {
+        if (!cancelled && saved === "3d") setRenderMode("3d");
+      })
+      .catch(() => {
+        /* private browsing / IDB unavailable — stay on 2d */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ── Toggle handler — updates state + best-effort persists to IDB ─────────
+  const handleModeToggle = (mode: "2d" | "3d") => {
+    setRenderMode(mode);
+    idbSet("codepulse:render-mode", mode).catch(() => {
+      /* best effort — silent failure in private browsing */
+    });
+  };
 
   // ── Theme-aware canvas colors (TH-01) ─────────────────────────────────────
   // Canvas APIs cannot read CSS variables — useThemeColors() resolves them to
@@ -154,8 +199,14 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
     getId: (n) => n.id,
     onFocus: (node) => {
       setSelectedNodeId(node.id);
-      // Center once the force layout assigns x/y (WR-02 — retry, don't skip).
-      centerNodeWhenReady(fgRef, node as { x?: number; y?: number });
+      // Mode-conditional centering (Task 3 wires the 3D branch; renderMode in scope).
+      if (renderMode === "2d") {
+        // 2D path — unchanged (SC#1 no regression): center once force layout assigns x/y.
+        centerNodeWhenReady(fgRef2d, node as { x?: number; y?: number });
+      } else {
+        // 3D path — cameraPosition + lookAt instead of centerAt/zoom (G3D-01 D-01b).
+        centerNode3DWhenReady(fgRef3d, node as { x?: number; y?: number; z?: number });
+      }
     },
   });
 
@@ -331,6 +382,13 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
       ? "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-primary/10 text-primary border border-primary/40"
       : "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
 
+  // ── Render-mode chip helper (Phase 91, G3D-01) ───────────────────────────
+  // Same active/inactive class strings as chipClass — cloned per PATTERNS.md §Analog C/D.
+  const renderModeChipClass = (mode: "2d" | "3d") =>
+    renderMode === mode
+      ? "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-primary/10 text-primary border border-primary/40"
+      : "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
+
   return (
     <div className={containerClass}>
       {/* ── Hero header row ────────────────────────────────────────────────── */}
@@ -376,7 +434,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
           )}
         </div>
 
-        {/* Right: filter chips + fullscreen button */}
+        {/* Right: filter chips + render-mode toggle + fullscreen button */}
         <div className="flex items-center gap-2">
           {/* Source filter chips (D-06) */}
           <div role="group" aria-label="Source filter" className="flex items-center gap-1">
@@ -400,6 +458,27 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
               onClick={() => setSourceFilter("both")}
             >
               Both
+            </button>
+          </div>
+
+          {/* 2D | 3D render-mode toggle (Phase 91, G3D-01) ─────────────────
+              Placed between source-filter group and fullscreen button per UI-SPEC
+              §Toggle Anatomy: [ Code | Vault | Both ] [ 2D | 3D ] [ fullscreen ].
+              Chip classes mirror the source-filter group above (PATTERNS.md §Analog C/D). */}
+          <div role="group" aria-label="Render mode" className="flex items-center gap-1">
+            <button
+              className={renderModeChipClass("2d")}
+              aria-pressed={renderMode === "2d"}
+              onClick={() => handleModeToggle("2d")}
+            >
+              2D
+            </button>
+            <button
+              className={renderModeChipClass("3d")}
+              aria-pressed={renderMode === "3d"}
+              onClick={() => handleModeToggle("3d")}
+            >
+              3D
             </button>
           </div>
 
@@ -474,9 +553,11 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
           {/* ForceGraphCanvas — explicit className prop (Pitfall 6).
               ref + onEngineStop frame the graph to the viewport once the
               simulation settles (and after filter/fullscreen reheats) so a
-              small node set never strands in a corner (IN-01). */}
+              small node set never strands in a corner (IN-01).
+              NOTE: 2D/3D swap point lives here — Task 2 (Plan 03) wraps this in
+              a renderMode conditional and adds the Suspense/LazyForceGraph3D branch. */}
           <ForceGraphCanvas
-            ref={fgRef}
+            ref={fgRef2d}
             data={filteredData}
             colorFn={colorFn}
             labelFn={labelFn}
@@ -486,7 +567,7 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
             defaultLinkColor={colors.primaryAlpha18}
             onNodeClick={(node: any) => setSelectedNodeId(node.id)}
             onBackgroundClick={() => setSelectedNodeId(null)}
-            onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
+            onEngineStop={() => fgRef2d.current?.zoomToFit(400, 60)}
             className={canvasClass}
             clusterForce={true}
             communityColorFn={(node: any) => communityColor(node.community)}
