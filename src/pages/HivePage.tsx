@@ -8,6 +8,8 @@
  */
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { buildFocusUrl } from "../lib/focus-url";
 import SwarmGraph from "../components/SwarmGraph";
 import BlackboardPanel from "../components/BlackboardPanel";
 import CostBreakdown from "../components/CostBreakdown";
@@ -18,6 +20,7 @@ import SwarmTaskDetail, { type SwarmTaskDetailData } from "../components/SwarmTa
 import { useGoalList } from "../hooks/useSwarmGraph";
 
 export default function HivePage() {
+  const navigate = useNavigate();
   const [goalId, setGoalId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<SwarmTaskDetailData | null>(null);
   const goals = useGoalList();
@@ -61,8 +64,20 @@ export default function HivePage() {
         </SectionErrorBoundary>
       </div>
 
-      {/* Click-to-read detail panel — opened by graph node or blackboard row */}
-      <SwarmTaskDetail task={selectedTask} onClose={() => setSelectedTask(null)} />
+      {/* Click-to-read detail panel — opened by graph node or blackboard row.
+          Its agent deep-links to the Code/Vault graph (GH-04 cross-nav). */}
+      <SwarmTaskDetail
+        task={selectedTask}
+        onClose={() => setSelectedTask(null)}
+        onAgentNav={(agent) =>
+          navigate(
+            buildFocusUrl(
+              { surface: "tool-galaxy", nodeId: `agent:${agent}` },
+              "/hive",
+            ),
+          )
+        }
+      />
     </div>
   );
 }

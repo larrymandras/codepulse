@@ -14,6 +14,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
+import { ExternalLink } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { modelBadgeClass } from "./AgentNode";
 
@@ -30,6 +31,11 @@ export interface SwarmTaskDetailData {
 interface SwarmTaskDetailProps {
   task: SwarmTaskDetailData | null;
   onClose: () => void;
+  /**
+   * Cross-graph link: focus this subtask's agent on the Code/Vault graph.
+   * Injected by the page (keeps this panel presentational). Omitted = plain text.
+   */
+  onAgentNav?: (agent: string) => void;
 }
 
 const eyebrow =
@@ -44,7 +50,7 @@ function MetaTile({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
-export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps) {
+export default function SwarmTaskDetail({ task, onClose, onAgentNav }: SwarmTaskDetailProps) {
   const agent = task?.agentId || task?.claimedBy;
   const deps = task?.dependsOn ?? [];
 
@@ -77,7 +83,19 @@ export default function SwarmTaskDetail({ task, onClose }: SwarmTaskDetailProps)
             <div className="grid grid-cols-2 gap-3">
               <MetaTile label="Agent">
                 {agent ? (
-                  <span className="font-mono break-all">{agent}</span>
+                  onAgentNav ? (
+                    <button
+                      type="button"
+                      onClick={() => onAgentNav(agent)}
+                      title="Focus this agent in Tool Galaxy"
+                      className="inline-flex items-center gap-1.5 font-mono break-all text-foreground hover:text-primary transition-colors"
+                    >
+                      {agent}
+                      <ExternalLink className="h-3 w-3 text-muted-foreground/60 shrink-0" />
+                    </button>
+                  ) : (
+                    <span className="font-mono break-all">{agent}</span>
+                  )
                 ) : (
                   <span className="text-muted-foreground italic">Unassigned</span>
                 )}
