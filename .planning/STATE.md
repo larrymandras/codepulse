@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 Phase: Milestone v9.0 complete (tagged v9.0)
 Plan: —
 Status: Awaiting next milestone
-Last activity: 2026-06-29 — Completed quick task 260629-nnf: Graphs Hub tile index
+Last activity: 2026-06-29 — Completed quick task 260629-oki: reverse cross-graph deep-links
 
 ## Deferred Items
 
@@ -154,6 +154,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260629-nnf | Complete Graphs Hub tile index — Capabilities, 3D Memory Galaxy, Hive/Swarm tiles | 2026-06-29 | 2d9df13 | [260629-nnf-graphs-hub-tile-index](./quick/260629-nnf-graphs-hub-tile-index/) |
+| 260629-oki | Reverse cross-graph deep-links (agent→tools, KG entity→owning agent) — GH-04 round-trip | 2026-06-29 | 6cffbae | [260629-oki-reverse-cross-graph-links](./quick/260629-oki-reverse-cross-graph-links/) |
 
 ## Session Continuity
 
