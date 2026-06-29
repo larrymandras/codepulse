@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import SwarmTaskDetail, { type SwarmTaskDetailData } from "./SwarmTaskDetail";
 
 const LONG =
@@ -39,5 +39,19 @@ describe("SwarmTaskDetail", () => {
   it("renders nothing visible when no task is selected (closed)", () => {
     render(<SwarmTaskDetail task={null} onClose={() => {}} />);
     expect(screen.queryByText(LONG)).not.toBeInTheDocument();
+  });
+
+  it("deep-links the agent to the Code/Vault graph when onAgentNav is provided", () => {
+    const onAgentNav = vi.fn();
+    render(
+      <SwarmTaskDetail task={makeTask()} onClose={() => {}} onAgentNav={onAgentNav} />,
+    );
+    fireEvent.click(screen.getByText("urdhr"));
+    expect(onAgentNav).toHaveBeenCalledWith("urdhr");
+  });
+
+  it("renders the agent as plain text (no button) when onAgentNav is absent", () => {
+    render(<SwarmTaskDetail task={makeTask()} onClose={() => {}} />);
+    expect(screen.getByText("urdhr").closest("button")).toBeNull();
   });
 });
