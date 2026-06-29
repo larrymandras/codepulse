@@ -1,11 +1,11 @@
 ---
 gsd_state_version: 1.0
 milestone: v9.0
-milestone_name: Readability & Experience — ACTIVE
-status: milestone_complete
-stopped_at: v9.0 complete (5/5 phases, 30/30 plans) — ready for /gsd-complete-milestone
-last_updated: 2026-06-29T16:50:02.104Z
-last_activity: 2026-06-29
+milestone_name: Readability & Experience — SHIPPED 2026-06-29
+status: Awaiting next milestone
+stopped_at: "Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases."
+last_updated: "2026-06-29T18:47:45.387Z"
+last_activity: 2026-06-29 — Milestone v9.0 completed and archived
 progress:
   total_phases: 5
   completed_phases: 5
@@ -21,17 +21,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v9.0 COMPLETE (5/5 phases) — ready for /gsd-complete-milestone
+**Current focus:** v9.0 shipped & archived (2026-06-29) — planning next milestone (`/gsd-new-milestone`)
 
 ## Current Position
 
-Phase: 91 (3D Memory Galaxy) — ✅ COMPLETE (5/5 plans; verifier PASSED, operator GPU sign-off 2026-06-29)
-Plan: all complete
-Next: `/gsd-complete-milestone` v9.0 (all 5 phases done). Archive-collision warning RESOLVED 2026-06-29 — the feared stale adversarial v9.0/10/11 archives are NOT in this repo (milestones/ has only v4/5/7/8); safe to run, no rename needed.
-Status: Milestone complete — ready to ship/close
-Last activity: 2026-06-29
+Phase: Milestone v9.0 complete (tagged v9.0)
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-06-29 — Milestone v9.0 completed and archived
 
-Progress: [██████████] 100% (v9.0: 5/5 phases, 30/30 plans)
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocking — see v9.0 audit reconciliation):
+
+| Category | Item | Status |
+|----------|------|--------|
+| uat_gap | Phase 80 80-HUMAN-UAT.md | passed (0 pending — false positive) |
+| uat_gap | Phase 84 84-HUMAN-UAT.md | passed (0 pending — false positive) |
+| uat_gap | Phase 85 85-HUMAN-UAT.md | passed (0 pending — false positive) |
+| verification_gap | Phase 89 89-VERIFICATION.md | human_needed (operator signed off 2026-06-24; flag unflipped) |
+| verification_gap | Phase 92 92-VERIFICATION.md | human_needed (live-verified 2026-06-25; flag unflipped) |
+| quick_task | 260603-or6-codepulse-register-opus-4-8-in-cost-mode | missing (stale, unrelated to v9.0) |
+| context_questions | Phase 078 078-CONTEXT.md | 3 open Qs (answered during v7.0 execution, unmarked) |
+| context_questions | Phase 89 89-CONTEXT.md | 3 open Qs (answered during execution, unmarked) |
+
+**Accepted tech debt:** Phases 88 & 90 have no formal `VERIFICATION.md` — 88 covered by Nyquist VALIDATION (47/47 tests), 90 by operator live sign-off (`90-08-SUMMARY`).
 
 ## v9.0 Roadmap
 
@@ -141,3 +155,7 @@ Last session: 2026-06-29T16:50:02.104Z
 Stopped at: Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases.
 Next action: `/gsd-complete-milestone` v9.0 — safe to run; archive-collision warning verified RESOLVED/MOOT 2026-06-29 (no stale adversarial v9.0/10/11 archives in this repo; no rename needed).
 Resume file: None
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone

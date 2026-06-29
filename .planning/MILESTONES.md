@@ -1,5 +1,26 @@
 # Milestones
 
+## v9.0 Readability & Experience (Shipped: 2026-06-29)
+
+**Phases completed:** 5 phases (88–92), 30 plans, 43 tasks
+**Timeline:** 2026-06-23 → 2026-06-29 (7 days) | 222 commits | 277 files, +33,655 / −3,495
+**Requirements:** 19/19 (TH-01..06, AR-01..03, ROOM-01..04, G3D-01..02, VOX-01..04)
+**Verification:** Phases 89/91/92 have VERIFICATION.md (91 verifier PASSED 10/10); Phase 90 operator live sign-off (`90-08-SUMMARY`); Phase 88 Nyquist VALIDATION (47/47 tests). All 5 phases have a VALIDATION.md. Phase 87/Phase 88 prod deploy `tidy-whale-981`.
+
+**Key accomplishments:**
+
+1. **AR — Durable Analytics Rollup (Phase 88):** Ingest-time rollups (`convex/analyticsRollup.ts` + shared `lib/sankeyClassify.ts`) maintained atomically from `ingest.ts`/`runtimeIngest.ts` — idempotency-keyed dedup (no double-count), a one-time historical backfill run against prod, and removal of every `.take()` count cap. Analytics queries now read O(buckets), permanently under Convex's 16 MiB/exec limit.
+2. **TH — Readable Themes & Editorial Skin (Phase 89):** Fully token-driven theming (~77 hardcoded hex/rgba sites across ~24 files migrated to `var(--token)`, canvas graphs read tokens via `useThemeColors()`), a WCAG-AA readability-first theme, the Midnight Aubergine editorial skin, Matrix-Emerald + Electric Cyan retained, and a no-flash persisted switcher honoring `prefers-reduced-motion`. Zero axe violations across 4 themes × 5 surfaces (20 cases).
+3. **ROOM — Agent / War Room finished (Phase 90):** Real participant identity from live roster (`useRosterAgents`), bounded room listing, genuine operator **Join** via LiveKit + the Ástríðr token endpoint, and per-room deep-links (`/war-room/:roomId`) with `seq`-ordered transcripts. Closed five live cross-repo integration gaps (LiveKit profile/workers, Convex deploy, `warRooms` ingest, transcript streaming, two CodePulse bugs) — operator live sign-off 2026-06-29.
+4. **G3D — 3D Memory Galaxy (Phase 91):** Opt-in, lazy-loaded `react-force-graph-3d` render mode on `CodeVaultGraph` (three.js confined to the lazy chunk; 2D default never bundles it). Renders the ~4,038-node production graph at ≥30 FPS (operator GPU sign-off), disposes the WebGL context cleanly on 2D↔3D toggling, and colors nodes via the TH-01 `useThemeColors()` resolver.
+5. **VOX — Voice Command Palette / Jarvis Mode (Phase 92):** Local in-browser openWakeWord ONNX wake-word detection (custom self-contained `hey_astrid.onnx`, no Picovoice/account), Web Speech STT via the shared `useSpeechRecognition` hook, streamed reply + persona TTS, and a safe-by-default OFF toggle that degrades gracefully on model-load failure (no silent hot mic).
+
+**Notable:** Phases 90 and 91 were unbuilt at the 2026-06-26 milestone audit (`gaps_found`) and were completed 2026-06-27..29; the archived audit reflects that mid-flight snapshot, not the shipped state. VOX-01..04 were added to v9.0 after original scoping and back-filled into traceability 2026-06-26. The feared stale `milestones/v9.0-*` adversarial-track archives were verified absent from this repo (no rename needed).
+
+**Known deferred items at close:** 8 (see STATE.md Deferred Items) — all non-blocking: 3 passed-UAT false positives (80/84/85), 2 verification flags still marked `human_needed` though signed off in docs (89/92), 1 stale unrelated quick task, 2 answered-but-unmarked CONTEXT question sets (078/89). Accepted tech debt: Phases 88 & 90 have no formal `VERIFICATION.md` (covered by Nyquist VALIDATION + operator live sign-off respectively).
+
+---
+
 ## v8.0 Graph/KG Consolidation (Shipped: 2026-06-23)
 
 **Phases completed:** 5 phases (83–87), 17 plans, 23 tasks

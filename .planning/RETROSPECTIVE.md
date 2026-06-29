@@ -91,6 +91,46 @@
 
 ---
 
+## Milestone: v9.0 — Readability & Experience
+
+**Shipped:** 2026-06-29
+**Phases:** 5 (88-92) | **Plans:** 30 | **Timeline:** 7 days (222 commits, +33,655 / −3,495)
+
+> *(v7.0 and v8.0 milestone retrospectives were not recorded at their closes; this section resumes the living retrospective at v9.0.)*
+
+### What Was Built
+- **Analytics Rollup (88):** ingest-time rollups (`analyticsRollup.ts` + shared `lib/sankeyClassify.ts`), idempotent dedup, prod historical backfill, all `.take()` caps removed — analytics now O(buckets), permanently under Convex 16 MiB/exec.
+- **Readable Themes (89):** fully token-driven theming (~77 hex sites → `var(--token)`, canvas via `useThemeColors()`), WCAG-AA readable theme, Midnight Aubergine editorial skin, no-flash persisted switcher honoring `prefers-reduced-motion`, axe-clean across 4 themes × 5 surfaces.
+- **Agent/War Room (90):** real roster identity, bounded listing, genuine operator LiveKit Join, per-room deep-links + `seq`-ordered transcripts.
+- **3D Memory Galaxy (91):** opt-in lazy `react-force-graph-3d` mode on `CodeVaultGraph`, ~4,038 nodes ≥30 FPS, clean WebGL disposal, theme-aware.
+- **Voice Command Palette (92):** local openWakeWord ONNX wake-word, Web Speech STT, streamed reply + persona TTS, safe-by-default OFF toggle.
+
+### What Worked
+- **Atomic-deploy discipline on Convex rollups (88):** landing dedup + ingest-time increments + cron branch removal in one wave avoided a double-count transition window (Pitfall 1) — co-locating the change was the only safe path under per-deploy atomicity.
+- **Token-first theming (89):** routing canvas graphs through a single `useThemeColors()` resolver (module-level, MutationObserver-reactive) made theme-awareness fall out for free downstream — Phase 91's 3D node colors reused it with zero new work.
+- **Lazy-chunk isolation as a verified gate (91):** a build-manifest chunk check (SC#2) proved three.js never enters the 2D bundle — a machine-checkable contract, not a hope.
+
+### What Was Inefficient
+- **Cross-repo gate declared but not closed before execution (90):** the "confirm `POST /api/war-room` ingest + `warRooms` population" gate was flagged at scoping but skipped; the feature was GREEN in `convex-test`/jsdom yet had never run end-to-end live. Running it surfaced **five layered integration gaps** (LiveKit profile/workers down, Convex fns committed-not-deployed, astridr never POSTing to ingest, transcripts never streamed, two CodePulse bugs) — all fixable, but caught 2-3 days late.
+- **Stale milestone audit blocked the clean narrative (meta):** the 2026-06-26 audit ran mid-flight (`gaps_found`, 90/91 unbuilt) and was never refreshed after they shipped, so close-out had to reconcile audit-vs-reality by hand.
+- **Verification-artifact inconsistency:** Phases 88 & 90 shipped without a formal `VERIFICATION.md` (relied on Nyquist VALIDATION + operator sign-off); 89 & 92 verification flags stayed `human_needed` after sign-off.
+
+### Patterns Established
+- **"Live-integration gate" must be an executed checklist, not a scoping note** — for any cross-repo feature, run the create→ingest→render path against the live stack *before* declaring build plans done.
+- **RED-scaffold pattern for not-yet-built Convex modules** — `@vite-ignore` dynamic import + loose local type lets dependent tests RED cleanly without breaking Vite transform or `tsc`.
+- **Operator manual-gate sign-off** for perceptual/GPU criteria axe/jsdom can't assert (canvas legibility, ≥30 FPS, WebGL no-leak, two-way audio) — documented in VALIDATION, signed off by date.
+
+### Key Lessons
+- A feature that is "all tests green" but has **never run live** is not done — `convex-test`/jsdom cannot catch a stopped Docker profile, an undeployed function, or a missing cross-repo emitter.
+- **Refresh the milestone audit at close** if phases shipped after it ran — a stale `gaps_found` audit costs a manual reconciliation and muddies the archived record.
+- **Keep one verification artifact shape per phase** — mixing VERIFICATION.md, VALIDATION.md, and operator sign-offs makes the close-out audit ambiguous about what's actually been checked.
+
+### Cost Observations
+- Heaviest spend was again cross-repo **live**-integration debugging (Phase 90's five gaps), not feature code — mirrors the v5.0 observation.
+- 3D (91) and voice (92) were bounded, single-surface phases that closed fast once their lazy-load / worker-pipeline architecture was fixed up front.
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -99,6 +139,7 @@
 |-----------|----------|--------|------------|
 | v4.0 | 39 days | 8 | Wave-based parallel execution, formal verification gates, human UAT |
 | v5.0 | 10 days | 12 | Multi-provider gateway, external integrations, advanced viz; milestone bookkeeping deferred (context-exhaustion lesson) |
+| v9.0 | 7 days | 5 | Token-first theming, lazy-chunk build gates, operator manual-gates; live-integration gate lesson (cross-repo features must run live before "done") *(v7/v8 retros not recorded)* |
 
 ### Cumulative Quality
 
@@ -106,6 +147,7 @@
 |-----------|-------|-----------|------------|
 | v4.0 | 268+ | 99.6% (1 pre-existing failure) | 311 files, +43,759 lines |
 | v5.0 | 445+ | green at ship | 668 files, +76,219 / −3,401 |
+| v9.0 | 88: 47/47 · 92: 83/83 Nyquist; 91 verifier 10/10 | green at ship | 277 files, +33,655 / −3,495; ~86,100 LOC |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -113,3 +155,5 @@
 2. SUMMARY.md one-liners need enforcement for automated extraction
 3. Do milestone bookkeeping (STATE reset, retrospective, tag, branch/worktree cleanup) as a discrete early step — never at the tail of a context-exhausted session
 4. Verify every telemetry widget's full data path end-to-end; a green build can still ship silently-empty widgets
+5. (v9.0) Cross-repo features must be exercised against the **live** stack before "done" — `convex-test`/jsdom green ≠ working; a declared integration gate must be an executed checklist, not a scoping note
+6. (v9.0) Refresh the milestone audit at close if phases shipped after it ran — a stale `gaps_found` snapshot forces manual reconciliation

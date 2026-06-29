@@ -10,10 +10,10 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
-**Shipped:** v8.0 Graph/KG Consolidation (2026-06-23) — all 5 phases (83-87), 8/8 requirements (GH-01..04, KG-08..11), milestone audit PASSED. Built the receiver for Ástríðr's nightly `graph_snapshot` (GH-01), the unified `/graphs` hub replacing the placeholder nav stub (GH-02/03), cross-graph tool→agent→KG navigation (GH-04), community-cluster layout (KG-09), a full-text KG Search lens (KG-08), saved + shareable graph views (KG-10), and KG temporal Diff/Animate sub-modes (KG-11). Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live clustering needs `community` emission, D-10) — CodePulse side complete and degrades gracefully. Phase 87 deployed to prod `tidy-whale-981`. Archive: `milestones/v8.0-ROADMAP.md`.
-**Prior shipped:** v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse via the Surface-Substrate bridge: a local daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`. v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End **closed 2026-06-18** — phases 71-74 shipped (light); 77 (CI hardening) complete; 75 (Agent Console) superseded by v7.0 Forge; **76 (Unified Graph Hub) NOT shipped → deferred to v8.0** (2026-06-18 reconciliation).
+**Shipped:** v9.0 Readability & Experience (2026-06-29) — all 5 phases (88-92), 30 plans, 19/19 requirements (TH-01..06, AR-01..03, ROOM-01..04, G3D-01..02, VOX-01..04). Durable ingest-time analytics rollups replacing fragile `.take()` caps (under Convex 16 MiB/exec at any volume); a fully token-driven theme system with a WCAG-AA readable theme + Midnight Aubergine editorial skin + no-flash persisted switcher (axe-clean across 4 themes × 5 surfaces); the Agent/War Room finished into a real multi-persona surface with a genuine operator Join via LiveKit (closed 5 live cross-repo integration gaps); an opt-in lazy-loaded `react-force-graph-3d` mode on `CodeVaultGraph` (~4,038 nodes at ≥30 FPS, operator GPU sign-off); and a local-wake-word Voice Command Palette (openWakeWord ONNX, no Picovoice). Archive: `milestones/v9.0-ROADMAP.md`.
+**Prior shipped:** v8.0 Graph/KG Consolidation (2026-06-23) — all 5 phases (83-87), 8/8 requirements (GH-01..04, KG-08..11), milestone audit PASSED: graph-snapshot receiver, unified `/graphs` hub, cross-graph tool→agent→KG navigation, community-cluster layout, full-text KG Search, saved/shareable views, and KG temporal Diff/Animate. Deployed to prod `tidy-whale-981`. Archive: `milestones/v8.0-ROADMAP.md`. v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse via the Surface-Substrate bridge: a local daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`. v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End **closed 2026-06-18** — phases 71-74 shipped (light); 77 (CI hardening) complete; 75 (Agent Console) superseded by v7.0 Forge; **76 (Unified Graph Hub) NOT shipped → deferred to v8.0** (2026-06-18 reconciliation).
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons, D3.js, dagre, Resend, React Email
-**Codebase:** ~66,600 LOC TypeScript (src/ + convex/)
+**Codebase:** ~86,100 LOC TypeScript, non-test (src/ + convex/) — grew with v9.0 analytics rollup, theming, War Room, 3D, and voice surfaces
 
 <details>
 <summary>v4.0 — Operational Excellence (2026-04-14)</summary>
@@ -39,7 +39,9 @@ v5.0 added 12 phases:
 
 > **Shipped 2026-06-23** (started 2026-06-18). 5 phases (83-87), 17 plans, 8/8 requirements (GH-01..04, KG-08..11); milestone audit PASSED. Completed the Unified Graph Hub that Phase 76 (v6.0) never shipped and deepened the KG Explorer (Phase 74): graph-snapshot receiver (stops dropping Ástríðr's nightly snapshots — the full ~4,038-node real graph is now live) + `/graphs` hub + cross-graph navigation + KG search / clustering / saved-views / temporal-diff. Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live community clustering needs `community` emission, D-10) — the CodePulse side is complete and degrades gracefully today. Archive: `milestones/v8.0-ROADMAP.md`; audit: `milestones/v8.0-MILESTONE-AUDIT.md`.
 
-## Current Milestone: v9.0 Readability & Experience
+## Shipped Milestone: v9.0 Readability & Experience
+
+> **Shipped 2026-06-29** (started 2026-06-23). 5 phases (88-92), 30 plans, 19/19 requirements (TH/AR/ROOM/G3D/VOX). Archive: `milestones/v9.0-ROADMAP.md`; the 2026-06-26 audit (`milestones/v9.0-MILESTONE-AUDIT.md`) is a mid-flight `gaps_found` snapshot taken before Phases 90/91 were built (both shipped 2026-06-27..29). Accepted tech debt at close: Phases 88 & 90 lack a formal `VERIFICATION.md` (covered by Nyquist VALIDATION + operator live sign-off respectively).
 
 **Goal:** Make CodePulse readable and richer to operate — a readability-first theme system plus three experience surfaces (Agent Room, 3D graph mode, durable analytics).
 
@@ -118,6 +120,16 @@ v5.0 added 12 phases:
 
 Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREMENTS.md` (fresh `REQUIREMENTS.md` is created by the next `/gsd-new-milestone`). Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in the archive as well.
 
+### Validated (v9.0 Readability & Experience)
+
+- ✓ TH-01..06 — Token-driven theming (~77 hex sites migrated, `useThemeColors()` resolver), WCAG-AA readable theme, Midnight Aubergine editorial skin, Matrix-Emerald + Electric Cyan retained, no-flash persisted switcher honoring `prefers-reduced-motion`, axe-clean a11y pass (4 themes × 5 surfaces) — v9.0 Phase 89
+- ✓ AR-01..03 — Ingest-time analytics rollups (`analyticsRollup.ts` + `lib/sankeyClassify.ts`), idempotent dedup, historical backfill run against prod, all `.take()` count caps removed, reads O(buckets) under Convex 16 MiB/exec — v9.0 Phase 88
+- ✓ ROOM-01..04 — War Room real participant identity (`useRosterAgents`), bounded listing, genuine operator Join via LiveKit + Ástríðr token endpoint, per-room deep-links + `seq`-ordered transcripts; 5 live cross-repo gaps closed — v9.0 Phase 90 (operator live sign-off)
+- ✓ G3D-01..02 — Opt-in lazy-loaded `react-force-graph-3d` mode on `CodeVaultGraph` (three.js confined to lazy chunk), ~4,038-node graph at ≥30 FPS (operator GPU sign-off), clean WebGL disposal, theme-aware via `useThemeColors()` — v9.0 Phase 91
+- ✓ VOX-01..04 — Local in-browser openWakeWord ONNX wake-word, Web Speech STT via shared `useSpeechRecognition`, streamed reply + persona TTS, safe-by-default OFF toggle with graceful model-load failure — v9.0 Phase 92
+
+Full definitions + traceability: archived in `.planning/milestones/v9.0-REQUIREMENTS.md`.
+
 ### Out of Scope
 
 - Mobile app — web-first, responsive layouts sufficient
@@ -133,7 +145,7 @@ Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREM
 - **Design reference (corrected 2026-06-09):** shadcn/ui New York + Tailwind 4. Default skin is a **dark "Matrix Emerald" cyberpunk theme** (emerald `#10b981` accent, zinc neutrals, glow/CRT effects); light `:root` is monochrome oklch. Geist + JetBrains Mono (Cinzel retired), Lucide icons, effective radius `0.5rem`. Formal system: `.planning/phases/071-unified-design-system/UI-SPEC.md`. *(The old "monochromatic Paperclip / --radius:0" descriptor was inaccurate for the live dark theme.)*
 - **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow, D3.js, dagre, Resend, React Email
 - **Providers:** 7 total — Anthropic Direct, OpenRouter, Ollama (legacy); Claude CLI, Codex CLI, Antigravity CLI, Claude SDK (gateway)
-- **Codebase:** ~66,600 LOC TypeScript, 50+ Convex tables, 15 dashboard pages, 110+ UI components
+- **Codebase:** ~86,100 LOC TypeScript (non-test), 50+ Convex tables, 15 dashboard pages, 110+ UI components
 
 ## Constraints
 
@@ -162,7 +174,10 @@ Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREM
 | Force-directed (react-force-graph-2d) for relationship graphs (v6.0) | Reverses the v5.0 "force-directed out of scope" call: dagre suits DAGs (call graph), but the Obsidian vault graph and Ástríðr KG are cyclic entity-relationship graphs where force layout is the right fit. Already validated by the merged Obsidian graph. | KG-viz + Obsidian graph use it; dagre retained for the call graph |
 | Cross-graph nav = normalized-EXACT match, no fuzzy (v8.0, Phase 85) | A wrong jump is worse than a missing one — `focusKeysMatch` is strict equality on normalized keys; a non-match shows no link (SC#3). `decodeFromParam` constrains the return target to same-origin in-app paths. | Zero-false-positive forward links; `from`-param return chips |
 | Summarize `graph_snapshot` in legacy `runtime_events` (v8.0, Phase 85) | The full {nodes,links} blob (>1 MiB) blew Convex's per-doc limit on the legacy insert, rejecting the whole ingest and silently capping the production cron; the row-based `graphSnapshots` receiver already holds the full graph. | Legacy row stores counts+sources only; full snapshots ingest (~4k nodes live) |
-| Reverse "3D out of scope" for an opt-in 3D Memory Galaxy (v9.0) | The v5.0 blanket "React Three Fiber / 3D — not operationally useful" call was right for *forced* 3D, but the code/vault/KG graph is a spatial entity-relationship structure where an **opt-in** 3D mode adds genuine exploratory value without regressing the 2D default. Scoped narrowly: a render-mode toggle on the existing `CodeVaultGraph`, reusing its data — not a new immersive page. | 3D is opt-in only; 2D `ForceGraphCanvas` stays the default render path |
+| Reverse "3D out of scope" for an opt-in 3D Memory Galaxy (v9.0) | The v5.0 blanket "React Three Fiber / 3D — not operationally useful" call was right for *forced* 3D, but the code/vault/KG graph is a spatial entity-relationship structure where an **opt-in** 3D mode adds genuine exploratory value without regressing the 2D default. Scoped narrowly: a render-mode toggle on the existing `CodeVaultGraph`, reusing its data — not a new immersive page. | ✓ Good — 3D opt-in only; 2D `ForceGraphCanvas` stays default; ~4,038 nodes ≥30 FPS, three.js confined to lazy chunk |
+| `react-force-graph-3d` over raw R3F for 3D (v9.0, Phase 91) | The opt-in 3D mode needs force-directed layout + lazy isolation, not a `<Canvas>`/`useFrame` rewrite; `react-force-graph-3d` manages its own WebGLRenderer with a near-identical prop API to the 2D lib and avoids ~300 KB of R3F/drei. | ✓ Good — lazy chunk keeps three.js out of the 2D default bundle |
+| LiveKit for the War Room operator Join (v9.0, Phase 90) | A genuine join needed real audio transport, not a cosmetic button; LiveKit (server behind a `war-room` compose profile + Ástríðr Bearer-auth token endpoint) gives real two-way voice. Surfaced that the cross-repo gate was never closed at scoping. | ✓ Good — real Join live-verified; 5 integration gaps closed; rebuilding workers evicts agents from open rooms (operational caveat) |
+| openWakeWord ONNX over Picovoice for wake-word (v9.0, Phase 92) | Picovoice rejected the account; openWakeWord is Apache-2.0, runs fully in-browser via `onnxruntime-web` (no account/key/quota, no audio leaves the machine). Custom self-contained `hey_astrid.onnx` is the production model. | ✓ Good — local, key-free, safe-by-default OFF toggle |
 
 ## Evolution
 
@@ -182,4 +197,11 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-23 — **v9.0 Readability & Experience started** via `/gsd-new-milestone`. Scope: readable themes + editorial skin toggle (Phase 89), Agent Room (audit-first), 3D Memory Galaxy (opt-in R3F mode — reverses prior 3D out-of-scope), and Analytics Rollup (Phase 88, folded in). Continues phase numbering (Agent Room + 3D = Phase 90+). Prior: v8.0 Graph/KG Consolidation SHIPPED (phases 83-87, 8/8 requirements, milestone audit PASSED, archived + tagged).*
+*Last updated: 2026-06-29 after **v9.0 Readability & Experience milestone** — SHIPPED & ARCHIVED (5 phases 88-92, 30 plans, 19/19 requirements; tagged v9.0). Full evolution review complete: v9.0 reqs moved to Validated, 4 Key Decisions logged with outcomes, codebase ~86,100 LOC. Next: `/gsd-new-milestone`.*
+
+<details>
+<summary>Prior footer — 2026-06-23 (v9.0 started)</summary>
+
+*2026-06-23 — **v9.0 Readability & Experience started** via `/gsd-new-milestone`. Scope: readable themes + editorial skin toggle (Phase 89), Agent Room (audit-first), 3D Memory Galaxy (opt-in R3F mode — reverses prior 3D out-of-scope), and Analytics Rollup (Phase 88, folded in). Continues phase numbering (Agent Room + 3D = Phase 90+). Prior: v8.0 Graph/KG Consolidation SHIPPED (phases 83-87, 8/8 requirements, milestone audit PASSED, archived + tagged).*
+
+</details>
