@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 Phase: 91 (3D Memory Galaxy) — ✅ COMPLETE (5/5 plans; verifier PASSED, operator GPU sign-off 2026-06-29)
 Plan: all complete
-Next: `/gsd-complete-milestone` v9.0 (all 5 phases done). NOTE: before running it, rename the stale `milestones/v9.0-*.md` archives (different Astridhr track) to `astridhr-adversarial-v9.0-*` to avoid clobbering.
+Next: `/gsd-complete-milestone` v9.0 (all 5 phases done). Archive-collision warning RESOLVED 2026-06-29 — the feared stale adversarial v9.0/10/11 archives are NOT in this repo (milestones/ has only v4/5/7/8); safe to run, no rename needed.
 Status: Milestone complete — ready to ship/close
 Last activity: 2026-06-29
 
@@ -128,7 +128,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - **Phase 90:** ✅ COMPLETE — 90-08 operator live sign-off received 2026-06-29 (`90-08-SUMMARY.md`); all 4 ROOM reqs verified live.
 - **Next: Phase 91 (3D Memory Galaxy)** — the last v9.0 phase. Needs the FPS≥30 benchmark at ~4,038 nodes (live `graphSnapshots`) before shipping; depends on Phase 89 `useThemeColors()` (done). Then `/gsd-complete-milestone` v9.0.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
-- **Archive-name collision:** Before `/gsd-complete-milestone`, rename `milestones/v9.0-*.md` etc. (stale archives from a different Astridhr track) to `astridhr-adversarial-v9.0-*` so the completion step doesn't clobber them.
+- **Archive-name collision: ✅ RESOLVED/MOOT (2026-06-29)** — verified the feared stale `milestones/v9.0-*.md`/`v10/v11` adversarial-track archives are NOT present in this repo (milestones/ holds only v4/5/7/8; git never tracked milestones/v9.0-*). The only v9.0 file is CodePulse's own `.planning/v9.0-MILESTONE-AUDIT.md`. No rename needed; `/gsd-complete-milestone` is safe.
 
 ### Blockers/Concerns
 
@@ -139,5 +139,5 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 Last session: 2026-06-29T16:50:02.104Z
 Stopped at: Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases.
-Next action: `/gsd-complete-milestone` v9.0 — rename stale `milestones/v9.0-*.md` archives to `astridhr-adversarial-v9.0-*` FIRST to avoid clobber (see Pending Todos).
+Next action: `/gsd-complete-milestone` v9.0 — safe to run; archive-collision warning verified RESOLVED/MOOT 2026-06-29 (no stale adversarial v9.0/10/11 archives in this repo; no rename needed).
 Resume file: None

@@ -4,7 +4,7 @@
 **Prior milestones (archived):** v4.0 (`milestones/v4.0-REQUIREMENTS.md`), v5.0 (`milestones/v5.0-REQUIREMENTS.md`), v6.0 (retained in `milestones/v8.0-REQUIREMENTS.md`), v7.0 (`milestones/v7.0-REQUIREMENTS.md`), v8.0 (`milestones/v8.0-REQUIREMENTS.md`).
 **Research:** `.planning/research/SUMMARY.md` (+ STACK / FEATURES / ARCHITECTURE / PITFALLS) — HIGH confidence, grounded in live-code audit.
 
-> ⚠ **Archive-name collision (resolve before `/gsd-complete-milestone`):** `milestones/v9.0-*.md`, `v10.0-*.md`, `v11.0-*.md` are stale archives from a *different* older "Astridhr v9.0/10/11 Adversarial-Review" track (security remediation, phases 83-88, shipped 2026-05-01). This milestone is CodePulse-local v9.0. The old archives must be renamed (e.g. `astridhr-adversarial-v9.0-*`) before this milestone is archived, or the completion step will clobber them.
+> ✅ **Archive-name collision — RESOLVED/MOOT (verified 2026-06-29):** The feared stale `milestones/v9.0-*.md`/`v10.0-*.md`/`v11.0-*.md` adversarial-track archives are **not present in this repo** — `milestones/` holds only v4.0/v5.0/v7.0/v8.0, and git history shows `milestones/v9.0-*` was never tracked here (those Astridhr "Adversarial-Review" archives live elsewhere, e.g. `astridr-repo`, which CodePulse's `/gsd-complete-milestone` does not touch). The only v9.0 file is `.planning/v9.0-MILESTONE-AUDIT.md`, which is CodePulse's own (stale) audit. No rename needed; `/gsd-complete-milestone` v9.0 is safe to run with no clobber risk.
 
 ---
 
