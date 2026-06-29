@@ -30,6 +30,13 @@ vi.mock("../../convex/_generated/api", () => ({
     registry: {
       listAllTools: "registry:listAllTools",
       listMcpServers: "registry:listMcpServers",
+      summary: "registry:summary",
+    },
+    memory: {
+      overview: "memory:overview",
+    },
+    swarmTasks: {
+      listGoals: "swarmTasks:listGoals",
     },
     callGraphEdges: {
       listEdges: "callGraphEdges:listEdges",
@@ -91,13 +98,16 @@ describe("GraphsHub", () => {
     cleanup();
   });
 
-  it("renders three MetricCard summary tiles: KG Explorer, Tool Galaxy, MCP Inventory", () => {
+  it("renders six MetricCard summary tiles, one per graph surface", () => {
     render(<GraphsHub />);
 
-    // All three tile labels must appear (MetricCard renders label as uppercase text)
+    // All six tile labels must appear (MetricCard renders label as uppercase text)
     expect(screen.getByText("TOOL GALAXY")).toBeTruthy();
     expect(screen.getByText("MCP INVENTORY")).toBeTruthy();
     expect(screen.getByText("KG EXPLORER")).toBeTruthy();
+    expect(screen.getByText("CAPABILITIES")).toBeTruthy();
+    expect(screen.getByText("3D MEMORY GALAXY")).toBeTruthy();
+    expect(screen.getByText("HIVE / SWARM")).toBeTruthy();
   });
 
   it("clicking the Tool Galaxy tile navigates to /tool-galaxy", () => {
@@ -128,5 +138,32 @@ describe("GraphsHub", () => {
     const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
     fireEvent.click(card);
     expect(mockNavigate).toHaveBeenCalledWith("/knowledge-graph");
+  });
+
+  it("clicking the Capabilities tile navigates to /capabilities", () => {
+    render(<GraphsHub />);
+
+    const labelEl = screen.getByText("CAPABILITIES");
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/capabilities");
+  });
+
+  it("clicking the 3D Memory Galaxy tile navigates to /memory", () => {
+    render(<GraphsHub />);
+
+    const labelEl = screen.getByText("3D MEMORY GALAXY");
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/memory");
+  });
+
+  it("clicking the Hive / Swarm tile navigates to /hive", () => {
+    render(<GraphsHub />);
+
+    const labelEl = screen.getByText("HIVE / SWARM");
+    const card = labelEl.closest(".glow-card") ?? labelEl.parentElement!;
+    fireEvent.click(card);
+    expect(mockNavigate).toHaveBeenCalledWith("/hive");
   });
 });
