@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
-stopped_at: Phase 90 code complete (7/7 build plans) + cross-repo live integration wired (LiveKit war-room profile, Convex deploy, room + transcript ingest, delete-room feature, dialog/upsert fixes); 90-08 live operator verification pending
-last_updated: "2026-06-29T00:00:00.000Z"
+stopped_at: Phase 90 (Agent Room / War Room) COMPLETE — 8/8 plans; 90-08 operator live sign-off received 2026-06-29 (token endpoint, two-way muted-default audio + real identity, seq-ordered transcript all verified live). v9.0 now 4/5 phases; only Phase 91 (3D Memory Galaxy) remains.
+last_updated: "2026-06-29T12:00:00.000Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 25
-  completed_plans: 24
-  percent: 78
+  completed_plans: 25
+  percent: 80
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 90 (agent-room-war-room) — EXECUTING (build complete; live verification pending)
-Plan: 8 of 8 (90-01..90-07 complete + cross-repo integration done; 90-08 manual)
-Status: Awaiting operator live sign-off (90-08): launch a fresh room → Join → talk → confirm agents respond + transcript fills in seq order
+Phase: 90 (agent-room-war-room) — ✅ COMPLETE (8/8 plans; operator live sign-off 2026-06-29)
+Next: Phase 91 (3D Memory Galaxy) — the last v9.0 phase before /gsd-complete-milestone
+Status: v9.0 at 4/5 phases (88, 89, 90, 92 done; 91 remains)
 Last activity: 2026-06-29
 
-Progress: [█████████░] 95% (90-08 live operator verification is the remainder)
+Progress: [████████░░] 80% (v9.0: 4/5 phases)
 
 ## v9.0 Roadmap
 
@@ -38,7 +38,7 @@ Progress: [█████████░] 95% (90-08 live operator verification
 |-------|------|--------------|--------|
 | 88 | Analytics Rollup | AR-01, AR-02, AR-03 | ✅ Complete (4/4 plans) |
 | 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | ✅ Complete (7/7 plans) |
-| 90 | Agent Room / War Room | ROOM-01..ROOM-04 | 🔄 Build complete (7/7) + cross-repo integration; 90-08 live verify pending |
+| 90 | Agent Room / War Room | ROOM-01..ROOM-04 | ✅ Complete (8/8 plans; live sign-off 2026-06-29) |
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
 | 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (5/5 plans) |
 
@@ -117,8 +117,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **Phase 90 — 90-08 LIVE VERIFICATION (operator):** with the full `war-room` stack up, launch a FRESH room → Join → speak to an agent → confirm: (1) token endpoint 200 + malformed→400, (2) two-way audio, muted-by-default, real roster names on cards, room-switch stops prior audio, (3) transcript renders monotonic by seq. On pass, write `90-08-SUMMARY.md`, mark Phase 90 complete, bump ROADMAP/STATE.
-- **Phase 90 pre-work:** ✅ DONE — `warRooms` ingest path confirmed + BUILT this session (it did not previously exist on the astridr side; see gap-closure above).
+- **Phase 90:** ✅ COMPLETE — 90-08 operator live sign-off received 2026-06-29 (`90-08-SUMMARY.md`); all 4 ROOM reqs verified live.
+- **Next: Phase 91 (3D Memory Galaxy)** — the last v9.0 phase. Needs the FPS≥30 benchmark at ~4,038 nodes (live `graphSnapshots`) before shipping; depends on Phase 89 `useThemeColors()` (done). Then `/gsd-complete-milestone` v9.0.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
 - **Archive-name collision:** Before `/gsd-complete-milestone`, rename `milestones/v9.0-*.md` etc. (stale archives from a different Astridhr track) to `astridhr-adversarial-v9.0-*` so the completion step doesn't clobber them.
 
@@ -130,6 +130,6 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 ## Session Continuity
 
 Last session: 2026-06-29
-Stopped at: Phase 90 build complete (90-01..90-07) + cross-repo live integration wired (LiveKit war-room profile started; Convex deployed; astridr room.created/updated + transcript.chunk ingest built; CodePulse upsert/dialog fixes; delete-room feature). All automated tests green (tsc clean). Test/dead rooms purged.
-Next action: Operator runs 90-08 live verification (launch fresh room → Join → talk → confirm agents respond + transcript fills in seq order). On pass, write 90-08-SUMMARY.md and mark Phase 90 complete.
-Resume file: .planning/phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md
+Stopped at: Phase 90 COMPLETE — 8/8 plans, operator live sign-off received ("approved" 2026-06-29). Cross-repo live integration built + verified end-to-end (LiveKit war-room profile, Convex deploy, astridr room+transcript ingest, delete-room feature, dialog/upsert fixes). All automated tests green, tsc clean.
+Next action: Phase 91 (3D Memory Galaxy) — run `/gsd-discuss-phase 91` (or plan it); validate FPS≥30 at ~4,038 nodes before shipping. It's the last v9.0 phase before `/gsd-complete-milestone`.
+Resume file: None (Phase 90 closed; see 90-INTEGRATION-NOTES.md + 90-08-SUMMARY.md for the record)
