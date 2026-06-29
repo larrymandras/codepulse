@@ -139,13 +139,22 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   // update after unmount. .catch swallowed for private-browsing / IDB unavailable.
   useEffect(() => {
     let cancelled = false;
-    idbGet("codepulse:render-mode")
-      .then((saved) => {
-        if (!cancelled && saved === "3d") setRenderMode("3d");
-      })
-      .catch(() => {
-        /* private browsing / IDB unavailable — stay on 2d */
-      });
+    // idb-keyval's get() touches the `indexedDB` global synchronously (to open the
+    // default store) — that global is undefined under jsdom/SSR and can throw on
+    // open in private browsing, BEFORE any promise exists. The try/catch keeps the
+    // graph rendering (on 2d) when persistence is unavailable; the async .catch
+    // only covers post-open rejections, not this synchronous failure.
+    try {
+      idbGet("codepulse:render-mode")
+        .then((saved) => {
+          if (!cancelled && saved === "3d") setRenderMode("3d");
+        })
+        .catch(() => {
+          /* private browsing / IDB unavailable — stay on 2d */
+        });
+    } catch {
+      /* synchronous IDB-open failure (jsdom/SSR/private browsing) — stay on 2d */
+    }
     return () => {
       cancelled = true;
     };
@@ -154,9 +163,15 @@ function GraphContent({ snapshot }: { snapshot: ProjectGraphData }) {
   // ── Toggle handler — updates state + best-effort persists to IDB ─────────
   const handleModeToggle = (mode: "2d" | "3d") => {
     setRenderMode(mode);
-    idbSet("codepulse:render-mode", mode).catch(() => {
-      /* best effort — silent failure in private browsing */
-    });
+    // try/catch guards the same synchronous idb-keyval open failure as the
+    // hydration effect above (jsdom/SSR/private browsing); persistence is best-effort.
+    try {
+      idbSet("codepulse:render-mode", mode).catch(() => {
+        /* best effort — silent failure in private browsing */
+      });
+    } catch {
+      /* synchronous IDB-open failure — best effort, ignore */
+    }
   };
 
   // ── Theme-aware canvas colors (TH-01) ─────────────────────────────────────
