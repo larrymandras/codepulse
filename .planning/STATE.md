@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: completed
-stopped_at: Phase 91 UI-SPEC approved
-last_updated: "2026-06-29T13:32:09.768Z"
+stopped_at: Phase 91 planned (5 plans, 4 waves) — checker PASSED
+last_updated: "2026-06-29T14:37:47.241Z"
 last_activity: 2026-06-29
 progress:
   total_phases: 5
   completed_phases: 4
-  total_plans: 25
+  total_plans: 30
   completed_plans: 25
   percent: 80
 ---
@@ -129,7 +129,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29T13:32:09.754Z
-Stopped at: Phase 91 UI-SPEC approved
+Last session: 2026-06-29T14:37:47.231Z
+Stopped at: Phase 91 planned (5 plans, 4 waves) — checker PASSED
 Next action: Phase 91 (3D Memory Galaxy) — run `/gsd-discuss-phase 91` (or plan it); validate FPS≥30 at ~4,038 nodes before shipping. It's the last v9.0 phase before `/gsd-complete-milestone`.
-Resume file: .planning/phases/91-3d-memory-galaxy/91-UI-SPEC.md
+Resume file: .planning/phases/91-3d-memory-galaxy/91-01-PLAN.md
