@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Readability & Experience — ACTIVE
 status: executing
-stopped_at: Completed 90-06-PLAN.md — deep-link route, real identity, bounded listing UI
-last_updated: "2026-06-26T20:50:00.805Z"
-last_activity: 2026-06-26
+stopped_at: Phase 90 code complete (7/7 build plans) + cross-repo live integration wired (LiveKit war-room profile, Convex deploy, room + transcript ingest, delete-room feature, dialog/upsert fixes); 90-08 live operator verification pending
+last_updated: "2026-06-29T00:00:00.000Z"
+last_activity: 2026-06-29
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 25
   completed_plans: 24
-  percent: 60
+  percent: 78
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 90 (agent-room-war-room) — EXECUTING
-Plan: 8 of 8
-Status: Ready to execute
-Last activity: 2026-06-26
+Phase: 90 (agent-room-war-room) — EXECUTING (build complete; live verification pending)
+Plan: 8 of 8 (90-01..90-07 complete + cross-repo integration done; 90-08 manual)
+Status: Awaiting operator live sign-off (90-08): launch a fresh room → Join → talk → confirm agents respond + transcript fills in seq order
+Last activity: 2026-06-29
 
-Progress: [██████████] 96%
+Progress: [█████████░] 95% (90-08 live operator verification is the remainder)
 
 ## v9.0 Roadmap
 
@@ -38,7 +38,7 @@ Progress: [██████████] 96%
 |-------|------|--------------|--------|
 | 88 | Analytics Rollup | AR-01, AR-02, AR-03 | ✅ Complete (4/4 plans) |
 | 89 | Readable Themes & Editorial Skin Toggle | TH-01..TH-06 | ✅ Complete (7/7 plans) |
-| 90 | Agent Room / War Room | ROOM-01..ROOM-04 | Not started |
+| 90 | Agent Room / War Room | ROOM-01..ROOM-04 | 🔄 Build complete (7/7) + cross-repo integration; 90-08 live verify pending |
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | Not started |
 | 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (5/5 plans) |
 
@@ -97,19 +97,39 @@ See PROJECT.md Key Decisions table for full history.
 - **Rule 3: useRosterAgents api-namespace guard** — `(api as any).ns?.list` optional chaining prevents TypeError when partial test mocks omit namespaces (approvalQueue, agentConfigVersions, agentProfiles); production unaffected since all namespaces exist there.
 - **listRooms normalization in component** — WarRoom.tsx normalizes the `useQuery` result with `Array.isArray` check to support both the real `{active,closed,hasMore}` Convex shape and the flat-array test mock, without modifying test file or Convex layer.
 
+**Phase 90 Plan 07 decisions (2026-06-26, Wave 5):**
+
+- **Real Join replaces cosmetic state** — `WarRoom.tsx` dropped local `isJoined/isMuted` for `useWarRoomVoice()`; room-change effect calls `voice.leave()` (fixes T-90-LEAK audio leak on room switch).
+- **Closed-room read-only (D-06)** — `isRoomEnded` (status≠active OR deep-link to non-existent room) renders the "Room Ended" notice + dimmed grid + disabled Join (Surface D); `TranscriptPanel live={false}`.
+- **Live-chunk dedup (D-07)** — live transcript chunks filtered against persisted events by (timestamp, speakerId); persisted events carry `seq` for ordering.
+
+**Phase 90 LIVE INTEGRATION GAP-CLOSURE (2026-06-27..29) — the cross-repo gate that was never closed:**
+
+The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **never been run end-to-end against the live stack**. The "Phase 90 cross-repo gate" (confirm `POST /api/war-room` ingest + `warRooms` Convex population) was flagged in scoping but **not actually closed before execution**. Running it live surfaced five layered gaps, each now fixed + committed:
+
+1. **LiveKit + agent workers never started** — `livekit` server and the 5 `war-room-*` workers are behind the `war-room` Docker compose profile; a bare `docker compose up` skips them, so `create_war_room` got `ClientConnectorDNSError: livekit:7880` → HTTP 500 ("launch does nothing"). Fix: `docker compose --profile war-room up -d` (livekit + workers healthy; astridr creds already `devkey`/`secret`).
+2. **Phase-90 Convex functions never deployed** — `listRooms` etc. were committed but not pushed; the live deployment ran the OLD array-returning `listRooms` → "Server Error" on the page. Fix: `npx convex dev --once` (deploys to `tidy-whale-981`).
+3. **astridr never populated CodePulse's `warRooms`** — `/war-room-ingest` existed on CodePulse but **nothing in astridr ever called it**, so launched rooms never appeared in the list. Fix (commit astridr `97c63643`): `create_war_room`/`close_war_room` fire-and-forget `room.created`/`room.updated` to `${CONVEX_URL}/war-room-ingest` (mirrors the existing Supabase pattern). CodePulse `upsertWarRoom` made to preserve `name`/`createdAt` on update (commit `e09ce37`).
+4. **Transcripts never streamed** — agents only wrote to Supabase. Fix (astridr `26874fac`): each Norse agent mirrors its committed response to `${CONVEX_URL}/transcript-ingest` → seq-ordered `warRoomEvents` (ROOM-04). Added `CONVEX_URL`+`ASTRIDR_INGEST_API_KEY` to the `x-war-room-env` compose anchor (workers lacked them).
+5. **Two CodePulse bugs found while testing** — (a) launch dialog wiped the form on every parent re-render (effect keyed on the unstable `initialParticipantIds=[]` literal; now `[open]`-only + stable `EMPTY_IDS` ref + regression test) — commit `4c3372d`; (b) no way to delete a room — added `deleteWarRoom` mutation + trash affordance + `closeWarRoom` client; `room.updated` is now patch-only (`insertIfMissing=false`) so a late close can't resurrect a deleted room — commit `1189ff5`.
+
+**Also learned:** rebuilding the `war-room-*` workers **evicts agents from any already-open room** (agents only join at dispatch/creation; a restarted worker does not auto-rejoin) — a live room goes silent after a worker rebuild; launch a fresh room. The astridr `POST /api/war-room/{room}/token` endpoint (commit `4093aec`) is live, Bearer-enforced, malformed-name→400.
+
 ### Pending Todos
 
-- **Phase 90 pre-work:** Read `astridr-repo/war_room_routes.py` and `convex/warRoomIngest.ts` to confirm the `warRooms` ingest path before planning. Do NOT start ROOM code without confirming `POST /api/war-room` exists and populates Convex rooms.
+- **Phase 90 — 90-08 LIVE VERIFICATION (operator):** with the full `war-room` stack up, launch a FRESH room → Join → speak to an agent → confirm: (1) token endpoint 200 + malformed→400, (2) two-way audio, muted-by-default, real roster names on cards, room-switch stops prior audio, (3) transcript renders monotonic by seq. On pass, write `90-08-SUMMARY.md`, mark Phase 90 complete, bump ROADMAP/STATE.
+- **Phase 90 pre-work:** ✅ DONE — `warRooms` ingest path confirmed + BUILT this session (it did not previously exist on the astridr side; see gap-closure above).
+- **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
 - **Archive-name collision:** Before `/gsd-complete-milestone`, rename `milestones/v9.0-*.md` etc. (stale archives from a different Astridhr track) to `astridhr-adversarial-v9.0-*` so the completion step doesn't clobber them.
 
 ### Blockers/Concerns
 
-- **Phase 90 cross-repo dependency (ROOM-03):** Real operator Join requires extending the Ástríðr participant-join/voice surface. If not ready, observer mode is the fallback. Must audit before Phase 90 plan.
+- **Phase 90 cross-repo dependency (ROOM-03):** ✅ RESOLVED — real operator Join is live (astridr token endpoint + LiveKit profile + room/transcript ingest all built and verified this session). Remaining: operator live sign-off (90-08).
 - **Phase 91 FPS at 4,038 nodes:** No controlled benchmark yet. FPS ≥30 is a blocking acceptance criterion — validate against the live `graphSnapshots` snapshot before shipping.
 
 ## Session Continuity
 
-Last session: 2026-06-26T20:50:00.795Z
-Stopped at: Completed 90-06-PLAN.md — deep-link route, real identity, bounded listing UI
-Next action: Execute 90-07-PLAN.md (voice join + closed-room read-only state; turns remaining 3 RED WarRoom.test.tsx cases GREEN)
-Resume file: None
+Last session: 2026-06-29
+Stopped at: Phase 90 build complete (90-01..90-07) + cross-repo live integration wired (LiveKit war-room profile started; Convex deployed; astridr room.created/updated + transcript.chunk ingest built; CodePulse upsert/dialog fixes; delete-room feature). All automated tests green (tsc clean). Test/dead rooms purged.
+Next action: Operator runs 90-08 live verification (launch fresh room → Join → talk → confirm agents respond + transcript fills in seq order). On pass, write 90-08-SUMMARY.md and mark Phase 90 complete.
+Resume file: .planning/phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md
