@@ -67,15 +67,25 @@ function shapeCacheAcc(a: CacheAcc) {
 }
 
 export const cacheStats = query({
-  args: { windowHours: v.optional(v.float64()) },
+  args: { windowHours: v.optional(v.float64()), sessionId: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const hours = args.windowHours ?? 24;
     const cutoff = Date.now() / 1000 - hours * 3600;
-    const all = await ctx.db
-      .query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+    // Per-session rollup when sessionId is given (uses the existing by_session index);
+    // otherwise the global window. Both feed the same aggregation below.
+    const all = args.sessionId
+      ? await ctx.db
+          .query("llmMetrics")
+          .withIndex("by_session", (q) =>
+            q.eq("sessionId", args.sessionId!).gte("timestamp", cutoff)
+          )
+          .filter((q) => q.neq(q.field("archived"), true))
+          .collect()
+      : await ctx.db
+          .query("llmMetrics")
+          .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
+          .filter((q) => q.neq(q.field("archived"), true))
+          .collect();
 
     const overall: CacheAcc = { calls: 0, read: 0, creation: 0, uncached: 0 };
     const perModel: Record<string, CacheAcc> = {};

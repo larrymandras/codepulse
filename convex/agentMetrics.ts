@@ -10,6 +10,11 @@ export const insertMetric = mutation({
     inputTokens: v.float64(),
     outputTokens: v.float64(),
     modelUsed: v.optional(v.string()),
+    // Previously dropped at the ingest boundary (runtimeIngest agent_metric) though
+    // the schema already carries them — thread through for per-session cost/tool rollups.
+    costUsd: v.optional(v.float64()),
+    sessionId: v.optional(v.string()),
+    toolCallCount: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("agentMetrics", {
@@ -20,6 +25,9 @@ export const insertMetric = mutation({
       inputTokens: args.inputTokens,
       outputTokens: args.outputTokens,
       modelUsed: args.modelUsed,
+      costUsd: args.costUsd,
+      sessionId: args.sessionId,
+      toolCallCount: args.toolCallCount,
     });
   },
 });

@@ -648,6 +648,9 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             inputTokens: d.inputTokens ?? d.input_tokens ?? 0,
             outputTokens: d.outputTokens ?? d.output_tokens ?? 0,
             modelUsed: d.modelUsed ?? d.model_used ?? d.model,
+            costUsd: d.costUsd ?? d.cost_usd,
+            sessionId: d.sessionId ?? d.session_id,
+            toolCallCount: d.toolCallCount ?? d.tool_call_count,
             timestamp,
           });
           break;
