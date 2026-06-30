@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { buildFocusUrl } from "../lib/focus-url";
 import SwarmGraph from "../components/SwarmGraph";
 import BlackboardPanel from "../components/BlackboardPanel";
@@ -21,16 +21,26 @@ import { useGoalList } from "../hooks/useSwarmGraph";
 
 export default function HivePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const goalParam = searchParams.get("goal");
   const [goalId, setGoalId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<SwarmTaskDetailData | null>(null);
   const goals = useGoalList();
 
-  // D-08: auto-follow the most-recent goal when none is selected yet
+  // Inbound deep-link: /hive?goal=<id> (from a Tool Galaxy agent's "swarm goals"
+  // link) preselects that goal instead of auto-following the newest.
   useEffect(() => {
+    if (goalParam) setGoalId(goalParam);
+  }, [goalParam]);
+
+  // D-08: auto-follow the most-recent goal when none is selected yet — but a
+  // ?goal= deep-link takes precedence (don't clobber it on mount).
+  useEffect(() => {
+    if (goalParam) return;
     if (goalId === null && goals.length > 0) {
       setGoalId(goals[0].goalId);
     }
-  }, [goalId, goals]);
+  }, [goalId, goals, goalParam]);
 
   return (
     <div className="space-y-6 p-6">

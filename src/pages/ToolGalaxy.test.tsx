@@ -42,6 +42,16 @@ vi.mock("../hooks/useProjectGraph", () => ({
   useProjectGraph: () => null,
 }));
 
+// ToolGalaxy queries api.swarmTasks.goalsByAgent for the agent→Hive link.
+const swarm = vi.hoisted(() => ({ goals: [] as string[] }));
+vi.mock("convex/react", () => ({
+  useQuery: (_ref: unknown, args: unknown) =>
+    args === "skip" ? undefined : swarm.goals,
+}));
+vi.mock("../../convex/_generated/api", () => ({
+  api: { swarmTasks: { goalsByAgent: "swarmTasks:goalsByAgent" } },
+}));
+
 import ToolGalaxy from "./ToolGalaxy";
 
 // Render inside a Router so router hooks (useNavigate/useSearchParams) resolve.
@@ -74,6 +84,7 @@ beforeEach(() => {
   sources.edges = [];
   sources.kits = [];
   sources.loading = false;
+  swarm.goals = [];
 });
 
 describe("ToolGalaxy page", () => {
@@ -114,6 +125,18 @@ describe("ToolGalaxy page", () => {
     expect(screen.getByText("RELATED ACROSS GRAPHS")).toBeInTheDocument();
     const toolsLink = screen.getByText("1 tool").closest("button")!;
     expect(within(toolsLink).getByText("Read")).toBeInTheDocument();
+  });
+
+  it("shows an agent's swarm goals as an inbound Hive link", () => {
+    swarm.goals = ["goal-1"];
+    sources.tools = [tool("Read")];
+    sources.edges = [edge("skuld", "Read")];
+    render(<ToolGalaxy />);
+    act(() => {
+      h.props!.onNodeClick({ id: "agent:skuld" });
+    });
+    const goalsLink = screen.getByText("1 swarm goal").closest("button")!;
+    expect(within(goalsLink).getByText("Hive")).toBeInTheDocument();
   });
 
   it("colors an orphan tool amber and a healthy tool emerald-ish", () => {

@@ -89,6 +89,8 @@ function originLabel(fromPath: string): string {
   if (segment === "/tool-galaxy") return "Tool Galaxy";
   if (segment === "/graphs") return "Code/Vault Graph";
   if (segment === "/knowledge-graph") return "KG Explorer";
+  if (segment === "/hive") return "Hive";
+  if (segment === "/memory") return "Memory";
   return "previous graph";
 }
 
