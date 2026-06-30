@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Don't scan GSD planning docs for utility candidates — their phase markdown
+   contains example strings like `shadow-[var(--glow-*)]` that Tailwind would
+   otherwise emit as invalid CSS (Lightning CSS warns on the `*`/`|`/`...`). */
+@source not "../.planning";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
