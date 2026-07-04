@@ -35,7 +35,7 @@
     "convex": "^1.42.0",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
-    "diff": "^7.0.0",
+    "diff": "^8.0.3",
     "idb-keyval": "^6.2.4",
     "js-yaml": "^5.2.1",
     "livekit-client": "2.20.0",
