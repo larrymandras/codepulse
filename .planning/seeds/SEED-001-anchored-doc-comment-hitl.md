@@ -1,6 +1,6 @@
 ---
 id: SEED-001
-status: planted
+status: shipped # 2026-07-04 — PR #54 (feat/doc-comment-hitl-ui): /doc-comments page, DocViewer + CommentSidebar + CommentPopover + ApprovedEditCard, backend-mirror docAnchor relocation, Bearer docCommentsApi client. Built outside GSD via superpowers plan (docs/superpowers/plans/2026-07-03-doc-comment-hitl-ui.md). Ástríðr backend half (SEED-014) built same window (feat(alpha) doc-comments endpoints + reviewer loop).
 planted: 2026-06-30
 planted_during: Rubric toolkit evaluation (third-party RoboLabs agent-dashboard kit)
 trigger_when: Next doc/review surface work, OR on demand. The paired Ástríðr backend seed (SEED-014) defines storage + the agent loop; this seed is the human-facing UI half. Either can be built first against an agreed doc_ref/anchor contract, but the loop only closes when both ship.
