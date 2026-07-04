@@ -52,4 +52,26 @@ describe("captureAnchorFromSelection", () => {
   it("returns null when the quote cannot be uniquely located", () => {
     expect(captureAnchorFromSelection("bravo bravo", "bravo", "", "")).toBeNull();
   });
+  it("emits CODEPOINT offsets (not UTF-16 offsets) when an astral char precedes the quote", () => {
+    const src = "\u{1F600} alpha bravo"; // 😀 alpha bravo — emoji is 2 UTF-16 units, 1 codepoint
+    const a = captureAnchorFromSelection(src, "bravo", "alpha ", "");
+    expect(a).not.toBeNull();
+    const utf16Start = src.indexOf("bravo");
+    const expectedCpStart = Array.from(src.slice(0, utf16Start)).length;
+    expect(a!.start).toBe(expectedCpStart);
+    // UTF-16 index and codepoint index diverge here because of the emoji.
+    expect(a!.start).not.toBe(utf16Start);
+    expect(Array.from(src).slice(a!.start, a!.end).join("")).toBe("bravo");
+  });
+});
+
+describe("relocateAnchor codepoint offsets (parity with backend over astral input)", () => {
+  it("position_match succeeds when anchor.start/end are codepoint offsets past an emoji", () => {
+    const src = "\u{1F600} alpha bravo charlie"; // 😀 alpha bravo charlie
+    const utf16Start = src.indexOf("bravo");
+    const cpStart = Array.from(src.slice(0, utf16Start)).length;
+    const cpEnd = cpStart + "bravo".length;
+    const r = relocateAnchor(src, A({ quote: "bravo", start: cpStart, end: cpEnd }));
+    expect(r).toMatchObject({ status: "located", reason: "position_match", start: cpStart, end: cpEnd });
+  });
 });
