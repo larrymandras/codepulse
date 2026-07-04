@@ -4,6 +4,30 @@ import remarkGfm from "remark-gfm";
 import type { Anchor, DocComment } from "../../lib/docCommentsApi";
 import { captureAnchorFromSelection, relocateAnchor } from "../../lib/docAnchor";
 
+/**
+ * Rehype plugin: stamp each hast element's source span (mdast/hast `position`
+ * offsets into the ORIGINAL markdown `source` string) onto `data-src-start` /
+ * `data-src-end` attributes. This lets `handleMouseUp` map a DOM selection
+ * back to a block's raw-markdown span, so prefix/suffix context can be
+ * derived from `source` itself instead of the rendered text (which strips
+ * `**`, `#`, list markers, link syntax, etc. that the raw source still has).
+ * Presentation-safe: only adds numeric data-* attributes, no new elements,
+ * no raw HTML, no change to sanitization.
+ */
+function rehypeSourcePos() {
+  return (tree: any) => {
+    const walk = (node: any) => {
+      if (node.type === "element" && node.position?.start?.offset != null) {
+        node.properties = node.properties || {};
+        node.properties["dataSrcStart"] = node.position.start.offset;
+        node.properties["dataSrcEnd"] = node.position.end.offset;
+      }
+      (node.children || []).forEach(walk);
+    };
+    walk(tree);
+  };
+}
+
 const STATUS_CLASS: Record<string, string> = {
   open: "bg-amber-500/25 border-b-2 border-amber-500",
   acked: "bg-blue-500/25 border-b-2 border-blue-500",
@@ -28,14 +52,46 @@ export function DocViewer({ source, comments, onSelectAnchor, onCommentClick }: 
     const quote = sel.toString();
     if (!quote.trim()) return;
     const range = sel.getRangeAt(0);
-    // rendered context: 32 chars around the selection within its text nodes.
-    // Use the range's own (normalized) boundary containers rather than
-    // sel.anchorNode/focusNode — those swap for backward selections (anchor is
-    // the END in document order), which would pair the wrong node with
-    // startOffset/endOffset. Only slice character context when the boundary
-    // container is a Text node; for Element boundaries the offset is a child
-    // index, not a character offset, so context is left empty (safe: falls
-    // back to the unique-quote match in captureAnchorFromSelection).
+
+    // Preferred path: derive prefix/suffix from the RAW markdown `source`,
+    // scoped to the mdast/hast source span of the block the selection sits
+    // in (stamped by rehypeSourcePos as data-src-start/data-src-end). This
+    // guarantees prefix+quote+suffix actually exists verbatim in `source`,
+    // fixing selections next to markdown syntax (**, #, list markers, links)
+    // where the rendered-text context is absent from the raw source. Any
+    // failure here (no stamped ancestor, quote not found in the block's
+    // source slice, thrown error) falls back to the rendered-context method.
+    try {
+      const block = findSourcePosAncestor(range.startContainer);
+      if (block) {
+        const blockStart = Number(block.dataset.srcStart);
+        const blockEnd = Number(block.dataset.srcEnd);
+        if (Number.isFinite(blockStart) && Number.isFinite(blockEnd)) {
+          const blockSource = source.slice(blockStart, blockEnd);
+          const rel = blockSource.indexOf(quote);
+          if (rel !== -1) {
+            const absStart = blockStart + rel;
+            const prefix = source.slice(Math.max(0, absStart - 32), absStart);
+            const suffix = source.slice(absStart + quote.length, absStart + quote.length + 32);
+            const anchor = captureAnchorFromSelection(source, quote, prefix, suffix);
+            if (!anchor) return; // ambiguous → refuse rather than persist a mis-anchored comment
+            onSelectAnchor(anchor, range.getBoundingClientRect());
+            return;
+          }
+        }
+      }
+    } catch {
+      // fall through to the rendered-context fallback below
+    }
+
+    // Fallback: rendered context, 32 chars around the selection within its
+    // text nodes. Use the range's own (normalized) boundary containers rather
+    // than sel.anchorNode/focusNode — those swap for backward selections
+    // (anchor is the END in document order), which would pair the wrong node
+    // with startOffset/endOffset. Only slice character context when the
+    // boundary container is a Text node; for Element boundaries the offset is
+    // a child index, not a character offset, so context is left empty (safe:
+    // falls back further to the unique-quote match in captureAnchorFromSelection).
     const startEl = range.startContainer;
     const endEl = range.endContainer;
     const prefix = startEl.nodeType === Node.TEXT_NODE
@@ -84,9 +140,21 @@ export function DocViewer({ source, comments, onSelectAnchor, onCommentClick }: 
       onMouseUp={handleMouseUp}
       className="prose prose-invert max-w-none px-6 py-4 font-mono text-sm leading-relaxed"
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{source}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSourcePos]}>
+        {source}
+      </ReactMarkdown>
     </div>
   );
+}
+
+/** Walk up from `node` to the nearest ancestor Element stamped with a source span. */
+function findSourcePosAncestor(node: Node): HTMLElement | null {
+  let el: Element | null = node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  while (el) {
+    if (el instanceof HTMLElement && el.dataset.srcStart !== undefined) return el;
+    el = el.parentElement;
+  }
+  return null;
 }
 
 /** Wrap the first unique DOM occurrence of each non-stale comment's quote in a <mark>. */
