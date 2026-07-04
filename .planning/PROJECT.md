@@ -35,6 +35,17 @@ v5.0 added 12 phases:
 11. SDK Spend Guard — provider controls, spend cap, session provider badges
 12. External Integrations & Call Graph — email/PagerDuty delivery + call graph visualization
 
+## Current Milestone: v10.0 Eval & Trace Observability + Hardening
+
+**Goal:** Close the loop on agent-output quality and per-call traceability — receive and judge the quality scores Ástríðr already emits, render LLM call chains natively — and harden the platform (security audit, key rotation, major dependency migrations).
+
+**Target features:**
+- **Eval pipeline + ingest** — `evalScores` table + ingest endpoint for Ástríðr's `task_quality` scores (emitted by `langfuse_eval.py` but currently dropped — no receiving endpoint, table, or UI exists); nightly Convex `internalAction` LLM-judging sampled sessions on a rubric; quality KPI + regression detection when a persona's model/instructions change.
+- **Native trace waterfall** — `traceId` grouping field on `llmMetrics`; in-app call-chain UI with timing bars, cost-per-call, and cache annotations (replaces the dead-link `LangfuseTraceLink.tsx`); self-hosted Langfuse/Phoenix explicitly deferred — the data is already in Convex.
+- **Hardening** — `/cso` code-security audit + remediation of confirmed findings; Forge ingest-key rotation (deployment memory records a placeholder key); TypeScript 5.9→6 and react-day-picker 9→10 major-bump migrations (both CI-red as dependabot PRs, closed 2026-07-04 and folded here).
+
+> **Seeded 2026-06-30** (`.planning/todos/pending/eval-and-trace-observability-v10.md`, from the cross-repo capability audit), formalized 2026-07-04 via `/gsd-new-milestone`. Both observability features ride existing `llmMetrics`/ingest data — no new transport from Ástríðr. Adjacent audit-#5 ingest data-loss bug already fixed (`aa145cd`). Continues phase numbering — v10.0 starts at Phase 93.
+
 ## Shipped Milestone: v8.0 Graph/KG Consolidation
 
 > **Shipped 2026-06-23** (started 2026-06-18). 5 phases (83-87), 17 plans, 8/8 requirements (GH-01..04, KG-08..11); milestone audit PASSED. Completed the Unified Graph Hub that Phase 76 (v6.0) never shipped and deepened the KG Explorer (Phase 74): graph-snapshot receiver (stops dropping Ástríðr's nightly snapshots — the full ~4,038-node real graph is now live) + `/graphs` hub + cross-graph navigation + KG search / clustering / saved-views / temporal-diff. Two follow-ons are data-gated on cross-repo Ástríðr deltas (live full-text search needs `/api/kg/search`, SEED-008; live community clustering needs `community` emission, D-10) — the CodePulse side is complete and degrades gracefully today. Archive: `milestones/v8.0-ROADMAP.md`; audit: `milestones/v8.0-MILESTONE-AUDIT.md`.
@@ -197,7 +208,14 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
+*Last updated: 2026-07-04 — **v10.0 Eval & Trace Observability + Hardening started** via `/gsd-new-milestone`. Scope: eval pipeline + ingest (`evalScores`, LLM-as-judge), native trace waterfall on `llmMetrics`, hardening (cso audit, Forge key rotation, TS 6 + react-day-picker 10 majors). Continues phase numbering from 93. Prior: v9.0 SHIPPED & ARCHIVED 2026-06-29 (5 phases 88-92, 19/19 reqs, tagged v9.0); SEED-001 doc-comment HITL UI shipped outside GSD 2026-07-04 (PR #54).*
+
+<details>
+<summary>Prior footer — 2026-06-29 (v9.0 shipped)</summary>
+
 *Last updated: 2026-06-29 after **v9.0 Readability & Experience milestone** — SHIPPED & ARCHIVED (5 phases 88-92, 30 plans, 19/19 requirements; tagged v9.0). Full evolution review complete: v9.0 reqs moved to Validated, 4 Key Decisions logged with outcomes, codebase ~86,100 LOC. Next: `/gsd-new-milestone`.*
+
+</details>
 
 <details>
 <summary>Prior footer — 2026-06-23 (v9.0 started)</summary>

@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.0
-milestone_name: Readability & Experience — SHIPPED 2026-06-29
-status: Awaiting next milestone
-stopped_at: "Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases."
-last_updated: "2026-06-29T18:47:45.387Z"
-last_activity: 2026-06-29 — Milestone v9.0 completed and archived
+milestone: v10.0
+milestone_name: Eval & Trace Observability + Hardening
+status: planning
+last_updated: "2026-07-04T19:30:20.441Z"
+last_activity: 2026-07-04
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 30
-  completed_plans: 30
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: Milestone v9.0 complete (tagged v9.0)
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-06-29 — Completed quick task 260629-qaj: cross-nav close-out (labels + inbound agent→Hive)
+Status: Defining requirements
+Last activity: 2026-07-04 — Milestone v10.0 started
 
 ## Deferred Items
 
