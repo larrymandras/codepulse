@@ -7,6 +7,7 @@ trigger_when: Next CodePulse milestone (v10.0). The marquee pair — do #2 + #3 
 scope: Medium (one milestone, two phases)
 source: 04-research/cross-repo-capability-audit-2026-06-30.md (#2, #3); patterns from Langfuse v3 / Arize Phoenix
 producer_repo: astridr (already emits task_quality via langfuse_eval.py; sends per-call data to llmMetrics)
+resolves_phase: 93 # Phase A → 93 (Eval Pipeline); Phase B → 94 (Trace Waterfall) — v10.0 roadmap 2026-07-04
 ---
 
 # TODO: Eval + Trace Observability for CodePulse (v10.0 marquee pair)
