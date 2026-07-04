@@ -65,6 +65,7 @@ import {
   Flame,
   Hexagon,
   Search,
+  MessageSquareText,
 } from "lucide-react";
 import { ScrollArea } from "../components/ui/scroll-area";
 import {
@@ -112,6 +113,7 @@ const iconComponents: Record<string, React.ElementType> = {
   "share-2": Share2,
   flame: Flame,
   hexagon: Hexagon,   // Phase 149 — Hive page
+  "message-square-text": MessageSquareText,
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -143,6 +145,7 @@ const navGroups: NavGroupConfig[] = [
       { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
       { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
       { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+      { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
     ],
   },
   {

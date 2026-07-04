@@ -73,6 +73,9 @@ const HivePage = lazy(() => import("./pages/HivePage"));
 // Phase 84: Graphs Hub
 const GraphsHub = lazy(() => import("./pages/GraphsHub"));
 
+// Doc-comment HITL review page
+const DocComments = lazy(() => import("./pages/DocComments"));
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -128,6 +131,8 @@ export default function App() {
               <Route path="/mcp-inventory" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading MCP Inventory...</div>}><McpInventory /></Suspense>} />
               {/* Phase 74: Temporal-KG Explorer (GRAPHS cluster) */}
               <Route path="/knowledge-graph" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading KG Explorer...</div>}><KnowledgeGraph /></Suspense>} />
+              {/* Doc-comment HITL review page */}
+              <Route path="/doc-comments" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Doc Review...</div>}><DocComments /></Suspense>} />
               {/* Phase 74: HR Section pages */}
               <Route path="/hr/roster" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
               <Route path="/hr/roster/:agentId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Roster...</div>}><HrRoster /></Suspense>} />
