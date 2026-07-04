@@ -20,18 +20,18 @@ function countOccurrences(haystack: string, needle: string): number {
  * byte-for-byte symmetric with the backend — any divergence risks silently
  * re-locating a comment to the wrong span instead of correctly marking it stale.
  *
- * Note: the context-match step only fires when prefix or suffix actually carry
- * context (non-empty). Without that guard, an anchor with empty prefix/suffix
- * would have `needle === quote`, collapsing step 2 into step 3 but reporting the
- * wrong `reason` ("context_match" instead of "quote_unique").
+ * Note: the context-match step runs unconditionally (quote is always non-empty
+ * for persisted anchors, so `needle` is never empty). With empty prefix/suffix,
+ * `needle === quote`, so this step reports `context_match` — matching the
+ * backend. The `quote_unique` branch only fires when the full context needle
+ * is NOT unique (or absent) but the bare quote still is.
  */
 export function relocateAnchor(source: string, anchor: Anchor): RelocateResult {
   if (anchor.quote && source.slice(anchor.start, anchor.end) === anchor.quote) {
     return { status: "located", start: anchor.start, end: anchor.end, reason: "position_match" };
   }
-  const hasContext = anchor.prefix.length > 0 || anchor.suffix.length > 0;
   const needle = anchor.prefix + anchor.quote + anchor.suffix;
-  if (hasContext && needle && countOccurrences(source, needle) === 1) {
+  if (needle && countOccurrences(source, needle) === 1) {
     const start = source.indexOf(needle) + anchor.prefix.length;
     return { status: "located", start, end: start + anchor.quote.length, reason: "context_match" };
   }

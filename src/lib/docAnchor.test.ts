@@ -18,10 +18,16 @@ describe("relocateAnchor (parity with backend)", () => {
     expect(r).toMatchObject({ status: "located", reason: "context_match" });
     expect(src.slice(r.start!, r.end!)).toBe("bravo");
   });
-  it("unique-quote fallback", () => {
+  it("unique-quote fallback (context changed, bare quote still unique)", () => {
+    const src = "the bravo is here";
+    expect(relocateAnchor(src, A({ quote: "bravo", prefix: "XXX", suffix: "YYY", start: 999, end: 1000 })))
+      .toMatchObject({ status: "located", reason: "quote_unique" });
+    // needle "XXXbravoYYY" is absent; bare "bravo" occurs once -> quote_unique
+  });
+  it("empty-context unique quote reports context_match (backend parity)", () => {
     const src = "the bravo is here";
     expect(relocateAnchor(src, A({ quote: "bravo", start: 999, end: 1000 })))
-      .toMatchObject({ status: "located", reason: "quote_unique" });
+      .toMatchObject({ status: "located", reason: "context_match" });
   });
   it("ambiguous quote → stale", () => {
     const src = "bravo and bravo";
