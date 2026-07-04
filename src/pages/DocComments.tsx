@@ -19,23 +19,29 @@ export default function DocComments() {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const { comments, refetch } = useDocComments(
+  const { comments, error: commentsError, refetch } = useDocComments(
     profileId, active?.repo ?? "", active?.path ?? "",
   );
 
   useEffect(() => {
     listDocs(profileId)
-      .then((r) => { setDocs(r.docs); setActive((a) => a ?? r.docs[0] ?? null); })
+      .then((r) => { setDocs(r.docs); setActive((a) => a ?? r.docs[0] ?? null); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [profileId]);
 
   useEffect(() => {
     if (!active) { setDoc(null); return; }
-    readDoc(active.repo, active.path).then(setDoc).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    let cancelled = false;
+    setDoc(null); // clear stale content immediately so no selection/create can use it
+    readDoc(active.repo, active.path)
+      .then((d) => { if (!cancelled) setDoc(d); })
+      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : String(e)); });
+    return () => { cancelled = true; };
   }, [active]);
 
   const submitComment = useCallback(async (text: string) => {
     if (!pending || !active || !doc) return;
+    setError(null);
     setSubmitting(true);
     try {
       await createComment({
@@ -49,6 +55,7 @@ export default function DocComments() {
   }, [pending, active, doc, profileId, refetch]);
 
   const onApply = useCallback(async (id: string) => {
+    setError(null);
     setApplyingId(id);
     try { await applyComment(id); refetch(); }
     catch (e) { setError(e instanceof Error ? e.message : String(e)); }
@@ -70,7 +77,7 @@ export default function DocComments() {
       </aside>
 
       <main className="relative overflow-y-auto">
-        {error && <div className="m-3 rounded bg-red-500/10 p-2 text-xs text-red-300">{error}</div>}
+        {(error || commentsError) && <div className="m-3 rounded bg-red-500/10 p-2 text-xs text-red-300">{error || commentsError}</div>}
         {doc
           ? <DocViewer source={doc.content} comments={comments}
               onSelectAnchor={(anchor, rect) => setPending({ anchor, rect })}
