@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: planning
-last_updated: "2026-07-04T19:30:20.441Z"
+last_updated: "2026-07-04T20:00:00.000Z"
 last_activity: 2026-07-04
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,14 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v9.0 shipped & archived (2026-06-29) — planning next milestone (`/gsd-new-milestone`)
+**Current focus:** v10.0 roadmap created (2026-07-04) — 3 phases (93-95), 9/9 requirements mapped, ready for `/gsd-plan-phase 93`
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 93 (Eval Pipeline & Quality KPIs) — not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-04 — Milestone v10.0 started
+Status: Roadmap created, awaiting phase planning
+Last activity: 2026-07-04 — Milestone v10.0 ROADMAP.md + REQUIREMENTS.md traceability written
 
 ## Deferred Items
 
@@ -46,7 +46,18 @@ Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocki
 
 **Accepted tech debt:** Phases 88 & 90 have no formal `VERIFICATION.md` — 88 covered by Nyquist VALIDATION (47/47 tests), 90 by operator live sign-off (`90-08-SUMMARY`).
 
-## v9.0 Roadmap
+## v10.0 Roadmap
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 93 | Eval Pipeline & Quality KPIs | EVAL-01, EVAL-02, EVAL-03 | Not started |
+| 94 | Trace Waterfall | TRACE-01, TRACE-02 | Not started |
+| 95 | Hardening — Security, Key Rotation, Dependency Majors | HARD-01, HARD-02, HARD-03, HARD-04 | Not started |
+
+**Execution order:** 93 and 94 are independent (separate schemas, both ride existing ingest paths) — either order or parallel. 95 is independent of both and sequenced last as audit/cleanup work.
+
+<details>
+<summary>Prior milestone (v9.0) Roadmap — SHIPPED 2026-06-29</summary>
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -56,13 +67,21 @@ Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocki
 | 91 | 3D Memory Galaxy | G3D-01, G3D-02 | ✅ Complete (5/5 plans; FPS≥30 + WebGL-leak operator sign-off 2026-06-29) |
 | 92 | Voice-Activated Command Palette (Jarvis Mode) | VOX-01..VOX-04 | ✅ Complete (6/6 plans) |
 
-**Execution order:** 88 → 89 → 92 → 90 → 91 (all done). All five v9.0 phases complete; milestone ready to close.
+**Execution order:** 88 → 89 → 92 → 90 → 91 (all done). All five v9.0 phases complete; milestone shipped & archived.
+
+</details>
 
 ## Accumulated Context
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v10.0 scoping decisions (2026-07-04):**
+
+- **3-phase roadmap** — EVAL-01..03 clustered into one phase (Phase 93) since they share the `evalScores` table (ingest, judge action, and KPI/regression UI are a single coherent delivery boundary, not three separable slices). TRACE-01/02 form Phase 94 (schema gates UI, same phase since the waterfall is unusable without `traceId`). HARD-01..04 form Phase 95 (independent audit/rotation/dependency-bump work, no shared schema with 93/94).
+- **95 sequenced last** — not a hard dependency, but hardening is audit/cleanup work rather than new-feature delivery; HARD-01 (`/cso`) may surface remediation scope once run, so it isn't gating the eval/trace feature work.
+- **No new Ástríðr transport** — both EVAL and TRACE ride existing `/runtime-ingest`-family paths; confirmed no emitter-protocol changes needed cross-repo.
 
 **v9.0 scoping decisions (2026-06-23):**
 
@@ -138,15 +157,15 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **Phase 90:** ✅ COMPLETE — 90-08 operator live sign-off received 2026-06-29 (`90-08-SUMMARY.md`); all 4 ROOM reqs verified live.
-- **Next: Phase 91 (3D Memory Galaxy)** — the last v9.0 phase. Needs the FPS≥30 benchmark at ~4,038 nodes (live `graphSnapshots`) before shipping; depends on Phase 89 `useThemeColors()` (done). Then `/gsd-complete-milestone` v9.0.
+- **v10.0 next action:** `/gsd-plan-phase 93` (Eval Pipeline & Quality KPIs) — first phase of the new milestone, no dependency, ready to plan.
+- **Phase 95 note:** HARD-03 (TypeScript 6) and HARD-04 (react-day-picker 10) already have CI-red dependabot branches (PR #50, PR #49) — plan-phase should reuse/rebase those branches rather than starting migrations from scratch.
+- **v9.0 (shipped, for reference):** ✅ COMPLETE — all 5 phases done, milestone archived 2026-06-29.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
-- **Archive-name collision: ✅ RESOLVED/MOOT (2026-06-29)** — verified the feared stale `milestones/v9.0-*.md`/`v10/v11` adversarial-track archives are NOT present in this repo (milestones/ holds only v4/5/7/8; git never tracked milestones/v9.0-*). The only v9.0 file is CodePulse's own `.planning/v9.0-MILESTONE-AUDIT.md`. No rename needed; `/gsd-complete-milestone` is safe.
+- **Archive-name collision: ✅ RESOLVED/MOOT (2026-06-29)** — verified the feared stale `milestones/v9.0-*.md`/`v10/v11` adversarial-track archives are NOT present in this repo (milestones/ holds only v4/5/7/8; git never tracked milestones/v9.0-*). The only v9.0 file is CodePulse's own `.planning/v9.0-MILESTONE-AUDIT.md`. No rename needed.
 
 ### Blockers/Concerns
 
-- **Phase 90 cross-repo dependency (ROOM-03):** ✅ RESOLVED — real operator Join is live (astridr token endpoint + LiveKit profile + room/transcript ingest all built and verified this session). Remaining: operator live sign-off (90-08).
-- **Phase 91 FPS at 4,038 nodes:** No controlled benchmark yet. FPS ≥30 is a blocking acceptance criterion — validate against the live `graphSnapshots` snapshot before shipping.
+- None currently blocking v10.0 — Phase 93/94 have no cross-repo dependency (both ride existing ingest); Phase 95's HARD-01 (`/cso`) may surface remediation scope once run, which would be new information, not a blocker at roadmap time.
 
 ### Quick Tasks Completed
 
@@ -160,11 +179,11 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-06-29T16:50:02.104Z
-Stopped at: Phase 91 (3D Memory Galaxy) COMPLETE — all 5 plans executed; code review (0 crit, 2 warnings fixed, 2 info accepted); verifier PASSED 10/10; idb-keyval regression fixed; operator GPU sign-off (SC#3 ≥30 FPS measured, SC#4 no-leak). v9.0 now 5/5 phases.
-Next action: `/gsd-complete-milestone` v9.0 — safe to run; archive-collision warning verified RESOLVED/MOOT 2026-06-29 (no stale adversarial v9.0/10/11 archives in this repo; no rename needed).
+Last session: 2026-07-04T20:00:00.000Z
+Stopped at: v10.0 ROADMAP.md + REQUIREMENTS.md traceability written by the roadmapper (3 phases: 93 Eval Pipeline & Quality KPIs, 94 Trace Waterfall, 95 Hardening). 9/9 requirements mapped, no orphans. STATE.md progress counters reset for the new milestone.
+Next action: `/gsd-plan-phase 93`
 Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Run `/gsd-plan-phase 93` to plan the Eval Pipeline & Quality KPIs phase.

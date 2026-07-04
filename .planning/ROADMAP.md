@@ -8,6 +8,7 @@
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 - ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**shipped 2026-06-23**) — unified Graphs hub + KG depth features — [archive](milestones/v8.0-ROADMAP.md)
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
+- 🚧 **v10.0 Eval & Trace Observability + Hardening** — Phases 93-95 (**started 2026-07-04**) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors
 
 ## Phases
 
@@ -213,7 +214,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
  (completed 2026-06-24)
 - [x] **Phase 90 — Agent Room / War Room** — ✅ COMPLETE (8/8, operator live sign-off 2026-06-29). Live participant identity + bounded listing + real operator Join + seq-ordered transcript — plus the cross-repo live integration that was never closed at scoping (LiveKit war-room profile, Convex deploy, astridr room/transcript ingest, delete-room feature, dialog/upsert fixes — see `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md` + `90-08-SUMMARY.md`).
-- [x] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware (completed 2026-06-29)
+- [x] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware (completed 2026-06-29)
 - [x] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (openWakeWord ONNX on `onnxruntime-web`, Apache-2.0, no Picovoice/account/key) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply auto-played via shared `useTtsPlayback`
  (completed 2026-06-25)
 
@@ -317,6 +318,63 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 ---
 
+## v10.0 Eval & Trace Observability + Hardening
+
+> **Started 2026-07-04** via `/gsd-new-milestone` (seeded from `.planning/todos/pending/eval-and-trace-observability-v10.md`, the 2026-06-30 cross-repo capability audit). Continues phase numbering from 93. Both observability features ride existing `llmMetrics`/ingest transport — no new emitter protocol from Ástríðr.
+
+**Milestone goal:** Close the loop on agent-output quality and per-call traceability — receive and judge the quality scores Ástríðr already emits, render LLM call chains natively — and harden the platform (security audit, key rotation, major dependency migrations).
+
+**Phase summary:**
+
+- [ ] **Phase 93: Eval Pipeline & Quality KPIs** — `evalScores` ingest (idempotent), nightly LLM-as-judge `internalAction`, per-persona quality KPI + regression detection
+- [ ] **Phase 94: Trace Waterfall** — `traceId` grouping on `llmMetrics` + in-app call-chain waterfall UI (replaces dead-link `LangfuseTraceLink.tsx`)
+- [ ] **Phase 95: Hardening — Security, Key Rotation, Dependency Majors** — `/cso` audit + remediation, Forge ingest-key rotation, TypeScript 6 + react-day-picker 10 migrations
+
+**Execution order:** 93 and 94 are independent of each other — both ride existing ingest paths with no shared schema — and can run in either order or in parallel. 95 is independent of both (its own audit/rotation/dependency-bump surface) and is sequenced last since it is hardening/cleanup work rather than new-feature delivery; HARD-03/04 close out dependabot PRs already CI-red, and HARD-01 may surface remediation work that adds scope once run.
+
+## Phase Details
+
+### Phase 93: Eval Pipeline & Quality KPIs
+**Goal**: Ástríðr's task-quality scores are captured instead of silently dropped, sampled sessions are LLM-judged nightly against a rubric, and operators can see per-persona quality trends and catch regressions tied to persona changes.
+**Depends on**: Nothing — new `evalScores` table and ingest path, no dependency on existing schema.
+**Requirements**: EVAL-01, EVAL-02, EVAL-03
+**Success Criteria** (what must be TRUE):
+  1. `task_quality` scores POSTed by Ástríðr's `langfuse_eval.py` to a bearer-authed ingest endpoint are stored in `evalScores` exactly once even under at-least-once retry (idempotent) — scores are no longer silently dropped on the floor.
+  2. A nightly Convex `internalAction` runs unattended, samples sessions, LLM-judges them against a rubric, and writes the resulting scores into `evalScores`.
+  3. Operator can view a per-persona quality KPI/trend on a dashboard surface.
+  4. A quality regression following a persona's model or instruction change (joined against `profileSwitches`/`configChanges`) is flagged or alerted to the operator, not silently absorbed into the trend line.
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 94: Trace Waterfall
+**Goal**: Operators can open any session and see exactly how its LLM call chain executed — ordered timing, per-call cost, and cache hits — inside CodePulse, replacing the dead Langfuse reference.
+**Depends on**: Nothing — extends existing `llmMetrics` rows already ingested; independent of Phase 93.
+**Requirements**: TRACE-01, TRACE-02
+**Success Criteria** (what must be TRUE):
+  1. New `llmMetrics` rows carry a `traceId` grouping field (schema + ingest pass-through); existing rows without `traceId` continue to render without error — no backward-compatibility break.
+  2. Operator can open a session's LLM call chain as an in-app trace waterfall with calls rendered as timing bars in correct chronological order.
+  3. Each call bar in the waterfall shows cost-per-call and a cache-hit/miss annotation.
+  4. The dead-link `LangfuseTraceLink.tsx` is replaced by the in-app waterfall — no more link out to a trace store that was never stood up.
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 95: Hardening — Security Audit, Key Rotation, Dependency Majors
+**Goal**: The platform's security posture, secrets, and major dependencies are current and verified — no live placeholder secrets, no unremediated confirmed findings, no CI-red dependency PRs blocking future work.
+**Depends on**: Nothing — independent of Phases 93/94; can run in parallel or any order, sequenced last as audit/cleanup work.
+**Requirements**: HARD-01, HARD-02, HARD-03, HARD-04
+**Success Criteria** (what must be TRUE):
+  1. `/cso` code-security audit is run against the repo and every confirmed finding (with `file:line` evidence, zero-false-positive precision bar) is remediated — no open confirmed findings remain.
+  2. The Forge ingest key placeholder (`<new-strong-secret>`, recorded in memory `forge-deployment-tidy-whale-981`) is replaced by a real rotated secret live in both the Convex env and the Forge daemon config, with a live ingest round-trip confirming the new key works end to end.
+  3. TypeScript 6.0 migration lands green — `tsc --noEmit`, the full Vitest suite, and `vite build` all pass with zero errors (was CI-red as dependabot PR #50, closed 2026-07-04).
+  4. react-day-picker 10 migration lands green — all calendar-consuming surfaces are manually verified to render and interact correctly (was CI-red as dependabot PR #49, closed 2026-07-04).
+**Plans**: TBD
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -342,5 +400,10 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 90. Agent Room / War Room | v9.0 | 8/8 | ✅ Complete | 2026-06-29 |
 | 91. 3D Memory Galaxy | v9.0 | 5/5 | Complete    | 2026-06-29 |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
+| 93. Eval Pipeline & Quality KPIs | v10.0 | 0/TBD | Not started | - |
+| 94. Trace Waterfall | v10.0 | 0/TBD | Not started | - |
+| 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 0/TBD | Not started | - |
 
-*Last updated: 2026-06-29 — **v9.0 Readability & Experience SHIPPED & ARCHIVED** (tagged v9.0; archive `milestones/v9.0-ROADMAP.md`). 5 phases (88-92), 30 plans, 19/19 requirements. — Prior note: Phase 90 build (90-01..90-07) complete; this session closed the cross-repo LIVE-integration gap that was never closed at scoping. Five layered gaps fixed + committed: (1) `war-room` Docker profile (LiveKit + 5 agent workers) wasn't started → create_war_room 500; (2) Phase-90 Convex fns committed-but-not-deployed → listRooms error; (3) astridr never POSTed to `/war-room-ingest` → built room.created/updated emit (astridr 97c63643, codepulse e09ce37); (4) transcript.chunk ingest from agents → built (astridr 26874fac); (5) launch-dialog form-wipe fix (codepulse 4c3372d) + new delete-room feature (codepulse 1189ff5). astridr token endpoint live (4093aec). Full record: `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md`. Remaining: 90-08 operator live sign-off. — Prior note: Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*
+*Last updated: 2026-07-04 — **v10.0 Eval & Trace Observability + Hardening roadmap created** via `/gsd-new-project` roadmapper. 3 phases (93-95), 9/9 requirements mapped (EVAL-01..03 → Phase 93; TRACE-01..02 → Phase 94; HARD-01..04 → Phase 95). Sequencing: 93/94 independent (separate schemas, both ride existing ingest), 95 independent of both, sequenced last as audit/cleanup. Next: `/gsd-plan-phase 93`.*
+
+*Prior: 2026-06-29 — **v9.0 Readability & Experience SHIPPED & ARCHIVED** (tagged v9.0; archive `milestones/v9.0-ROADMAP.md`). 5 phases (88-92), 30 plans, 19/19 requirements. — Prior note: Phase 90 build (90-01..90-07) complete; this session closed the cross-repo LIVE-integration gap that was never closed at scoping. Five layered gaps fixed + committed: (1) `war-room` Docker profile (LiveKit + 5 agent workers) wasn't started → create_war_room 500; (2) Phase-90 Convex fns committed-but-not-deployed → listRooms error; (3) astridr never POSTed to `/war-room-ingest` → built room.created/updated emit (astridr 97c63643, codepulse e09ce37); (4) transcript.chunk ingest from agents → built (astridr 26874fac); (5) launch-dialog form-wipe fix (codepulse 4c3372d) + new delete-room feature (codepulse 1189ff5). astridr token endpoint live (4093aec). Full record: `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md`. Remaining: 90-08 operator live sign-off. — Prior note: Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*

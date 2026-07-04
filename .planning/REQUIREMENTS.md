@@ -36,16 +36,16 @@
 
 ## Traceability
 
-_Populated by the roadmap._
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| EVAL-01 | Phase 93 | Pending |
+| EVAL-02 | Phase 93 | Pending |
+| EVAL-03 | Phase 93 | Pending |
+| TRACE-01 | Phase 94 | Pending |
+| TRACE-02 | Phase 94 | Pending |
+| HARD-01 | Phase 95 | Pending |
+| HARD-02 | Phase 95 | Pending |
+| HARD-03 | Phase 95 | Pending |
+| HARD-04 | Phase 95 | Pending |
 
-| Requirement | Phase |
-|-------------|-------|
-| EVAL-01 | — |
-| EVAL-02 | — |
-| EVAL-03 | — |
-| TRACE-01 | — |
-| TRACE-02 | — |
-| HARD-01 | — |
-| HARD-02 | — |
-| HARD-03 | — |
-| HARD-04 | — |
+**Coverage:** 9/9 v10.0 requirements mapped. No orphans.
