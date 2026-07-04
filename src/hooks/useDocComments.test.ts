@@ -23,4 +23,29 @@ describe("useDocComments", () => {
     expect(result.current.comments).toEqual([]);
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("does not update state after unmount when fetch resolves late", async () => {
+    // Deferred promise so we control exactly when listCommentsForDoc resolves,
+    // letting us unmount while the fetch is still in flight.
+    let resolveFetch: (v: { comments: api.DocComment[]; count: number }) => void;
+    const deferred = new Promise<{ comments: api.DocComment[]; count: number }>((resolve) => {
+      resolveFetch = resolve;
+    });
+    vi.spyOn(api, "listCommentsForDoc").mockReturnValue(deferred);
+
+    const { unmount } = renderHook(() =>
+      useDocComments("larry", "astridr", ".planning/x-SPEC.md"),
+    );
+
+    // Unmount before the in-flight fetch resolves — mountedRef flips false.
+    unmount();
+
+    // Resolving now would previously call setComments/setLoading on a torn-down
+    // hook. This should not throw or produce an act() warning.
+    resolveFetch!({ comments: [{ id: "c1", status: "open" } as api.DocComment], count: 1 });
+    await expect(deferred).resolves.toEqual({
+      comments: [{ id: "c1", status: "open" }],
+      count: 1,
+    });
+  });
 });
