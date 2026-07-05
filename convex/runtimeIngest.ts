@@ -2,6 +2,7 @@ import { httpAction } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 import { legacyEventData } from "./ingestSummary";
+import { processTaskQualityEvent } from "./evalScores";
 
 /**
  * HTTP action: POST /runtime-ingest
@@ -71,6 +72,23 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             goalId: d.goalId ?? d.goal_id,            // Phase 149 PULSE-01 — cost-by-goal join
             cacheReadInputTokens: d.cacheReadInputTokens ?? d.cache_read_input_tokens,
             cacheCreationInputTokens: d.cacheCreationInputTokens ?? d.cache_creation_input_tokens,
+          });
+          break;
+        }
+        case "task_quality": {
+          // Phase 93 (EVAL-01): Ástríðr's langfuse_eval.py task_quality scores,
+          // currently dropped on the floor — now persisted to evalScores.
+          // Inherits the validateIngestAuth Bearer gate above (T-93-02); no new
+          // route or auth check added. Idempotent dedup + NaN/out-of-range
+          // rejection happen inside ingestTaskQuality (T-93-01/T-93-03).
+          const d = data as any;
+          const parsed = processTaskQualityEvent(d, timestamp);
+          await ctx.runMutation(api.evalScores.ingestTaskQuality, {
+            profileId: parsed.profileId,
+            sessionId: parsed.sessionId,
+            overall: parsed.overall,
+            idempotencyKey: parsed.idempotencyKey,
+            timestamp: parsed.timestamp,
           });
           break;
         }

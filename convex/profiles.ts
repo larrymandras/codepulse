@@ -77,6 +77,14 @@ export const recordActivityBatch = mutation({
   },
 });
 
+// Phase 93 (RESEARCH Pitfall 2 / D-11): audit-trail key for persona model
+// changes, matching the `profile.<id>.<field>` naming of the existing
+// updateEmail precedent (L144-150 below). Exported so EVAL-03's regression
+// detection and tests can assert the exact key shape without re-deriving it.
+export function personaConfigChangeKey(profileId: string): string {
+  return `profile.${profileId}.modelPreferences`;
+}
+
 // Profile config sync
 export const upsertConfig = mutation({
   args: {
@@ -92,6 +100,27 @@ export const upsertConfig = mutation({
       .query("profileConfigs")
       .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
       .first();
+
+    // Phase 93 (RESEARCH Pitfall 2): audit a persona's modelPreferences change.
+    // Only write the audit row when modelPreferences is actually part of THIS
+    // update and differs from the stored value — a channels/budget-only patch
+    // must not emit a no-op audit row. Deliberately scoped to profileConfigs
+    // only (NOT agentProfiles.update): per RESEARCH Assumption A1, agentProfiles
+    // has zero rows and is not the real persona-model change path.
+    if (
+      args.modelPreferences !== undefined &&
+      JSON.stringify(args.modelPreferences) !==
+        JSON.stringify(existing?.modelPreferences)
+    ) {
+      await ctx.db.insert("configChanges", {
+        configKey: personaConfigChangeKey(args.profileId),
+        oldValue: existing?.modelPreferences,
+        newValue: args.modelPreferences,
+        changedBy: "dashboard",
+        changedAt: now,
+      });
+    }
+
     if (existing) {
       await ctx.db.patch(existing._id, {
         channels: args.channels ?? existing.channels,
