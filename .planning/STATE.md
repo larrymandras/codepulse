@@ -4,8 +4,8 @@ milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
 stopped_at: Phase 93 UI-SPEC approved
-last_updated: "2026-07-05T19:03:31.793Z"
-last_activity: 2026-07-05 -- Phase 93 planning complete
+last_updated: "2026-07-05T20:05:56.230Z"
+last_activity: 2026-07-05 -- Phase 93 execution started
 progress:
   total_phases: 3
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v10.0 roadmap created (2026-07-04) — 3 phases (93-95), 9/9 requirements mapped, ready for `/gsd-plan-phase 93`
+**Current focus:** Phase 93 — eval-pipeline-quality-kpis
 
 ## Current Position
 
-Phase: Phase 93 (Eval Pipeline & Quality KPIs) — not started
-Plan: —
-Status: Ready to execute
-Last activity: 2026-07-05 -- Phase 93 planning complete
+Phase: 93 (eval-pipeline-quality-kpis) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 93
+Last activity: 2026-07-05 -- Phase 93 execution started
 
 ## Deferred Items
 
