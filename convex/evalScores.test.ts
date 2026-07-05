@@ -13,6 +13,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
+import { personaConfigChangeKey } from "./profiles";
 
 describe("evalScores — processTaskQualityEvent", () => {
   it("coalesces a full snake_case Ástríðr payload to the evalScores row shape", () => {
@@ -112,5 +113,22 @@ describe("evalScores — ingestTaskQuality score-range guard (pure predicate mir
   it("rejects out-of-range scores", () => {
     expect(isValidScore(-0.1)).toBe(false);
     expect(isValidScore(1.1)).toBe(false);
+  });
+});
+
+describe("profiles — personaConfigChangeKey (configChange audit key)", () => {
+  it('produces "profile.business.modelPreferences" for profileId "business"', () => {
+    expect(personaConfigChangeKey("business")).toBe(
+      "profile.business.modelPreferences"
+    );
+  });
+
+  it("matches the profile.<id>.<field> naming of the existing updateEmail precedent", () => {
+    expect(personaConfigChangeKey("personal")).toBe(
+      "profile.personal.modelPreferences"
+    );
+    expect(personaConfigChangeKey("consulting")).toBe(
+      "profile.consulting.modelPreferences"
+    );
   });
 });
