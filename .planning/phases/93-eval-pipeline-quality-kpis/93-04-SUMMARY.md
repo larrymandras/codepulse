@@ -109,3 +109,7 @@ None - no external service configuration required. This plan is pure Convex back
 ---
 *Phase: 93-eval-pipeline-quality-kpis*
 *Completed: 2026-07-05*
+
+## Self-Check: PASSED
+
+All created/modified files verified present (`convex/evalScores.ts`, `convex/evalScores.test.ts`, this summary); all 3 commits (`a87c2f4` Task 1, `a06d268` Task 2, `6dbac3e` plan metadata) verified in `git log`.
