@@ -11,7 +11,7 @@ import {
 // JUDGE_TOOL / JudgeOutputSchema) — task_completion, error_handling,
 // tool_efficiency, cost_discipline. Colored via the --chart-2..5 tokens,
 // leaving --chart-1 for the overall line.
-const RUBRIC_DIMENSIONS: { key: string; label: string; color: string }[] = [
+export const RUBRIC_DIMENSIONS: { key: string; label: string; color: string }[] = [
   { key: "task_completion", label: "Task Completion", color: "var(--chart-2)" },
   { key: "error_handling", label: "Error Handling", color: "var(--chart-3)" },
   { key: "tool_efficiency", label: "Tool Efficiency", color: "var(--chart-4)" },
