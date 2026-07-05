@@ -19,6 +19,8 @@ import {
   callJudgeLLM,
   storeEvalScoreHandler,
   RUBRIC_VERSION,
+  sampleSessionsForPersonas,
+  runJudgeBatch,
   type StoreEvalScoreArgs,
 } from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
@@ -424,5 +426,101 @@ describe("profiles — personaConfigChangeKey (configChange audit key)", () => {
     expect(personaConfigChangeKey("consulting")).toBe(
       "profile.consulting.modelPreferences"
     );
+  });
+});
+
+describe("evalScores — sampleSessionsForPersonas (nightly sampling, D-08)", () => {
+  const activePersonas = ["personal", "business", "consulting"];
+
+  it("sampling caps at 3 sessions per persona", () => {
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      sessionId: `biz-${i}`,
+      profileId: "business",
+    }));
+
+    const { sampled } = sampleSessionsForPersonas(activePersonas, candidates);
+    const businessSampled = sampled.filter((s) => s.profileId === "business");
+    expect(businessSampled.length).toBe(3);
+  });
+
+  it("sampling distributes across all active personas independently", () => {
+    const candidates = [
+      { sessionId: "p1", profileId: "personal" },
+      { sessionId: "p2", profileId: "personal" },
+      { sessionId: "b1", profileId: "business" },
+      { sessionId: "c1", profileId: "consulting" },
+    ];
+
+    const { sampled } = sampleSessionsForPersonas(activePersonas, candidates);
+    expect(sampled.filter((s) => s.profileId === "personal").length).toBe(2);
+    expect(sampled.filter((s) => s.profileId === "business").length).toBe(1);
+    expect(sampled.filter((s) => s.profileId === "consulting").length).toBe(1);
+  });
+
+  it("sampling buckets an unresolvable persona attribution under \"unknown\" and counts it", () => {
+    const candidates = [
+      { sessionId: "s1", profileId: undefined },
+      { sessionId: "s2", profileId: "some-non-persona-agent-type" },
+      { sessionId: "s3", profileId: "business" },
+    ];
+
+    const { sampled, unknownCount } = sampleSessionsForPersonas(
+      activePersonas,
+      candidates
+    );
+
+    expect(unknownCount).toBe(2);
+    const unknownSampled = sampled.filter((s) => s.profileId === "unknown");
+    expect(unknownSampled.length).toBe(2);
+    expect(unknownSampled.map((s) => s.sessionId).sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("sampling returns zero unknownCount when every candidate attributes cleanly", () => {
+    const candidates = [
+      { sessionId: "p1", profileId: "personal" },
+      { sessionId: "b1", profileId: "business" },
+    ];
+    const { unknownCount } = sampleSessionsForPersonas(activePersonas, candidates);
+    expect(unknownCount).toBe(0);
+  });
+});
+
+describe("evalScores — runJudgeBatch (Promise.allSettled isolation, Pitfall 5/E2)", () => {
+  it("one rejecting session does not drop the others in the same batch", async () => {
+    const sampled = [
+      { profileId: "business", sessionId: "ok-1" },
+      { profileId: "business", sessionId: "bad-1" },
+      { profileId: "business", sessionId: "ok-2" },
+    ];
+
+    const judgeOne = vi.fn(async (s: { sessionId: string }) => {
+      if (s.sessionId === "bad-1") {
+        throw new Error("judge failed after 3 attempts");
+      }
+    });
+
+    const { scored, failed } = await runJudgeBatch(sampled, judgeOne);
+    expect(scored).toBe(2);
+    expect(failed).toBe(1);
+    expect(judgeOne).toHaveBeenCalledTimes(3);
+  });
+
+  it("all sessions succeeding reports zero failures", async () => {
+    const sampled = [
+      { profileId: "personal", sessionId: "a" },
+      { profileId: "personal", sessionId: "b" },
+    ];
+    const judgeOne = vi.fn(async () => {});
+    const { scored, failed } = await runJudgeBatch(sampled, judgeOne);
+    expect(scored).toBe(2);
+    expect(failed).toBe(0);
+  });
+
+  it("an empty sampled batch resolves with zero scored and zero failed", async () => {
+    const judgeOne = vi.fn(async () => {});
+    const { scored, failed } = await runJudgeBatch([], judgeOne);
+    expect(scored).toBe(0);
+    expect(failed).toBe(0);
+    expect(judgeOne).not.toHaveBeenCalled();
   });
 });

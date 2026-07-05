@@ -2,10 +2,11 @@ import {
   mutation,
   internalQuery,
   internalMutation,
+  internalAction,
 } from "./_generated/server";
 import { v } from "convex/values";
 import { z } from "zod";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 
 /**
  * Phase 93 (EVAL-01) — evalScores ingest.
@@ -559,4 +560,199 @@ export const storeEvalScore = internalMutation({
     overall: v.float64(),
   },
   handler: storeEvalScoreHandler,
+});
+
+// ============================================================
+// EVAL-02 — Nightly sampling internalAction + cron (Task 3)
+// ============================================================
+//
+// PERSONA DECISION (resolves RESEARCH Pitfall 1 / Open Question 1 — do not
+// bake an unstated assumption into a query):
+//
+// "Active persona" = rows from `profiles.listConfigs` (profileConfigs:
+// personal/business/consulting), consistent with UI-SPEC Assumption #6.
+// `sessions`/`events` carry NO `profileId` field, so a candidate session is
+// attributed to a persona via its `llmMetrics.agentId` where resolvable.
+//
+// Evidence for the `llmMetrics.agentId` -> persona join (verified in
+// astridr-repo): `astridr/agent/loop.py` and `astridr/agent/insight_extractor.py`
+// set `agent_id=self._active_profile` / `agent_id=profile_id` at most call
+// sites, so `llmMetrics.agentId` carries the active operational profileId for
+// those sessions -- BUT `astridr/agent/loop.py:1537` has one path
+// (`self_improvement.py`) where `agent_id` falls back to `_agent_type`
+// instead of the profile, so attribution is not total.
+//
+// When a session has no resolvable persona attribution, it is judged under
+// an explicit `"unknown"` persona bucket rather than being dropped, and that
+// bucket's volume is emitted as an `N unknown-persona` count in the action's
+// liveness summary (console.error + return value) so attribution drift is
+// visible in prod rather than silently absorbed. This is a first-class,
+// documented decision -- not a silent join.
+
+export interface SampleCandidate {
+  sessionId: string;
+  // Resolved via llmMetrics.agentId (may be unresolved -> undefined, see the
+  // PERSONA DECISION comment above).
+  profileId?: string;
+}
+
+export interface SamplingResult {
+  sampled: Array<{ profileId: string; sessionId: string }>;
+  unknownCount: number;
+}
+
+const MAX_SESSIONS_PER_PERSONA = 3; // D-08
+
+/**
+ * Pure, testable sampling function: given the set of active persona ids and a
+ * candidate session pool (each pre-attributed to a persona id where
+ * resolvable), returns at most `maxPerPersona` sessions per persona. Sessions
+ * that don't attribute to a currently-active persona are bucketed under the
+ * explicit `"unknown"` persona rather than dropped (see PERSONA DECISION
+ * above) -- `unknownCount` reports how many candidates landed there so
+ * attribution drift is observable.
+ */
+export function sampleSessionsForPersonas(
+  activePersonaIds: string[],
+  candidates: SampleCandidate[],
+  maxPerPersona: number = MAX_SESSIONS_PER_PERSONA
+): SamplingResult {
+  const activeSet = new Set(activePersonaIds);
+  const byPersona = new Map<string, string[]>();
+  let unknownCount = 0;
+
+  for (const c of candidates) {
+    const pid = c.profileId && activeSet.has(c.profileId) ? c.profileId : "unknown";
+    if (pid === "unknown") unknownCount++;
+    const bucket = byPersona.get(pid) ?? [];
+    bucket.push(c.sessionId);
+    byPersona.set(pid, bucket);
+  }
+
+  const sampled: Array<{ profileId: string; sessionId: string }> = [];
+  for (const [profileId, sessionIds] of byPersona.entries()) {
+    // Random sample within the day (D-08), not always the first N.
+    const shuffled = [...sessionIds].sort(() => Math.random() - 0.5);
+    for (const sessionId of shuffled.slice(0, maxPerPersona)) {
+      sampled.push({ profileId, sessionId });
+    }
+  }
+
+  return { sampled, unknownCount };
+}
+
+/**
+ * Runs the per-session judge calls with Promise.allSettled (NOT Promise.all
+ * -- Pitfall 5/E2/4b.2): one session throwing must never drop the others in
+ * the same batch. Returns settled/rejected counts for the liveness summary
+ * (E7). Extracted as its own function so the allSettled-isolation behavior
+ * is directly unit-testable without a Convex ctx.
+ */
+export async function runJudgeBatch(
+  sampled: Array<{ profileId: string; sessionId: string }>,
+  judgeOne: (s: { profileId: string; sessionId: string }) => Promise<void>
+): Promise<{ scored: number; failed: number }> {
+  const results = await Promise.allSettled(sampled.map((s) => judgeOne(s)));
+  const scored = results.filter((r) => r.status === "fulfilled").length;
+  const failed = results.filter((r) => r.status === "rejected").length;
+  if (failed > 0) {
+    console.error(
+      `[eval-judge] ${failed}/${results.length} sessions failed judging tonight`
+    );
+  }
+  return { scored, failed };
+}
+
+export const getCandidateSessionsInternal = internalQuery({
+  args: { dayStart: v.float64() },
+  handler: async (ctx, { dayStart }) => {
+    const dayEnd = dayStart + 86400;
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_status", (q) => q.eq("status", "completed"))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("lastEventAt"), dayStart),
+          q.lt(q.field("lastEventAt"), dayEnd)
+        )
+      )
+      .collect();
+
+    const candidates: SampleCandidate[] = [];
+    for (const s of sessions) {
+      // See PERSONA DECISION above: best-effort attribution via
+      // llmMetrics.agentId; unresolved -> undefined -> "unknown" bucket.
+      const metric = await ctx.db
+        .query("llmMetrics")
+        .withIndex("by_session", (q) => q.eq("sessionId", s.sessionId))
+        .first();
+      candidates.push({ sessionId: s.sessionId, profileId: metric?.agentId });
+    }
+    return candidates;
+  },
+});
+
+async function judgeOneSession(
+  ctx: any,
+  sessionId: string,
+  profileId: string
+): Promise<void> {
+  const digestData = await ctx.runQuery(
+    internal.evalScores.getJudgeDigestInternal,
+    { sessionId }
+  );
+  const digest = buildJudgeDigest(digestData);
+  const userPrompt = `Session digest:\n${digest}`;
+  const { output, model } = await callJudgeLLM(
+    ctx.runQuery.bind(ctx),
+    JUDGE_SYSTEM_PROMPT,
+    userPrompt
+  );
+  await ctx.runMutation(internal.evalScores.storeEvalScore, {
+    sessionId,
+    profileId,
+    judgeModel: model,
+    timestamp: Date.now() / 1000,
+    ...output,
+  });
+}
+
+export const judgeSessionsAction = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // listConfigs is a public query (convex/profiles.ts) — internalActions can
+    // call public queries via ctx.runQuery just as freely as internal ones.
+    const personas = await ctx.runQuery(api.profiles.listConfigs, {});
+    const activePersonaIds = (personas as Array<{ profileId: string }>).map(
+      (p) => p.profileId
+    );
+
+    const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400;
+    const candidates = await ctx.runQuery(
+      internal.evalScores.getCandidateSessionsInternal,
+      { dayStart }
+    );
+
+    const { sampled, unknownCount } = sampleSessionsForPersonas(
+      activePersonaIds,
+      candidates as SampleCandidate[]
+    );
+
+    const { scored, failed } = await runJudgeBatch(sampled, (s) =>
+      judgeOneSession(ctx, s.sessionId, s.profileId)
+    );
+
+    // E7: liveness summary -- "no data" (zero scores) must be distinguishable
+    // from "nothing happened" from this line alone.
+    console.error(
+      `[eval-judge] ${sampled.length} sampled / ${scored} scored / ${failed} failed / ${unknownCount} unknown-persona`
+    );
+
+    return {
+      sampled: sampled.length,
+      scored,
+      failed,
+      unknownPersonaCount: unknownCount,
+    };
+  },
 });
