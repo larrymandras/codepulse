@@ -131,4 +131,13 @@ crons.daily(
   internal.graphSnapshots.sweepGraphSnapshotVersions,
 );
 
+// Phase 93: Nightly LLM-judge sampling (EVAL-02). Offset from the 04:30
+// graph-snapshot sweep and the 06:00 daily-digest generation to avoid
+// scheduler contention.
+crons.daily(
+  "judge-sampled-sessions",
+  { hourUTC: 5, minuteUTC: 0 },
+  internal.evalScores.judgeSessionsAction,
+);
+
 export default crons;

@@ -238,8 +238,13 @@ export const setLLMConfig = mutation({
     if (!identity) throw new ConvexError("Unauthenticated");
 
     // T-07-08: Validate slot and provider values
-    if (slot !== "primary" && slot !== "backup") {
-      throw new Error(`Invalid slot "${slot}". Must be "primary" or "backup".`);
+    // Phase 93 D-07: "eval" is a third, isolated slot (intelligence.llm_eval) for the
+    // nightly LLM-judge caller in evalScores.ts — changing primary/backup must never
+    // silently reweight judge scoring, so it gets its own valid slot value here.
+    if (slot !== "primary" && slot !== "backup" && slot !== "eval") {
+      throw new Error(
+        `Invalid slot "${slot}". Must be "primary", "backup", or "eval".`
+      );
     }
     if (provider !== "openai" && provider !== "anthropic") {
       throw new Error(

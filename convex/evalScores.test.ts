@@ -11,8 +11,18 @@
  * Uses plain vitest — convex-test is NOT installed in this repo
  * (see convex/runtimeIngest.test.ts:9).
  */
-import { describe, it, expect } from "vitest";
-import { processTaskQualityEvent } from "./evalScores";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  processTaskQualityEvent,
+  buildJudgeDigest,
+  JudgeOutputSchema,
+  callJudgeLLM,
+  storeEvalScoreHandler,
+  RUBRIC_VERSION,
+  sampleSessionsForPersonas,
+  runJudgeBatch,
+  type StoreEvalScoreArgs,
+} from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
 
 describe("evalScores — processTaskQualityEvent", () => {
@@ -116,6 +126,292 @@ describe("evalScores — ingestTaskQuality score-range guard (pure predicate mir
   });
 });
 
+describe("evalScores — buildJudgeDigest (digest builder)", () => {
+  it("digest aggregates events into tool/eventType counts and includes llmMetrics summary stats", () => {
+    const digest = buildJudgeDigest({
+      session: {
+        sessionId: "s1",
+        status: "completed",
+        provider: "claude",
+        model: "claude-opus-4-8",
+      },
+      events: [
+        { toolName: "Read", eventType: "PostToolUse" },
+        { toolName: "Read", eventType: "PostToolUse" },
+        { toolName: "Edit", eventType: "PostToolUse" },
+      ],
+      llmMetrics: [
+        { cost: 0.01, totalTokens: 500 },
+        { cost: 0.02, totalTokens: 700 },
+      ],
+    });
+
+    expect(digest).toContain("Read: 2");
+    expect(digest).toContain("Edit: 1");
+    expect(digest).toContain("$0.0300");
+    expect(digest).toContain("total tokens: 1200");
+    expect(digest).toContain("LLM calls: 2");
+  });
+
+  it("names the failing tool/operation for an error-heavy session (E6 digest fidelity)", () => {
+    const digest = buildJudgeDigest({
+      session: { sessionId: "s2", status: "errored" },
+      events: [
+        { toolName: "Bash", eventType: "PostToolUseFailure", payload: { error: "npm install failed: ENOTFOUND registry.npmjs.org" } },
+        { toolName: "Bash", eventType: "PostToolUseFailure", payload: { error: "npm install failed: ENOTFOUND registry.npmjs.org" } },
+      ],
+      llmMetrics: [],
+    });
+
+    expect(digest).toContain("[Bash]");
+    expect(digest).toContain("ENOTFOUND");
+    expect(digest).toContain("Errors (2)");
+  });
+
+  it("digest truncates free-text payload content to well under 300 chars per snippet", () => {
+    const longError = "x".repeat(1000);
+    const digest = buildJudgeDigest({
+      session: { sessionId: "s3" },
+      events: [
+        { toolName: "Bash", eventType: "error", payload: { message: longError } },
+      ],
+      llmMetrics: [],
+    });
+
+    const errorLine = digest.split("\n").find((l) => l.startsWith("Errors"));
+    expect(errorLine).toBeDefined();
+    // The whole digest must stay bounded — the raw 1000-char payload must not
+    // survive verbatim in the output.
+    expect(digest.length).toBeLessThan(600);
+    expect(digest).not.toContain(longError);
+  });
+
+  it("digest handles an empty session/events/llmMetrics gracefully", () => {
+    const digest = buildJudgeDigest({ session: null, events: [], llmMetrics: [] });
+    expect(digest).toContain("Session: unknown");
+    expect(digest).toContain("Event count: 0");
+    expect(digest).toContain("Tool/event activity: none");
+  });
+});
+
+describe("evalScores — JudgeOutputSchema (judge structured-output validation)", () => {
+  const validOutput = {
+    task_completion: 0.9,
+    task_completion_rationale: "Session completed cleanly with no errors.",
+    error_handling: 0.8,
+    error_handling_rationale: "No errors to recover from.",
+    tool_efficiency: 0.85,
+    tool_efficiency_rationale: "Tool usage proportionate to the task.",
+    cost_discipline: 0.95,
+    cost_discipline_rationale: "Low cost for the work performed.",
+    overall: 0.88,
+  };
+
+  it("accepts a clean 4-dimension + overall judge object", () => {
+    const result = JudgeOutputSchema.safeParse(validOutput);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an out-of-range score (task_completion 1.5)", () => {
+    const result = JudgeOutputSchema.safeParse({
+      ...validOutput,
+      task_completion: 1.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a missing dimension", () => {
+    const { error_handling, ...missingDimension } = validOutput;
+    const result = JudgeOutputSchema.safeParse(missingDimension);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an empty rationale", () => {
+    const result = JudgeOutputSchema.safeParse({
+      ...validOutput,
+      cost_discipline_rationale: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("evalScores — callJudgeLLM (judge caller retry loop)", () => {
+  const runQueryOk = async () => ({
+    provider: "anthropic",
+    model: "claude-haiku-4-5",
+    apiKey: "test-key",
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function anthropicResponse(input: Record<string, unknown>) {
+    return {
+      ok: true,
+      json: async () => ({ content: [{ type: "tool_use", input }] }),
+      text: async () => "",
+    };
+  }
+
+  const validJudgeInput = {
+    task_completion: 0.9,
+    task_completion_rationale: "clean",
+    error_handling: 0.9,
+    error_handling_rationale: "clean",
+    tool_efficiency: 0.9,
+    tool_efficiency_rationale: "clean",
+    cost_discipline: 0.9,
+    cost_discipline_rationale: "clean",
+    overall: 0.9,
+  };
+
+  it("judge caller returns validated output on a clean first attempt", async () => {
+    (fetch as any).mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(result.model).toBe("claude-haiku-4-5");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("judge caller repairs a zod-invalid response and succeeds on retry", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(anthropicResponse({ ...validJudgeInput, task_completion: 1.5 }))
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondCallBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(secondCallBody.messages[0].content).toContain("failed validation");
+  });
+
+  it("judge caller retries an HTTP failure without a repair message", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "server error" })
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondCallBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(secondCallBody.messages[0].content).not.toContain("failed validation");
+  });
+
+  it("judge caller throws after exhausting all 3 attempts and writes no row (no side effect on failure)", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" });
+
+    await expect(callJudgeLLM(runQueryOk, "system", "user")).rejects.toThrow(
+      /Judge failed after 3 attempts/
+    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("judge caller never logs the apiKey", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    await callJudgeLLM(runQueryOk, "system", "user");
+    for (const call of errorSpy.mock.calls) {
+      expect(String(call[0])).not.toContain("test-key");
+    }
+    errorSpy.mockRestore();
+  });
+});
+
+describe("evalScores — storeEvalScoreHandler (idempotent judge score store)", () => {
+  function makeFakeDb() {
+    const rows: any[] = [];
+    return {
+      rows,
+      query(_table: string) {
+        const conditions: Array<[string, any]> = [];
+        return {
+          withIndex(_indexName: string, cb: (q: any) => any) {
+            const qProxy = {
+              eq(field: string, value: any) {
+                conditions.push([field, value]);
+                return qProxy;
+              },
+            };
+            cb(qProxy);
+            return {
+              first: async () =>
+                rows.find((r) => conditions.every(([f, v]) => r[f] === v)) ??
+                null,
+            };
+          },
+        };
+      },
+      insert: async (_table: string, doc: any) => {
+        rows.push(doc);
+        return "fake-id";
+      },
+    };
+  }
+
+  const baseArgs: StoreEvalScoreArgs = {
+    sessionId: "s1",
+    profileId: "business",
+    judgeModel: "claude-haiku-4-5",
+    timestamp: 1000,
+    task_completion: 0.9,
+    task_completion_rationale: "clean",
+    error_handling: 0.8,
+    error_handling_rationale: "clean",
+    tool_efficiency: 0.85,
+    tool_efficiency_rationale: "clean",
+    cost_discipline: 0.95,
+    cost_discipline_rationale: "clean",
+    overall: 0.88,
+  };
+
+  it("writes exactly one row on first call", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows.length).toBe(1);
+    expect(db.rows[0].scoreName).toBe("llm_judge");
+    expect(db.rows[0].idempotencyKey).toBe("judge:s1");
+  });
+
+  it("is idempotent — a second call for the same session writes no second row", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows.length).toBe(1);
+  });
+
+  it("stamps rubricVersion and judgeModel", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows[0].rubricVersion).toBe(RUBRIC_VERSION);
+    expect(db.rows[0].judgeModel).toBe("claude-haiku-4-5");
+  });
+
+  it("stores per-dimension score+rationale in the dimensions map", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows[0].dimensions.task_completion).toEqual({
+      score: 0.9,
+      rationale: "clean",
+    });
+    expect(db.rows[0].dimensions.cost_discipline).toEqual({
+      score: 0.95,
+      rationale: "clean",
+    });
+  });
+});
+
 describe("profiles — personaConfigChangeKey (configChange audit key)", () => {
   it('produces "profile.business.modelPreferences" for profileId "business"', () => {
     expect(personaConfigChangeKey("business")).toBe(
@@ -130,5 +426,101 @@ describe("profiles — personaConfigChangeKey (configChange audit key)", () => {
     expect(personaConfigChangeKey("consulting")).toBe(
       "profile.consulting.modelPreferences"
     );
+  });
+});
+
+describe("evalScores — sampleSessionsForPersonas (nightly sampling, D-08)", () => {
+  const activePersonas = ["personal", "business", "consulting"];
+
+  it("sampling caps at 3 sessions per persona", () => {
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      sessionId: `biz-${i}`,
+      profileId: "business",
+    }));
+
+    const { sampled } = sampleSessionsForPersonas(activePersonas, candidates);
+    const businessSampled = sampled.filter((s) => s.profileId === "business");
+    expect(businessSampled.length).toBe(3);
+  });
+
+  it("sampling distributes across all active personas independently", () => {
+    const candidates = [
+      { sessionId: "p1", profileId: "personal" },
+      { sessionId: "p2", profileId: "personal" },
+      { sessionId: "b1", profileId: "business" },
+      { sessionId: "c1", profileId: "consulting" },
+    ];
+
+    const { sampled } = sampleSessionsForPersonas(activePersonas, candidates);
+    expect(sampled.filter((s) => s.profileId === "personal").length).toBe(2);
+    expect(sampled.filter((s) => s.profileId === "business").length).toBe(1);
+    expect(sampled.filter((s) => s.profileId === "consulting").length).toBe(1);
+  });
+
+  it("sampling buckets an unresolvable persona attribution under \"unknown\" and counts it", () => {
+    const candidates = [
+      { sessionId: "s1", profileId: undefined },
+      { sessionId: "s2", profileId: "some-non-persona-agent-type" },
+      { sessionId: "s3", profileId: "business" },
+    ];
+
+    const { sampled, unknownCount } = sampleSessionsForPersonas(
+      activePersonas,
+      candidates
+    );
+
+    expect(unknownCount).toBe(2);
+    const unknownSampled = sampled.filter((s) => s.profileId === "unknown");
+    expect(unknownSampled.length).toBe(2);
+    expect(unknownSampled.map((s) => s.sessionId).sort()).toEqual(["s1", "s2"]);
+  });
+
+  it("sampling returns zero unknownCount when every candidate attributes cleanly", () => {
+    const candidates = [
+      { sessionId: "p1", profileId: "personal" },
+      { sessionId: "b1", profileId: "business" },
+    ];
+    const { unknownCount } = sampleSessionsForPersonas(activePersonas, candidates);
+    expect(unknownCount).toBe(0);
+  });
+});
+
+describe("evalScores — runJudgeBatch (Promise.allSettled isolation, Pitfall 5/E2)", () => {
+  it("one rejecting session does not drop the others in the same batch", async () => {
+    const sampled = [
+      { profileId: "business", sessionId: "ok-1" },
+      { profileId: "business", sessionId: "bad-1" },
+      { profileId: "business", sessionId: "ok-2" },
+    ];
+
+    const judgeOne = vi.fn(async (s: { sessionId: string }) => {
+      if (s.sessionId === "bad-1") {
+        throw new Error("judge failed after 3 attempts");
+      }
+    });
+
+    const { scored, failed } = await runJudgeBatch(sampled, judgeOne);
+    expect(scored).toBe(2);
+    expect(failed).toBe(1);
+    expect(judgeOne).toHaveBeenCalledTimes(3);
+  });
+
+  it("all sessions succeeding reports zero failures", async () => {
+    const sampled = [
+      { profileId: "personal", sessionId: "a" },
+      { profileId: "personal", sessionId: "b" },
+    ];
+    const judgeOne = vi.fn(async () => {});
+    const { scored, failed } = await runJudgeBatch(sampled, judgeOne);
+    expect(scored).toBe(2);
+    expect(failed).toBe(0);
+  });
+
+  it("an empty sampled batch resolves with zero scored and zero failed", async () => {
+    const judgeOne = vi.fn(async () => {});
+    const { scored, failed } = await runJudgeBatch([], judgeOne);
+    expect(scored).toBe(0);
+    expect(failed).toBe(0);
+    expect(judgeOne).not.toHaveBeenCalled();
   });
 });
