@@ -41,6 +41,8 @@ const legacyMap: Record<string, { semantic: string; label: string }> = {
   verifying: { semantic: "ok", label: "VERIFYING" },
   done: { semantic: "ok", label: "DONE" },
   verify_rejected: { semantic: "error", label: "REJECTED" },
+  // Quality regression alert (Phase 93 EVAL-03, D-13)
+  regression: { semantic: "error", label: "REGRESSION" },
 };
 
 export function StatusBadge({ status, label }: StatusBadgeProps) {

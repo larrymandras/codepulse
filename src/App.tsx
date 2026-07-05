@@ -24,6 +24,10 @@ import { AstridrWSProvider } from "./contexts/AstridrWSContext";
 const Agents = lazy(() => import("./pages/Agents"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 
+// Phase 93: Quality KPI pages (EVAL-03)
+const Quality = lazy(() => import("./pages/Quality"));
+const QualityDetail = lazy(() => import("./pages/QualityDetail"));
+
 // Lazy-load command center pages (Phase 56)
 const Chat = lazy(() => import("./pages/Chat"));
 const LiveRun = lazy(() => import("./pages/LiveRun"));
@@ -88,6 +92,9 @@ export default function App() {
               <Route path="/capabilities" element={<Capabilities />} />
               <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-base p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
               <Route path="/alerts" element={<Alerts />} />
+              {/* Phase 93: Quality KPI pages (EVAL-03) */}
+              <Route path="/quality" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><Quality /></Suspense>} />
+              <Route path="/quality/:profileId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><QualityDetail /></Suspense>} />
               <Route path="/infrastructure" element={<Infrastructure />} />
               <Route path="/profiles" element={<Navigate to="/hr/roster" replace />} />
               <Route path="/agents" element={<Navigate to="/hr/roster" replace />} />
