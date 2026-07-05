@@ -11,8 +11,16 @@
  * Uses plain vitest — convex-test is NOT installed in this repo
  * (see convex/runtimeIngest.test.ts:9).
  */
-import { describe, it, expect } from "vitest";
-import { processTaskQualityEvent, buildJudgeDigest } from "./evalScores";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import {
+  processTaskQualityEvent,
+  buildJudgeDigest,
+  JudgeOutputSchema,
+  callJudgeLLM,
+  storeEvalScoreHandler,
+  RUBRIC_VERSION,
+  type StoreEvalScoreArgs,
+} from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
 
 describe("evalScores — processTaskQualityEvent", () => {
@@ -181,6 +189,224 @@ describe("evalScores — buildJudgeDigest (digest builder)", () => {
     expect(digest).toContain("Session: unknown");
     expect(digest).toContain("Event count: 0");
     expect(digest).toContain("Tool/event activity: none");
+  });
+});
+
+describe("evalScores — JudgeOutputSchema (judge structured-output validation)", () => {
+  const validOutput = {
+    task_completion: 0.9,
+    task_completion_rationale: "Session completed cleanly with no errors.",
+    error_handling: 0.8,
+    error_handling_rationale: "No errors to recover from.",
+    tool_efficiency: 0.85,
+    tool_efficiency_rationale: "Tool usage proportionate to the task.",
+    cost_discipline: 0.95,
+    cost_discipline_rationale: "Low cost for the work performed.",
+    overall: 0.88,
+  };
+
+  it("accepts a clean 4-dimension + overall judge object", () => {
+    const result = JudgeOutputSchema.safeParse(validOutput);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an out-of-range score (task_completion 1.5)", () => {
+    const result = JudgeOutputSchema.safeParse({
+      ...validOutput,
+      task_completion: 1.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a missing dimension", () => {
+    const { error_handling, ...missingDimension } = validOutput;
+    const result = JudgeOutputSchema.safeParse(missingDimension);
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects an empty rationale", () => {
+    const result = JudgeOutputSchema.safeParse({
+      ...validOutput,
+      cost_discipline_rationale: "",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("evalScores — callJudgeLLM (judge caller retry loop)", () => {
+  const runQueryOk = async () => ({
+    provider: "anthropic",
+    model: "claude-haiku-4-5",
+    apiKey: "test-key",
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function anthropicResponse(input: Record<string, unknown>) {
+    return {
+      ok: true,
+      json: async () => ({ content: [{ type: "tool_use", input }] }),
+      text: async () => "",
+    };
+  }
+
+  const validJudgeInput = {
+    task_completion: 0.9,
+    task_completion_rationale: "clean",
+    error_handling: 0.9,
+    error_handling_rationale: "clean",
+    tool_efficiency: 0.9,
+    tool_efficiency_rationale: "clean",
+    cost_discipline: 0.9,
+    cost_discipline_rationale: "clean",
+    overall: 0.9,
+  };
+
+  it("judge caller returns validated output on a clean first attempt", async () => {
+    (fetch as any).mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(result.model).toBe("claude-haiku-4-5");
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("judge caller repairs a zod-invalid response and succeeds on retry", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(anthropicResponse({ ...validJudgeInput, task_completion: 1.5 }))
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondCallBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(secondCallBody.messages[0].content).toContain("failed validation");
+  });
+
+  it("judge caller retries an HTTP failure without a repair message", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "server error" })
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    const result = await callJudgeLLM(runQueryOk, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondCallBody = JSON.parse((fetch as any).mock.calls[1][1].body);
+    expect(secondCallBody.messages[0].content).not.toContain("failed validation");
+  });
+
+  it("judge caller throws after exhausting all 3 attempts and writes no row (no side effect on failure)", async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" });
+
+    await expect(callJudgeLLM(runQueryOk, "system", "user")).rejects.toThrow(
+      /Judge failed after 3 attempts/
+    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it("judge caller never logs the apiKey", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 500, text: async () => "err" })
+      .mockResolvedValueOnce(anthropicResponse(validJudgeInput));
+
+    await callJudgeLLM(runQueryOk, "system", "user");
+    for (const call of errorSpy.mock.calls) {
+      expect(String(call[0])).not.toContain("test-key");
+    }
+    errorSpy.mockRestore();
+  });
+});
+
+describe("evalScores — storeEvalScoreHandler (idempotent judge score store)", () => {
+  function makeFakeDb() {
+    const rows: any[] = [];
+    return {
+      rows,
+      query(_table: string) {
+        const conditions: Array<[string, any]> = [];
+        return {
+          withIndex(_indexName: string, cb: (q: any) => any) {
+            const qProxy = {
+              eq(field: string, value: any) {
+                conditions.push([field, value]);
+                return qProxy;
+              },
+            };
+            cb(qProxy);
+            return {
+              first: async () =>
+                rows.find((r) => conditions.every(([f, v]) => r[f] === v)) ??
+                null,
+            };
+          },
+        };
+      },
+      insert: async (_table: string, doc: any) => {
+        rows.push(doc);
+        return "fake-id";
+      },
+    };
+  }
+
+  const baseArgs: StoreEvalScoreArgs = {
+    sessionId: "s1",
+    profileId: "business",
+    judgeModel: "claude-haiku-4-5",
+    timestamp: 1000,
+    task_completion: 0.9,
+    task_completion_rationale: "clean",
+    error_handling: 0.8,
+    error_handling_rationale: "clean",
+    tool_efficiency: 0.85,
+    tool_efficiency_rationale: "clean",
+    cost_discipline: 0.95,
+    cost_discipline_rationale: "clean",
+    overall: 0.88,
+  };
+
+  it("writes exactly one row on first call", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows.length).toBe(1);
+    expect(db.rows[0].scoreName).toBe("llm_judge");
+    expect(db.rows[0].idempotencyKey).toBe("judge:s1");
+  });
+
+  it("is idempotent — a second call for the same session writes no second row", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows.length).toBe(1);
+  });
+
+  it("stamps rubricVersion and judgeModel", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows[0].rubricVersion).toBe(RUBRIC_VERSION);
+    expect(db.rows[0].judgeModel).toBe("claude-haiku-4-5");
+  });
+
+  it("stores per-dimension score+rationale in the dimensions map", async () => {
+    const db = makeFakeDb();
+    await storeEvalScoreHandler({ db }, baseArgs);
+    expect(db.rows[0].dimensions.task_completion).toEqual({
+      score: 0.9,
+      rationale: "clean",
+    });
+    expect(db.rows[0].dimensions.cost_discipline).toEqual({
+      score: 0.95,
+      rationale: "clean",
+    });
   });
 });
 
