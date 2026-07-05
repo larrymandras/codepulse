@@ -1,5 +1,6 @@
 import {
   mutation,
+  query,
   internalQuery,
   internalMutation,
   internalAction,
@@ -7,6 +8,7 @@ import {
 import { v } from "convex/values";
 import { z } from "zod";
 import { internal, api } from "./_generated/api";
+import { personaConfigChangeKey } from "./profiles";
 
 /**
  * Phase 93 (EVAL-01) — evalScores ingest.
@@ -756,3 +758,264 @@ export const judgeSessionsAction = internalAction({
     };
   },
 });
+
+// ============================================================
+// EVAL-03 — KPI read queries + regression detector (Plan 04)
+// ============================================================
+//
+// D-17: 30-day default history window; evalScores volume is tiny so a
+// range-bound index read is fine (no archival sweep needed).
+const DEFAULT_KPI_RANGE_DAYS = 30;
+const LISTED_SESSIONS_LIMIT = 50;
+
+// D-12: a ~7-day before/after window each side of a change event, plus a
+// bounded lookback on change-event candidates so the profileSwitches/
+// configChanges reads stay index-range-bound rather than an unbounded scan
+// (the same "never .collect() unbounded" discipline the plan calls out for
+// evalScores extends to these reads too).
+const REGRESSION_WINDOW_SECONDS = 7 * 86400;
+const CHANGE_EVENT_LOOKBACK_SECONDS = 30 * 86400;
+
+// D-14: conservative, code-defined, zero-false-positive-biased constants —
+// tuned by commit, no settings UI this phase.
+export const MIN_SESSIONS_PER_SIDE = 5;
+export const REGRESSION_DROP_THRESHOLD = 0.15; // 15 pts on the 0-100 display scale
+
+// ─── Pure helpers (meanOverall / periodDelta) ───────────────────────────────
+
+/** Arithmetic mean of `.overall` across rows; 0 for an empty set (never NaN). */
+export function meanOverall(rows: Array<{ overall: number }>): number {
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, r) => sum + r.overall, 0) / rows.length;
+}
+
+/** Simple current-minus-previous delta — positive = improved, negative = dropped. */
+export function periodDelta(current: number, previous: number): number {
+  return current - previous;
+}
+
+// ─── Change-event markers (profileSwitches + persona-scoped configChanges) ─
+
+export type ChangeEventType = "model" | "switch";
+
+export interface ChangeEventMarker {
+  timestamp: number;
+  changeType: ChangeEventType;
+}
+
+interface ProfileSwitchRow {
+  fromProfile: string;
+  toProfile: string;
+  timestamp: number;
+}
+
+interface ConfigChangeRow {
+  configKey: string;
+  changedAt: number;
+}
+
+/**
+ * Merges profileSwitches (fromProfile/toProfile touching this persona) and
+ * persona-scoped configChanges (D-11) into one sorted change-event list.
+ * `changeType` distinguishes the two sources for both the KPI detail-page
+ * markers and the regression-message copy ("a model change" vs "an
+ * instruction change" — UI-SPEC L102 copy contract): a persona-scoped
+ * configChanges row (`profile.<id>.modelPreferences`, written by
+ * profiles.upsertConfig) is "model"; a profileSwitches row touching this
+ * persona is "switch", rendered as "an instruction change" — D-11 defines
+ * only these two change-source categories, so the mapping is exhaustive.
+ */
+export function buildChangeMarkers(
+  profileId: string,
+  switches: ProfileSwitchRow[],
+  configChanges: ConfigChangeRow[]
+): ChangeEventMarker[] {
+  const markers: ChangeEventMarker[] = [];
+
+  for (const s of switches) {
+    if (s.fromProfile === profileId || s.toProfile === profileId) {
+      markers.push({ timestamp: s.timestamp, changeType: "switch" });
+    }
+  }
+
+  const configKey = personaConfigChangeKey(profileId);
+  for (const c of configChanges) {
+    if (c.configKey === configKey) {
+      markers.push({ timestamp: c.changedAt, changeType: "model" });
+    }
+  }
+
+  return markers.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+// ─── KPI read queries ────────────────────────────────────────────────────────
+
+export interface PersonaKpi {
+  profileId: string;
+  currentMean: number;
+  sparkline: Array<{ timestamp: number; overall: number }>;
+  delta: number;
+  activeRegression: boolean;
+}
+
+/**
+ * Pure combination of current/previous-period evalScores rows into the KPI
+ * shape `listPersonaKpis` returns per persona — extracted so the mean/delta/
+ * sparkline math is directly unit-testable without a Convex ctx.
+ */
+export function buildPersonaKpi(
+  currentScores: Array<{ overall: number; timestamp: number }>,
+  previousScores: Array<{ overall: number; timestamp: number }>,
+  activeRegression: boolean
+): Omit<PersonaKpi, "profileId"> {
+  const currentMean = meanOverall(currentScores);
+  const previousMean = meanOverall(previousScores);
+  const sparkline = [...currentScores]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((s) => ({ timestamp: s.timestamp, overall: s.overall }));
+  return {
+    currentMean,
+    sparkline,
+    delta: periodDelta(currentMean, previousMean),
+    activeRegression,
+  };
+}
+
+export const listPersonaKpis = query({
+  args: {},
+  handler: async (ctx): Promise<PersonaKpi[]> => {
+    // Mirrors profiles.listConfigs's body directly — a query cannot call
+    // another query function, so the two-line read is duplicated here rather
+    // than routed through ctx.runQuery (actions/mutations only).
+    const personas = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_updatedAt")
+      .order("desc")
+      .collect();
+
+    const now = Date.now() / 1000;
+    const currentStart = now - DEFAULT_KPI_RANGE_DAYS * 86400;
+    const previousStart = currentStart - DEFAULT_KPI_RANGE_DAYS * 86400;
+
+    const results: PersonaKpi[] = [];
+    for (const p of personas) {
+      const profileId = p.profileId as string;
+
+      const currentScores = await ctx.db
+        .query("evalScores")
+        .withIndex("by_profileId", (q) =>
+          q.eq("profileId", profileId).gte("timestamp", currentStart)
+        )
+        .collect();
+
+      const previousScores = await ctx.db
+        .query("evalScores")
+        .withIndex("by_profileId", (q) =>
+          q
+            .eq("profileId", profileId)
+            .gte("timestamp", previousStart)
+            .lt("timestamp", currentStart)
+        )
+        .collect();
+
+      // T-93-12: never read/return apiKey — this query touches only
+      // evalScores/profileConfigs/alerts, never agentConfigs.
+      const activeAlert = await ctx.db
+        .query("alerts")
+        .withIndex("by_source", (q) =>
+          q.eq("source", `eval-regression:${profileId}`)
+        )
+        .filter((q) => q.eq(q.field("status"), "active"))
+        .first();
+
+      const kpi = buildPersonaKpi(currentScores, previousScores, !!activeAlert);
+      results.push({ profileId, ...kpi });
+    }
+
+    return results;
+  },
+});
+
+export interface PersonaDetailSeriesPoint {
+  timestamp: number;
+  sessionId: string;
+  overall: number;
+  dimensions?: Record<string, { score: number; rationale: string }>;
+}
+
+/** Sorts evalScores rows into a chronological per-session series. */
+export function buildPersonaDetailSeries(
+  scores: Array<{
+    timestamp: number;
+    sessionId: string;
+    overall: number;
+    dimensions?: Record<string, { score: number; rationale: string }>;
+  }>
+): PersonaDetailSeriesPoint[] {
+  return [...scores]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((s) => ({
+      timestamp: s.timestamp,
+      sessionId: s.sessionId,
+      overall: s.overall,
+      dimensions: s.dimensions,
+    }));
+}
+
+export const getPersonaDetail = query({
+  args: { profileId: v.string(), rangeDays: v.optional(v.float64()) },
+  handler: async (ctx, { profileId, rangeDays }) => {
+    const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
+    const rangeStart = Date.now() / 1000 - days * 86400;
+
+    const scores = await ctx.db
+      .query("evalScores")
+      .withIndex("by_profileId", (q) =>
+        q.eq("profileId", profileId).gte("timestamp", rangeStart)
+      )
+      .collect();
+
+    const switchRows = await ctx.db
+      .query("profileSwitches")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", rangeStart))
+      .collect();
+
+    const configKey = personaConfigChangeKey(profileId);
+    const configChangeRows = await ctx.db
+      .query("configChanges")
+      .withIndex("by_key", (q) =>
+        q.eq("configKey", configKey).gte("changedAt", rangeStart)
+      )
+      .collect();
+
+    return {
+      series: buildPersonaDetailSeries(scores),
+      markers: buildChangeMarkers(profileId, switchRows, configChangeRows),
+    };
+  },
+});
+
+export const listJudgedSessions = query({
+  args: { profileId: v.string(), rangeDays: v.optional(v.float64()) },
+  handler: async (ctx, { profileId, rangeDays }) => {
+    const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
+    const rangeStart = Date.now() / 1000 - days * 86400;
+
+    const rows = await ctx.db
+      .query("evalScores")
+      .withIndex("by_profileId", (q) =>
+        q.eq("profileId", profileId).gte("timestamp", rangeStart)
+      )
+      .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
+      .order("desc")
+      .take(LISTED_SESSIONS_LIMIT);
+
+    return rows.map((r) => ({
+      sessionId: r.sessionId,
+      overall: r.overall,
+      dimensions: r.dimensions,
+      timestamp: r.timestamp,
+    }));
+  },
+});
+

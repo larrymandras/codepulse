@@ -21,6 +21,11 @@ import {
   RUBRIC_VERSION,
   sampleSessionsForPersonas,
   runJudgeBatch,
+  meanOverall,
+  periodDelta,
+  buildPersonaKpi,
+  buildPersonaDetailSeries,
+  buildChangeMarkers,
   type StoreEvalScoreArgs,
 } from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
@@ -522,5 +527,116 @@ describe("evalScores — runJudgeBatch (Promise.allSettled isolation, Pitfall 5/
     expect(scored).toBe(0);
     expect(failed).toBe(0);
     expect(judgeOne).not.toHaveBeenCalled();
+  });
+});
+
+// ============================================================
+// Plan 04 (EVAL-03) — KPI read queries + regression detector
+// ============================================================
+
+describe("evalScores — meanOverall / periodDelta (KPI math)", () => {
+  it("meanOverall computes the arithmetic mean of .overall across rows", () => {
+    expect(meanOverall([{ overall: 0.9 }, { overall: 0.8 }, { overall: 1.0 }])).toBeCloseTo(0.9);
+  });
+
+  it("meanOverall returns 0 (never NaN) for an empty set", () => {
+    expect(meanOverall([])).toBe(0);
+  });
+
+  it("periodDelta returns a positive value when the current period improved", () => {
+    expect(periodDelta(0.9, 0.7)).toBeCloseTo(0.2);
+  });
+
+  it("periodDelta returns a negative value when the current period dropped", () => {
+    expect(periodDelta(0.5, 0.8)).toBeCloseTo(-0.3);
+  });
+});
+
+describe("evalScores — buildPersonaKpi (per-persona kpi combination)", () => {
+  it("combines current/previous scores into currentMean + sparkline + delta", () => {
+    const current = [
+      { overall: 0.9, timestamp: 300 },
+      { overall: 0.8, timestamp: 100 },
+      { overall: 1.0, timestamp: 200 },
+    ];
+    const previous = [
+      { overall: 0.6, timestamp: 10 },
+      { overall: 0.7, timestamp: 20 },
+    ];
+
+    const kpi = buildPersonaKpi(current, previous, false);
+
+    expect(kpi.currentMean).toBeCloseTo(0.9);
+    expect(kpi.delta).toBeCloseTo(0.25); // 0.9 - 0.65
+    expect(kpi.activeRegression).toBe(false);
+    // Sparkline is chronologically sorted, not insertion order.
+    expect(kpi.sparkline.map((s) => s.timestamp)).toEqual([100, 200, 300]);
+  });
+
+  it("passes the activeRegression flag through unchanged", () => {
+    const kpi = buildPersonaKpi([{ overall: 0.5, timestamp: 1 }], [], true);
+    expect(kpi.activeRegression).toBe(true);
+  });
+
+  it("currentMean/delta stay 0 when there is no data on either side", () => {
+    const kpi = buildPersonaKpi([], [], false);
+    expect(kpi.currentMean).toBe(0);
+    expect(kpi.delta).toBe(0);
+    expect(kpi.sparkline).toEqual([]);
+  });
+});
+
+describe("evalScores — buildPersonaDetailSeries (kpi detail chronological series)", () => {
+  it("sorts out-of-order rows chronologically and preserves dimensions", () => {
+    const series = buildPersonaDetailSeries([
+      { timestamp: 300, sessionId: "s3", overall: 0.7 },
+      { timestamp: 100, sessionId: "s1", overall: 0.9, dimensions: { task_completion: { score: 0.9, rationale: "clean" } } },
+      { timestamp: 200, sessionId: "s2", overall: 0.8 },
+    ]);
+
+    expect(series.map((s) => s.sessionId)).toEqual(["s1", "s2", "s3"]);
+    expect(series[0].dimensions).toEqual({ task_completion: { score: 0.9, rationale: "clean" } });
+    expect(series[1].dimensions).toBeUndefined();
+  });
+});
+
+describe("evalScores — buildChangeMarkers (kpi detail change-event markers, D-11)", () => {
+  it("surfaces a profileSwitches row touching this persona as a 'switch' marker", () => {
+    const markers = buildChangeMarkers(
+      "business",
+      [{ fromProfile: "personal", toProfile: "business", timestamp: 500 }],
+      []
+    );
+    expect(markers).toEqual([{ timestamp: 500, changeType: "switch" }]);
+  });
+
+  it("surfaces a persona-scoped configChanges row as a 'model' marker", () => {
+    const markers = buildChangeMarkers(
+      "business",
+      [],
+      [{ configKey: "profile.business.modelPreferences", changedAt: 700 }]
+    );
+    expect(markers).toEqual([{ timestamp: 700, changeType: "model" }]);
+  });
+
+  it("surfaces BOTH profileSwitch and persona-scoped configChange markers together, sorted chronologically", () => {
+    const markers = buildChangeMarkers(
+      "business",
+      [{ fromProfile: "business", toProfile: "personal", timestamp: 900 }],
+      [{ configKey: "profile.business.modelPreferences", changedAt: 400 }]
+    );
+    expect(markers).toEqual([
+      { timestamp: 400, changeType: "model" },
+      { timestamp: 900, changeType: "switch" },
+    ]);
+  });
+
+  it("filters out switches/configChanges belonging to a different persona", () => {
+    const markers = buildChangeMarkers(
+      "business",
+      [{ fromProfile: "personal", toProfile: "consulting", timestamp: 500 }],
+      [{ configKey: "profile.consulting.modelPreferences", changedAt: 600 }]
+    );
+    expect(markers).toEqual([]);
   });
 });
