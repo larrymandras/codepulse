@@ -1715,4 +1715,27 @@ export default defineSchema({
     target:     v.string(),   // namespaced node id (target node)
     relation:   v.string(),
   }).index("by_snapshot_version", ["snapshotId", "version"]),
+
+  // ============================================================
+  // EVAL PIPELINE & QUALITY KPIs (Phase 93, EVAL-01)
+  // ============================================================
+
+  // Ástríðr task_quality scores (langfuse_eval.py) + Plan-02 LLM-judge scores.
+  // Full judge-ready field set defined up front so this schema is never
+  // re-touched by downstream plans (dimensions/rubricVersion/judgeModel are
+  // populated only by the judge; task_quality ingest leaves them undefined).
+  evalScores: defineTable({
+    scoreName: v.string(), // "task_quality" | "llm_judge"
+    profileId: v.string(),
+    sessionId: v.string(),
+    overall: v.float64(), // 0-1
+    dimensions: v.optional(v.any()), // per-dimension { score, rationale } map — judge-only
+    rubricVersion: v.optional(v.string()), // judge-only
+    judgeModel: v.optional(v.string()), // judge-only (E5 version stamping)
+    idempotencyKey: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_idempotencyKey", ["idempotencyKey"])
+    .index("by_profileId", ["profileId", "timestamp"])
+    .index("by_scoreName", ["scoreName", "timestamp"]),
 });

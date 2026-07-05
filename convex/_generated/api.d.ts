@@ -52,6 +52,7 @@ import type * as drift from "../drift.js";
 import type * as emailDigest from "../emailDigest.js";
 import type * as emailTemplates_DigestEmailTemplate from "../emailTemplates/DigestEmailTemplate.js";
 import type * as episodic from "../episodic.js";
+import type * as evalScores from "../evalScores.js";
 import type * as events from "../events.js";
 import type * as executionModes from "../executionModes.js";
 import type * as fileOps from "../fileOps.js";
@@ -193,6 +194,7 @@ declare const fullApi: ApiFromModules<{
   emailDigest: typeof emailDigest;
   "emailTemplates/DigestEmailTemplate": typeof emailTemplates_DigestEmailTemplate;
   episodic: typeof episodic;
+  evalScores: typeof evalScores;
   events: typeof events;
   executionModes: typeof executionModes;
   fileOps: typeof fileOps;

@@ -9,6 +9,7 @@
  * Uses plain vitest mocks (convex-test is not installed in this repo).
  */
 import { describe, it, expect } from "vitest";
+import { processTaskQualityEvent } from "./evalScores";
 
 // ---------------------------------------------------------------------------
 // Extracted swarm_task routing logic — mirrors runtimeIngest.ts case exactly
@@ -242,5 +243,51 @@ describe("runtimeIngest — llm_call goalId extraction", () => {
   it("returns undefined when neither field present (non-swarm call)", () => {
     const goalId = extractLlmCallGoalId({ provider: "anthropic", model: "sonnet" });
     expect(goalId).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 93 (EVAL-01) — task_quality dispatch case
+// ---------------------------------------------------------------------------
+//
+// The task_quality case in runtimeIngest.ts calls the exported
+// processTaskQualityEvent (convex/evalScores.ts) to coalesce fields before
+// ctx.runMutation(api.evalScores.ingestTaskQuality, ...). These tests exercise
+// that same production function, mirroring the extracted-pure-function
+// convention used above for swarm_task (convex-test is not installed).
+
+describe("runtimeIngest — task_quality case", () => {
+  it("redelivering the same idempotencyKey twice mirrors the same dedup key both times", () => {
+    // The dedup itself lives inside ingestTaskQuality (ctx.db query), which
+    // requires a live Convex instance to exercise end-to-end. What
+    // runtimeIngest.ts controls is that the SAME idempotencyKey is derived
+    // for the SAME redelivered event — verified here at the pure-function
+    // boundary (T-93-01).
+    const event = {
+      score: 0.8,
+      profile_id: "business",
+      session_id: "s1",
+      event_id: "e1",
+    };
+    const first = processTaskQualityEvent(event, 100);
+    const second = processTaskQualityEvent(event, 200);
+    expect(first.idempotencyKey).toBe("e1");
+    expect(second.idempotencyKey).toBe("e1");
+    expect(first.idempotencyKey).toBe(second.idempotencyKey);
+  });
+
+  it("field coalescing produces the exact shape api.evalScores.ingestTaskQuality expects", () => {
+    const args = processTaskQualityEvent(
+      { score: 0.8, profile_id: "business", session_id: "s1", event_id: "e1" },
+      123
+    );
+    expect(args).toEqual({
+      scoreName: "task_quality",
+      profileId: "business",
+      sessionId: "s1",
+      overall: 0.8,
+      idempotencyKey: "e1",
+      timestamp: 123,
+    });
   });
 });
