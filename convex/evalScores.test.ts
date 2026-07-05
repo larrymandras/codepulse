@@ -26,9 +26,17 @@ import {
   buildPersonaKpi,
   buildPersonaDetailSeries,
   buildChangeMarkers,
+  evaluateRegression,
+  buildRegressionMessage,
+  insertRegressionAlertHandler,
+  detectRegressionsForPersona,
+  MIN_SESSIONS_PER_SIDE,
+  REGRESSION_DROP_THRESHOLD,
   type StoreEvalScoreArgs,
+  type DetectRegressionsCtx,
 } from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
+import { internal } from "./_generated/api";
 
 describe("evalScores — processTaskQualityEvent", () => {
   it("coalesces a full snake_case Ástríðr payload to the evalScores row shape", () => {
@@ -638,5 +646,230 @@ describe("evalScores — buildChangeMarkers (kpi detail change-event markers, D-
       [{ configKey: "profile.consulting.modelPreferences", changedAt: 600 }]
     );
     expect(markers).toEqual([]);
+  });
+});
+
+describe("evalScores — evaluateRegression (D-12/D-14 regression gate)", () => {
+  const highScores = (n: number, overall = 0.9) =>
+    Array.from({ length: n }, () => ({ overall }));
+
+  it("fires when both sides clear >=5 sessions and the drop clears the threshold", () => {
+    const before = highScores(5, 0.9);
+    const after = highScores(5, 0.6);
+    const result = evaluateRegression(before, after);
+    expect(result.fire).toBe(true);
+    expect(result.meanBefore).toBeCloseTo(0.9);
+    expect(result.meanAfter).toBeCloseTo(0.6);
+    expect(result.drop).toBeCloseTo(0.3);
+  });
+
+  it("does NOT fire on a 2-vs-2 comparison, even with a large drop", () => {
+    const before = highScores(2, 0.9);
+    const after = highScores(2, 0.2);
+    expect(evaluateRegression(before, after).fire).toBe(false);
+  });
+
+  it("does NOT fire on a 4-vs-6 comparison (before side below the min-sample floor)", () => {
+    const before = highScores(4, 0.9);
+    const after = highScores(6, 0.5);
+    expect(evaluateRegression(before, after).fire).toBe(false);
+  });
+
+  it("does NOT fire when the drop is real but sub-threshold (5-vs-5)", () => {
+    const before = highScores(5, 0.8);
+    const after = highScores(5, 0.75); // drop 0.05 < REGRESSION_DROP_THRESHOLD
+    const result = evaluateRegression(before, after);
+    expect(result.fire).toBe(false);
+    expect(result.drop).toBeLessThan(REGRESSION_DROP_THRESHOLD);
+  });
+
+  it("does NOT fire on a single-outlier swing that doesn't move the mean past threshold", () => {
+    const before = highScores(5, 0.9);
+    const after = [
+      { overall: 0.9 },
+      { overall: 0.9 },
+      { overall: 0.9 },
+      { overall: 0.9 },
+      { overall: 0.3 }, // one bad session out of 5
+    ];
+    const result = evaluateRegression(before, after);
+    expect(result.fire).toBe(false); // mean drop is 0.12, below 0.15
+  });
+
+  it("respects explicit minPerSide/dropThreshold overrides", () => {
+    const before = highScores(2, 0.9);
+    const after = highScores(2, 0.5);
+    const result = evaluateRegression(before, after, { minPerSide: 2, dropThreshold: 0.3 });
+    expect(result.fire).toBe(true);
+  });
+
+  it("uses MIN_SESSIONS_PER_SIDE=5 as the default gate", () => {
+    expect(MIN_SESSIONS_PER_SIDE).toBe(5);
+  });
+});
+
+describe("evalScores — buildRegressionMessage (UI-SPEC copy contract)", () => {
+  it("matches the '{persona} quality dropped {N} pts after {change type} on {date} (before -> after)' shape", () => {
+    const evaluation = evaluateRegression(
+      Array.from({ length: 5 }, () => ({ overall: 0.82 })),
+      Array.from({ length: 5 }, () => ({ overall: 0.64 }))
+    );
+    // Jul 3 2026, UTC noon, unambiguous across all timezones.
+    const changeTimestamp = Date.UTC(2026, 6, 3, 12, 0, 0) / 1000;
+    const message = buildRegressionMessage("business", evaluation, changeTimestamp, "model");
+    expect(message).toBe("business quality dropped 18 pts after a model change on Jul 3 (82 → 64)");
+  });
+
+  it("renders 'an instruction change' for a profileSwitches-sourced event", () => {
+    const evaluation = evaluateRegression(
+      Array.from({ length: 5 }, () => ({ overall: 0.9 })),
+      Array.from({ length: 5 }, () => ({ overall: 0.6 }))
+    );
+    const changeTimestamp = Date.UTC(2026, 6, 3, 12, 0, 0) / 1000;
+    const message = buildRegressionMessage("personal", evaluation, changeTimestamp, "switch");
+    expect(message).toContain("an instruction change");
+  });
+});
+
+describe("evalScores — insertRegressionAlertHandler (regression alert delivery shape)", () => {
+  function makeFakeDb() {
+    const rows: any[] = [];
+    return {
+      rows,
+      insert: async (_table: string, doc: any) => {
+        rows.push(doc);
+        return "fake-alert-id";
+      },
+    };
+  }
+
+  it("inserts an alert with webhookStatus pending and the eval-regression:<profileId> source (createIfNew shape)", async () => {
+    const db = makeFakeDb();
+    await insertRegressionAlertHandler(
+      { db },
+      {
+        profileId: "business",
+        message: "business quality dropped 18 pts after a model change on Jul 3 (82 → 64)",
+        details: { before: 0.82, after: 0.64, changeDate: 123, changeType: "model" },
+      }
+    );
+
+    expect(db.rows.length).toBe(1);
+    const alert = db.rows[0];
+    expect(alert.source).toBe("eval-regression:business");
+    expect(alert.webhookStatus).toBe("pending");
+    expect(alert.status).toBe("active");
+    expect(alert.acknowledged).toBe(false);
+    expect(alert.severity).toBe("warning");
+    expect(alert.details).toEqual({ before: 0.82, after: 0.64, changeDate: 123, changeType: "model" });
+  });
+});
+
+describe("evalScores — detectRegressionsForPersona (regression alert delivery + dedup)", () => {
+  interface FakeCtxOptions {
+    existingAlert?: unknown;
+    switches?: Array<{ fromProfile: string; toProfile: string; timestamp: number }>;
+    configChanges?: Array<{ configKey: string; changedAt: number }>;
+    scoreWindows?: unknown[][];
+    insertedAlertId?: string;
+  }
+
+  // Deliberately dispatches on CALL ORDER (not on which Convex function
+  // reference was passed) — comparing anyApi Proxy references captured
+  // through vi.fn() crashes vitest's pretty-format diffing on failure (a
+  // Convex/vitest interaction quirk verified empirically while writing this
+  // test, not a real assertion result), so call order is the safe substitute.
+  function makeCtx(opts: FakeCtxOptions) {
+    let callN = 0;
+    const runQuery = vi.fn(async (_fn: any, _args: any) => {
+      callN++;
+      if (callN === 1) return opts.existingAlert ?? null;
+      if (callN === 2) {
+        return { switches: opts.switches ?? [], configChanges: opts.configChanges ?? [] };
+      }
+      return opts.scoreWindows?.[callN - 3] ?? [];
+    });
+    const runMutation = vi.fn(async (_fn: any, _args: any) => opts.insertedAlertId ?? "alert-1");
+    const runAfter = vi.fn(async (_delay: number, _fn: any, _args: any) => {});
+    const ctx: DetectRegressionsCtx = { runQuery, runMutation, scheduler: { runAfter } };
+    return { ctx, runQuery, runMutation, runAfter };
+  }
+
+  it("an already-open regression alert blocks re-firing (dedup by source) — no mutation, no scheduled delivery", async () => {
+    const { ctx, runQuery, runMutation, runAfter } = makeCtx({
+      existingAlert: { _id: "existing-alert", status: "active" },
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(false);
+    expect(runQuery).toHaveBeenCalledTimes(1); // only the existing-alert check ran
+    expect(runMutation).not.toHaveBeenCalled();
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("a real regression (>=5/side, over-threshold) inserts an alert and schedules delivery", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({
+      existingAlert: null,
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: [
+        Array.from({ length: 5 }, () => ({ overall: 0.9 })), // before
+        Array.from({ length: 5 }, () => ({ overall: 0.6 })), // after
+      ],
+      insertedAlertId: "new-alert-id",
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(true);
+    expect(runMutation).toHaveBeenCalledTimes(1);
+    // The alert's persisted shape (webhookStatus pending, source) is proven by
+    // the insertRegressionAlertHandler unit test above; here we assert the
+    // orchestration passed the right *data* through (no proxy comparison).
+    const mutationArgs = runMutation.mock.calls[0][1];
+    expect(mutationArgs.profileId).toBe("business");
+    expect(mutationArgs.message).toContain("business quality dropped");
+    expect(mutationArgs.details.changeType).toBe("model");
+
+    expect(runAfter).toHaveBeenCalledTimes(1);
+    expect(runAfter.mock.calls[0][0]).toBe(0); // scheduled immediately
+    expect(runAfter.mock.calls[0][2]).toEqual({ alertId: "new-alert-id", attempt: 1 });
+  });
+
+  it("does NOT insert or schedule delivery when the gate doesn't clear (sub-threshold drop)", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({
+      existingAlert: null,
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: [
+        Array.from({ length: 5 }, () => ({ overall: 0.8 })), // before
+        Array.from({ length: 5 }, () => ({ overall: 0.75 })), // after — sub-threshold drop
+      ],
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(false);
+    expect(runMutation).not.toHaveBeenCalled();
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("does NOT insert or schedule delivery when there are no change events at all", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({ existingAlert: null });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(false);
+    expect(runMutation).not.toHaveBeenCalled();
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("never calls the public alerts.create mutation anywhere in the module (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const sourcePath = resolve(process.cwd(), "convex/evalScores.ts");
+    const source = readFileSync(sourcePath, "utf-8");
+    // A call-site reference — not a bare mention (the module's own comments
+    // legitimately discuss "alerts.create" in prose as the thing NOT to use).
+    expect(source).not.toMatch(/alerts\.create\(/);
   });
 });
