@@ -12,7 +12,7 @@
  * (see convex/runtimeIngest.test.ts:9).
  */
 import { describe, it, expect } from "vitest";
-import { processTaskQualityEvent } from "./evalScores";
+import { processTaskQualityEvent, buildJudgeDigest } from "./evalScores";
 import { personaConfigChangeKey } from "./profiles";
 
 describe("evalScores — processTaskQualityEvent", () => {
@@ -113,6 +113,74 @@ describe("evalScores — ingestTaskQuality score-range guard (pure predicate mir
   it("rejects out-of-range scores", () => {
     expect(isValidScore(-0.1)).toBe(false);
     expect(isValidScore(1.1)).toBe(false);
+  });
+});
+
+describe("evalScores — buildJudgeDigest (digest builder)", () => {
+  it("digest aggregates events into tool/eventType counts and includes llmMetrics summary stats", () => {
+    const digest = buildJudgeDigest({
+      session: {
+        sessionId: "s1",
+        status: "completed",
+        provider: "claude",
+        model: "claude-opus-4-8",
+      },
+      events: [
+        { toolName: "Read", eventType: "PostToolUse" },
+        { toolName: "Read", eventType: "PostToolUse" },
+        { toolName: "Edit", eventType: "PostToolUse" },
+      ],
+      llmMetrics: [
+        { cost: 0.01, totalTokens: 500 },
+        { cost: 0.02, totalTokens: 700 },
+      ],
+    });
+
+    expect(digest).toContain("Read: 2");
+    expect(digest).toContain("Edit: 1");
+    expect(digest).toContain("$0.0300");
+    expect(digest).toContain("total tokens: 1200");
+    expect(digest).toContain("LLM calls: 2");
+  });
+
+  it("names the failing tool/operation for an error-heavy session (E6 digest fidelity)", () => {
+    const digest = buildJudgeDigest({
+      session: { sessionId: "s2", status: "errored" },
+      events: [
+        { toolName: "Bash", eventType: "PostToolUseFailure", payload: { error: "npm install failed: ENOTFOUND registry.npmjs.org" } },
+        { toolName: "Bash", eventType: "PostToolUseFailure", payload: { error: "npm install failed: ENOTFOUND registry.npmjs.org" } },
+      ],
+      llmMetrics: [],
+    });
+
+    expect(digest).toContain("[Bash]");
+    expect(digest).toContain("ENOTFOUND");
+    expect(digest).toContain("Errors (2)");
+  });
+
+  it("digest truncates free-text payload content to well under 300 chars per snippet", () => {
+    const longError = "x".repeat(1000);
+    const digest = buildJudgeDigest({
+      session: { sessionId: "s3" },
+      events: [
+        { toolName: "Bash", eventType: "error", payload: { message: longError } },
+      ],
+      llmMetrics: [],
+    });
+
+    const errorLine = digest.split("\n").find((l) => l.startsWith("Errors"));
+    expect(errorLine).toBeDefined();
+    // The whole digest must stay bounded — the raw 1000-char payload must not
+    // survive verbatim in the output.
+    expect(digest.length).toBeLessThan(600);
+    expect(digest).not.toContain(longError);
+  });
+
+  it("digest handles an empty session/events/llmMetrics gracefully", () => {
+    const digest = buildJudgeDigest({ session: null, events: [], llmMetrics: [] });
+    expect(digest).toContain("Session: unknown");
+    expect(digest).toContain("Event count: 0");
+    expect(digest).toContain("Tool/event activity: none");
   });
 });
 
