@@ -1,5 +1,6 @@
 import {
   mutation,
+  query,
   internalQuery,
   internalMutation,
   internalAction,
@@ -7,6 +8,7 @@ import {
 import { v } from "convex/values";
 import { z } from "zod";
 import { internal, api } from "./_generated/api";
+import { personaConfigChangeKey } from "./profiles";
 
 /**
  * Phase 93 (EVAL-01) — evalScores ingest.
@@ -742,6 +744,11 @@ export const judgeSessionsAction = internalAction({
       judgeOneSession(ctx, s.sessionId, s.profileId)
     );
 
+    // Plan 04 (EVAL-03): the night's own judge scores must be counted before
+    // the before/after regression comparison runs (RESEARCH Open Question 3
+    // — detectRegressions rides the tail of this action, no extra cron slot).
+    await ctx.runAction(internal.evalScores.detectRegressions, {});
+
     // E7: liveness summary -- "no data" (zero scores) must be distinguishable
     // from "nothing happened" from this line alone.
     console.error(
@@ -754,5 +761,519 @@ export const judgeSessionsAction = internalAction({
       failed,
       unknownPersonaCount: unknownCount,
     };
+  },
+});
+
+// ============================================================
+// EVAL-03 — KPI read queries + regression detector (Plan 04)
+// ============================================================
+//
+// D-17: 30-day default history window; evalScores volume is tiny so a
+// range-bound index read is fine (no archival sweep needed).
+const DEFAULT_KPI_RANGE_DAYS = 30;
+const LISTED_SESSIONS_LIMIT = 50;
+
+// D-12: a ~7-day before/after window each side of a change event, plus a
+// bounded lookback on change-event candidates so the profileSwitches/
+// configChanges reads stay index-range-bound rather than an unbounded scan
+// (the same "never .collect() unbounded" discipline the plan calls out for
+// evalScores extends to these reads too).
+const REGRESSION_WINDOW_SECONDS = 7 * 86400;
+const CHANGE_EVENT_LOOKBACK_SECONDS = 30 * 86400;
+
+// D-14: conservative, code-defined, zero-false-positive-biased constants —
+// tuned by commit, no settings UI this phase.
+export const MIN_SESSIONS_PER_SIDE = 5;
+export const REGRESSION_DROP_THRESHOLD = 0.15; // 15 pts on the 0-100 display scale
+
+// ─── Pure helpers (meanOverall / periodDelta) ───────────────────────────────
+
+/** Arithmetic mean of `.overall` across rows; 0 for an empty set (never NaN). */
+export function meanOverall(rows: Array<{ overall: number }>): number {
+  if (rows.length === 0) return 0;
+  return rows.reduce((sum, r) => sum + r.overall, 0) / rows.length;
+}
+
+/** Simple current-minus-previous delta — positive = improved, negative = dropped. */
+export function periodDelta(current: number, previous: number): number {
+  return current - previous;
+}
+
+// ─── Change-event markers (profileSwitches + persona-scoped configChanges) ─
+
+export type ChangeEventType = "model" | "switch";
+
+export interface ChangeEventMarker {
+  timestamp: number;
+  changeType: ChangeEventType;
+}
+
+interface ProfileSwitchRow {
+  fromProfile: string;
+  toProfile: string;
+  timestamp: number;
+}
+
+interface ConfigChangeRow {
+  configKey: string;
+  changedAt: number;
+}
+
+/**
+ * Merges profileSwitches (fromProfile/toProfile touching this persona) and
+ * persona-scoped configChanges (D-11) into one sorted change-event list.
+ * `changeType` distinguishes the two sources for both the KPI detail-page
+ * markers and the regression-message copy ("a model change" vs "an
+ * instruction change" — UI-SPEC L102 copy contract): a persona-scoped
+ * configChanges row (`profile.<id>.modelPreferences`, written by
+ * profiles.upsertConfig) is "model"; a profileSwitches row touching this
+ * persona is "switch", rendered as "an instruction change" — D-11 defines
+ * only these two change-source categories, so the mapping is exhaustive.
+ */
+export function buildChangeMarkers(
+  profileId: string,
+  switches: ProfileSwitchRow[],
+  configChanges: ConfigChangeRow[]
+): ChangeEventMarker[] {
+  const markers: ChangeEventMarker[] = [];
+
+  for (const s of switches) {
+    if (s.fromProfile === profileId || s.toProfile === profileId) {
+      markers.push({ timestamp: s.timestamp, changeType: "switch" });
+    }
+  }
+
+  const configKey = personaConfigChangeKey(profileId);
+  for (const c of configChanges) {
+    if (c.configKey === configKey) {
+      markers.push({ timestamp: c.changedAt, changeType: "model" });
+    }
+  }
+
+  return markers.sort((a, b) => a.timestamp - b.timestamp);
+}
+
+// ─── KPI read queries ────────────────────────────────────────────────────────
+
+export interface PersonaKpi {
+  profileId: string;
+  currentMean: number;
+  sparkline: Array<{ timestamp: number; overall: number }>;
+  delta: number;
+  activeRegression: boolean;
+}
+
+/**
+ * Pure combination of current/previous-period evalScores rows into the KPI
+ * shape `listPersonaKpis` returns per persona — extracted so the mean/delta/
+ * sparkline math is directly unit-testable without a Convex ctx.
+ */
+export function buildPersonaKpi(
+  currentScores: Array<{ overall: number; timestamp: number }>,
+  previousScores: Array<{ overall: number; timestamp: number }>,
+  activeRegression: boolean
+): Omit<PersonaKpi, "profileId"> {
+  const currentMean = meanOverall(currentScores);
+  const previousMean = meanOverall(previousScores);
+  const sparkline = [...currentScores]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((s) => ({ timestamp: s.timestamp, overall: s.overall }));
+  return {
+    currentMean,
+    sparkline,
+    delta: periodDelta(currentMean, previousMean),
+    activeRegression,
+  };
+}
+
+export const listPersonaKpis = query({
+  args: {},
+  handler: async (ctx): Promise<PersonaKpi[]> => {
+    // Mirrors profiles.listConfigs's body directly — a query cannot call
+    // another query function, so the two-line read is duplicated here rather
+    // than routed through ctx.runQuery (actions/mutations only).
+    const personas = await ctx.db
+      .query("profileConfigs")
+      .withIndex("by_updatedAt")
+      .order("desc")
+      .collect();
+
+    const now = Date.now() / 1000;
+    const currentStart = now - DEFAULT_KPI_RANGE_DAYS * 86400;
+    const previousStart = currentStart - DEFAULT_KPI_RANGE_DAYS * 86400;
+
+    const results: PersonaKpi[] = [];
+    for (const p of personas) {
+      const profileId = p.profileId as string;
+
+      const currentScores = await ctx.db
+        .query("evalScores")
+        .withIndex("by_profileId", (q) =>
+          q.eq("profileId", profileId).gte("timestamp", currentStart)
+        )
+        .collect();
+
+      const previousScores = await ctx.db
+        .query("evalScores")
+        .withIndex("by_profileId", (q) =>
+          q
+            .eq("profileId", profileId)
+            .gte("timestamp", previousStart)
+            .lt("timestamp", currentStart)
+        )
+        .collect();
+
+      // T-93-12: never read/return apiKey — this query touches only
+      // evalScores/profileConfigs/alerts, never agentConfigs.
+      const activeAlert = await ctx.db
+        .query("alerts")
+        .withIndex("by_source", (q) =>
+          q.eq("source", `eval-regression:${profileId}`)
+        )
+        .filter((q) => q.eq(q.field("status"), "active"))
+        .first();
+
+      const kpi = buildPersonaKpi(currentScores, previousScores, !!activeAlert);
+      results.push({ profileId, ...kpi });
+    }
+
+    return results;
+  },
+});
+
+export interface PersonaDetailSeriesPoint {
+  timestamp: number;
+  sessionId: string;
+  overall: number;
+  dimensions?: Record<string, { score: number; rationale: string }>;
+}
+
+/** Sorts evalScores rows into a chronological per-session series. */
+export function buildPersonaDetailSeries(
+  scores: Array<{
+    timestamp: number;
+    sessionId: string;
+    overall: number;
+    dimensions?: Record<string, { score: number; rationale: string }>;
+  }>
+): PersonaDetailSeriesPoint[] {
+  return [...scores]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((s) => ({
+      timestamp: s.timestamp,
+      sessionId: s.sessionId,
+      overall: s.overall,
+      dimensions: s.dimensions,
+    }));
+}
+
+export const getPersonaDetail = query({
+  args: { profileId: v.string(), rangeDays: v.optional(v.float64()) },
+  handler: async (ctx, { profileId, rangeDays }) => {
+    const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
+    const rangeStart = Date.now() / 1000 - days * 86400;
+
+    const scores = await ctx.db
+      .query("evalScores")
+      .withIndex("by_profileId", (q) =>
+        q.eq("profileId", profileId).gte("timestamp", rangeStart)
+      )
+      .collect();
+
+    const switchRows = await ctx.db
+      .query("profileSwitches")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", rangeStart))
+      .collect();
+
+    const configKey = personaConfigChangeKey(profileId);
+    const configChangeRows = await ctx.db
+      .query("configChanges")
+      .withIndex("by_key", (q) =>
+        q.eq("configKey", configKey).gte("changedAt", rangeStart)
+      )
+      .collect();
+
+    return {
+      series: buildPersonaDetailSeries(scores),
+      markers: buildChangeMarkers(profileId, switchRows, configChangeRows),
+    };
+  },
+});
+
+export const listJudgedSessions = query({
+  args: { profileId: v.string(), rangeDays: v.optional(v.float64()) },
+  handler: async (ctx, { profileId, rangeDays }) => {
+    const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
+    const rangeStart = Date.now() / 1000 - days * 86400;
+
+    const rows = await ctx.db
+      .query("evalScores")
+      .withIndex("by_profileId", (q) =>
+        q.eq("profileId", profileId).gte("timestamp", rangeStart)
+      )
+      .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
+      .order("desc")
+      .take(LISTED_SESSIONS_LIMIT);
+
+    return rows.map((r) => ({
+      sessionId: r.sessionId,
+      overall: r.overall,
+      dimensions: r.dimensions,
+      timestamp: r.timestamp,
+    }));
+  },
+});
+
+// ─── Regression detector ─────────────────────────────────────────────────────
+
+export interface RegressionEvaluation {
+  fire: boolean;
+  meanBefore: number;
+  meanAfter: number;
+  drop: number;
+}
+
+/**
+ * Pure D-12/D-14 gate: fires ONLY when both sides clear `minPerSide` judged
+ * sessions AND the before-mean-minus-after-mean drop clears `dropThreshold`.
+ * A 2-vs-2, 4-vs-6, sub-threshold-drop, or single-outlier-that-doesn't-move-
+ * the-mean comparison all resolve to `fire: false` — the zero-false-positive
+ * bar (T-93-10 / Larry's standing precision bar) lives entirely in this gate.
+ */
+export function evaluateRegression(
+  beforeScores: Array<{ overall: number }>,
+  afterScores: Array<{ overall: number }>,
+  options: { minPerSide?: number; dropThreshold?: number } = {}
+): RegressionEvaluation {
+  const minPerSide = options.minPerSide ?? MIN_SESSIONS_PER_SIDE;
+  const dropThreshold = options.dropThreshold ?? REGRESSION_DROP_THRESHOLD;
+
+  const meanBefore = meanOverall(beforeScores);
+  const meanAfter = meanOverall(afterScores);
+  const drop = meanBefore - meanAfter;
+
+  if (beforeScores.length < minPerSide || afterScores.length < minPerSide) {
+    return { fire: false, meanBefore, meanAfter, drop };
+  }
+
+  return { fire: drop >= dropThreshold, meanBefore, meanAfter, drop };
+}
+
+/** Formats a unix-seconds timestamp as the UI-SPEC copy's "{date}" token, e.g. "Jul 3". */
+function formatChangeDate(timestampSeconds: number): string {
+  return new Date(timestampSeconds * 1000).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * Builds the exact UI-SPEC copy (L102): "{persona} quality dropped {N} pts
+ * after {change type} on {date} ({before} → {after})" — e.g. "business
+ * quality dropped 18 pts after a model change on Jul 3 (82 → 64)." Scores
+ * are stored 0-1 and rendered here on the 0-100 display scale ("pts").
+ */
+export function buildRegressionMessage(
+  profileId: string,
+  evaluation: RegressionEvaluation,
+  changeTimestamp: number,
+  changeType: ChangeEventType
+): string {
+  const changeTypeLabel =
+    changeType === "model" ? "a model change" : "an instruction change";
+  const beforePts = Math.round(evaluation.meanBefore * 100);
+  const afterPts = Math.round(evaluation.meanAfter * 100);
+  const dropPts = beforePts - afterPts;
+  const dateLabel = formatChangeDate(changeTimestamp);
+  return `${profileId} quality dropped ${dropPts} pts after ${changeTypeLabel} on ${dateLabel} (${beforePts} → ${afterPts})`;
+}
+
+export const getActiveRegressionAlertInternal = internalQuery({
+  args: { profileId: v.string() },
+  handler: async (ctx, { profileId }) => {
+    return await ctx.db
+      .query("alerts")
+      .withIndex("by_source", (q) =>
+        q.eq("source", `eval-regression:${profileId}`)
+      )
+      .filter((q) => q.eq(q.field("status"), "active"))
+      .first();
+  },
+});
+
+export const getPersonaChangeEventsInternal = internalQuery({
+  args: { profileId: v.string() },
+  handler: async (ctx, { profileId }) => {
+    const lookbackStart = Date.now() / 1000 - CHANGE_EVENT_LOOKBACK_SECONDS;
+
+    const switches = await ctx.db
+      .query("profileSwitches")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", lookbackStart))
+      .collect();
+
+    const configKey = personaConfigChangeKey(profileId);
+    const configChanges = await ctx.db
+      .query("configChanges")
+      .withIndex("by_key", (q) =>
+        q.eq("configKey", configKey).gte("changedAt", lookbackStart)
+      )
+      .collect();
+
+    return { switches, configChanges };
+  },
+});
+
+export const getEvalScoresWindowInternal = internalQuery({
+  args: {
+    profileId: v.string(),
+    start: v.float64(),
+    end: v.float64(),
+  },
+  handler: async (ctx, { profileId, start, end }) => {
+    return await ctx.db
+      .query("evalScores")
+      .withIndex("by_profileId", (q) =>
+        q.eq("profileId", profileId).gte("timestamp", start).lt("timestamp", end)
+      )
+      .collect();
+  },
+});
+
+interface AlertInsertDb {
+  insert: (table: string, doc: any) => Promise<any>;
+}
+
+/**
+ * Extracted insert logic (mirrors storeEvalScoreHandler's pattern) so the
+ * exact field set — especially `webhookStatus: "pending"` and the
+ * `eval-regression:${profileId}` source — is directly unit-testable against
+ * a fake `ctx.db`, without convex-test. Replicates alerts.ts's createIfNew
+ * shape (L716-736) plus a `details` field, since createIfNew itself doesn't
+ * accept one (T-93-11 / RESEARCH L340) — this insert call does not use the
+ * shared createIfNew helper, and never calls the public alerts.create.
+ */
+export async function insertRegressionAlertHandler(
+  ctx: { db: AlertInsertDb } | any,
+  args: { profileId: string; message: string; details: unknown }
+): Promise<any> {
+  return await ctx.db.insert("alerts", {
+    severity: "warning",
+    source: `eval-regression:${args.profileId}`,
+    message: args.message,
+    acknowledged: false,
+    status: "active",
+    createdAt: Date.now() / 1000,
+    webhookStatus: "pending",
+    details: args.details,
+  });
+}
+
+export const insertRegressionAlert = internalMutation({
+  args: {
+    profileId: v.string(),
+    message: v.string(),
+    details: v.any(),
+  },
+  handler: insertRegressionAlertHandler,
+});
+
+export interface DetectRegressionsCtx {
+  runQuery: (fn: any, args: any) => Promise<any>;
+  runMutation: (fn: any, args: any) => Promise<any>;
+  scheduler: { runAfter: (delay: number, fn: any, args: any) => Promise<any> };
+}
+
+/**
+ * Runs the D-12 before/after comparison for one persona's change events, in
+ * chronological order, stopping at the first event that fires (one alert per
+ * persona per run is enough — the existing-alert dedup guard above already
+ * blocks re-scanning once a regression is open, so a second event in the
+ * same run cannot double-fire). Extracted from `detectRegressions` so the
+ * fire path (alert insert shape + scheduled webhook delivery, NOT the public
+ * `alerts.create`) is directly unit-testable against a fake ctx, without
+ * convex-test.
+ */
+export async function detectRegressionsForPersona(
+  ctx: DetectRegressionsCtx,
+  profileId: string
+): Promise<{ fired: boolean }> {
+  const existingAlert = await ctx.runQuery(
+    internal.evalScores.getActiveRegressionAlertInternal,
+    { profileId }
+  );
+  if (existingAlert) return { fired: false };
+
+  const { switches, configChanges } = await ctx.runQuery(
+    internal.evalScores.getPersonaChangeEventsInternal,
+    { profileId }
+  );
+  const events = buildChangeMarkers(profileId, switches, configChanges);
+
+  for (const event of events) {
+    const beforeScores = await ctx.runQuery(
+      internal.evalScores.getEvalScoresWindowInternal,
+      {
+        profileId,
+        start: event.timestamp - REGRESSION_WINDOW_SECONDS,
+        end: event.timestamp,
+      }
+    );
+    const afterScores = await ctx.runQuery(
+      internal.evalScores.getEvalScoresWindowInternal,
+      {
+        profileId,
+        start: event.timestamp,
+        end: event.timestamp + REGRESSION_WINDOW_SECONDS,
+      }
+    );
+
+    const evaluation = evaluateRegression(beforeScores, afterScores);
+    if (!evaluation.fire) continue;
+
+    const message = buildRegressionMessage(
+      profileId,
+      evaluation,
+      event.timestamp,
+      event.changeType
+    );
+
+    const alertId = await ctx.runMutation(
+      internal.evalScores.insertRegressionAlert,
+      {
+        profileId,
+        message,
+        details: {
+          before: evaluation.meanBefore,
+          after: evaluation.meanAfter,
+          changeDate: event.timestamp,
+          changeType: event.changeType,
+        },
+      }
+    );
+
+    // D-13: inherit the existing alert engine's delivery routing —
+    // createIfNew's exact shape (webhookStatus pending + scheduled
+    // sendAlertWebhook), never the non-delivering public alerts.create.
+    await ctx.scheduler.runAfter(0, internal.webhookDelivery.sendAlertWebhook, {
+      alertId,
+      attempt: 1,
+    });
+
+    return { fired: true };
+  }
+
+  return { fired: false };
+}
+
+export const detectRegressions = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // listConfigs is a public query — internalActions call it via api.,
+    // same pattern as judgeSessionsAction above.
+    const personas = await ctx.runQuery(api.profiles.listConfigs, {});
+    for (const p of personas as Array<{ profileId: string }>) {
+      await detectRegressionsForPersona(ctx, p.profileId);
+    }
   },
 });
