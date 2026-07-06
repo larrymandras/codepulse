@@ -12,8 +12,8 @@
 
 ### Trace Waterfall (TRACE)
 
-- [ ] **TRACE-01**: `llmMetrics` rows carry a `traceId` grouping field (schema + ingest pass-through), backward compatible with existing rows that lack it.
-- [ ] **TRACE-02**: Operator can open a session's LLM call chain as an in-app trace waterfall — timing bars, cost-per-call, cache annotations — replacing the dead-link `LangfuseTraceLink.tsx`.
+- [x] **TRACE-01**: `llmMetrics` rows carry a `traceId` grouping field (schema + ingest pass-through), backward compatible with existing rows that lack it.
+- [x] **TRACE-02**: Operator can open a session's LLM call chain as an in-app trace waterfall — timing bars, cost-per-call, cache annotations — replacing the dead-link `LangfuseTraceLink.tsx`.
 
 ### Hardening (HARD)
 
@@ -41,8 +41,8 @@
 | EVAL-01 | Phase 93 | Complete |
 | EVAL-02 | Phase 93 | Complete |
 | EVAL-03 | Phase 93 | Complete |
-| TRACE-01 | Phase 94 | Pending |
-| TRACE-02 | Phase 94 | Pending |
+| TRACE-01 | Phase 94 | Complete |
+| TRACE-02 | Phase 94 | Complete |
 | HARD-01 | Phase 95 | Pending |
 | HARD-02 | Phase 95 | Pending |
 | HARD-03 | Phase 95 | Pending |

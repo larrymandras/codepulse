@@ -328,7 +328,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 - [x] **Phase 93: Eval Pipeline & Quality KPIs** — `evalScores` ingest (idempotent), nightly LLM-as-judge `internalAction`, per-persona quality KPI + regression detection
  (completed 2026-07-06)
-- [ ] **Phase 94: Trace Waterfall** — `traceId` grouping on `llmMetrics` + in-app call-chain waterfall UI (replaces dead-link `LangfuseTraceLink.tsx`)
+- [x] **Phase 94: Trace Waterfall** — `traceId` grouping on `llmMetrics` + in-app call-chain waterfall UI (replaces dead-link `LangfuseTraceLink.tsx`) (completed 2026-07-06)
 - [ ] **Phase 95: Hardening — Security, Key Rotation, Dependency Majors** — `/cso` audit + remediation, Forge ingest-key rotation, TypeScript 6 + react-day-picker 10 migrations
 
 **Execution order:** 93 and 94 are independent of each other — both ride existing ingest paths with no shared schema — and can run in either order or in parallel. 95 is independent of both (its own audit/rotation/dependency-bump surface) and is sequenced last since it is hardening/cleanup work rather than new-feature delivery; HARD-03/04 close out dependabot PRs already CI-red, and HARD-01 may surface remediation work that adds scope once run.
@@ -369,7 +369,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 94-02-PLAN.md — Wave 1: Ástríðr cross-repo emitter — _current_trace_id contextvar trio + _process_inner insertion + attach at anthropic/openrouter/ollama providers (TRACE-01, D-01)
 - [x] 94-03-PLAN.md — Wave 2: TraceWaterfall component — client-side traceId grouping, bar math (seconds/ms), 3-state cache badge, cost dash, MetricCard strip, live useQuery (TRACE-02)
 - [x] 94-04-PLAN.md — Wave 3: SessionDetail Trace tab + ?tab=trace deep-link + Analytics "View Trace" cross-link + LangfuseTraceLink deletion (TRACE-02, D-06/07/08)
-- [ ] 94-05-PLAN.md — Wave 4: live E2E completion bar (D-05) — operator-gated prod Convex deploy + astridr rebuild + grouped-trace/legacy-fallback verification
+- [x] 94-05-PLAN.md — Wave 4: live E2E completion bar (D-05) — operator-gated prod Convex deploy + astridr rebuild + grouped-trace/legacy-fallback verification
 **UI hint**: yes
 
 ---
@@ -413,7 +413,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 91. 3D Memory Galaxy | v9.0 | 5/5 | Complete    | 2026-06-29 |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
 | 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete    | 2026-07-06 |
-| 94. Trace Waterfall | v10.0 | 4/5 | In Progress|  |
+| 94. Trace Waterfall | v10.0 | 5/5 | Complete    | 2026-07-06 |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 0/TBD | Not started | - |
 
 *Last updated: 2026-07-04 — **v10.0 Eval & Trace Observability + Hardening roadmap created** via `/gsd-new-project` roadmapper. 3 phases (93-95), 9/9 requirements mapped (EVAL-01..03 → Phase 93; TRACE-01..02 → Phase 94; HARD-01..04 → Phase 95). Sequencing: 93/94 independent (separate schemas, both ride existing ingest), 95 independent of both, sequenced last as audit/cleanup. Next: `/gsd-plan-phase 93`.*

@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: executing
-stopped_at: Phase 94 UI-SPEC approved
-last_updated: "2026-07-06T18:02:53.848Z"
-last_activity: 2026-07-06 -- Phase 94 execution started
+status: ready_to_plan
+stopped_at: Phase 94 complete (5/5) — ready to discuss Phase 95
+last_updated: 2026-07-06T20:59:40.273Z
+last_activity: 2026-07-06 -- Phase 94 complete (verified 22/22, live sign-off)
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
-  completed_plans: 6
-  percent: 33
+  completed_plans: 11
+  percent: 67
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 94 — trace-waterfall
+**Current focus:** Phase 95 — hardening — security audit, key rotation, dependency majors
 
 ## Current Position
 
-Phase: 94 (trace-waterfall) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 94
-Last activity: 2026-07-06 -- Phase 94 execution started
+Phase: 95
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-07-06
 
 ## Deferred Items
 
