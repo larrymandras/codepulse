@@ -1,7 +1,8 @@
 ---
 phase: 94
 slug: trace-waterfall
-status: draft
+status: approved
+reviewed_at: 2026-07-06
 shadcn_initialized: true
 preset: new-york / radix / lucide (detected via `npx shadcn info`, components.json)
 created: 2026-07-06
@@ -58,7 +59,7 @@ New typography introduced by `TraceWaterfall` + the Trace tab. The session summa
 | Heading | 14px (`text-sm`, mono, uppercase, tracking-widest) | 600 (semibold) | 1.2 | Trace-group header line ("Turn 3 · 8 calls · 4.2s · $0.31") — matches the existing `text-sm font-mono tracking-widest text-primary uppercase` convention already used by the sibling "Agents (N)" / "Errors (N)" section headers in `SessionDetail.tsx` |
 | Display | 30px (inherited, unchanged) | 500 (medium, inherited) | — | Session-level summary strip numbers — literal reuse of `<MetricCard>`, not restyled |
 
-**Weights declared for new work: 400 + 600 (2 weights).** Weight 500 appears only via the reused `MetricCard` component and is an inherited exemption, not a new choice.
+**Weights declared for new work: 400 + 600 (2 weights).** Weight 500 appears only via the reused `MetricCard` component and is an inherited exemption, not a new choice. **Do NOT use weight 500 in any new `TraceWaterfall` element** — it is exclusively a `MetricCard` artifact and must not propagate into new code.
 
 ---
 
@@ -113,6 +114,8 @@ Accent reserved for: expand/collapse chevron active state, "View Trace" cross-na
 
 ## Component & Interaction Notes (for planner/executor — supplements the tables above)
 
+- **Visual focal point:** the call bars within the expanded trace groups are the primary visual anchor of the Trace tab — the summary strip and group headers are supporting context and must not compete with them for visual weight.
+- **Chevron accessibility:** the expand/collapse chevron is icon-only; it MUST carry an `aria-label` (e.g., `aria-label="Expand trace group"` / `"Collapse trace group"`) or be paired with the group-header text as a single labeled trigger (Radix `Collapsible.Trigger` wrapping the whole header row satisfies this).
 - **New component:** `src/components/TraceWaterfall.tsx` — Gantt-styled, mirrors `GanttTimeline.tsx`'s time-axis/lane structure (props, tick generation, `toPercent` mapping) but does NOT import or extend `GanttTimeline`'s `agents`/`events` prop shape (D-09 — separate component, parallel structure only).
 - **Vertical structure (D-10):** collapsible trace groups (one per `traceId`, in chronological order) → each group header shows total duration + total cost + call count → expanding reveals one row per `llmMetrics` call, bar positioned on the shared session time axis (`start = timestamp − latencyMs`, `width = latencyMs`). The "Untraced calls" group (rows with no `traceId`) always renders last, flat, un-collapsible (no per-turn grouping possible for it).
 - **Bar label (D-11):** inline text `{model} · {cost or "n/a"} · {cache badge or omitted}`; hover or click reveals a detail panel/tooltip with tokens in/out, `cacheReadInputTokens`/`cacheCreationInputTokens`, latency, provider, `toolName`, `billingType`. Exact hover-vs-click mechanism is Claude's discretion (CONTEXT.md) — default to Radix `Tooltip` on hover (already installed, zero new dependency) unless the executor finds hover insufficient for touch/click-through needs.
@@ -125,11 +128,11 @@ Accent reserved for: expand/collapse chevron active state, "View Trace" cross-na
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (FLAG resolved — focal point + chevron `aria-label` added to Component Notes)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (FLAG resolved — weight-500 exemption sharpened)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED — gsd-ui-checker, 2026-07-06
