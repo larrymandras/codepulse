@@ -257,10 +257,10 @@ export function buildJudgeDigest(input: JudgeDigestInput): string {
 
 export const JUDGE_TOOL_NAME = "score_session";
 
-// Rubric-shape source of truth (AI-SPEC Section 3) — reused verbatim for the
-// Anthropic branch's `tools[0].input_schema` and (as-is, since every field is
-// required — no nullable-union translation needed, Pitfall 3) the OpenAI
-// branch's `response_format.json_schema.schema`.
+// Rubric-shape source of truth (AI-SPEC Section 3) — used verbatim for the
+// Anthropic branch's `tools[0].input_schema`. The OpenAI branch derives a
+// strict-compatible variant from it (OPENAI_JUDGE_SCHEMA below) — the raw
+// schema is NOT strict-valid as-is (CR-03).
 export const JUDGE_TOOL = {
   name: JUDGE_TOOL_NAME,
   description:
@@ -294,6 +294,29 @@ export const JUDGE_TOOL = {
     ],
   },
 } as const;
+
+/**
+ * CR-03 (93-REVIEW): OpenAI strict structured outputs REQUIRE
+ * `additionalProperties: false` on every object schema — sending
+ * JUDGE_TOOL.input_schema verbatim produced a deterministic 400 on every
+ * call (all 3 retry attempts) whenever provider=openai. This variant:
+ * - adds the mandatory `additionalProperties: false`;
+ * - strips the `minimum`/`maximum` range keywords, whose strict-mode support
+ *   has been inconsistent across OpenAI API versions — range enforcement
+ *   already lives in JudgeOutputSchema (zod) + the repair loop, so dropping
+ *   them here loses nothing and removes the 400 risk entirely.
+ */
+export const OPENAI_JUDGE_SCHEMA = {
+  type: "object",
+  properties: Object.fromEntries(
+    Object.entries(JUDGE_TOOL.input_schema.properties).map(([key, prop]) => [
+      key,
+      { type: (prop as { type: string }).type },
+    ])
+  ),
+  required: [...JUDGE_TOOL.input_schema.required],
+  additionalProperties: false,
+};
 
 // E5 trend-attributability: bump this whenever the rubric wording/dimension
 // set changes, so a KPI trend query can tell "quality changed" apart from
@@ -395,7 +418,8 @@ export async function callOpenAIJudge(
         json_schema: {
           name: JUDGE_TOOL_NAME,
           strict: true,
-          schema: JUDGE_TOOL.input_schema,
+          // CR-03: strict-compatible variant — NOT the raw tool schema.
+          schema: OPENAI_JUDGE_SCHEMA,
         },
       },
     }),

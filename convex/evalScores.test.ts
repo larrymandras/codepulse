@@ -17,6 +17,8 @@ import {
   buildJudgeDigest,
   JudgeOutputSchema,
   callJudgeLLM,
+  JUDGE_TOOL,
+  OPENAI_JUDGE_SCHEMA,
   storeEvalScoreHandler,
   RUBRIC_VERSION,
   sampleSessionsForPersonas,
@@ -340,6 +342,69 @@ describe("evalScores — callJudgeLLM (judge caller retry loop)", () => {
       expect(String(call[0])).not.toContain("test-key");
     }
     errorSpy.mockRestore();
+  });
+});
+
+describe("evalScores — OpenAI judge branch (CR-03: strict schema compatibility)", () => {
+  const runQueryOpenAI = async () => ({
+    provider: "openai",
+    model: "gpt-test",
+    apiKey: "test-key",
+  });
+
+  const validJudgeInput = {
+    task_completion: 0.9,
+    task_completion_rationale: "clean",
+    error_handling: 0.9,
+    error_handling_rationale: "clean",
+    tool_efficiency: 0.9,
+    tool_efficiency_rationale: "clean",
+    cost_discipline: 0.9,
+    cost_discipline_rationale: "clean",
+    overall: 0.9,
+  };
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("OPENAI_JUDGE_SCHEMA carries additionalProperties: false and no minimum/maximum keywords", () => {
+    expect(OPENAI_JUDGE_SCHEMA.additionalProperties).toBe(false);
+    const serialized = JSON.stringify(OPENAI_JUDGE_SCHEMA);
+    expect(serialized).not.toContain('"minimum"');
+    expect(serialized).not.toContain('"maximum"');
+    // Same field set as the Anthropic tool schema — nothing lost in translation.
+    expect(Object.keys(OPENAI_JUDGE_SCHEMA.properties).sort()).toEqual(
+      Object.keys(JUDGE_TOOL.input_schema.properties).sort()
+    );
+    expect([...OPENAI_JUDGE_SCHEMA.required].sort()).toEqual(
+      [...JUDGE_TOOL.input_schema.required].sort()
+    );
+  });
+
+  it("the OpenAI request body sends the strict-compatible schema, not the raw tool schema", async () => {
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: JSON.stringify(validJudgeInput) } }],
+      }),
+      text: async () => "",
+    });
+
+    const result = await callJudgeLLM(runQueryOpenAI, "system", "user");
+    expect(result.output.overall).toBe(0.9);
+    expect(result.model).toBe("gpt-test");
+
+    const body = JSON.parse((fetch as any).mock.calls[0][1].body);
+    const jsonSchema = body.response_format.json_schema;
+    expect(jsonSchema.strict).toBe(true);
+    expect(jsonSchema.schema.additionalProperties).toBe(false);
+    expect(JSON.stringify(jsonSchema.schema)).not.toContain('"minimum"');
+    expect(JSON.stringify(jsonSchema.schema)).not.toContain('"maximum"');
   });
 });
 
