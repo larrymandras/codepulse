@@ -12,6 +12,7 @@ import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { RunTimeline } from "../components/RunTimeline";
 import { RunHistorySelector } from "../components/RunHistorySelector";
 import { RunSummary } from "../components/RunSummary";
+import JobsPanel from "../components/JobsPanel";
 import { Square } from "lucide-react";
 
 type Block = { type: string; [key: string]: unknown };
@@ -237,6 +238,12 @@ export default function LiveRun() {
           </span>
         </div>
       )}
+      {/* Background subagent jobs (Phase 168 SC-2/SC-3): live-query-driven,
+          surfaces job completion without manual polling regardless of
+          which tab or WS run is active. */}
+      <div className="px-4 py-3 border-b border-(--border) shrink-0">
+        <JobsPanel />
+      </div>
       {activeTab === "timeline" ? (
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4" onScroll={handleScroll}>
           {displayBlocks.length === 0 && !displayStreaming ? (
