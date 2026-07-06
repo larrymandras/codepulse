@@ -403,17 +403,19 @@ const TABS: { key: Tab; label: string }[] = [
 
 **Risk assessment:** Both assumptions are LOW risk because the D-04 backward-compatible fallback (flat "Untraced calls" bucket) means any gap in traceId propagation degrades to a visible-but-correct state rather than a broken one. Recommend confirming A1 with the user during planning discretion resolution ("Loop-level insertion point... is Claude's discretion" per CONTEXT.md) rather than treating it as a hard requirement.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `traceId` be a bare `uuid4()` or a prefixed/structured id (e.g., `trace_<uuid4>`)?**
    - What we know: `goalId` uses bare `str(uuid.uuid4())` with no prefix (`router.py:498`).
    - What's unclear: whether a prefix would help future debugging (grepping raw logs for `trace_` vs `goal_` ids) — CONTEXT.md marks the exact format as Claude's discretion.
    - Recommendation: Follow the `goalId` precedent exactly (bare uuid4, no prefix) for consistency — the two ids are already visually distinguishable by which JSON field they appear under.
+   - **RESOLVED:** Adopted the recommendation — bare `str(uuid.uuid4())`, no prefix (matches `goalId` precedent). Implemented in Plan 94-02.
 
 2. **Does automation/queen-triggered traceId tracing need a separate opt-out?**
    - What we know: `queen.py` already sets its own `goalId` per swarm task (queen.py:744-797); adding traceId at the `_process_inner` level would apply uniformly to both chat and automation turns.
    - What's unclear: whether the user wants automation-triggered LLM calls traced at all, or considers "trace" to mean "conversational turn" specifically (D-02's wording: "one user message / one loop iteration" — automation IS a loop iteration, just not user-initiated).
    - Recommendation: Trace uniformly (simpler, one code path, and D-04's fallback means nothing breaks if some rows end up traced that the user didn't strictly need traced) — flag for a quick confirmation during planning/discuss if the user wants to exclude automation turns explicitly.
+   - **RESOLVED:** Adopted uniform tracing — the traceId contextvar is set once at `_process_inner`, covering both chat and automation/queen turns (no separate opt-out). Implemented in Plan 94-02.
 
 ## Environment Availability
 
