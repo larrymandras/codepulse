@@ -13,13 +13,23 @@ vi.mock("recharts", () => ({
     <div data-testid="line-chart">{children}</div>
   ),
   Line: ({ dataKey }: { dataKey: string }) => <div data-testid={`line-${dataKey}`} />,
-  XAxis: () => null,
+  // WR-05: capture axis props — the real Recharts drops a ReferenceLine whose
+  // x doesn't match a category on a category axis, so the tests must pin that
+  // the chart uses a NUMERIC timestamp axis and numeric marker positions.
+  XAxis: ({ dataKey, type, domain }: { dataKey?: string; type?: string; domain?: unknown }) => (
+    <div
+      data-testid="x-axis"
+      data-key={dataKey}
+      data-type={type}
+      data-domain={JSON.stringify(domain)}
+    />
+  ),
   YAxis: () => null,
   CartesianGrid: () => null,
   Tooltip: () => null,
   Legend: () => null,
-  ReferenceLine: ({ label }: { label?: { value?: string } | string }) => (
-    <div data-testid="reference-line">
+  ReferenceLine: ({ x, label }: { x?: number | string; label?: { value?: string } | string }) => (
+    <div data-testid="reference-line" data-x={String(x)}>
       {typeof label === "object" ? label?.value : label}
     </div>
   ),
@@ -65,6 +75,35 @@ describe("QualityTrendChart", () => {
     expect(screen.getByTestId("line-cost_discipline")).toBeInTheDocument();
     expect(screen.getAllByTestId("reference-line")).toHaveLength(1);
     expect(screen.getByText("Model change")).toBeInTheDocument();
+  });
+
+  it("WR-05: uses a numeric timestamp axis so markers position independently of session dates", () => {
+    render(<QualityTrendChart series={fixtureSeries} markers={fixtureMarkers} />);
+
+    const xAxis = screen.getByTestId("x-axis");
+    expect(xAxis).toHaveAttribute("data-key", "timestamp");
+    expect(xAxis).toHaveAttribute("data-type", "number");
+  });
+
+  it("WR-05: a marker BETWEEN judged-session dates gets its raw numeric timestamp as x (would be dropped on a category axis)", () => {
+    // fixtureMarkers[0].timestamp (1751371200) sits between the two session
+    // timestamps (1751328000, 1751414400) and matches neither — the exact
+    // case a category axis silently dropped.
+    render(<QualityTrendChart series={fixtureSeries} markers={fixtureMarkers} />);
+
+    const marker = screen.getByTestId("reference-line");
+    expect(marker).toHaveAttribute("data-x", "1751371200");
+  });
+
+  it("WR-05: the axis domain spans a marker OUTSIDE the judged-session range so it still renders", () => {
+    const outsideMarker: { timestamp: number; changeType: "model" | "switch" }[] = [
+      { timestamp: 1751500800, changeType: "switch" }, // after the last session
+    ];
+    render(<QualityTrendChart series={fixtureSeries} markers={outsideMarker} />);
+
+    const xAxis = screen.getByTestId("x-axis");
+    expect(xAxis).toHaveAttribute("data-domain", JSON.stringify([1751328000, 1751500800]));
+    expect(screen.getByTestId("reference-line")).toHaveAttribute("data-x", "1751500800");
   });
 
   it("renders the empty-state copy when there is no judged-session data", () => {

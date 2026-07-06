@@ -55,17 +55,30 @@ const chartConfig: ChartConfig = {
  * rendered 0-100 to match the KPI card display convention. Change-event
  * markers (persona model/instruction changes, D-11) render as ReferenceLine
  * verticals, mirroring ResponseTimeChart.tsx's p50/p95/p99 marker pattern.
+ *
+ * WR-05 (93-REVIEW): the XAxis is a NUMERIC time axis keyed on the raw
+ * timestamp, not a category axis of formatted dates. On a category axis,
+ * Recharts silently drops a ReferenceLine whose x doesn't match an existing
+ * category — and a model/instruction change rarely lands on the same
+ * calendar day as a judged session, so the most important markers vanished.
+ * The numeric domain spans BOTH the session series and the markers, so a
+ * marker outside the judged-session range still renders.
  */
 export function QualityTrendChart({ series, markers }: QualityTrendChartProps) {
-  const { data, hasData, markerLabels } = useMemo(() => {
+  const { data, hasData, markerLabels, domain } = useMemo(() => {
     if (series.length === 0) {
-      return { data: [], hasData: false, markerLabels: [] as { date: string; label: string }[] };
+      return {
+        data: [],
+        hasData: false,
+        markerLabels: [] as { timestamp: number; label: string }[],
+        domain: [0, 1] as [number, number],
+      };
     }
 
     const sorted = [...series].sort((a, b) => a.timestamp - b.timestamp);
     const rows = sorted.map((point) => {
       const row: Record<string, number | string> = {
-        date: formatDateLabel(point.timestamp),
+        timestamp: point.timestamp,
         overall: Math.round(point.overall * 100),
       };
       for (const dim of RUBRIC_DIMENSIONS) {
@@ -76,11 +89,20 @@ export function QualityTrendChart({ series, markers }: QualityTrendChartProps) {
     });
 
     const marks = markers.map((m) => ({
-      date: formatDateLabel(m.timestamp),
+      timestamp: m.timestamp,
       label: m.changeType === "model" ? "Model change" : "Instruction change",
     }));
 
-    return { data: rows, hasData: true, markerLabels: marks };
+    const allTimestamps = [
+      ...sorted.map((p) => p.timestamp),
+      ...marks.map((m) => m.timestamp),
+    ];
+    const axisDomain: [number, number] = [
+      Math.min(...allTimestamps),
+      Math.max(...allTimestamps),
+    ];
+
+    return { data: rows, hasData: true, markerLabels: marks, domain: axisDomain };
   }, [series, markers]);
 
   return (
@@ -93,9 +115,25 @@ export function QualityTrendChart({ series, markers }: QualityTrendChartProps) {
       ) : (
         <ChartContainer config={chartConfig} className="h-[280px] w-full">
           <LineChart data={data}>
-            <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+            <XAxis
+              dataKey="timestamp"
+              type="number"
+              domain={domain}
+              tickFormatter={(value) => formatDateLabel(Number(value))}
+              tick={{ fontSize: 10 }}
+            />
             <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(_value, payload) =>
+                    formatDateLabel(
+                      Number((payload?.[0]?.payload as { timestamp?: number })?.timestamp ?? 0)
+                    )
+                  }
+                />
+              }
+            />
             <Line
               type="monotone"
               dataKey="overall"
@@ -115,8 +153,8 @@ export function QualityTrendChart({ series, markers }: QualityTrendChartProps) {
             ))}
             {markerLabels.map((m, i) => (
               <ReferenceLine
-                key={`${m.date}-${i}`}
-                x={m.date}
+                key={`${m.timestamp}-${i}`}
+                x={m.timestamp}
                 stroke="var(--status-error)"
                 strokeDasharray="4 4"
                 label={{ value: m.label, position: "top", fontSize: 10 }}
