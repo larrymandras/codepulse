@@ -944,11 +944,17 @@ export const listPersonaKpis = query({
     for (const p of personas) {
       const profileId = p.profileId as string;
 
+      // WR-03 (93-REVIEW): KPI means read ONLY judge rubric scores — blending
+      // Ástríðr's binary 0/1 task_quality rows (per-turn success bit) into the
+      // same mean corrupts the "judged nightly" metric the page advertises.
+      // task_quality rows stay persisted (EVAL-01) but are excluded here,
+      // matching listJudgedSessions' existing scoreName filter.
       const currentScores = await ctx.db
         .query("evalScores")
         .withIndex("by_profileId", (q) =>
           q.eq("profileId", profileId).gte("timestamp", currentStart)
         )
+        .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
         .collect();
 
       const previousScores = await ctx.db
@@ -959,6 +965,7 @@ export const listPersonaKpis = query({
             .gte("timestamp", previousStart)
             .lt("timestamp", currentStart)
         )
+        .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
         .collect();
 
       // T-93-12: never read/return apiKey — this query touches only
@@ -1011,11 +1018,13 @@ export const getPersonaDetail = query({
     const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
     const rangeStart = Date.now() / 1000 - days * 86400;
 
+    // WR-03: detail series shows judge rubric scores only (see listPersonaKpis).
     const scores = await ctx.db
       .query("evalScores")
       .withIndex("by_profileId", (q) =>
         q.eq("profileId", profileId).gte("timestamp", rangeStart)
       )
+      .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
       .collect();
 
     const switchRows = await ctx.db
@@ -1177,11 +1186,15 @@ export const getEvalScoresWindowInternal = internalQuery({
     end: v.float64(),
   },
   handler: async (ctx, { profileId, start, end }) => {
+    // WR-03: regression windows compare judge rubric scores only — a burst of
+    // binary 0/1 task_quality rows must never fire (or mask) a regression
+    // (D-14 zero-false-positive bar).
     return await ctx.db
       .query("evalScores")
       .withIndex("by_profileId", (q) =>
         q.eq("profileId", profileId).gte("timestamp", start).lt("timestamp", end)
       )
+      .filter((q) => q.eq(q.field("scoreName"), "llm_judge"))
       .collect();
   },
 });

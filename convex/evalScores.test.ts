@@ -1021,6 +1021,21 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
     expect(runAfter).not.toHaveBeenCalled();
   });
 
+  it("WR-03: every evalScores read feeding KPI means/regression windows filters to llm_judge (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = readFileSync(resolve(process.cwd(), "convex/evalScores.ts"), "utf-8");
+    // listPersonaKpis (current + previous), getPersonaDetail, listJudgedSessions,
+    // getEvalScoresWindowInternal — 5 scoreName-filtered evalScores reads. Same
+    // static-source-check convention as the alerts.create test below (the
+    // handlers need a live Convex instance; the invariant is that no KPI read
+    // blends binary task_quality rows into judge rubric means).
+    const filterCount = (
+      source.match(/q\.eq\(q\.field\("scoreName"\), "llm_judge"\)/g) ?? []
+    ).length;
+    expect(filterCount).toBe(5);
+  });
+
   it("never calls the public alerts.create mutation anywhere in the module (static source check)", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
