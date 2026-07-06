@@ -93,6 +93,11 @@ export const upsertConfig = mutation({
     budget: v.optional(v.any()),
     modelPreferences: v.optional(v.any()),
     emailAddress: v.optional(v.string()),
+    // WR-07 (93-REVIEW): audit-trail actor. Defaults to "dashboard" (the
+    // operator UI path); the Ástríðr profile_config runtime sync passes
+    // "astridr-sync" so configChanges rows — and the "model change"
+    // regression markers derived from them (D-11) — name the real actor.
+    changedBy: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now() / 1000;
@@ -116,7 +121,7 @@ export const upsertConfig = mutation({
         configKey: personaConfigChangeKey(args.profileId),
         oldValue: existing?.modelPreferences,
         newValue: args.modelPreferences,
-        changedBy: "dashboard",
+        changedBy: args.changedBy ?? "dashboard",
         changedAt: now,
       });
     }

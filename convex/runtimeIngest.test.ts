@@ -293,6 +293,18 @@ describe("runtimeIngest — task_quality case", () => {
     });
   });
 
+  it("WR-07: the Astridr profile_config sync attributes configChanges to astridr-sync, not dashboard (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    // The profile_config runtime case must name the real actor.
+    expect(ingestSource).toContain('changedBy: "astridr-sync"');
+    const profilesSource = readFileSync(resolve(process.cwd(), "convex/profiles.ts"), "utf-8");
+    // upsertConfig defaults the audit actor to "dashboard" only when the
+    // caller doesn't say otherwise — never hardcodes it.
+    expect(profilesSource).toContain('args.changedBy ?? "dashboard"');
+  });
+
   it("WR-06: ingestTaskQuality is an internalMutation, routed via internal.* from the Bearer-gated httpAction (static source check)", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");

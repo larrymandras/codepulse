@@ -482,6 +482,9 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             channels: d.channels,
             budget: d.budget,
             modelPreferences: d.modelPreferences ?? d.model_preferences,
+            // WR-07: this is the Ástríðr runtime sync, not an operator action —
+            // the configChanges audit row must not claim "dashboard".
+            changedBy: "astridr-sync",
           });
           break;
         }
