@@ -326,7 +326,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 **Phase summary:**
 
-- [ ] **Phase 93: Eval Pipeline & Quality KPIs** — `evalScores` ingest (idempotent), nightly LLM-as-judge `internalAction`, per-persona quality KPI + regression detection
+- [x] **Phase 93: Eval Pipeline & Quality KPIs** — `evalScores` ingest (idempotent), nightly LLM-as-judge `internalAction`, per-persona quality KPI + regression detection (completed 2026-07-06)
 - [ ] **Phase 94: Trace Waterfall** — `traceId` grouping on `llmMetrics` + in-app call-chain waterfall UI (replaces dead-link `LangfuseTraceLink.tsx`)
 - [ ] **Phase 95: Hardening — Security, Key Rotation, Dependency Majors** — `/cso` audit + remediation, Forge ingest-key rotation, TypeScript 6 + react-day-picker 10 migrations
 
@@ -349,7 +349,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 93-03-PLAN.md — Wave 2: cross-repo Ástríðr langfuse_eval.py fire-and-forget task_quality mirror POST (EVAL-01, D-01)
 - [x] 93-04-PLAN.md — Wave 3: regression detection (before/after window means, >=5/side, delivered alert) + KPI read queries (EVAL-03)
 - [x] 93-05-PLAN.md — Wave 4: Quality page + persona detail + trend chart + hooks + regression badge + nav/route (EVAL-03)
-- [ ] 93-06-PLAN.md — Wave 5: live E2E completion bar (D-04) + judge calibration reference set (checkpoints)
+- [x] 93-06-PLAN.md — Wave 5: live E2E completion bar (D-04) + judge calibration reference set (checkpoints)
 **UI hint**: yes
 
 ---
@@ -406,7 +406,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 90. Agent Room / War Room | v9.0 | 8/8 | ✅ Complete | 2026-06-29 |
 | 91. 3D Memory Galaxy | v9.0 | 5/5 | Complete    | 2026-06-29 |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
-| 93. Eval Pipeline & Quality KPIs | v10.0 | 5/6 | In Progress|  |
+| 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete   | 2026-07-06 |
 | 94. Trace Waterfall | v10.0 | 0/TBD | Not started | - |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 0/TBD | Not started | - |
 

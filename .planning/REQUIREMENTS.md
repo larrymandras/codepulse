@@ -6,9 +6,9 @@
 
 ### Eval Pipeline (EVAL)
 
-- [ ] **EVAL-01**: Ástríðr's emitted `task_quality` scores are received via a bearer-authed ingest endpoint and stored in an `evalScores` Convex table (idempotent on at-least-once retry) — scores are no longer dropped on the floor. Producer already exists: `astridr/.../langfuse_eval.py`.
-- [ ] **EVAL-02**: A nightly Convex `internalAction` LLM-judges sampled sessions against a rubric and writes scores to `evalScores`.
-- [ ] **EVAL-03**: Operator can see a per-persona quality KPI/trend, and a quality regression following a persona model/instruction change is detectable — flagged or alerted, joined against `profileSwitches`/`configChanges`.
+- [x] **EVAL-01**: Ástríðr's emitted `task_quality` scores are received via a bearer-authed ingest endpoint and stored in an `evalScores` Convex table (idempotent on at-least-once retry) — scores are no longer dropped on the floor. Producer already exists: `astridr/.../langfuse_eval.py`.
+- [x] **EVAL-02**: A nightly Convex `internalAction` LLM-judges sampled sessions against a rubric and writes scores to `evalScores`.
+- [x] **EVAL-03**: Operator can see a per-persona quality KPI/trend, and a quality regression following a persona model/instruction change is detectable — flagged or alerted, joined against `profileSwitches`/`configChanges`.
 
 ### Trace Waterfall (TRACE)
 
@@ -38,9 +38,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| EVAL-01 | Phase 93 | Pending |
-| EVAL-02 | Phase 93 | Pending |
-| EVAL-03 | Phase 93 | Pending |
+| EVAL-01 | Phase 93 | Complete |
+| EVAL-02 | Phase 93 | Complete |
+| EVAL-03 | Phase 93 | Complete |
 | TRACE-01 | Phase 94 | Pending |
 | TRACE-02 | Phase 94 | Pending |
 | HARD-01 | Phase 95 | Pending |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
-stopped_at: Phase 93 UI-SPEC approved
-last_updated: "2026-07-05T20:05:56.230Z"
-last_activity: 2026-07-05 -- Phase 93 execution started
+stopped_at: Completed 93-06-PLAN.md (live E2E verified; 3 human items pending)
+last_updated: "2026-07-06T12:33:44.924Z"
+last_activity: 2026-07-06
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 0
-  percent: 0
+  completed_plans: 6
+  percent: 33
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 93 (eval-pipeline-quality-kpis) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 93
-Last activity: 2026-07-05 -- Phase 93 execution started
+Phase: 93 (eval-pipeline-quality-kpis) — COMPLETE (6/6 plans; D-04 live E2E verified 2026-07-06)
+Plan: 6 of 6 (93-06 complete)
+Status: Phase complete — 3 operator items pending (final astridr rebuild applying revert+auth fix; /quality grid visual refresh; E3 calibration labels in 93-CALIBRATION.md — Quality trends NOT trusted until the >=0.7 gate closes)
+Last activity: 2026-07-06
 
 ## Deferred Items
 
@@ -155,6 +155,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - **cooldownTicks=150** — the library default is `Infinity`; a finite value is required so `onEngineStop` fires and `zoomToFit(400, 60)` runs on simulation settle (Pitfall 3). Value 150 matches ForceGraphCanvas's 120 ticks with a small buffer for 3D physics.
 - **centerNode3DWhenReady appended without touching 2D path** — `centerNodeWhenReady` (L30-61) is byte-unchanged; the 3D function mirrors its RAF/cancel/frames/maxFrames structure exactly. `lookAt` passed as explicit node coords to prevent camera aiming at scene origin for off-center nodes (Pitfall 6).
 - [Phase ?]: SC#2 PASS: three.js/react-force-graph-3d confined to ForceGraph3D-[hash].js lazy chunk; zero three.js markers in any of the 3 main index chunks
+- [Phase ?]: 93-06: persona identity for Quality-page join = operational profile id stamped on session.active_profile, not shared persona_id
+- [Phase ?]: 93-06: SELF-01 was never wired into AgentLoop in prod (dead since Phase 73); bootstrap now wires it, enable flag reverted post-verification (config/self-improvement.yaml)
+- [Phase ?]: 93-06: Quality trends NOT trusted until E3 >=0.7 human-agreement gate closes (93-CALIBRATION.md, labels pending)
+- [Phase ?]: 93-06 user-directed: astridr web chat cookie-session auth; profile-scoped /{p}/api/* auth bypass closed
 
 ### Pending Todos
 
@@ -180,10 +184,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-05T14:29:56.007Z
-Stopped at: Phase 93 UI-SPEC approved
+Last session: 2026-07-06T12:33:44.914Z
+Stopped at: Completed 93-06-PLAN.md (live E2E verified; 3 human items pending)
 Next action: `/gsd-plan-phase 93`
-Resume file: .planning/phases/93-eval-pipeline-quality-kpis/93-UI-SPEC.md
+Resume file: None
 
 ## Operator Next Steps
 
