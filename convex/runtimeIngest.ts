@@ -120,6 +120,33 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "subagent_job": {
+          // Phase 168 (background subagents) — route a background delegate_task
+          // TERMINAL-state event (completed/failed/cancelled — never queued/
+          // running, those live only in Supabase, read via check_job) into the
+          // standalone subagentJobs table (D-09: NOT swarmTasks). Inherits the
+          // validateIngestAuth Bearer-token gate above. Dual snake/camel read
+          // mirrors case "swarm_task", even though the live emitter (Phase
+          // 168-04 fix) sends camelCase only. submittedAt/finishedAt are Unix
+          // epoch SECONDS per docs/astridr-contract.md §2.31 (no ms conversion
+          // — unlike swarm_task, this table has no shared ms-unit consumer).
+          // submittedAt is documented as not-yet-populated by the emitter; the
+          // upsert mutation itself falls back to finishedAt/now on first insert.
+          const d = data as any;
+          await ctx.runMutation(api.subagentJobs.upsert, {
+            jobId: d.job_id ?? d.jobId ?? "unknown",
+            agentTypeId: d.agent_type_id ?? d.agentTypeId ?? "unknown",
+            status: d.status ?? "unknown",
+            taskSnippet: d.task_snippet ?? d.taskSnippet ?? "",
+            resultSnippet: d.result_snippet ?? d.resultSnippet,
+            error: d.error,
+            channelId: d.channel_id ?? d.channelId,
+            chatId: d.chat_id ?? d.chatId,
+            submittedAt: d.submitted_at ?? d.submittedAt,
+            finishedAt: d.finished_at ?? d.finishedAt ?? timestamp,
+          });
+          break;
+        }
         case "security_event": {
           const d = data as any;
           const eventType = d.eventType ?? d.event_type ?? d.layer ?? "unknown";

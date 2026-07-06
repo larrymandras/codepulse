@@ -925,6 +925,30 @@ export default defineSchema({
     .index("by_created", ["createdAt"]),
 
   // ============================================================
+  // BACKGROUND SUBAGENT JOBS (Phase 168 — background subagents)
+  // Standalone table, NOT an extension of swarmTasks (D-09) — /hive
+  // semantics stay untouched. Mirrors a non-blocking delegate_task(
+  // background=True) job through queued/running/completed/failed/
+  // cancelled, keyed by jobId.
+  // ============================================================
+
+  subagentJobs: defineTable({
+    jobId: v.string(),
+    agentTypeId: v.string(),
+    status: v.string(),        // "queued"|"running"|"completed"|"failed"|"cancelled"
+    taskSnippet: v.string(),
+    resultSnippet: v.optional(v.string()),
+    error: v.optional(v.string()),
+    channelId: v.optional(v.string()),
+    chatId: v.optional(v.string()),
+    submittedAt: v.float64(),
+    finishedAt: v.optional(v.float64()),
+    updatedAt: v.optional(v.float64()),
+  })
+    .index("by_jobId", ["jobId"])
+    .index("by_status", ["status", "submittedAt"]),
+
+  // ============================================================
   // ALERT ROUTING (Phase 6)
   // ============================================================
 

@@ -125,6 +125,7 @@ import type * as sessions from "../sessions.js";
 import type * as skillCategories from "../skillCategories.js";
 import type * as skillSync from "../skillSync.js";
 import type * as startupEvents from "../startupEvents.js";
+import type * as subagentJobs from "../subagentJobs.js";
 import type * as supabase from "../supabase.js";
 import type * as swarmTasks from "../swarmTasks.js";
 import type * as systemResources from "../systemResources.js";
@@ -267,6 +268,7 @@ declare const fullApi: ApiFromModules<{
   skillCategories: typeof skillCategories;
   skillSync: typeof skillSync;
   startupEvents: typeof startupEvents;
+  subagentJobs: typeof subagentJobs;
   supabase: typeof supabase;
   swarmTasks: typeof swarmTasks;
   systemResources: typeof systemResources;
