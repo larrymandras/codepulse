@@ -131,11 +131,12 @@ function computeTimeRange(rows: LlmCallRow[]) {
 }
 
 /** Summary-strip aggregates, computed only from real measured fields — no estimation. */
-function computeSummary(rows: LlmCallRow[]) {
+export function computeSummary(rows: LlmCallRow[]) {
   let totalCost = 0;
   let callsWithoutCost = 0;
   let totalTokens = 0;
   let cacheReadSum = 0;
+  let cacheCreationSum = 0;
   let promptTokenSum = 0;
 
   for (const row of rows) {
@@ -148,10 +149,15 @@ function computeSummary(rows: LlmCallRow[]) {
     if (typeof row.cacheReadInputTokens === "number") {
       cacheReadSum += row.cacheReadInputTokens;
     }
+    if (typeof row.cacheCreationInputTokens === "number") {
+      cacheCreationSum += row.cacheCreationInputTokens;
+    }
     promptTokenSum += row.promptTokens;
   }
 
-  const cacheDenominator = cacheReadSum + promptTokenSum;
+  // hitRate = cache_read / total prompt tokens, where total = uncached input
+  // + cache writes + cache reads — same formula as shapeCacheAcc in convex/llm.ts.
+  const cacheDenominator = cacheReadSum + cacheCreationSum + promptTokenSum;
   const cacheRatio = cacheDenominator > 0 ? cacheReadSum / cacheDenominator : 0;
 
   return { totalCost, callsWithoutCost, totalTokens, cacheRatio };
@@ -214,7 +220,7 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
             <MetricCard label="Total Cost" value={formatCost(summary.totalCost)} />
             {summary.callsWithoutCost > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                {summary.callsWithoutCost} calls without cost
+                {summary.callsWithoutCost} call{summary.callsWithoutCost === 1 ? "" : "s"} without cost
               </p>
             )}
           </div>

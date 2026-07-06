@@ -20,6 +20,7 @@ import {
   barMetrics,
   cacheBadge,
   costLabel,
+  computeSummary,
   TraceWaterfall,
   type LlmCallRow,
 } from "./TraceWaterfall";
@@ -181,6 +182,42 @@ describe("costLabel", () => {
 });
 
 // ---------------------------------------------------------------------------
+// computeSummary
+// ---------------------------------------------------------------------------
+
+describe("computeSummary", () => {
+  it("includes cache-creation tokens in the cache-ratio denominator (matches shapeCacheAcc)", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({
+        promptTokens: 100,
+        cacheReadInputTokens: 300,
+        cacheCreationInputTokens: 600,
+      }),
+    ];
+
+    // hitRate = read / (uncached input + cache writes + cache reads)
+    //         = 300 / (100 + 600 + 300) = 0.3
+    expect(computeSummary(rows).cacheRatio).toBeCloseTo(0.3);
+  });
+
+  it("treats missing cache fields as zero and returns 0 ratio when no tokens at all", () => {
+    expect(computeSummary([makeRow({ promptTokens: 0 })]).cacheRatio).toBe(0);
+  });
+
+  it("sums cost only over rows with a numeric cost and counts the rest", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ cost: 0.01 }),
+      makeRow({ cost: undefined }),
+      makeRow({ cost: 0.02 }),
+    ];
+
+    const summary = computeSummary(rows);
+    expect(summary.totalCost).toBeCloseTo(0.03);
+    expect(summary.callsWithoutCost).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // TraceWaterfall (component) — mount tests with mocked useQuery
 // ---------------------------------------------------------------------------
 
@@ -237,7 +274,7 @@ describe("TraceWaterfall (component)", () => {
     render(<TraceWaterfall sessionId="session-1" />);
 
     expect(screen.getByText("Total Cost")).toBeInTheDocument();
-    expect(screen.getByText("1 calls without cost")).toBeInTheDocument();
+    expect(screen.getByText("1 call without cost")).toBeInTheDocument();
     expect(screen.getByText("Call Count")).toBeInTheDocument();
     expect(screen.getByText("Total Tokens")).toBeInTheDocument();
     expect(screen.getByText("Cache Read Ratio")).toBeInTheDocument();
