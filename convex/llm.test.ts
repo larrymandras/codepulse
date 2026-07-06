@@ -30,6 +30,7 @@ async function recordCallLogic(ctx: any, args: any) {
     toolName: args.toolName,
     billingType: "api",
     goalId: args.goalId,  // Phase 149 PULSE-01
+    traceId: args.traceId,  // Phase 94 TRACE-01
   });
 }
 
@@ -64,6 +65,39 @@ describe("llm", () => {
         // goalId intentionally absent
       });
       expect(store.llmMetrics[0].goalId).toBeUndefined();
+    });
+  });
+
+  describe("recordCall — traceId persistence (Phase 94 TRACE-01)", () => {
+    it("persists traceId into the llmMetrics row", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        traceId: "trace-abc-123",
+      });
+      expect(store.llmMetrics).toHaveLength(1);
+      expect(store.llmMetrics[0].traceId).toBe("trace-abc-123");
+    });
+
+    it("traceId is undefined when omitted (backward compat — existing rows unaffected)", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        // traceId intentionally absent
+      });
+      expect(store.llmMetrics[0].traceId).toBeUndefined();
     });
   });
 

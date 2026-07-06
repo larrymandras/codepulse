@@ -17,6 +17,7 @@ export const recordCall = mutation({
     agentId: v.optional(v.string()),
     toolName: v.optional(v.string()),
     goalId: v.optional(v.string()),   // Phase 149 PULSE-01 — swarm cost join
+    traceId: v.optional(v.string()),  // Phase 94 TRACE-01 — per-turn trace grouping
     cacheReadInputTokens: v.optional(v.float64()),      // prompt-cache hit monitoring
     cacheCreationInputTokens: v.optional(v.float64()),  // prompt-cache write monitoring
   },
@@ -36,6 +37,7 @@ export const recordCall = mutation({
       toolName: args.toolName,
       billingType,
       goalId: args.goalId,
+      traceId: args.traceId,
       cacheReadInputTokens: args.cacheReadInputTokens,
       cacheCreationInputTokens: args.cacheCreationInputTokens,
     });
