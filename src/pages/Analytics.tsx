@@ -27,7 +27,6 @@ import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
 import GatewayTasksPanel from "../components/GatewayTasksPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
-import { LangfuseTraceLink } from "../components/LangfuseTraceLink";
 import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
@@ -80,7 +79,6 @@ export default function Analytics() {
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
         <div className="flex items-center gap-3">
           <TokenSavingsIndicator savedTokens={0} totalTokens={0} />
-          <LangfuseTraceLink />
         </div>
       </div>
       
