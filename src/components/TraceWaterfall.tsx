@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "convex/react";
+import { ChevronRight } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import {
   Collapsible,
@@ -114,7 +115,64 @@ export function costLabel(row: { cost?: number }): string {
   return typeof row.cost === "number" ? formatCost(row.cost) : "n/a";
 }
 
-// ─── Component (fleshed out in Task 2) ─────────────────────────────────────
+// ─── Render-only helpers ────────────────────────────────────────────────────
+
+const ROW_HEIGHT = 36; // inherited verbatim from the sibling swimlane component's row-height constant (house exception)
+
+/** Session-wide time axis: seconds domain, right edge extends to "now" so a live session's axis keeps growing. */
+function computeTimeRange(rows: LlmCallRow[]) {
+  const now = Date.now() / 1000;
+  const starts = rows.map((r) => barMetrics(r).start);
+  const ends = rows.map((r) => r.timestamp);
+  const minTs = Math.min(...starts, ...ends);
+  const maxTs = Math.max(...ends, now);
+  const range = Math.max(maxTs - minTs, 1);
+  return { minTs, maxTs, range };
+}
+
+/** Summary-strip aggregates, computed only from real measured fields — no estimation. */
+function computeSummary(rows: LlmCallRow[]) {
+  let totalCost = 0;
+  let callsWithoutCost = 0;
+  let totalTokens = 0;
+  let cacheReadSum = 0;
+  let promptTokenSum = 0;
+
+  for (const row of rows) {
+    if (typeof row.cost === "number") {
+      totalCost += row.cost;
+    } else {
+      callsWithoutCost += 1;
+    }
+    totalTokens += row.totalTokens;
+    if (typeof row.cacheReadInputTokens === "number") {
+      cacheReadSum += row.cacheReadInputTokens;
+    }
+    promptTokenSum += row.promptTokens;
+  }
+
+  const cacheDenominator = cacheReadSum + promptTokenSum;
+  const cacheRatio = cacheDenominator > 0 ? cacheReadSum / cacheDenominator : 0;
+
+  return { totalCost, callsWithoutCost, totalTokens, cacheRatio };
+}
+
+/** Aggregate cost for a group of rows — "n/a" only when every row in the group is missing cost (D-14). */
+function groupCostLabel(rows: LlmCallRow[]): string {
+  const defined = rows.filter((r) => typeof r.cost === "number");
+  if (defined.length === 0) return "n/a";
+  const sum = defined.reduce((acc, r) => acc + (r.cost as number), 0);
+  return formatCost(sum);
+}
+
+/** Per-row "X% cached" label — only meaningful when cacheBadge(row) === "HIT". */
+function rowCachePercent(row: LlmCallRow): number {
+  const read = row.cacheReadInputTokens ?? 0;
+  const denominator = read + row.promptTokens;
+  return denominator > 0 ? Math.round((read / denominator) * 100) : 0;
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export function TraceWaterfall({ sessionId }: { sessionId: string }) {
   const rows = useQuery(api.llm.sessionCalls, { sessionId }) as
@@ -122,6 +180,8 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
     | undefined;
 
   const groups = useMemo(() => groupByTrace(rows ?? []), [rows]);
+  const timeRange = useMemo(() => computeTimeRange(rows ?? []), [rows]);
+  const summary = useMemo(() => computeSummary(rows ?? []), [rows]);
 
   if (rows === undefined) {
     return null;
@@ -140,31 +200,161 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
     );
   }
 
+  const toPercent = (ts: number) =>
+    ((ts - timeRange.minTs) / timeRange.range) * 100;
+
+  let turnNumber = 0;
+
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-4">
-        {groups.map((group) => (
-          <Collapsible key={group.traceId ?? UNTRACED_KEY} defaultOpen>
-            <CollapsibleTrigger>{group.traceId ?? "Untraced calls"}</CollapsibleTrigger>
-            <CollapsibleContent>
-              {group.rows.map((row, i) => (
-                <div key={row._id ?? i}>
-                  {row.model} · {costLabel(row)}
+      <div className="flex flex-col gap-6">
+        {/* Summary strip (D-15) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <MetricCard label="Total Cost" value={formatCost(summary.totalCost)} />
+            {summary.callsWithoutCost > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {summary.callsWithoutCost} calls without cost
+              </p>
+            )}
+          </div>
+          <MetricCard label="Call Count" value={rows.length} />
+          <MetricCard label="Total Tokens" value={summary.totalTokens.toLocaleString()} />
+          <MetricCard
+            label="Cache Read Ratio"
+            value={`${Math.round(summary.cacheRatio * 100)}%`}
+          />
+        </div>
+
+        {/* Trace groups */}
+        <div className="flex flex-col gap-4">
+          {groups.map((group) => {
+            const isUntraced = group.traceId === undefined;
+            const groupDurationMs = group.rows.reduce(
+              (sum, r) => sum + r.latencyMs,
+              0
+            );
+
+            if (isUntraced) {
+              return (
+                <div
+                  key={UNTRACED_KEY}
+                  className="rounded-lg border border-border p-4"
+                  style={{ backgroundColor: "var(--muted)" }}
+                >
+                  <h3
+                    className="text-sm font-mono tracking-widest uppercase font-semibold"
+                    style={{ color: "var(--muted-foreground)" }}
+                  >
+                    Untraced calls · {group.rows.length}
+                  </h3>
+                  <div className="mt-2 flex flex-col gap-0.5">
+                    {group.rows.map((row, i) => (
+                      <TraceCallRow
+                        key={row._id ?? i}
+                        row={row}
+                        toPercent={toPercent}
+                      />
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-        ))}
+              );
+            }
+
+            turnNumber += 1;
+            const thisTurn = turnNumber;
+
+            return (
+              <Collapsible
+                key={group.traceId}
+                defaultOpen
+                className="rounded-lg border border-border bg-card"
+              >
+                <CollapsibleTrigger className="group flex w-full items-center justify-between p-4 text-left">
+                  <span className="text-sm font-mono tracking-widest uppercase font-semibold">
+                    Turn {thisTurn} · {group.rows.length} ·{" "}
+                    {formatDurationMs(groupDurationMs)} ·{" "}
+                    {groupCostLabel(group.rows)}
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-4 pb-4 flex flex-col gap-0.5">
+                  {group.rows.map((row, i) => (
+                    <TraceCallRow
+                      key={row._id ?? i}
+                      row={row}
+                      toPercent={toPercent}
+                    />
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
+        </div>
       </div>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="sr-only">detail</span>
-        </TooltipTrigger>
-        <TooltipContent>detail</TooltipContent>
-      </Tooltip>
-      <MetricCard label="stub" value="stub" />
-      <div className="hidden">{formatDurationMs(0)}</div>
     </TooltipProvider>
+  );
+}
+
+// ─── Call bar row ───────────────────────────────────────────────────────────
+
+function TraceCallRow({
+  row,
+  toPercent,
+}: {
+  row: LlmCallRow;
+  toPercent: (ts: number) => number;
+}) {
+  const { start, width } = barMetrics(row);
+  const left = toPercent(start);
+  const barWidth = Math.max(toPercent(start + width) - left, 0.5);
+  const badge = cacheBadge(row);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="relative w-full" style={{ height: ROW_HEIGHT }}>
+          <div
+            className="absolute inset-y-1.5 rounded-sm flex items-center px-2 text-xs whitespace-nowrap overflow-hidden"
+            style={{
+              left: `${left}%`,
+              width: `${barWidth}%`,
+              minWidth: "60px",
+              backgroundColor: "var(--chart-1)",
+            }}
+          >
+            <span className="truncate">
+              {row.model} · {costLabel(row)}
+              {badge === "HIT" && (
+                <span style={{ color: "var(--status-ok)" }}>
+                  {" "}
+                  · {rowCachePercent(row)}% cached
+                </span>
+              )}
+              {badge === "MISS" && (
+                <span style={{ color: "var(--status-warn)" }}> · uncached</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="flex flex-col gap-0.5 text-xs">
+          <span>Provider: {row.provider}</span>
+          <span>Model: {row.model}</span>
+          {row.toolName && <span>Tool: {row.toolName}</span>}
+          {row.billingType && <span>Billing: {row.billingType}</span>}
+          <span>
+            Tokens: {row.promptTokens} in / {row.completionTokens} out
+          </span>
+          <span>
+            Cache read: {row.cacheReadInputTokens ?? "n/a"} · Cache
+            creation: {row.cacheCreationInputTokens ?? "n/a"}
+          </span>
+          <span>Latency: {formatDurationMs(row.latencyMs)}</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
