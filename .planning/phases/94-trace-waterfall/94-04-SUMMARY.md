@@ -105,6 +105,17 @@ None. T-94-07 (invalid `?tab=` value) is mitigated via the `Tab`-union validatio
 
 TRACE-02 is fully wired end-to-end: an operator can now reach the trace waterfall either from the SessionDetail Trace tab directly or via the Analytics Recent LLM Calls table's "View Trace" cross-link, and the dead Langfuse external-dashboard link is gone. This is the last plan in Phase 94's wave 3 (depends_on: [94-03]) — no blockers for phase closeout.
 
+## Self-Check: PASSED
+
+- FOUND: `src/pages/SessionDetail.tsx`
+- FOUND: `src/pages/Analytics.tsx`
+- FOUND: `src/components/LangfuseTraceLink.tsx` correctly deleted
+- FOUND: `.planning/phases/94-trace-waterfall/94-04-SUMMARY.md`
+- FOUND commit: `a683c51` (Task 1)
+- FOUND commit: `43050ca` (Task 2)
+- FOUND commit: `9030fb8` (Task 3)
+- FOUND commit: `8af1c8b` (this summary)
+
 ---
 *Phase: 94-trace-waterfall*
 *Completed: 2026-07-06*
