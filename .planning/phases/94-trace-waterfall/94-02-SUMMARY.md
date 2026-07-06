@@ -113,3 +113,11 @@ None - no external service configuration required. This plan is producer-side on
 ---
 *Phase: 94-trace-waterfall*
 *Completed: 2026-07-06*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/94-trace-waterfall/94-02-SUMMARY.md` (this file)
+- FOUND: astridr-repo commit `02529544` (test: trace context test suite)
+- FOUND: astridr-repo commit `478d2a14` (feat: contextvar + _process_inner wiring)
+- FOUND: astridr-repo commit `05b12a44` (feat: provider traceId attach)
+- All 6 tests in `tests/unit/test_trace_context.py` pass; `py_compile` clean on all 3 providers; router.py confirmed untouched
