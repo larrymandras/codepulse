@@ -665,6 +665,19 @@ export async function runJudgeBatch(
   return { scored, failed };
 }
 
+/**
+ * CR-01 (93-REVIEW): the nightly cron fires at 05:00 UTC (crons.ts). Judging
+ * the CURRENT UTC day at that moment would only ever see sessions completed
+ * between 00:00 and 05:00 UTC — everything completing later the same day
+ * would fall in a window whose run has already happened, and would never be
+ * sampled. The run therefore judges the PREVIOUS complete UTC day: it rides
+ * right after that day closes. (The `judge:${sessionId}` idempotency key
+ * already protects against any overlap double-judging.)
+ */
+export function judgeWindowDayStart(nowMs: number): number {
+  return Math.floor(nowMs / 1000 / 86400) * 86400 - 86400;
+}
+
 export const getCandidateSessionsInternal = internalQuery({
   args: { dayStart: v.float64() },
   handler: async (ctx, { dayStart }) => {
@@ -729,7 +742,8 @@ export const judgeSessionsAction = internalAction({
       (p) => p.profileId
     );
 
-    const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400;
+    // Previous complete UTC day — see judgeWindowDayStart (CR-01).
+    const dayStart = judgeWindowDayStart(Date.now());
     const candidates = await ctx.runQuery(
       internal.evalScores.getCandidateSessionsInternal,
       { dayStart }

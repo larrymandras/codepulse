@@ -21,6 +21,7 @@ import {
   RUBRIC_VERSION,
   sampleSessionsForPersonas,
   runJudgeBatch,
+  judgeWindowDayStart,
   meanOverall,
   periodDelta,
   buildPersonaKpi,
@@ -495,6 +496,37 @@ describe("evalScores — sampleSessionsForPersonas (nightly sampling, D-08)", ()
     ];
     const { unknownCount } = sampleSessionsForPersonas(activePersonas, candidates);
     expect(unknownCount).toBe(0);
+  });
+});
+
+describe("evalScores — judgeWindowDayStart (CR-01: judge the previous complete UTC day)", () => {
+  const DAY = 86400;
+
+  it("at the 05:00 UTC cron moment, the window is the PREVIOUS UTC day, not the current one", () => {
+    const cronMomentMs = Date.UTC(2026, 6, 6, 5, 0, 0); // Jul 6 2026 05:00 UTC
+    const dayStart = judgeWindowDayStart(cronMomentMs);
+    expect(dayStart).toBe(Date.UTC(2026, 6, 5, 0, 0, 0) / 1000); // Jul 5 00:00 UTC
+  });
+
+  it("a session completing AFTER 05:00 UTC falls inside the next night's window (never skipped)", () => {
+    // Session completes Jul 5 at 18:00 UTC — after that day's 05:00 run.
+    const sessionLastEventAt = Date.UTC(2026, 6, 5, 18, 0, 0) / 1000;
+    // The NEXT run (Jul 6, 05:00 UTC) must cover it.
+    const dayStart = judgeWindowDayStart(Date.UTC(2026, 6, 6, 5, 0, 0));
+    expect(sessionLastEventAt).toBeGreaterThanOrEqual(dayStart);
+    expect(sessionLastEventAt).toBeLessThan(dayStart + DAY);
+  });
+
+  it("a session completing BEFORE 05:00 UTC is covered exactly once (by the same day's run)", () => {
+    // Session completes Jul 6 at 02:00 UTC.
+    const sessionLastEventAt = Date.UTC(2026, 6, 6, 2, 0, 0) / 1000;
+    // Jul 6's 05:00 run covers Jul 5 — does NOT include it.
+    const jul6Start = judgeWindowDayStart(Date.UTC(2026, 6, 6, 5, 0, 0));
+    expect(sessionLastEventAt).toBeGreaterThanOrEqual(jul6Start + DAY);
+    // Jul 7's 05:00 run covers Jul 6 — includes it.
+    const jul7Start = judgeWindowDayStart(Date.UTC(2026, 6, 7, 5, 0, 0));
+    expect(sessionLastEventAt).toBeGreaterThanOrEqual(jul7Start);
+    expect(sessionLastEventAt).toBeLessThan(jul7Start + DAY);
   });
 });
 
