@@ -4,8 +4,8 @@ milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
 stopped_at: Phase 94 UI-SPEC approved
-last_updated: "2026-07-06T17:14:26.782Z"
-last_activity: 2026-07-06 -- Phase 94 planning complete
+last_updated: "2026-07-06T18:02:53.848Z"
+last_activity: 2026-07-06 -- Phase 94 execution started
 progress:
   total_phases: 3
   completed_phases: 1
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 94 — trace waterfall
+**Current focus:** Phase 94 — trace-waterfall
 
 ## Current Position
 
-Phase: 94
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-06 -- Phase 94 planning complete
+Phase: 94 (trace-waterfall) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 94
+Last activity: 2026-07-06 -- Phase 94 execution started
 
 ## Deferred Items
 
