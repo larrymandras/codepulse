@@ -79,11 +79,14 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // Phase 93 (EVAL-01): Ástríðr's langfuse_eval.py task_quality scores,
           // currently dropped on the floor — now persisted to evalScores.
           // Inherits the validateIngestAuth Bearer gate above (T-93-02); no new
-          // route or auth check added. Idempotent dedup + NaN/out-of-range
-          // rejection happen inside ingestTaskQuality (T-93-01/T-93-03).
+          // route or auth check added. WR-06: ingestTaskQuality is an
+          // internalMutation reachable ONLY through this authenticated route —
+          // as a public mutation it was directly callable with just the
+          // deployment URL. Idempotent dedup + NaN/out-of-range rejection
+          // happen inside ingestTaskQuality (T-93-01/T-93-03).
           const d = data as any;
           const parsed = processTaskQualityEvent(d, timestamp);
-          await ctx.runMutation(api.evalScores.ingestTaskQuality, {
+          await ctx.runMutation(internal.evalScores.ingestTaskQuality, {
             profileId: parsed.profileId,
             sessionId: parsed.sessionId,
             overall: parsed.overall,

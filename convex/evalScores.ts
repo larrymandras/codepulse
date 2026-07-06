@@ -1,5 +1,4 @@
 import {
-  mutation,
   query,
   internalQuery,
   internalMutation,
@@ -61,7 +60,14 @@ export function processTaskQualityEvent(
   };
 }
 
-export const ingestTaskQuality = mutation({
+// WR-06 (93-REVIEW): internalMutation, NOT the public mutation() builder —
+// a public mutation is directly callable by any client holding VITE_CONVEX_URL
+// (shipped in the frontend bundle), bypassing the /runtime-ingest Bearer gate
+// and letting arbitrary quality scores pollute KPI means and the regression
+// detector. Reached only via internal.evalScores.ingestTaskQuality from the
+// authenticated httpAction (same pattern as internal.graphSnapshots.
+// upsertGraphSnapshot, runtimeIngest.ts).
+export const ingestTaskQuality = internalMutation({
   args: {
     profileId: v.string(),
     sessionId: v.string(),

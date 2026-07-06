@@ -252,9 +252,11 @@ describe("runtimeIngest — llm_call goalId extraction", () => {
 //
 // The task_quality case in runtimeIngest.ts calls the exported
 // processTaskQualityEvent (convex/evalScores.ts) to coalesce fields before
-// ctx.runMutation(api.evalScores.ingestTaskQuality, ...). These tests exercise
-// that same production function, mirroring the extracted-pure-function
-// convention used above for swarm_task (convex-test is not installed).
+// ctx.runMutation(internal.evalScores.ingestTaskQuality, ...) (WR-06: an
+// internalMutation reachable only via the Bearer-gated httpAction). These
+// tests exercise that same production function, mirroring the
+// extracted-pure-function convention used above for swarm_task (convex-test
+// is not installed).
 
 describe("runtimeIngest — task_quality case", () => {
   it("redelivering the same idempotencyKey twice mirrors the same dedup key both times", () => {
@@ -276,7 +278,7 @@ describe("runtimeIngest — task_quality case", () => {
     expect(first.idempotencyKey).toBe(second.idempotencyKey);
   });
 
-  it("field coalescing produces the exact shape api.evalScores.ingestTaskQuality expects", () => {
+  it("field coalescing produces the exact shape internal.evalScores.ingestTaskQuality expects", () => {
     const args = processTaskQualityEvent(
       { score: 0.8, profile_id: "business", session_id: "s1", event_id: "e1" },
       123
@@ -289,5 +291,17 @@ describe("runtimeIngest — task_quality case", () => {
       idempotencyKey: "e1",
       timestamp: 123,
     });
+  });
+
+  it("WR-06: ingestTaskQuality is an internalMutation, routed via internal.* from the Bearer-gated httpAction (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const evalSource = readFileSync(resolve(process.cwd(), "convex/evalScores.ts"), "utf-8");
+    // Declared with the internal builder — never the public mutation() one,
+    // which any client holding VITE_CONVEX_URL could call directly.
+    expect(evalSource).toMatch(/export const ingestTaskQuality = internalMutation\(/);
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    expect(ingestSource).toContain("internal.evalScores.ingestTaskQuality");
+    expect(ingestSource).not.toContain("api.evalScores.ingestTaskQuality");
   });
 });
