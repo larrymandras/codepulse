@@ -122,6 +122,15 @@ None — this plan only adds a new component consumed by Plan 04 (SessionDetail 
 
 `TraceWaterfall` is fully built, unit-tested, and ready to be imported into `SessionDetail.tsx`'s new "Trace" tab in the next plan (94-04), which also wires the `?tab=trace` deep-link and the "View Trace" cross-nav link from Analytics. No blockers.
 
+## Self-Check: PASSED
+
+- FOUND: `src/components/TraceWaterfall.tsx`
+- FOUND: `src/components/TraceWaterfall.test.tsx`
+- FOUND: `.planning/phases/94-trace-waterfall/94-03-SUMMARY.md`
+- FOUND commit: `ac4b66c` (Task 1)
+- FOUND commit: `7237462` (Task 2)
+- FOUND commit: `cad54a1` (this summary)
+
 ---
 *Phase: 94-trace-waterfall*
 *Completed: 2026-07-06*
