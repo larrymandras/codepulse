@@ -133,16 +133,22 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // submittedAt is documented as not-yet-populated by the emitter; the
           // upsert mutation itself falls back to finishedAt/now on first insert.
           const d = data as any;
+          // 168-06 live fix: coalesce null → undefined on every optional
+          // field. Convex v.optional(v.string()) accepts an ABSENT field,
+          // not JSON null — one null resultSnippet from a legacy/null-
+          // emitting runtime poisoned a whole 8-event batch live
+          // (ArgumentValidationError). The emitter now strips None keys,
+          // but this ingest boundary must be defensive regardless.
           await ctx.runMutation(api.subagentJobs.upsert, {
             jobId: d.job_id ?? d.jobId ?? "unknown",
             agentTypeId: d.agent_type_id ?? d.agentTypeId ?? "unknown",
             status: d.status ?? "unknown",
             taskSnippet: d.task_snippet ?? d.taskSnippet ?? "",
-            resultSnippet: d.result_snippet ?? d.resultSnippet,
-            error: d.error,
-            channelId: d.channel_id ?? d.channelId,
-            chatId: d.chat_id ?? d.chatId,
-            submittedAt: d.submitted_at ?? d.submittedAt,
+            resultSnippet: d.result_snippet ?? d.resultSnippet ?? undefined,
+            error: d.error ?? undefined,
+            channelId: d.channel_id ?? d.channelId ?? undefined,
+            chatId: d.chat_id ?? d.chatId ?? undefined,
+            submittedAt: d.submitted_at ?? d.submittedAt ?? undefined,
             finishedAt: d.finished_at ?? d.finishedAt ?? timestamp,
           });
           break;
