@@ -368,7 +368,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 94-01-PLAN.md — Wave 1: llmMetrics.traceId schema + recordCall arg + /runtime-ingest alias + sessionCalls query + tests + codegen (TRACE-01)
 - [x] 94-02-PLAN.md — Wave 1: Ástríðr cross-repo emitter — _current_trace_id contextvar trio + _process_inner insertion + attach at anthropic/openrouter/ollama providers (TRACE-01, D-01)
 - [x] 94-03-PLAN.md — Wave 2: TraceWaterfall component — client-side traceId grouping, bar math (seconds/ms), 3-state cache badge, cost dash, MetricCard strip, live useQuery (TRACE-02)
-- [ ] 94-04-PLAN.md — Wave 3: SessionDetail Trace tab + ?tab=trace deep-link + Analytics "View Trace" cross-link + LangfuseTraceLink deletion (TRACE-02, D-06/07/08)
+- [x] 94-04-PLAN.md — Wave 3: SessionDetail Trace tab + ?tab=trace deep-link + Analytics "View Trace" cross-link + LangfuseTraceLink deletion (TRACE-02, D-06/07/08)
 - [ ] 94-05-PLAN.md — Wave 4: live E2E completion bar (D-05) — operator-gated prod Convex deploy + astridr rebuild + grouped-trace/legacy-fallback verification
 **UI hint**: yes
 
@@ -413,7 +413,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 91. 3D Memory Galaxy | v9.0 | 5/5 | Complete    | 2026-06-29 |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
 | 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete    | 2026-07-06 |
-| 94. Trace Waterfall | v10.0 | 3/5 | In Progress|  |
+| 94. Trace Waterfall | v10.0 | 4/5 | In Progress|  |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 0/TBD | Not started | - |
 
 *Last updated: 2026-07-04 — **v10.0 Eval & Trace Observability + Hardening roadmap created** via `/gsd-new-project` roadmapper. 3 phases (93-95), 9/9 requirements mapped (EVAL-01..03 → Phase 93; TRACE-01..02 → Phase 94; HARD-01..04 → Phase 95). Sequencing: 93/94 independent (separate schemas, both ride existing ingest), 95 independent of both, sequenced last as audit/cleanup. Next: `/gsd-plan-phase 93`.*
