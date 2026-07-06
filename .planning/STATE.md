@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: executing
-stopped_at: Completed 93-06-PLAN.md (live E2E verified; 3 human items pending)
-last_updated: "2026-07-06T12:33:44.924Z"
+status: ready_to_plan
+stopped_at: Phase 93 complete (6/6) — ready to discuss Phase 94
+last_updated: 2026-07-06T13:34:23.929Z
 last_activity: 2026-07-06
 progress:
   total_phases: 3
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 93 — eval-pipeline-quality-kpis
+**Current focus:** Phase 94 — trace waterfall
 
 ## Current Position
 
-Phase: 93 (eval-pipeline-quality-kpis) — COMPLETE (6/6 plans; D-04 live E2E verified 2026-07-06)
-Plan: 6 of 6 (93-06 complete)
-Status: Phase complete — 3 operator items pending (final astridr rebuild applying revert+auth fix; /quality grid visual refresh; E3 calibration labels in 93-CALIBRATION.md — Quality trends NOT trusted until the >=0.7 gate closes)
+Phase: 94
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-07-06
 
 ## Deferred Items
@@ -162,7 +162,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v10.0 next action:** `/gsd-plan-phase 93` (Eval Pipeline & Quality KPIs) — first phase of the new milestone, no dependency, ready to plan.
+- **v10.0 next action:** `/gsd-discuss-phase 94` (Trace Waterfall) — Phase 93 complete 2026-07-06; 94 has no dependency on 93, ready to discuss/plan.
 - **Phase 95 note:** HARD-03 (TypeScript 6) and HARD-04 (react-day-picker 10) already have CI-red dependabot branches (PR #50, PR #49) — plan-phase should reuse/rebase those branches rather than starting migrations from scratch.
 - **v9.0 (shipped, for reference):** ✅ COMPLETE — all 5 phases done, milestone archived 2026-06-29.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
@@ -185,10 +185,15 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 ## Session Continuity
 
 Last session: 2026-07-06T12:33:44.914Z
-Stopped at: Completed 93-06-PLAN.md (live E2E verified; 3 human items pending)
-Next action: `/gsd-plan-phase 93`
+Stopped at: Phase 93 complete — verified 18/18, review findings fixed, phase closed
+Next action: `/gsd-discuss-phase 94`
 Resume file: None
 
 ## Operator Next Steps
 
-- Run `/gsd-plan-phase 93` to plan the Eval Pipeline & Quality KPIs phase.
+- **Pending from Phase 93 close-out:**
+  1. Final astridr rebuild (`docker compose up --build -d astridr` from astridr-repo) — applies the SELF-01 revert + web-auth fix + review fixes (WR-01/WR-02)
+  2. Convex prod redeploy (`npx convex deploy --yes` from codepulse) — carries the 9 post-review convex/UI fixes to tidy-whale-981
+  3. `/quality` grid visual re-confirm after the redeploy (the `personal` persona card)
+  4. E3 calibration labels in `93-CALIBRATION.md` — quality trends not trusted until the ≥0.7 agreement gate closes
+- Run `/gsd-discuss-phase 94` to start the Trace Waterfall phase.

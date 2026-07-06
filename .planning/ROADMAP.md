@@ -406,7 +406,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 90. Agent Room / War Room | v9.0 | 8/8 | ✅ Complete | 2026-06-29 |
 | 91. 3D Memory Galaxy | v9.0 | 5/5 | Complete    | 2026-06-29 |
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
-| 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete   | 2026-07-06 |
+| 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete    | 2026-07-06 |
 | 94. Trace Waterfall | v10.0 | 0/TBD | Not started | - |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 0/TBD | Not started | - |
 
