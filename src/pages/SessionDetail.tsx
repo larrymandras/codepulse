@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatTimestamp } from "../lib/formatters";
@@ -12,8 +12,10 @@ import FileTree from "../components/FileTree";
 import SessionTimeline from "../components/SessionTimeline";
 import BashLog from "../components/BashLog";
 import SessionCapabilities from "../components/SessionCapabilities";
+import { TraceWaterfall } from "../components/TraceWaterfall";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
 
-type Tab = "overview" | "timeline" | "files" | "bash" | "errors";
+type Tab = "overview" | "timeline" | "files" | "bash" | "errors" | "trace";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "overview", label: "Overview" },
@@ -21,11 +23,22 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "files", label: "Files" },
   { key: "bash", label: "Bash" },
   { key: "errors", label: "Errors" },
+  { key: "trace", label: "Trace" },
 ];
+
+const TAB_KEYS = new Set<Tab>(TABS.map((t) => t.key));
+
+function isTab(value: string | null): value is Tab {
+  return value !== null && TAB_KEYS.has(value as Tab);
+}
 
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [searchParams] = useSearchParams();
+  const initialTabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<Tab>(
+    isTab(initialTabParam) ? initialTabParam : "overview"
+  );
 
   const session = useQuery(api.sessions.getById, id ? { sessionId: id } : "skip");
   const events = useQuery(api.events.listBySession, id ? { sessionId: id, limit: 200 } : "skip") ?? [];
@@ -151,6 +164,13 @@ export default function SessionDetail() {
       {/* Errors Tab */}
       {activeTab === "errors" && (
         <ErrorsList errors={errors} />
+      )}
+
+      {/* Trace Tab */}
+      {activeTab === "trace" && (
+        <SectionErrorBoundary name="Trace">
+          <TraceWaterfall sessionId={id} />
+        </SectionErrorBoundary>
       )}
     </div>
   );
