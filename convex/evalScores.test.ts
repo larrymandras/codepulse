@@ -33,6 +33,7 @@ import {
   buildRegressionMessage,
   insertRegressionAlertHandler,
   detectRegressionsForPersona,
+  runRegressionSweep,
   MIN_SESSIONS_PER_SIDE,
   REGRESSION_DROP_THRESHOLD,
   type StoreEvalScoreArgs,
@@ -1019,6 +1020,50 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
     expect(result.fired).toBe(false);
     expect(runMutation).not.toHaveBeenCalled();
     expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("WR-08: one persona throwing does not abort the remaining personas in the sweep", async () => {
+    const attempted: string[] = [];
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const detectOne = vi.fn(async (profileId: string) => {
+      attempted.push(profileId);
+      if (profileId === "business") throw new Error("query failed");
+      return { fired: profileId === "consulting" };
+    });
+
+    const { fired, failed } = await runRegressionSweep(
+      ["personal", "business", "consulting"],
+      detectOne
+    );
+
+    expect(attempted).toEqual(["personal", "business", "consulting"]);
+    expect(fired).toBe(1);
+    expect(failed).toBe(1);
+    errorSpy.mockRestore();
+  });
+
+  it("WR-08: an all-clean sweep reports zero failures", async () => {
+    const { fired, failed } = await runRegressionSweep(
+      ["personal", "business"],
+      async () => ({ fired: false })
+    );
+    expect(fired).toBe(0);
+    expect(failed).toBe(0);
+  });
+
+  it("WR-08: the E7 liveness summary is emitted before the regression pass, which is try/caught (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = readFileSync(resolve(process.cwd(), "convex/evalScores.ts"), "utf-8");
+    const summaryIdx = source.indexOf("[eval-judge] ${sampled.length} sampled");
+    const regressionIdx = source.indexOf(
+      "await ctx.runAction(internal.evalScores.detectRegressions, {})"
+    );
+    expect(summaryIdx).toBeGreaterThan(-1);
+    expect(regressionIdx).toBeGreaterThan(-1);
+    // Summary first: a regression-side throw can never suppress it.
+    expect(summaryIdx).toBeLessThan(regressionIdx);
   });
 
   it("WR-03: every evalScores read feeding KPI means/regression windows filters to llm_judge (static source check)", async () => {

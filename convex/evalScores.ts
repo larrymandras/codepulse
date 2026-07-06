@@ -788,16 +788,25 @@ export const judgeSessionsAction = internalAction({
       judgeOneSession(ctx, s.sessionId, s.profileId)
     );
 
-    // Plan 04 (EVAL-03): the night's own judge scores must be counted before
-    // the before/after regression comparison runs (RESEARCH Open Question 3
-    // — detectRegressions rides the tail of this action, no extra cron slot).
-    await ctx.runAction(internal.evalScores.detectRegressions, {});
-
     // E7: liveness summary -- "no data" (zero scores) must be distinguishable
-    // from "nothing happened" from this line alone.
+    // from "nothing happened" from this line alone. WR-08 (93-REVIEW): emitted
+    // BEFORE the regression pass so a regression-side throw can never suppress
+    // the judging summary (judging already fully succeeded at this point).
     console.error(
       `[eval-judge] ${sampled.length} sampled / ${scored} scored / ${failed} failed / ${unknownCount} unknown-persona`
     );
+
+    // Plan 04 (EVAL-03): the night's own judge scores must be counted before
+    // the before/after regression comparison runs (RESEARCH Open Question 3
+    // — detectRegressions rides the tail of this action, no extra cron slot).
+    // WR-08: a regression-pass failure is logged, never allowed to fail the
+    // cron after judging succeeded (per-persona isolation lives inside
+    // runRegressionSweep; this guard covers the pass's own setup reads).
+    try {
+      await ctx.runAction(internal.evalScores.detectRegressions, {});
+    } catch (err) {
+      console.error(`[eval-regression] regression pass failed: ${String(err)}`);
+    }
 
     return {
       sampled: sampled.length,
@@ -1345,14 +1354,47 @@ export async function detectRegressionsForPersona(
   return { fired: false };
 }
 
+/**
+ * WR-08 (93-REVIEW): per-persona error isolation for the regression pass —
+ * one persona's query/mutation failure must never abort the remaining
+ * personas (same discipline as runJudgeBatch's Promise.allSettled; sequential
+ * try/catch here because the detector intentionally runs personas in order).
+ * Extracted so the isolation behavior is directly unit-testable without a
+ * Convex ctx.
+ */
+export async function runRegressionSweep(
+  personaIds: string[],
+  detectOne: (profileId: string) => Promise<{ fired: boolean }>
+): Promise<{ fired: number; failed: number }> {
+  let fired = 0;
+  let failed = 0;
+  for (const profileId of personaIds) {
+    try {
+      const result = await detectOne(profileId);
+      if (result.fired) fired += 1;
+    } catch (err) {
+      failed += 1;
+      console.error(
+        `[eval-regression] persona ${profileId} failed: ${String(err)}`
+      );
+    }
+  }
+  return { fired, failed };
+}
+
 export const detectRegressions = internalAction({
   args: {},
-  handler: async (ctx) => {
+  // Explicit return annotation: judgeSessionsAction (same file) calls this via
+  // internal.evalScores.detectRegressions, so inference would be circular.
+  handler: async (ctx): Promise<{ fired: number; failed: number }> => {
     // listConfigs is a public query — internalActions call it via api.,
     // same pattern as judgeSessionsAction above.
     const personas = await ctx.runQuery(api.profiles.listConfigs, {});
-    for (const p of personas as Array<{ profileId: string }>) {
-      await detectRegressionsForPersona(ctx, p.profileId);
-    }
+    const personaIds = (personas as Array<{ profileId: string }>).map(
+      (p) => p.profileId
+    );
+    return await runRegressionSweep(personaIds, (profileId) =>
+      detectRegressionsForPersona(ctx, profileId)
+    );
   },
 });
