@@ -10,6 +10,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
+**In progress:** v10.0 Eval & Trace Observability + Hardening — Phase 93 (Eval Pipeline & Quality KPIs) complete 2026-07-06: `evalScores` pipeline live end-to-end on prod (Ástríðr `task_quality` mirror → `/runtime-ingest` → nightly LLM judge → regression alerts → `/quality` KPI UI), verified 18/18 with a real operator conversation; 11 code-review findings fixed same-day. Cross-repo: SELF-01 evaluator wired into Ástríðr's AgentLoop (was dead code since Phase 73) + web-chat cookie-session auth. Next: Phase 94 (Trace Waterfall).
 **Shipped:** v9.0 Readability & Experience (2026-06-29) — all 5 phases (88-92), 30 plans, 19/19 requirements (TH-01..06, AR-01..03, ROOM-01..04, G3D-01..02, VOX-01..04). Durable ingest-time analytics rollups replacing fragile `.take()` caps (under Convex 16 MiB/exec at any volume); a fully token-driven theme system with a WCAG-AA readable theme + Midnight Aubergine editorial skin + no-flash persisted switcher (axe-clean across 4 themes × 5 surfaces); the Agent/War Room finished into a real multi-persona surface with a genuine operator Join via LiveKit (closed 5 live cross-repo integration gaps); an opt-in lazy-loaded `react-force-graph-3d` mode on `CodeVaultGraph` (~4,038 nodes at ≥30 FPS, operator GPU sign-off); and a local-wake-word Voice Command Palette (openWakeWord ONNX, no Picovoice). Archive: `milestones/v9.0-ROADMAP.md`.
 **Prior shipped:** v8.0 Graph/KG Consolidation (2026-06-23) — all 5 phases (83-87), 8/8 requirements (GH-01..04, KG-08..11), milestone audit PASSED: graph-snapshot receiver, unified `/graphs` hub, cross-graph tool→agent→KG navigation, community-cluster layout, full-text KG Search, saved/shareable views, and KG temporal Diff/Animate. Deployed to prod `tidy-whale-981`. Archive: `milestones/v8.0-ROADMAP.md`. v7.0 Forge Integration (2026-06-17) — Forge folded into CodePulse via the Surface-Substrate bridge: a local daemon emits state UP through bearer-authed Convex httpActions, and CodePulse sends commands DOWN through a Convex queue the daemon polls. Clerk-gated; no localhost/mixed-content path. Archive: `milestones/v7.0-ROADMAP.md`. v5.0 Advanced Visualization & Integrations (2026-05-25). v6.0 Agentic OS Front-End **closed 2026-06-18** — phases 71-74 shipped (light); 77 (CI hardening) complete; 75 (Agent Console) superseded by v7.0 Forge; **76 (Unified Graph Hub) NOT shipped → deferred to v8.0** (2026-06-18 reconciliation).
 **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui New York, Lucide icons, D3.js, dagre, Resend, React Email
@@ -130,6 +131,10 @@ v5.0 added 12 phases:
 - ✓ KG-11 — Temporal diff / animation between two as-of points — Phase 87 (2026-06-23)
 
 Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREMENTS.md` (fresh `REQUIREMENTS.md` is created by the next `/gsd-new-milestone`). Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in the archive as well.
+
+### Validated (v10.0 Eval & Trace Observability + Hardening — in progress)
+
+- ✓ EVAL-01..03 — Per-persona quality persistence (`evalScores` + idempotent `task_quality` ingest + Ástríðr mirror), nightly 4-dimension LLM judge (isolated `intelligence.llm_eval` slot, rubric v1, previous-complete-day window), window-mean regression detection with delivered alerts + `/quality` KPI grid/drill-in — Phase 93 (2026-07-06, live E2E operator-verified; quality trends gated on E3 ≥0.7 judge-calibration agreement, labels pending)
 
 ### Validated (v9.0 Readability & Experience)
 
