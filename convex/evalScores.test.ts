@@ -799,7 +799,7 @@ describe("evalScores — insertRegressionAlertHandler (regression alert delivery
 
 describe("evalScores — detectRegressionsForPersona (regression alert delivery + dedup)", () => {
   interface FakeCtxOptions {
-    existingAlert?: unknown;
+    priorAlerts?: unknown[];
     switches?: Array<{ fromProfile: string; toProfile: string; timestamp: number }>;
     configChanges?: Array<{ configKey: string; changedAt: number }>;
     scoreWindows?: unknown[][];
@@ -815,7 +815,7 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
     let callN = 0;
     const runQuery = vi.fn(async (_fn: any, _args: any) => {
       callN++;
-      if (callN === 1) return opts.existingAlert ?? null;
+      if (callN === 1) return opts.priorAlerts ?? [];
       if (callN === 2) {
         return { switches: opts.switches ?? [], configChanges: opts.configChanges ?? [] };
       }
@@ -827,22 +827,83 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
     return { ctx, runQuery, runMutation, runAfter };
   }
 
-  it("an already-open regression alert blocks re-firing (dedup by source) — no mutation, no scheduled delivery", async () => {
+  // Would-fire fixture: >=5 sessions per side, 0.9 -> 0.6 drop clears threshold.
+  const firingWindows = [
+    Array.from({ length: 5 }, () => ({ overall: 0.9 })), // before
+    Array.from({ length: 5 }, () => ({ overall: 0.6 })), // after
+  ];
+
+  it("a prior ACTIVE alert for the same change event blocks re-firing — no mutation, no scheduled delivery", async () => {
     const { ctx, runQuery, runMutation, runAfter } = makeCtx({
-      existingAlert: { _id: "existing-alert", status: "active" },
+      priorAlerts: [
+        { _id: "existing-alert", status: "active", details: { changeDate: 1_000_000 } },
+      ],
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: firingWindows,
     });
 
     const result = await detectRegressionsForPersona(ctx, "business");
 
     expect(result.fired).toBe(false);
-    expect(runQuery).toHaveBeenCalledTimes(1); // only the existing-alert check ran
+    expect(runQuery).toHaveBeenCalledTimes(2); // prior alerts + change events; no window reads
     expect(runMutation).not.toHaveBeenCalled();
     expect(runAfter).not.toHaveBeenCalled();
   });
 
+  it("CR-02: an ACKNOWLEDGED alert for the same change event still blocks re-firing (dedup is event-keyed, not status-keyed)", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({
+      priorAlerts: [
+        { _id: "acked-alert", status: "acknowledged", details: { changeDate: 1_000_000 } },
+      ],
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: firingWindows,
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(false);
+    expect(runMutation).not.toHaveBeenCalled();
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("CR-02: a RESOLVED alert for the same change event still blocks re-firing", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({
+      priorAlerts: [
+        { _id: "resolved-alert", status: "resolved", details: { changeDate: 1_000_000 } },
+      ],
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: firingWindows,
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(false);
+    expect(runMutation).not.toHaveBeenCalled();
+    expect(runAfter).not.toHaveBeenCalled();
+  });
+
+  it("CR-02: a prior alert for a DIFFERENT change event does NOT block a new regression from firing", async () => {
+    const { ctx, runMutation, runAfter } = makeCtx({
+      priorAlerts: [
+        // Stale active alert from an old change event — must not mask the new one.
+        { _id: "old-alert", status: "active", details: { changeDate: 500_000 } },
+      ],
+      configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
+      scoreWindows: firingWindows,
+      insertedAlertId: "new-alert-id",
+    });
+
+    const result = await detectRegressionsForPersona(ctx, "business");
+
+    expect(result.fired).toBe(true);
+    expect(runMutation).toHaveBeenCalledTimes(1);
+    expect(runMutation.mock.calls[0][1].details.changeDate).toBe(1_000_000);
+    expect(runAfter).toHaveBeenCalledTimes(1);
+  });
+
   it("a real regression (>=5/side, over-threshold) inserts an alert and schedules delivery", async () => {
     const { ctx, runMutation, runAfter } = makeCtx({
-      existingAlert: null,
+      priorAlerts: [],
       configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
       scoreWindows: [
         Array.from({ length: 5 }, () => ({ overall: 0.9 })), // before
@@ -870,7 +931,7 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
 
   it("does NOT insert or schedule delivery when the gate doesn't clear (sub-threshold drop)", async () => {
     const { ctx, runMutation, runAfter } = makeCtx({
-      existingAlert: null,
+      priorAlerts: [],
       configChanges: [{ configKey: "profile.business.modelPreferences", changedAt: 1_000_000 }],
       scoreWindows: [
         Array.from({ length: 5 }, () => ({ overall: 0.8 })), // before
@@ -886,7 +947,7 @@ describe("evalScores — detectRegressionsForPersona (regression alert delivery 
   });
 
   it("does NOT insert or schedule delivery when there are no change events at all", async () => {
-    const { ctx, runMutation, runAfter } = makeCtx({ existingAlert: null });
+    const { ctx, runMutation, runAfter } = makeCtx({ priorAlerts: [] });
 
     const result = await detectRegressionsForPersona(ctx, "business");
 

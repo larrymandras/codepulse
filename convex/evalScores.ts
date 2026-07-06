@@ -1103,7 +1103,16 @@ export function buildRegressionMessage(
   return `${profileId} quality dropped ${dropPts} pts after ${changeTypeLabel} on ${dateLabel} (${beforePts} → ${afterPts})`;
 }
 
-export const getActiveRegressionAlertInternal = internalQuery({
+/**
+ * CR-02 (93-REVIEW): returns ALL prior regression alerts for this persona,
+ * regardless of lifecycle status. Dedup must key on the immutable change
+ * event (details.changeDate), NOT on `status === "active"` — the regression
+ * inputs are immutable history, so a status-keyed dedup deterministically
+ * re-fired the identical alert every night after the operator acknowledged
+ * or resolved it, and (inversely) a stale active alert blocked detection of
+ * any NEW regression for the persona indefinitely.
+ */
+export const getRegressionAlertsInternal = internalQuery({
   args: { profileId: v.string() },
   handler: async (ctx, { profileId }) => {
     return await ctx.db
@@ -1111,8 +1120,7 @@ export const getActiveRegressionAlertInternal = internalQuery({
       .withIndex("by_source", (q) =>
         q.eq("source", `eval-regression:${profileId}`)
       )
-      .filter((q) => q.eq(q.field("status"), "active"))
-      .first();
+      .collect();
   },
 });
 
@@ -1201,22 +1209,27 @@ export interface DetectRegressionsCtx {
 /**
  * Runs the D-12 before/after comparison for one persona's change events, in
  * chronological order, stopping at the first event that fires (one alert per
- * persona per run is enough — the existing-alert dedup guard above already
- * blocks re-scanning once a regression is open, so a second event in the
- * same run cannot double-fire). Extracted from `detectRegressions` so the
- * fire path (alert insert shape + scheduled webhook delivery, NOT the public
- * `alerts.create`) is directly unit-testable against a fake ctx, without
- * convex-test.
+ * persona per run is enough). Dedup is keyed on the change event itself
+ * (CR-02): any prior alert — active, acknowledged, or resolved — whose
+ * `details.changeDate` matches an event blocks re-firing for that event
+ * forever, while leaving OTHER (new) change events detectable. Extracted
+ * from `detectRegressions` so the fire path (alert insert shape + scheduled
+ * webhook delivery, NOT the public `alerts.create`) is directly
+ * unit-testable against a fake ctx, without convex-test.
  */
 export async function detectRegressionsForPersona(
   ctx: DetectRegressionsCtx,
   profileId: string
 ): Promise<{ fired: boolean }> {
-  const existingAlert = await ctx.runQuery(
-    internal.evalScores.getActiveRegressionAlertInternal,
+  const priorAlerts = await ctx.runQuery(
+    internal.evalScores.getRegressionAlertsInternal,
     { profileId }
   );
-  if (existingAlert) return { fired: false };
+  const alertedChangeDates = new Set<number>(
+    (priorAlerts as Array<{ details?: { changeDate?: number } }>)
+      .map((a) => a.details?.changeDate)
+      .filter((d): d is number => typeof d === "number")
+  );
 
   const { switches, configChanges } = await ctx.runQuery(
     internal.evalScores.getPersonaChangeEventsInternal,
@@ -1225,6 +1238,10 @@ export async function detectRegressionsForPersona(
   const events = buildChangeMarkers(profileId, switches, configChanges);
 
   for (const event of events) {
+    // CR-02: this change event already produced an alert (whatever its
+    // current lifecycle status) — never re-fire for the same event.
+    if (alertedChangeDates.has(event.timestamp)) continue;
+
     const beforeScores = await ctx.runQuery(
       internal.evalScores.getEvalScoresWindowInternal,
       {
