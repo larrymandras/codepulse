@@ -925,8 +925,12 @@ export function buildPersonaKpi(
 }
 
 export const listPersonaKpis = query({
-  args: {},
-  handler: async (ctx): Promise<PersonaKpi[]> => {
+  // WR-04 (93-REVIEW): the Quality page's 7/30/90-day selector must actually
+  // move the data window — previously the backend hard-fixed 30d and the UI
+  // only re-filtered the returned sparkline client-side, so "90d window" was
+  // a mislabel over 30d data. Mirrors getPersonaDetail's rangeDays arg.
+  args: { rangeDays: v.optional(v.float64()) },
+  handler: async (ctx, { rangeDays }): Promise<PersonaKpi[]> => {
     // Mirrors profiles.listConfigs's body directly — a query cannot call
     // another query function, so the two-line read is duplicated here rather
     // than routed through ctx.runQuery (actions/mutations only).
@@ -936,9 +940,10 @@ export const listPersonaKpis = query({
       .order("desc")
       .collect();
 
+    const days = rangeDays ?? DEFAULT_KPI_RANGE_DAYS;
     const now = Date.now() / 1000;
-    const currentStart = now - DEFAULT_KPI_RANGE_DAYS * 86400;
-    const previousStart = currentStart - DEFAULT_KPI_RANGE_DAYS * 86400;
+    const currentStart = now - days * 86400;
+    const previousStart = currentStart - days * 86400;
 
     const results: PersonaKpi[] = [];
     for (const p of personas) {

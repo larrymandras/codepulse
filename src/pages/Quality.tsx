@@ -87,7 +87,7 @@ function QualityKpiCard({
               />
             </div>
           </div>
-          <DeltaBadge delta={delta} />
+          <DeltaBadge delta={delta} rangeDays={rangeDays} />
         </>
       )}
       <p className="text-xs text-muted-foreground mt-2 font-mono">
@@ -97,7 +97,7 @@ function QualityKpiCard({
   );
 }
 
-function DeltaBadge({ delta }: { delta: number }) {
+function DeltaBadge({ delta, rangeDays }: { delta: number; rangeDays: number }) {
   const pts = Math.round(delta * 100);
   const glyph = pts > 0 ? "▲" : pts < 0 ? "▼" : "→";
   const color =
@@ -106,14 +106,16 @@ function DeltaBadge({ delta }: { delta: number }) {
   return (
     <div className={`text-sm font-mono ${color}`}>
       {glyph} {sign}
-      {pts} pts vs previous 30d
+      {pts} pts vs previous {rangeDays}d
     </div>
   );
 }
 
 export default function Quality() {
-  const kpis = useQualityKpis();
   const [rangeDays, setRangeDays] = useState(30);
+  // WR-04: the selected range drives the BACKEND window (current mean,
+  // sparkline, delta) — not just a client-side re-filter of fixed 30d data.
+  const kpis = useQualityKpis(rangeDays);
 
   const now = Date.now() / 1000;
   const rangeStart = now - rangeDays * 86400;
