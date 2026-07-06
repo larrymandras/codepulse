@@ -37,7 +37,13 @@ findings:
   warning: 8
   info: 2
   total: 13
-status: issues_found
+fixes:
+  fixed_at: 2026-07-06T09:25:00Z
+  scope: critical_warning
+  fixed: 11
+  skipped: 0
+  out_of_scope: 2  # IN-01, IN-02 (Info — excluded from fix scope)
+status: fixed
 ---
 
 # Phase 93: Code Review Report
@@ -45,7 +51,33 @@ status: issues_found
 **Reviewed:** 2026-07-06T14:30:00Z
 **Depth:** standard
 **Files Reviewed:** 28 (17 CodePulse + 11 Ástríðr cross-repo)
-**Status:** issues_found
+**Status:** fixed — all 3 Critical + 8 Warning findings fixed (one atomic commit each; CodePulse commits on `master`, Ástríðr commits on astridr-repo `main`). Info findings (IN-01, IN-02) out of fix scope, left open.
+
+## Fix Status
+
+| Finding | Status | Repo | Commit |
+|---------|--------|------|--------|
+| CR-01 | fixed | codepulse | `c383df6` |
+| CR-02 | fixed | codepulse | `146e41f` |
+| CR-03 | fixed | codepulse | `1ee346d` |
+| WR-01 | fixed | astridr-repo | `24da72e3` |
+| WR-02 | fixed | astridr-repo | `1cd5c484` |
+| WR-03 | fixed | codepulse | `7507498` |
+| WR-04 | fixed | codepulse | `999e4d9` |
+| WR-05 | fixed | codepulse | `1bd1695` |
+| WR-06 | fixed | codepulse | `e748b4d` |
+| WR-07 | fixed | codepulse | `485cb63` |
+| WR-08 | fixed | codepulse | `2e4829f` |
+| IN-01 | open | — | out of fix scope (Info) |
+| IN-02 | open | — | out of fix scope (Info) |
+
+Verification: `npx tsc --noEmit` clean; CodePulse `npm test` 162 files / 1607 tests green; astridr-repo relevant pytest set (test_langfuse_eval, test_self_improvement, test_post_turn_pipeline_profile, test_web_auth, unit/agent/test_loop, agent/test_loop_timeout, unit/eval/test_self_improvement_task) 128 tests green.
+
+Fix deviations from the recommended snippets (all intent-preserving):
+- **CR-02:** replaced the status-keyed guard entirely (rather than adding a second check) — `getActiveRegressionAlertInternal` became `getRegressionAlertsInternal` (all statuses) and dedup is a per-event `details.changeDate` set, so a stale active alert also no longer masks NEW regressions (the finding's inverse edge).
+- **CR-03:** besides adding `additionalProperties: false`, the OpenAI variant (`OPENAI_JUDGE_SCHEMA`) also strips `minimum`/`maximum` (the finding's lower-confidence adjunct): range enforcement already lives in the zod `JudgeOutputSchema` + repair loop, so stripping removes the remaining 400 risk with zero validation loss.
+- **WR-01:** chose the per-turn-rows option (`session:agent:name:turn`), matching Langfuse's one-score-per-turn semantics; KPI pollution by per-turn binary rows is prevented by the WR-03 fix (KPI reads filter to `llm_judge`).
+- **WR-02:** implemented as a shared `resolve_operational_profile()` helper in post_turn_pipeline.py (imported by loop.py), applied to all three cited sites including loop.py:1089 (session replay).
 
 ## Summary
 
@@ -61,6 +93,7 @@ However, three Critical defects exist in the eval pipeline itself: the nightly j
 
 ### CR-01: Nightly judge only ever sees sessions completed between 00:00 and 05:00 UTC — the rest of each day is permanently skipped
 
+**Status:** fixed — codepulse `c383df6` (extracted `judgeWindowDayStart()`, previous complete UTC day)
 **File:** `convex/evalScores.ts:732`, `convex/crons.ts:137-141`, `convex/evalScores.ts:670-681`
 **Issue:** The cron fires at 05:00 UTC (`crons.ts:139: { hourUTC: 5, minuteUTC: 0 }`), but the action computes the **current** UTC day:
 
@@ -78,6 +111,7 @@ const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
 
 ### CR-02: Regression alert re-fires every night after acknowledge/resolve — dedup is keyed to a mutable `status`
 
+**Status:** fixed — codepulse `146e41f` (event-keyed dedup on `details.changeDate` across all alert statuses)
 **File:** `convex/evalScores.ts:1092-1103, 1201-1205, 782`; `convex/alertLifecycle.ts:15, 29`
 **Issue:** `detectRegressionsForPersona` dedups only on an alert with `status === "active"`:
 
@@ -96,6 +130,7 @@ if (prior.some((a) => a.details?.changeDate === event.timestamp)) continue;
 
 ### CR-03: OpenAI judge branch sends an invalid strict JSON schema — hard 400 on every call when provider=openai
 
+**Status:** fixed — codepulse `1ee346d` (`OPENAI_JUDGE_SCHEMA`: additionalProperties false, range keywords stripped)
 **File:** `convex/evalScores.ts:271-296, 393-400`
 **Issue:** `callOpenAIJudge` passes `JUDGE_TOOL.input_schema` verbatim as a strict structured-output schema:
 
@@ -117,6 +152,7 @@ and add a unit test asserting the OpenAI request body carries `additionalPropert
 
 ### WR-01: Mirror idempotency key omits the turn — only the FIRST turn's binary score per session ever persists in evalScores
 
+**Status:** fixed — astridr-repo `24da72e3` (per-turn key `session:agent:name:turn`)
 **File:** `C:/Users/mandr/astridr-repo/astridr/integrations/langfuse_eval.py:130`; `astridr/agent/post_turn_pipeline.py:520-536`; `convex/evalScores.ts:85-93`
 **Issue:** `spawn_evaluation` runs after **every turn** (post_turn_pipeline.py:521-536) and each turn's score is 1.0/0.0 (`self_improvement.py:68`). The mirror's dedup key is:
 
@@ -129,6 +165,7 @@ and add a unit test asserting the OpenAI request body carries `additionalPropert
 
 ### WR-02: Persona fallback `or self._active_profile` is dead code — non-channel sessions mirror as profileId "default"
 
+**Status:** fixed — astridr-repo `1cd5c484` (`resolve_operational_profile()`, applied at all 3 sites incl. loop.py:1089)
 **File:** `C:/Users/mandr/astridr-repo/astridr/agent/loop.py:173, 1545-1546`; `astridr/agent/post_turn_pipeline.py:534-535`
 **Issue:** Both call sites use:
 
@@ -145,12 +182,14 @@ profile_id=(_ap if _ap and _ap != "default" else self._active_profile),
 
 ### WR-03: KPI means and regression windows blend binary task_quality scores with judge rubric scores — no `scoreName` filter
 
+**Status:** fixed — codepulse `7507498` (all three reads filter `scoreName === "llm_judge"`)
 **File:** `convex/evalScores.ts:909-924, 976-981, 1133-1140`; contrast `convex/evalScores.ts:1014`
 **Issue:** `listPersonaKpis`, `getPersonaDetail`, and `getEvalScoresWindowInternal` read `evalScores` by `by_profileId` with **no scoreName filter**, so the "quality score" averages 0/1 task_quality rows (Ástríðr's per-turn success bit, self_improvement.py:68) together with 0-1 judge rubric scores. `listJudgedSessions` (evalScores.ts:1014) filters `scoreName === "llm_judge"`, proving the distinction was known. Consequences: (a) the Quality page copy claims "judged nightly" and counts "Sessions Judged" (Quality.tsx:153, 170) over rows that are not judge scores; (b) a burst of binary 0.0 task_quality rows in a ±7-day window can single-handedly fire — or mask — a regression, undermining the E5 trend-attributability and D-14 zero-false-positive goals.
 **Fix:** Either filter all three reads to `scoreName === "llm_judge"`, or, if blending is intended, document it and rename the UI copy/metric labels accordingly.
 
 ### WR-04: Quality page range selector doesn't change the data window — "90d window" label over fixed 30d data
 
+**Status:** fixed — codepulse `999e4d9` (`rangeDays` arg threaded backend → hook → page; DeltaBadge label follows range)
 **File:** `src/pages/Quality.tsx:114-119, 93-95, 109`; `src/hooks/useEvalScores.ts:9-11`; `convex/evalScores.ts:773, 901-903`
 **Issue:** `useQualityKpis()` calls `listPersonaKpis` with no args; the backend hard-fixes the window to `DEFAULT_KPI_RANGE_DAYS = 30` (evalScores.ts:773, 901-903). The page's 7/30/90 selector only re-filters the returned 30d sparkline client-side (`Quality.tsx:119, 125`) and updates the label:
 
@@ -163,24 +202,28 @@ Selecting "Last 90 days" therefore shows at most 30 days of data labeled "90d wi
 
 ### WR-05: Change-event markers silently fail to render when no session was judged on the marker's exact date
 
+**Status:** fixed — codepulse `1bd1695` (numeric timestamp axis, domain spans series + markers)
 **File:** `src/components/QualityTrendChart.tsx:66-80, 116-124`
 **Issue:** The XAxis is a category axis of per-session formatted dates (`row.date`, line 68), and markers render as `<ReferenceLine x={m.date} ...>` (line 119). On a category axis, Recharts drops a ReferenceLine whose `x` doesn't match an existing category — and a model/instruction change rarely lands on the same calendar day as a judged session. The most important marker (the change that caused a gap in judging) is exactly the one most likely to vanish. Duplicate date categories (multiple sessions per day) also make marker placement ambiguous. `Quality.test.tsx` can't catch this because its Recharts mock renders ReferenceLine unconditionally (Quality.test.tsx:21-25).
 **Fix:** Use a numeric time axis (`XAxis dataKey="timestamp" type="number" domain={['dataMin','dataMax']}` with a tick formatter) so `ReferenceLine x={m.timestamp}` positions independently of session dates; or snap each marker to the nearest existing category before rendering.
 
 ### WR-06: `ingestTaskQuality` is a public mutation — directly callable with only the deployment URL, bypassing the Bearer gate
 
+**Status:** fixed — codepulse `e748b4d` (internalMutation, routed via `internal.evalScores.ingestTaskQuality`)
 **File:** `convex/evalScores.ts:64`; contrast `convex/runtimeIngest.ts:940`
 **Issue:** The T-93-02 comment (runtimeIngest.ts:81-83) says the task_quality path "inherits the validateIngestAuth Bearer gate", but that gate covers only the HTTP `/runtime-ingest` route. `ingestTaskQuality` is declared with the public `mutation()` builder (evalScores.ts:64), so any client holding `VITE_CONVEX_URL` (shipped in the frontend bundle) can call `api.evalScores.ingestTaskQuality` directly and inject arbitrary quality scores — polluting KPI means and the regression detector without any credential. The same file's `storeEvalScore`/`insertRegressionAlert` correctly use `internalMutation`, and `runtimeIngest.ts:940` (`internal.graphSnapshots.upsertGraphSnapshot`) proves httpActions can call internal mutations. (This mirrors a pre-existing pattern on other ingest mutations, but this phase added a new instance while claiming Bearer inheritance.)
 **Fix:** Change to `internalMutation` and invoke via `internal.evalScores.ingestTaskQuality` from runtimeIngest.
 
 ### WR-07: configChanges audit rows written by Ástríðr runtime sync are attributed to "dashboard"
 
+**Status:** fixed — codepulse `485cb63` (optional `changedBy` arg; runtimeIngest passes "astridr-sync")
 **File:** `convex/profiles.ts:115-121`; `convex/runtimeIngest.ts:475-484`
 **Issue:** `upsertConfig` hardcodes `changedBy: "dashboard"` (profiles.ts:119) in the Phase-93 modelPreferences audit row, but the `profile_config` runtime event routes through the same mutation (runtimeIngest.ts:477: `api.profiles.upsertConfig`). Every persona model change synced from Ástríðr is recorded in the audit trail — and surfaced as a "model change" regression marker — as if the operator changed it from the dashboard. An audit trail with a wrong actor defeats its purpose (this is precisely the D-11 change-source signal the regression copy cites).
 **Fix:** Add an optional `changedBy: v.optional(v.string())` arg to `upsertConfig` (default `"dashboard"`), and pass `"astridr-sync"` from the runtimeIngest call site.
 
 ### WR-08: `detectRegressions` has no per-persona error isolation and runs before the E7 liveness summary
 
+**Status:** fixed — codepulse `2e4829f` (`runRegressionSweep` per-persona try/catch; summary emitted before the pass)
 **File:** `convex/evalScores.ts:1269-1279, 750-756`
 **Issue:** `detectRegressions` iterates personas sequentially with no try/catch (evalScores.ts:1275-1277) — one persona's query/mutation failure aborts the remaining personas. It is also awaited (evalScores.ts:750) **before** the `[eval-judge] ... sampled / scored / failed` liveness line (evalScores.ts:754), so a throw there both fails the cron and suppresses the E7 summary even though judging fully succeeded — the exact "no data vs nothing happened" ambiguity E7 exists to prevent. This contrasts with the module's own `Promise.allSettled` discipline in `runJudgeBatch`.
 **Fix:** Wrap each `detectRegressionsForPersona` call in try/catch (log and continue), and emit the liveness summary before — or in a `finally` around — the regression pass.
@@ -189,12 +232,14 @@ Selecting "Last 90 days" therefore shows at most 30 days of data labeled "90d wi
 
 ### IN-01: Biased shuffle in nightly sampling
 
+**Status:** open — out of fix scope (Info)
 **File:** `convex/evalScores.ts:637`
 **Issue:** `[...sessionIds].sort(() => Math.random() - 0.5)` is the classic biased shuffle — comparison sorts with random comparators produce non-uniform permutations, so D-08's "random sample within the day" is skewed toward insertion order.
 **Fix:** Use a Fisher–Yates shuffle (5 lines) for uniform sampling.
 
 ### IN-02: Unused import in test file
 
+**Status:** open — out of fix scope (Info)
 **File:** `convex/evalScores.test.ts:39`
 **Issue:** `import { internal } from "./_generated/api";` is never used — the tests deliberately avoid proxy comparisons (per the comment at lines 776-781), leaving the import dead.
 **Fix:** Remove the import.
