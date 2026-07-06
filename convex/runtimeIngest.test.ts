@@ -62,6 +62,14 @@ function extractLlmCallGoalId(data: Record<string, any>): string | undefined {
   return d.goalId ?? d.goal_id;
 }
 
+/**
+ * Simulate the llm_call case traceId extraction in runtimeIngest.ts (Phase 94 TRACE-01).
+ */
+function extractLlmCallTraceId(data: Record<string, any>): string | undefined {
+  const d = data;
+  return d.traceId ?? d.trace_id;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -243,6 +251,23 @@ describe("runtimeIngest — llm_call goalId extraction", () => {
   it("returns undefined when neither field present (non-swarm call)", () => {
     const goalId = extractLlmCallGoalId({ provider: "anthropic", model: "sonnet" });
     expect(goalId).toBeUndefined();
+  });
+});
+
+describe("runtimeIngest — llm_call traceId extraction", () => {
+  it("extracts traceId from camelCase field", () => {
+    const traceId = extractLlmCallTraceId({ traceId: "trace-camel", trace_id: undefined });
+    expect(traceId).toBe("trace-camel");
+  });
+
+  it("falls back to trace_id snake_case when traceId absent", () => {
+    const traceId = extractLlmCallTraceId({ trace_id: "trace-snake" });
+    expect(traceId).toBe("trace-snake");
+  });
+
+  it("returns undefined when neither field present (legacy untraced call)", () => {
+    const traceId = extractLlmCallTraceId({ provider: "anthropic", model: "sonnet" });
+    expect(traceId).toBeUndefined();
   });
 });
 
