@@ -3,8 +3,9 @@ phase: 93
 slug: eval-pipeline-quality-kpis
 status: approved
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-07-05
+last_audited: 2026-07-06
 ---
 
 # Phase 93 — Validation Strategy
@@ -38,21 +39,21 @@ created: 2026-07-05
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 93-01-01 | 01 | 1 | EVAL-01 | T-93-01 / T-93-02 / T-93-03 | Idempotent `by_idempotencyKey` dedup + inherited Bearer auth + `[0,1]` score clamp/reject | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts convex/runtimeIngest.test.ts` | ❌ W0 | ⬜ pending |
-| 93-01-02 | 01 | 1 | EVAL-01 (enables EVAL-03 / D-11) | — (dashboard-gated write) | Auditable `configChanges` row on persona model change | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "configChange"` | ❌ W0 | ⬜ pending |
-| 93-02-01 | 02 | 2 | EVAL-02 | T-93-05 | eval config slot isolated; apiKey never logged/returned | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "digest"` | ❌ W0 | ⬜ pending |
-| 93-02-02 | 02 | 2 | EVAL-02 | T-93-04 / T-93-07 | zod `[0,1]` bounds; no poisoned/partial row on exhausted retry | unit (fixture replay, no live LLM) | `npx vitest run convex/evalScores.test.ts -t "judge"` | ❌ W0 | ⬜ pending |
-| 93-02-03 | 02 | 2 | EVAL-02 | T-93-06 | `Promise.allSettled` isolation; ≤3/persona cost cap; unknown-bucket counted | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "sampling\|allSettled\|partial"` | ❌ W0 | ⬜ pending |
-| 93-03-01 | 03 | 2 | EVAL-01 | T-93-08 / T-93-09 | Bearer key env-only; fire-and-forget, never raises into score path | syntax (ast parse) | `cd C:/Users/mandr/astridr-repo && python -c "import ast; ast.parse(open('astridr/integrations/langfuse_eval.py').read()); print('ok')"` | ❌ W0 | ⬜ pending |
-| 93-03-02 | 03 | 2 | EVAL-01 | T-93-08 / T-93-09 | Gated mirror payload/header + never-raises isolation pinned by test | unit (mocked HTTP) | `cd C:/Users/mandr/astridr-repo && python -m pytest tests/test_langfuse_eval.py -q` | ❌ W0 | ⬜ pending |
-| 93-04-01 | 04 | 3 | EVAL-03 | T-93-12 | KPI queries index-bound; never return apiKey | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "kpi\|meanOverall\|delta"` | ❌ W0 | ⬜ pending |
-| 93-04-02 | 04 | 3 | EVAL-03 | T-93-10 / T-93-11 | ≥5/side + threshold gate (no false fire); delivered via createIfNew shape | unit (boundary fixtures) | `npx vitest run convex/evalScores.test.ts -t "regression\|alert delivery"` | ❌ W0 | ⬜ pending |
-| 93-05-01 | 05 | 4 | EVAL-03 | T-93-13 | Rationale rendered via React text nodes only (no XSS) | unit (jsdom render) | `npx vitest run src/pages/Quality.test.tsx` | ❌ W0 | ⬜ pending |
-| 93-05-02 | 05 | 4 | EVAL-03 | T-93-12 / T-93-13 | No apiKey to client; text-only rendering | unit (jsdom render) | `npx tsc --noEmit && npx vitest run src/pages/Quality.test.tsx` | ❌ W0 | ⬜ pending |
-| 93-05-03 | 05 | 4 | EVAL-03 | — | Lazy-chunked routes build clean | build | `npx tsc --noEmit && npm run build` | ✅ (build, no test file) | ⬜ pending |
-| 93-06-01 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-14 / T-93-SC | Operator-gated prod deploy + secret handling | manual-only | see Manual-Only Verifications | n/a | ⬜ pending |
-| 93-06-02 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-SC | Live E2E human-verify (D-04) — green tests do not substitute | manual-only | see Manual-Only Verifications | n/a | ⬜ pending |
-| 93-06-03 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-15 | Judge calibration ≥0.7 agreement gate recorded before trends trusted | file+grep | `test -f .planning/phases/93-eval-pipeline-quality-kpis/93-CALIBRATION.md && grep -qi "agreement" .planning/phases/93-eval-pipeline-quality-kpis/93-CALIBRATION.md && echo ok` | ❌ W0 | ⬜ pending |
+| 93-01-01 | 01 | 1 | EVAL-01 | T-93-01 / T-93-02 / T-93-03 | Idempotent `by_idempotencyKey` dedup + inherited Bearer auth + `[0,1]` score clamp/reject | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts convex/runtimeIngest.test.ts` | ✅ | ✅ green |
+| 93-01-02 | 01 | 1 | EVAL-01 (enables EVAL-03 / D-11) | — (dashboard-gated write) | Auditable `configChanges` row on persona model change | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "configChange"` | ✅ | ✅ green |
+| 93-02-01 | 02 | 2 | EVAL-02 | T-93-05 | eval config slot isolated; apiKey never logged/returned | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "digest"` | ✅ | ✅ green |
+| 93-02-02 | 02 | 2 | EVAL-02 | T-93-04 / T-93-07 | zod `[0,1]` bounds; no poisoned/partial row on exhausted retry | unit (fixture replay, no live LLM) | `npx vitest run convex/evalScores.test.ts -t "judge"` | ✅ | ✅ green |
+| 93-02-03 | 02 | 2 | EVAL-02 | T-93-06 | `Promise.allSettled` isolation; ≤3/persona cost cap; unknown-bucket counted | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "sampling\|allSettled\|partial"` | ✅ | ✅ green |
+| 93-03-01 | 03 | 2 | EVAL-01 | T-93-08 / T-93-09 | Bearer key env-only; fire-and-forget, never raises into score path | syntax (ast parse) | `cd C:/Users/mandr/astridr-repo && python -c "import ast; ast.parse(open('astridr/integrations/langfuse_eval.py').read()); print('ok')"` | ✅ | ✅ green |
+| 93-03-02 | 03 | 2 | EVAL-01 | T-93-08 / T-93-09 | Gated mirror payload/header + never-raises isolation pinned by test | unit (mocked HTTP) | `cd C:/Users/mandr/astridr-repo && python -m pytest tests/test_langfuse_eval.py -q` | ✅ | ✅ green |
+| 93-04-01 | 04 | 3 | EVAL-03 | T-93-12 | KPI queries index-bound; never return apiKey | unit (extracted-logic) | `npx vitest run convex/evalScores.test.ts -t "kpi\|meanOverall\|delta"` | ✅ | ✅ green |
+| 93-04-02 | 04 | 3 | EVAL-03 | T-93-10 / T-93-11 | ≥5/side + threshold gate (no false fire); delivered via createIfNew shape | unit (boundary fixtures) | `npx vitest run convex/evalScores.test.ts -t "regression\|alert delivery"` | ✅ | ✅ green |
+| 93-05-01 | 05 | 4 | EVAL-03 | T-93-13 | Rationale rendered via React text nodes only (no XSS) | unit (jsdom render) | `npx vitest run src/pages/Quality.test.tsx` | ✅ | ✅ green |
+| 93-05-02 | 05 | 4 | EVAL-03 | T-93-12 / T-93-13 | No apiKey to client; text-only rendering | unit (jsdom render) | `npx tsc --noEmit && npx vitest run src/pages/Quality.test.tsx` | ✅ | ✅ green |
+| 93-05-03 | 05 | 4 | EVAL-03 | — | Lazy-chunked routes build clean | build | `npx tsc --noEmit && npm run build` | ✅ (build, no test file) | ✅ green |
+| 93-06-01 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-14 / T-93-SC | Operator-gated prod deploy + secret handling | manual-only | see Manual-Only Verifications | n/a | ✅ done (2026-07-06, 93-06-SUMMARY) |
+| 93-06-02 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-SC | Live E2E human-verify (D-04) — green tests do not substitute | manual-only | see Manual-Only Verifications | n/a | ✅ done (2026-07-06, 93-06-SUMMARY) |
+| 93-06-03 | 06 | 5 | EVAL-01 / EVAL-02 / EVAL-03 | T-93-15 | Judge calibration ≥0.7 agreement gate recorded before trends trusted | file+grep | `test -f .planning/phases/93-eval-pipeline-quality-kpis/93-CALIBRATION.md && grep -qi "agreement" .planning/phases/93-eval-pipeline-quality-kpis/93-CALIBRATION.md && echo ok` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -62,11 +63,11 @@ created: 2026-07-05
 
 ## Wave 0 Requirements
 
-- [ ] `convex/evalScores.test.ts` — new file; covers EVAL-01 (idempotency + snake/camel coalesce), EVAL-02 (digest, judge zod/retry, allSettled sampling), EVAL-03 (regression threshold math, alert-delivery shape, `meanOverall`/`periodDelta` KPI helpers). Created in 93-01-01, extended by 93-02 and 93-04 tasks.
-- [ ] `convex/runtimeIngest.test.ts` — extend with a `describe("runtimeIngest — task_quality case")` block mirroring the existing `processSwarmTaskEvent` extracted-logic pattern (93-01-01).
-- [ ] `src/pages/Quality.test.tsx` — new jsdom rendering test for `QualityTrendChart` (line-per-dimension + ReferenceLine markers) and the KPI/detail pages (93-05-01).
-- [ ] `C:/Users/mandr/astridr-repo/tests/test_langfuse_eval.py` — extend (cross-repo) with the gated-mirror payload/header assertions + never-raises isolation (93-03-02).
-- [ ] **No framework install needed** — vitest/zod (Convex+UI) and pytest (producer) already present; `convex-test` is intentionally NOT installed — follow the extracted-pure-function convention (`runtimeIngest.test.ts`/`swarmTasks.test.ts`/`cacheStats.test.ts`/`briefings.test.ts`).
+- [x] `convex/evalScores.test.ts` — new file; covers EVAL-01 (idempotency + snake/camel coalesce), EVAL-02 (digest, judge zod/retry, allSettled sampling), EVAL-03 (regression threshold math, alert-delivery shape, `meanOverall`/`periodDelta` KPI helpers). Created in 93-01-01, extended by 93-02 and 93-04 tasks.
+- [x] `convex/runtimeIngest.test.ts` — extend with a `describe("runtimeIngest — task_quality case")` block mirroring the existing `processSwarmTaskEvent` extracted-logic pattern (93-01-01).
+- [x] `src/pages/Quality.test.tsx` — new jsdom rendering test for `QualityTrendChart` (line-per-dimension + ReferenceLine markers) and the KPI/detail pages (93-05-01).
+- [x] `C:/Users/mandr/astridr-repo/tests/test_langfuse_eval.py` — extend (cross-repo) with the gated-mirror payload/header assertions + never-raises isolation (93-03-02).
+- [x] **No framework install needed** — vitest/zod (Convex+UI) and pytest (producer) already present; `convex-test` is intentionally NOT installed — follow the extracted-pure-function convention (`runtimeIngest.test.ts`/`swarmTasks.test.ts`/`cacheStats.test.ts`/`briefings.test.ts`).
 
 *Wave 0 flips `wave_0_complete: true` during execution once the above scaffolds exist and import cleanly.*
 
@@ -91,3 +92,23 @@ created: 2026-07-05
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** approved 2026-07-05
+
+---
+
+## Validation Audit 2026-07-06
+
+| Metric | Count |
+|--------|-------|
+| Gaps found | 0 |
+| Resolved | 0 |
+| Escalated | 0 |
+
+Post-execution audit (/gsd-validate-phase 93). All 15 task rows verified against live artifacts:
+
+- **vitest:** `convex/evalScores.test.ts` + `convex/runtimeIngest.test.ts` + `src/pages/Quality.test.tsx` — 3 files, **98 tests passed** (996ms). Test names match every `-t` filter in the map (configChange, digest, judge, sampling/allSettled, kpi/meanOverall/delta, regression).
+- **producer (astridr-repo):** `ast.parse` of `langfuse_eval.py` → ok; `pytest tests/test_langfuse_eval.py -q` → **11 passed** (9 at plan-03 completion + 2 added during 93-06 fixes).
+- **build gate:** `npx tsc --noEmit` clean; `npm run build` succeeds (chunk-size warning only, pre-existing).
+- **calibration check:** `93-CALIBRATION.md` exists and contains "agreement" — automated check green. ⚠️ The E3 **≥0.7 human-agreement gate itself is NOT EVALUATED** (labels pending, Larry sole labeler); Quality trends explicitly not trusted until closed — tracked in 93-06-SUMMARY Known Stubs.
+- **manual gates 93-06-01/02:** performed 2026-07-06 per 93-06-SUMMARY (prod deploy + eval key; live E2E row `4e701b43…/profileId personal` on tidy-whale-981, 3 `llm_judge` rows rendered, liveness summary logged, operator visual confirm).
+
+No new tests generated — no auditor spawn required.
