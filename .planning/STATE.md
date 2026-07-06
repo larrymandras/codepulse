@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: ready_to_plan
-stopped_at: Phase 94 complete (5/5) — ready to discuss Phase 95
-last_updated: 2026-07-06T20:59:40.273Z
-last_activity: 2026-07-06 -- Phase 94 complete (verified 22/22, live sign-off)
+status: planning
+stopped_at: Phase 95 context gathered
+last_updated: "2026-07-06T22:53:59.757Z"
+last_activity: 2026-07-06
 progress:
   total_phases: 3
   completed_phases: 2
@@ -184,10 +184,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-06T16:28:05.548Z
-Stopped at: Phase 94 UI-SPEC approved
+Last session: 2026-07-06T22:53:59.748Z
+Stopped at: Phase 95 context gathered
 Next action: `/gsd-discuss-phase 94`
-Resume file: .planning/phases/94-trace-waterfall/94-UI-SPEC.md
+Resume file: .planning/phases/95-hardening-security-audit-key-rotation-dependency-majors/95-CONTEXT.md
 
 ## Operator Next Steps
 
