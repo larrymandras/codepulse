@@ -1,8 +1,9 @@
 import { useQuery } from "convex/react";
+import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { useRecentEvents } from "../hooks/useRecentEvents";
 import { useLlmMetrics } from "../hooks/useLlmMetrics";
-import { formatCost } from "../lib/formatters";
+import { formatCost, formatDurationMs, formatTimestamp } from "../lib/formatters";
 import MetricCard, { thresholdColor } from "../components/MetricCard";
 import CostTrendChart from "../components/CostTrendChart";
 import LlmAnalyticsPanel from "../components/LlmAnalyticsPanel";
@@ -31,6 +32,7 @@ import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
+import { Badge } from "../components/ui/badge";
 import {
   Table,
   TableHeader,
@@ -40,9 +42,14 @@ import {
   TableCell,
 } from "../components/ui/table";
 
+/** Deep-link into the session's Trace tab (TRACE-02, D-08). Null-guarded + encoded, mirrors KGDetailsPanel's provenanceHref. */
+function traceHref(sessionId?: string | null): string | null {
+  return sessionId ? `/sessions/${encodeURIComponent(sessionId)}?tab=trace` : null;
+}
+
 export default function Analytics() {
   const { events } = useRecentEvents(100);
-  const { calls: llmCalls } = useLlmMetrics();
+  const { calls: llmCalls, status: llmStatus, loadMore: loadMoreLlm } = useLlmMetrics();
   // Phase 67 D-01: Split cost view — API spend (real money) vs Subscription usage (call counts/tokens)
   const apiCostByProvider = useQuery(api.aggregates.costByPeriod, {
     period: "daily",
@@ -189,6 +196,96 @@ export default function Analytics() {
                     </tbody>
                   </table>
                 </div>
+              )}
+            </GlassPanel>
+          </SectionErrorBoundary>
+        </div>
+
+        {/* Recent LLM Calls — bounded, paginated; rows deep-link to the session's Trace tab (TRACE-02) */}
+        <div className="md:col-span-12">
+          <SectionErrorBoundary name="Recent LLM Calls">
+            <GlassPanel className="p-4">
+              <SectionHeader title="Recent LLM Calls" />
+              {llmCalls.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No LLM calls recorded yet.</p>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Model</TableHead>
+                        <TableHead>Cost</TableHead>
+                        <TableHead>Latency</TableHead>
+                        <TableHead>Cache</TableHead>
+                        <TableHead>Trace</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {llmCalls.map((call, i) => {
+                        const href = traceHref(call.sessionId);
+                        return (
+                          <TableRow key={call._id ?? i}>
+                            <TableCell className="font-mono text-sm tabular-nums">
+                              {formatTimestamp(call.timestamp)}
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">{call.model}</TableCell>
+                            <TableCell className="tabular-nums">
+                              {call.cost != null ? formatCost(call.cost) : "—"}
+                            </TableCell>
+                            <TableCell className="tabular-nums">
+                              {formatDurationMs(call.latencyMs)}
+                            </TableCell>
+                            <TableCell>
+                              {call.cacheReadInputTokens === undefined ? (
+                                "—"
+                              ) : call.cacheReadInputTokens > 0 ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs"
+                                  style={{ borderColor: "var(--status-ok)", color: "var(--status-ok)" }}
+                                >
+                                  cached
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs"
+                                  style={{ borderColor: "var(--status-warn)", color: "var(--status-warn)" }}
+                                >
+                                  miss
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {href ? (
+                                <Link
+                                  to={href}
+                                  style={{ color: "var(--primary)" }}
+                                  className="hover:underline text-sm font-medium"
+                                >
+                                  View Trace
+                                </Link>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  {llmStatus === "CanLoadMore" && (
+                    <div className="flex justify-center mt-3">
+                      <button
+                        onClick={() => loadMoreLlm(25)}
+                        className="px-3 py-1.5 text-sm font-mono text-muted-foreground hover:text-foreground bg-muted hover:bg-accent rounded-lg transition-colors"
+                      >
+                        Load more
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </GlassPanel>
           </SectionErrorBoundary>
