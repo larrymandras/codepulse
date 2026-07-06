@@ -34,6 +34,14 @@ async function recordCallLogic(ctx: any, args: any) {
   });
 }
 
+// Mirrors the sessionCalls query handler in llm.ts (Phase 94 TRACE-02):
+// by_session index filter + archived exclusion + ascending timestamp order.
+function sessionCallsLogic(store: { llmMetrics: Record<string, any>[] }, args: { sessionId: string }) {
+  return store.llmMetrics
+    .filter((r) => r.sessionId === args.sessionId && r.archived !== true)
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+
 describe("llm", () => {
   describe("recordCall — goalId persistence (Phase 149 PULSE-01)", () => {
     it("persists goalId into the llmMetrics row", async () => {
@@ -98,6 +106,47 @@ describe("llm", () => {
         // traceId intentionally absent
       });
       expect(store.llmMetrics[0].traceId).toBeUndefined();
+    });
+  });
+
+  describe("sessionCalls (Phase 94 TRACE-02)", () => {
+    function seedMixedStore() {
+      const store = makeLlmStore();
+      store.llmMetrics.push(
+        { sessionId: "sess-A", timestamp: 300, traceId: "trace-1" },
+        { sessionId: "sess-A", timestamp: 100, traceId: "trace-1" },
+        { sessionId: "sess-A", timestamp: 200 }, // legacy row, no traceId
+        { sessionId: "sess-A", timestamp: 400, archived: true, traceId: "trace-2" },
+        { sessionId: "sess-B", timestamp: 150, traceId: "trace-3" }
+      );
+      return store;
+    }
+
+    it("returns only rows matching the given sessionId", () => {
+      const store = seedMixedStore();
+      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      expect(rows.every((r) => r.sessionId === "sess-A")).toBe(true);
+      expect(rows).toHaveLength(3);
+    });
+
+    it("excludes archived rows", () => {
+      const store = seedMixedStore();
+      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      expect(rows.some((r) => r.archived === true)).toBe(false);
+    });
+
+    it("returns rows in ascending timestamp order", () => {
+      const store = seedMixedStore();
+      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      expect(rows.map((r) => r.timestamp)).toEqual([100, 200, 300]);
+    });
+
+    it("a legacy row with no traceId is still returned with traceId undefined", () => {
+      const store = seedMixedStore();
+      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      const legacyRow = rows.find((r) => r.timestamp === 200);
+      expect(legacyRow).toBeDefined();
+      expect(legacyRow!.traceId).toBeUndefined();
     });
   });
 

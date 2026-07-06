@@ -116,6 +116,25 @@ export const cacheStats = query({
   },
 });
 
+/**
+ * Full-session, chronological, non-archived llmMetrics rows for the Trace
+ * Waterfall (Phase 94 TRACE-02). Unlike cacheStats, no rolling-window cutoff
+ * is applied — the Trace tab shows the whole session so the client can group
+ * rows by traceId. No server-side grouping/cost estimation/cache derivation;
+ * the UI component owns presentation (D-14/D-13).
+ */
+export const sessionCalls = query({
+  args: { sessionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .order("asc")
+      .filter((q) => q.neq(q.field("archived"), true))
+      .collect();
+  },
+});
+
 export const recentCalls = query({
   args: {},
   handler: async (ctx) => {
