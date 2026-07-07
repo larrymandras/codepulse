@@ -387,7 +387,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans**: 4 plans (3 waves)
 - [x] 95-01-PLAN.md — Wave 1: delete dead react-day-picker (HARD-04) + TypeScript 6.0.3 via tsconfig node-globals fix + remove redundant @types (HARD-03) + REQUIREMENTS wording
 - [x] 95-02-PLAN.md — Wave 2: verify already-merged D-10 majors + delete 6 stale dependabot branches + react-easy-crop@6 UI checkpoint (HARD-03)
-- [ ] 95-04-PLAN.md — Wave 2: HARD-02 close-out — Forge-daemon env check + live real-emitter round trip + records update (HARD-02)
+- [x] 95-04-PLAN.md — Wave 2: HARD-02 close-out — Forge-daemon env check + live real-emitter round trip + records update (HARD-02)
 - [ ] 95-03-PLAN.md — Wave 3: /cso audit + npm audit + secret scan → 95-SECURITY-AUDIT.md (inventory→confirm→fix) certifying the shipped tree (HARD-01)
 
 ---
@@ -419,7 +419,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 | 92. Voice-Activated Command Palette (Jarvis Mode) | v9.0 | 6/6 | Complete   | 2026-06-25 |
 | 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete    | 2026-07-06 |
 | 94. Trace Waterfall | v10.0 | 5/5 | Complete    | 2026-07-06 |
-| 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 2/4 | In Progress|  |
+| 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 3/4 | In Progress|  |
 
 *Last updated: 2026-07-04 — **v10.0 Eval & Trace Observability + Hardening roadmap created** via `/gsd-new-project` roadmapper. 3 phases (93-95), 9/9 requirements mapped (EVAL-01..03 → Phase 93; TRACE-01..02 → Phase 94; HARD-01..04 → Phase 95). Sequencing: 93/94 independent (separate schemas, both ride existing ingest), 95 independent of both, sequenced last as audit/cleanup. Next: `/gsd-plan-phase 93`.*
 
