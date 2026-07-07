@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
-stopped_at: Phase 95 context gathered
-last_updated: "2026-07-07T11:12:40.877Z"
-last_activity: 2026-07-07 -- Phase 95 planning complete
+stopped_at: Completed 95-01-PLAN.md
+last_updated: "2026-07-07T12:34:52.464Z"
+last_activity: 2026-07-07
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 15
-  completed_plans: 11
+  completed_plans: 12
   percent: 67
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 95 — hardening — security audit, key rotation, dependency majors
+**Current focus:** Phase 95 — hardening-security-audit-key-rotation-dependency-majors
 
 ## Current Position
 
-Phase: 95
-Plan: Not started
+Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-07 -- Phase 95 planning complete
+Last activity: 2026-07-07
 
 ## Deferred Items
 
@@ -159,6 +159,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase ?]: 93-06: SELF-01 was never wired into AgentLoop in prod (dead since Phase 73); bootstrap now wires it, enable flag reverted post-verification (config/self-improvement.yaml)
 - [Phase ?]: 93-06: Quality trends NOT trusted until E3 >=0.7 human-agreement gate closes (93-CALIBRATION.md, labels pending)
 - [Phase ?]: 93-06 user-directed: astridr web chat cookie-session auth; profile-scoped /{p}/api/* auth bypass closed
+- [Phase 95]: HARD-03: TS6 migration resolved via single tsconfig types:["node"] fix (Option A), not per-file globalThis casts; the four D-10 folded majors (diff@8, js-yaml@5, jsdom@29, react-easy-crop@6) were already merged to master and verified green under the new bar
+- [Phase 95]: HARD-04: react-day-picker resolved by deleting the dead calendar.tsx primitive (zero consumers), not a 9->10 migration
 
 ### Pending Todos
 
@@ -184,10 +186,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-06T22:53:59.748Z
-Stopped at: Phase 95 context gathered
+Last session: 2026-07-07T12:34:52.454Z
+Stopped at: Completed 95-01-PLAN.md
 Next action: `/gsd-discuss-phase 94`
-Resume file: .planning/phases/95-hardening-security-audit-key-rotation-dependency-majors/95-CONTEXT.md
+Resume file: None
 
 ## Operator Next Steps
 
