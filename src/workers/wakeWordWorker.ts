@@ -21,7 +21,7 @@
  *   Outbound: { type: 'ready' }  |  { type: 'error', message: string }  |  { type: 'wake', score: number }
  *
  * @see RESEARCH.md §"Pattern 1: Three-Stage ONNX Pipeline"
- * @see src/worklets/micCapture.worklet.ts (the frame source)
+ * @see src/worklets/public/micCapture.worklet.js (the frame source)
  * @see src/lib/melNormalize.ts (the normalization util)
  */
 

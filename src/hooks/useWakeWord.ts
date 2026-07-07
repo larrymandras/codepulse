@@ -3,7 +3,7 @@
  *
  * Coordinates:
  *   1. getUserMedia mic capture (with 16kHz preference + fallback)
- *   2. AudioContext + AudioWorklet (micCapture.worklet.ts)
+ *   2. AudioContext + AudioWorklet (public/micCapture.worklet.js)
  *   3. Web Worker (wakeWordWorker.ts) running the ONNX pipeline
  *
  * Lifecycle contract:
@@ -18,7 +18,7 @@
  * @see RESEARCH.md §"Pattern 3: useWakeWord Hook" + §"Loading Models with Error Handling"
  * @see PATTERNS.md §useWakeWord.ts (lines 31–124)
  * @see src/workers/wakeWordWorker.ts (Worker receiving the frames)
- * @see src/worklets/micCapture.worklet.ts (AudioWorklet posting the frames)
+ * @see public/micCapture.worklet.js (AudioWorklet posting the frames)
  */
 
 import { useState, useRef, useCallback, useEffect } from 'react';
@@ -174,9 +174,13 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       }
       audioCtxRef.current = audioCtx;
 
-      // Add the worklet module
+      // Add the worklet module. Served as PLAIN JS from /public (see
+      // public/micCapture.worklet.js) rather than bundled from the .ts source:
+      // Vite copies `new URL('*.ts', import.meta.url)` assets untranspiled in a
+      // production build, which shipped raw TypeScript and broke addModule on the
+      // Vercel deploy ("Unable to load a worklet's module"). BASE_URL is '/'.
       await audioCtx.audioWorklet.addModule(
-        new URL('../worklets/micCapture.worklet.ts', import.meta.url).href,
+        `${import.meta.env.BASE_URL}micCapture.worklet.js`,
       );
 
       // ---[ Step 5: Wire mic → AudioWorkletNode → Worker port ]---
