@@ -97,6 +97,16 @@ None - no external service configuration required.
 - HARD-01 (`/cso` audit) and HARD-02 (key-rotation close-out) remain untouched by this plan, as directed — they are scoped to later plans (03/04) in this phase.
 - No blockers for subsequent plans in Phase 95.
 
+## Self-Check: PASSED
+
+- FOUND: .planning/phases/95-hardening-security-audit-key-rotation-dependency-majors/95-01-SUMMARY.md
+- FOUND: calendar.tsx deleted (src/components/ui/calendar.tsx no longer exists)
+- FOUND: typescript ^6.0.3 in package.json
+- FOUND: commit 221bbe8 (Task 1)
+- FOUND: commit b8af8cf (Task 2)
+- FOUND: commit 30dbf7f (Task 3)
+- FOUND: commit 675b91f (SUMMARY.md)
+
 ---
 *Phase: 95-hardening-security-audit-key-rotation-dependency-majors*
 *Completed: 2026-07-07*
