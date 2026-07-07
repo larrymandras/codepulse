@@ -19,8 +19,8 @@
 
 - [ ] **HARD-01**: `/cso` code-security audit run against the repo; confirmed findings remediated (zero-false-positive precision bar; findings require `file:line` evidence).
 - [ ] **HARD-02**: Forge ingest key rotated — a real secret live in the Convex env and the Forge daemon; the placeholder `<new-strong-secret>` retired (see memory `forge-deployment-tidy-whale-981`).
-- [ ] **HARD-03**: TypeScript 5.9→6.0 migration lands green — `tsc --noEmit`, full Vitest suite, and `vite build` all pass (was CI-red as dependabot PR #50, closed 2026-07-04).
-- [ ] **HARD-04**: react-day-picker 9→10 migration lands green — calendar-consuming surfaces verified (was CI-red as dependabot PR #49, closed 2026-07-04).
+- [x] **HARD-03**: TypeScript 5.9→6.0.3 migration lands green — `tsc --noEmit`, full Vitest suite, and `vite build` all pass. Resolved via a single tsconfig-level fix (`compilerOptions.types: ["node"]`) after TS 6.0 stopped auto-including `@types/node`'s ambient globals; all 22 PR #50 CI errors were one root cause (Node globals not found), zero API/strictness breakage, zero prod-file edits. Redundant `@types/diff@7` and `@types/js-yaml@4` DefinitelyTyped stubs removed (both major-mismatched with and superseded by the runtime packages' own bundled types). **Folded-scope note:** four other pending dependabot majors — `diff@8`, `js-yaml@5`, `jsdom@29`, `react-easy-crop@6` — had already merged to master 2026-07-04 (commits `142cc7c`, `ec42253`, `c0c7bac`, `ab2eab4`) and are verified green under this TS 6.0.3 bar.
+- [x] **HARD-04**: react-day-picker resolved by deletion, not a 9→10 migration — `src/components/ui/calendar.tsx` was the sole `react-day-picker` importer with zero real consumers of its exported `Calendar`/`CalendarDayButton`. Deleted the dead primitive and dropped `react-day-picker` from package.json/lockfile, resolving CI-red dependabot PR #49 (closed 2026-07-04) at the root. Re-add via `npx shadcn add calendar` if a date-picker surface is ever needed.
 
 ## Future Requirements
 
@@ -45,7 +45,7 @@
 | TRACE-02 | Phase 94 | Complete |
 | HARD-01 | Phase 95 | Pending |
 | HARD-02 | Phase 95 | Pending |
-| HARD-03 | Phase 95 | Pending |
-| HARD-04 | Phase 95 | Pending |
+| HARD-03 | Phase 95 | Complete |
+| HARD-04 | Phase 95 | Complete |
 
 **Coverage:** 9/9 v10.0 requirements mapped. No orphans.
