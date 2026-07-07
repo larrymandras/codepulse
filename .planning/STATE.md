@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — COMPLETE (4/4 plans)
+Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — COMPLETE + VERIFIED (4/4 plans)
 Plan: 4 of 4 complete
-Status: Phase complete — HARD-01/02/03/04 all resolved & verified. All v10.0 phases done; milestone close (`/gsd-complete-milestone`) pending.
-Last activity: 2026-07-07 -- Phase 95 executed end-to-end
+Status: Phase complete & verified (`95-VERIFICATION.md`, 16/16 truths, status passed). HARD-01/02/03/04 all resolved. All 3 v10.0 phases complete + verified (93/94/95 each have VERIFICATION.md). **Milestone ready to close — no blockers** (`/gsd-complete-milestone`).
+Last activity: 2026-07-07 -- Phase 95 executed, verified, loose ends cleared (forge merge + durability + audit remediation)
 
 ## Deferred Items
 

@@ -83,13 +83,13 @@ completed: 2026-07-07
 
 ## Issues Encountered / Follow-ups
 
-- **Forge daemon ingest config is non-durable:** no `.env`/dotenv, so the ingest vars evaporate when the shell closes. Follow-up (forge repo, out of phase-95 scope): add dotenv support or a launch wrapper so Forge emits reliably without manual env export each run.
-- **`fix/db-migration-fk-rebuild` not merged to forge `master`** — active for running now; operator to merge when ready.
+- **Forge daemon ingest config non-durability — RESOLVED (2026-07-07):** `main()` now loads a `.env` via Node's native `process.loadEnvFile` (forge commit `e70e45e`); `.env.example` added; `forge/.gitignore` closed the `.env` gap. Ingest vars persist across runs.
+- **`fix/db-migration-fk-rebuild` — MERGED to forge `master` (2026-07-07, `9adacfe`)** and branch deleted; post-merge build + 800 tests green.
 
 ## User Setup Required
 
-- Merge forge `fix/db-migration-fk-rebuild` → `master` when convenient.
-- To keep Forge emitting to CodePulse across restarts, either always export the 4 ingest vars before `npm run dev` or add a durable config (follow-up above).
+- **Done:** forge branch merged to `master`; daemon durability fix landed.
+- To keep Forge emitting to CodePulse across restarts: copy `forge/.env.example` → `forge/.env` and fill in `FORGE_INGEST_API_KEY` (from `npx convex env get FORGE_INGEST_API_KEY`). The daemon now auto-loads it — no shell export needed.
 
 ## Next Phase Readiness
 
