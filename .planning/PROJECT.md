@@ -162,8 +162,8 @@ Full definitions + traceability: archived in `.planning/milestones/v9.0-REQUIREM
 
 - **Ástríðr repo:** C:\Users\mandr\astridr-repo (WebSocket endpoint + CLI Gateway)
 - **CodePulse repo:** C:\Users\mandr\codepulse
-- **Design reference (corrected 2026-06-09):** shadcn/ui New York + Tailwind 4. Default skin is a **dark "Matrix Emerald" cyberpunk theme** (emerald `#10b981` accent, zinc neutrals, glow/CRT effects); light `:root` is monochrome oklch. Geist + JetBrains Mono (Cinzel retired), Lucide icons, effective radius `0.5rem`. Formal system: `.planning/phases/071-unified-design-system/UI-SPEC.md`. *(The old "monochromatic Paperclip / --radius:0" descriptor was inaccurate for the live dark theme.)*
-- **Stack:** React 19, Vite 7, TypeScript 5.9, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow, D3.js, dagre, Resend, React Email
+- **Design reference (updated 2026-07-07):** shadcn/ui New York + Tailwind 4, token-driven with a runtime theme switcher (`ThemeSwitcher.tsx` / `useThemeColors()`, v9.0 Phase 89). `<html data-theme>` persisted in `localStorage["codepulse-theme"]`; dark themes are `cyan` (Electric Cyan `#06b6d4`, **default**), `emerald` (Matrix Emerald `#10b981`), `readable` (WCAG-AA, effects off), `aubergine` (editorial); light `:root` is monochrome oklch "Paperclip". Geist + JetBrains Mono (Cinzel retired), Lucide icons, effective radius `0.5rem`, zinc neutrals, glow/CRT effects. Tokens live in `src/index.css` `[data-theme]` blocks — never hardcode hex. *(The design-system unification originally specced as "Phase 71" shipped across v7–v9; its spec is archived under `milestones/`.)*
+- **Stack:** React 19, Vite 7, TypeScript 6.0, Tailwind CSS 4, Convex, shadcn/ui, Lucide, React Flow, D3.js, dagre, Resend, React Email
 - **Providers:** 7 total — Anthropic Direct, OpenRouter, Ollama (legacy); Claude CLI, Codex CLI, Antigravity CLI, Claude SDK (gateway)
 - **Codebase:** ~86,100 LOC TypeScript (non-test), 50+ Convex tables, 15 dashboard pages, 110+ UI components
 
