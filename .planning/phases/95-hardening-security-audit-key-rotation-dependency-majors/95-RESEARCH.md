@@ -358,17 +358,17 @@ The skill writes `.audits/security/<YYYY-MM-DD>-<HHMMSS>.{md,json}` (create `.au
 | A4 | js-yaml 5 / diff 8 / jsdom 29 major changelogs contain no behavior change reachable by this repo's usage | Standard Stack | Low — tsc+vitest green on master is strong evidence; execution agents should still skim `react-easy-crop@6` changelog |
 | A5 | The `/cso` fail-open finding is prod-mitigated (ASTRIDR key set) and thus low-severity | Security Domain | Low — verified 07-05 in memory; the audit re-confirms via `convex env list` char-count |
 
-## Open Questions
+## Open Questions (RESOLVED — recommendations adopted by the plans)
 
-1. **Does `"types": ["node"]` need companions?**
+1. **RESOLVED — Does `"types": ["node"]` need companions?** (→ 95-01 Task 2 verify loop)
    - Known: node globals fail; all vitest primitives are explicitly imported (184 files).
    - Unclear: whether any ambient-only `@types` (e.g. a `vite/client` reference for `import.meta.env`) is depended upon.
    - Recommendation: apply Option A, run full `tsc --noEmit`, expand the array only as errors dictate. Treat as a 1-line change + verify loop, not a research blocker.
 
-2. **One hardening branch vs per-bump branches (Claude's discretion, D-09/D-10)?**
+2. **RESOLVED — One hardening branch vs per-bump branches (Claude's discretion, D-09/D-10)?**
    - Recommendation: single `hardening/phase-95` branch off master with atomic per-change commits (TS6 fix; `@types` removal; calendar deletion; audit doc). The four D-10 majors are already on master, so per-bump branches for them are moot — just delete the six stale remote dependabot branches as cleanup.
 
-3. **Does the phase redeploy prod Convex?**
+3. **RESOLVED — Does the phase redeploy prod Convex?** (→ 95-04 Task 1 coordinates with the pending Phase-93 redeploy)
    - STATE.md "Operator Next Steps" already lists a pending Phase-93 Convex redeploy. Recommendation: coordinate — if the operator runs the Phase-93 redeploy, the HARD-02 round-trip can piggyback on the fresh deployment rather than issuing a duplicate `npx convex deploy`.
 
 ## Environment Availability
