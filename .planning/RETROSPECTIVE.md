@@ -131,6 +131,39 @@
 
 ---
 
+## Milestone: v10.0 — Eval & Trace Observability + Hardening
+
+**Shipped:** 2026-07-07
+**Phases:** 3 (93-95) | **Plans:** 15 | **Timeline:** 2026-07-05 → 2026-07-07
+
+### What Was Built
+- Eval pipeline (Phase 93): `evalScores` table + idempotent `task_quality` ingest + Ástríðr mirror, nightly 4-dimension LLM-as-judge `internalAction`, per-persona quality KPI grid + window-mean regression detection
+- Native trace waterfall (Phase 94): `traceId` grouping on `llmMetrics` threaded from an Ástríðr per-turn contextvar through all 3 providers → Gantt `TraceWaterfall` on SessionDetail, replacing the dead `LangfuseTraceLink`
+- Hardening (Phase 95): TS 6.0.3 green (one tsconfig fix) + react-day-picker deleted + 4 folded majors verified; Forge/Ástríðr ingest keys verified via live round-trip (no rotation); `/cso` audit SHIP with 4 LOW findings all remediated
+
+### What Worked
+- **Live verification caught what tests couldn't.** Phase 93 fixed "FIVE production gaps no test suite had caught," found only by running the real cross-repo path. Same in 95 — the Forge round-trip surfaced a checklist host bug + a daemon startup crash that green CI never would.
+- **Fail-closed-by-symmetry.** The `/cso` headline finding was fixed by making `validateIngestAuth` mirror the already-correct fail-closed Forge path — a known-good local pattern beat inventing a new one.
+- **Zero-false-positive audit bar held.** `/cso` produced 4 confirmed findings + 4 explicitly-dropped candidates with rationale; no cry-wolf triage churn.
+
+### What Was Inefficient
+- **A "verification" task ballooned into cross-repo debugging.** HARD-02 was scoped verify-not-rotate, but an honest close required finding an unlisted Forge daemon repo, fixing a SQLite-migration FK crash, and a `.cloud`/`.site` config trap. Real work hid behind a checkbox.
+- **Watched the wrong tables first.** Initially queried `jobs`/`workspaces` (the daemon's *local* SQLite names) instead of the Convex `forgeJobs`/`forgeWorkspaces` — led to a wrong "Forge never worked" read before the schema check corrected it.
+
+### Patterns Established
+- **Verify the emitter side by its actual sink** — confirm rows land in the correct destination table, filtered by post-test timestamp + emitter identity, not by "the POST returned 200."
+- **SQLite table-rebuild migrations must disable FKs for the run** (`foreign_keys=OFF` + `foreign_key_check` after) — `legacy_alter_table=ON` does not prevent FK-ref rewrite on `RENAME` in modern SQLite (3.51.x).
+- **Cross-check GSD counters against git ground truth at close** — the SDK undercounted again (phases 2→3, plans 12→15).
+
+### Key Lessons
+- A stale mid-flight `MILESTONE-AUDIT.md` reports false `gaps_found`; trust the per-phase `VERIFICATION.md` + `REQUIREMENTS.md` checkboxes as current truth and note the staleness explicitly.
+- "Fix all the loose ends" is where the real bugs live — the durability + FK fixes shipped to a *different* repo entirely (forge).
+
+### Cost Observations
+- Model mix: orchestration on Opus; the one autonomous executor (95-01) routed to Sonnet
+- Sessions: 1 long execute-phase → verify → milestone close
+- Notable: the orchestrator/subagent split kept the noisy green-bar output (184 test files) out of main context; most of the phase ran inline because `/cso` needs the Skill tool and the operator gates needed live interaction
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: executing
-stopped_at: Phase 95 complete — all 3 v10.0 phases done (counters corrected vs git ground truth); milestone close pending
-last_updated: "2026-07-07T15:30:00.000Z"
-last_activity: 2026-07-07 -- Phase 95 complete (HARD-01..04)
+status: Awaiting next milestone
+stopped_at: v10.0 milestone shipped & archived (2026-07-07)
+last_updated: "2026-07-07T18:29:58.325Z"
+last_activity: 2026-07-07 — Milestone v10.0 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v10.0 execution complete — all 3 phases (93, 94, 95) done; milestone close pending
+**Current focus:** Planning next milestone — v10.0 shipped & archived 2026-07-07. Run `/gsd-new-milestone` to start the next cycle.
 
 ## Current Position
 
-Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — COMPLETE + VERIFIED (4/4 plans)
-Plan: 4 of 4 complete
-Status: Phase complete & verified (`95-VERIFICATION.md`, 16/16 truths, status passed). HARD-01/02/03/04 all resolved. All 3 v10.0 phases complete + verified (93/94/95 each have VERIFICATION.md). **Milestone ready to close — no blockers** (`/gsd-complete-milestone`).
-Last activity: 2026-07-07 -- Phase 95 executed, verified, loose ends cleared (forge merge + durability + audit remediation)
+Phase: Milestone v10.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-07 — Milestone v10.0 completed and archived
 
 ## Deferred Items
 
@@ -46,6 +46,20 @@ Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocki
 | context_questions | Phase 89 89-CONTEXT.md | 3 open Qs (answered during execution, unmarked) |
 
 **Accepted tech debt:** Phases 88 & 90 have no formal `VERIFICATION.md` — 88 covered by Nyquist VALIDATION (47/47 tests), 90 by operator live sign-off (`90-08-SUMMARY`).
+
+**v10.0 close (2026-07-07) — acknowledged & deferred (all stale/non-blocking):**
+
+| Category | Item | Status |
+|----------|------|--------|
+| quick_task | 260603-or6-codepulse-register-opus-4-8-in-cost-mode | missing (stale, unrelated — carried from v9.0) |
+| quick_task | 260629-close-crossnav | done (commit b0253b3; dir cleaned) |
+| quick_task | 260629-hive-task-agent-link | done (commit b7b8e84; dir cleaned) |
+| quick_task | 260629-mem-event-deeplink | done (commit 58b999f; dir cleaned) |
+| quick_task | 260629-nnf-graphs-hub-tile-index | done (commit 2d9df13; dir cleaned) |
+| quick_task | 260629-oki-reverse-cross-graph-links | done (commit 6cffbae; dir cleaned) |
+| validation_gap | Phase 95 95-VALIDATION.md | draft (Nyquist not finalized; substance covered by 95-VERIFICATION 16/16 + green bar 1644 tests) |
+
+The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) is a stale **mid-flight snapshot** predating Phases 94/95; superseded by the three phase VERIFICATION.md files (all passed) and REQUIREMENTS.md (9/9 complete).
 
 ## v10.0 Roadmap
 
@@ -193,9 +207,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- **Pending from Phase 93 close-out:**
-  1. Final astridr rebuild (`docker compose up --build -d astridr` from astridr-repo) — applies the SELF-01 revert + web-auth fix + review fixes (WR-01/WR-02)
-  2. Convex prod redeploy (`npx convex deploy --yes` from codepulse) — carries the 9 post-review convex/UI fixes to tidy-whale-981
-  3. `/quality` grid visual re-confirm after the redeploy (the `personal` persona card)
-  4. E3 calibration labels in `93-CALIBRATION.md` — quality trends not trusted until the ≥0.7 agreement gate closes
-- Run `/gsd-discuss-phase 94` to start the Trace Waterfall phase.
+- Start the next milestone with /gsd-new-milestone

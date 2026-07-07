@@ -1,5 +1,23 @@
 # Milestones
 
+## v10.0 Eval & Trace Observability + Hardening (Shipped: 2026-07-07)
+
+**Phases completed:** 3 phases (93-95), 15 plans, 36 tasks
+**Timeline:** 2026-07-05 → 2026-07-07 | 97 files, +13,336 / −819
+**Requirements:** 9/9 (EVAL-01..03, TRACE-01/02, HARD-01..04)
+**Verification:** All 3 phases have `VERIFICATION.md` — 93 (18/18), 94 (22/22 + operator live sign-off), 95 (16/16). Prod deploy `tidy-whale-981`. Cross-repo: Forge daemon SQLite-migration FK crash + ingest-config durability fixes merged to forge `master` (`9adacfe`).
+**Known deferred items at close:** 7 (all stale/non-blocking — see STATE.md Deferred Items).
+
+**Key accomplishments:**
+
+- D-04 is met with a real score traveling the full cross-repo path — Larry's Telegram turn (session `4e701b43`) -> `spawn_evaluation` -> mirror POST -> prod `/runtime-ingest` -> `evalScores` row with `profileId: "personal"` -> `listPersonaKpis` card (currentMean 1, delta +1, sparkline populated) — after live testing surfaced and fixed FIVE production gaps no test suite had caught, plus the E3 calibration reference set (12 real sessions, labels pending, trends explicitly not yet trusted).
+- TypeScript 5.9.3 to 6.0.3 landed green via a single tsconfig `types: ["node"]` fix, react-day-picker fully deleted (not migrated), and the two now-redundant `@types/diff`/`@types/js-yaml` stubs removed — full green bar (tsc + 164/164 passing test files + vite build) confirmed on the settled tree.
+- The four already-merged dependency majors were confirmed at target on the settled tree, all six stale dependabot branches confirmed gone from origin (pruned locally), and the `react-easy-crop@6` cropper UI in `AvatarUploader.tsx` was operator-verified live — closing D-10 as the retrospective verification it actually is, with no no-op re-bump commits.
+- Ran the `/cso` fast-tier audit over the settled CodePulse tree (`src/`+`convex/`+build/config); verdict SHIP with `npm audit` 0 vulns, 0 committed secrets, and full ingest-auth coverage. Four LOW findings, all `file:line`-evidenced — the operator approved fixing all four, and they were remediated in one pass: `validateIngestAuth` made fail-closed, `insightsChat.ask` auth-gated, `.gitignore` broadened, and CI actions SHA-pinned. Green bar re-run green. HARD-01 resolved.
+- HARD-02 closed honestly as verification + documentation (NO new rotation): both ingest keys confirmed real on prod Convex `tidy-whale-981`, and both emitter sides proven by live round trip — a completed `codex`/`goal` job from the real Forge daemon (`host lmofficenew`) landed a fresh `forgeJobs` row (`01KWYJ2GVQ09WRQTRN96VP926Y` @ 15:10:18Z), corroborated by a live Ástríðr `events` row at 13:40:44Z. Getting there required fixing two real blockers: a `.cloud`→`.site` host bug in the deploy checklist and a forge-daemon startup crash (migration-v4 FK violation).
+
+---
+
 ## v9.0 Readability & Experience (Shipped: 2026-06-29)
 
 **Phases completed:** 5 phases (88–92), 30 plans, 43 tasks
