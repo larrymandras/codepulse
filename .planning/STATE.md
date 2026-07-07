@@ -47,19 +47,21 @@ Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocki
 
 **Accepted tech debt:** Phases 88 & 90 have no formal `VERIFICATION.md` — 88 covered by Nyquist VALIDATION (47/47 tests), 90 by operator live sign-off (`90-08-SUMMARY`).
 
-**v10.0 close (2026-07-07) — acknowledged & deferred (all stale/non-blocking):**
+**v10.0 close-out cleanup (2026-07-07) — ALL RESOLVED (`audit-open` now reports 0 open items):**
 
-| Category | Item | Status |
-|----------|------|--------|
-| quick_task | 260603-or6-codepulse-register-opus-4-8-in-cost-mode | missing (stale, unrelated — carried from v9.0) |
-| quick_task | 260629-close-crossnav | done (commit b0253b3; dir cleaned) |
-| quick_task | 260629-hive-task-agent-link | done (commit b7b8e84; dir cleaned) |
-| quick_task | 260629-mem-event-deeplink | done (commit 58b999f; dir cleaned) |
-| quick_task | 260629-nnf-graphs-hub-tile-index | done (commit 2d9df13; dir cleaned) |
-| quick_task | 260629-oki-reverse-cross-graph-links | done (commit 6cffbae; dir cleaned) |
-| validation_gap | Phase 95 95-VALIDATION.md | draft (Nyquist not finalized; substance covered by 95-VERIFICATION 16/16 + green bar 1644 tests) |
+These were completed work flagged only by naming / status-marker mismatches, not real gaps. All quick-task dirs moved to `.planning/quick-archive/` (out of the audit scan); `95-VALIDATION.md` finalized.
 
-The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) is a stale **mid-flight snapshot** predating Phases 94/95; superseded by the three phase VERIFICATION.md files (all passed) and REQUIREMENTS.md (9/9 complete).
+| Category | Item | Resolution |
+|----------|------|------------|
+| quick_task | 260603-or6-codepulse-register-opus-4-8-in-cost-mode | ✅ DONE 2026-06-03 — registered `claude-opus-4-8` @ $5/$25 in `modelPricing.ts` + fixed a latent 3× Opus over-pricing bug; archived |
+| quick_task | 260629-close-crossnav | ✅ DONE (commit b0253b3); archived |
+| quick_task | 260629-hive-task-agent-link | ✅ DONE (commit b7b8e84); archived |
+| quick_task | 260629-mem-event-deeplink | ✅ DONE (commit 58b999f); archived |
+| quick_task | 260629-nnf-graphs-hub-tile-index | ✅ DONE (commit 2d9df13); archived |
+| quick_task | 260629-oki-reverse-cross-graph-links | ✅ DONE (commit 6cffbae); archived |
+| validation_gap | Phase 95 95-VALIDATION.md | ✅ FINALIZED — `status: complete`, `nyquist_compliant: true`; all gates green, both manual checks operator-verified, cross-referenced by 95-VERIFICATION (16/16) |
+
+The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flight snapshot** predating Phases 94/95; superseded by the three phase VERIFICATION.md files (all passed) and the archived REQUIREMENTS (9/9 complete).
 
 ## v10.0 Roadmap
 
@@ -192,11 +194,11 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260629-nnf | Complete Graphs Hub tile index — Capabilities, 3D Memory Galaxy, Hive/Swarm tiles | 2026-06-29 | 2d9df13 | [260629-nnf-graphs-hub-tile-index](./quick/260629-nnf-graphs-hub-tile-index/) |
-| 260629-oki | Reverse cross-graph deep-links (agent→tools, KG entity→owning agent) — GH-04 round-trip | 2026-06-29 | 6cffbae | [260629-oki-reverse-cross-graph-links](./quick/260629-oki-reverse-cross-graph-links/) |
-| 260629-ow5 | Memory ?event= deep-link focus — close the KG-provenance cross-nav target | 2026-06-29 | 58b999f | [260629-mem-event-deeplink](./quick/260629-mem-event-deeplink/) |
-| 260629-pcy | Hive swarm-task → agent cross-graph deep-link — Hive joins the cross-nav web | 2026-06-29 | b7b8e84 | [260629-hive-task-agent-link](./quick/260629-hive-task-agent-link/) |
-| 260629-qaj | Close out cross-nav — back-chip labels (Hive/Memory) + inbound agent→Hive (?goal=) | 2026-06-29 | b0253b3 | [260629-close-crossnav](./quick/260629-close-crossnav/) |
+| 260629-nnf | Complete Graphs Hub tile index — Capabilities, 3D Memory Galaxy, Hive/Swarm tiles | 2026-06-29 | 2d9df13 | [260629-nnf-graphs-hub-tile-index](./quick-archive/260629-nnf-graphs-hub-tile-index/) |
+| 260629-oki | Reverse cross-graph deep-links (agent→tools, KG entity→owning agent) — GH-04 round-trip | 2026-06-29 | 6cffbae | [260629-oki-reverse-cross-graph-links](./quick-archive/260629-oki-reverse-cross-graph-links/) |
+| 260629-ow5 | Memory ?event= deep-link focus — close the KG-provenance cross-nav target | 2026-06-29 | 58b999f | [260629-mem-event-deeplink](./quick-archive/260629-mem-event-deeplink/) |
+| 260629-pcy | Hive swarm-task → agent cross-graph deep-link — Hive joins the cross-nav web | 2026-06-29 | b7b8e84 | [260629-hive-task-agent-link](./quick-archive/260629-hive-task-agent-link/) |
+| 260629-qaj | Close out cross-nav — back-chip labels (Hive/Memory) + inbound agent→Hive (?goal=) | 2026-06-29 | b0253b3 | [260629-close-crossnav](./quick-archive/260629-close-crossnav/) |
 
 ## Session Continuity
 

@@ -2,7 +2,7 @@
 quick_id: 260629-pcy
 slug: hive-task-agent-link
 description: Wire Hive into the cross-graph web — swarm task → owning agent deep-link
-status: in-progress
+status: complete
 date: 2026-06-29
 mode: quick
 ---

@@ -2,7 +2,7 @@
 quick_id: 260629-qaj
 slug: close-crossnav
 description: Close out cross-nav — back-chip labels for Hive/Memory + inbound agent→Hive deep-link
-status: in-progress
+status: complete
 date: 2026-06-29
 mode: quick
 ---

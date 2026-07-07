@@ -2,7 +2,7 @@
 quick_id: 260629-nnf
 slug: graphs-hub-tile-index
 description: Complete the Graphs Hub tile index — add Capabilities, 3D Memory Galaxy, and Hive/Swarm tiles
-status: in-progress
+status: complete
 date: 2026-06-29
 mode: quick
 ---

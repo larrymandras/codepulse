@@ -2,7 +2,7 @@
 quick_id: 260629-oki
 slug: reverse-cross-graph-links
 description: Add reverse/bidirectional cross-graph deep-links (agent→tools, KG entity→owning agent) to complete Phase 85's round-trip
-status: in-progress
+status: complete
 date: 2026-06-29
 mode: quick
 ---

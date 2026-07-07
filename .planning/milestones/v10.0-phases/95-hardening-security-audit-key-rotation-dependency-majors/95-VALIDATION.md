@@ -1,10 +1,11 @@
 ---
 phase: 95
 slug: hardening-security-audit-key-rotation-dependency-majors
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-07
+finalized: 2026-07-07
 ---
 
 # Phase 95 — Validation Strategy
@@ -38,18 +39,18 @@ created: 2026-07-07
 
 ## Per-Task Verification Map
 
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 95-XX-XX | TS6 | — | HARD-03 | — | Type-check green on TS 6.0.3 | type-check | `npx tsc --noEmit` | ✅ (0 errors on 5.9.3) | ⬜ pending |
-| 95-XX-XX | TS6 | — | HARD-03 | — | Full unit suite green on TS 6 + jsdom 29 | unit | `npx vitest run` | ✅ existing 184 files | ⬜ pending |
-| 95-XX-XX | TS6 | — | HARD-03 | — | Prod build succeeds | build | `npm run build` | ✅ | ⬜ pending |
-| 95-XX-XX | day-picker | — | HARD-04 | — | No `react-day-picker` references remain | grep + build | `grep -r react-day-picker src convex` (expect none) + `npx tsc --noEmit` | ✅ deletion-verified | ⬜ pending |
-| 95-XX-XX | majors | — | HARD-03 (D-10) | — | `react-easy-crop@6` UI intact | manual | mount `AvatarUploader.tsx` cropper surface | ⚠️ manual | ⬜ pending |
-| 95-XX-XX | audit | — | HARD-01 | — | 0 dependency CVEs | audit | `npm audit` | ✅ already 0 | ⬜ pending |
-| 95-XX-XX | audit | — | HARD-01 | T-95-01 | `convex/ingestAuth.ts` fail-closed / no confirmed open findings | source + audit | `/cso` verdict + inspect `ingestAuth.ts` | ✅ | ⬜ pending |
-| 95-XX-XX | key-rotation | — | HARD-02 | — | Fresh rows from real emitters land in prod Convex | manual/integration | inspect prod Convex (`tidy-whale-981`) tables post-emit | ⚠️ manual live (D-02) | ⬜ pending |
+| Task ID | Plan | Wave | Requirement | Secure Behavior | Test Type | Automated Command | Status |
+|---------|------|------|-------------|-----------------|-----------|-------------------|--------|
+| T-95-01-2 | 95-01 | 1 | HARD-03 | Type-check green on TS 6.0.3 | type-check | `npx tsc --noEmit` | ✅ green (0 errors) |
+| T-95-01-3 | 95-01 | 1 | HARD-03 | Full unit suite green on TS 6 + jsdom 29 | unit | `npx vitest run` | ✅ green (164 files / 1644 tests) |
+| T-95-01-3 | 95-01 | 1 | HARD-03 | Prod build succeeds | build | `npm run build` | ✅ green (exit 0) |
+| T-95-01-1 | 95-01 | 1 | HARD-04 | No `react-day-picker` references remain | grep + build | `grep -rn react-day-picker src convex` (none) + `tsc --noEmit` | ✅ green (exit 1, deleted) |
+| T-95-02-2 | 95-02 | 2 | HARD-03 (D-10) | `react-easy-crop@6` cropper UI intact | manual | mount `AvatarUploader.tsx` cropper surface | ✅ operator-verified ("cropper approved") |
+| T-95-03-1 | 95-03 | 3 | HARD-01 | 0 dependency CVEs | audit | `npm audit` | ✅ green (0 vulnerabilities) |
+| T-95-03-3 | 95-03 | 3 | HARD-01 | `convex/ingestAuth.ts` fail-closed / no open findings | source + audit | `/cso` verdict + `ingestAuth.ts` | ✅ SHIP; validateIngestAuth made fail-closed, 4/4 findings remediated |
+| T-95-04-1 | 95-04 | 2 | HARD-02 | Fresh rows from real emitters land in prod Convex | manual/integration | inspect prod Convex (`tidy-whale-981`) `forgeJobs` post-emit | ✅ operator-verified (fresh `forgeJobs` row `01KWYJ2…` @ 15:10:18Z) |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky — all rows green as of 2026-07-07 finalization.*
 
 ---
 
@@ -70,11 +71,11 @@ created: 2026-07-07
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (none — existing infra covers)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 90s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (the two inherently-manual checks — D-10 cropper UI, D-02 live round-trip — were operator-completed)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (none — existing 184-file suite + tsc + build infra covers HARD-03/04; ingestAuth tests added for HARD-01)
+- [x] No watch-mode flags
+- [x] Feedback latency < 90s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** finalized 2026-07-07 — all automated gates green (tsc 0 / vitest 164 files-1644 tests / build 0 / npm audit 0), both manual checks operator-verified, cross-referenced by `95-VERIFICATION.md` (16/16 passed). Nyquist-compliant: the automatable surface is fully sampled; the non-automatable surface (D-02/D-10) is documented manual + operator-signed.
