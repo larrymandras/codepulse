@@ -65,21 +65,21 @@ export default function OnboardingGuide() {
         if (e.target === e.currentTarget) dismiss();
       }}
     >
-      <div className="relative bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 max-w-lg w-full mx-4">
+      <div className="relative bg-card border border-border rounded-xl p-6 max-w-lg w-full mx-4">
         {/* Always-visible close affordance */}
         <button
           onClick={dismiss}
           aria-label="Close onboarding"
-          className="absolute right-3 top-3 text-gray-400 hover:text-gray-100 transition-colors"
+          className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
         {/* Step content */}
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-100 mb-2">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
             {steps[step].title}
           </h2>
-          <p className="text-base text-gray-400 leading-relaxed">
+          <p className="text-base text-muted-foreground leading-relaxed">
             {steps[step].description}
           </p>
         </div>
@@ -90,8 +90,9 @@ export default function OnboardingGuide() {
             <button
               key={i}
               onClick={() => setStep(i)}
+              aria-label={`Go to step ${i + 1}`}
               className={`w-2 h-2 rounded-full transition-colors ${
-                i === step ? "bg-indigo-500" : "bg-gray-600"
+                i === step ? "bg-primary" : "bg-muted"
               }`}
             />
           ))}
@@ -104,8 +105,8 @@ export default function OnboardingGuide() {
             disabled={isFirst}
             className={`px-4 py-2 text-base rounded-lg transition-colors ${
               isFirst
-                ? "text-gray-600 cursor-not-allowed"
-                : "text-gray-300 hover:bg-gray-700"
+                ? "text-muted-foreground/50 cursor-not-allowed"
+                : "text-foreground hover:bg-accent"
             }`}
           >
             Previous
@@ -114,7 +115,7 @@ export default function OnboardingGuide() {
             {!isLast && (
               <button
                 onClick={dismiss}
-                className="px-4 py-2 text-base text-gray-400 hover:text-gray-200 transition-colors"
+                className="px-4 py-2 text-base text-muted-foreground hover:text-foreground transition-colors"
               >
                 Skip
               </button>
@@ -122,14 +123,14 @@ export default function OnboardingGuide() {
             {isLast ? (
               <button
                 onClick={dismiss}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-base text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-base text-primary-foreground rounded-lg transition-colors"
               >
                 Done
               </button>
             ) : (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-base text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-primary hover:bg-primary/90 text-base text-primary-foreground rounded-lg transition-colors"
               >
                 Next
               </button>

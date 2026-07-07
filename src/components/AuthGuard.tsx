@@ -16,19 +16,19 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     <>
       <SignedIn>{children}</SignedIn>
       <SignedOut>
-        <div className="flex h-screen items-center justify-center bg-gray-950">
+        <div className="flex h-screen items-center justify-center bg-background">
           <div className="text-center space-y-6">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-600 flex items-center justify-center text-2xl font-bold text-white">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
               CP
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-100">CodePulse</h1>
-              <p className="text-base text-gray-500 mt-1">
+              <h1 className="text-xl font-semibold text-foreground">CodePulse</h1>
+              <p className="text-base text-muted-foreground mt-1">
                 Sign in to access the telemetry dashboard
               </p>
             </div>
             <SignInButton mode="modal">
-              <button className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-lg text-base font-medium transition-colors">
+              <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2.5 rounded-lg text-base font-medium transition-colors">
                 Sign In
               </button>
             </SignInButton>
