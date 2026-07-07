@@ -66,12 +66,20 @@ export function getCorsHeaders(request: Request): Record<string, string> {
 
 /**
  * Validate the Bearer token on an ingest request.
- * Returns true if auth passes (or if no key is configured — dev mode).
- * Returns false if a key is configured but the request does not provide it.
+ * Fails CLOSED (CSO-95-01, symmetric with validateForgeIngestAuth): a missing
+ * key must NOT silently open the /ingest + /runtime-ingest family to anonymous
+ * writes. To run the unauthenticated dev path, set ASTRIDR_INGEST_ALLOW_ANON=true
+ * explicitly.
+ * Returns true only if a configured key matches the request's Bearer token, or
+ * if no key is set AND ASTRIDR_INGEST_ALLOW_ANON is explicitly "true".
  */
 export function validateIngestAuth(request: Request): boolean {
   const expectedKey = _env.ASTRIDR_INGEST_API_KEY;
-  if (!expectedKey) return true; // Skip auth in dev when no key configured
+  if (!expectedKey) {
+    // Fail closed: a missing key must not silently open the ingest family to the
+    // public internet. Require an explicit opt-in for the dev/anon path.
+    return _env.ASTRIDR_INGEST_ALLOW_ANON === "true";
+  }
   const authHeader = request.headers.get("Authorization") ?? "";
   return authHeader === `Bearer ${expectedKey}`;
 }

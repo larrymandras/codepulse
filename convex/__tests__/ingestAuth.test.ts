@@ -35,8 +35,16 @@ describe("ingestAuth (CPHLTH-02)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("skips auth when no API key configured (dev mode)", () => {
+  it("fails closed when no API key configured and no anon opt-in (CSO-95-01)", () => {
     vi.stubEnv("ASTRIDR_INGEST_API_KEY", "");
+    const req = new Request("http://localhost/ingest", { method: "POST" });
+    expect(validateIngestAuth(req)).toBe(false);
+    vi.unstubAllEnvs();
+  });
+
+  it("allows anon ingest only when ASTRIDR_INGEST_ALLOW_ANON=true (dev opt-in, CSO-95-01)", () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "");
+    vi.stubEnv("ASTRIDR_INGEST_ALLOW_ANON", "true");
     const req = new Request("http://localhost/ingest", { method: "POST" });
     expect(validateIngestAuth(req)).toBe(true);
     vi.unstubAllEnvs();

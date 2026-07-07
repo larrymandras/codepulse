@@ -248,6 +248,16 @@ export const ask = action({
     question: v.string(),
   },
   handler: async (ctx, { question }): Promise<Record<string, unknown>[]> => {
+    // CSO-95-02: gate the billed LLM call behind authentication. The Convex
+    // deployment URL is public (VITE_CONVEX_URL ships in the frontend bundle),
+    // so without this an unauthenticated caller could invoke ask() directly and
+    // drive OpenAI spend. Clerk identity is present when the dashboard UI is
+    // authenticated; reject direct unauthenticated calls before any LLM cost.
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return [{ type: "markdown", content: "Authentication required to use Insights Chat." }];
+    }
+
     // Step 1: Call LLM with question and tool definitions
     const llmResponse = await callLLM(question);
     const choice = llmResponse.choices?.[0]?.message;

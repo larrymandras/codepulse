@@ -1,6 +1,9 @@
 node_modules/
 dist/
-.env.local
+# Secrets: ignore all env files except the committed template (CSO-95-03)
+.env
+.env.*
+!.env.example
 .worktrees/
 graphify-out/
 
@@ -19,3 +22,6 @@ test-results/
 
 # Design artifacts
 open-design/
+
+# Raw security-audit output (curated results live in .planning/phases/*/95-SECURITY-AUDIT.md)
+.audits/
