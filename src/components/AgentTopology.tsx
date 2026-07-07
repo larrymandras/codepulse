@@ -187,7 +187,7 @@ export default function AgentTopology() {
 
   if (allAgents.length === 0) {
     return (
-      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
+      <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-6 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
           Agent Topology
@@ -199,7 +199,7 @@ export default function AgentTopology() {
   }
 
   return (
-    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col max-h-[450px] hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
+    <div className="glow-card bg-card/60 backdrop-blur-md border border-border/50 rounded-xl p-6 relative overflow-hidden flex flex-col hover:border-primary/50 transition-colors shadow-[var(--glow-xs)] hover:shadow-[var(--glow-sm)] hover:scale-[1.01] transition-transform duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4 border-b border-border/30 pb-4">
         <h2 className="text-sm font-mono tracking-widest text-primary uppercase flex items-center gap-2">
