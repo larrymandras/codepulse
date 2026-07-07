@@ -153,7 +153,6 @@ const navGroups: NavGroupConfig[] = [
   {
     group: "CONSOLE",
     items: [
-      { label: "Agent Console", icon: "terminal", group: "CONSOLE", placeholder: true },
       { to: "/live-run", label: "Live Run", icon: "activity", group: "CONSOLE" },
       { to: "/executions", label: "Executions", icon: "list", group: "CONSOLE" },
       { to: "/build", label: "Build", icon: "hammer", group: "CONSOLE" },
