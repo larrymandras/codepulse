@@ -279,7 +279,7 @@ function GalaxyCanvas({
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <MetricCard label="Tools" value={graph.stats.toolCount} />
         <MetricCard label="Agents" value={graph.stats.agentCount} />
-        <MetricCard label="MCP Servers" value={graph.stats.serverCount} />
+        <MetricCard label="MCP in Graph" value={graph.stats.serverCount} />
         <MetricCard label="Kits" value={graph.stats.kitCount} />
         <MetricCard label="Edges" value={graph.stats.edgeCount} />
         <MetricCard label="Orphans" value={graph.stats.orphanCount} />
@@ -384,6 +384,7 @@ function GalaxyCanvas({
                 fgRef.current?.zoom(3, 800);
               }}
               cooldownTicks={120}
+              onEngineStop={() => fgRef.current?.zoomToFit(400, 60)}
               d3VelocityDecay={0.3}
               backgroundColor="transparent"
             />
