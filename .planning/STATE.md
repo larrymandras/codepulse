@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
-stopped_at: Completed 95-01-PLAN.md
-last_updated: "2026-07-07T12:34:52.464Z"
-last_activity: 2026-07-07
+stopped_at: Phase 95 complete — all 3 v10.0 phases done (counters corrected vs git ground truth); milestone close pending
+last_updated: "2026-07-07T15:30:00.000Z"
+last_activity: 2026-07-07 -- Phase 95 complete (HARD-01..04)
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 15
-  completed_plans: 12
-  percent: 67
+  completed_plans: 15
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 95 — hardening-security-audit-key-rotation-dependency-majors
+**Current focus:** v10.0 execution complete — all 3 phases (93, 94, 95) done; milestone close pending
 
 ## Current Position
 
-Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — EXECUTING
-Plan: 2 of 4
-Status: Ready to execute
-Last activity: 2026-07-07
+Phase: 95 (hardening-security-audit-key-rotation-dependency-majors) — COMPLETE (4/4 plans)
+Plan: 4 of 4 complete
+Status: Phase complete — HARD-01/02/03/04 all resolved & verified. All v10.0 phases done; milestone close (`/gsd-complete-milestone`) pending.
+Last activity: 2026-07-07 -- Phase 95 executed end-to-end
 
 ## Deferred Items
 
@@ -51,9 +51,9 @@ Items acknowledged and deferred at milestone close on 2026-06-29 (all non-blocki
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 93 | Eval Pipeline & Quality KPIs | EVAL-01, EVAL-02, EVAL-03 | Not started |
-| 94 | Trace Waterfall | TRACE-01, TRACE-02 | Not started |
-| 95 | Hardening — Security, Key Rotation, Dependency Majors | HARD-01, HARD-02, HARD-03, HARD-04 | Not started |
+| 93 | Eval Pipeline & Quality KPIs | EVAL-01, EVAL-02, EVAL-03 | ✅ Complete (6/6 plans) |
+| 94 | Trace Waterfall | TRACE-01, TRACE-02 | ✅ Complete (5/5 plans) |
+| 95 | Hardening — Security, Key Rotation, Dependency Majors | HARD-01, HARD-02, HARD-03, HARD-04 | ✅ Complete (4/4 plans) |
 
 **Execution order:** 93 and 94 are independent (separate schemas, both ride existing ingest paths) — either order or parallel. 95 is independent of both and sequenced last as audit/cleanup work.
 
