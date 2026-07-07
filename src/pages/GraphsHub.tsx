@@ -20,6 +20,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { GlassPanel } from "../components/GlassPanel";
 import MetricCard from "../components/MetricCard";
 import InfoTooltip from "../components/InfoTooltip";
+import { pluralize } from "../lib/formatters";
 import { CodeVaultGraph } from "../components/graph/CodeVaultGraph";
 import { useToolGalaxySources } from "../hooks/useToolGalaxy";
 import { useMcpHealthSources } from "../hooks/useMcpHealth";
@@ -54,7 +55,7 @@ function ToolGalaxyTile() {
   return (
     <MetricCard
       label="TOOL GALAXY"
-      value={`${stats.toolCount} tools · ${stats.orphanCount} orphans`}
+      value={`${pluralize(stats.toolCount, "tool")} · ${pluralize(stats.orphanCount, "orphan")}`}
       onClick={() => navigate("/tool-galaxy")}
     />
   );
@@ -70,7 +71,7 @@ function McpInventoryTile() {
   return (
     <MetricCard
       label="MCP INVENTORY"
-      value={`${serverCount} servers · ${errorCount} errors`}
+      value={`${pluralize(serverCount, "server")} · ${pluralize(errorCount, "error")}`}
       onClick={() => navigate("/mcp-inventory")}
     />
   );
@@ -86,7 +87,7 @@ function KgExplorerTile() {
   return (
     <MetricCard
       label="KG EXPLORER"
-      value={`${entities} entities · ${triples} triples`}
+      value={`${pluralize(entities, "entity", "entities")} · ${pluralize(triples, "triple")}`}
       onClick={() => navigate("/knowledge-graph")}
     />
   );
@@ -102,7 +103,7 @@ function CapabilitiesTile() {
   return (
     <MetricCard
       label="CAPABILITIES"
-      value={`${skills} skills · ${tools} tools`}
+      value={`${pluralize(skills, "skill")} · ${pluralize(tools, "tool")}`}
       onClick={() => navigate("/capabilities")}
     />
   );
@@ -118,7 +119,7 @@ function MemoryGalaxyTile() {
   return (
     <MetricCard
       label="3D MEMORY GALAXY"
-      value={`${events} events · ${agents} agents`}
+      value={`${pluralize(events, "event")} · ${pluralize(agents, "agent")}`}
       onClick={() => navigate("/memory")}
     />
   );
@@ -131,7 +132,7 @@ function HiveSwarmTile() {
   return (
     <MetricCard
       label="HIVE / SWARM"
-      value={`${goals.length} goals`}
+      value={`${pluralize(goals.length, "goal")}`}
       onClick={() => navigate("/hive")}
     />
   );

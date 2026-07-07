@@ -29,3 +29,13 @@ export function truncatePath(path: string, maxLen = 40): string {
   if (path.length <= maxLen) return path;
   return "..." + path.slice(path.length - maxLen + 3);
 }
+
+/**
+ * Format a count with a correctly-pluralized noun: `pluralize(1, "agent")` →
+ * "1 agent", `pluralize(3, "agent")` → "3 agents". Pass an explicit `plural`
+ * for irregulars: `pluralize(2, "entity", "entities")` → "2 entities".
+ */
+export function pluralize(count: number, noun: string, plural?: string): string {
+  const word = count === 1 ? noun : plural ?? `${noun}s`;
+  return `${count} ${word}`;
+}
