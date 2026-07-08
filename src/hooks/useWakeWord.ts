@@ -54,9 +54,15 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const visibilityHandlerRef = useRef<(() => void) | null>(null);
 
   /** Stop all active resources and release the mic. Does NOT set status — caller does that. */
   const releaseResources = useCallback((): void => {
+    // Remove the visibility keep-alive listener
+    if (visibilityHandlerRef.current) {
+      document.removeEventListener('visibilitychange', visibilityHandlerRef.current);
+      visibilityHandlerRef.current = null;
+    }
     // Terminate Worker
     if (workerRef.current) {
       workerRef.current.terminate();
@@ -173,6 +179,29 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
         audioCtx = new AudioContext();
       }
       audioCtxRef.current = audioCtx;
+
+      // Keep the wake-word AudioContext alive. Browsers suspend it on tab blur,
+      // audio-focus changes, or around TTS playback, which silently stops the
+      // worklet's process() → the wake word "works then stops". Auto-resume any
+      // unwanted suspension. A real stop() closes the context ('closed'), which
+      // resume() cannot revive, so this only ever revives a 'suspended' context.
+      audioCtx.onstatechange = () => {
+        if (audioCtx.state === 'suspended') {
+          void audioCtx.resume().catch(() => {});
+        }
+      };
+      // Also resume when the tab returns to the foreground (Chrome suspends
+      // background-tab audio and does not always auto-resume on return).
+      const onVisible = () => {
+        if (
+          document.visibilityState === 'visible' &&
+          audioCtxRef.current?.state === 'suspended'
+        ) {
+          void audioCtxRef.current.resume().catch(() => {});
+        }
+      };
+      visibilityHandlerRef.current = onVisible;
+      document.addEventListener('visibilitychange', onVisible);
 
       // Add the worklet module. Served as PLAIN JS from /public (see
       // public/micCapture.worklet.js) rather than bundled from the .ts source:
