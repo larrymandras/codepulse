@@ -35,6 +35,10 @@ export interface VoiceModePanelProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SILENCE_TIMEOUT_MS = 30_000; // 30 seconds (UI-SPEC §"Silence timeout (30s)")
+// Pause-to-send: accumulate final speech segments and only send the whole
+// utterance after this much true silence, so a mid-thought pause (e.g. while
+// walking) no longer chops the message at the first pause.
+const SEND_DEBOUNCE_MS = 2_000;
 
 // ─── State label / dot class mappings (UI-SPEC §"State → visual rendering table") ─
 
@@ -184,6 +188,12 @@ export function VoiceModePanel({
   // Silence timeout ref
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Pause-to-send: debounce timer + running transcript accumulator. Final
+  // segments accumulate here; interim results (user resuming) cancel the pending
+  // send; the send only fires after SEND_DEBOUNCE_MS of true silence.
+  const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const accumulatedRef = useRef("");
+
   // ─── Silence timer helpers ──────────────────────────────────────────────────
 
   const resetSilenceTimer = useCallback(() => {
@@ -203,6 +213,34 @@ export function VoiceModePanel({
     }
   }, []);
 
+  const clearSendTimer = useCallback(() => {
+    if (sendTimerRef.current) {
+      clearTimeout(sendTimerRef.current);
+      sendTimerRef.current = null;
+    }
+  }, []);
+
+  // End-of-turn: send the full accumulated utterance to Ástríðr. No-op if empty.
+  const flushSend = useCallback(async () => {
+    clearSendTimer();
+    const message = accumulatedRef.current.trim();
+    if (!message) return;
+    accumulatedRef.current = "";
+    dispatch({ type: "FINAL_RESULT" });
+    setReplyText("");
+    try {
+      const ack = await sendCommand({ type: "chat.send", message });
+      const sessionId =
+        (ack.session_id as string | undefined) ??
+        (ack.data?.session_id as string | undefined) ??
+        String(Date.now());
+      activeSessionRef.current = sessionId;
+    } catch (err) {
+      console.warn("VoiceModePanel: sendCommand failed:", err);
+      dispatch({ type: "ERROR" });
+    }
+  }, [sendCommand, clearSendTimer]);
+
   // ─── Speech recognition ─────────────────────────────────────────────────────
 
   const handleInterimResult = useCallback(
@@ -210,42 +248,42 @@ export function VoiceModePanel({
       setInterimText(text);
       dispatch({ type: "INTERIM_RESULT" });
       resetSilenceTimer();
+      // User is still speaking — defer the end-of-turn send.
+      clearSendTimer();
     },
-    [resetSilenceTimer]
+    [resetSilenceTimer, clearSendTimer]
   );
 
   const handleFinalResult = useCallback(
-    async (text: string) => {
+    (text: string) => {
       setInterimText("");
-      setFinalText(text);
       resetSilenceTimer();
 
-      // End-phrase: dispatch END + close (T-92-13 mitigation — D-01)
+      // End-phrase: exit voice mode. Discard any accumulated text — saying
+      // "stop"/"goodbye" is an abort, not a message. (T-92-13 mitigation — D-01)
       if (isEndPhrase(text)) {
+        clearSendTimer();
+        accumulatedRef.current = "";
         dispatch({ type: "END" });
         clearSilenceTimer();
         onClose();
         return;
       }
 
-      // Normal command: send to Ástríðr via existing WS transport
-      dispatch({ type: "FINAL_RESULT" });
-      setReplyText("");
+      // Accumulate this finalized segment and show the running transcript.
+      // Do NOT send yet — a mid-thought pause finalizes a segment but the user
+      // may still be talking. Debounce the send: it fires only after
+      // SEND_DEBOUNCE_MS of true silence, and handleInterimResult cancels it if
+      // the user resumes. This is what stops long messages being cut off.
+      accumulatedRef.current = `${accumulatedRef.current} ${text}`.trim();
+      setFinalText(accumulatedRef.current);
 
-      try {
-        const ack = await sendCommand({ type: "chat.send", message: text });
-        // Capture session_id for routing streaming events (PATTERNS §sendCommand+session_id)
-        const sessionId =
-          (ack.session_id as string | undefined) ??
-          (ack.data?.session_id as string | undefined) ??
-          String(Date.now());
-        activeSessionRef.current = sessionId;
-      } catch (err) {
-        console.warn("VoiceModePanel: sendCommand failed:", err);
-        dispatch({ type: "ERROR" });
-      }
+      clearSendTimer();
+      sendTimerRef.current = setTimeout(() => {
+        void flushSend();
+      }, SEND_DEBOUNCE_MS);
     },
-    [sendCommand, onClose, clearSilenceTimer, resetSilenceTimer]
+    [resetSilenceTimer, clearSilenceTimer, clearSendTimer, onClose, flushSend]
   );
 
   const handleEnd = useCallback(() => {
@@ -355,6 +393,7 @@ export function VoiceModePanel({
 
     return () => {
       clearSilenceTimer();
+      clearSendTimer();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount
@@ -363,10 +402,12 @@ export function VoiceModePanel({
 
   const handleClose = useCallback(() => {
     clearSilenceTimer();
+    clearSendTimer();
+    accumulatedRef.current = "";
     recognitionStop();
     dispatch({ type: "END" });
     onClose();
-  }, [onClose, clearSilenceTimer, recognitionStop]);
+  }, [onClose, clearSilenceTimer, clearSendTimer, recognitionStop]);
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 

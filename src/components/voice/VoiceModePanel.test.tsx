@@ -146,19 +146,63 @@ describe("VoiceModePanel", () => {
 
   // ─── 3. Final transcript → sendCommand with chat.send ──────────────────────
 
-  it("sends chat.send when final transcript received (non-end-phrase)", async () => {
-    render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
+  it("sends chat.send after the end-of-turn pause (non-end-phrase)", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
 
-    await act(async () => {
-      onFinalResultCallback?.("show me agents");
-    });
+      await act(async () => {
+        onFinalResultCallback?.("show me agents");
+      });
 
-    await waitFor(() => {
+      // Pause-to-send: nothing is sent until ~2s of silence elapses.
+      expect(mockSendCommand).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
       expect(mockSendCommand).toHaveBeenCalledWith({
         type: "chat.send",
         message: "show me agents",
       });
-    });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accumulates segments across a pause and sends them as one message", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
+
+      // Two finalized segments split by a mid-thought pause...
+      await act(async () => {
+        onFinalResultCallback?.("show me the agents");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(800); // shorter than the 2s debounce
+      });
+      await act(async () => {
+        onFinalResultCallback?.("that are online");
+      });
+
+      // ...are still unsent until the full pause elapses,
+      expect(mockSendCommand).not.toHaveBeenCalled();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      // ...then sent as a single combined utterance.
+      expect(mockSendCommand).toHaveBeenCalledTimes(1);
+      expect(mockSendCommand).toHaveBeenCalledWith({
+        type: "chat.send",
+        message: "show me the agents that are online",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // ─── 4. End-phrase → END dispatched, sendCommand NOT called ────────────────
