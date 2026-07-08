@@ -308,7 +308,12 @@ export function VoiceModePanel({
 
   // ─── TTS playback ───────────────────────────────────────────────────────────
 
-  const { play: ttsPlay, isPlaying, analyser: ttsAnalyser } = useTtsPlayback();
+  // Analyser is intentionally NOT enabled: during a voice session it created an
+  // extra AudioContext that (together with the removed avatar mic tap) could
+  // disturb the wake-word engine. The avatar pulses synthetically for now; real
+  // her-voice reactivity will be re-added via a contention-free path.
+  const { play: ttsPlay, isPlaying } = useTtsPlayback();
+  const ttsAnalyser = null;
 
   // ─── Feedback guard (T-92-10 mitigation) ───────────────────────────────────
   // When TTS starts playing: pause STT (recognition.stop)

@@ -30,6 +30,12 @@
 import { useEffect, useRef } from "react";
 import type { VoiceState } from "./voiceState";
 import avatarSrc from "@/assets/avatar/astridr-avatar.png";
+import avatarSpeakingSrc from "@/assets/avatar/astridr-avatar-speaking.png";
+
+// Shared mask so both the calm and speaking frames fade into the panel
+// identically — the crossfade reads as one figure changing expression.
+const AVATAR_MASK =
+  "radial-gradient(ellipse 72% 78% at 50% 42%, #000 55%, transparent 82%)";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -85,86 +91,17 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
   const ttsAnalyserRef = useRef<AnalyserNode | null>(ttsAnalyser);
   ttsAnalyserRef.current = ttsAnalyser;
 
-  // Mic analyser (my voice) — owned here, alive only while listening.
-  const micCtxRef = useRef<AudioContext | null>(null);
-  const micAnalyserRef = useRef<AnalyserNode | null>(null);
-  const micStreamRef = useRef<MediaStream | null>(null);
-
   // Cached theme color (rgb), refreshed on theme change.
   const colorRef = useRef<[number, number, number]>(FALLBACK_CYAN);
 
-  // ─── Acquire / release the mic tap based on state ─────────────────────────
-  useEffect(() => {
-    const wantMic =
-      (state === "listening" || state === "transcribing") &&
-      !prefersReducedMotion();
-
-    let cancelled = false;
-
-    const releaseMic = () => {
-      if (micStreamRef.current) {
-        for (const t of micStreamRef.current.getTracks()) t.stop();
-        micStreamRef.current = null;
-      }
-      if (micCtxRef.current) {
-        void micCtxRef.current.close().catch(() => {});
-        micCtxRef.current = null;
-      }
-      micAnalyserRef.current = null;
-    };
-
-    if (wantMic && !micAnalyserRef.current) {
-      (async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
-          });
-          if (cancelled) {
-            for (const t of stream.getTracks()) t.stop();
-            return;
-          }
-          const Ctor =
-            window.AudioContext ??
-            (window as unknown as { webkitAudioContext?: typeof AudioContext })
-              .webkitAudioContext;
-          const ctx = new Ctor();
-          if (ctx.state !== "running") await ctx.resume().catch(() => {});
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 256;
-          analyser.smoothingTimeConstant = 0.75;
-          ctx.createMediaStreamSource(stream).connect(analyser);
-          micStreamRef.current = stream;
-          micCtxRef.current = ctx;
-          micAnalyserRef.current = analyser;
-        } catch {
-          // Permission denied / no device → aura falls back to a synthetic
-          // listening pulse. Never throw.
-        }
-      })();
-    } else if (!wantMic) {
-      releaseMic();
-    }
-
-    return () => {
-      cancelled = true;
-      if (!wantMic) releaseMic();
-    };
-  }, [state]);
-
-  // Release mic on unmount.
-  useEffect(() => {
-    return () => {
-      if (micStreamRef.current) {
-        for (const t of micStreamRef.current.getTracks()) t.stop();
-        micStreamRef.current = null;
-      }
-      if (micCtxRef.current) {
-        void micCtxRef.current.close().catch(() => {});
-        micCtxRef.current = null;
-      }
-      micAnalyserRef.current = null;
-    };
-  }, []);
+  // NOTE: this component intentionally opens NO getUserMedia and NO mic
+  // AudioContext. A 3rd concurrent mic capture (on top of the wake-word engine
+  // and speech recognition) reconfigured the input device and left the
+  // wake-word worklet dead after a voice session (wake word "worked then
+  // stopped" until reload). The "listening" aura is therefore driven
+  // synthetically. True mic-amplitude reactivity, when re-added, must REUSE the
+  // wake-word engine's existing stream (an exposed AnalyserNode), never a new
+  // capture. See .planning/AVATAR-HANDOFF.md.
 
   // ─── Track theme color from the probe (handles hex & oklch) ───────────────
   useEffect(() => {
@@ -217,7 +154,6 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     if (!ctx) return;
 
     const reduced = prefersReducedMotion();
-    const micBuf = new Uint8Array(new ArrayBuffer(128));
     const ttsBuf = new Uint8Array(new ArrayBuffer(128));
 
     let raf = 0;
@@ -235,10 +171,9 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       let target = 0;
       let herTint = 0; // 0 = cyan (me), 1 = emerald (her)
       if (s === "listening" || s === "transcribing") {
-        const a = micAnalyserRef.current;
-        const lvl = a ? analyserLevel(a, micBuf) : -1;
-        // Mic RMS is small; scale up. Fallback: gentle breathing.
-        target = lvl >= 0 ? Math.min(1, lvl * 6) : 0.18 + 0.12 * Math.sin(t * 0.05);
+        // Synthetic listening pulse — no mic capture (see note above). A gentle
+        // breathing glow that reads as "receptive / hearing you".
+        target = 0.28 + 0.16 * Math.sin(t * 0.06) + 0.06 * Math.sin(t * 0.17);
       } else if (s === "speaking") {
         herTint = 1;
         const a = ttsAnalyserRef.current;
@@ -334,17 +269,24 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       />
       {/* Aura (behind) */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-      {/* Avatar (front), edges faded into the panel */}
+      {/* Calm frame — always present as the base layer. */}
       <img
         src={avatarSrc}
         alt=""
         draggable={false}
         className="absolute inset-0 h-full w-full object-contain"
+        style={{ WebkitMaskImage: AVATAR_MASK, maskImage: AVATAR_MASK }}
+      />
+      {/* Speaking frame — crossfades in over the calm frame during her turn. */}
+      <img
+        src={avatarSpeakingSrc}
+        alt=""
+        draggable={false}
+        className="absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-out"
         style={{
-          WebkitMaskImage:
-            "radial-gradient(ellipse 72% 78% at 50% 42%, #000 55%, transparent 82%)",
-          maskImage:
-            "radial-gradient(ellipse 72% 78% at 50% 42%, #000 55%, transparent 82%)",
+          WebkitMaskImage: AVATAR_MASK,
+          maskImage: AVATAR_MASK,
+          opacity: state === "speaking" ? 1 : 0,
         }}
       />
     </div>

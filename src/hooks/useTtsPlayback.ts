@@ -3,21 +3,28 @@
  *
  * Extracted from Chat.tsx (Phase 92, Plan 02).
  * Consumed by:
- *   - Chat.tsx (existing TTS auto-play behavior)
- *   - VoiceModePanel.tsx / palette voice mode (92-04)
+ *   - Chat.tsx (existing TTS auto-play behavior) — default, plain playback
+ *   - VoiceModePanel.tsx / palette voice mode (92-04) — opts into `analyser`
  *
- * Exposes isPlaying for the feedback guard (pause STT recognition during TTS),
- * and an optional `analyser` (Web Audio AnalyserNode tapping her voice) so the
- * voice avatar's aura can react to Ástríðr's TTS amplitude while she speaks.
+ * Exposes `isPlaying` for the feedback guard (pause STT recognition during TTS).
  *
- * Robustness contract (avatar work, 2026-07-08):
- *   The analyser is best-effort and MUST NEVER break playback. TTS is served
- *   cross-origin from the Ástríðr backend; analysing a media element requires
- *   `crossOrigin="anonymous"` + a matching CORS header on the audio response.
- *   If that isn't available (or the AudioContext can't run), we transparently
- *   fall back to plain, un-analysed playback — identical to the pre-avatar
- *   behavior. The aura synthesises a gentle pulse when real data is absent, so
- *   "speaking" still looks alive either way.
+ * ─── Analyser is OPT-IN (avatar work, 2026-07-08) ──────────────────────────
+ * Only the voice avatar needs to tap TTS amplitude, so the Web-Audio analyser
+ * path is gated behind `options.analyser`. When it is NOT requested (the
+ * default — Chat.tsx and every other caller), playback is the original
+ * dead-simple `new Audio(url).play()`: NO AudioContext, NO crossOrigin, NO
+ * MediaElementSource.
+ *
+ * This matters because routing the SHARED path through a second AudioContext +
+ * `crossOrigin="anonymous"` regressed /chat: it contended with the wake-word
+ * AudioContext (voice activation stalled) and, when the cross-origin TTS lacked
+ * CORS headers, forced a failed-load-then-retry double fetch (laggy replies).
+ * Keeping the analyser opt-in restores the known-good behavior everywhere the
+ * avatar isn't mounted.
+ *
+ * Even in analyser mode, the analyser is best-effort and never breaks playback:
+ * if the AudioContext can't run or the cross-origin media isn't analysable, it
+ * transparently falls back to the same plain playback.
  */
 
 import { useState, useRef, useCallback, useEffect } from "react";
@@ -26,7 +33,16 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 const ASTRIDR_API_URL = import.meta.env.VITE_ASTRIDR_API_URL ?? "http://localhost:8181";
 
-// ─── Return type ──────────────────────────────────────────────────────────────
+// ─── Options / return type ────────────────────────────────────────────────────
+
+export interface UseTtsPlaybackOptions {
+  /**
+   * When true, route playback through a Web Audio AnalyserNode so `analyser`
+   * exposes live amplitude (used by the voice avatar). Defaults to false, which
+   * keeps the original plain-<audio> behavior with zero Web Audio overhead.
+   */
+  analyser?: boolean;
+}
 
 export interface UseTtsPlaybackReturn {
   /** Play audio at the given URL (relative or absolute). Normalizes relative paths internally. */
@@ -36,24 +52,25 @@ export interface UseTtsPlaybackReturn {
   /** True while the <audio> element is playing; false after onended or stop(). */
   isPlaying: boolean;
   /**
-   * AnalyserNode tapping the currently-playing TTS audio, or null when Web Audio
-   * analysis is unavailable (playback still works). Frequency/time data drives
-   * the avatar aura while Ástríðr speaks.
+   * AnalyserNode tapping the currently-playing TTS audio, or null when analysis
+   * isn't enabled/available (playback still works). Only non-null when the hook
+   * was created with `{ analyser: true }` and Web Audio analysis succeeded.
    */
   analyser: AnalyserNode | null;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useTtsPlayback(): UseTtsPlaybackReturn {
+export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackReturn {
+  const analyserEnabled = options?.analyser ?? false;
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Web Audio graph (lazy). One AudioContext + one AnalyserNode reused across
-  // plays; a fresh MediaElementSourceNode is created per <audio> element
-  // (createMediaElementSource may only be called once per element).
+  // Web Audio graph (lazy, analyser mode only). One AudioContext + AnalyserNode
+  // reused across plays; a fresh MediaElementSourceNode per <audio> element.
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
@@ -71,8 +88,6 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
       audioRef.current.pause();
       audioRef.current = null;
     }
-    // Disconnect the per-element source so the element can be GC'd. The shared
-    // analyser stays connected to destination for the next play.
     if (sourceRef.current) {
       try {
         sourceRef.current.disconnect();
@@ -102,10 +117,9 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
     setIsPlaying(false);
   }, [teardownAudioEl]);
 
-  /** Plain, guaranteed-working playback path (pre-avatar behavior, no analysis). */
+  /** Plain, guaranteed-working playback path — the original pre-avatar behavior. */
   const playPlain = useCallback(
     (fullUrl: string, token: number) => {
-      // Superseded by a newer play()/stop()? Abort.
       if (token !== playTokenRef.current) return;
       teardownAudioEl();
 
@@ -126,10 +140,9 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
     [teardownAudioEl],
   );
 
-  /** Analysed playback path — routes the element through an AnalyserNode. */
+  /** Analysed playback path — routes the element through an AnalyserNode (opt-in). */
   const playAnalysed = useCallback(
     async (fullUrl: string, token: number) => {
-      // Lazily build the AudioContext + shared analyser.
       let ctx = audioCtxRef.current;
       if (!ctx) {
         const Ctor =
@@ -146,8 +159,6 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
         analyserRef.current = node;
       }
 
-      // A suspended context outputs silence through the graph → would be a
-      // regression. Only take the analysed path if we can get it running.
       if (ctx.state !== "running") {
         await ctx.resume();
       }
@@ -157,8 +168,6 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
       teardownAudioEl();
 
       const audio = new Audio();
-      // Opt into CORS so the media is analysable (not tainted). If the server
-      // doesn't send matching CORS headers, the load errors → onerror fallback.
       audio.crossOrigin = "anonymous";
       audioRef.current = audio;
 
@@ -169,7 +178,6 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
       setAnalyser(analyserRef.current);
       setIsPlaying(true);
 
-      // If the analysed load fails (typically CORS), fall back to plain audio.
       audio.onerror = () => {
         if (token !== playTokenRef.current) return;
         console.warn("TTS analysed load failed; falling back to plain playback");
@@ -197,14 +205,19 @@ export function useTtsPlayback(): UseTtsPlaybackReturn {
     (url: string) => {
       const token = ++playTokenRef.current;
       const fullUrl = normalizeUrl(url);
-      // Try the analysed path; any failure transparently degrades to plain.
+      if (!analyserEnabled) {
+        // Default: original plain playback, no Web Audio at all.
+        playPlain(fullUrl, token);
+        return;
+      }
+      // Opt-in: try the analysed path; any failure degrades to plain.
       void playAnalysed(fullUrl, token).catch((err) => {
         if (token !== playTokenRef.current) return;
         console.warn("TTS analyser unavailable; plain playback:", err);
         playPlain(fullUrl, token);
       });
     },
-    [playAnalysed, playPlain],
+    [analyserEnabled, playAnalysed, playPlain],
   );
 
   return { play, stop, isPlaying, analyser };
