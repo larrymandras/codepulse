@@ -43,10 +43,26 @@ const END_PHRASES = ["stop", "goodbye", "thanks", "that's all"];
 
 /**
  * Returns true if the transcript is an end-phrase that should exit voice mode.
- * Case-insensitive, trims leading/trailing whitespace.
+ *
+ * Speech-to-text returns punctuated, capitalized transcripts ("Stop.",
+ * "Goodbye,") and often prefixes filler ("okay goodbye"), so an exact match
+ * against END_PHRASES never fires. Normalize (lowercase, strip punctuation) and
+ * match if the whole utterance is an end-phrase OR ends with one — so a plain
+ * "stop" / "goodbye" reliably exits without over-matching a real command.
  */
 export function isEndPhrase(text: string): boolean {
-  return END_PHRASES.includes(text.toLowerCase().trim());
+  const norm = text
+    .toLowerCase()
+    .replace(/[^\w\s']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!norm) return false;
+  if (END_PHRASES.includes(norm)) return true;
+  const words = norm.split(" ");
+  return (
+    END_PHRASES.includes(words[words.length - 1]) ||
+    END_PHRASES.includes(words.slice(-2).join(" "))
+  );
 }
 
 // ─── State machine ────────────────────────────────────────────────────────────
