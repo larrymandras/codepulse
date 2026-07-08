@@ -21,6 +21,7 @@ import { X, Volume2, Loader2, AlertCircle } from "lucide-react";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTtsPlayback } from "@/hooks/useTtsPlayback";
+import { AvatarAura } from "./AvatarAura";
 import { voiceReducer, isEndPhrase, type VoiceState } from "./voiceState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -307,7 +308,7 @@ export function VoiceModePanel({
 
   // ─── TTS playback ───────────────────────────────────────────────────────────
 
-  const { play: ttsPlay, isPlaying } = useTtsPlayback();
+  const { play: ttsPlay, isPlaying, analyser: ttsAnalyser } = useTtsPlayback();
 
   // ─── Feedback guard (T-92-10 mitigation) ───────────────────────────────────
   // When TTS starts playing: pause STT (recognition.stop)
@@ -425,6 +426,13 @@ export function VoiceModePanel({
           <X className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Audio-reactive avatar (the cyber-Norse Ástríðr) */}
+      {voiceState !== "error-disabled" && (
+        <div className="flex justify-center pt-5 pb-1">
+          <AvatarAura state={voiceState} ttsAnalyser={ttsAnalyser} />
+        </div>
+      )}
 
       {/* Transcript area */}
       <VoiceTranscriptArea
