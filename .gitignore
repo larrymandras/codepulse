@@ -25,3 +25,4 @@ open-design/
 
 # Raw security-audit output (curated results live in .planning/phases/*/95-SECURITY-AUDIT.md)
 .audits/
+.vercel
