@@ -129,7 +129,10 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     const container = containerRef.current;
     if (!canvas || !container) return;
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // The aura is a soft, low-frequency glow — it does not need retina
+      // backing. Cap DPR at 1.25 to keep the per-frame fill/stroke area small
+      // (the canvas is redrawn every frame). Higher DPR was a real cost.
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.25);
       const { width, height } = container.getBoundingClientRect();
       canvas.width = Math.max(1, Math.round(width * dpr));
       canvas.height = Math.max(1, Math.round(height * dpr));
@@ -147,6 +150,13 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
   }, []);
 
   // ─── Draw loop ────────────────────────────────────────────────────────────
+  // Performance-critical: this runs continuously while the panel is open on a
+  // busy /chat page. It must stay cheap. Deliberately:
+  //   - NO ctx.shadowBlur (the single most expensive 2D op) — glow comes from
+  //     additive 'lighter' compositing + a radial bloom gradient instead.
+  //   - throttled to ~30fps (plenty for a soft breathing glow),
+  //   - paused when the tab is hidden,
+  //   - fps-independent timing so animation speed is constant regardless.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -155,13 +165,13 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
 
     const reduced = prefersReducedMotion();
     const ttsBuf = new Uint8Array(new ArrayBuffer(128));
+    const FRAME_MS = 1000 / 30;
 
     let raf = 0;
     let smoothed = 0; // eased amplitude 0..1
-    let t = 0; // time accumulator (frames)
+    let lastDraw = -Infinity;
 
-    const draw = () => {
-      t += 1;
+    const render = (t: number) => {
       const w = canvas.width;
       const h = canvas.height;
       const s = stateRef.current;
@@ -171,74 +181,66 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       let target = 0;
       let herTint = 0; // 0 = cyan (me), 1 = emerald (her)
       if (s === "listening" || s === "transcribing") {
-        // Synthetic listening pulse — no mic capture (see note above). A gentle
-        // breathing glow that reads as "receptive / hearing you".
         target = 0.28 + 0.16 * Math.sin(t * 0.06) + 0.06 * Math.sin(t * 0.17);
       } else if (s === "speaking") {
         herTint = 1;
         const a = ttsAnalyserRef.current;
         const lvl = a ? analyserLevel(a, ttsBuf) : -1;
-        // If no real data (CORS-tainted / no analyser), synthesize a lively pulse.
         target =
           lvl > 0.01
             ? Math.min(1, lvl * 5)
             : 0.35 + 0.25 * Math.abs(Math.sin(t * 0.12));
       } else if (s === "processing") {
-        // Thinking: slow contemplative breathing.
         target = 0.22 + 0.1 * Math.sin(t * 0.04);
       } else {
         target = 0.08; // idle / error — faint presence
       }
 
-      // Ease toward target (fast attack, slower release feels responsive).
-      const k = target > smoothed ? 0.4 : 0.12;
+      const k = target > smoothed ? 0.45 : 0.14;
       smoothed = reduced ? 0.25 : lerp(smoothed, target, k);
       const level = smoothed;
 
       const [r, g, b] = mix([cr, cg, cb], EMERALD, herTint * 0.55);
 
-      // ── Render ──
       ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
 
       const cx = w / 2;
       const cy = h * 0.46;
       const base = Math.min(w, h) * 0.28;
+      const px = canvas.width / 400;
 
-      // Soft central bloom.
-      const bloomR = base * (1.6 + level * 1.1);
+      // Soft central bloom (carries most of the glow now that shadowBlur is gone).
+      const bloomR = base * (1.7 + level * 1.2);
       const bloom = ctx.createRadialGradient(cx, cy, 0, cx, cy, bloomR);
-      bloom.addColorStop(0, `rgba(${r},${g},${b},${0.18 + level * 0.35})`);
-      bloom.addColorStop(0.5, `rgba(${r},${g},${b},${0.06 + level * 0.12})`);
+      bloom.addColorStop(0, `rgba(${r},${g},${b},${0.22 + level * 0.4})`);
+      bloom.addColorStop(0.45, `rgba(${r},${g},${b},${0.08 + level * 0.16})`);
       bloom.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = bloom;
       ctx.beginPath();
       ctx.arc(cx, cy, bloomR, 0, Math.PI * 2);
       ctx.fill();
 
-      // Concentric reactive rings.
-      const rings = 4;
+      // Concentric additive rings — plain strokes, no shadow.
+      const rings = 3;
       for (let i = 0; i < rings; i++) {
         const p = i / rings;
-        const radius = base * (0.85 + p * 1.4) + level * base * (0.5 + p);
-        const alpha = (0.5 - p * 0.34) * (0.35 + level * 0.9);
+        const radius = base * (0.9 + p * 1.3) + level * base * (0.5 + p);
+        const alpha = (0.55 - p * 0.32) * (0.4 + level * 0.9);
         ctx.beginPath();
         ctx.strokeStyle = `rgba(${r},${g},${b},${Math.max(0, alpha)})`;
-        ctx.lineWidth = Math.max(1, (2.4 - p * 1.4) * (canvas.width / 400));
-        ctx.shadowColor = `rgba(${r},${g},${b},0.9)`;
-        ctx.shadowBlur = (10 + level * 26) * (canvas.width / 400);
+        ctx.lineWidth = Math.max(1, (2.6 - p * 1.4) * px);
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.stroke();
       }
-      ctx.shadowBlur = 0;
 
-      // Rotating scan arc — most visible while thinking, subtle otherwise.
-      const scanAlpha = s === "processing" ? 0.55 : 0.2 + level * 0.3;
+      // Rotating scan arc — most visible while thinking.
+      const scanAlpha = s === "processing" ? 0.6 : 0.22 + level * 0.3;
       const scanR = base * 1.7;
       const rot = t * (s === "processing" ? 0.03 : 0.012);
-      ctx.beginPath();
       ctx.strokeStyle = `rgba(${r},${g},${b},${scanAlpha})`;
-      ctx.lineWidth = 2 * (canvas.width / 400);
+      ctx.lineWidth = 2 * px;
+      ctx.beginPath();
       ctx.arc(cx, cy, scanR, rot, rot + Math.PI * 0.5);
       ctx.stroke();
       ctx.beginPath();
@@ -246,11 +248,25 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       ctx.stroke();
 
       ctx.globalCompositeOperation = "source-over";
-
-      if (!reduced) raf = requestAnimationFrame(draw);
     };
 
-    draw();
+    // Reduced motion → one static frame, no loop at all.
+    if (reduced) {
+      render(0);
+      return;
+    }
+
+    const loop = (now: number) => {
+      raf = requestAnimationFrame(loop);
+      if (now - lastDraw < FRAME_MS) return; // throttle to ~30fps
+      lastDraw = now;
+      if (typeof document !== "undefined" && document.hidden) return; // pause when hidden
+      // fps-independent phase: express `now` as 60fps-equivalent frame count so
+      // the sine multipliers keep their original visual speed.
+      render(now / 16.67);
+    };
+    raf = requestAnimationFrame(loop);
+
     return () => {
       if (raf) cancelAnimationFrame(raf);
     };
