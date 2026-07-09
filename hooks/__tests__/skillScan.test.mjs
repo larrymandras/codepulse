@@ -67,9 +67,16 @@ describe("collectClaudeCodeSkills", () => {
     mkdirSync(join(home, ".claude", "skills", "deep-research"), { recursive: true });
     writeFileSync(join(home, ".claude", "skills", "deep-research", "SKILL.md"),
       "---\nname: deep-research\ndescription: Research\n---\n");
-    mkdirSync(join(home, ".claude", "plugins", "cache", "p", "1.0.0", "skills", "brainstorm"), { recursive: true });
-    writeFileSync(join(home, ".claude", "plugins", "cache", "p", "1.0.0", "skills", "brainstorm", "SKILL.md"),
-      "---\nname: brainstorm\ndescription: Ideas\n---\n");
+    // Two cached versions of the same plugin; only 1.1.0 is installed.
+    for (const [ver, desc] of [["1.0.0", "Ideas OLD"], ["1.1.0", "Ideas NEW"]]) {
+      mkdirSync(join(home, ".claude", "plugins", "cache", "p", ver, "skills", "brainstorm"), { recursive: true });
+      writeFileSync(join(home, ".claude", "plugins", "cache", "p", ver, "skills", "brainstorm", "SKILL.md"),
+        `---\nname: brainstorm\ndescription: ${desc}\n---\n`);
+    }
+    writeFileSync(join(home, ".claude", "plugins", "installed_plugins.json"), JSON.stringify({
+      version: 2,
+      plugins: { "p@official": [{ installPath: join(home, ".claude", "plugins", "cache", "p", "1.1.0") }] },
+    }));
     mkdirSync(join(home, ".claude", "skills-available", "sales-icp"), { recursive: true });
     writeFileSync(join(home, ".claude", "skills-available", "sales-icp", "SKILL.md"),
       "---\nname: sales-icp\ndescription: Build an ICP\nupstream: unknown\n---\n");
@@ -105,6 +112,27 @@ describe("collectClaudeCodeSkills", () => {
   it("does not treat a loose file in skills-available as a skill", () => {
     const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
     expect(skills.some((s) => s.name === "CATALOG.md")).toBe(false);
+  });
+
+  it("keeps one row per (name, origin), preferring the personal skills dir over a plugin", () => {
+    // The plugin cache also ships a `deep-research`; the personal dir must win.
+    const pluginSkill = join(home, ".claude", "plugins", "cache", "p", "1.1.0", "skills", "deep-research");
+    mkdirSync(pluginSkill, { recursive: true });
+    writeFileSync(join(pluginSkill, "SKILL.md"), "---\nname: deep-research\ndescription: FROM PLUGIN\n---\n");
+
+    const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
+    const rows = skills.filter((s) => s.name === "deep-research" && s.origin === "claude-code");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].description).toBe("Research"); // the personal dir's copy
+    rmSync(pluginSkill, { recursive: true, force: true });
+  });
+
+  it("emits only the INSTALLED version of a plugin skill, not every cached version", () => {
+    const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
+    const brainstorm = skills.filter((s) => s.name === "brainstorm");
+    expect(brainstorm).toHaveLength(1);
+    expect(brainstorm[0].description).toBe("Ideas NEW");
+    expect(brainstorm[0].source).toContain("1.1.0");
   });
 
   it("does not re-emit global skills as project skills when cwd is the home dir", () => {

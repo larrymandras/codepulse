@@ -71,6 +71,40 @@ function readSkillDir(skillsDir, origin, acc) {
   }
 }
 
+/**
+ * Skills from the *installed* version of each plugin.
+ *
+ * The cache keeps every version ever fetched (superpowers 6.0.3/6.1.0/6.1.1;
+ * frontend-design at eight commit SHAs). Walking the cache emits one row per cached
+ * version, and since upsert is keyed on (name, origin) the winner is whichever the
+ * walk happened to reach last. installed_plugins.json records the exact installPath.
+ * Returns false when the manifest is unusable, so the caller can fall back.
+ */
+function readInstalledPluginSkills(home, origin, acc) {
+  const manifest = join(home, ".claude", "plugins", "installed_plugins.json");
+  if (!existsSync(manifest)) return false;
+  let data;
+  try {
+    data = JSON.parse(readFileSync(manifest, "utf8"));
+  } catch {
+    return false;
+  }
+  const plugins = data?.plugins;
+  if (!plugins || typeof plugins !== "object") return false;
+
+  let found = 0;
+  for (const entries of Object.values(plugins)) {
+    for (const e of Array.isArray(entries) ? entries : [entries]) {
+      if (!e?.installPath) continue;
+      const skillsDir = join(e.installPath, "skills");
+      if (!existsSync(skillsDir)) continue;
+      readSkillDir(skillsDir, origin, acc);
+      found++;
+    }
+  }
+  return found > 0;
+}
+
 function walkPluginCache(dir, origin, acc, depth = 0) {
   if (depth > 8 || !existsSync(dir)) return;
   let entries;
@@ -98,7 +132,10 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
   const acc = [];
   const globalDir = join(home, ".claude", "skills");
   readSkillDir(globalDir, "claude-code", acc);
-  walkPluginCache(join(home, ".claude", "plugins", "cache"), "claude-code", acc);
+  // Prefer the installed version of each plugin; fall back to walking the whole cache.
+  if (!readInstalledPluginSkills(home, "claude-code", acc)) {
+    walkPluginCache(join(home, ".claude", "plugins", "cache"), "claude-code", acc);
+  }
   // Cold storage: present on disk but NOT loaded by Claude Code. Distinct origin so
   // per-origin pruning keeps it isolated from the active-skill rows.
   readSkillDir(join(home, ".claude", "skills-available"), "claude-code:available", acc);
@@ -111,5 +148,16 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
   if (!samePath(projectDir, globalDir, platform)) {
     readSkillDir(projectDir, `claude-code:project:${repoKey(root, platform)}`, acc);
   }
-  return acc;
+
+  // A name can appear twice within one origin (e.g. ~/.claude/skills/vercel-sandbox and
+  // a plugin that also ships vercel-sandbox). The server upserts by (name, origin), so
+  // the survivor would otherwise depend on walk order. Keep the first — the personal
+  // skills dir is read before plugins, so a hand-installed skill beats a plugin's copy.
+  const seen = new Set();
+  return acc.filter((s) => {
+    const key = `${s.origin}::${s.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
