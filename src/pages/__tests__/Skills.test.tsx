@@ -152,8 +152,10 @@ const MOCK_WITH_UNCATEGORIZED = [
 ];
 
 function setupMocks(
-  skills = MOCK_ENRICHED_SKILLS,
-  categories = MOCK_CATEGORIES,
+  // widened: MOCK_WITH_UNCATEGORIZED has `categoryName: string | null`, which the
+  // narrower inferred type of MOCK_ENRICHED_SKILLS rejects.
+  skills: readonly Record<string, unknown>[] = MOCK_ENRICHED_SKILLS,
+  categories: readonly Record<string, unknown>[] = MOCK_CATEGORIES,
   autoAssigned = 0,
 ) {
   (mockUseQuery as any).mockImplementation((ref: any) => {
@@ -229,10 +231,15 @@ describe("Skills page", () => {
     expect(screen.getByText("Set Up Manually")).toBeInTheDocument();
   });
 
-  it("shows new skills banner when auto-assigned count > 0", () => {
-    setupMocks(MOCK_ENRICHED_SKILLS, MOCK_CATEGORIES, 3);
+  it("banner counts the skills REVIEW will actually show, not the countAutoAssigned query", () => {
+    // Changed 2026-07-09. The banner used to read `api.skillCategories.countAutoAssigned`,
+    // which counts overrides *including hidden ones*, so it could advertise a number the
+    // review drawer would never display. It now derives from the same list the drawer
+    // renders. MOCK_WITH_UNCATEGORIZED adds exactly one isAutoAssigned && !hidden skill;
+    // the stale `3` below is now ignored on purpose.
+    setupMocks(MOCK_WITH_UNCATEGORIZED, MOCK_CATEGORIES, 3);
     render(<Skills />);
-    expect(screen.getByText(/3 new skills auto-categorized/)).toBeInTheDocument();
+    expect(screen.getByText(/1 new skill auto-categorized/i)).toBeInTheDocument();
   });
 
   it("shows frequently used skills", () => {

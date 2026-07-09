@@ -135,6 +135,8 @@ export const syncInventory = mutation({
             source: skill.source,
             discoveredAt: now,
             origin,
+            upstream: skill.upstream,
+            command: skill.command,
           });
           await ctx.runMutation(api.skillCategories.autoSeedSkill, {
             skillName: skill.name,
@@ -151,6 +153,8 @@ export const syncInventory = mutation({
             description: skill.description ?? existing.description,
             source: skill.source ?? existing.source,
             origin,
+            upstream: skill.upstream ?? existing.upstream,
+            command: skill.command ?? existing.command,
           });
         }
       }

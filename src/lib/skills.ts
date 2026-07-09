@@ -1,0 +1,120 @@
+// Pure display helpers for the Skills page. Unit-tested — no React, no Convex.
+
+export const DORMANT_ORIGIN = "claude-code:available";
+const PROJECT_PREFIX = "claude-code:project:";
+
+export type SkillLike = {
+  name: string;
+  displayName?: string;
+  origins?: string[];
+  source?: string;
+  command?: string;
+  upstream?: string;
+  useCount?: number;
+  lastUsedAt?: number;
+  hidden?: boolean;
+};
+
+/** True when the skill exists on disk but Claude Code does not load it. */
+export function isDormant(skill: SkillLike): boolean {
+  const origins = skill.origins ?? [];
+  return origins.length > 0 && origins.every((o) => o === DORMANT_ORIGIN);
+}
+
+/** Skills present both dormant and active — activating the dormant copy would shadow. */
+export function isShadowing(skill: SkillLike): boolean {
+  const origins = skill.origins ?? [];
+  return origins.includes(DORMANT_ORIGIN) && origins.some((o) => o !== DORMANT_ORIGIN);
+}
+
+/**
+ * Recover the repo directory name from a project skill's SKILL.md path, so five
+ * `claude-code:project:<hash>` origins don't all render as an identical "Project".
+ * Returns null when the path doesn't look like `<repo>/.claude/skills/<name>/SKILL.md`.
+ */
+export function projectNameFromSource(source?: string): string | null {
+  if (!source) return null;
+  const norm = source.replace(/\\/g, "/");
+  const idx = norm.toLowerCase().lastIndexOf("/.claude/");
+  if (idx <= 0) return null;
+  const repoRoot = norm.slice(0, idx);
+  const seg = repoRoot.split("/").filter(Boolean).pop();
+  return seg || null;
+}
+
+/** Human label for one origin string. */
+export function originLabel(origin: string, projectName?: string | null): string {
+  if (origin === DORMANT_ORIGIN) return "Dormant (cold storage)";
+  if (origin === "claude-code") return "Claude Code";
+  if (origin.startsWith(PROJECT_PREFIX)) {
+    return projectName ? `Project · ${projectName}` : `Project · ${origin.slice(PROJECT_PREFIX.length, PROJECT_PREFIX.length + 7)}`;
+  }
+  return origin;
+}
+
+/**
+ * Build the origin <select> options: one entry per distinct origin, each with a
+ * label that actually distinguishes it. Sorted, stable, no duplicate labels.
+ */
+export function originOptions(skills: SkillLike[]): Array<{ value: string; label: string }> {
+  const projectNameByOrigin = new Map<string, string>();
+  for (const s of skills) {
+    for (const o of s.origins ?? []) {
+      if (!o.startsWith(PROJECT_PREFIX) || projectNameByOrigin.has(o)) continue;
+      const n = projectNameFromSource(s.source);
+      if (n) projectNameByOrigin.set(o, n);
+    }
+  }
+
+  const seen = new Set<string>();
+  for (const s of skills) for (const o of s.origins ?? []) seen.add(o);
+
+  const opts = [...seen].map((value) => ({
+    value,
+    label: originLabel(value, projectNameByOrigin.get(value)),
+  }));
+
+  // Disambiguate any labels that still collide (two repos with the same folder name).
+  const counts = new Map<string, number>();
+  for (const o of opts) counts.set(o.label, (counts.get(o.label) ?? 0) + 1);
+  for (const o of opts) {
+    if ((counts.get(o.label) ?? 0) > 1 && o.value.startsWith(PROJECT_PREFIX)) {
+      o.label = `${o.label} (${o.value.slice(PROJECT_PREFIX.length, PROJECT_PREFIX.length + 7)})`;
+    }
+  }
+
+  return opts.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * What to put on the clipboard for a skill. Suite skills declare an explicit
+ * `command:` (e.g. `/legal nda <file>`); everything else invokes as `/<name>`.
+ * Any argument placeholder is stripped — you want the command, not the docs.
+ */
+export function skillInvocation(skill: SkillLike): string {
+  const cmd = skill.command?.trim();
+  if (cmd) return cmd.replace(/\s*<[^>]*>/g, "").trim();
+  return `/${skill.name}`;
+}
+
+/** Can this skill be checked for updates? Only if it records a real upstream. */
+export function hasKnownUpstream(skill: SkillLike): boolean {
+  const u = skill.upstream?.trim();
+  return Boolean(u) && u !== "unknown";
+}
+
+/**
+ * The pill row: most-used skills first. Dormant skills are excluded — they are not
+ * loaded, so copying their invocation would hand the user a command that does nothing.
+ * Falls back to favorites/recent only via the caller; here we just rank by real usage.
+ */
+export function topSkills(skills: SkillLike[], limit = 8): SkillLike[] {
+  return skills
+    .filter((s) => !s.hidden && !isDormant(s) && (s.useCount ?? 0) > 0)
+    .sort((a, b) => {
+      const d = (b.useCount ?? 0) - (a.useCount ?? 0);
+      if (d !== 0) return d;
+      return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
+    })
+    .slice(0, limit);
+}

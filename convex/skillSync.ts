@@ -44,6 +44,8 @@ export type GroupedSkill = {
   discoveredAt: number;
   useCount: number;
   lastUsedAt?: number;
+  upstream?: string;
+  command?: string;
 };
 
 /** Collapse (name, origin) rows into one entry per name for display. */
@@ -56,6 +58,8 @@ export function groupSkillRowsByName(
     discoveredAt: number;
     useCount?: number;
     lastUsedAt?: number;
+    upstream?: string;
+    command?: string;
   }>
 ): GroupedSkill[] {
   const byName = new Map<string, GroupedSkill>();
@@ -69,6 +73,13 @@ export function groupSkillRowsByName(
     if (!g.origins.includes(o)) g.origins.push(o);
     if (!g.description && r.description) g.description = r.description;
     if (!g.source && r.source) g.source = r.source;
+    // A known upstream beats "unknown": prefer the row that actually records one.
+    if (r.upstream && r.upstream !== "unknown" && (!g.upstream || g.upstream === "unknown")) {
+      g.upstream = r.upstream;
+    } else if (!g.upstream && r.upstream) {
+      g.upstream = r.upstream;
+    }
+    if (!g.command && r.command) g.command = r.command;
     g.discoveredAt = Math.min(g.discoveredAt, r.discoveredAt);
     g.useCount += r.useCount ?? 0;
     if (r.lastUsedAt != null && (g.lastUsedAt == null || r.lastUsedAt > g.lastUsedAt)) {

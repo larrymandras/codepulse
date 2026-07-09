@@ -196,8 +196,12 @@ export default defineSchema({
     source: v.optional(v.string()),
     lastUsedAt: v.optional(v.float64()),
     discoveredAt: v.float64(),
-    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog"
+    origin: v.optional(v.string()), // "native" | "bridge" | "cc" | "catalog" | "claude-code[:available|:project:<key>]"
     useCount: v.optional(v.float64()),
+    // From SKILL.md frontmatter. `upstream` is "unknown" for hand-copied skills,
+    // which is exactly the set that cannot be checked for updates.
+    upstream: v.optional(v.string()),
+    command: v.optional(v.string()), // explicit invocation, e.g. "/legal nda"
   })
     .index("by_name", ["name"])
     .index("by_name_origin", ["name", "origin"]),

@@ -8,8 +8,11 @@ import { UncategorizedSkills } from "@/components/skills/UncategorizedSkills";
 import { FavoriteSkills } from "@/components/skills/FavoriteSkills";
 import { FrequentSkills } from "@/components/skills/FrequentSkills";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
+import { SkillPills } from "@/components/skills/SkillPills";
+import { SkillReviewDrawer } from "@/components/skills/SkillReviewDrawer";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
 import { CategoryEditPopover } from "@/components/skills/CategoryEditPopover";
+import { originOptions } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 export default function Skills() {
@@ -21,10 +24,10 @@ export default function Skills() {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [originFilter, setOriginFilter] = useState<string>("all");
+  const [reviewing, setReviewing] = useState(false);
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
-  const autoAssignedCount = useQuery(api.skillCategories.countAutoAssigned) ?? 0;
 
   const recordLaunch = useMutation(api.registry.recordSkillLaunch);
   const updateOverride = useMutation(api.skillCategories.updateSkillOverride);
@@ -35,11 +38,13 @@ export default function Skills() {
   const bulkAccept = useMutation(api.skillCategories.bulkAcceptAutoAssigned);
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
 
-  const allOrigins = useMemo(() => {
-    const set = new Set<string>();
-    for (const s of enrichedSkills) for (const o of (s.origins ?? [])) set.add(o);
-    return [...set].sort();
-  }, [enrichedSkills]);
+  // Distinct, distinguishable labels — five repos must not all render as "Project".
+  const originChoices = useMemo(() => originOptions(enrichedSkills), [enrichedSkills]);
+
+  const reviewSkills = useMemo(
+    () => enrichedSkills.filter((s) => s.isAutoAssigned && !s.hidden),
+    [enrichedSkills]
+  );
 
   const visibleSkills = useMemo(() => {
     return enrichedSkills.filter(
@@ -163,6 +168,8 @@ export default function Skills() {
         Skills Database
       </h1>
 
+      <SkillPills skills={enrichedSkills} onUse={(name) => recordLaunch({ name })} />
+
       {needsSeed && (
         <div className="bg-card border border-border rounded-lg p-6 text-center">
           <p className="text-muted-foreground mb-3">
@@ -205,9 +212,9 @@ export default function Skills() {
               aria-label="Filter by origin"
             >
               <option value="all">All origins</option>
-              {allOrigins.map((o) => (
-                <option key={o} value={o}>
-                  {o.startsWith("claude-code:project:") ? "Project" : o}
+              {originChoices.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
                 </option>
               ))}
             </select>
@@ -245,10 +252,12 @@ export default function Skills() {
 
           {/* Main Content Area */}
           <div className="flex-1 min-w-0 flex flex-col gap-6">
-            {autoAssignedCount > 0 && (
+            {reviewSkills.length > 0 && (
               <NewSkillsBanner
-                count={autoAssignedCount}
-                onReview={() => {}}
+                // Count what REVIEW will actually show, so the banner and the drawer
+                // never disagree. countAutoAssigned includes hidden skills; this doesn't.
+                count={reviewSkills.length}
+                onReview={() => setReviewing(true)}
                 onAcceptAll={() => bulkAccept()}
               />
             )}
@@ -298,6 +307,33 @@ export default function Skills() {
             )}
           </div>
         </div>
+      )}
+
+      {reviewing && (
+        <SkillReviewDrawer
+          skills={reviewSkills}
+          categories={categories.map((c) => ({
+            name: c.name,
+            displayName: c.displayName,
+            icon: c.icon,
+          }))}
+          onAccept={(skillName) => {
+            // updateSkillOverride always clears isAutoAssigned. Re-send the existing
+            // category so "accept" confirms the guess; an uncategorized skill still
+            // accepts (category stays null) rather than silently doing nothing.
+            const s = enrichedSkills.find((x) => x.name === skillName);
+            void updateOverride(
+              s?.categoryName ? { skillName, categoryName: s.categoryName } : { skillName }
+            );
+          }}
+          onMove={(skillName, categoryName) => void updateOverride({ skillName, categoryName })}
+          onHide={(skillName) => void updateOverride({ skillName, hidden: true })}
+          onAcceptAll={() => {
+            void bulkAccept();
+            setReviewing(false);
+          }}
+          onClose={() => setReviewing(false)}
+        />
       )}
 
       {/* ── Modals ── */}

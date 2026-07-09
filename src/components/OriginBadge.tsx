@@ -4,6 +4,7 @@ const BADGE_STYLES: Record<string, { bg: string; text: string; label: string }> 
   cc: { bg: "bg-amber-500/10", text: "text-amber-400", label: "CC" },
   catalog: { bg: "bg-gray-500/10", text: "text-gray-500", label: "Catalog" },
   "claude-code": { bg: "bg-purple-500/10", text: "text-purple-400", label: "Claude Code" },
+  "claude-code:available": { bg: "bg-slate-500/10", text: "text-slate-400", label: "Dormant" },
   unknown: { bg: "bg-gray-500/10", text: "text-gray-500", label: "Unknown" },
 };
 

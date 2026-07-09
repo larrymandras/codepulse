@@ -3,13 +3,33 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 
-export function parseFrontmatter(text) {
+const BLOCK_SCALAR = new Set([">", "|", ">-", "|-", ">+", "|+", ""]);
+
+export function parseFrontmatter(input) {
+  // Normalize CRLF first: JS `.` does not match \r, so an unnormalized CRLF file
+  // parses only its final frontmatter key. Every SKILL.md on Windows is CRLF.
+  const text = input.replace(/\r\n?/g, "\n").replace(/^﻿/, "");
   const m = text.match(/^---\s*([\s\S]*?)\s*---/);
   if (!m) return {};
   const out = {};
-  for (const line of m[1].split("\n")) {
-    const kv = line.match(/^(\w[\w-]*):\s*(.*)$/);
-    if (kv) out[kv[1]] = kv[2].replace(/^["']|["']$/g, "").trim();
+  const lines = m[1].split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const kv = lines[i].match(/^(\w[\w-]*):\s*(.*)$/);
+    if (!kv) continue;
+    const key = kv[1];
+    const raw = kv[2].trim();
+
+    // `desc: >` / `desc: |` / `desc:` all continue on the following indented lines.
+    if (BLOCK_SCALAR.has(raw)) {
+      const folded = [];
+      while (i + 1 < lines.length && (/^[ \t]/.test(lines[i + 1]) || !lines[i + 1].trim())) {
+        folded.push(lines[++i].trim());
+      }
+      out[key] = folded.filter(Boolean).join(" ");
+      continue;
+    }
+
+    out[key] = raw.replace(/\s+#.*$/, "").replace(/^["']|["']$/g, "").trim();
   }
   return out;
 }
@@ -40,7 +60,14 @@ function readSkillDir(skillsDir, origin, acc) {
     if (!existsSync(md)) continue;
     let fm = {};
     try { fm = parseFrontmatter(readFileSync(md, "utf8")); } catch {}
-    acc.push({ name: fm.name || name, description: fm.description || "", source: md, origin });
+    acc.push({
+      name: fm.name || name,
+      description: fm.description || "",
+      source: md,
+      origin,
+      upstream: fm.upstream || undefined,
+      command: fm.command || undefined,
+    });
   }
 }
 
@@ -63,6 +90,9 @@ export function collectClaudeCodeSkills({ home, cwd, platform = process.platform
   const acc = [];
   readSkillDir(join(home, ".claude", "skills"), "claude-code", acc);
   walkPluginCache(join(home, ".claude", "plugins", "cache"), "claude-code", acc);
+  // Cold storage: present on disk but NOT loaded by Claude Code. Distinct origin so
+  // per-origin pruning keeps it isolated from the active-skill rows.
+  readSkillDir(join(home, ".claude", "skills-available"), "claude-code:available", acc);
   const root = findRepoRoot(cwd);
   readSkillDir(join(root, ".claude", "skills"), `claude-code:project:${repoKey(root, platform)}`, acc);
   return acc;
