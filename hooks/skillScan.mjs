@@ -61,7 +61,10 @@ function readSkillDir(skillsDir, origin, acc) {
     let fm = {};
     try { fm = parseFrontmatter(readFileSync(md, "utf8")); } catch {}
     acc.push({
-      name: fm.name || name,
+      // Claude Code identifies a skill by its DIRECTORY, not by frontmatter `name:`.
+      // Trusting fm.name produced rows the user cannot invoke: "Shadcn UI & Blocks",
+      // "playwright-skill", "react:components".
+      name,
       description: fm.description || "",
       source: md,
       origin,

@@ -59,11 +59,16 @@ export function originLabel(origin: string, projectName?: string | null): string
 export function originOptions(skills: SkillLike[]): Array<{ value: string; label: string }> {
   const projectNameByOrigin = new Map<string, string>();
   for (const s of skills) {
-    for (const o of s.origins ?? []) {
-      if (!o.startsWith(PROJECT_PREFIX) || projectNameByOrigin.has(o)) continue;
-      const n = projectNameFromSource(s.source);
-      if (n) projectNameByOrigin.set(o, n);
-    }
+    const origins = s.origins ?? [];
+    // Skills are grouped by name, so `source` is whichever origin's row was seen first.
+    // Only trust it when this skill belongs to exactly one origin; otherwise a vault
+    // skill that also exists globally would name its project after the global path
+    // (that is how `Project · Mandras` rendered as `Project · mandr`).
+    if (origins.length !== 1) continue;
+    const o = origins[0];
+    if (!o.startsWith(PROJECT_PREFIX) || projectNameByOrigin.has(o)) continue;
+    const n = projectNameFromSource(s.source);
+    if (n) projectNameByOrigin.set(o, n);
   }
 
   const seen = new Set<string>();

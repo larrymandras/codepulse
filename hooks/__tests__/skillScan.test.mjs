@@ -114,6 +114,19 @@ describe("collectClaudeCodeSkills", () => {
     expect(skills.some((s) => s.name === "CATALOG.md")).toBe(false);
   });
 
+  it("names a skill by its directory, not by frontmatter `name:`", () => {
+    // Claude Code discovers skills by directory. A SKILL.md declaring `name: watch`
+    // inside skills/claude-video/ is still invoked as claude-video.
+    mkdirSync(join(home, ".claude", "skills", "claude-video"), { recursive: true });
+    writeFileSync(join(home, ".claude", "skills", "claude-video", "SKILL.md"),
+      "---\nname: watch\ndescription: Watch a video\n---\n");
+
+    const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
+    expect(skills.some((s) => s.name === "claude-video")).toBe(true);
+    expect(skills.some((s) => s.name === "watch")).toBe(false);
+    rmSync(join(home, ".claude", "skills", "claude-video"), { recursive: true, force: true });
+  });
+
   it("keeps one row per (name, origin), preferring the personal skills dir over a plugin", () => {
     // The plugin cache also ships a `deep-research`; the personal dir must win.
     const pluginSkill = join(home, ".claude", "plugins", "cache", "p", "1.1.0", "skills", "deep-research");

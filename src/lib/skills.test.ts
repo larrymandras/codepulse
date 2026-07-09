@@ -80,6 +80,26 @@ describe("originOptions", () => {
     expect(labels.every((l) => l.startsWith("Project · app"))).toBe(true);
   });
 
+  it("ignores the source of a multi-origin skill when naming a project", () => {
+    // `shared` lives in both the global dir and the vault repo; grouping keeps only one
+    // source. Naming the project from it would yield "mandr" instead of "Mandras".
+    const skills = [
+      { name: "shared", origins: ["claude-code", proj("v1")], source: "C:/Users/mandr/.claude/skills/shared/SKILL.md" },
+      { name: "vault-only", origins: [proj("v1")], source: "C:/Users/mandr/Mandras/.claude/skills/vault-only/SKILL.md" },
+    ];
+    const labels = originOptions(skills).map((o) => o.label);
+    expect(labels).toContain("Project · Mandras");
+    expect(labels).not.toContain("Project · mandr");
+  });
+
+  it("falls back to a hash stub when every skill in a project origin is multi-origin", () => {
+    const skills = [
+      { name: "shared", origins: ["claude-code", proj("abc1234def")], source: "C:/Users/mandr/.claude/skills/shared/SKILL.md" },
+    ];
+    const labels = originOptions(skills).map((o) => o.label);
+    expect(labels).toContain("Project · abc1234");
+  });
+
   it("dedupes one origin shared by many skills", () => {
     const skills = [
       { name: "a", origins: ["claude-code"] },

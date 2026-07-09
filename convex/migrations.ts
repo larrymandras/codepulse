@@ -1,7 +1,52 @@
-import { internalMutation, internalAction } from "./_generated/server";
+import { internalMutation, internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { v } from "convex/values";
 
 const BATCH_SIZE = 500;
+
+/**
+ * Inspect the `skills` table by origin. Read-only.
+ *
+ * Used to identify orphaned origins: `computeSkillPrunes` only prunes origins that
+ * are PRESENT in an incoming snapshot, so an origin the scanner stops emitting
+ * survives forever. That happened with `claude-code:project:<hash>` rows produced
+ * when a session's cwd was the home directory (see hooks/skillScan.mjs).
+ */
+export const listSkillOrigins = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("skills").collect();
+    const byOrigin = new Map<string, { count: number; sampleName: string; sampleSource?: string }>();
+    for (const r of rows) {
+      const o = r.origin ?? "unknown";
+      const cur = byOrigin.get(o);
+      if (cur) cur.count++;
+      else byOrigin.set(o, { count: 1, sampleName: r.name, sampleSource: r.source });
+    }
+    return {
+      total: rows.length,
+      origins: [...byOrigin.entries()]
+        .map(([origin, v]) => ({ origin, ...v }))
+        .sort((a, b) => b.count - a.count),
+    };
+  },
+});
+
+/**
+ * Delete every `skills` row for one origin. Dry-run unless `apply: true`.
+ * Deliberately NOT batched-with-continuation: the orphan origins are ~130 rows each.
+ */
+export const purgeSkillsByOrigin = internalMutation({
+  args: { origin: v.string(), apply: v.optional(v.boolean()) },
+  handler: async (ctx, { origin, apply }) => {
+    const rows = (await ctx.db.query("skills").collect()).filter((r) => (r.origin ?? "unknown") === origin);
+    if (!apply) {
+      return { origin, matched: rows.length, deleted: 0, dryRun: true, names: rows.slice(0, 5).map((r) => r.name) };
+    }
+    for (const r of rows) await ctx.db.delete(r._id);
+    return { origin, matched: rows.length, deleted: rows.length, dryRun: false };
+  },
+});
 
 /**
  * Purge events with sessionId="unknown" in batches.

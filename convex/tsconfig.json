@@ -11,6 +11,11 @@
     "jsx": "react-jsx",
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
+    /* Convex functions may use process.env and Buffer, and the *.test.ts files in this
+     * directory import node builtins. Without this, `npx convex deploy` fails its
+     * typecheck with 32 x TS2591 ("Cannot find name 'process'") and no deploy is
+     * possible. The root tsconfig.json already declares the same. */
+    "types": ["node"],
 
     /* These compiler options are required by Convex */
     "target": "ESNext",
