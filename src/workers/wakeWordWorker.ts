@@ -12,7 +12,7 @@
  * Mel normalization: apply (v / 10.0) + 2.0 via normalizeMelFrame after Stage 1
  * (RESEARCH Pitfall 1 — omitting this causes near-zero scores always).
  *
- * Threshold: score >= 0.5 AND cooldown >= 2000ms → post { type: 'wake', score }
+ * Threshold: score >= THRESHOLD (0.21) AND cooldown >= 2000ms → post { type: 'wake', score }
  *
  * No COOP/COEP required: ort.env.wasm.numThreads = 1 avoids SharedArrayBuffer.
  *
@@ -43,7 +43,12 @@ ort.env.wasm.numThreads = 1;
 ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/';
 
 // ---[ Detection constants ]---
-export const THRESHOLD = 0.5;
+// 0.21 is the model's auto-optimized threshold (livekit-wakeword trainer,
+// hey_astrid.onnx retrained 2026-07-09 on 20k samples): recall 90.7% at
+// ~0.12 false-positives/hour on 24h of validation audio. The prior 1k-sample
+// model needed 0.5 and still only hit ~47% recall. Raise toward 0.3–0.4 if
+// false triggers become annoying; lower toward 0.15 if it misses the phrase.
+export const THRESHOLD = 0.21;
 export const COOLDOWN_MS = 2000;
 
 // ---[ Fallback model name if hey_astrid.onnx is absent ]---
