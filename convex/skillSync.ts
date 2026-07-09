@@ -3,6 +3,17 @@
 export type SkillRow = { _id: string; name: string; origin?: string | null };
 export type IncomingSkill = { name: string; origin?: string | null };
 
+/**
+ * Larger of two optional numbers; undefined only when both are.
+ * Used to merge `useCount`/`lastUsedAt`, which have two independent writers
+ * (the host scanner's usage log, and recordSkillLaunch from dashboard clicks).
+ */
+export function maxDefined(a?: number, b?: number): number | undefined {
+  if (a === undefined) return b;
+  if (b === undefined) return a;
+  return a > b ? a : b;
+}
+
 /** Normalize a possibly-missing origin to a stable, non-empty string. */
 export function normalizeOrigin(origin?: string | null): string {
   const o = (origin ?? "").trim();

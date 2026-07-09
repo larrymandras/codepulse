@@ -3,7 +3,30 @@ import {
   normalizeOrigin,
   computeSkillPrunes,
   groupSkillRowsByName,
+  maxDefined,
 } from "../skillSync";
+
+describe("maxDefined", () => {
+  it("returns the larger value", () => {
+    expect(maxDefined(3, 7)).toBe(7);
+    expect(maxDefined(7, 3)).toBe(7);
+  });
+  it("returns the defined one when the other is missing", () => {
+    expect(maxDefined(undefined, 5)).toBe(5);
+    expect(maxDefined(5, undefined)).toBe(5);
+  });
+  it("is undefined only when both are", () => {
+    expect(maxDefined(undefined, undefined)).toBeUndefined();
+  });
+  it("never lets a scan erase dashboard launches", () => {
+    // scanner read 2 from the usage log; the UI has recorded 9 clicks
+    expect(maxDefined(2, 9)).toBe(9);
+  });
+  it("treats 0 as a real value, not as missing", () => {
+    expect(maxDefined(0, undefined)).toBe(0);
+    expect(maxDefined(undefined, 0)).toBe(0);
+  });
+});
 
 describe("normalizeOrigin", () => {
   it("passes through a non-empty origin", () => {

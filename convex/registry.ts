@@ -1,7 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { normalizeOrigin, computeSkillPrunes } from "./skillSync";
+import { normalizeOrigin, computeSkillPrunes, maxDefined } from "./skillSync";
 
 export const syncInventory = mutation({
   args: {
@@ -137,6 +137,8 @@ export const syncInventory = mutation({
             origin,
             upstream: skill.upstream,
             command: skill.command,
+            useCount: skill.useCount,
+            lastUsedAt: skill.lastUsedAt,
           });
           await ctx.runMutation(api.skillCategories.autoSeedSkill, {
             skillName: skill.name,
@@ -149,12 +151,18 @@ export const syncInventory = mutation({
             changedAt: now,
           });
         } else {
+          // useCount has two independent writers: this scanner (from the host
+          // skill-usage log) and recordSkillLaunch (clicks in the dashboard). Take the
+          // max so a scan can never erase launches, and a launch can never be erased
+          // by a scan that read a stale log.
           await ctx.db.patch(existing._id, {
             description: skill.description ?? existing.description,
             source: skill.source ?? existing.source,
             origin,
             upstream: skill.upstream ?? existing.upstream,
             command: skill.command ?? existing.command,
+            useCount: maxDefined(skill.useCount, existing.useCount),
+            lastUsedAt: maxDefined(skill.lastUsedAt, existing.lastUsedAt),
           });
         }
       }

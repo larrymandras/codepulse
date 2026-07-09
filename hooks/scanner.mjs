@@ -9,6 +9,7 @@ import { homedir, cpus, totalmem, freemem } from "os";
 import { execSync } from "child_process";
 import { fileURLToPath } from "url";
 import { collectClaudeCodeSkills } from "./skillScan.mjs";
+import { readSkillUsage, mergeUsage } from "./skillUsage.mjs";
 
 /**
  * Run a full environment scan and POST results to CodePulse /scan endpoint.
@@ -74,7 +75,11 @@ export async function runScan(sessionId, codepulseUrl, ingestKey) {
 
   // ── Claude Code skills (personal + plugin cache + per-repo project) ──
   try {
-    snapshot.skills.push(...collectClaudeCodeSkills({ home, cwd }));
+    const skills = collectClaudeCodeSkills({ home, cwd });
+    // Join real invocation counts from the host skill-usage log so the dashboard can
+    // rank by use. Without this every row sits at useCount 0 and "Most Used" is empty.
+    mergeUsage(skills, readSkillUsage(home));
+    snapshot.skills.push(...skills);
   } catch (err) {
     console.error(`[codepulse-scanner] skill scan failed: ${err.message}`);
   }
@@ -287,9 +292,12 @@ if (isDirectRun) {
   if (dryRun) {
     const { homedir } = await import("node:os");
     const { collectClaudeCodeSkills } = await import("./skillScan.mjs");
-    const skills = collectClaudeCodeSkills({ home: homedir(), cwd: process.cwd() });
+    const { readSkillUsage, mergeUsage } = await import("./skillUsage.mjs");
+    const home = homedir();
+    const skills = mergeUsage(collectClaudeCodeSkills({ home, cwd: process.cwd() }), readSkillUsage(home));
     console.log(JSON.stringify(skills, null, 2));
-    console.log(`[codepulse-scanner] DRY RUN — ${skills.length} skills would be posted.`);
+    const used = skills.filter((s) => s.useCount).length;
+    console.log(`[codepulse-scanner] DRY RUN — ${skills.length} skills would be posted (${used} with usage).`);
     process.exit(0);
   }
 
