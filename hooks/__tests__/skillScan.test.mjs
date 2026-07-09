@@ -107,6 +107,15 @@ describe("collectClaudeCodeSkills", () => {
     expect(skills.some((s) => s.name === "CATALOG.md")).toBe(false);
   });
 
+  it("does not re-emit global skills as project skills when cwd is the home dir", () => {
+    // findRepoRoot(home) returns home (no .git above it), so <root>/.claude/skills
+    // IS the global dir. Without the guard, every global skill appears twice.
+    const skills = collectClaudeCodeSkills({ home, cwd: home, platform: "linux" });
+    const project = skills.filter((s) => s.origin.startsWith("claude-code:project:"));
+    expect(project).toEqual([]);
+    expect(skills.filter((s) => s.name === "deep-research")).toHaveLength(1);
+  });
+
   it("keeps dormant skills separate from active ones sharing a name", () => {
     const skills = collectClaudeCodeSkills({ home, cwd, platform: "linux" });
     const origins = skills.filter((s) => s.origin === "claude-code:available");

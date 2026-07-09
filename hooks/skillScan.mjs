@@ -86,14 +86,30 @@ function walkPluginCache(dir, origin, acc, depth = 0) {
   }
 }
 
+const samePath = (a, b, platform) => {
+  const norm = (p) => {
+    const s = p.replace(/\\/g, "/").replace(/\/+$/, "");
+    return platform === "win32" ? s.toLowerCase() : s;
+  };
+  return norm(a) === norm(b);
+};
+
 export function collectClaudeCodeSkills({ home, cwd, platform = process.platform }) {
   const acc = [];
-  readSkillDir(join(home, ".claude", "skills"), "claude-code", acc);
+  const globalDir = join(home, ".claude", "skills");
+  readSkillDir(globalDir, "claude-code", acc);
   walkPluginCache(join(home, ".claude", "plugins", "cache"), "claude-code", acc);
   // Cold storage: present on disk but NOT loaded by Claude Code. Distinct origin so
   // per-origin pruning keeps it isolated from the active-skill rows.
   readSkillDir(join(home, ".claude", "skills-available"), "claude-code:available", acc);
+
   const root = findRepoRoot(cwd);
-  readSkillDir(join(root, ".claude", "skills"), `claude-code:project:${repoKey(root, platform)}`, acc);
+  const projectDir = join(root, ".claude", "skills");
+  // When the session's cwd is the home directory (no .git above it), findRepoRoot
+  // returns home, and <root>/.claude/skills IS the global skills dir. Scanning it
+  // again would emit every global skill a second time under a bogus project origin.
+  if (!samePath(projectDir, globalDir, platform)) {
+    readSkillDir(projectDir, `claude-code:project:${repoKey(root, platform)}`, acc);
+  }
   return acc;
 }
