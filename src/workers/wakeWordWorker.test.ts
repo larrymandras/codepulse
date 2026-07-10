@@ -212,9 +212,14 @@ describe('wakeWordWorker — processChunk (module import)', () => {
     expect(normalizeSpy).toBeDefined();
   });
 
-  it('THRESHOLD is 0.5 and COOLDOWN_MS is 2000', async () => {
+  // 6a3eaf7 retrained hey_astrid and moved THRESHOLD 0.5 -> 0.21 (the model's
+  // auto-optimized value: 90.7% recall @ ~0.12 FP/hr, vs 63.3% recall at 0.5).
+  // These tests previously hard-coded 0.5, and the "below threshold" case fed 0.3 —
+  // which is below the OLD threshold but above the new one, so it correctly triggered.
+  // Scores are now derived from the exported constant so a future retune can't rot them.
+  it('THRESHOLD is 0.21 (retrained model) and COOLDOWN_MS is 2000', async () => {
     const { THRESHOLD, COOLDOWN_MS } = await import('./wakeWordWorker');
-    expect(THRESHOLD).toBe(0.5);
+    expect(THRESHOLD).toBe(0.21);
     expect(COOLDOWN_MS).toBe(2000);
   });
 
@@ -235,8 +240,10 @@ describe('wakeWordWorker — processChunk (module import)', () => {
     //
     // Simpler approach: override mockClassifierRunFn to return high score
     // and send many frames; verify wake is posted.
+    const { THRESHOLD } = await import('./wakeWordWorker');
+    const aboveThreshold = (1 + THRESHOLD) / 2; // strictly above, whatever THRESHOLD is
     mockClassifierRunFn.mockImplementation(async () => ({
-      score: { data: makeClassifierOutput(0.9), dims: [1, 1] },
+      score: { data: makeClassifierOutput(aboveThreshold), dims: [1, 1] },
     }));
 
     // Send 50 frames to ensure all buffers fill
@@ -261,7 +268,11 @@ describe('wakeWordWorker — processChunk (module import)', () => {
       (call) => (call[0] as { type: string }).type === 'wake',
     );
     expect(wakeCalls.length).toBeGreaterThanOrEqual(1);
+    // Assert the wake carries the ABOVE-threshold score, not merely that some wake
+    // fired. Without this the test passes even when `score >= THRESHOLD` is inverted,
+    // because the worker's default low-score frames would trigger instead.
     expect(wakeCalls[0][0]).toMatchObject({ type: 'wake', score: expect.any(Number) });
+    expect((wakeCalls[0][0] as { score: number }).score).toBeCloseTo(aboveThreshold, 5);
   });
 
   it('score < THRESHOLD does NOT trigger wake', async () => {
@@ -270,9 +281,11 @@ describe('wakeWordWorker — processChunk (module import)', () => {
 
     await importAndInit();
 
-    // Classifier returns score below threshold
+    // Classifier returns a score strictly below the current threshold.
+    const { THRESHOLD } = await import('./wakeWordWorker');
+    const belowThreshold = THRESHOLD / 2;
     mockClassifierRunFn.mockImplementation(async () => ({
-      score: { data: makeClassifierOutput(0.3), dims: [1, 1] },
+      score: { data: makeClassifierOutput(belowThreshold), dims: [1, 1] },
     }));
 
     const msgHandler = (globalThis as unknown as { onmessage?: (e: MessageEvent) => void }).onmessage;
