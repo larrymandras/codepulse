@@ -189,27 +189,29 @@ export default function Inbox() {
   // request_id_target is the HITL UUID — NOT the WS correlation request_id
   // (sendCommand auto-generates its own for ack tracking; T-56-08 mitigated).
   const handleApprove = useCallback(
-    async (requestId: string) => {
+    async (requestId: string): Promise<boolean> => {
       const ok = await approve(requestId);
-      if (!ok) return;
+      if (!ok) return false;
       setApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
+      return true;
     },
     [approve]
   );
 
   const handleReject = useCallback(
-    async (requestId: string, note?: string) => {
+    async (requestId: string, note?: string): Promise<boolean> => {
       const ok = await reject(requestId, note);
-      if (!ok) return;
+      if (!ok) return false;
       setApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
+      return true;
     },
     [reject]
   );
