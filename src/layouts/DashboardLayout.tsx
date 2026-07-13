@@ -148,15 +148,7 @@ const navGroups: NavGroupConfig[] = [
       { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
       { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
       { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
-    ],
-  },
-  {
-    group: "CONSOLE",
-    items: [
-      { to: "/live-run", label: "Live Run", icon: "activity", group: "CONSOLE" },
-      { to: "/executions", label: "Executions", icon: "list", group: "CONSOLE" },
-      { to: "/build", label: "Build", icon: "hammer", group: "CONSOLE" },
-      { to: "/forge", label: "Forge", icon: "flame", group: "CONSOLE" },
+      { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },
     ],
   },
   {
@@ -184,6 +176,8 @@ const navGroups: NavGroupConfig[] = [
     items: [
       { to: "/", label: "Dashboard", icon: "grid", group: "OBSERVE" },
       { to: "/hive", label: "Hive", icon: "hexagon", group: "OBSERVE" },
+      { to: "/executions", label: "Executions", icon: "list", group: "OBSERVE" },
+      { to: "/build", label: "Build", icon: "hammer", group: "OBSERVE" },
       { to: "/analytics", label: "Analytics", icon: "chart", group: "OBSERVE" },
       { to: "/alerts", label: "Alerts", icon: "bell", group: "OBSERVE" },
       { to: "/quality", label: "Quality", icon: "gauge", group: "OBSERVE" },
@@ -793,3 +787,5 @@ export default function DashboardLayout() {
 
 // Export navItems for external use (CommandPalette, etc.)
 export { navItems };
+// Export iconComponents so CommandPalette can resolve string-keyed icons (F2 enabler, Plan 05)
+export { iconComponents };
