@@ -8,6 +8,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { GlassPanel } from "@/components/GlassPanel";
+import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -33,6 +34,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { sendMeetingBot } from "@/lib/astridrApi";
+import { useRosterAgents } from "@/hooks/useRosterAgents";
 
 type SortField = "startedAt" | "durationMs" | "participantCount" | "costUsd";
 
@@ -81,14 +83,20 @@ export default function MeetingBot() {
     });
   }, [recentCalls, sortField, sortDir]);
 
+  const { agents } = useRosterAgents();
+
   const [meetingUrl, setMeetingUrl] = useState("");
-  const [agentId, setAgentId] = useState("freya");
+  const [agentId, setAgentId] = useState("");
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   async function handleSendBot() {
     if (!meetingUrl.startsWith("https://")) {
       setSendResult({ ok: false, message: "Meeting URL must start with https://" });
+      return;
+    }
+    if (!agentId) {
+      setSendResult({ ok: false, message: "Select an agent to send" });
       return;
     }
     setSending(true);
@@ -129,7 +137,7 @@ export default function MeetingBot() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Meeting Bot</h1>
+      <PageHeader title="Meeting Bot" />
 
       {/* Send Bot Form */}
       <SectionErrorBoundary name="Send Bot">
@@ -154,16 +162,15 @@ export default function MeetingBot() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="freya">Freya</SelectItem>
-                  <SelectItem value="astrid">Ástríðr</SelectItem>
-                  <SelectItem value="hervor">Hervor</SelectItem>
-                  <SelectItem value="hildr">Hildr</SelectItem>
-                  <SelectItem value="gondul">Gondul</SelectItem>
-                  <SelectItem value="ragnhildr">Ragnhildr</SelectItem>
+                  {agents.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSendBot} disabled={sending || !meetingUrl}>
+            <Button onClick={handleSendBot} disabled={sending || !meetingUrl || !agentId}>
               {sending ? "Sending…" : "Send Bot"}
             </Button>
           </div>

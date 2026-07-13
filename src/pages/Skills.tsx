@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { PageHeader } from "@/components/PageHeader";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
 import { UncategorizedSkills } from "@/components/skills/UncategorizedSkills";
@@ -164,9 +165,7 @@ export default function Skills() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <h1 className="text-2xl font-mono tracking-widest uppercase font-bold text-primary mb-6">
-        Skills Database
-      </h1>
+      <PageHeader title="Skills" className="mb-6" />
 
       <SkillPills skills={enrichedSkills} onUse={(name) => recordLaunch({ name })} />
 
