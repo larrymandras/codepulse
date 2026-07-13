@@ -18,6 +18,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { GlassPanel } from "@/components/GlassPanel";
+import { PageHeader } from "@/components/PageHeader";
 import { SectionHeader } from "@/components/SectionHeader";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { RoomListItem } from "@/components/RoomListItem";
@@ -30,7 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { WarRoomLaunchDialog } from "@/components/hr/WarRoomLaunchDialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, AlertCircle } from "lucide-react";
+import { Plus, Loader2, AlertCircle, PanelLeft, X } from "lucide-react";
 import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { resolveParticipant, resolveAgentColor } from "@/lib/warRoomIdentity";
 import { useWarRoomVoice } from "@/hooks/useWarRoomVoice";
@@ -119,6 +120,9 @@ export default function WarRoom() {
     ) ?? [];
 
   const [launchOpen, setLaunchOpen] = useState(false);
+  // Mobile master-list overlay (F8) — the room list collapses into a
+  // slide-in overlay below md so the room detail gets full width on mobile.
+  const [roomListOpen, setRoomListOpen] = useState(false);
   const [liveChunks, setLiveChunks] = useState<TranscriptChunk[]>([]);
   const [speakingAgents, setSpeakingAgents] = useState<Set<string>>(new Set());
   const { subscribeEvent } = useAstridrWS();
@@ -248,16 +252,29 @@ export default function WarRoom() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">War Room</h1>
-        <button
-          onClick={() => setLaunchOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-base font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          New Room
-        </button>
-      </div>
+      <PageHeader
+        title="War Room"
+        actions={
+          <div className="flex items-center gap-2">
+            {/* Mobile-only toggle to reveal the room list overlay (F8) */}
+            <button
+              type="button"
+              onClick={() => setRoomListOpen(true)}
+              aria-label="Show room list"
+              className="md:hidden flex items-center justify-center size-11 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <PanelLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => setLaunchOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-base font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              New Room
+            </button>
+          </div>
+        }
+      />
       <WarRoomLaunchDialog
         open={launchOpen}
         onOpenChange={setLaunchOpen}
@@ -266,10 +283,31 @@ export default function WarRoom() {
       />
       <SectionErrorBoundary name="War Room">
         <div className="flex gap-4 h-[calc(100vh-140px)]">
-          {/* Left panel — room list */}
-          <GlassPanel className="w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300">
-            <div className="p-3">
+          {/* Mobile backdrop for the room list overlay (F8) */}
+          {roomListOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/50 md:hidden"
+              onClick={() => setRoomListOpen(false)}
+            />
+          )}
+
+          {/* Left panel — room list; fixed 280px on desktop, slide-in overlay on mobile (F8) */}
+          <GlassPanel
+            className={`w-64 flex-shrink-0 rounded-xl overflow-hidden flex flex-col hover:scale-[1.01] transition-transform duration-300 fixed inset-y-0 left-0 z-50 md:static md:z-auto md:translate-x-0 ${
+              roomListOpen ? "translate-x-0" : "-translate-x-full"
+            }`}
+          >
+            <div className="p-3 flex items-center justify-between">
               <SectionHeader title="Active Rooms" />
+              {/* Mobile-only close button for the overlay (F8) */}
+              <button
+                type="button"
+                onClick={() => setRoomListOpen(false)}
+                aria-label="Hide room list"
+                className="md:hidden flex items-center justify-center size-11 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {activeRooms.map((room) => (
@@ -277,7 +315,10 @@ export default function WarRoom() {
                   key={room._id}
                   room={room}
                   isSelected={room.roomId === selectedRoomId}
-                  onSelect={() => setSelectedRoomId(room.roomId)}
+                  onSelect={() => {
+                    setSelectedRoomId(room.roomId);
+                    setRoomListOpen(false);
+                  }}
                   onDelete={() => handleDeleteRoom(room)}
                 />
               ))}
@@ -301,7 +342,10 @@ export default function WarRoom() {
                       key={room._id}
                       room={room}
                       isSelected={room.roomId === selectedRoomId}
-                      onSelect={() => setSelectedRoomId(room.roomId)}
+                      onSelect={() => {
+                        setSelectedRoomId(room.roomId);
+                        setRoomListOpen(false);
+                      }}
                       onDelete={() => handleDeleteRoom(room)}
                     />
                   ))}
