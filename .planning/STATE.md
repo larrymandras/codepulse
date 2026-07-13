@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: Awaiting next milestone
-stopped_at: Phase 96 context gathered
-last_updated: "2026-07-13T12:39:47.631Z"
+stopped_at: Phase 96 UI-SPEC approved
+last_updated: "2026-07-13T12:47:47.808Z"
 last_activity: 2026-07-07 — Milestone v10.0 completed and archived
 progress:
   total_phases: 3
@@ -206,10 +206,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-13T12:39:47.623Z
-Stopped at: Phase 96 context gathered
+Last session: 2026-07-13T12:47:47.798Z
+Stopped at: Phase 96 UI-SPEC approved
 Next action: `/gsd-discuss-phase 94`
-Resume file: .planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/96-CONTEXT.md
+Resume file: .planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/96-UI-SPEC.md
 
 ## Operator Next Steps
 
