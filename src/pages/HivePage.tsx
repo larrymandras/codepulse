@@ -18,6 +18,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { GlassPanel } from "../components/GlassPanel";
 import SwarmTaskDetail, { type SwarmTaskDetailData } from "../components/SwarmTaskDetail";
 import { useGoalList } from "../hooks/useSwarmGraph";
+import { PageHeader } from "../components/PageHeader";
 
 export default function HivePage() {
   const navigate = useNavigate();
@@ -44,14 +45,16 @@ export default function HivePage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Page header: HIVE MIND label + live-pulse dot + GoalPicker right */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xs font-mono uppercase tracking-widest text-primary flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          HIVE MIND
-        </h1>
-        <GoalPicker selectedGoalId={goalId} onSelect={setGoalId} />
-      </div>
+      {/* Page header: Hive Mind label + live-pulse dot + GoalPicker right */}
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            Hive Mind
+          </span>
+        }
+        actions={<GoalPicker selectedGoalId={goalId} onSelect={setGoalId} />}
+      />
 
       {/* Region 1: Swarm Graph hero */}
       <SectionErrorBoundary name="Swarm Graph">

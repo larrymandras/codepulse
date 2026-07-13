@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/PageHeader";
 
 /** Truncates from the end (rationale is a sentence, not a path — no leading-ellipsis semantics). */
 function truncateText(text: string, maxLen = 120): string {
@@ -90,20 +91,25 @@ export default function QualityDetail() {
           <ChevronLeft className="h-3 w-3" />
           Back to Quality
         </Link>
-        <div className="flex items-center justify-between mt-3">
-          <h1 className="text-2xl font-bold">{profileId}</h1>
-          <Select value={String(rangeDays)} onValueChange={(v) => setRangeDays(Number(v))}>
-            <SelectTrigger size="sm" className="h-8 w-40 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {RANGE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="mt-3">
+          <PageHeader
+            title={profileId}
+            className="mb-0"
+            actions={
+              <Select value={String(rangeDays)} onValueChange={(v) => setRangeDays(Number(v))}>
+                <SelectTrigger size="sm" className="h-8 w-40 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {RANGE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            }
+          />
         </div>
       </div>
 
