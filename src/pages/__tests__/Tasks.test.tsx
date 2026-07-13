@@ -7,7 +7,7 @@
  * toggle, no PageHeader, no per-agent grouping).
  */
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ─── dnd-kit mocks (avoid real drag machinery in jsdom) ────────────────────
@@ -168,7 +168,7 @@ describe("Tasks — merged board (By Status / By Agent)", () => {
     // Board starts in status mode
     expect(screen.getByText(/Backlog/)).toBeInTheDocument();
 
-    screen.getByRole("button", { name: "By Agent" }).click();
+    fireEvent.click(screen.getByRole("button", { name: "By Agent" }));
 
     expect(screen.getByText("Astridr")).toBeInTheDocument();
   });
