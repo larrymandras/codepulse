@@ -36,8 +36,8 @@ export interface ChatBubbleProps {
   timestamp?: number;
   audioUrl?: string;
   onPlayAudio?: (url: string) => void;
-  onApprove?: (requestId: string) => void;
-  onReject?: (requestId: string, reason?: string) => void;
+  onApprove?: (requestId: string) => Promise<void>;
+  onReject?: (requestId: string, reason?: string) => Promise<void>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

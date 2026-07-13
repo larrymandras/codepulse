@@ -30,8 +30,8 @@ import { ApprovalBlock } from "@/components/blocks/ApprovalBlock";
 
 interface BlockRendererProps {
   block: GenerativeBlock;
-  onApprove?: (requestId: string) => void;
-  onReject?: (requestId: string, reason?: string) => void;
+  onApprove?: (requestId: string) => Promise<void>;
+  onReject?: (requestId: string, reason?: string) => Promise<void>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

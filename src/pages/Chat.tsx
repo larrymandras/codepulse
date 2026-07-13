@@ -15,7 +15,7 @@ import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
 import { Volume2, VolumeX } from "lucide-react";
-import { toast } from "sonner";
+import { useApprovalActions } from "@/components/ApprovalActions";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -29,6 +29,7 @@ function generateId(): string {
 export default function Chat() {
   const { status, sendCommand, subscribeEvent } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
+  const { approve, reject } = useApprovalActions(sendCommand);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -299,16 +300,23 @@ export default function Chat() {
   }, [subscribeEvent, playAudio]);
 
   // ─── Approve/Reject handlers for approval blocks ─────────────────────────
+  // Delegates to the shared ApprovalActions hook (D-11) so Chat and Inbox
+  // send the identical, server-correct { request_id_target, decision }
+  // payload and both await the ack before toasting (T-96-03-01 fix).
 
-  const handleApprove = useCallback((requestId: string) => {
-    void sendCommand({ type: "approval.respond", requestId, approved: true });
-    toast.success("Approved — sent to Ástríðr");
-  }, [sendCommand]);
+  const handleApprove = useCallback(
+    async (requestId: string) => {
+      await approve(requestId);
+    },
+    [approve]
+  );
 
-  const handleReject = useCallback((requestId: string, reason?: string) => {
-    void sendCommand({ type: "approval.respond", requestId, approved: false, reason });
-    toast("Rejected");
-  }, [sendCommand]);
+  const handleReject = useCallback(
+    async (requestId: string, reason?: string) => {
+      await reject(requestId, reason);
+    },
+    [reject]
+  );
 
   // ─── Voice send handler (auto-send after speech recognition) ─────────────
 
