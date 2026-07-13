@@ -14,6 +14,7 @@ import { RunHistorySelector } from "../components/RunHistorySelector";
 import { RunSummary } from "../components/RunSummary";
 import JobsPanel from "../components/JobsPanel";
 import { Square } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 type Block = { type: string; [key: string]: unknown };
 type ActiveTab = "timeline" | "summary";
@@ -201,17 +202,22 @@ export default function LiveRun() {
     : displayBlocks.filter((b) => b.type === "thinking" || b.type === "reasoning").length || undefined;
 
   return (
-    <div className="flex flex-col h-full max-h-[500px]">
-      <div className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
-        <h1 className="text-xl font-semibold text-(--foreground)">Live Run</h1>
-        <div className="flex items-center gap-3">
-          <RunHistorySelector
-            sessions={sessions}
-            selectedSessionId={isLive ? null : selectedSessionId}
-            onSelect={handleSelectSession}
-          />
-          <WSStatusIndicator status={status} />
-        </div>
+    <div className="flex flex-col h-full">
+      <div className="p-4 border-b border-(--border) shrink-0">
+        <PageHeader
+          title="Live Run"
+          className="mb-0"
+          actions={
+            <div className="flex items-center gap-3">
+              <RunHistorySelector
+                sessions={sessions}
+                selectedSessionId={isLive ? null : selectedSessionId}
+                onSelect={handleSelectSession}
+              />
+              <WSStatusIndicator status={status} />
+            </div>
+          }
+        />
       </div>
       <div className="flex items-center justify-between px-4 py-2 border-b border-(--border) shrink-0">
         <div className="flex gap-2">

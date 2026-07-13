@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GlassPanel } from "@/components/GlassPanel";
 import StatusBadge from "@/components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
 
 type PairingState = "idle" | "loading" | "qr-active" | "connected";
 type ConnectionStatus =
@@ -285,10 +286,7 @@ export default function WhatsApp() {
       className="max-w-2xl mx-auto space-y-6"
     >
       {/* Page heading */}
-      <div className="flex items-center gap-3">
-        <MessageCircle className="h-6 w-6 text-muted-foreground" />
-        <h1 className="text-xl font-semibold">WhatsApp Channel</h1>
-      </div>
+      <PageHeader title="WhatsApp Channel" icon={MessageCircle} className="mb-0" />
 
       {/* Bridge offline alert */}
       <AnimatePresence>

@@ -11,6 +11,7 @@ import type { IdeationRowFinding } from "../components/IdeationRow";
 import { TaskCreateForm } from "../components/TaskCreateForm";
 import { findingToTaskDefaults } from "../lib/findingToTask";
 import type { NewTask } from "../types/kanban";
+import { PageHeader } from "@/components/PageHeader";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -115,20 +116,22 @@ export default function Ideation() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Ideation</h1>
-        <div className="flex items-center gap-2">
-          {selectedIds.size > 0 && (
-            <button
-              onClick={handleBulkConvert}
-              className="text-base px-3 py-1.5 bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
-            >
-              Convert Selected ({selectedIds.size})
-            </button>
-          )}
-          <span className="text-sm text-muted-foreground">{totalActive} findings</span>
-        </div>
-      </div>
+      <PageHeader
+        title="Ideation"
+        actions={
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <button
+                onClick={handleBulkConvert}
+                className="text-base px-3 py-1.5 bg-(--primary) text-(--primary-foreground) hover:opacity-90 transition-opacity"
+              >
+                Convert Selected ({selectedIds.size})
+              </button>
+            )}
+            <span className="text-sm text-muted-foreground">{totalActive} findings</span>
+          </div>
+        }
+      />
 
       <SectionErrorBoundary>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

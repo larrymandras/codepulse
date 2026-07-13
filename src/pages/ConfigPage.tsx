@@ -17,6 +17,7 @@ import { ToolsForm } from "@/components/config/ToolsForm";
 import { ProfilesForm } from "@/components/config/ProfilesForm";
 import { PipesForm } from "@/components/config/PipesForm";
 import { YamlSection } from "@/components/config/YamlSection";
+import { PageHeader } from "@/components/PageHeader";
 
 const SECTIONS = [
   { id: "security-rules", label: "Security", icon: Shield },
@@ -255,42 +256,45 @@ export default function ConfigPage() {
 
         <div className="flex flex-col flex-1 min-w-0">
           {/* Header bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-(--border) shrink-0 gap-4">
-            <h1 className="text-lg font-semibold text-(--foreground) whitespace-nowrap">
-              {isDirty ? "Config •" : "Config"}
-            </h1>
-            <div className="flex items-center gap-2">
-              {showRawToggle && (
-                <Button variant="ghost" size="sm" onClick={toggleRawMode} className="gap-1.5 text-sm">
-                  <Code className="h-3.5 w-3.5" />
-                  {rawMode ? "Form" : "Raw YAML"}
-                </Button>
-              )}
-              <Button
-                size="sm"
-                onClick={handleValidate}
-                disabled={isDisconnected || loading || validating || !isDirty}
-              >
-                {validating ? "Validating..." : "Validate"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDiff(!showDiff)}
-                disabled={!isDirty}
-              >
-                {showDiff ? "Hide Diff" : "Review"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowConfirm(true)}
-                disabled={!applyEnabled || isDisconnected || applying}
-              >
-                {applying ? "Applying..." : "Apply"}
-              </Button>
-              <WSStatusIndicator status={status} />
-            </div>
+          <div className="px-4 py-3 border-b border-(--border) shrink-0">
+            <PageHeader
+              title={isDirty ? "Config •" : "Config"}
+              className="mb-0"
+              actions={
+                <div className="flex items-center gap-2">
+                  {showRawToggle && (
+                    <Button variant="ghost" size="sm" onClick={toggleRawMode} className="gap-1.5 text-sm">
+                      <Code className="h-3.5 w-3.5" />
+                      {rawMode ? "Form" : "Raw YAML"}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    onClick={handleValidate}
+                    disabled={isDisconnected || loading || validating || !isDirty}
+                  >
+                    {validating ? "Validating..." : "Validate"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDiff(!showDiff)}
+                    disabled={!isDirty}
+                  >
+                    {showDiff ? "Hide Diff" : "Review"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowConfirm(true)}
+                    disabled={!applyEnabled || isDisconnected || applying}
+                  >
+                    {applying ? "Applying..." : "Apply"}
+                  </Button>
+                  <WSStatusIndicator status={status} />
+                </div>
+              }
+            />
           </div>
 
           {/* Validation result */}

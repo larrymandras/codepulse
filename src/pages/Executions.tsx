@@ -7,6 +7,7 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import ExecutionTable from "../components/ExecutionTable";
 import ExecutionFilterBar from "../components/ExecutionFilterBar";
 import LoadMoreButton from "../components/LoadMoreButton";
+import { PageHeader } from "@/components/PageHeader";
 
 interface FilterState {
   status: string | null;
@@ -105,9 +106,7 @@ export default function Executions() {
   return (
     <div className="space-y-6">
       {/* Page heading */}
-      <h1 className="text-2xl font-semibold text-foreground">
-        Execution History
-      </h1>
+      <PageHeader title="Execution History" />
 
       {/* Summary stat bar — PRIMARY VISUAL ANCHOR */}
       <SectionErrorBoundary name="Execution Metrics">
