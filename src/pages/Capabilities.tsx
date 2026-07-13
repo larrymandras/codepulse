@@ -24,6 +24,7 @@ import {
 } from "../hooks/useCapabilities";
 import { useCommandCatalog } from "../hooks/useCommandCatalog";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
+import { PageHeader } from "@/components/PageHeader";
 
 function changeTypeColor(_key: string, oldVal: any, newVal: any): string {
   if (oldVal === undefined || oldVal === null) return "text-green-400";
@@ -357,27 +358,30 @@ export default function Capabilities() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
-      <div className="md:col-span-12 flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Capabilities Registry</h1>
-        {/* Global search */}
-        <div className="relative w-64">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search tools, skills, commands..."
-            className="w-full bg-card border border-border rounded-lg px-3 py-1.5 pl-8 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
-          />
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
-            >
-              &times;
-            </button>
-          )}
-        </div>
+      <div className="md:col-span-12">
+        <PageHeader
+          title="Capabilities Registry"
+          actions={
+            <div className="relative w-64">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search tools, skills, commands..."
+                className="w-full bg-card border border-border rounded-lg px-3 py-1.5 pl-8 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-colors"
+              />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-sm"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
+          }
+        />
       </div>
 
       {/* 1. Summary cards */}

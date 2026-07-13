@@ -26,6 +26,7 @@ import { LeaderboardTable } from "@/components/hr/analytics/LeaderboardTable";
 import { WeightSliders } from "@/components/hr/analytics/WeightSliders";
 import { TeamSummaryCards } from "@/components/hr/analytics/TeamSummaryCards";
 import { AgentComparisonChart } from "@/components/hr/analytics/AgentComparisonChart";
+import { PageHeader } from "@/components/PageHeader";
 
 // ─── Time window → seconds ─────────────────────────────────────────────────
 
@@ -97,26 +98,27 @@ export default function AgentAnalytics() {
         <SectionErrorBoundary name="Header">
           <GlassPanel className="p-6 relative overflow-hidden hover:scale-[1.01] transition-transform duration-300">
             <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
-            <div className="flex items-center justify-between flex-wrap gap-4 relative z-10">
-              <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
-                Agent Analytics
-              </h1>
-              <ToggleGroup
-                type="single"
-                value={timeWindow}
-                onValueChange={(v) => v && setTimeWindow(v as TimeWindow)}
-              >
-                {(["1h", "24h", "7d", "30d"] as const).map((w) => (
-                  <ToggleGroupItem
-                    key={w}
-                    value={w}
-                    className="text-xs font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all data-[state=on]:shadow-[var(--glow-xs)]"
+            <div className="relative z-10">
+              <PageHeader
+                title="Agent Analytics"
+                actions={
+                  <ToggleGroup
+                    type="single"
+                    value={timeWindow}
+                    onValueChange={(v) => v && setTimeWindow(v as TimeWindow)}
                   >
-                    {w}
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
+                    {(["1h", "24h", "7d", "30d"] as const).map((w) => (
+                      <ToggleGroupItem
+                        key={w}
+                        value={w}
+                        className="text-xs font-mono tracking-widest uppercase px-3 h-7 data-[state=on]:bg-primary/20 data-[state=on]:text-primary border border-transparent data-[state=on]:border-primary/30 transition-all data-[state=on]:shadow-[var(--glow-xs)]"
+                      >
+                        {w}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                }
+              />
             </div>
           </GlassPanel>
         </SectionErrorBoundary>

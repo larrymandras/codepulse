@@ -17,6 +17,7 @@ import ToolExecutionPanel from "../components/ToolExecutionPanel";
 import GitActivityWidget from "../components/GitActivityWidget";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import OperatorScoreCard from "../components/OperatorScoreCard";
+import { PageHeader } from "@/components/PageHeader";
 
 type ChartTab = "pulse" | "timeline";
 
@@ -50,7 +51,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <PageHeader title="Dashboard" />
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
         {/* Operator Score Hero Card (Phase 120) */}

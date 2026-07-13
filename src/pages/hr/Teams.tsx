@@ -9,6 +9,7 @@ import { useRosterAgents } from "@/hooks/useRosterAgents";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UsersRound, Plus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 function resolveTeamAgents(
   agentIds: string[],
@@ -45,21 +46,21 @@ export default function Teams() {
         <div className="absolute top-0 right-0 h-full w-32 bg-gradient-to-l from-primary/10 to-transparent pointer-events-none animate-scanline mix-blend-overlay" />
         <div className="flex flex-col gap-6 relative z-10">
           {/* Header */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold font-mono tracking-wide text-foreground uppercase flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-primary animate-pulse shadow-[var(--glow-xs)]" />
-                Teams
-              </h1>
-              <span className="text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
-                {teams.length} team{teams.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-xs uppercase tracking-widest shadow-[var(--glow-xs)] hover:shadow-[var(--glow-md)] transition-all">
-              <Plus className="h-4 w-4 mr-1" />
-              New Team
-            </Button>
-          </div>
+          <PageHeader
+            title="Teams"
+            icon={UsersRound}
+            actions={
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-mono tracking-widest uppercase text-muted-foreground/80 bg-muted/20 px-3 py-1 rounded border border-border/50">
+                  {teams.length} team{teams.length !== 1 ? "s" : ""}
+                </span>
+                <Button size="sm" onClick={() => navigate("/hr/teams/new")} className="font-mono text-xs uppercase tracking-widest shadow-[var(--glow-xs)] hover:shadow-[var(--glow-md)] transition-all">
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Team
+                </Button>
+              </div>
+            }
+          />
 
           {/* Loading state */}
           {isLoading && (

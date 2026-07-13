@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import BriefingFeedItem from "../components/BriefingFeedItem";
 import LoadMoreButton from "../components/LoadMoreButton";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Briefings() {
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -20,7 +21,7 @@ export default function Briefings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Briefings</h1>
+      <PageHeader title="Briefings" />
 
       {/* Date range filter */}
       <div className="flex items-center gap-4">
