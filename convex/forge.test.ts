@@ -387,6 +387,7 @@ import {
   buildIntakeRow,
   isAcceptedGithubUrlShape,
   isSafeSubpath,
+  resolveClaimTypes,
 } from "./forge";
 import type { Id } from "./_generated/dataModel";
 
@@ -464,6 +465,28 @@ describe("forge.shouldExpireCommand — TTL expiry logic (D-12)", () => {
 
   it("returns false for already-expired command (idempotent)", () => {
     expect(shouldExpireCommand("expired", PAST, NOW)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveClaimTypes — supportedTypes default (D-P6-11)
+// ---------------------------------------------------------------------------
+
+describe("forge.resolveClaimTypes — supportedTypes default (D-P6-11)", () => {
+  it("defaults to ['launch', 'stop'] when supportedTypes is undefined (today's daemon)", () => {
+    expect(resolveClaimTypes(undefined)).toEqual(["launch", "stop"]);
+  });
+
+  it("returns an explicit empty array unchanged (absent is not the same as empty)", () => {
+    expect(resolveClaimTypes([])).toEqual([]);
+  });
+
+  it("returns ['intake'] when supportedTypes explicitly declares only intake", () => {
+    expect(resolveClaimTypes(["intake"])).toEqual(["intake"]);
+  });
+
+  it("returns a composed list when supportedTypes declares launch + intake", () => {
+    expect(resolveClaimTypes(["launch", "intake"])).toEqual(["launch", "intake"]);
   });
 });
 
@@ -828,4 +851,7 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("enqueueIntake: inserts forgeCommands row with commandType='intake' and status='queued'");
   it.todo("enqueueIntake: rejects an upload exceeding MAX_INTAKE_UPLOAD_BYTES (requires a live storage-backed row)");
   it.todo("generateForgeUploadUrl: returns a usable signed upload URL");
+  it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");
+  it.todo("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'");
+  it.todo("forgeCommandsClaim: resolves storageId to a fetchable downloadUrl for a claimed intake row (SC5 — covered live by scripts/verify-intake-claim.mjs in Plan 06-04, not here)");
 });
