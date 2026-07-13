@@ -258,3 +258,36 @@ import { cn } from "@/lib/utils";
 _Reviewed: 2026-07-13T15:13:09Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
+
+## Fixes Applied
+
+**Fixed:** 2026-07-13 — scope: Critical + Warning (Info findings intentionally not fixed).
+**Verification:** `npx tsc --noEmit` clean; full `npx vitest run` green (1739 passed, +4 new regression tests over the review baseline of 1735).
+
+### CR-01 — fixed (commit `5243b00`)
+
+- `useApprovalActions` (`src/components/ApprovalActions.tsx`) now wraps `await sendCommand(payload)` in try/catch in both `approve()` and `reject()` — a rejected promise (error ack / timeout / queue-full, the real `AstridrWSContext` contract) surfaces `toast.error` and resolves `false`. The resolved non-ok ack branch is retained as belt-and-braces.
+- `ApprovalBlock` (`src/components/blocks/ApprovalBlock.tsx`) no longer flips optimistically: `onApprove`/`onReject` are now `Promise<boolean>` and the block only commits `approved`/`rejected` state when the callback resolves `true` (a throw also leaves it pending). Buttons disable while the ack is in flight — the async wait newly opened a double-submit window the old instant-collapse UI didn't have.
+- Prop chain updated to `Promise<boolean>`: `BlockRenderer.tsx`, `ChatBubble.tsx`; `Chat.tsx` handlers forward the hook's boolean.
+- `Chat.test.tsx` regression test now mocks the REAL contract (`mockSendCommand.mockRejectedValueOnce(new Error("bad"))`) and asserts error toast + no success toast + block stays pending. **Mutation-verified:** the test fails against the pre-fix code (stashed prod files, re-ran, 1 failed) and passes with the fix.
+- `ApprovalBlock.test.tsx` updated to the boolean contract, with new stays-pending-on-false tests for both approve and reject.
+
+### WR-01 — fixed (commit `003df72`)
+
+- `PageHeader.tsx` merges `className` via `cn()` (clsx + twMerge) from `src/lib/utils`, so the `mb-0`/`mb-0.5` overrides on the 7 migrated pages now drop the conflicting baked-in `mb-4` instead of losing to CSS emission order.
+- Added a regression test asserting `mb-0` replaces `mb-4` in the rendered class list.
+
+### WR-02 — fixed (commit `998bb90`)
+
+- Nav registry (`navGroups`, `navItems`, `iconComponents`, `NavItem`, `NavGroupConfig`) extracted verbatim to leaf module `src/lib/navRegistry.ts` (imports only lucide-react).
+- `DashboardLayout.tsx` and `CommandPalette.tsx` both import from the registry — the `CommandPalette ↔ DashboardLayout` cycle is gone. DashboardLayout's tail re-exports were dropped (CommandPalette was their only consumer; no tests imported them). No behavior change.
+
+### WR-03 — fixed (commit `a0041f5`)
+
+- Removed the `{ to: "/mission-control", label: "Mission Control", … }` OBSERVE entry from the nav registry. The `App.tsx` redirect to `/tasks?view=agent` keeps deep links working; Tasks (COMMAND) is the merged board.
+
+### Not fixed (out of scope)
+
+- IN-01 through IN-08 — Info findings, per fix scope.
+
+_Fixer: Claude (gsd-code-fixer)_
