@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
+import { PageHeader } from "../components/PageHeader";
 import MetricCard from "../components/MetricCard";
 import { Separator } from "../components/ui/separator";
 import {
@@ -318,7 +319,7 @@ function GalaxyCanvas({
       {/* Canvas + optional detail panel side-by-side when a node is selected */}
       <div className={selectedNodeId ? "grid grid-cols-[1fr_280px] gap-4 items-start" : ""}>
         <div
-          className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
+          className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-background"
           style={{ boxShadow: "var(--glow-lg)" }}
         >
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-zinc-900 via-[#09090b] to-black opacity-80 pointer-events-none" />
@@ -594,11 +595,15 @@ export default function ToolGalaxy() {
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
       <div className="md:col-span-12 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Boxes className="h-6 w-6 text-primary" />
-            Tool Galaxy
-            <InfoTooltip text="Force-directed map of every installed tool, MCP server, and the agents that call them. Node brightness = recency, size = usage; dashed amber rings flag installed-but-unused (orphan) tools." />
-          </h1>
+          <PageHeader
+            icon={Boxes}
+            title={
+              <>
+                Tool Galaxy
+                <InfoTooltip text="Force-directed map of every installed tool, MCP server, and the agents that call them. Node brightness = recency, size = usage; dashed amber rings flag installed-but-unused (orphan) tools." />
+              </>
+            }
+          />
           <p className="text-sm text-muted-foreground font-mono mt-1">
             Capability topology from discoveredTools · mcpServers · callGraphEdges · kits
           </p>
