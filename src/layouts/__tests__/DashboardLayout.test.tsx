@@ -1,4 +1,142 @@
-import { describe, test } from "vitest";
+/**
+ * DashboardLayout.test.tsx — Phase 96 Plan 02 (F3/D-04: honest header telemetry).
+ *
+ * Covers the header SYS/LAT readouts: they must render REAL data only and be
+ * HIDDEN entirely (never "—", never "0") when the underlying data is absent.
+ *
+ *   - SYS hidden when systemResources.current returns null
+ *   - SYS shows the rounded cpu value when systemResources.current is present
+ *   - LAT hidden when the WS is not connected / no measurement exists
+ *
+ * All heavy/side-effecting children (CommandPalette, wake-word engine, audio,
+ * notifications, avatar uploader, etc.) are stubbed so the layout mounts in
+ * jsdom without pulling in their own contexts/dependencies — this test is
+ * scoped to the header telemetry contract, not the full sidebar/palette UX
+ * (see the original sidebar IA test.todo stubs below, still pending).
+ */
+
+import { describe, test, it, expect, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+
+// ─── Module mocks (declared before component import — Vitest hoisting) ──────
+
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(),
+  useConvexConnectionState: vi.fn(() => ({ isWebSocketConnected: true })),
+}));
+
+vi.mock("../../../convex/_generated/api", () => ({
+  api: {
+    systemResources: { current: "systemResources:current" },
+    avatars: { getImageUrl: "avatars:getImageUrl" },
+    notifications: { latestUnread: "notifications:latestUnread" },
+  },
+}));
+
+vi.mock("@/contexts/AstridrWSContext", () => ({
+  useAstridrWS: vi.fn(() => ({
+    status: "disconnected",
+    sendCommand: vi.fn().mockResolvedValue({ type: "ack", request_id: "1", status: "ok" }),
+    subscribe: vi.fn(),
+    subscribeEvent: vi.fn(),
+    reconnect: vi.fn(),
+  })),
+}));
+
+// Stub heavy/side-effecting children so DashboardLayout mounts cleanly in jsdom.
+vi.mock("../../components/AlertBanner", () => ({ default: () => null }));
+vi.mock("../../components/ErrorBoundary", () => ({
+  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock("../../components/OnboardingGuide", () => ({ default: () => null }));
+vi.mock("../../components/UserMenu", () => ({ default: () => null }));
+vi.mock("../../components/PrivacyShield", () => ({ default: () => null }));
+vi.mock("../../components/ThemeSwitcher", () => ({ ThemeSwitcher: () => null }));
+vi.mock("../../components/AmbientAudioPlayer", () => ({ default: () => null }));
+vi.mock("../../hooks/useAudioEvents", () => ({ useAudioEvents: () => {} }));
+vi.mock("../../components/NotificationBell", () => ({ default: () => null }));
+vi.mock("../../hooks/useNotificationToasts", () => ({ useNotificationToasts: () => {} }));
+vi.mock("../../components/EStopButton", () => ({ EStopButton: () => null }));
+vi.mock("../../components/CommandPalette", () => ({ CommandPalette: () => null }));
+vi.mock("../../components/MicToggle", () => ({ MicToggle: () => null }));
+vi.mock("../../components/ListeningIndicatorPill", () => ({ ListeningIndicatorPill: () => null }));
+vi.mock("../../hooks/useWakeWord", () => ({
+  useWakeWord: () => ({ status: "idle", errorReason: null, start: vi.fn(), stop: vi.fn() }),
+}));
+vi.mock("../../components/AvatarUploader", () => ({ default: () => null }));
+vi.mock("sonner", () => ({
+  Toaster: () => null,
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
+}));
+
+import { useQuery } from "convex/react";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import DashboardLayout from "../DashboardLayout";
+
+function renderLayout() {
+  return render(
+    <MemoryRouter>
+      <DashboardLayout />
+    </MemoryRouter>,
+  );
+}
+
+describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useAstridrWS).mockReset();
+  });
+
+  it("hides SYS when systemResources.current returns null", () => {
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(screen.queryByText(/SYS:/)).not.toBeInTheDocument();
+  });
+
+  it("shows SYS with the rounded cpu value when systemResources.current is present", () => {
+    vi.mocked(useQuery).mockImplementation(((ref: unknown) => {
+      if (ref === "systemResources:current") return { cpu: 42.6, ram: null, disk: null };
+      return undefined;
+    }) as typeof useQuery);
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(screen.getByText(/SYS:/)).toBeInTheDocument();
+    expect(screen.getByText("43%")).toBeInTheDocument();
+  });
+
+  it("hides LAT when the WS is not connected (no measurement)", () => {
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+
+    renderLayout();
+
+    expect(screen.queryByText(/LAT:/)).not.toBeInTheDocument();
+  });
+});
 
 describe("DashboardLayout Sidebar (UI-04)", () => {
   test.todo("renders 5 section groups: OVERVIEW, OPERATIONS, SYSTEM, INSIGHTS, ADMIN");

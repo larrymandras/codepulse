@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
@@ -23,6 +23,7 @@ import AvatarUploader from "../components/AvatarUploader";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import {
   LayoutDashboard,
   Cpu,
@@ -568,6 +569,55 @@ export default function DashboardLayout() {
     };
   }, []);
 
+  // Header telemetry (F3/D-04) — real CPU + WS round-trip latency, hidden
+  // entirely when the underlying data is absent. Never fabricate a number.
+  const systemResources = useQuery(api.systemResources.current);
+  const showSys = systemResources?.cpu != null;
+
+  const { status: wsStatus, sendCommand } = useAstridrWS();
+  const [headerLatencyMs, setHeaderLatencyMs] = useState<number | null>(null);
+  const headerPingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Ping-based latency measurement — mirrors ConnectionPopover.tsx's 30s RTT
+  // pattern. Only measures (and only renders) while the WS is connected.
+  useEffect(() => {
+    if (wsStatus !== "connected") {
+      setHeaderLatencyMs(null);
+      if (headerPingTimerRef.current) {
+        clearInterval(headerPingTimerRef.current);
+        headerPingTimerRef.current = null;
+      }
+      return;
+    }
+
+    const measureLatency = async () => {
+      if (wsStatus !== "connected") return;
+      try {
+        const start = performance.now();
+        await sendCommand({ type: "ping" }).catch(() => {
+          /* error ack still gives RTT */
+        });
+        setHeaderLatencyMs(Math.round(performance.now() - start));
+      } catch {
+        // Ignore — latency stays at last known value
+      }
+    };
+
+    void measureLatency();
+    headerPingTimerRef.current = setInterval(() => {
+      void measureLatency();
+    }, 30_000);
+
+    return () => {
+      if (headerPingTimerRef.current) {
+        clearInterval(headerPingTimerRef.current);
+        headerPingTimerRef.current = null;
+      }
+    };
+  }, [wsStatus, sendCommand]);
+
+  const showLat = wsStatus === "connected" && headerLatencyMs != null;
+
   // Wake-word engine — onWake opens the command palette in voice mode (VOX-01)
   const {
     status: wakeWordStatus,
@@ -700,16 +750,22 @@ export default function DashboardLayout() {
                 </span>
               </div>
               
-              <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary/60 pl-2 border-l border-primary/20">
-                <span className="flex items-center gap-1.5">
-                  <Cpu className="w-3 h-3 text-primary/80" /> 
-                  SYS: <span className="text-primary font-bold">14%</span>
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Server className="w-3 h-3 text-primary/80" /> 
-                  LAT: <span className="text-primary font-bold">12ms</span>
-                </span>
-              </div>
+              {(showSys || showLat) && (
+                <div className="hidden lg:flex items-center gap-4 text-xs font-mono text-primary/60 pl-2 border-l border-primary/20">
+                  {showSys && (
+                    <span className="flex items-center gap-1.5">
+                      <Cpu className="w-3 h-3 text-primary/80" />
+                      SYS: <span className="text-primary font-bold">{Math.round(systemResources!.cpu!)}%</span>
+                    </span>
+                  )}
+                  {showLat && (
+                    <span className="flex items-center gap-1.5">
+                      <Server className="w-3 h-3 text-primary/80" />
+                      LAT: <span className="text-primary font-bold">{headerLatencyMs}ms</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
