@@ -30,8 +30,9 @@ import { ApprovalBlock } from "@/components/blocks/ApprovalBlock";
 
 interface BlockRendererProps {
   block: GenerativeBlock;
-  onApprove?: (requestId: string) => Promise<void>;
-  onReject?: (requestId: string, reason?: string) => Promise<void>;
+  /** Resolve true iff the server ack'd — ApprovalBlock gates its UI flip on it. */
+  onApprove?: (requestId: string) => Promise<boolean>;
+  onReject?: (requestId: string, reason?: string) => Promise<boolean>;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────

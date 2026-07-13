@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { ApprovalBlock } from "@/components/blocks/ApprovalBlock";
 import type { ApprovalBlockData } from "@/types/generative-blocks";
 
@@ -42,11 +42,47 @@ describe("ApprovalBlock", () => {
     expect(card.className).toContain("border-l-4");
   });
 
-  test("calls onApprove with requestId when approve clicked", () => {
-    const onApprove = vi.fn();
+  test("calls onApprove with requestId when approve clicked", async () => {
+    const onApprove = vi.fn().mockResolvedValue(true);
     render(<ApprovalBlock block={mockBlock} onApprove={onApprove} />);
-    fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    });
     expect(onApprove).toHaveBeenCalledWith("req-123");
+  });
+
+  test("collapses to 'Approved — sent to Ástríðr' only after onApprove resolves true", async () => {
+    const onApprove = vi.fn().mockResolvedValue(true);
+    render(<ApprovalBlock block={mockBlock} onApprove={onApprove} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    });
+    expect(screen.getByText("Approved — sent to Ástríðr")).toBeInTheDocument();
+  });
+
+  test("stays pending (no false 'Approved') when onApprove resolves false", async () => {
+    const onApprove = vi.fn().mockResolvedValue(false);
+    render(<ApprovalBlock block={mockBlock} onApprove={onApprove} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Approve" }));
+    });
+    expect(onApprove).toHaveBeenCalledWith("req-123");
+    expect(screen.queryByText("Approved — sent to Ástríðr")).toBeNull();
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+  });
+
+  test("stays pending when onReject resolves false", async () => {
+    const onReject = vi.fn().mockResolvedValue(false);
+    render(<ApprovalBlock block={mockBlock} onReject={onReject} />);
+    fireEvent.click(screen.getByRole("button", { name: "Reject Request" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Submit Rejection" }));
+    });
+    expect(onReject).toHaveBeenCalledWith("req-123", undefined);
+    expect(screen.queryByText("Rejected")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Submit Rejection" })
+    ).toBeInTheDocument();
   });
 
   test("collapses to 'Approved — sent to Ástríðr' after approve", () => {
@@ -64,13 +100,15 @@ describe("ApprovalBlock", () => {
     ).toBeInTheDocument();
   });
 
-  test("calls onReject with requestId and collapses to 'Rejected' after reject submitted", () => {
-    const onReject = vi.fn();
+  test("calls onReject with requestId and collapses to 'Rejected' after reject resolves true", async () => {
+    const onReject = vi.fn().mockResolvedValue(true);
     render(<ApprovalBlock block={mockBlock} onReject={onReject} />);
     fireEvent.click(screen.getByRole("button", { name: "Reject Request" }));
     const textarea = screen.getByPlaceholderText("Optional: explain rejection...");
     fireEvent.change(textarea, { target: { value: "Not ready" } });
-    fireEvent.click(screen.getByRole("button", { name: "Submit Rejection" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Submit Rejection" }));
+    });
     expect(onReject).toHaveBeenCalledWith("req-123", "Not ready");
     expect(screen.getByText("Rejected")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit Rejection" })).toBeNull();

@@ -10,10 +10,13 @@
  *
  * `request_id_target` is the HITL UUID — NOT the WS correlation `request_id`
  * (sendCommand auto-injects that one). Both approve() and reject() await the
- * ack and branch on `ack.status`: an error surfaces `toast.error` and returns
- * `false` (no success toast is ever shown when the server rejected the
- * command — this is the fix for T-96-03-01, the false-success repudiation
- * bug that shipped in Chat.tsx).
+ * ack. The REAL `AstridrWSContext.sendCommand` never resolves a non-ok ack —
+ * it REJECTS the promise on every failure path (error ack, ack timeout,
+ * queue-full while disconnected), so the hook catches that rejection,
+ * surfaces `toast.error`, and returns `false`. A resolved non-ok ack is also
+ * handled as belt-and-braces. No success toast is ever shown unless the
+ * server confirmed the command — this is the fix for T-96-03-01, the
+ * false-success repudiation bug that shipped in Chat.tsx.
  *
  * Phase 96, Plan 03: F6 (payload fix) + D-11 (shared approval component).
  */
@@ -45,7 +48,12 @@ export interface UseApprovalActionsReturn {
  * Shared approve/reject hook. Both handlers await the ack and only toast
  * success when the server actually confirmed (`ack.status === "ok"`);
  * otherwise they toast.error and return false so callers can skip any
- * optimistic state update (e.g. marking an inbox item read).
+ * optimistic state update (e.g. marking an inbox item read, or collapsing
+ * an ApprovalBlock to its approved/rejected state).
+ *
+ * Failure handling is owned HERE (single owner of the sendCommand contract):
+ * the live context rejects on error acks / timeouts / queue-full, so both
+ * handlers catch, toast, and return false — they never throw.
  */
 export function useApprovalActions(sendCommand: SendCommand): UseApprovalActionsReturn {
   const approve = async (requestId: string): Promise<boolean> => {
@@ -54,8 +62,16 @@ export function useApprovalActions(sendCommand: SendCommand): UseApprovalActions
       request_id_target: requestId,
       decision: "approve",
     } satisfies ApprovalRespondPayload;
-    const ack = await sendCommand(payload);
+    let ack: AckResponse;
+    try {
+      ack = await sendCommand(payload);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Approval failed");
+      return false;
+    }
     if (ack.status !== "ok") {
+      // Belt-and-braces: the live context rejects instead of resolving a
+      // non-ok ack, but a non-conforming sendCommand could still resolve one.
       toast.error(ack.error ?? "Approval failed");
       return false;
     }
@@ -70,8 +86,15 @@ export function useApprovalActions(sendCommand: SendCommand): UseApprovalActions
       decision: "reject",
       ...(comment ? { comment } : {}),
     } satisfies ApprovalRespondPayload;
-    const ack = await sendCommand(payload);
+    let ack: AckResponse;
+    try {
+      ack = await sendCommand(payload);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Rejection failed");
+      return false;
+    }
     if (ack.status !== "ok") {
+      // Belt-and-braces — see approve() above.
       toast.error(ack.error ?? "Rejection failed");
       return false;
     }

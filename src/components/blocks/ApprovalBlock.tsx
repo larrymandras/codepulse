@@ -17,8 +17,14 @@ import type { ApprovalBlockData } from "@/types/generative-blocks";
 
 interface ApprovalBlockProps {
   block: ApprovalBlockData;
-  onApprove?: (requestId: string) => void;
-  onReject?: (requestId: string, reason?: string) => void;
+  /**
+   * Must resolve true iff the server ack'd the decision. The block only
+   * commits its approved/rejected UI state on true — a false (or a throw)
+   * leaves it pending so a server-rejected approval never renders as
+   * "Approved" (T-96-03-01).
+   */
+  onApprove?: (requestId: string) => Promise<boolean>;
+  onReject?: (requestId: string, reason?: string) => Promise<boolean>;
 }
 
 type ApprovalStatus = "pending" | "approved" | "rejected";
@@ -33,16 +39,42 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
   const [status, setStatus] = useState<ApprovalStatus>("pending");
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const handleApprove = () => {
-    onApprove?.(block.requestId);
-    setStatus("approved");
+  const handleApprove = async () => {
+    if (!onApprove) {
+      setStatus("approved");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (await onApprove(block.requestId)) setStatus("approved");
+    } catch {
+      // Callback contract is "resolve false on failure" (the shared
+      // ApprovalActions hook already toasts) — treat a throw the same:
+      // stay pending, never render a false "Approved".
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleRejectSubmit = () => {
-    onReject?.(block.requestId, rejectReason.trim() || undefined);
-    setStatus("rejected");
-    setShowRejectInput(false);
+  const handleRejectSubmit = async () => {
+    if (!onReject) {
+      setStatus("rejected");
+      setShowRejectInput(false);
+      return;
+    }
+    setBusy(true);
+    try {
+      if (await onReject(block.requestId, rejectReason.trim() || undefined)) {
+        setStatus("rejected");
+        setShowRejectInput(false);
+      }
+    } catch {
+      // See handleApprove — stay pending on a throwing callback.
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (status === "approved") {
@@ -89,14 +121,16 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
       {!showRejectInput && (
         <div className="flex gap-2">
           <button
-            className="min-h-[44px] px-4 text-base font-medium bg-(--status-ok) text-white"
+            className="min-h-[44px] px-4 text-base font-medium bg-(--status-ok) text-white disabled:opacity-50"
             onClick={handleApprove}
+            disabled={busy}
           >
             Approve
           </button>
           <button
-            className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white"
+            className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white disabled:opacity-50"
             onClick={() => setShowRejectInput(true)}
+            disabled={busy}
           >
             Reject Request
           </button>
@@ -116,8 +150,9 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
           />
           <div className="flex gap-2">
             <button
-              className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white"
+              className="min-h-[44px] px-4 text-base font-medium bg-(--destructive) text-white disabled:opacity-50"
               onClick={handleRejectSubmit}
+              disabled={busy}
             >
               Submit Rejection
             </button>

@@ -36,8 +36,9 @@ export interface ChatBubbleProps {
   timestamp?: number;
   audioUrl?: string;
   onPlayAudio?: (url: string) => void;
-  onApprove?: (requestId: string) => Promise<void>;
-  onReject?: (requestId: string, reason?: string) => Promise<void>;
+  /** Resolve true iff the server ack'd — ApprovalBlock gates its UI flip on it. */
+  onApprove?: (requestId: string) => Promise<boolean>;
+  onReject?: (requestId: string, reason?: string) => Promise<boolean>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

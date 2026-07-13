@@ -303,19 +303,18 @@ export default function Chat() {
   // ─── Approve/Reject handlers for approval blocks ─────────────────────────
   // Delegates to the shared ApprovalActions hook (D-11) so Chat and Inbox
   // send the identical, server-correct { request_id_target, decision }
-  // payload and both await the ack before toasting (T-96-03-01 fix).
+  // payload and both await the ack before toasting (T-96-03-01 fix). The
+  // hook never throws — it catches sendCommand rejections (error ack /
+  // timeout / queue-full), toasts, and resolves false. The boolean is
+  // forwarded so ApprovalBlock only flips to approved/rejected on true.
 
   const handleApprove = useCallback(
-    async (requestId: string) => {
-      await approve(requestId);
-    },
+    (requestId: string) => approve(requestId),
     [approve]
   );
 
   const handleReject = useCallback(
-    async (requestId: string, reason?: string) => {
-      await reject(requestId, reason);
-    },
+    (requestId: string, reason?: string) => reject(requestId, reason),
     [reject]
   );
 

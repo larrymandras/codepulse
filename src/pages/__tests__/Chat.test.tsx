@@ -1,13 +1,16 @@
 /**
  * Chat approval payload + ack-handling regression test.
  *
- * Chat.tsx currently sends the WRONG approval.respond shape
- * ({ requestId, approved }) and never checks the sendCommand ack before
- * showing a success toast. This test encodes the server-correct contract
- * (Inbox.tsx's verified-correct shape): { request_id_target, decision } +
- * ack-checked toast.
+ * Encodes the server-correct approval.respond contract
+ * ({ request_id_target, decision }, not { requestId, approved }) AND the
+ * REAL AstridrWSContext.sendCommand failure contract: the live context never
+ * resolves a non-ok ack — it REJECTS the promise (error ack / timeout /
+ * queue-full). A rejected send must surface toast.error, show no success
+ * toast, and leave the ApprovalBlock pending (no false "Approved" state).
  *
  * Phase 96, Plan 03: F6 (payload fix) + D-11 (shared approval component).
+ * CR-01 review fix: failure path exercises rejection, the shape the real
+ * context emits, instead of an unreachable resolved error ack.
  */
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
@@ -139,8 +142,10 @@ describe("Chat — approval payload + ack handling (F6)", () => {
     expect(call).not.toHaveProperty("approved");
   });
 
-  test("shows toast.error and no success toast when ack.status is error", async () => {
-    mockSendCommand.mockResolvedValueOnce({ status: "error", error: "bad" });
+  test("shows toast.error, no success toast, and keeps the block pending when sendCommand rejects (real contract)", async () => {
+    // The REAL context rejects on error acks/timeouts/queue-full — it never
+    // resolves { status: "error" }.
+    mockSendCommand.mockRejectedValueOnce(new Error("bad"));
     renderChat();
     injectApprovalBlock("req-3");
 
@@ -150,9 +155,12 @@ describe("Chat — approval payload + ack handling (F6)", () => {
 
     expect(toast.error).toHaveBeenCalledWith("bad");
     expect(toast.success).not.toHaveBeenCalled();
+    // The block must NOT falsely flip to "Approved" — it stays actionable.
+    expect(screen.getByText("Approve")).toBeInTheDocument();
+    expect(screen.queryByText("Approved — sent to Ástríðr")).toBeNull();
   });
 
-  test("shows toast.success when ack.status is ok", async () => {
+  test("shows toast.success and collapses the block when ack.status is ok", async () => {
     mockSendCommand.mockResolvedValueOnce({ status: "ok" });
     renderChat();
     injectApprovalBlock("req-4");
@@ -163,5 +171,6 @@ describe("Chat — approval payload + ack handling (F6)", () => {
 
     expect(toast.success).toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByText("Approved — sent to Ástríðr")).toBeInTheDocument();
   });
 });
