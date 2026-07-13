@@ -269,19 +269,19 @@ Not applicable — this phase is not a rename/refactor/migration of stored ident
 
 **All other claims in this research were verified directly against live source in this session** (DashboardLayout.tsx, CommandPalette.tsx, App.tsx, Tasks.tsx, MissionControl.tsx, HeroStatsBar.tsx, Security.tsx, Automation.tsx, systemResources.ts, missionControl.ts, useRosterAgents.ts, ThemeSwitcher.tsx, DocComments.tsx, Skills.tsx, cronSchedules.ts, useAutomation.ts, Infrastructure.tsx, Chat.tsx, Inbox.tsx, AstridrWSContext.tsx, and cross-repo `astridr-repo/astridr/api/ws_commands.py` + two resolved debug session logs covering this exact approval contract) — none are `[ASSUMED]`.
 
-## Open Questions
+## Open Questions (all RESOLVED during planning)
 
-1. **What is the real data source for header LAT:?**
+1. **What is the real data source for header LAT:? — (RESOLVED: WS-ping round-trip latency, per 96-02.)**
    - What we know: `systemResources.current` has no latency field (verified). `ConnectionPopover.tsx` already computes real WS round-trip latency client-side. `providerHealth.latencyEmaMs` exists per-provider but has no aggregate query yet.
    - What's unclear: Which semantic CONTEXT.md's author intended — "connection health" (WS ping) vs "AI provider responsiveness" (providerHealth).
    - Recommendation: Default to the WS-ping approach (zero new backend code, directly matches "Astridr Runtime Telemetry" framing) unless the planner/user has a stated preference for LLM-provider latency instead.
 
-2. **Should the merged Tasks board's "By Agent" view keep `missionControl.ts` as a separate Convex module, or fold it into `tasks.ts`?**
+2. **Should the merged Tasks board's "By Agent" view keep `missionControl.ts` as a separate Convex module, or fold it into `tasks.ts`? — (RESOLVED: keep `missionControl.ts` separate and reuse it unchanged, per 96-04 — only the MissionControl page is deleted; deferring the module fold avoids Convex codegen churn this phase.)**
    - What we know: Both already query the same `tasks` table; no schema reason to keep them separate.
    - What's unclear: Whether keeping `missionControl.ts` as a named, semantically-scoped module aids readability vs. consolidating into `tasks.ts` reduces file count/import surface.
    - Recommendation: Claude's Discretion per CONTEXT.md — either is low-risk; lean toward folding into `tasks.ts` since D-02 deletes the `MissionControl.tsx` *page*, and an orphaned-but-still-used Convex module named after a deleted page is a minor but real naming-drift risk for the next audit.
 
-3. **Skills.tsx `onDelete={() => {}}` — confirmed truly dead, not partially wired.**
+3. **Skills.tsx `onDelete={() => {}}` — confirmed truly dead, not partially wired. (RESOLVED: drop the delete affordance when `isNew`/`!canDelete`; no new handler needed, per 96-08.)**
    - What we know: This no-op is on the **create-category** modal path (`isNew` / `canDelete={false}`), where a delete affordance would be logically meaningless (nothing exists yet to delete). The sibling **edit-category** modal (`:367-372`) has a real `handleDeleteCategory` handler.
    - What's unclear: Nothing — this resolves D-10's "drop the affordance" branch cleanly; the no-op simply shouldn't render a delete button at all when `isNew`, which `canDelete={false}` already ensures. Likely a near-zero-effort task (verify the prop is honored, no new handler needed).
 
