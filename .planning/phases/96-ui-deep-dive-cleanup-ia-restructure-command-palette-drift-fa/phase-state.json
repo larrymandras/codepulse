@@ -1,0 +1,110 @@
+{
+  "phase": 96,
+  "phaseName": "ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa",
+  "created": "2026-07-13T15:02:16.779Z",
+  "history": [
+    {
+      "timestamp": "2026-07-13T15:02:16.780Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    },
+    {
+      "timestamp": "2026-07-13T19:25:25.844Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-07-13T19:25:25.844Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 13,
+      "files": [
+        "96-01-PLAN.md",
+        "96-02-PLAN.md",
+        "96-03-PLAN.md",
+        "96-04-PLAN.md",
+        "96-05-PLAN.md",
+        "96-06-PLAN.md",
+        "96-07-PLAN.md",
+        "96-08-PLAN.md",
+        "96-09-PLAN.md",
+        "96-10-PLAN.md",
+        "96-11-PLAN.md",
+        "96-12-PLAN.md",
+        "96-13-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 13,
+      "files": [
+        "96-01-SUMMARY.md",
+        "96-02-SUMMARY.md",
+        "96-03-SUMMARY.md",
+        "96-04-SUMMARY.md",
+        "96-05-SUMMARY.md",
+        "96-06-SUMMARY.md",
+        "96-07-SUMMARY.md",
+        "96-08-SUMMARY.md",
+        "96-09-SUMMARY.md",
+        "96-10-SUMMARY.md",
+        "96-11-SUMMARY.md",
+        "96-12-SUMMARY.md",
+        "96-13-SUMMARY.md"
+      ]
+    },
+    "REVIEW.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-REVIEW.md"
+      ]
+    },
+    "VERIFICATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-VERIFICATION.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "96-VALIDATION.md"
+      ]
+    }
+  }
+}
