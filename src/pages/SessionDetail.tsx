@@ -14,6 +14,7 @@ import BashLog from "../components/BashLog";
 import SessionCapabilities from "../components/SessionCapabilities";
 import { TraceWaterfall } from "../components/TraceWaterfall";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { PageHeader } from "../components/PageHeader";
 
 type Tab = "overview" | "timeline" | "files" | "bash" | "errors" | "trace";
 
@@ -68,6 +69,9 @@ export default function SessionDetail() {
 
   return (
     <div className="space-y-4">
+      {/* SessionDetail is a standalone routed view (/sessions/:id) — F7 header */}
+      <PageHeader title="Session Detail" />
+
       {/* Tab bar */}
       <div className="flex gap-1 bg-card border border-border rounded-xl p-1">
         {TABS.map((tab) => (

@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader } from "@/components/PageHeader";
 
 const RANGE_OPTIONS = [
   { value: "7", label: "Last 7 days" },
@@ -150,7 +151,7 @@ export default function Quality() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Quality</h1>
+        <PageHeader title="Quality" className="mb-0" />
         <p className="text-base text-muted-foreground mt-1">
           Per-persona LLM output quality — judged nightly, tracked over time.
         </p>

@@ -21,6 +21,7 @@ import {
   type ServerStatus,
   type ToolStatus,
 } from "../lib/mcp-health";
+import { PageHeader } from "../components/PageHeader";
 
 // Map MCP status → StatusBadge semantic (ok/error/idle), so the inventory reuses
 // the Phase 71 design-token status colors rather than inventing new ones.
@@ -327,11 +328,16 @@ export default function McpInventory() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Network className="h-6 w-6 text-primary" />
-          MCP Inventory & Health
-          <InfoTooltip text="Every MCP server and the tools it hosts, with per-tool health (last call, error rate) derived from callGraphEdges. Prune chips flag tools as disabled — a CodePulse governance flag; Ástríðr enforcement is a follow-up." />
-        </h1>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              MCP Inventory & Health
+              <InfoTooltip text="Every MCP server and the tools it hosts, with per-tool health (last call, error rate) derived from callGraphEdges. Prune chips flag tools as disabled — a CodePulse governance flag; Ástríðr enforcement is a follow-up." />
+            </span>
+          }
+          icon={Network}
+          className="mb-0"
+        />
         <p className="text-sm text-muted-foreground font-mono mt-1">
           Server → tool health from mcpServers · discoveredTools · callGraphEdges
         </p>

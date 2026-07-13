@@ -13,6 +13,7 @@ import { api } from "../../convex/_generated/api";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
 
 function generateId(): string {
@@ -73,7 +74,7 @@ export default function InsightsChat() {
     <div className="flex flex-col -m-6 h-[calc(100vh-3rem)]">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <h1 className="text-base font-semibold text-foreground">Insights</h1>
+        <PageHeader title="Insights" className="mb-0.5" />
         <p className="text-sm text-muted-foreground mt-0.5">
           Ask about cost, errors, sessions, agents, or alerts.
         </p>

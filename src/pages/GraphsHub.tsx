@@ -28,6 +28,7 @@ import { useKgSummary } from "../hooks/useKgSummary";
 import { useCapabilitySummary } from "../hooks/useCapabilities";
 import { useGoalList } from "../hooks/useSwarmGraph";
 import { buildGalaxy } from "../lib/tool-galaxy";
+import { PageHeader } from "../components/PageHeader";
 
 // ---------------------------------------------------------------------------
 // Sub-components — each tile is its own small component so the hook and
@@ -146,13 +147,15 @@ export default function GraphsHub() {
   return (
     <div className="space-y-6 p-6">
       {/* Page header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xs font-mono uppercase tracking-widest font-bold text-primary flex items-center gap-2">
-          <Network className="h-5 w-5 text-primary" />
-          GRAPHS HUB
-          <InfoTooltip text="Ástríðr's code, vault, and tool graphs — unified. The hero below shows the nightly graphify + Obsidian snapshot." />
-        </h1>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            Graphs Hub
+            <InfoTooltip text="Ástríðr's code, vault, and tool graphs — unified. The hero below shows the nightly graphify + Obsidian snapshot." />
+          </span>
+        }
+        icon={Network}
+      />
 
       {/* Summary tile row — six independent tiles, one per graph surface */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
