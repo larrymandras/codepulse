@@ -672,6 +672,12 @@ export const expireStaleCommands = internalMutation({
       .collect();
     for (const cmd of stale) {
       if (shouldExpireCommand(cmd.status, cmd.expiresAt, now)) {
+        // D-P6-10 (site 2 of 2): an unclaimed intake row that TTL-expires
+        // also needs its blob deleted before the terminal patch — this site
+        // is independent of ackCommand's (an expired row is never acked).
+        if (cmd.commandType === "intake" && cmd.intakePayload?.storageId) {
+          await ctx.storage.delete(cmd.intakePayload.storageId);
+        }
         await ctx.db.patch(cmd._id, { status: "expired" });
       }
     }
