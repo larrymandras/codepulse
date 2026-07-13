@@ -854,4 +854,22 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");
   it.todo("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'");
   it.todo("forgeCommandsClaim: resolves storageId to a fetchable downloadUrl for a claimed intake row (SC5 — covered live by scripts/verify-intake-claim.mjs in Plan 06-04, not here)");
+
+  // D-P6-10/D-P6-13 lifecycle stubs: these genuinely require a live storage-backed
+  // row to verify meaningfully (the interesting behavior IS the ctx.storage.delete
+  // call against a real blob), so they cannot be pure-logic-extracted the way
+  // resolveClaimTypes/isSafeSubpath were. Coverage split (do not overstate):
+  // Plan 06-04's scripts/verify-intake-claim.mjs covers exactly TWO of these five
+  // live against the dev deployment — the done-path blob delete (its post-ack
+  // fetch(downloadUrl) non-200 assertion) and report-on-ack storage (its
+  // listForgeCommands report assertion). The remaining three — failed-status blob
+  // delete, duplicate-ack idempotency, and the expire-path blob delete — are NOT
+  // covered by any automation this phase; they remain honest todos with optional
+  // manual spot-checks documented in 06-VALIDATION.md's Manual-Only Verifications
+  // table.
+  it.todo("ackCommand: deletes the intake row's storage blob before patching status to done");
+  it.todo("ackCommand: deletes the intake row's storage blob before patching status to failed");
+  it.todo("ackCommand: does not re-delete an already-terminal intake row's blob on a duplicate ack (CR-01 idempotency)");
+  it.todo("ackCommand: stores the report field on the row for a terminal intake ack");
+  it.todo("expireStaleCommands: deletes an unclaimed intake row's storage blob before marking it expired");
 });
