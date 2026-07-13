@@ -384,7 +384,12 @@ import {
   shouldExpireCommand,
   isTerminalCommandStatus,
   buildLaunchRow,
+  buildIntakeRow,
+  isAcceptedGithubUrlShape,
+  isSafeSubpath,
+  resolveClaimTypes,
 } from "./forge";
+import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // stripDangerousCapability — Pitfall 7 / D-06 mitigation
@@ -460,6 +465,58 @@ describe("forge.shouldExpireCommand — TTL expiry logic (D-12)", () => {
 
   it("returns false for already-expired command (idempotent)", () => {
     expect(shouldExpireCommand("expired", PAST, NOW)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveClaimTypes — supportedTypes default (D-P6-11)
+// ---------------------------------------------------------------------------
+
+describe("forge.resolveClaimTypes — supportedTypes default (D-P6-11)", () => {
+  it("defaults to ['launch', 'stop'] when supportedTypes is undefined (today's daemon)", () => {
+    expect(resolveClaimTypes(undefined)).toEqual(["launch", "stop"]);
+  });
+
+  it("returns an explicit empty array unchanged (absent is not the same as empty)", () => {
+    expect(resolveClaimTypes([])).toEqual([]);
+  });
+
+  it("returns ['intake'] when supportedTypes explicitly declares only intake", () => {
+    expect(resolveClaimTypes(["intake"])).toEqual(["intake"]);
+  });
+
+  it("returns a composed list when supportedTypes declares launch + intake", () => {
+    expect(resolveClaimTypes(["launch", "intake"])).toEqual(["launch", "intake"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// claimAndUpsertHost — empty supportedTypes claims nothing (D-P6-11 +
+// Plan 06-04 review fix)
+// ---------------------------------------------------------------------------
+
+describe("forge.claimAndUpsertHost — empty supportedTypes short-circuit (D-P6-11)", () => {
+  /**
+   * Mirror of the empty-types early return in claimAndUpsertHost. In
+   * production, `types.length === 0` returns [] after the forgeHosts liveness
+   * upsert but BEFORE the queued-commands query — a zero-length spread into
+   * q.or(...) would error at runtime. Here we test the extracted decision
+   * function without a live Convex runtime.
+   */
+  function shouldSkipClaimQuery(types: string[]): boolean {
+    return types.length === 0;
+  }
+
+  it("skips the claim query for an explicit empty supportedTypes ([] -> claim nothing)", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes([]))).toBe(true);
+  });
+
+  it("does not skip for an omitted supportedTypes (defaults to launch/stop)", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes(undefined))).toBe(false);
+  });
+
+  it("does not skip for a declared non-empty capability set", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes(["intake"]))).toBe(false);
   });
 });
 
@@ -562,14 +619,273 @@ describe("forge.buildLaunchRow — field mapping (FI-06)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Auth fail-closed guard — FI-08 / D-13
+// Phase 06 (skill-intake): buildIntakeRow — field mapping (D-P6-01..09)
 // ---------------------------------------------------------------------------
 
-describe("forge.enqueueLaunch / enqueueStop — auth fail-closed guard (FI-08, D-13)", () => {
+describe("forge.buildIntakeRow — field mapping", () => {
+  const now = 1_700_000_000_000;
+  const TTL_MS = 5 * 60 * 1000;
+  const subject = "user_abc123";
+
+  const uploadArgs = {
+    hostId:      "desktop-abc",
+    commandId:   "01JXMQ00000000000000000002",
+    destination: "project" as const,
+    workspaceId: "ws-desktop-1",
+    storageId:   "storage-id-1" as Id<"_storage">,
+    githubUrl:   undefined,
+    subpath:     undefined,
+  };
+
+  const urlArgs = {
+    hostId:      "desktop-abc",
+    commandId:   "01JXMQ00000000000000000003",
+    destination: "global" as const,
+    workspaceId: null,
+    storageId:   undefined,
+    githubUrl:   "https://github.com/owner/repo",
+    subpath:     "skills/foo",
+  };
+
+  it("sets commandType to intake", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.commandType).toBe("intake");
+  });
+
+  it("sets launchPayload and stopPayload to null", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.launchPayload).toBeNull();
+    expect(row.stopPayload).toBeNull();
+  });
+
+  it("sets status to queued", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.status).toBe("queued");
+  });
+
+  it("sets issuedBy to the Clerk identity subject", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.issuedBy).toBe(subject);
+  });
+
+  it("sets expiresAt to createdAt + TTL_MS", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.expiresAt).toBe(now + TTL_MS);
+    expect(row.createdAt).toBe(now);
+  });
+
+  it("sets all nullable timing/ack fields to null", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.claimedAt).toBeNull();
+    expect(row.executedAt).toBeNull();
+    expect(row.completedAt).toBeNull();
+    expect(row.resolvedForgeJobId).toBeNull();
+    expect(row.error).toBeNull();
+  });
+
+  it("maps intakePayload fields from args (upload variant)", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.intakePayload.destination).toBe("project");
+    expect(row.intakePayload.workspaceId).toBe("ws-desktop-1");
+    expect(row.intakePayload.storageId).toBe("storage-id-1");
+    expect(row.intakePayload.githubUrl).toBeUndefined();
+    expect(row.intakePayload.subpath).toBeUndefined();
+  });
+
+  it("maps intakePayload fields from args (githubUrl variant)", () => {
+    const row = buildIntakeRow(urlArgs, subject, now, TTL_MS);
+    expect(row.intakePayload.destination).toBe("global");
+    expect(row.intakePayload.workspaceId).toBeNull();
+    expect(row.intakePayload.storageId).toBeUndefined();
+    expect(row.intakePayload.githubUrl).toBe("https://github.com/owner/repo");
+    expect(row.intakePayload.subpath).toBe("skills/foo");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): isAcceptedGithubUrlShape — accept/reject (D-P6-06)
+// ---------------------------------------------------------------------------
+
+describe("forge.isAcceptedGithubUrlShape — accept/reject", () => {
+  it("accepts a plain github.com URL", () => {
+    expect(isAcceptedGithubUrlShape("https://github.com/owner/repo")).toBe(true);
+  });
+
+  it("accepts a github.com URL with a /tree/ subpath", () => {
+    expect(
+      isAcceptedGithubUrlShape("https://github.com/owner/repo/tree/main/skills/foo")
+    ).toBe(true);
+  });
+
+  it("accepts owner/repo shorthand", () => {
+    expect(isAcceptedGithubUrlShape("owner/repo")).toBe(true);
+  });
+
+  it("rejects a non-github.com URL", () => {
+    expect(isAcceptedGithubUrlShape("https://gitlab.com/owner/repo")).toBe(false);
+  });
+
+  it("rejects a non-URL string", () => {
+    expect(isAcceptedGithubUrlShape("not a url at all")).toBe(false);
+  });
+
+  it("rejects an empty string", () => {
+    expect(isAcceptedGithubUrlShape("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): isSafeSubpath — traversal guard (D-P6-07)
+// ---------------------------------------------------------------------------
+
+describe("forge.isSafeSubpath — traversal guard", () => {
+  it("accepts undefined", () => {
+    expect(isSafeSubpath(undefined)).toBe(true);
+  });
+
+  it("accepts a plain relative subpath", () => {
+    expect(isSafeSubpath("skills/foo")).toBe(true);
+  });
+
+  it("rejects a leading ../ traversal", () => {
+    expect(isSafeSubpath("../etc/passwd")).toBe(false);
+  });
+
+  it("rejects a leading-slash absolute path", () => {
+    expect(isSafeSubpath("/etc/passwd")).toBe(false);
+  });
+
+  it("rejects a nested .. segment", () => {
+    expect(isSafeSubpath("skills/../../etc")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — XOR enforcement (D-P6-05)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — XOR enforcement (D-P6-05)", () => {
   /**
-   * Mirror of the fail-closed identity guard used in enqueueLaunch / enqueueStop.
-   * In production this is `ctx.auth.getUserIdentity()` returning null.
+   * Mirror of the storageId/githubUrl XOR guard used in enqueueIntake.
    * Here we test the extracted decision function without a live Convex runtime.
+   */
+  function xorGuard(hasFile: boolean, hasUrl: boolean): void {
+    if (hasFile === hasUrl) {
+      throw new Error("Provide exactly one of storageId or githubUrl");
+    }
+  }
+
+  it("throws when both storageId and githubUrl are present", () => {
+    expect(() => xorGuard(true, true)).toThrow(
+      "Provide exactly one of storageId or githubUrl"
+    );
+  });
+
+  it("throws when neither storageId nor githubUrl is present", () => {
+    expect(() => xorGuard(false, false)).toThrow(
+      "Provide exactly one of storageId or githubUrl"
+    );
+  });
+
+  it("does not throw when only storageId is present", () => {
+    expect(() => xorGuard(true, false)).not.toThrow();
+  });
+
+  it("does not throw when only githubUrl is present", () => {
+    expect(() => xorGuard(false, true)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — storageId existence + size guard
+// (D-P6-09 + Plan 06-04 review fix)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — storageId existence + size guard (D-P6-09)", () => {
+  /**
+   * Mirror of the storage-metadata guard used in enqueueIntake. In production
+   * `meta` is `await ctx.db.system.get("_storage", storageId)`, which returns
+   * null for a bogus/dangling storageId. Here we test the extracted decision
+   * function without a live Convex runtime.
+   */
+  const MAX = 1_000_000; // MAX_INTAKE_UPLOAD_BYTES
+  function storageMetaGuard(meta: { size: number } | null): void {
+    if (!meta) {
+      throw new Error("Uploaded file not found: storageId does not reference an existing file");
+    }
+    if (meta.size > MAX) {
+      throw new Error(`Uploaded file exceeds ${MAX} bytes`);
+    }
+  }
+
+  it("throws when the storageId resolves to no file (null metadata)", () => {
+    expect(() => storageMetaGuard(null)).toThrow(
+      "Uploaded file not found: storageId does not reference an existing file"
+    );
+  });
+
+  it("throws when the file exceeds the 1 MB cap", () => {
+    expect(() => storageMetaGuard({ size: MAX + 1 })).toThrow(
+      `Uploaded file exceeds ${MAX} bytes`
+    );
+  });
+
+  it("does not throw for an existing file within the cap", () => {
+    expect(() => storageMetaGuard({ size: MAX })).not.toThrow();
+    expect(() => storageMetaGuard({ size: 1 })).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — workspaceId required for
+// destination='project' (D-P6-04)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — workspaceId required for project destination (D-P6-04)", () => {
+  /**
+   * Mirror of the project-destination workspaceId guard used in enqueueIntake.
+   * Here we test the extracted decision function without a live Convex runtime.
+   */
+  function projectWorkspaceGuard(
+    destination: "global" | "project" | "cold",
+    workspaceId: string | null
+  ): void {
+    if (destination === "project" && !workspaceId) {
+      throw new Error("workspaceId is required when destination is 'project'");
+    }
+  }
+
+  it("throws for destination='project' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("project", null)).toThrow(
+      "workspaceId is required when destination is 'project'"
+    );
+  });
+
+  it("does not throw for destination='project' with a workspaceId", () => {
+    expect(() => projectWorkspaceGuard("project", "ws-desktop-1")).not.toThrow();
+  });
+
+  it("does not throw for destination='global' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("global", null)).not.toThrow();
+  });
+
+  it("does not throw for destination='cold' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("cold", null)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth fail-closed guard — FI-08 / D-13 (applies to enqueueLaunch, enqueueStop,
+// enqueueIntake, and generateForgeUploadUrl — all four Clerk-gated mutations
+// share the identical guard shape and throw message, D-P6 phase 06 addition)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueLaunch / enqueueStop / enqueueIntake / generateForgeUploadUrl — auth fail-closed guard (FI-08, D-13)", () => {
+  /**
+   * Mirror of the fail-closed identity guard used in enqueueLaunch / enqueueStop /
+   * enqueueIntake / generateForgeUploadUrl. In production this is
+   * `ctx.auth.getUserIdentity()` returning null. Here we test the extracted
+   * decision function without a live Convex runtime.
    */
   function authGuard(identity: { subject: string } | null): void {
     if (identity === null) {
@@ -602,4 +918,28 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("expireStaleCommands: does not touch executing/done/failed commands");
   it.todo("ackCommand: sets resolvedForgeJobId and status=done on claimed command");
   it.todo("ackCommand: sets status=failed and error on failed command");
+  it.todo("enqueueIntake: inserts forgeCommands row with commandType='intake' and status='queued'");
+  it.todo("enqueueIntake: rejects an upload exceeding MAX_INTAKE_UPLOAD_BYTES (requires a live storage-backed row)");
+  it.todo("generateForgeUploadUrl: returns a usable signed upload URL");
+  it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");
+  it.todo("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'");
+  it.todo("forgeCommandsClaim: resolves storageId to a fetchable downloadUrl for a claimed intake row (SC5 — covered live by scripts/verify-intake-claim.mjs in Plan 06-04, not here)");
+
+  // D-P6-10/D-P6-13 lifecycle stubs: these genuinely require a live storage-backed
+  // row to verify meaningfully (the interesting behavior IS the ctx.storage.delete
+  // call against a real blob), so they cannot be pure-logic-extracted the way
+  // resolveClaimTypes/isSafeSubpath were. Coverage split (do not overstate):
+  // Plan 06-04's scripts/verify-intake-claim.mjs covers exactly TWO of these five
+  // live against the dev deployment — the done-path blob delete (its post-ack
+  // fetch(downloadUrl) non-200 assertion) and report-on-ack storage (its
+  // listForgeCommands report assertion). The remaining three — failed-status blob
+  // delete, duplicate-ack idempotency, and the expire-path blob delete — are NOT
+  // covered by any automation this phase; they remain honest todos with optional
+  // manual spot-checks documented in 06-VALIDATION.md's Manual-Only Verifications
+  // table.
+  it.todo("ackCommand: deletes the intake row's storage blob before patching status to done");
+  it.todo("ackCommand: deletes the intake row's storage blob before patching status to failed");
+  it.todo("ackCommand: does not re-delete an already-terminal intake row's blob on a duplicate ack (CR-01 idempotency)");
+  it.todo("ackCommand: stores the report field on the row for a terminal intake ack");
+  it.todo("expireStaleCommands: deletes an unclaimed intake row's storage blob before marking it expired");
 });

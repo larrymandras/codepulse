@@ -15,6 +15,7 @@
 
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // Phase 80: Pure-logic helpers (exported for unit tests in forge.test.ts)
@@ -22,6 +23,9 @@ import { v } from "convex/values";
 
 /** 5-minute TTL for queued commands (D-12). */
 export const FORGE_COMMAND_TTL_MS = 5 * 60 * 1000;
+
+/** 1 MB hard cap on an uploaded SKILL.md (D-P6-09). */
+export const MAX_INTAKE_UPLOAD_BYTES = 1_000_000;
 
 /**
  * Strip the `dangerous` key from a capabilities JSON string before storage (D-06, Pitfall 7).
@@ -83,6 +87,7 @@ interface LaunchRow {
     capabilities: string | null;
   };
   stopPayload: null;
+  intakePayload: null;
   status: string;
   issuedBy: string;
   createdAt: number;
@@ -117,6 +122,7 @@ export function buildLaunchRow(
       capabilities: args.capabilities,
     },
     stopPayload:        null,
+    intakePayload:      null,
     status:             "queued",
     issuedBy:           subject,
     createdAt:          now,
@@ -127,6 +133,102 @@ export function buildLaunchRow(
     resolvedForgeJobId: null,
     error:              null,
   };
+}
+
+interface IntakeRowArgs {
+  hostId: string;
+  commandId: string;
+  destination: "global" | "project" | "cold";
+  workspaceId: string | null;
+  storageId?: Id<"_storage">;
+  githubUrl?: string;
+  subpath?: string;
+}
+
+interface IntakeRow {
+  hostId: string;
+  commandId: string;
+  commandType: "intake";
+  launchPayload: null;
+  stopPayload: null;
+  intakePayload: {
+    destination: "global" | "project" | "cold";
+    workspaceId: string | null;
+    storageId?: Id<"_storage">;
+    githubUrl?: string;
+    subpath?: string;
+  };
+  status: string;
+  issuedBy: string;
+  createdAt: number;
+  expiresAt: number;
+  claimedAt: null;
+  executedAt: null;
+  completedAt: null;
+  resolvedForgeJobId: null;
+  error: null;
+}
+
+/**
+ * Build the forgeCommands insert object for an intake command.
+ * Mirrors buildLaunchRow exactly (D-P6-01..09).
+ */
+export function buildIntakeRow(
+  args: IntakeRowArgs,
+  subject: string,
+  now: number,
+  ttlMs: number
+): IntakeRow {
+  return {
+    hostId:      args.hostId,
+    commandId:   args.commandId,
+    commandType: "intake",
+    launchPayload: null,
+    stopPayload:   null,
+    intakePayload: {
+      destination: args.destination,
+      workspaceId: args.workspaceId,
+      storageId:   args.storageId,
+      githubUrl:   args.githubUrl,
+      subpath:     args.subpath,
+    },
+    status:             "queued",
+    issuedBy:           subject,
+    createdAt:          now,
+    expiresAt:          now + ttlMs,
+    claimedAt:          null,
+    executedAt:         null,
+    completedAt:        null,
+    resolvedForgeJobId: null,
+    error:              null,
+  };
+}
+
+// Direct TypeScript port of skill_intake's github_url.py FULL_URL/SHORTHAND
+// regexes (D-P6-06). Must never accept a form the Python parser would reject —
+// port, don't reinterpret. Source: skill-intake repo,
+// src/skill_intake/ingestion/github_url.py.
+const GITHUB_FULL_URL = /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/tree\/(.+?))?\/?$/i;
+const GITHUB_SHORTHAND = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/;
+
+/**
+ * True when `url` matches either the full github.com URL form or the
+ * owner/repo shorthand form accepted by skill-intake's own CLI (D-P6-06).
+ */
+export function isAcceptedGithubUrlShape(url: string): boolean {
+  return GITHUB_FULL_URL.test(url) || GITHUB_SHORTHAND.test(url);
+}
+
+/**
+ * True when `subpath` is undefined, or is a relative path with no leading
+ * slash/backslash and no ".." segment. Stops path-traversal strings from
+ * crossing the bridge (D-P6-07 fan-out field).
+ */
+export function isSafeSubpath(subpath: string | undefined): boolean {
+  if (subpath === undefined) return true;
+  if (subpath.startsWith("/") || subpath.startsWith("\\")) return false;
+  const segments = subpath.split(/[/\\]/);
+  return !segments.includes("..");
 }
 
 // ---------------------------------------------------------------------------
@@ -374,6 +476,7 @@ export const enqueueStop = mutation({
       commandType:        "stop",
       launchPayload:      null,
       stopPayload:        { forgeJobId: args.forgeJobId },
+      intakePayload:      null,
       status:             "queued",
       issuedBy:           identity.subject,
       createdAt:          now,
@@ -387,14 +490,129 @@ export const enqueueStop = mutation({
   },
 });
 
+export const enqueueIntake = mutation({
+  args: {
+    hostId:      v.string(),
+    commandId:   v.string(),  // client-generated ULID for optimistic reconciliation (D-10)
+    destination: v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+    workspaceId: v.union(v.string(), v.null()),
+    storageId:   v.optional(v.id("_storage")),
+    githubUrl:   v.optional(v.string()),
+    subpath:     v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // D-13: Fail-closed — DELIBERATE divergence from read-query graceful-skip.
+    // DO NOT change to graceful-skip (if (!identity) return;). This is a
+    // write/control path. Read queries in this file have no auth check — that
+    // convention does NOT propagate here.
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+
+    // D-P6-05: exactly one of storageId / githubUrl, never both, never neither.
+    const hasFile = args.storageId !== undefined;
+    const hasUrl = args.githubUrl !== undefined;
+    if (hasFile === hasUrl) {
+      throw new Error("Provide exactly one of storageId or githubUrl");
+    }
+
+    if (hasFile) {
+      // D-P6-09: 1 MB hard cap, enforced before any row is ever inserted.
+      // Non-deprecated size-check API — do NOT use ctx.storage.getMetadata().
+      const meta = await ctx.db.system.get("_storage", args.storageId!);
+      // A bogus/dangling storageId must fail here, not surface later as a
+      // null downloadUrl on the claimed row (review fix, Plan 06-04).
+      if (!meta) {
+        throw new Error("Uploaded file not found: storageId does not reference an existing file");
+      }
+      if (meta.size > MAX_INTAKE_UPLOAD_BYTES) {
+        throw new Error(`Uploaded file exceeds ${MAX_INTAKE_UPLOAD_BYTES} bytes`);
+      }
+    }
+
+    if (hasUrl) {
+      if (!isAcceptedGithubUrlShape(args.githubUrl!)) {
+        throw new Error(`Not a recognized GitHub URL form: ${args.githubUrl}`);
+      }
+    }
+
+    if (!isSafeSubpath(args.subpath)) {
+      throw new Error(`Invalid subpath: ${args.subpath}`);
+    }
+
+    if (args.destination === "project" && !args.workspaceId) {
+      throw new Error("workspaceId is required when destination is 'project'");
+    }
+
+    const row = buildIntakeRow(args, identity.subject, Date.now(), FORGE_COMMAND_TTL_MS);
+    await ctx.db.insert("forgeCommands", row);
+  },
+});
+
+export const generateForgeUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // D-13: Fail-closed — DELIBERATE divergence from read-query graceful-skip.
+    // DO NOT change to graceful-skip. This is a write/control path.
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+    // D-P6-08: exactly one signed URL per call, for a single SKILL.md — no
+    // zip or multi-file path exists in this mutation.
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Phase 80: Internal mutations (called from httpActions — bearer-authed, no Clerk)
 // ---------------------------------------------------------------------------
+
+// D-P6-11: a daemon that sends no supportedTypes field is today's daemon, which
+// can only execute "launch"/"stop" — default to that so it never sees an intake
+// row it cannot execute.
+export function resolveClaimTypes(supportedTypes?: string[]): string[] {
+  return supportedTypes ?? ["launch", "stop"];
+}
+
+// TEST-ONLY: used exclusively by scripts/verify-intake-claim.mjs (SC5,
+// D-P6-15). internalMutation — never part of the api.* surface the browser
+// SDK can call. Do not import from client code.
+export const generateVerificationUploadUrl = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// TEST-ONLY: used exclusively by scripts/verify-intake-claim.mjs (SC5,
+// D-P6-15). internalMutation — never part of the api.* surface the browser
+// SDK can call. Do not import from client code. Reuses buildIntakeRow exactly
+// like enqueueIntake does, but skips the Clerk check and enqueueIntake's own
+// validation (XOR/size/URL-shape) — the script controls its own inputs
+// directly and those paths are already unit-tested in Plan 06-01.
+export const seedIntakeRowForVerification = internalMutation({
+  args: {
+    hostId:      v.string(),
+    commandId:   v.string(),
+    destination: v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+    workspaceId: v.union(v.string(), v.null()),
+    storageId:   v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert(
+      "forgeCommands",
+      buildIntakeRow(args, "verification-script", Date.now(), FORGE_COMMAND_TTL_MS)
+    );
+  },
+});
 
 export const claimAndUpsertHost = internalMutation({
   args: {
     hostId: v.string(),
     now:    v.number(),
+    supportedTypes: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Upsert forgeHosts liveness record (read+patch-or-insert = atomic in one mutation)
@@ -408,6 +626,14 @@ export const claimAndUpsertHost = internalMutation({
       await ctx.db.insert("forgeHosts", { hostId: args.hostId, lastSeenAt: args.now });
     }
 
+    const types = resolveClaimTypes(args.supportedTypes);
+
+    // D-P6-11: an explicit empty supportedTypes means "I can execute nothing
+    // right now" — liveness is recorded (above) but nothing is claimed. This
+    // also guards the q.or(...) below, which requires at least one expression
+    // and would error at runtime on a zero-length spread (review fix, 06-04).
+    if (types.length === 0) return [];
+
     // Atomically claim queued, non-expired commands for this host (up to 10).
     // Convex mutations are serializable — read + patch in one mutation = double-claim safe.
     const queued = await ctx.db
@@ -415,7 +641,12 @@ export const claimAndUpsertHost = internalMutation({
       .withIndex("by_host_status_created", (q) =>
         q.eq("hostId", args.hostId).eq("status", "queued")
       )
-      .filter((q) => q.gt(q.field("expiresAt"), args.now))
+      .filter((q) =>
+        q.and(
+          q.gt(q.field("expiresAt"), args.now),
+          q.or(...types.map((t) => q.eq(q.field("commandType"), t)))
+        )
+      )
       .take(10);
 
     for (const cmd of queued) {
@@ -440,6 +671,7 @@ export const ackCommand = internalMutation({
     resolvedForgeJobId: v.union(v.string(), v.null()),
     error:              v.union(v.string(), v.null()),
     now:                v.number(),
+    report:             v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const cmd = await ctx.db
@@ -448,13 +680,24 @@ export const ackCommand = internalMutation({
       .unique();
     if (!cmd) return;  // idempotent: already acked or hard-deleted
     // Idempotent on a terminal row too — never overwrite done/failed/expired
-    // with a late or duplicate ack (CR-01).
+    // with a late or duplicate ack (CR-01). This also guarantees the blob
+    // delete below never fires twice for the same row.
     if (isTerminalCommandStatus(cmd.status)) return;
+    // D-P6-10 (site 1 of 2): delete the uploaded SKILL.md blob before the row
+    // goes terminal, mirroring sweepForgeFileRecords's storage-first ordering (D-05).
+    if (
+      cmd.commandType === "intake" &&
+      cmd.intakePayload?.storageId &&
+      (args.status === "done" || args.status === "failed")
+    ) {
+      await ctx.storage.delete(cmd.intakePayload.storageId);
+    }
     await ctx.db.patch(cmd._id, {
       status:             args.status,
       resolvedForgeJobId: args.resolvedForgeJobId,
       error:              args.error,
       completedAt:        args.now,
+      report:             args.report ?? null,
     });
   },
 });
@@ -472,6 +715,12 @@ export const expireStaleCommands = internalMutation({
       .collect();
     for (const cmd of stale) {
       if (shouldExpireCommand(cmd.status, cmd.expiresAt, now)) {
+        // D-P6-10 (site 2 of 2): an unclaimed intake row that TTL-expires
+        // also needs its blob deleted before the terminal patch — this site
+        // is independent of ackCommand's (an expired row is never acked).
+        if (cmd.commandType === "intake" && cmd.intakePayload?.storageId) {
+          await ctx.storage.delete(cmd.intakePayload.storageId);
+        }
         await ctx.db.patch(cmd._id, { status: "expired" });
       }
     }

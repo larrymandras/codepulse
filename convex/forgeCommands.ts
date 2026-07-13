@@ -47,7 +47,7 @@ export const forgeCommandsClaim = httpAction(async (ctx, request) => {
     );
   }
 
-  const { hostId } = body ?? {};
+  const { hostId, supportedTypes } = body ?? {};
   if (!hostId) {
     return new Response(
       JSON.stringify({ error: "Missing required field: hostId" }),
@@ -61,10 +61,25 @@ export const forgeCommandsClaim = httpAction(async (ctx, request) => {
   const result = await ctx.runMutation(internal.forge.claimAndUpsertHost, {
     hostId,
     now: Date.now(),
+    supportedTypes,
   });
 
+  // D-P6-12: downloadUrl is resolved here, attached to the response object only —
+  // it is never written back to the forgeCommands row (ctx.db.patch/insert),
+  // matching forgeFileIngest.ts's "never persist derived/ephemeral capabilities"
+  // convention (T-82-06).
+  const commands = await Promise.all(
+    result.map(async (cmd: any) => {
+      if (cmd.commandType === "intake" && cmd.intakePayload?.storageId) {
+        const downloadUrl = await ctx.storage.getUrl(cmd.intakePayload.storageId);
+        return { ...cmd, downloadUrl };
+      }
+      return cmd;
+    })
+  );
+
   return new Response(
-    JSON.stringify({ commands: result }),
+    JSON.stringify({ commands }),
     {
       status: 200,
       headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
@@ -103,7 +118,7 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
     );
   }
 
-  const { commandId, status } = body ?? {};
+  const { commandId, status, report } = body ?? {};
   if (!commandId) {
     return new Response(
       JSON.stringify({ error: "Missing required field: commandId" }),
@@ -129,6 +144,7 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
     resolvedForgeJobId: body.forgeJobId ?? null,
     error:              body.error ?? null,
     now:                Date.now(),
+    report:             report ?? null,
   });
 
   return new Response(

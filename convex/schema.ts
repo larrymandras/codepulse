@@ -1634,9 +1634,9 @@ export default defineSchema({
   forgeCommands: defineTable({
     hostId:      v.string(),
     commandId:   v.string(),  // client-generated ULID for optimistic reconciliation
-    commandType: v.union(v.literal("launch"), v.literal("stop")),
+    commandType: v.union(v.literal("launch"), v.literal("stop"), v.literal("intake")),
 
-    // Launch payload (null for stop commands)
+    // Launch payload (null for stop/intake commands)
     launchPayload: v.union(
       v.object({
         agent:        v.string(),
@@ -1649,13 +1649,33 @@ export default defineSchema({
       v.null()
     ),
 
-    // Stop payload (null for launch commands)
+    // Stop payload (null for launch/intake commands)
     stopPayload: v.union(
       v.object({
         forgeJobId: v.string(),  // the job to stop
       }),
       v.null()
     ),
+
+    // Intake payload (null for launch/stop commands). Skill-intake validation
+    // request: exactly one of storageId (uploaded SKILL.md) or githubUrl,
+    // never both, never neither (D-P6-05, enforced by enqueueIntake).
+    // v.optional wrapper: pre-Phase-06 rows in the live deployment were
+    // written before this field existed and omit it entirely — optional keeps
+    // them schema-valid (operator-approved prod-data compat, Plan 06-04).
+    // The inner union-with-null is unchanged so the Phase-06 insert sites
+    // (buildLaunchRow/enqueueStop/buildIntakeRow) that explicitly supply
+    // `intakePayload: null` still validate without modification.
+    intakePayload: v.optional(v.union(
+      v.object({
+        destination:  v.union(v.literal("global"), v.literal("project"), v.literal("cold")),  // D-P6-03
+        workspaceId:  v.union(v.string(), v.null()),  // required when destination === "project" (D-P6-04)
+        storageId:    v.optional(v.id("_storage")),   // uploaded SKILL.md (D-P6-05)
+        githubUrl:    v.optional(v.string()),          // GitHub URL/shorthand (D-P6-05, D-P6-06)
+        subpath:      v.optional(v.string()),          // fan-out for a repo with N skills (D-P6-07)
+      }),
+      v.null()
+    )),
 
     // State machine value: queued | executing | done | failed | expired
     status:    v.string(),
@@ -1673,6 +1693,11 @@ export default defineSchema({
     // Ack fields
     resolvedForgeJobId: v.union(v.string(), v.null()),  // daemon sets on done (D-10 reconciliation)
     error:              v.union(v.string(), v.null()),
+
+    // Intake validation report, set by the daemon on completion (D-P6-13).
+    // Optional (not union-with-null) so existing launch/stop insert call
+    // sites need no change to supply it.
+    report: v.optional(v.any()),
   })
     .index("by_host_status_created", ["hostId", "status", "createdAt"])  // claim query
     .index("by_commandId",           ["commandId"])                        // optimistic reconciliation
