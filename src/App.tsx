@@ -8,7 +8,6 @@ import Capabilities from "./pages/Capabilities";
 // Analytics is lazy-loaded below
 import Alerts from "./pages/Alerts";
 import Infrastructure from "./pages/Infrastructure";
-import Profiles from "./pages/Profiles";
 import Security from "./pages/Security";
 import SelfHealing from "./pages/SelfHealing";
 import BuildProgress from "./pages/BuildProgress";
@@ -21,7 +20,6 @@ import Ideation from "./pages/Ideation";
 import { AstridrWSProvider } from "./contexts/AstridrWSContext";
 
 // Lazy-load heavy pages
-const Agents = lazy(() => import("./pages/Agents"));
 const Analytics = lazy(() => import("./pages/Analytics"));
 
 // Phase 93: Quality KPI pages (EVAL-03)
@@ -47,7 +45,6 @@ const WhatsApp = lazy(() => import("./pages/WhatsApp"));
 // Lazy-load Phase 72 pages
 const WarRoom = lazy(() => import("./pages/WarRoom"));
 const MeetingBot = lazy(() => import("./pages/MeetingBot"));
-const MissionControl = lazy(() => import("./pages/MissionControl"));
 
 // Skills browser
 const Skills = lazy(() => import("./pages/Skills"));
@@ -90,7 +87,7 @@ export default function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/sessions/:id" element={<SessionDetail />} />
               <Route path="/capabilities" element={<Capabilities />} />
-              <Route path="/analytics" element={<Suspense fallback={<div className="text-gray-500 text-base p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
+              <Route path="/analytics" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
               <Route path="/alerts" element={<Alerts />} />
               {/* Phase 93: Quality KPI pages (EVAL-03) */}
               <Route path="/quality" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><Quality /></Suspense>} />
@@ -129,7 +126,8 @@ export default function App() {
               {/* Phase 90: deep-link route — same component, roomId drives auto-select */}
               <Route path="/war-room/:roomId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading War Room...</div>}><WarRoom /></Suspense>} />
               <Route path="/meeting-bot" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Meeting Bot...</div>}><MeetingBot /></Suspense>} />
-              <Route path="/mission-control" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Mission Control...</div>}><MissionControl /></Suspense>} />
+              {/* Phase 96 Plan 04 (D-02): Mission Control merged into Tasks — By Agent view */}
+              <Route path="/mission-control" element={<Navigate to="/tasks?view=agent" replace />} />
               {/* Phase 84: Graphs Hub (GRAPHS cluster — hub first) */}
               <Route path="/graphs" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Graphs Hub...</div>}><GraphsHub /></Suspense>} />
               {/* Phase 72: Tool / Capability Galaxy (GRAPHS cluster) */}
