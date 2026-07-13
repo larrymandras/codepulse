@@ -1,142 +1,132 @@
 ---
 phase: 96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa
-verified: 2026-07-13T16:00:00Z
-status: human_needed
-score: 12/12 must-haves verified (all plans)
+verified: 2026-07-13T19:40:00Z
+status: passed
+score: 16/16 must-haves verified (12 original truths regression-checked + 4 gap-closure truths from Plan 96-13)
 overrides_applied: 0
-human_verification:
-  - test: "Live Chat approval round-trip against a running Ástríðr backend"
-    expected: "Approving/rejecting a HITL request from the Chat inline ApprovalBlock sends the correct { type: 'approval.respond', request_id_target, decision } payload to the real Ástríðr WS handler, and a server-side rejection shows toast.error without flipping the block to 'approved'"
-    why_human: "No live Ástríðr backend was available in-session; only unit/regression tests (mocked WS context) could be run. The payload shape and rejection-handling logic are verified in code and by mutation-tested regression tests, but an end-to-end wire-level round trip has not been observed against the real server."
+re_verification:
+  previous_status: human_needed
+  previous_score: 12/12 must-haves verified (all plans); 1 item routed to human_verification
+  gaps_closed:
+    - "Inbox approval card flips to Approved/Rejected ONLY when the server ack'd the decision — no false success on server-rejected decisions (D-11, T-96-13-01)"
+    - "Inbox.tsx handleApprove/handleReject return the shared useApprovalActions boolean instead of Promise<void>"
+    - "InboxCard.tsx gates setApproved(true)/setRejected(true) on the awaited boolean, mirroring ApprovalBlock.tsx (T-96-13-01)"
+    - "Chat subscribes to the backend's real run.blocks event (plural, blocks array); the dead run.block (singular) subscription is removed (T-96-13-02)"
+  gaps_remaining: []
+  regressions: []
 ---
 
 # Phase 96: UI Deep-Dive Cleanup Verification Report
 
-**Phase Goal:** UI deep-dive cleanup — IA restructure (dissolve CONSOLE cluster, merge Mission Control into Tasks), kill command-palette drift (single-source nav registry), remove fabricated telemetry/trust signals (honesty-first), fix the live Chat approval.respond payload bug, extract shared components (PageHeader, ApprovalActions, FactsTable), migrate 31+ page headers to PageHeader (F7), responsive master-detail panes (F8), remove dead UI (F9), typing/token/a11y minors (F10).
-**Verified:** 2026-07-13T16:00:00Z
-**Status:** human_needed
-**Re-verification:** No — initial verification
+**Phase Goal:** Every UI surface tells the truth and follows one standard — the CONSOLE nav cluster is dissolved, the command palette reaches every page, no header/security/automation readout shows a fabricated number, orphaned pages and dead UI are gone, the two divergent approval flows are unified against the verified Ástríðr contract, and all 35 pages share one PageHeader.
+**Verified:** 2026-07-13T19:40:00Z
+**Status:** passed
+**Re-verification:** Yes — after gap closure (Plan 96-13, following live UAT in 96-HUMAN-UAT.md)
+
+## Context
+
+The prior verification (2026-07-13T16:00:00Z) found all 12 original plans' truths (F1–F10, D-01–D-11) substantively implemented and wired, but routed the live Chat/Inbox approval round-trip to `human_verification` because no live Ástríðr backend was available in-session. That human verification was subsequently performed (recorded in `96-HUMAN-UAT.md`) and surfaced **2 CodePulse-side gaps** plus 2 out-of-scope Ástríðr-backend gaps (recorded as handoff notes, not phase-96 must-haves, since `astridr-repo` fixes are outside this phase's file-modification scope). Plan 96-13 (`gap_closure: true`) closed both CodePulse-side gaps. This re-verification focuses on Plan 96-13's must-haves with full 3-level checks, and does a regression sanity pass on the 12 previously-passed truths.
 
 ## Goal Achievement
 
-### Observable Truths (by Finding/Decision ID)
+### Gap-Closure Truths (Plan 96-13 — full verification)
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| F1/D-01/D-02/D-03 | CONSOLE cluster dissolved; Forge→COMMAND; Live Run single entry; Executions/Build→OBSERVE; Mission Control merged into Tasks with redirect | ✓ VERIFIED | `src/lib/navRegistry.ts`: no CONSOLE group exists; COMMAND includes `/forge` (:125) and single `/live-run` (:119); OBSERVE includes `/executions` (:153) and `/build` (:154); Mission Control entry removed with explanatory comment (:163-165). `src/App.tsx:130` redirects `/mission-control` → `/tasks?view=agent`. `src/pages/MissionControl.tsx`, `Profiles.tsx`, `Agents.tsx` all deleted (confirmed absent from filesystem) |
-| F2 | CommandPalette sources nav from single registry, no hardcoded NAV_PAGES; stale /agents, /profiles links fixed | ✓ VERIFIED | `src/components/CommandPalette.tsx:33` imports `{ navItems, iconComponents }` from `@/lib/navRegistry`; render loop at :81-84 maps over `navItems`. `App.tsx:96-97` redirects `/profiles` and `/agents` → `/hr/roster` |
-| F3/D-04 | Header SYS/LAT telemetry wired to real data, hidden when absent (honesty-first) | ✓ VERIFIED | `DashboardLayout.tsx:401-402`: `systemResources = useQuery(api.systemResources.current)`, `showSys = systemResources?.cpu != null`; `:410-444` real WS ping-based latency measurement; `:580-595` conditionally renders SYS/LAT only when `showSys`/`showLat` true — no fabricated literals remain |
-| F4/D-05/D-06/D-07 | Security "Valid" badge removed + honest event-count label; Automation computed schedule count, no `totalJobs ?? 12`; both empty allowlist placeholders removed | ✓ VERIFIED | `Security.tsx:226` — `"{n} events loaded"`, no "Chain integrity: Valid" string found; `Automation.tsx:95` — `<MetricCard label="Configured Schedules" value={CRON_SCHEDULES.length} />`, no `totalJobs` match; `Infrastructure.tsx` — no "Network Policy" string remains; Security's Network Access Log preserved (`Security.tsx:426`) |
-| F5/D-08 | Profiles.tsx, Agents.tsx deleted; redirects preserved | ✓ VERIFIED | Files confirmed absent; `App.tsx:96-97` redirects intact |
-| F6/D-11 | Chat sends correct `{request_id_target, decision}` payload via shared ApprovalActions hook; ack-checked with error toast; Chat+Inbox share one hook | ✓ VERIFIED | `src/components/ApprovalActions.tsx` — single hook exporting `approve`/`reject`, builds `ApprovalRespondPayload` with `request_id_target`; wraps `sendCommand` in try/catch (added in follow-up commit `5243b00`) surfacing `toast.error` on rejection, resolves `false`; consumed by both `Chat.tsx:18,33` and `Inbox.tsx:31,115`. `ApprovalBlock.tsx` now types `onApprove/onReject` as `Promise<boolean>` and only commits UI state on `true` |
-| F7 | Shared `<PageHeader>` created and consumed by all 31+ target pages (35 total pages, ~4 already-compliant, rest migrated) | ✓ VERIFIED | `src/components/PageHeader.tsx` emits `text-2xl font-bold text-foreground` h1 (uses `cn()` for className merge post-fix `003df72`). Verified `PageHeader` import+usage present in all 29 migrated pages (Tasks, Chat, Inbox, Security, Automation, Infrastructure, Memory, Dreaming, MeetingBot, Skills, DocComments, KnowledgeGraph, ToolGalaxy, WarRoom, hr/* x5, Dashboard, Alerts, Briefings, Capabilities, Settings, SelfHealing, Executions, Ideation, ConfigPage, InsightsChat, LiveRun, WhatsApp, HivePage, GraphsHub, McpInventory, Quality, QualityDetail, SessionDetail). Remaining bespoke `<h1>` count across `src/pages/`: exactly 3 (Analytics, BuildProgress, ForgePage) — all already verbatim-compliant with the F7 standard, as FINDINGS.md and the plans state. `max-h-[500px]` cap fully removed from Chat/Inbox/Tasks/LiveRun (0 matches repo-wide) |
-| F8 | ForgePage and WarRoom master-detail panes collapse responsively on mobile with 44px accessible toggle | ✓ VERIFIED | Both files show `md:hidden` toggle buttons with `size-11` (44px) and explicit `aria-label` ("Show/Hide job list", "Show/Hide room list"); fixed/slide-in aside pattern (`fixed inset-y-0 left-0 z-50 ... md:static md:translate-x-0`) mirrors DashboardLayout's established mobile-nav pattern |
-| F9 | Duplication/dead UI removed: FactsTable shared, LlmProviderPanel de-duplicated, dead widgets/stubs removed, MeetingBot live roster, Skills no-op delete guarded | ✓ VERIFIED | `FactsTable.tsx` created, imported by both `Memory.tsx:33` and `Dreaming.tsx:19`; Analytics.tsx has exactly one `LlmProviderPanel` render; "Import Conversations" string absent from Memory.tsx; "Start Backfill"/`AnimatedNumber` absent from Dreaming.tsx; `TokenSavingsIndicator`/`errorTrend` absent from Analytics.tsx; MeetingBot.tsx imports and uses `useRosterAgents()` (:37,86), no hardcoded agent names found; `CategoryEditPopover.tsx:136` gates the delete button render on `canDelete &&`, so Skills' `canDelete={false}` create-modal renders no delete button at all |
-| F10 | Token/a11y minors: Suspense fallback token, DocComments off raw palette, ThemeSwitcher aria-label, canvas DOM bg tokens, BuildProgress typed access | ✓ VERIFIED | DocComments.tsx uses `border-border`/`text-muted-foreground`/`bg-primary` tokens (no raw zinc-*/emerald-* found); `ThemeSwitcher.tsx:43` has `aria-label="Select theme"` on SelectTrigger; `bg-[#09090b]` absent from KnowledgeGraph.tsx/ToolGalaxy.tsx (replaced with `bg-background`/`bg-card`); `BuildProgress.tsx` has zero `as any`/`c: any`/`anyApi` matches |
+| 1 | Inbox approval card flips to Approved/Rejected ONLY when the server ack'd the decision; server-rejected leaves card pending, no false success | ✓ VERIFIED | `src/components/InboxCard.tsx:156-167` `handleApprove`: `if (await onApprove(item.requestId)) setApproved(true);` wrapped in try/catch/finally, stays pending on throw/false. Same pattern at `:169-182` for reject. Mirrors `ApprovalBlock.tsx:44-78` exactly. |
+| 2 | `Inbox.tsx` `handleApprove`/`handleReject` return the shared `useApprovalActions` boolean instead of `Promise<void>` | ✓ VERIFIED | `src/pages/Inbox.tsx:191-217`: both handlers typed `Promise<boolean>`, `const ok = await approve(requestId); if (!ok) return false; ... return true;` (same shape for reject) |
+| 3 | `InboxCard.tsx` gates `setApproved`/`setRejected` on the awaited boolean, mirroring `ApprovalBlock.tsx:51` | ✓ VERIFIED | `InboxCard.tsx:54-55` prop types changed to `(requestId: string) => Promise<boolean>`; render logic at `:156-182` gates exactly as ApprovalBlock does |
+| 4 | Chat subscribes to the real `run.blocks` (plural) event; dead `run.block` (singular) subscription removed | ✓ VERIFIED | `src/pages/Chat.tsx:201` `subscribeEvent("run.blocks", ...)`; handler at `:201-232` reads `event.data ?? event`, guards empty/missing `blocks`, spreads array into message. `grep -c 'subscribeEvent("run.block"'` (exact singular) in Chat.tsx = 0. Cleanup at `:305` calls `unsubBlocks()`. |
+| 5 | Regression tests exist for server-rejected Inbox path | ✓ VERIFIED | `src/pages/__tests__/Inbox.test.tsx:203-254` — new `describe("Inbox — approval false-success gating (D-11)")` with 3 tests: server-rejected approve stays pending, server-rejected reject stays pending, server-ok approve commits. All 3 assert on rendered DOM state (`getByText("Approve")` present / `queryByText("Approved")` null), not on toast calls. |
 
-**Score:** 10/10 F-level truths verified (F1–F10), all mapped D-01–D-11 decisions verified within them.
+**Score:** 5/5 gap-closure truths verified.
 
-### Post-Review Fix Verification (96-REVIEW.md → Fixes Applied)
+### Regression Check — Prior 12 Plans (F1–F10, D-01–D-11)
 
-| Finding | Fix Commit | Status | Evidence |
-|---------|-----------|--------|----------|
-| CR-01 (critical): approval error path unreachable, false "approved" UI on server rejection | `5243b00` | ✓ VERIFIED LIVE | `ApprovalActions.tsx:65-71,89-95` wraps `sendCommand` in try/catch, toasts error, returns `false` on rejection; `ApprovalBlock.tsx` only sets `status("approved"/"rejected")` when the awaited callback resolves `true`. `Chat.test.tsx:145-173` mocks `mockSendCommand.mockRejectedValueOnce(...)` (the real contract) and asserts `toast.error` fires, success toast does not, block stays pending — commit message documents mutation verification (test fails against pre-fix code) |
-| WR-01 (warning): PageHeader raw string concat defeats mb-0/mb-0.5 overrides | `003df72` | ✓ VERIFIED LIVE | `PageHeader.tsx:15` now uses `cn("flex items-center justify-between mb-4", className)`; `PageHeader.test.tsx:31-37` asserts `mb-0` present, `mb-4` absent when className="mb-0" passed |
-| WR-02 (warning): circular import DashboardLayout ↔ CommandPalette | `998bb90` | ✓ VERIFIED LIVE | `src/lib/navRegistry.ts` created as leaf module (imports only lucide-react); both `DashboardLayout.tsx` and `CommandPalette.tsx` import from it, not each other |
-| WR-03 (warning): stale Mission Control nav entry pointing at a redirect | `a0041f5` | ✓ VERIFIED LIVE | `navRegistry.ts` OBSERVE group has no `/mission-control` entry; explanatory comment at :163-165 documents the removal |
-| IN-01 through IN-08 (info) | — | Intentionally not fixed | Confirmed as advisory-only per REVIEW.md; none are must-haves for this phase's success criteria |
+Quick sanity check per re-verification-mode rules (existence + basic sanity, not full re-derivation — these previously passed with full 3-level verification):
 
-All 4 review-flagged defects (1 critical + 3 warnings) are confirmed fixed and live on `master` (HEAD `81a1e73`), not merely claimed in commit messages — each fix was independently re-derived from the current file contents, not from SUMMARY/REVIEW narrative.
+| # | Truth | Status | Evidence |
+|---|-------|--------|----------|
+| F1–F5 | CONSOLE cluster dissolved; Mission Control/Profiles/Agents deleted with redirects; nav registry single-sourced | ✓ VERIFIED | `src/pages/MissionControl.tsx`, `Profiles.tsx`, `Agents.tsx` confirmed absent from filesystem; `grep "CONSOLE" src/lib/navRegistry.ts` returns 0 matches |
+| F6/D-11 | Chat + Inbox share one `useApprovalActions` hook with correct `{request_id_target, decision}` payload, `Promise<boolean>` contract | ✓ VERIFIED (hardened) | `src/components/ApprovalActions.tsx:42,44,59,82` — `approve`/`reject` both typed and implemented as `Promise<boolean>`; now consumed correctly by both `ApprovalBlock.tsx` (pre-existing) and `InboxCard.tsx` (this gap closure) |
+| F7 | Shared `PageHeader` component exists and is used | ✓ VERIFIED | `src/components/PageHeader.tsx` present; `Inbox.tsx:32,351` imports and renders it |
+| F8–F10 | Responsive master-detail, dead UI removed, token/a11y minors | ✓ VERIFIED (unchanged) | No files touched by Plan 96-13 overlap with F8/F9/F10 scope; not re-derived here (no code path changed) |
+
+**No regressions found.** Full test suite and tsc corroborate this (see Behavioral Spot-Checks below).
 
 ### Required Artifacts
 
 | Artifact | Expected | Status | Details |
 |----------|----------|--------|---------|
-| `src/components/PageHeader.tsx` | F7 shared page-title component, `cn()`-merged className | ✓ VERIFIED | Emits exact `text-2xl font-bold text-foreground`; icon + actions slots present |
-| `src/components/ApprovalActions.tsx` | Shared approve/reject hook, correct payload, rejection-handled | ✓ VERIFIED | `request_id_target`/`decision` shape; try/catch around `sendCommand` |
-| `src/lib/navRegistry.ts` | Single-source nav registry, no circular import | ✓ VERIFIED | Leaf module; both DashboardLayout and CommandPalette import from it |
-| `src/components/FactsTable.tsx` | Shared facts table for Memory + Dreaming | ✓ VERIFIED | Consumed by both pages |
-| `src/pages/Tasks.tsx` | Merged By-Status/By-Agent board, deep-linkable | ✓ VERIFIED | `?view=agent` query param synced via `useSearchParams`; typed `api.tasks.*` (no `anyApi`) |
-| `src/App.tsx` | Mission-control/profiles/agents redirects; orphan imports removed | ✓ VERIFIED | All three redirects present; no import of deleted pages found |
-| `src/pages/Security.tsx`, `Automation.tsx`, `Infrastructure.tsx` | Honest telemetry, no placeholders | ✓ VERIFIED | Confirmed via grep above |
-| `src/pages/ForgePage.tsx`, `WarRoom.tsx` | Responsive master-detail | ✓ VERIFIED | md:hidden toggle + 44px hit target + aria-label |
-| 29 migrated pages | `<PageHeader>` import + render | ✓ VERIFIED | Confirmed for all 29 (2 matches each: import + JSX use) |
+| `src/components/InboxCard.tsx` | Approve/reject handlers gated on ack boolean | ✓ VERIFIED | Contains `if (await onApprove` (:160), prop types `Promise<boolean>` (:54-55) |
+| `src/pages/Inbox.tsx` | Handlers return the hook boolean | ✓ VERIFIED | `return false;`/`return true;` present in both handlers (:194,200,208,214) |
+| `src/pages/__tests__/Inbox.test.tsx` | Regression: server-rejected approve/reject leaves card pending | ✓ VERIFIED | New describe block, 3 tests, all passing |
+| `src/pages/Chat.tsx` | `run.blocks` (plural) subscription consuming blocks array | ✓ VERIFIED | `subscribeEvent("run.blocks", ...)` at :201; iterates/spreads `blocks` array |
+| `src/pages/__tests__/Chat.test.tsx` | `injectApprovalBlock`/callback capture moved to `run.blocks` channel | ✓ VERIFIED | `getRunBlocksCallback()` (:59) filters on `"run.blocks"`; `injectApprovalBlock` (:69-87) emits `{session_id, blocks: [...]}` |
 
 ### Key Link Verification
 
 | From | To | Via | Status | Details |
 |------|-----|-----|--------|---------|
-| `CommandPalette.tsx` | `navRegistry.ts` | import `navItems, iconComponents` | ✓ WIRED | `:33` |
-| `DashboardLayout.tsx` | `navRegistry.ts` | import `navGroups, iconComponents` | ✓ WIRED | `:30` |
-| `DashboardLayout.tsx` header | `api.systemResources.current` | `useQuery` + null guard | ✓ WIRED | `:401-402` |
-| `Chat.tsx`/`Inbox.tsx` | `ApprovalActions.tsx` | `useApprovalActions(sendCommand)` | ✓ WIRED | `Chat.tsx:33`, `Inbox.tsx:115` |
-| `Memory.tsx`/`Dreaming.tsx` | `FactsTable.tsx` | import + render | ✓ WIRED | `Memory.tsx:33,699`, `Dreaming.tsx:19,157` |
-| `MeetingBot.tsx` | `useRosterAgents` | hook import + `agents.map` | ✓ WIRED | `:37,86` |
-| `App.tsx` `/mission-control` | `/tasks?view=agent` | `<Navigate replace>` | ✓ WIRED | `:130` |
+| `InboxCard.tsx` | `Inbox.tsx handleApprove`/`handleReject` boolean | `if (await onApprove(id)) setApproved(true)` | ✓ WIRED | `InboxCard.tsx:160` gates directly on the awaited return value; `Inbox.tsx:191-217` supplies that boolean |
+| `Chat.tsx` | Ástríðr telemetry `run.blocks` | `subscribeEvent("run.blocks", ...)` iterating `data.blocks` | ✓ WIRED | `Chat.tsx:201-232`; dual-shape read (`event.data ?? event`) matches Inbox's `approval_request` pattern |
 
 ### Data-Flow Trace (Level 4)
 
 | Artifact | Data Variable | Source | Produces Real Data | Status |
 |----------|---------------|--------|---------------------|--------|
-| DashboardLayout header SYS | `systemResources.cpu` | `api.systemResources.current` (Convex query) | Yes — hidden (not fabricated) when null | ✓ FLOWING |
-| DashboardLayout header LAT | `headerLatencyMs` | Real WS ping round-trip (`sendCommand({type:"ping"})`, measured via `performance.now()`) | Yes — hidden when WS disconnected | ✓ FLOWING |
-| Security "events loaded" | `mergedEvents.length` | Live merged event stream (unchanged from pre-phase; only label changed to be honest) | Yes | ✓ FLOWING |
-| Automation "Configured Schedules" | `CRON_SCHEDULES.length` | Static catalog constant (D-06 explicitly keeps this static, honestly labeled — not a live/fabricated claim) | N/A — intentionally static per decision D-06 | ✓ FLOWING (by design) |
-| MeetingBot agent Select | `agents` | `useRosterAgents()` hook (live Convex-backed roster) | Yes | ✓ FLOWING |
+| `InboxCard` approved/rejected state | `approved`/`rejected` (useState) | Gated on `onApprove`/`onReject` return value, which traces to `useApprovalActions`' `sendCommand` ack (`ack.status === "ok"`) | Yes — no longer settable on a rejected/thrown promise | ✓ FLOWING |
+| `Chat.tsx` message blocks | `msg.blocks` | `run.blocks` WS event `blocks` array (backend: `loop.py:1440`, `post_turn_pipeline.py:437`) | Yes for the event shape the backend actually emits (text/tool_use); approval-type blocks still never emitted by backend (documented out-of-scope gap) | ✓ FLOWING (for in-scope block types) |
 
 ### Behavioral Spot-Checks
 
 | Behavior | Command | Result | Status |
 |----------|---------|--------|--------|
-| Full test suite | `npx vitest run` | 176 test files, 1739 tests passed, 187 todo, 17 skipped, 0 failed | ✓ PASS |
+| Targeted regression tests | `npx vitest run src/pages/__tests__/Inbox.test.tsx src/pages/__tests__/Chat.test.tsx` | 2 files, 15 tests, all passed | ✓ PASS |
+| Full test suite (no regressions) | `npx vitest run` | 176 files, 1742 tests passed, 187 todo, 17 skipped, 0 failed | ✓ PASS |
 | Type check | `npx tsc --noEmit` | Clean, no errors | ✓ PASS |
-| Production build | `npm run build` | Built successfully in 1.19s (chunk-size warnings only, no errors) | ✓ PASS |
+| No lingering singular `run.block` subscription | `grep -rn '"run\.block"' src/` | 0 matches | ✓ PASS |
+| `RunBlockEvent` type (singular) not live-wired anywhere | `grep -rn "RunBlockEvent" src/` | Only its own declaration in `types/generative-blocks.ts:75`; no importer | ✓ PASS (dead type-only export, explicitly scoped out in SUMMARY, not a functional risk) |
 
 ### Probe Execution
 
-No project-convention probes (`scripts/*/tests/probe-*.sh`) exist or are referenced by this phase's PLAN/SUMMARY files. Skipped — this is a UI cleanup phase verified via tsc/vitest/build, not a migration/tooling phase.
+No project-convention probes (`scripts/*/tests/probe-*.sh`) exist or are referenced by this phase's plans. Skipped — this is a UI cleanup phase verified via tsc/vitest, not a migration/tooling phase.
 
 ### Requirements Coverage
 
-This is a findings-driven cleanup phase with no formal REQ-IDs; F1–F10 (FINDINGS.md) and D-01–D-11 (CONTEXT.md) serve as the requirement contract.
+No formal REQ-IDs; this is a findings-driven cleanup phase using F1–F10 (FINDINGS.md) and D-01–D-11 (CONTEXT.md) as the requirement contract (`.planning/REQUIREMENTS.md` does not exist in this project).
 
 | ID | Source | Description | Status | Evidence |
 |----|--------|-------------|--------|----------|
-| F1 | FINDINGS.md | IA restructure: dissolve CONSOLE | ✓ SATISFIED | navRegistry.ts |
-| F2 | FINDINGS.md | CommandPalette nav drift | ✓ SATISFIED | CommandPalette.tsx |
-| F3 | FINDINGS.md | Fake telemetry in header | ✓ SATISFIED | DashboardLayout.tsx |
-| F4 | FINDINGS.md | Hardcoded trust signals | ✓ SATISFIED | Security/Automation/Infrastructure.tsx |
-| F5 | FINDINGS.md | Orphaned Profiles/Agents pages | ✓ SATISFIED | Files deleted, redirects intact |
-| F6 | FINDINGS.md | Divergent approval flows | ✓ SATISFIED | ApprovalActions.tsx |
-| F7 | FINDINGS.md | Page header standardization | ✓ SATISFIED | 29 pages + 3 pre-compliant |
-| F8 | FINDINGS.md | Mobile master-detail breakage | ✓ SATISFIED | ForgePage/WarRoom |
-| F9 | FINDINGS.md | Duplication & dead UI | ✓ SATISFIED | FactsTable, dead code removed |
-| F10 | FINDINGS.md | Token & a11y minors | ✓ SATISFIED | DocComments, ThemeSwitcher, BuildProgress |
-| D-01–D-11 | CONTEXT.md | Implementation decisions | ✓ SATISFIED | All decisions traced to the F-level rows above (D-01/D-02 in F1; D-03 in F1; D-04 in F3; D-05/D-06/D-07 in F4; D-08 in F5; D-09 in F9; D-10 in F9; D-11 in F6) |
+| D-11 | CONTEXT.md:37 | "Full closure this phase: verify approval payload contract... fix whichever sender is wrong... extract one shared approval component used by both Chat and Inbox" | ✓ SATISFIED | Shared `ApprovalActions.tsx` hook consumed by both `Chat.tsx` (via `ApprovalBlock.tsx`) and `Inbox.tsx` (via `InboxCard.tsx`); both consumers now correctly gate UI state on the hook's `Promise<boolean>` — the last asymmetry (InboxCard's unconditional commit) closed by Plan 96-13 |
+| F1–F10 | FINDINGS.md | All 10 findings | ✓ SATISFIED | Unchanged from prior verification; regression-checked above, no new files in F1–F5/F7–F10 scope touched by Plan 96-13 |
 
-**No orphaned requirements found** — every F-ID and D-ID declared in a plan's `requirements` frontmatter maps to a FINDINGS.md/CONTEXT.md entry, and every FINDINGS.md/CONTEXT.md entry is claimed by at least one plan.
+**No orphaned requirements found.** Plan 96-13 declares `requirements: [D-11]`, which maps to CONTEXT.md:37 and is satisfied per above.
 
 ### Anti-Patterns Found
 
 | File | Line | Pattern | Severity | Impact |
 |------|------|---------|----------|--------|
-| — | — | No TBD/FIXME/XXX/TODO/HACK/PLACEHOLDER markers found in any phase-touched core file (PageHeader, ApprovalActions, navRegistry, Tasks, Chat, Inbox, Security, Automation, Infrastructure, MeetingBot, Skills, DocComments, ForgePage, WarRoom) | — | — |
+| — | — | No TBD/FIXME/XXX/TODO/HACK/PLACEHOLDER markers found in any file modified by Plan 96-13 (`InboxCard.tsx`, `Inbox.tsx`, `Inbox.test.tsx`, `Chat.tsx`, `Chat.test.tsx`) | — | — |
 
-The 8 Info-level findings from 96-REVIEW.md (IN-01 through IN-08) remain unfixed by explicit, documented decision ("Info findings intentionally not fixed"). These are minor/cosmetic (e.g., an unreachable empty-state flash in Tasks, a stale comment about activation-constraint px value, an unused `formatRelative` leftover in Dreaming, non-memoized hook return identities, residual `as any` casts inside Tasks.tsx's ported MissionControl logic). None of them contradict any must-have truth for this phase; they are pre-existing/ported behavior or genuinely low-severity nits, not newly introduced blockers. Flagged here as ℹ️ INFO for visibility, not as a gap.
+### Out-of-Scope Items (Not Gaps — Different Repository)
+
+Two backend gaps diagnosed during live UAT remain open in `astridr-repo` (a separate repository from this CodePulse project, not a later phase in this milestone's roadmap — Phase 96 is the last phase in `.planning/ROADMAP.md`):
+
+1. `chat.send` bypasses the Ástríðr security pipeline (`astridr/api/ws_commands.py:443` → `wiring.py:105-142` never calls `process_inbound`), so a CodePulse chat message can never trip the HITL gate.
+2. No producer of approval-type generative blocks exists in astridr (`run.blocks` never emits `type:"approval"`).
+
+These are explicitly out of CodePulse's file-modification scope (confirmed: `96-13-PLAN.md` `files_modified` touches only `src/pages/Inbox.tsx`, `src/components/InboxCard.tsx`, `src/pages/__tests__/Inbox.test.tsx`, `src/pages/Chat.tsx`, `src/pages/__tests__/Chat.test.tsx` — no astridr-repo path). CodePulse's side of the contract (Chat's `run.blocks` subscription, the shared ack-boolean gating) is now correctly wired and will function the moment the backend gaps are fixed. This is not treated as a phase-96 gap because phase 96's success criteria concern CodePulse UI truthfulness and consistency, not the Ástríðr backend's security pipeline.
 
 ### Human Verification Required
 
-### 1. Live Chat approval round-trip against a running Ástríðr backend
-
-**Test:** With the Ástríðr backend running and a pending HITL approval request visible in Chat, click Approve (and separately, Reject) on an `ApprovalBlock`. Then simulate/observe a server-side rejection (e.g., stop the backend mid-flight, or trigger an intentional Pydantic validation failure) and confirm the block does NOT flip to "approved" and a `toast.error` appears instead.
-**Expected:** The WS message sent is `{type:"approval.respond", request_id_target: <uuid>, decision:"approve"|"reject"}` (matching `ApprovalRespondCommand` in `astridr/api/ws_commands.py`), and on any rejection path (error ack, timeout, queue-full) the UI shows `toast.error` and the block remains in "pending" state — never silently shows "approved" when the server denied/failed the request.
-**Why human:** No live Ástríðr backend was available in this verification session (per the task brief) or in the execution session (per SUMMARY notes) to observe the real wire-level round trip. The payload shape has been cross-repo-verified against the Pydantic model source (per RESEARCH.md/plan interfaces) and the rejection-handling logic is mutation-tested against a mocked WS context (`Chat.test.tsx`), but an actual live-server verification of this phase's centerpiece bug fix (T-96-03-01) has not been performed by any agent.
+None. The live UAT round-trip that previously required a human + running backend was already performed (`96-HUMAN-UAT.md`); it surfaced the 2 CodePulse-side gaps now closed and code-verified here, plus the 2 backend gaps documented above as out of this phase's scope. No further human verification is needed to confirm this phase's own (CodePulse-side) goal — the fixes are deterministically verifiable via the regression tests added (`Inbox.test.tsx:203-254`), which directly encode the exact failure mode reported live (`mockRejectedValueOnce(new Error("No pending request found"))` — the identical error string from the live UAT server response).
 
 ## Gaps Summary
 
-No gaps found. All 12 plans' must-haves are verified as substantively implemented, wired, and covered by regression tests. All 4 code-review-flagged defects (1 critical, 3 warnings) are confirmed fixed on `master` HEAD (`81a1e73`), not just claimed — each was independently re-derived from live file contents. tsc, full vitest suite (1739 passing, 0 failed), and production build are all clean. The only open item is the live cross-repo WS round-trip for the Chat approval fix, which requires a running Ástríðr backend and is therefore routed to human verification rather than treated as a gap — the code-level fix, its mutation-tested regression coverage, and the Pydantic contract cross-check are all in place.
+No gaps found. Both CodePulse-side gaps recorded in `96-HUMAN-UAT.md` are closed and independently re-derived from live file contents (not from SUMMARY narrative): `InboxCard.tsx` now gates `setApproved`/`setRejected` on the awaited `useApprovalActions` boolean exactly like `ApprovalBlock.tsx`, `Inbox.tsx`'s handlers return that boolean instead of swallowing it, and `Chat.tsx` subscribes to the backend's real `run.blocks` (plural, array) event with the dead `run.block` (singular) subscription fully removed. Full regression suite (1742 tests, 0 failed) and `tsc --noEmit` are clean. The 2 remaining gaps from live UAT are confirmed backend-repo issues (astridr-repo), explicitly out of this phase's scope, and do not block phase 96's goal, which concerns CodePulse UI honesty/consistency — not the Ástríðr backend's security pipeline wiring.
 
 ---
 
-_Verified: 2026-07-13T16:00:00Z_
+_Verified: 2026-07-13T19:40:00Z_
 _Verifier: Claude (gsd-verifier)_

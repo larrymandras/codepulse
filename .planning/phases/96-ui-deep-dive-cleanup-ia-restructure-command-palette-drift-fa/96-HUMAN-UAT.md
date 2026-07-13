@@ -3,7 +3,7 @@ status: complete
 phase: 96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa
 source: [96-VERIFICATION.md]
 started: 2026-07-13T15:45:00Z
-updated: 2026-07-13T19:05:00Z
+updated: 2026-07-13T19:55:00Z
 ---
 
 ## Current Test
@@ -69,7 +69,8 @@ blocked: 0
 ## Gaps
 
 - truth: "Approval request triggered from CodePulse Chat surfaces as a pending ApprovalBlock; Approve/Deny round-trips `approval.respond` and flips state only on server ack"
-  status: failed
+  status: resolved
+  resolution: "CodePulse-side item closed by plan 96-13 (commit 4ebbebb): Chat.tsx now subscribes to the real run.blocks (plural) event and iterates the blocks array — verified in 96-VERIFICATION.md. The two remaining 'missing' items are astridr-repo scope (chat.send bypasses security pipeline; no approval-block producer exists) — explicit HANDOFF to astridr-repo, out of phase 96 file scope. Until those land, the Chat half of this truth is untestable live; the Inbox half is covered by gap 2 below."
   reason: "User reported: no approval block appeared in Chat; agent replied 'I've sent an email...' with no gate; nothing in Telegram"
   severity: major
   test: 1
@@ -84,7 +85,8 @@ blocked: 0
     - "codepulse: align Chat.tsx subscription with the real backend event name once one exists"
 
 - truth: "Inbox approval card only shows Approved/Rejected when the server ack'd the decision (no false success)"
-  status: failed
+  status: resolved
+  resolution: "Closed by plan 96-13 (commits 4dfd7da/ae8dc70): Inbox.tsx handleApprove/handleReject return the useApprovalActions boolean, InboxCard.tsx gates setApproved/setRejected on it (mirrors ApprovalBlock.tsx), and a 3-test regression suite covers the server-rejected path. Verified against live code in 96-VERIFICATION.md; 15/15 tests pass."
   reason: "User reported: error toast 'No pending request found' appeared correctly, but the stale card still flipped to 'Approved'"
   severity: major
   test: 1
