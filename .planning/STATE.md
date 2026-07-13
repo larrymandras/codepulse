@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: executing
-stopped_at: Phase 96 UI-SPEC approved
-last_updated: "2026-07-13T19:14:32.379Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 96 was final phase)
+last_updated: 2026-07-13T19:39:37.212Z
 last_activity: 2026-07-13 -- Phase 96 execution started
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 4
   total_plans: 13
   completed_plans: 13
-  percent: 0
+  percent: 100
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 96 — ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Phase: 96 (ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa) — EXECUTING
-Plan: 13 of 13
-Status: Executing Phase 96
-Last activity: 2026-07-13 -- Phase 96 execution started
+Phase: 96
+Plan: Not started
+Status: Milestone complete
+Last activity: 2026-07-13
 
 ## Deferred Items
 
@@ -70,6 +70,7 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 | 93 | Eval Pipeline & Quality KPIs | EVAL-01, EVAL-02, EVAL-03 | ✅ Complete (6/6 plans) |
 | 94 | Trace Waterfall | TRACE-01, TRACE-02 | ✅ Complete (5/5 plans) |
 | 95 | Hardening — Security, Key Rotation, Dependency Majors | HARD-01, HARD-02, HARD-03, HARD-04 | ✅ Complete (4/4 plans) |
+| 96 | UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | F1–F10 / D-01–D-11 (cleanup phase, no formal REQ IDs) | ✅ Complete (13/13 plans; re-verified 16/16 after 96-13 gap closure) |
 
 **Execution order:** 93 and 94 are independent (separate schemas, both ride existing ingest paths) — either order or parallel. 95 is independent of both and sequenced last as audit/cleanup work.
 

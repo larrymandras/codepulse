@@ -441,6 +441,7 @@ Plans:
 
 - [x] 96-01-PLAN.md — Wave 1: shared PageHeader component + contract test (F7 foundation)
 - [x] 96-02-PLAN.md — Wave 1: DashboardLayout IA restructure (dissolve CONSOLE) + real/hidden header telemetry + iconComponents export (F1/D-03, F3/D-04, F2 enabler)
+- [x] 96-13-PLAN.md — Wave 1 (gap closure, from 96-HUMAN-UAT): Inbox ack-boolean gating (no false success) + Chat run.blocks event alignment (D-11) — completed 2026-07-13
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -485,6 +486,7 @@ Plans:
 | 93. Eval Pipeline & Quality KPIs | v10.0 | 6/6 | Complete    | 2026-07-06 |
 | 94. Trace Waterfall | v10.0 | 5/5 | Complete    | 2026-07-06 |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
+| 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
 
 *Last updated: 2026-07-07 — **v10.0 SHIPPED & ARCHIVED**. 3 phases (93-95), 15 plans, 36 tasks, 9/9 requirements (EVAL-01..03, TRACE-01/02, HARD-01..04). All 3 phases verified (`VERIFICATION.md` each; 95 = 16/16). Full detail archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-new-milestone`.*
 
