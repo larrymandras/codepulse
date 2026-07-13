@@ -732,6 +732,21 @@ describe("forge.isAcceptedGithubUrlShape — accept/reject", () => {
   it("rejects an empty string", () => {
     expect(isAcceptedGithubUrlShape("")).toBe(false);
   });
+
+  // WR-01 (phase-06 review): the Python parser's full-URL branch is gated on
+  // a CASE-SENSITIVE scheme prefix (raw.startswith("http://")/("https://"))
+  // before its IGNORECASE FULL_URL regex — mirror both halves of that.
+  it("rejects an uppercase-scheme URL, matching Python's case-sensitive scheme gate (WR-01)", () => {
+    expect(isAcceptedGithubUrlShape("HTTPS://github.com/owner/repo")).toBe(false);
+  });
+
+  it("rejects a mixed-case-scheme URL (WR-01)", () => {
+    expect(isAcceptedGithubUrlShape("hTtp://github.com/owner/repo")).toBe(false);
+  });
+
+  it("accepts a lowercase-scheme URL with uppercase host, matching Python's IGNORECASE FULL_URL (WR-01)", () => {
+    expect(isAcceptedGithubUrlShape("https://GITHUB.COM/owner/repo")).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

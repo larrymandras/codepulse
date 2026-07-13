@@ -214,9 +214,19 @@ const GITHUB_SHORTHAND = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/;
 /**
  * True when `url` matches either the full github.com URL form or the
  * owner/repo shorthand form accepted by skill-intake's own CLI (D-P6-06).
+ *
+ * Mirrors parse_github_url's dispatch structure exactly (phase-06 review
+ * WR-01): the Python side gates the full-URL branch on a CASE-SENSITIVE
+ * `raw.startswith("http://") / ("https://")` check before applying its
+ * IGNORECASE FULL_URL regex — so "HTTPS://github.com/o/r" is rejected by
+ * Python (fails the scheme gate, then fails SHORTHAND on the extra slashes)
+ * and must be rejected here too. Never OR the two regexes.
  */
 export function isAcceptedGithubUrlShape(url: string): boolean {
-  return GITHUB_FULL_URL.test(url) || GITHUB_SHORTHAND.test(url);
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return GITHUB_FULL_URL.test(url); // /i kept — Python's FULL_URL is re.IGNORECASE
+  }
+  return GITHUB_SHORTHAND.test(url);
 }
 
 /**
