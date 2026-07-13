@@ -15,7 +15,8 @@ import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
 import { Volume2, VolumeX } from "lucide-react";
-import { toast } from "sonner";
+import { useApprovalActions } from "@/components/ApprovalActions";
+import { PageHeader } from "@/components/PageHeader";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -29,6 +30,7 @@ function generateId(): string {
 export default function Chat() {
   const { status, sendCommand, subscribeEvent } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
+  const { approve, reject } = useApprovalActions(sendCommand);
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -299,16 +301,23 @@ export default function Chat() {
   }, [subscribeEvent, playAudio]);
 
   // ─── Approve/Reject handlers for approval blocks ─────────────────────────
+  // Delegates to the shared ApprovalActions hook (D-11) so Chat and Inbox
+  // send the identical, server-correct { request_id_target, decision }
+  // payload and both await the ack before toasting (T-96-03-01 fix).
 
-  const handleApprove = useCallback((requestId: string) => {
-    void sendCommand({ type: "approval.respond", requestId, approved: true });
-    toast.success("Approved — sent to Ástríðr");
-  }, [sendCommand]);
+  const handleApprove = useCallback(
+    async (requestId: string) => {
+      await approve(requestId);
+    },
+    [approve]
+  );
 
-  const handleReject = useCallback((requestId: string, reason?: string) => {
-    void sendCommand({ type: "approval.respond", requestId, approved: false, reason });
-    toast("Rejected");
-  }, [sendCommand]);
+  const handleReject = useCallback(
+    async (requestId: string, reason?: string) => {
+      await reject(requestId, reason);
+    },
+    [reject]
+  );
 
   // ─── Voice send handler (auto-send after speech recognition) ─────────────
 
@@ -324,42 +333,46 @@ export default function Chat() {
   const isDisconnected = status !== "connected";
 
   return (
-    <div className="flex flex-col h-full max-h-[500px]">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
-        <h1 className="text-base font-semibold text-(--foreground)">Chat</h1>
-        <div className="flex items-center gap-3">
-          {/* TTS toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              setTtsEnabled((prev) => {
-                const next = !prev;
-                if (!next && ttsIsPlaying) {
-                  stopAudio();
-                }
-                return next;
-              });
-            }}
-            className="flex items-center justify-center w-8 h-8 rounded-none transition-colors"
-            style={{
-              color: ttsEnabled ? "var(--primary)" : "var(--muted-foreground)",
-              border: "1px solid var(--border)",
-              backgroundColor: ttsEnabled
-                ? "color-mix(in oklch, var(--primary) 10%, transparent)"
-                : undefined,
-            }}
-            aria-label={ttsEnabled ? "Disable auto-TTS" : "Enable auto-TTS"}
-            title={ttsEnabled ? "Auto-TTS enabled" : "Auto-TTS disabled"}
-          >
-            {ttsEnabled ? (
-              <Volume2 className="w-4 h-4" />
-            ) : (
-              <VolumeX className="w-4 h-4" />
-            )}
-          </button>
-          <WSStatusIndicator status={status} />
-        </div>
+      <header className="p-4 border-b border-(--border) shrink-0">
+        <PageHeader
+          title="Chat"
+          actions={
+            <div className="flex items-center gap-3">
+              {/* TTS toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTtsEnabled((prev) => {
+                    const next = !prev;
+                    if (!next && ttsIsPlaying) {
+                      stopAudio();
+                    }
+                    return next;
+                  });
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-none transition-colors"
+                style={{
+                  color: ttsEnabled ? "var(--primary)" : "var(--muted-foreground)",
+                  border: "1px solid var(--border)",
+                  backgroundColor: ttsEnabled
+                    ? "color-mix(in oklch, var(--primary) 10%, transparent)"
+                    : undefined,
+                }}
+                aria-label={ttsEnabled ? "Disable auto-TTS" : "Enable auto-TTS"}
+                title={ttsEnabled ? "Auto-TTS enabled" : "Auto-TTS disabled"}
+              >
+                {ttsEnabled ? (
+                  <Volume2 className="w-4 h-4" />
+                ) : (
+                  <VolumeX className="w-4 h-4" />
+                )}
+              </button>
+              <WSStatusIndicator status={status} />
+            </div>
+          }
+        />
       </header>
 
       {/* Message list */}

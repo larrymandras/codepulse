@@ -28,7 +28,8 @@ import { useLiveFlash } from "@/hooks/useLiveFlash";
 import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { InboxCard, type InboxItem, type InboxItemType } from "../components/InboxCard";
 import { InboxFilterBar, type InboxFilter } from "../components/InboxFilterBar";
-import { toast } from "sonner";
+import { useApprovalActions } from "@/components/ApprovalActions";
+import { PageHeader } from "@/components/PageHeader";
 
 // ─── Risk inference ────────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ function sortItems(items: InboxItem[]): InboxItem[] {
 export default function Inbox() {
   const { status, subscribeEvent, sendCommand } = useAstridrWS();
   const { flashRef, triggerFlash } = useLiveFlash();
+  const { approve, reject } = useApprovalActions(sendCommand);
 
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [approvalItems, setApprovalItems] = useState<InboxItem[]>([]);
@@ -181,51 +183,35 @@ export default function Inbox() {
     return unsub;
   }, [subscribeEvent, triggerFlash]);
 
-  // ─── Approve handler ──────────────────────────────────────────────────────
+  // ─── Approve/Reject handlers ──────────────────────────────────────────────
+  // Delegate to the shared ApprovalActions hook (D-11) — sole owner of the
+  // { request_id_target, decision } payload shape and ack-checked toasts.
+  // request_id_target is the HITL UUID — NOT the WS correlation request_id
+  // (sendCommand auto-generates its own for ack tracking; T-56-08 mitigated).
   const handleApprove = useCallback(
     async (requestId: string) => {
-      // CRITICAL: request_id_target is the HITL UUID — NOT the WS correlation id.
-      // sendCommand auto-generates its own request_id for the WS ack tracking.
-      const ack = await sendCommand({
-        type: "approval.respond",
-        request_id_target: requestId,
-        decision: "approve",
-      });
-      if (ack.status !== "ok") {
-        toast.error(ack.error ?? "Approval failed");
-        return;
-      }
-      toast.success("Approval sent.");
+      const ok = await approve(requestId);
+      if (!ok) return;
       setApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
     },
-    [sendCommand]
+    [approve]
   );
 
-  // ─── Reject handler ───────────────────────────────────────────────────────
   const handleReject = useCallback(
     async (requestId: string, note?: string) => {
-      const ack = await sendCommand({
-        type: "approval.respond",
-        request_id_target: requestId,
-        decision: "reject",
-        ...(note ? { comment: note } : {}),
-      });
-      if (ack.status !== "ok") {
-        toast.error(ack.error ?? "Rejection failed");
-        return;
-      }
-      toast.success("Rejection sent.");
+      const ok = await reject(requestId, note);
+      if (!ok) return;
       setApprovalItems((prev) =>
         prev.map((item) =>
           item.requestId === requestId ? { ...item, read: true } : item
         )
       );
     },
-    [sendCommand]
+    [reject]
   );
 
   // ─── Mark-read handler ────────────────────────────────────────────────────
@@ -357,11 +343,10 @@ export default function Inbox() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full max-h-[500px]">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
-        <h1 className="text-xl font-semibold text-(--foreground)">Inbox</h1>
-        <WSStatusIndicator status={status} />
+      <div className="p-4 border-b border-(--border) shrink-0">
+        <PageHeader title="Inbox" actions={<WSStatusIndicator status={status} />} />
       </div>
 
       {/* Offline banner */}
