@@ -521,7 +521,12 @@ export const enqueueIntake = mutation({
       // D-P6-09: 1 MB hard cap, enforced before any row is ever inserted.
       // Non-deprecated size-check API — do NOT use ctx.storage.getMetadata().
       const meta = await ctx.db.system.get("_storage", args.storageId!);
-      if (meta && meta.size > MAX_INTAKE_UPLOAD_BYTES) {
+      // A bogus/dangling storageId must fail here, not surface later as a
+      // null downloadUrl on the claimed row (review fix, Plan 06-04).
+      if (!meta) {
+        throw new Error("Uploaded file not found: storageId does not reference an existing file");
+      }
+      if (meta.size > MAX_INTAKE_UPLOAD_BYTES) {
         throw new Error(`Uploaded file exceeds ${MAX_INTAKE_UPLOAD_BYTES} bytes`);
       }
     }

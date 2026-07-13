@@ -767,6 +767,46 @@ describe("forge.enqueueIntake — XOR enforcement (D-P6-05)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — storageId existence + size guard
+// (D-P6-09 + Plan 06-04 review fix)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — storageId existence + size guard (D-P6-09)", () => {
+  /**
+   * Mirror of the storage-metadata guard used in enqueueIntake. In production
+   * `meta` is `await ctx.db.system.get("_storage", storageId)`, which returns
+   * null for a bogus/dangling storageId. Here we test the extracted decision
+   * function without a live Convex runtime.
+   */
+  const MAX = 1_000_000; // MAX_INTAKE_UPLOAD_BYTES
+  function storageMetaGuard(meta: { size: number } | null): void {
+    if (!meta) {
+      throw new Error("Uploaded file not found: storageId does not reference an existing file");
+    }
+    if (meta.size > MAX) {
+      throw new Error(`Uploaded file exceeds ${MAX} bytes`);
+    }
+  }
+
+  it("throws when the storageId resolves to no file (null metadata)", () => {
+    expect(() => storageMetaGuard(null)).toThrow(
+      "Uploaded file not found: storageId does not reference an existing file"
+    );
+  });
+
+  it("throws when the file exceeds the 1 MB cap", () => {
+    expect(() => storageMetaGuard({ size: MAX + 1 })).toThrow(
+      `Uploaded file exceeds ${MAX} bytes`
+    );
+  });
+
+  it("does not throw for an existing file within the cap", () => {
+    expect(() => storageMetaGuard({ size: MAX })).not.toThrow();
+    expect(() => storageMetaGuard({ size: 1 })).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 06 (skill-intake): enqueueIntake — workspaceId required for
 // destination='project' (D-P6-04)
 // ---------------------------------------------------------------------------
