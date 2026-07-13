@@ -434,7 +434,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Goal:** Every UI surface tells the truth and follows one standard — the CONSOLE nav cluster is dissolved, the command palette reaches every page, no header/security/automation readout shows a fabricated number, orphaned pages and dead UI are gone, the two divergent approval flows are unified against the verified Ástríðr contract, and all 35 pages share one PageHeader.
 **Requirements**: F1–F10 (FINDINGS.md) / D-01–D-11 (CONTEXT.md) — no formal REQ IDs; cleanup phase
 **Depends on:** Phase 95
-**Plans:** 2/12 plans executed
+**Plans:** 12/12 plans complete
 
 Plans:
 **Wave 1**
@@ -444,16 +444,16 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 96-03-PLAN.md — Wave 2: F6 approval fix — Chat payload/ack correctness + shared ApprovalActions (Chat+Inbox) + headers (F6/D-11)
-- [ ] 96-04-PLAN.md — Wave 2: Tasks+MissionControl merge (view toggle, typed api) + orphan deletions + App.tsx redirects (F1/D-01/D-02/D-08, F7/F10)
-- [ ] 96-05-PLAN.md — Wave 2: CommandPalette + HeroStatsBar sourced from navItems/iconComponents; stale links fixed (F2)
-- [ ] 96-06-PLAN.md — Wave 2: F4 honesty — Security badge/allowlist, Automation cron count, Infrastructure placeholder + headers (D-05/D-06/D-07)
-- [ ] 96-07-PLAN.md — Wave 2: shared FactsTable (Memory+Dreaming) + Dreaming dead-code + headers (D-09, F9/D-10, F7)
-- [ ] 96-08-PLAN.md — Wave 2: MeetingBot live roster + Skills no-op delete removal + headers (D-10, F9, F7)
-- [ ] 96-09-PLAN.md — Wave 2: F8 mobile master-detail collapse (ForgePage, WarRoom) + WarRoom header (F8, F7)
-- [ ] 96-10-PLAN.md — Wave 2: F10 minors — DocComments tokens/header, ThemeSwitcher aria-label, KG/ToolGalaxy bg token, Analytics dead UI (F10, F9/D-10)
-- [ ] 96-11-PLAN.md — Wave 2: F7 header sweep A — 5 hr/* + Dashboard/Alerts/Briefings/Capabilities/Settings/SelfHealing
-- [ ] 96-12-PLAN.md — Wave 2: F7 header sweep B — Executions/Ideation/ConfigPage/InsightsChat/LiveRun/WhatsApp/Hive/GraphsHub/McpInventory/Quality/QualityDetail/SessionDetail
+- [x] 96-03-PLAN.md — Wave 2: F6 approval fix — Chat payload/ack correctness + shared ApprovalActions (Chat+Inbox) + headers (F6/D-11)
+- [x] 96-04-PLAN.md — Wave 2: Tasks+MissionControl merge (view toggle, typed api) + orphan deletions + App.tsx redirects (F1/D-01/D-02/D-08, F7/F10)
+- [x] 96-05-PLAN.md — Wave 2: CommandPalette + HeroStatsBar sourced from navItems/iconComponents; stale links fixed (F2)
+- [x] 96-06-PLAN.md — Wave 2: F4 honesty — Security badge/allowlist, Automation cron count, Infrastructure placeholder + headers (D-05/D-06/D-07)
+- [x] 96-07-PLAN.md — Wave 2: shared FactsTable (Memory+Dreaming) + Dreaming dead-code + headers (D-09, F9/D-10, F7)
+- [x] 96-08-PLAN.md — Wave 2: MeetingBot live roster + Skills no-op delete removal + headers (D-10, F9, F7)
+- [x] 96-09-PLAN.md — Wave 2: F8 mobile master-detail collapse (ForgePage, WarRoom) + WarRoom header (F8, F7)
+- [x] 96-10-PLAN.md — Wave 2: F10 minors — DocComments tokens/header, ThemeSwitcher aria-label, KG/ToolGalaxy bg token, Analytics dead UI (F10, F9/D-10)
+- [x] 96-11-PLAN.md — Wave 2: F7 header sweep A — 5 hr/* + Dashboard/Alerts/Briefings/Capabilities/Settings/SelfHealing
+- [x] 96-12-PLAN.md — Wave 2: F7 header sweep B — Executions/Ideation/ConfigPage/InsightsChat/LiveRun/WhatsApp/Hive/GraphsHub/McpInventory/Quality/QualityDetail/SessionDetail
 
 ---
 
