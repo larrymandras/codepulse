@@ -564,10 +564,18 @@ export const generateForgeUploadUrl = mutation({
 // Phase 80: Internal mutations (called from httpActions — bearer-authed, no Clerk)
 // ---------------------------------------------------------------------------
 
+// D-P6-11: a daemon that sends no supportedTypes field is today's daemon, which
+// can only execute "launch"/"stop" — default to that so it never sees an intake
+// row it cannot execute.
+export function resolveClaimTypes(supportedTypes?: string[]): string[] {
+  return supportedTypes ?? ["launch", "stop"];
+}
+
 export const claimAndUpsertHost = internalMutation({
   args: {
     hostId: v.string(),
     now:    v.number(),
+    supportedTypes: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Upsert forgeHosts liveness record (read+patch-or-insert = atomic in one mutation)
@@ -581,6 +589,8 @@ export const claimAndUpsertHost = internalMutation({
       await ctx.db.insert("forgeHosts", { hostId: args.hostId, lastSeenAt: args.now });
     }
 
+    const types = resolveClaimTypes(args.supportedTypes);
+
     // Atomically claim queued, non-expired commands for this host (up to 10).
     // Convex mutations are serializable — read + patch in one mutation = double-claim safe.
     const queued = await ctx.db
@@ -588,7 +598,12 @@ export const claimAndUpsertHost = internalMutation({
       .withIndex("by_host_status_created", (q) =>
         q.eq("hostId", args.hostId).eq("status", "queued")
       )
-      .filter((q) => q.gt(q.field("expiresAt"), args.now))
+      .filter((q) =>
+        q.and(
+          q.gt(q.field("expiresAt"), args.now),
+          q.or(...types.map((t) => q.eq(q.field("commandType"), t)))
+        )
+      )
       .take(10);
 
     for (const cmd of queued) {
