@@ -55,31 +55,33 @@ import { toast } from "sonner";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Capture the run.block subscription callback so tests can inject an approval block. */
-function getRunBlockCallback(): ((event: Record<string, unknown>) => void) | null {
+/** Capture the run.blocks subscription callback so tests can inject an approval block. */
+function getRunBlocksCallback(): ((event: Record<string, unknown>) => void) | null {
   for (const call of mockSubscribeEvent.mock.calls as unknown as [
     string,
     (event: Record<string, unknown>) => void,
   ][]) {
-    if (call[0] === "run.block") return call[1];
+    if (call[0] === "run.blocks") return call[1];
   }
   return null;
 }
 
 function injectApprovalBlock(requestId: string) {
-  const cb = getRunBlockCallback();
-  if (!cb) throw new Error("run.block subscription not found");
+  const cb = getRunBlocksCallback();
+  if (!cb) throw new Error("run.blocks subscription not found");
   act(() => {
     cb({
       session_id: "sess-1",
-      block: {
-        type: "approval",
-        requestId,
-        action: "shell_exec",
-        details: { command: "rm -rf /tmp/x" },
-        riskLevel: "high",
-        agentName: "Ástríðr",
-      },
+      blocks: [
+        {
+          type: "approval",
+          requestId,
+          action: "shell_exec",
+          details: { command: "rm -rf /tmp/x" },
+          riskLevel: "high",
+          agentName: "Ástríðr",
+        },
+      ],
     });
   });
 }
