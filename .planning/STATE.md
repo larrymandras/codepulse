@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
-status: Awaiting next milestone
-stopped_at: Phase 96 UI-SPEC approved
-last_updated: "2026-07-13T12:47:47.808Z"
-last_activity: 2026-07-07 — Milestone v10.0 completed and archived
+status: executing
+stopped_at: Phase 96 planned (12 plans, 2 waves)
+last_updated: "2026-07-13T14:09:21.299Z"
+last_activity: 2026-07-13 -- Phase 96 planning complete
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 3
-  total_plans: 15
+  total_plans: 27
   completed_plans: 15
-  percent: 100
+  percent: 56
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: Milestone v10.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-07 — Milestone v10.0 completed and archived
+Phase: 96 — UI deep-dive cleanup (IA restructure, palette drift, fake telemetry, consistency)
+Plan: 12 plans / 2 waves, verified
+Status: Ready to execute
+Last activity: 2026-07-13 -- Phase 96 planning complete
 
 ## Deferred Items
 

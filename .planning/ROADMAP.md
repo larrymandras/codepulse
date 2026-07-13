@@ -213,6 +213,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] **Phase 88 — Analytics Rollup** — Durable Convex 16 MiB read-limit fix via ingest-time rollups (completed 2026-06-24)
 - [x] **Phase 89 — Readable Themes & Editorial Skin Toggle** — Token-driven theming + Midnight Aubergine skin + no-flash switcher + WCAG-AA pass
  (completed 2026-06-24)
+
 - [x] **Phase 90 — Agent Room / War Room** — ✅ COMPLETE (8/8, operator live sign-off 2026-06-29). Live participant identity + bounded listing + real operator Join + seq-ordered transcript — plus the cross-repo live integration that was never closed at scoping (LiveKit war-room profile, Convex deploy, astridr room/transcript ingest, delete-room feature, dialog/upsert fixes — see `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md` + `90-08-SUMMARY.md`).
 - [x] **Phase 91 — 3D Memory Galaxy** — Opt-in `react-force-graph-3d` render mode on `CodeVaultGraph`, lazy-loaded, theme-aware (completed 2026-06-29)
 - [x] **Phase 92 — Voice-Activated Command Palette (Jarvis Mode)** — Browser wake-word (openWakeWord ONNX on `onnxruntime-web`, Apache-2.0, no Picovoice/account/key) opens the command palette in voice mode; Web Speech STT → existing `chat.send`; streamed reply auto-played via shared `useTtsPlayback`
@@ -223,15 +224,19 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ## Phase Details
 
 ### Phase 88: Analytics Rollup
+
 **Goal**: Analytics queries read pre-aggregated rollup buckets instead of scanning raw event documents — eliminating the Convex 16 MiB/exec read-limit risk permanently.
 **Depends on**: Nothing — Convex-only, no UI surface, lowest regression risk.
 **Requirements**: AR-01, AR-02, AR-03
 **Success Criteria** (what must be TRUE):
+
   1. Every analytics query (`activityHeatmap`, `toolFlowSankey`, `errorRateTrend`, `tokenSunburst`, `tokenWaterfall`) reads well under 16 MiB at any event volume — no `.take()` count caps remain once rollups are authoritative.
   2. Rollup increments are idempotent: at-least-once ingest retries do not double-count; a one-time historical backfill action populates rollups for pre-existing events.
   3. Heatmap, sankey, and error-trend data fidelity is no longer bounded by the capped `.take()` limits restored after the quick-unblock (heatmap ≤1000, sankey ≤1000, errorRateTrend ≤300×3).
   4. Archival/retention sweeps in `dataRetention.ts` do not inflate or corrupt rollup counts (rollups remain consistent after events are archived or deleted).
+
 **Plans**: 4 plans (4 waves)
+
   - [x] 88-01-PLAN.md — Wave 0: extract shared sankey classifier (convex/lib/sankeyClassify.ts) + scaffold 3 Nyquist test files (AR-01/02/03)
   - [x] 88-02-PLAN.md — Wave 1 (atomic deploy): idempotencyKey schema+index, in-mutation dedup + ingest-time event/sankey increments, remove computeHourly event/error branches, paginate cost cron, backfill action, httpAction key pass-through (AR-01, AR-02)
   - [x] 88-03-PLAN.md — Wave 2: run one-time historical backfill (operator checkpoint) + dataRetention aggregates-safety verify/test (AR-02)
@@ -240,16 +245,20 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ---
 
 ### Phase 89: Readable Themes & Editorial Skin Toggle
+
 **Goal**: Operators can switch between a readable WCAG-AA theme, the Midnight Aubergine editorial skin, and Matrix Emerald — with zero flash on hard refresh and full token coverage across every surface including canvas-rendered graphs.
 **Depends on**: Phase 71 design tokens (foundation exists; TH-01 token cleanup is the internal first step).
 **Requirements**: TH-01, TH-02, TH-03, TH-04, TH-05, TH-06
 **Success Criteria** (what must be TRUE):
+
   1. The saved skin (Electric Cyan / Matrix Emerald / Midnight Aubergine) applies before first paint on hard refresh — no visible flash of unstyled or wrong-theme content (FOUC eliminated; blocking inline `<script>` in `index.html`; the two stale localStorage keys consolidated into one).
   2. `axe-core/playwright` reports zero WCAG-AA contrast violations on the five highest-traffic pages (Dashboard, Live Run, Analytics, Forge, Graphs) for every shipped theme.
   3. Canvas-rendered graphs (`ForceGraphCanvas`, `CodeVaultGraph`, KG Explorer) respect the active theme — no hardcoded `#06b6d4` cyan or `#10b981` emerald nodes remain; node colors read CSS custom properties via `useThemeColors()`.
   4. The Midnight Aubergine editorial skin renders with its full token set (warm aubergine background, cream text, gold/emerald/plum accents, paper-grain overlay) — distinct from and coexisting with the other two skins via `[data-theme="aubergine"]`.
   5. Scanline / matrix-grid / heavy glow animations are disabled for users with `prefers-reduced-motion` enabled; the default skin remains Electric Cyan (readable theme is opt-in).
+
 **Plans**: 7 plans (waves 0-3)
+
 - [x] 89-01-PLAN.md — Wave 0: install @axe-core/playwright, useThemeColors() hook + hexToRgba, seed e2e/unit test scaffolds (TH-01, TH-06)
 - [x] 89-02-PLAN.md — Wave 1: Readable + Aubergine token blocks, --vault-node-color on all themes, aubergine surface effects, effect suppression, in-CSS chrome tokenization (TH-01..04)
 - [x] 89-03-PLAN.md — Wave 1: migrate glow/shadow to glow tokens in 14 top-level components (TH-01)
@@ -257,20 +266,25 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 - [x] 89-05-PLAN.md — Wave 2: no-FOUC pre-paint script, 4-theme switcher, key consolidation, remove dark/light toggle + dead classes (TH-05, TH-01)
 - [x] 89-06-PLAN.md — Wave 2: route useThemeColors() into ForceGraphCanvas/CodeVaultGraph/KnowledgeGraph; violet vault token (TH-01)
 - [x] 89-07-PLAN.md — Wave 3: axe WCAG-AA contrast (20 cases) + no-FOUC + reduced-motion e2e + operator manual sign-off (TH-06, TH-02..05)
+
 **UI hint**: yes
 
 ---
 
 ### Phase 90: Agent Room / War Room
+
 **Goal**: The War Room surface shows real agent identity and gives the operator a genuine Join pathway — completing the ~70-75% built scaffolding into a usable, bounded, robust multi-persona room.
 **Depends on**: Phase 88 (recommended — no hard dependency, but analytics stability reduces noise). Cross-repo: `astridr-repo` `POST /api/war-room` existence confirmed; participant-join surface must be audited before planning.
 **Requirements**: ROOM-01, ROOM-02, ROOM-03, ROOM-04
 **Success Criteria** (what must be TRUE):
+
   1. The War Room renders real participant identity — agent names, avatars, colors, and role badges sourced from `useRosterAgents()` data, not the four hardcoded placeholder props in `WarRoom.tsx`.
   2. Room listing is bounded (no unbounded `.collect()` on `warRooms`) and rooms are visibly populated from real Ástríðr→Convex ingest events (the `warRooms` ingest path confirmed live).
   3. The operator's "Join" button sends a real signal to Ástríðr (not cosmetic) — confirmed against the `astridr-repo` participant-join/voice surface; if real-time voice is unavailable in this phase, observer mode ships with an honest label.
   4. Each room has a stable deep-link URL (`/war-room/:roomId`) and transcript chunks render in deterministic order via a `seq` field (no out-of-order rendering under concurrent ingest).
+
 **Plans**: 8 plans in 6 waves
+
 - [x] 90-01-PLAN.md — Wave 1: pin livekit-client@2.20.0 (legitimacy gate) + warRoomEvents.seq + by_room_seq index + Convex redeploy (ROOM-03, ROOM-04)
 - [x] 90-02-PLAN.md — Wave 2: livekit mock + getColor export + warRoomIdentity/useWarRoomVoice skeletons + 5 RED test files (ROOM-01..04)
 - [x] 90-03-PLAN.md — Wave 3: bounded listRooms {active,closed,hasMore} + seq-assigning insertWarRoomEvent + seq-ordered getRoomEvents (ROOM-02, ROOM-04)
@@ -283,34 +297,42 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ---
 
 ### Phase 91: 3D Memory Galaxy
+
 **Goal**: Operators can toggle an opt-in 3D render mode on `CodeVaultGraph` that renders the full ~4,038-node production graph at acceptable frame rates — without shipping three.js to users who stay in 2D mode.
 **Depends on**: Phase 89 (TH-01 `useThemeColors()` resolver required for G3D-02 theme-aware node colors — hard dependency; 91 must come after 89 is complete).
 **Requirements**: G3D-01, G3D-02
 **Success Criteria** (what must be TRUE):
+
   1. The 3D toggle is visible on `CodeVaultGraph`; switching to 3D renders the graph using `react-force-graph-3d` and switching back to 2D restores `ForceGraphCanvas` — the 2D render path is unchanged and no regression exists on the default 2D view.
   2. The 2D bundle does not include three.js — `vite build` chunk manifest confirms `three` is isolated to its own lazy chunk; the 2D path loads zero three.js code.
   3. The 3D mode renders the ~4,038-node production graph at ≥30 FPS (validated against the live snapshot from the Convex `graphSnapshots` table before shipping).
   4. Toggling 2D↔3D disposes the WebGL context cleanly — no memory leak on repeated toggle (verified via DevTools memory snapshot or equivalent); the toggle state persists across page reloads via `idb-keyval`.
   5. 3D node colors respect the active theme — colors read from the Phase 89 `useThemeColors()` resolver, not hardcoded hex values.
+
 **Plans**: 5 plans (4 waves)
+
 - [x] 91-01-PLAN.md — Wave 0: install react-force-graph-3d (three transitive) + ForceGraph3D.test.tsx Nyquist RED scaffold (SC#1/#4/#5) (G3D-01, G3D-02)
 - [x] 91-02-PLAN.md — Wave 1: ForceGraph3D.tsx lazy 3D wrapper + ForceGraph3DHandle + centerNode3DWhenReady in graph-center.ts (G3D-01, G3D-02)
 - [x] 91-03-PLAN.md — Wave 2: CodeVaultGraph host — 2D|3D toggle + idb-keyval persist + lazy swap + theme-aware 3D color/size callbacks + focus 3D branch (makes Wave 0 tests GREEN) (G3D-01, G3D-02)
 - [x] 91-04-PLAN.md — Wave 3: SC#2 build-manifest chunk-isolation check (no three.js in main bundle) (G3D-01)
 - [x] 91-05-PLAN.md — Wave 3: manual gates — SC#3 ≥30 FPS at live ~4,038-node snapshot + SC#4 WebGL no-leak on repeat toggle (G3D-02)
+
 **UI hint**: yes
 
 ---
 
 ### Phase 92: Voice-Activated Command Palette (Jarvis Mode)
+
 **Goal**: An operator can summon Ástríðr hands-free from anywhere in CodePulse by speaking a wake word, speak a command, and hear the streamed reply in a Norse persona voice — entirely through the existing command palette and WebSocket `chat.send` path, with zero Ástríðr backend changes.
 **Depends on**: Phase 2 (WebSocket command sender — shipped) and Phase 3 (Command Palette — shipped). No hard dependency on 89/90/91. Requires a custom-trained **openWakeWord** "Hey Astrid" model (ONNX) + the shared openWakeWord melspectrogram/embedding ONNX models placed in `public/`. No third-party account, key, or quota (Picovoice rejected the account; openWakeWord is open-source/Apache-2.0 and runs in-browser via `onnxruntime-web`).
 **Requirements**: VOX-01, VOX-02, VOX-03, VOX-04
 **Success Criteria** (what must be TRUE):
+
   1. With voice mode enabled, speaking the wake word ("Hey Astrid") anywhere in the app reliably opens the command palette in a "listening" voice mode within ~1s — detection runs continuously and locally in a Web Worker / AudioWorklet via openWakeWord ONNX models on `onnxruntime-web` (no audio leaves the machine for wake detection), and does not require the palette to already be open (`DashboardLayout.tsx` wake handler + existing ⌘K toggle coexist).
   2. After wake, the operator's spoken command is transcribed via the browser Web Speech API (reusing the recognition logic in `ChatInput.tsx`), shown as a live transcript, and on a final result is sent verbatim through the existing `sendCommand({type:"chat.send", message})` over `AstridrWSContext` — no new transport.
   3. The streamed reply renders in the palette (`run.text`) and the `run.tts` `audio_url` auto-plays in the selected Norse persona's ElevenLabs voice via a shared `useTtsPlayback` hook extracted from `Chat.tsx` (Chat and palette share one playback path; no duplicate logic). Persona→voice resolution remains Ástríðr-side (`VoiceIdentityResolver`) — no CodePulse voice config.
   4. Voice mode is privacy-honest: always-on listening is OFF by default, requires an explicit operator toggle, shows a persistent "listening" indicator while active, and missing/failed-to-load wake-word ONNX models degrade gracefully (clear disabled state, no crash, no silent always-on mic).
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -328,8 +350,10 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 - [x] **Phase 93: Eval Pipeline & Quality KPIs** — `evalScores` ingest (idempotent), nightly LLM-as-judge `internalAction`, per-persona quality KPI + regression detection
  (completed 2026-07-06)
+
 - [x] **Phase 94: Trace Waterfall** — `traceId` grouping on `llmMetrics` + in-app call-chain waterfall UI (replaces dead-link `LangfuseTraceLink.tsx`)
  (completed 2026-07-06)
+
 - [x] **Phase 95: Hardening — Security, Key Rotation, Dependency Majors** — `/cso` audit + remediation, Forge ingest-key rotation, TypeScript 6 + react-day-picker 10 migrations
  (completed 2026-07-07)
 
@@ -338,54 +362,68 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 ## Phase Details
 
 ### Phase 93: Eval Pipeline & Quality KPIs
+
 **Goal**: Ástríðr's task-quality scores are captured instead of silently dropped, sampled sessions are LLM-judged nightly against a rubric, and operators can see per-persona quality trends and catch regressions tied to persona changes.
 **Depends on**: Nothing — new `evalScores` table and ingest path, no dependency on existing schema.
 **Requirements**: EVAL-01, EVAL-02, EVAL-03
 **Success Criteria** (what must be TRUE):
+
   1. `task_quality` scores POSTed by Ástríðr's `langfuse_eval.py` to a bearer-authed ingest endpoint are stored in `evalScores` exactly once even under at-least-once retry (idempotent) — scores are no longer silently dropped on the floor.
   2. A nightly Convex `internalAction` runs unattended, samples sessions, LLM-judges them against a rubric, and writes the resulting scores into `evalScores`.
   3. Operator can view a per-persona quality KPI/trend on a dashboard surface.
   4. A quality regression following a persona's model or instruction change (joined against `profileSwitches`/`configChanges`) is flagged or alerted to the operator, not silently absorbed into the trend line.
+
 **Plans**: 6 plans (5 waves)
+
 - [x] 93-01-PLAN.md — Wave 1: evalScores table (full schema) + idempotent task_quality ingest case + close configChanges audit gap in profiles.upsertConfig (EVAL-01)
 - [x] 93-02-PLAN.md — Wave 2: nightly LLM judge — eval config slot + digest builder + dual-provider caller + zod validation + sampling internalAction + 05:00 cron (EVAL-02)
 - [x] 93-03-PLAN.md — Wave 2: cross-repo Ástríðr langfuse_eval.py fire-and-forget task_quality mirror POST (EVAL-01, D-01)
 - [x] 93-04-PLAN.md — Wave 3: regression detection (before/after window means, >=5/side, delivered alert) + KPI read queries (EVAL-03)
 - [x] 93-05-PLAN.md — Wave 4: Quality page + persona detail + trend chart + hooks + regression badge + nav/route (EVAL-03)
 - [x] 93-06-PLAN.md — Wave 5: live E2E completion bar (D-04) + judge calibration reference set (checkpoints)
+
 **UI hint**: yes
 
 ---
 
 ### Phase 94: Trace Waterfall
+
 **Goal**: Operators can open any session and see exactly how its LLM call chain executed — ordered timing, per-call cost, and cache hits — inside CodePulse, replacing the dead Langfuse reference.
 **Depends on**: Nothing — extends existing `llmMetrics` rows already ingested; independent of Phase 93.
 **Requirements**: TRACE-01, TRACE-02
 **Success Criteria** (what must be TRUE):
+
   1. New `llmMetrics` rows carry a `traceId` grouping field (schema + ingest pass-through); existing rows without `traceId` continue to render without error — no backward-compatibility break.
   2. Operator can open a session's LLM call chain as an in-app trace waterfall with calls rendered as timing bars in correct chronological order.
   3. Each call bar in the waterfall shows cost-per-call and a cache-hit/miss annotation.
   4. The dead-link `LangfuseTraceLink.tsx` is replaced by the in-app waterfall — no more link out to a trace store that was never stood up.
+
 **Plans**: 5 plans (4 waves)
+
 - [x] 94-01-PLAN.md — Wave 1: llmMetrics.traceId schema + recordCall arg + /runtime-ingest alias + sessionCalls query + tests + codegen (TRACE-01)
 - [x] 94-02-PLAN.md — Wave 1: Ástríðr cross-repo emitter — _current_trace_id contextvar trio + _process_inner insertion + attach at anthropic/openrouter/ollama providers (TRACE-01, D-01)
 - [x] 94-03-PLAN.md — Wave 2: TraceWaterfall component — client-side traceId grouping, bar math (seconds/ms), 3-state cache badge, cost dash, MetricCard strip, live useQuery (TRACE-02)
 - [x] 94-04-PLAN.md — Wave 3: SessionDetail Trace tab + ?tab=trace deep-link + Analytics "View Trace" cross-link + LangfuseTraceLink deletion (TRACE-02, D-06/07/08)
 - [x] 94-05-PLAN.md — Wave 4: live E2E completion bar (D-05) — operator-gated prod Convex deploy + astridr rebuild + grouped-trace/legacy-fallback verification
+
 **UI hint**: yes
 
 ---
 
 ### Phase 95: Hardening — Security Audit, Key Rotation, Dependency Majors
+
 **Goal**: The platform's security posture, secrets, and major dependencies are current and verified — no live placeholder secrets, no unremediated confirmed findings, no CI-red dependency PRs blocking future work.
 **Depends on**: Nothing — independent of Phases 93/94; can run in parallel or any order, sequenced last as audit/cleanup work.
 **Requirements**: HARD-01, HARD-02, HARD-03, HARD-04
 **Success Criteria** (what must be TRUE):
+
   1. `/cso` code-security audit is run against the repo and every confirmed finding (with `file:line` evidence, zero-false-positive precision bar) is remediated — no open confirmed findings remain.
   2. The Forge ingest key placeholder (`<new-strong-secret>`, recorded in memory `forge-deployment-tidy-whale-981`) is replaced by a real rotated secret live in both the Convex env and the Forge daemon config, with a live ingest round-trip confirming the new key works end to end.
   3. TypeScript 6.0 migration lands green — `tsc --noEmit`, the full Vitest suite, and `vite build` all pass with zero errors (was CI-red as dependabot PR #50, closed 2026-07-04).
   4. react-day-picker 10 migration lands green — all calendar-consuming surfaces are manually verified to render and interact correctly (was CI-red as dependabot PR #49, closed 2026-07-04).
+
 **Plans**: 4 plans (3 waves)
+
 - [x] 95-01-PLAN.md — Wave 1: delete dead react-day-picker (HARD-04) + TypeScript 6.0.3 via tsconfig node-globals fix + remove redundant @types (HARD-03) + REQUIREMENTS wording
 - [x] 95-02-PLAN.md — Wave 2: verify already-merged D-10 majors + delete 6 stale dependabot branches + react-easy-crop@6 UI checkpoint (HARD-03)
 - [x] 95-04-PLAN.md — Wave 2: HARD-02 close-out — Forge-daemon env check + live real-emitter round trip + records update (HARD-02)
@@ -399,8 +437,13 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 **Plans:** 12 plans (2 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 96-01-PLAN.md — Wave 1: shared PageHeader component + contract test (F7 foundation)
 - [ ] 96-02-PLAN.md — Wave 1: DashboardLayout IA restructure (dissolve CONSOLE) + real/hidden header telemetry + iconComponents export (F1/D-03, F3/D-04, F2 enabler)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 96-03-PLAN.md — Wave 2: F6 approval fix — Chat payload/ack correctness + shared ApprovalActions (Chat+Inbox) + headers (F6/D-11)
 - [ ] 96-04-PLAN.md — Wave 2: Tasks+MissionControl merge (view toggle, typed api) + orphan deletions + App.tsx redirects (F1/D-01/D-02/D-08, F7/F10)
 - [ ] 96-05-PLAN.md — Wave 2: CommandPalette + HeroStatsBar sourced from navItems/iconComponents; stale links fixed (F2)
