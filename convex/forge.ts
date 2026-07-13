@@ -15,6 +15,7 @@
 
 import { internalMutation, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // Phase 80: Pure-logic helpers (exported for unit tests in forge.test.ts)
@@ -22,6 +23,9 @@ import { v } from "convex/values";
 
 /** 5-minute TTL for queued commands (D-12). */
 export const FORGE_COMMAND_TTL_MS = 5 * 60 * 1000;
+
+/** 1 MB hard cap on an uploaded SKILL.md (D-P6-09). */
+export const MAX_INTAKE_UPLOAD_BYTES = 1_000_000;
 
 /**
  * Strip the `dangerous` key from a capabilities JSON string before storage (D-06, Pitfall 7).
@@ -129,6 +133,102 @@ export function buildLaunchRow(
     resolvedForgeJobId: null,
     error:              null,
   };
+}
+
+interface IntakeRowArgs {
+  hostId: string;
+  commandId: string;
+  destination: "global" | "project" | "cold";
+  workspaceId: string | null;
+  storageId?: Id<"_storage">;
+  githubUrl?: string;
+  subpath?: string;
+}
+
+interface IntakeRow {
+  hostId: string;
+  commandId: string;
+  commandType: "intake";
+  launchPayload: null;
+  stopPayload: null;
+  intakePayload: {
+    destination: "global" | "project" | "cold";
+    workspaceId: string | null;
+    storageId?: Id<"_storage">;
+    githubUrl?: string;
+    subpath?: string;
+  };
+  status: string;
+  issuedBy: string;
+  createdAt: number;
+  expiresAt: number;
+  claimedAt: null;
+  executedAt: null;
+  completedAt: null;
+  resolvedForgeJobId: null;
+  error: null;
+}
+
+/**
+ * Build the forgeCommands insert object for an intake command.
+ * Mirrors buildLaunchRow exactly (D-P6-01..09).
+ */
+export function buildIntakeRow(
+  args: IntakeRowArgs,
+  subject: string,
+  now: number,
+  ttlMs: number
+): IntakeRow {
+  return {
+    hostId:      args.hostId,
+    commandId:   args.commandId,
+    commandType: "intake",
+    launchPayload: null,
+    stopPayload:   null,
+    intakePayload: {
+      destination: args.destination,
+      workspaceId: args.workspaceId,
+      storageId:   args.storageId,
+      githubUrl:   args.githubUrl,
+      subpath:     args.subpath,
+    },
+    status:             "queued",
+    issuedBy:           subject,
+    createdAt:          now,
+    expiresAt:          now + ttlMs,
+    claimedAt:          null,
+    executedAt:         null,
+    completedAt:        null,
+    resolvedForgeJobId: null,
+    error:              null,
+  };
+}
+
+// Direct TypeScript port of skill_intake's github_url.py FULL_URL/SHORTHAND
+// regexes (D-P6-06). Must never accept a form the Python parser would reject —
+// port, don't reinterpret. Source: skill-intake repo,
+// src/skill_intake/ingestion/github_url.py.
+const GITHUB_FULL_URL = /^https?:\/\/(?:www\.)?github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/tree\/(.+?))?\/?$/i;
+const GITHUB_SHORTHAND = /^([^/\s]+)\/([^/\s]+?)(?:\.git)?$/;
+
+/**
+ * True when `url` matches either the full github.com URL form or the
+ * owner/repo shorthand form accepted by skill-intake's own CLI (D-P6-06).
+ */
+export function isAcceptedGithubUrlShape(url: string): boolean {
+  return GITHUB_FULL_URL.test(url) || GITHUB_SHORTHAND.test(url);
+}
+
+/**
+ * True when `subpath` is undefined, or is a relative path with no leading
+ * slash/backslash and no ".." segment. Stops path-traversal strings from
+ * crossing the bridge (D-P6-07 fan-out field).
+ */
+export function isSafeSubpath(subpath: string | undefined): boolean {
+  if (subpath === undefined) return true;
+  if (subpath.startsWith("/") || subpath.startsWith("\\")) return false;
+  const segments = subpath.split(/[/\\]/);
+  return !segments.includes("..");
 }
 
 // ---------------------------------------------------------------------------
@@ -387,6 +487,76 @@ export const enqueueStop = mutation({
       resolvedForgeJobId: null,
       error:              null,
     });
+  },
+});
+
+export const enqueueIntake = mutation({
+  args: {
+    hostId:      v.string(),
+    commandId:   v.string(),  // client-generated ULID for optimistic reconciliation (D-10)
+    destination: v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+    workspaceId: v.union(v.string(), v.null()),
+    storageId:   v.optional(v.id("_storage")),
+    githubUrl:   v.optional(v.string()),
+    subpath:     v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // D-13: Fail-closed — DELIBERATE divergence from read-query graceful-skip.
+    // DO NOT change to graceful-skip (if (!identity) return;). This is a
+    // write/control path. Read queries in this file have no auth check — that
+    // convention does NOT propagate here.
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+
+    // D-P6-05: exactly one of storageId / githubUrl, never both, never neither.
+    const hasFile = args.storageId !== undefined;
+    const hasUrl = args.githubUrl !== undefined;
+    if (hasFile === hasUrl) {
+      throw new Error("Provide exactly one of storageId or githubUrl");
+    }
+
+    if (hasFile) {
+      // D-P6-09: 1 MB hard cap, enforced before any row is ever inserted.
+      // Non-deprecated size-check API — do NOT use ctx.storage.getMetadata().
+      const meta = await ctx.db.system.get("_storage", args.storageId!);
+      if (meta && meta.size > MAX_INTAKE_UPLOAD_BYTES) {
+        throw new Error(`Uploaded file exceeds ${MAX_INTAKE_UPLOAD_BYTES} bytes`);
+      }
+    }
+
+    if (hasUrl) {
+      if (!isAcceptedGithubUrlShape(args.githubUrl!)) {
+        throw new Error(`Not a recognized GitHub URL form: ${args.githubUrl}`);
+      }
+    }
+
+    if (!isSafeSubpath(args.subpath)) {
+      throw new Error(`Invalid subpath: ${args.subpath}`);
+    }
+
+    if (args.destination === "project" && !args.workspaceId) {
+      throw new Error("workspaceId is required when destination is 'project'");
+    }
+
+    const row = buildIntakeRow(args, identity.subject, Date.now(), FORGE_COMMAND_TTL_MS);
+    await ctx.db.insert("forgeCommands", row);
+  },
+});
+
+export const generateForgeUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // D-13: Fail-closed — DELIBERATE divergence from read-query graceful-skip.
+    // DO NOT change to graceful-skip. This is a write/control path.
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+    // D-P6-08: exactly one signed URL per call, for a single SKILL.md — no
+    // zip or multi-file path exists in this mutation.
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
