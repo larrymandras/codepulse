@@ -133,3 +133,13 @@ None - no external service configuration required.
 ---
 *Phase: 96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa*
 *Completed: 2026-07-13*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/FactsTable.tsx
+- FOUND: src/components/__tests__/FactsTable.test.tsx
+- FOUND: .planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/96-07-SUMMARY.md
+- FOUND commit: cba4d13 (test, RED)
+- FOUND commit: 274f6f1 (feat, GREEN)
+- FOUND commit: d09defc (feat, Task 2)
+- FOUND commit: 6d7a6bb (docs, summary)
