@@ -8,7 +8,7 @@
 - ✅ **v7.0 Forge Integration** — Phases 78-82 (**shipped 2026-06-17**) — Forge→CodePulse Surface-Substrate fold-in — [archive](milestones/v7.0-ROADMAP.md)
 - ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**shipped 2026-06-23**) — unified Graphs hub + KG depth features — [archive](milestones/v8.0-ROADMAP.md)
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
-- ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-95 (**shipped 2026-07-07**) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors — [archive](milestones/v10.0-ROADMAP.md)
+- ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
 
 ## Phases
 
@@ -340,7 +340,8 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 ---
 
-## v10.0 Eval & Trace Observability + Hardening
+<details>
+<summary>✅ v10.0 Eval & Trace Observability + Hardening (Phases 93-96) — SHIPPED 2026-07-07; Phase 96 addendum completed 2026-07-13</summary>
 
 > **Started 2026-07-04** via `/gsd-new-milestone` (seeded from `.planning/todos/pending/eval-and-trace-observability-v10.md`, the 2026-06-30 cross-repo capability audit). Continues phase numbering from 93. Both observability features ride existing `llmMetrics`/ingest transport — no new emitter protocol from Ástríðr.
 
@@ -356,6 +357,9 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 - [x] **Phase 95: Hardening — Security, Key Rotation, Dependency Majors** — `/cso` audit + remediation, Forge ingest-key rotation, TypeScript 6 + react-day-picker 10 migrations
  (completed 2026-07-07)
+
+- [x] **Phase 96: UI Deep-Dive Cleanup (post-ship addendum)** — CONSOLE cluster dissolved, CommandPalette single-sourced from navRegistry, fabricated readouts/trust signals removed, orphan pages deleted, both approval consumers gated on server ack against the verified Ástríðr contract, one PageHeader across all pages; 13/13 plans, re-verified 16/16 after 96-13 gap closure; SECURITY 35/35 threats closed
+ (completed 2026-07-13)
 
 **Execution order:** 93 and 94 are independent of each other — both ride existing ingest paths with no shared schema — and can run in either order or in parallel. 95 is independent of both (its own audit/rotation/dependency-bump surface) and is sequenced last since it is hardening/cleanup work rather than new-feature delivery; HARD-03/04 close out dependabot PRs already CI-red, and HARD-01 may surface remediation work that adds scope once run.
 
@@ -456,6 +460,8 @@ Plans:
 - [x] 96-11-PLAN.md — Wave 2: F7 header sweep A — 5 hr/* + Dashboard/Alerts/Briefings/Capabilities/Settings/SelfHealing
 - [x] 96-12-PLAN.md — Wave 2: F7 header sweep B — Executions/Ideation/ConfigPage/InsightsChat/LiveRun/WhatsApp/Hive/GraphsHub/McpInventory/Quality/QualityDetail/SessionDetail
 
+</details>
+
 ---
 
 ## Progress
@@ -488,6 +494,6 @@ Plans:
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
 
-*Last updated: 2026-07-07 — **v10.0 SHIPPED & ARCHIVED**. 3 phases (93-95), 15 plans, 36 tasks, 9/9 requirements (EVAL-01..03, TRACE-01/02, HARD-01..04). All 3 phases verified (`VERIFICATION.md` each; 95 = 16/16). Full detail archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-new-milestone`.*
+*Last updated: 2026-07-13 — **v10.0 fully closed including Phase 96 addendum**. Phase 96 (UI deep-dive cleanup, 13 plans / 28 tasks, appended post-ship 2026-07-13): re-verified 16/16 after 96-13 gap closure, code review clean, SECURITY 35/35 threats closed, UAT gaps resolved (astridr-side items handed off to astridr phase 178.1). v10.0 as shipped 2026-07-07: 3 phases (93-95), 15 plans, 36 tasks, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md` (Phase 96 appendix added 2026-07-13). Next: `/gsd-new-milestone`.*
 
 *Prior: 2026-06-29 — **v9.0 Readability & Experience SHIPPED & ARCHIVED** (tagged v9.0; archive `milestones/v9.0-ROADMAP.md`). 5 phases (88-92), 30 plans, 19/19 requirements. — Prior note: Phase 90 build (90-01..90-07) complete; this session closed the cross-repo LIVE-integration gap that was never closed at scoping. Five layered gaps fixed + committed: (1) `war-room` Docker profile (LiveKit + 5 agent workers) wasn't started → create_war_room 500; (2) Phase-90 Convex fns committed-but-not-deployed → listRooms error; (3) astridr never POSTed to `/war-room-ingest` → built room.created/updated emit (astridr 97c63643, codepulse e09ce37); (4) transcript.chunk ingest from agents → built (astridr 26874fac); (5) launch-dialog form-wipe fix (codepulse 4c3372d) + new delete-room feature (codepulse 1189ff5). astridr token endpoint live (4093aec). Full record: `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md`. Remaining: 90-08 operator live sign-off. — Prior note: Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*

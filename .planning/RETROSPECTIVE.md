@@ -164,6 +164,19 @@
 - Sessions: 1 long execute-phase → verify → milestone close
 - Notable: the orchestrator/subagent split kept the noisy green-bar output (184 test files) out of main context; most of the phase ran inline because `/cso` needs the Skill tool and the operator gates needed live interaction
 
+### Addendum — Phase 96: UI Deep-Dive Cleanup (completed 2026-07-13, appended post-ship)
+
+**What was built:** Full-app UI truth/consistency sweep from an audit (F1–F10 / D-01–D-11): CONSOLE cluster dissolved; CommandPalette + sidebar single-sourced from `navRegistry` (~15 routes of drift killed); fabricated telemetry/trust signals removed; orphan pages deleted with redirects; dead UI stubs removed; one `<PageHeader>` everywhere; mobile master-detail collapse; both HITL approval consumers gated on the server ack boolean against the live-verified Ástríðr contract. 13 plans / 28 tasks in one day.
+
+**What worked:**
+- **Live UAT caught what green tests + a passed verification missed** — again. The pre-gap verification passed 12/12 must-haves, yet the live Telegram/dashboard race exposed InboxCard's false-success and Chat's dead `run.block` subscription. The gap-closure loop (UAT → 96-13 plan → re-verify 16/16) closed both same-day.
+- **Cross-repo diagnosis at UAT time paid forward:** the three root-caused backend gaps became astridr Phase 178.1 with file:line evidence already in hand — discuss/plan/execute ran the same day on the strength of that diagnosis.
+- **Delta-scoped re-review:** the gap-closure code review scoped to 96-13's 5 files instead of re-reviewing 63 — same gate, fraction of the cost.
+
+**What was inefficient:** `phase.complete` miscounted a third consecutive time (claimed `roadmap_updated` while writing nothing; left counters at 0). Ground-truth diff before commit remains mandatory.
+
+**Key lesson:** when one consumer of a shared contract gets a fix (ApprovalBlock's ack gating in 96-03), grep for every sibling consumer (InboxCard) before closing — the UAT found the miss, but the sweep-all-instances rule would have caught it at build time.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution

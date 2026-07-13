@@ -16,6 +16,13 @@
 - Ran the `/cso` fast-tier audit over the settled CodePulse tree (`src/`+`convex/`+build/config); verdict SHIP with `npm audit` 0 vulns, 0 committed secrets, and full ingest-auth coverage. Four LOW findings, all `file:line`-evidenced — the operator approved fixing all four, and they were remediated in one pass: `validateIngestAuth` made fail-closed, `insightsChat.ask` auth-gated, `.gitignore` broadened, and CI actions SHA-pinned. Green bar re-run green. HARD-01 resolved.
 - HARD-02 closed honestly as verification + documentation (NO new rotation): both ingest keys confirmed real on prod Convex `tidy-whale-981`, and both emitter sides proven by live round trip — a completed `codex`/`goal` job from the real Forge daemon (`host lmofficenew`) landed a fresh `forgeJobs` row (`01KWYJ2GVQ09WRQTRN96VP926Y` @ 15:10:18Z), corroborated by a live Ástríðr `events` row at 13:40:44Z. Getting there required fixing two real blockers: a `.cloud`→`.site` host bug in the deploy checklist and a forge-daemon startup crash (migration-v4 FK violation).
 
+**Addendum — Phase 96: UI Deep-Dive Cleanup (completed 2026-07-13, appended to v10.0 post-ship):**
+
+- 13 plans / 28 tasks in one day, from a full-app audit (F1–F10 findings, D-01–D-11 decisions). Every UI surface now tells the truth and follows one standard: CONSOLE nav cluster dissolved; CommandPalette + sidebar single-sourced from `navRegistry` (killed ~15-route drift); fabricated header telemetry (`SYS: 14%`/`LAT: 12ms`), hardcoded Security "Valid" badge, Automation `?? 12` fallback, and fake cron indicators all removed; orphaned MissionControl/Profiles/Agents pages deleted with redirects (Tasks absorbed Mission Control behind a view toggle); dead UI stubs removed; all pages on one shared `<PageHeader>`; mobile master-detail collapse for ForgePage/WarRoom.
+- Both HITL approval consumers (Chat ApprovalBlock + InboxCard) now gate UI state on the server ack boolean against the live-verified Ástríðr `ApprovalRespondCommand` contract — the false-success class found in live UAT is closed and regression-tested; Chat realigned from the never-emitted `run.block` to the real `run.blocks` event.
+- Gates: re-verification 16/16 after the 96-13 gap closure, code review clean (0 critical/0 warning), 96-SECURITY.md 35/35 threats closed (`threats_open: 0`), 1742 tests + tsc green.
+- Cross-repo handoff: `chat.send` security-pipeline bypass + missing approval-block producer routed to astridr-repo Phase 178.1 (inserted, planned, and code-complete same day; pending live UAT).
+
 ---
 
 ## v9.0 Readability & Experience (Shipped: 2026-06-29)

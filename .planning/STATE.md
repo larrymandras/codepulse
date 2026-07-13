@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 96
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-13
+Phase: 96 (final — v10.0 fully closed including Phase 96 addendum)
+Plan: 13/13 complete
+Status: Milestone complete — archived (v10.0-ROADMAP.md appendix added); next: /gsd-new-milestone
+Last activity: 2026-07-13 -- v10.0 close-out: Phase 96 verified 16/16, review clean, SECURITY 35/35 closed, records folded into milestone archive/MILESTONES.md/ROADMAP collapse
 
 ## Deferred Items
 
