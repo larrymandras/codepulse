@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 Phase: 96 (final — v10.0 fully closed including Phase 96 addendum)
 Plan: 13/13 complete
 Status: Milestone complete — archived (v10.0-ROADMAP.md appendix added); next: /gsd-new-milestone
-Last activity: 2026-07-13 -- v10.0 close-out: Phase 96 verified 16/16, review clean, SECURITY 35/35 closed, records folded into milestone archive/MILESTONES.md/ROADMAP collapse
+Last activity: 2026-07-13 -- Completed quick task 260713-q9k: ApprovalBlock update-by-id in Chat (closes the D-05 cross-repo handoff from astridr 178.1)
 
 ## Deferred Items
 
@@ -199,6 +199,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260713-q9k | ApprovalBlock update-by-id in Chat — resolution status-update blocks flip the existing card in place (D-05 handoff from astridr 178.1) | 2026-07-13 | 307b90a | [260713-q9k-approvalblock-update-by-id-in-chat-updat](./quick/260713-q9k-approvalblock-update-by-id-in-chat-updat/) |
 | 260629-nnf | Complete Graphs Hub tile index — Capabilities, 3D Memory Galaxy, Hive/Swarm tiles | 2026-06-29 | 2d9df13 | [260629-nnf-graphs-hub-tile-index](./quick-archive/260629-nnf-graphs-hub-tile-index/) |
 | 260629-oki | Reverse cross-graph deep-links (agent→tools, KG entity→owning agent) — GH-04 round-trip | 2026-06-29 | 6cffbae | [260629-oki-reverse-cross-graph-links](./quick-archive/260629-oki-reverse-cross-graph-links/) |
 | 260629-ow5 | Memory ?event= deep-link focus — close the KG-provenance cross-nav target | 2026-06-29 | 58b999f | [260629-mem-event-deeplink](./quick-archive/260629-mem-event-deeplink/) |
