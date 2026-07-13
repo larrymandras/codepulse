@@ -15,6 +15,7 @@
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getCorsHeaders, validateForgeIngestAuth, unauthorizedResponse } from "./ingestAuth";
+import { MAX_ACK_REPORT_BYTES } from "./forge";
 
 // ---------------------------------------------------------------------------
 // POST /forge-commands-claim
@@ -151,6 +152,28 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
         headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
       }
     );
+  }
+  // WR-03 (phase-06 review): reject a pathologically large report at the
+  // door with a diagnostic 400 (the daemon should retry with a smaller or no
+  // report). ackCommand's capAckReport is the defense-in-depth layer that
+  // guarantees an ack that does reach the mutation can never fail on report
+  // size — the blob delete and terminal patch must always commit.
+  if (report !== undefined && report !== null) {
+    let reportBytes: number;
+    try {
+      reportBytes = JSON.stringify(report).length;
+    } catch {
+      reportBytes = Number.POSITIVE_INFINITY;
+    }
+    if (reportBytes > MAX_ACK_REPORT_BYTES) {
+      return new Response(
+        JSON.stringify({ error: `Report too large: ${reportBytes} bytes exceeds the ${MAX_ACK_REPORT_BYTES}-byte cap` }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
+        }
+      );
+    }
   }
 
   await ctx.runMutation(internal.forge.ackCommand, {

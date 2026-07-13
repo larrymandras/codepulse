@@ -388,6 +388,8 @@ import {
   isAcceptedGithubUrlShape,
   isSafeSubpath,
   resolveClaimTypes,
+  capAckReport,
+  MAX_ACK_REPORT_BYTES,
 } from "./forge";
 import type { Id } from "./_generated/dataModel";
 
@@ -967,6 +969,43 @@ describe("forgeCommandsAck — ack status gate (WR-02)", () => {
   it("rejects arbitrary strings", () => {
     expect(isAckableStatus("bogus")).toBe(false);
     expect(isAckableStatus("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 review WR-03: capAckReport — oversized report degrades, never fails
+// ---------------------------------------------------------------------------
+
+describe("forge.capAckReport — report size cap (WR-03)", () => {
+  it("passes a normal report through unchanged", () => {
+    const report = { schema_version: 1, verdict: "admit", findings: [] };
+    expect(capAckReport(report)).toBe(report);
+  });
+
+  it("passes null/undefined through as null", () => {
+    expect(capAckReport(null)).toBeNull();
+    expect(capAckReport(undefined)).toBeNull();
+  });
+
+  it("replaces an oversized report with a truncation stub carrying the byte count", () => {
+    const oversized = { findings: "x".repeat(MAX_ACK_REPORT_BYTES + 1) };
+    const result = capAckReport(oversized) as { truncated: boolean; reason: string; bytes: number };
+    expect(result.truncated).toBe(true);
+    expect(result.reason).toBe("report exceeded size cap");
+    expect(result.bytes).toBeGreaterThan(MAX_ACK_REPORT_BYTES);
+  });
+
+  it("keeps a report exactly at the cap", () => {
+    // JSON.stringify wraps a bare string in quotes: 2 chars of overhead.
+    const atCap = "x".repeat(MAX_ACK_REPORT_BYTES - 2);
+    expect(capAckReport(atCap)).toBe(atCap);
+  });
+
+  it("treats an unserializable report as oversized (stub, not throw)", () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const result = capAckReport(circular) as { truncated: boolean };
+    expect(result.truncated).toBe(true);
   });
 });
 

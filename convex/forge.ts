@@ -28,6 +28,36 @@ export const FORGE_COMMAND_TTL_MS = 5 * 60 * 1000;
 export const MAX_INTAKE_UPLOAD_BYTES = 1_000_000;
 
 /**
+ * WR-03 (phase-06 review): cap on the serialized ack report. Convex enforces
+ * ~1 MiB per document; an unbounded report pushing the forgeCommands row past
+ * it would make ctx.db.patch throw on every ack retry, leaving the command
+ * stuck "executing" forever (expireStaleCommands only expires queued rows)
+ * and the blob undeleted. 400k leaves ample headroom for the rest of the row.
+ */
+export const MAX_ACK_REPORT_BYTES = 400_000;
+
+/**
+ * Returns `report` unchanged when its JSON serialization fits within
+ * MAX_ACK_REPORT_BYTES; otherwise returns a small truncation stub. The key
+ * property (WR-03): an oversized report must degrade the report, never fail
+ * the ack — the ack's blob delete and terminal patch must always commit.
+ * An unserializable report (throwing JSON.stringify) is treated as oversized.
+ */
+export function capAckReport(report: unknown): unknown {
+  if (report === null || report === undefined) return report ?? null;
+  let bytes: number;
+  try {
+    bytes = JSON.stringify(report).length;
+  } catch {
+    return { truncated: true, reason: "report exceeded size cap" };
+  }
+  if (bytes > MAX_ACK_REPORT_BYTES) {
+    return { truncated: true, reason: "report exceeded size cap", bytes };
+  }
+  return report;
+}
+
+/**
  * Strip the `dangerous` key from a capabilities JSON string before storage (D-06, Pitfall 7).
  * Returns null when the result is empty, unparseable, or the input was null/empty.
  * Defense-in-depth on top of the UI never sending it.
@@ -719,7 +749,10 @@ export const ackCommand = internalMutation({
       resolvedForgeJobId: args.resolvedForgeJobId,
       error:              args.error,
       completedAt:        args.now,
-      report:             args.report ?? null,
+      // WR-03: an oversized report is replaced with a truncation stub so the
+      // terminal patch (and the blob delete above) always commits — the ack
+      // must never fail because the report is too large.
+      report:             capAckReport(args.report ?? null),
     });
   },
 });
