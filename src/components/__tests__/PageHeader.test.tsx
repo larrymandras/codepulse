@@ -27,4 +27,13 @@ describe("PageHeader", () => {
     const { container } = render(<PageHeader title="Knowledge Graph" icon={Network} />);
     expect(container.querySelector("svg")).not.toBeNull();
   });
+
+  it("lets a caller-passed margin override replace the default mb-4 (twMerge, WR-01)", () => {
+    const { container } = render(<PageHeader title="Config" className="mb-0" />);
+    const root = container.firstChild as HTMLElement;
+    // twMerge must DROP the conflicting default — keeping both would let
+    // mb-4 win via CSS emission order regardless of class order.
+    expect(root.className).toContain("mb-0");
+    expect(root.className).not.toContain("mb-4");
+  });
 });
