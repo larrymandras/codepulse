@@ -51,7 +51,7 @@ export default function HeroStatsBar() {
       numericValue: typeof stats.activeSessions === "number" ? stats.activeSessions : undefined,
       sub: `${stats.runningAgents} agents`,
       color: "#60a5fa",
-      onClick: () => navigate("/agents"),
+      onClick: () => navigate("/hr/roster"),
     },
     {
       label: "Error Rate",

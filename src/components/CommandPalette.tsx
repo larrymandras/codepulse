@@ -27,57 +27,8 @@ import {
   Navigation,
   Zap,
   LayoutDashboard,
-  Cpu,
-  BarChart2,
-  Server,
-  Users,
-  Shield,
-  Lightbulb,
-  RefreshCw,
-  Hammer,
-  Brain,
-  Moon,
-  ScrollText,
-  List,
-  Settings,
-  TrendingUp,
-  Activity,
-  KanbanSquare,
-  SlidersHorizontal,
-  Radio,
-  Video,
-  LayoutGrid,
 } from "lucide-react";
-
-// Nav items shared with DashboardLayout — kept in sync manually
-const NAV_PAGES = [
-  { to: "/", label: "Dashboard", Icon: LayoutDashboard },
-  { to: "/capabilities", label: "Capabilities", Icon: Cpu },
-  { to: "/analytics", label: "Analytics", Icon: BarChart2 },
-  { to: "/alerts", label: "Alerts", Icon: Bell },
-  { to: "/infrastructure", label: "Infrastructure", Icon: Server },
-  { to: "/agents", label: "Agents", Icon: Bot },
-  { to: "/profiles", label: "Profiles", Icon: Users },
-  { to: "/security", label: "Security", Icon: Shield },
-  { to: "/ideation", label: "Ideation", Icon: Lightbulb },
-  { to: "/self-healing", label: "Self-Healing", Icon: RefreshCw },
-  { to: "/build", label: "Build", Icon: Hammer },
-  { to: "/memory", label: "Memory", Icon: Brain },
-  { to: "/dreaming", label: "Dreaming", Icon: Moon },
-  { to: "/briefings", label: "Briefings", Icon: ScrollText },
-  { to: "/automation", label: "Automation", Icon: Clock },
-  { to: "/executions", label: "Executions", Icon: List },
-  { to: "/settings", label: "Settings", Icon: Settings },
-  { to: "/insights", label: "Insights", Icon: TrendingUp },
-  { to: "/chat", label: "Chat", Icon: MessageSquare },
-  { to: "/live-run", label: "Live Run", Icon: Activity },
-  { to: "/inbox", label: "Inbox", Icon: Inbox },
-  { to: "/tasks", label: "Tasks", Icon: KanbanSquare },
-  { to: "/config", label: "Config", Icon: SlidersHorizontal },
-  { to: "/war-room", label: "War Room", Icon: Radio },
-  { to: "/meeting-bot", label: "Meeting Bot", Icon: Video },
-  { to: "/mission-control", label: "Mission Control", Icon: LayoutGrid },
-];
+import { navItems, iconComponents } from "../layouts/DashboardLayout";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -123,21 +74,26 @@ export function CommandPalette({
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
 
-        {/* Pages group — all navigation routes */}
+        {/* Pages group — all navigation routes, sourced from the single navItems registry (F2) */}
         <CommandGroup heading="Pages">
-          {NAV_PAGES.map(({ to, label, Icon }) => (
-            <CommandItem key={to} onSelect={() => select(() => navigate(to))}>
-              <Icon className="mr-2 h-4 w-4" />
-              {label}
-            </CommandItem>
-          ))}
+          {navItems.map((item) => {
+            if (!item.to) return null;
+            const to = item.to;
+            const Icon = iconComponents[item.icon] ?? LayoutDashboard;
+            return (
+              <CommandItem key={to} onSelect={() => select(() => navigate(to))}>
+                <Icon className="mr-2 h-4 w-4" />
+                {item.label}
+              </CommandItem>
+            );
+          })}
         </CommandGroup>
 
         <CommandSeparator />
 
         <CommandGroup heading="Agents">
           {agents.map((a) => (
-            <CommandItem key={a.id} onSelect={() => select(() => navigate("/agents"))}>
+            <CommandItem key={a.id} onSelect={() => select(() => navigate("/hr/roster"))}>
               <Bot className="mr-2 h-4 w-4" />
               {a.name}
             </CommandItem>
