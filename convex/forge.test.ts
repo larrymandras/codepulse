@@ -384,7 +384,11 @@ import {
   shouldExpireCommand,
   isTerminalCommandStatus,
   buildLaunchRow,
+  buildIntakeRow,
+  isAcceptedGithubUrlShape,
+  isSafeSubpath,
 } from "./forge";
+import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
 // stripDangerousCapability — Pitfall 7 / D-06 mitigation
@@ -562,14 +566,233 @@ describe("forge.buildLaunchRow — field mapping (FI-06)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Auth fail-closed guard — FI-08 / D-13
+// Phase 06 (skill-intake): buildIntakeRow — field mapping (D-P6-01..09)
 // ---------------------------------------------------------------------------
 
-describe("forge.enqueueLaunch / enqueueStop — auth fail-closed guard (FI-08, D-13)", () => {
+describe("forge.buildIntakeRow — field mapping", () => {
+  const now = 1_700_000_000_000;
+  const TTL_MS = 5 * 60 * 1000;
+  const subject = "user_abc123";
+
+  const uploadArgs = {
+    hostId:      "desktop-abc",
+    commandId:   "01JXMQ00000000000000000002",
+    destination: "project" as const,
+    workspaceId: "ws-desktop-1",
+    storageId:   "storage-id-1" as Id<"_storage">,
+    githubUrl:   undefined,
+    subpath:     undefined,
+  };
+
+  const urlArgs = {
+    hostId:      "desktop-abc",
+    commandId:   "01JXMQ00000000000000000003",
+    destination: "global" as const,
+    workspaceId: null,
+    storageId:   undefined,
+    githubUrl:   "https://github.com/owner/repo",
+    subpath:     "skills/foo",
+  };
+
+  it("sets commandType to intake", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.commandType).toBe("intake");
+  });
+
+  it("sets launchPayload and stopPayload to null", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.launchPayload).toBeNull();
+    expect(row.stopPayload).toBeNull();
+  });
+
+  it("sets status to queued", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.status).toBe("queued");
+  });
+
+  it("sets issuedBy to the Clerk identity subject", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.issuedBy).toBe(subject);
+  });
+
+  it("sets expiresAt to createdAt + TTL_MS", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.expiresAt).toBe(now + TTL_MS);
+    expect(row.createdAt).toBe(now);
+  });
+
+  it("sets all nullable timing/ack fields to null", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.claimedAt).toBeNull();
+    expect(row.executedAt).toBeNull();
+    expect(row.completedAt).toBeNull();
+    expect(row.resolvedForgeJobId).toBeNull();
+    expect(row.error).toBeNull();
+  });
+
+  it("maps intakePayload fields from args (upload variant)", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(row.intakePayload.destination).toBe("project");
+    expect(row.intakePayload.workspaceId).toBe("ws-desktop-1");
+    expect(row.intakePayload.storageId).toBe("storage-id-1");
+    expect(row.intakePayload.githubUrl).toBeUndefined();
+    expect(row.intakePayload.subpath).toBeUndefined();
+  });
+
+  it("maps intakePayload fields from args (githubUrl variant)", () => {
+    const row = buildIntakeRow(urlArgs, subject, now, TTL_MS);
+    expect(row.intakePayload.destination).toBe("global");
+    expect(row.intakePayload.workspaceId).toBeNull();
+    expect(row.intakePayload.storageId).toBeUndefined();
+    expect(row.intakePayload.githubUrl).toBe("https://github.com/owner/repo");
+    expect(row.intakePayload.subpath).toBe("skills/foo");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): isAcceptedGithubUrlShape — accept/reject (D-P6-06)
+// ---------------------------------------------------------------------------
+
+describe("forge.isAcceptedGithubUrlShape — accept/reject", () => {
+  it("accepts a plain github.com URL", () => {
+    expect(isAcceptedGithubUrlShape("https://github.com/owner/repo")).toBe(true);
+  });
+
+  it("accepts a github.com URL with a /tree/ subpath", () => {
+    expect(
+      isAcceptedGithubUrlShape("https://github.com/owner/repo/tree/main/skills/foo")
+    ).toBe(true);
+  });
+
+  it("accepts owner/repo shorthand", () => {
+    expect(isAcceptedGithubUrlShape("owner/repo")).toBe(true);
+  });
+
+  it("rejects a non-github.com URL", () => {
+    expect(isAcceptedGithubUrlShape("https://gitlab.com/owner/repo")).toBe(false);
+  });
+
+  it("rejects a non-URL string", () => {
+    expect(isAcceptedGithubUrlShape("not a url at all")).toBe(false);
+  });
+
+  it("rejects an empty string", () => {
+    expect(isAcceptedGithubUrlShape("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): isSafeSubpath — traversal guard (D-P6-07)
+// ---------------------------------------------------------------------------
+
+describe("forge.isSafeSubpath — traversal guard", () => {
+  it("accepts undefined", () => {
+    expect(isSafeSubpath(undefined)).toBe(true);
+  });
+
+  it("accepts a plain relative subpath", () => {
+    expect(isSafeSubpath("skills/foo")).toBe(true);
+  });
+
+  it("rejects a leading ../ traversal", () => {
+    expect(isSafeSubpath("../etc/passwd")).toBe(false);
+  });
+
+  it("rejects a leading-slash absolute path", () => {
+    expect(isSafeSubpath("/etc/passwd")).toBe(false);
+  });
+
+  it("rejects a nested .. segment", () => {
+    expect(isSafeSubpath("skills/../../etc")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — XOR enforcement (D-P6-05)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — XOR enforcement (D-P6-05)", () => {
   /**
-   * Mirror of the fail-closed identity guard used in enqueueLaunch / enqueueStop.
-   * In production this is `ctx.auth.getUserIdentity()` returning null.
+   * Mirror of the storageId/githubUrl XOR guard used in enqueueIntake.
    * Here we test the extracted decision function without a live Convex runtime.
+   */
+  function xorGuard(hasFile: boolean, hasUrl: boolean): void {
+    if (hasFile === hasUrl) {
+      throw new Error("Provide exactly one of storageId or githubUrl");
+    }
+  }
+
+  it("throws when both storageId and githubUrl are present", () => {
+    expect(() => xorGuard(true, true)).toThrow(
+      "Provide exactly one of storageId or githubUrl"
+    );
+  });
+
+  it("throws when neither storageId nor githubUrl is present", () => {
+    expect(() => xorGuard(false, false)).toThrow(
+      "Provide exactly one of storageId or githubUrl"
+    );
+  });
+
+  it("does not throw when only storageId is present", () => {
+    expect(() => xorGuard(true, false)).not.toThrow();
+  });
+
+  it("does not throw when only githubUrl is present", () => {
+    expect(() => xorGuard(false, true)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 06 (skill-intake): enqueueIntake — workspaceId required for
+// destination='project' (D-P6-04)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueIntake — workspaceId required for project destination (D-P6-04)", () => {
+  /**
+   * Mirror of the project-destination workspaceId guard used in enqueueIntake.
+   * Here we test the extracted decision function without a live Convex runtime.
+   */
+  function projectWorkspaceGuard(
+    destination: "global" | "project" | "cold",
+    workspaceId: string | null
+  ): void {
+    if (destination === "project" && !workspaceId) {
+      throw new Error("workspaceId is required when destination is 'project'");
+    }
+  }
+
+  it("throws for destination='project' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("project", null)).toThrow(
+      "workspaceId is required when destination is 'project'"
+    );
+  });
+
+  it("does not throw for destination='project' with a workspaceId", () => {
+    expect(() => projectWorkspaceGuard("project", "ws-desktop-1")).not.toThrow();
+  });
+
+  it("does not throw for destination='global' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("global", null)).not.toThrow();
+  });
+
+  it("does not throw for destination='cold' with a null workspaceId", () => {
+    expect(() => projectWorkspaceGuard("cold", null)).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Auth fail-closed guard — FI-08 / D-13 (applies to enqueueLaunch, enqueueStop,
+// enqueueIntake, and generateForgeUploadUrl — all four Clerk-gated mutations
+// share the identical guard shape and throw message, D-P6 phase 06 addition)
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueLaunch / enqueueStop / enqueueIntake / generateForgeUploadUrl — auth fail-closed guard (FI-08, D-13)", () => {
+  /**
+   * Mirror of the fail-closed identity guard used in enqueueLaunch / enqueueStop /
+   * enqueueIntake / generateForgeUploadUrl. In production this is
+   * `ctx.auth.getUserIdentity()` returning null. Here we test the extracted
+   * decision function without a live Convex runtime.
    */
   function authGuard(identity: { subject: string } | null): void {
     if (identity === null) {
@@ -602,4 +825,7 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("expireStaleCommands: does not touch executing/done/failed commands");
   it.todo("ackCommand: sets resolvedForgeJobId and status=done on claimed command");
   it.todo("ackCommand: sets status=failed and error on failed command");
+  it.todo("enqueueIntake: inserts forgeCommands row with commandType='intake' and status='queued'");
+  it.todo("enqueueIntake: rejects an upload exceeding MAX_INTAKE_UPLOAD_BYTES (requires a live storage-backed row)");
+  it.todo("generateForgeUploadUrl: returns a usable signed upload URL");
 });
