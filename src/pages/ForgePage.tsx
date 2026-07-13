@@ -19,6 +19,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { PanelLeft, X } from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
 import {
   useForgeJobsRaw,
@@ -97,6 +98,10 @@ export default function ForgePage() {
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Mobile master-list overlay (F8) — the job list collapses into a
+  // slide-in overlay below md so the detail pane gets full width on mobile.
+  const [listOpen, setListOpen] = useState(false);
+
   // Selection state: (hostId, forgeJobId) pair (D-11 — merged multi-host list)
   const [selectedKey, setSelectedKey] = useState<{
     hostId: string;
@@ -142,19 +147,55 @@ export default function ForgePage() {
       {CLERK_KEY && <ClerkAuthProbe onChange={setIsAuthenticated} />}
 
       {/* Page header — standard CodePulse pattern (BuildProgress.tsx:24) */}
-      <h1 className="text-2xl font-bold text-foreground shrink-0">Forge</h1>
+      <div className="flex items-center justify-between shrink-0">
+        <h1 className="text-2xl font-bold text-foreground">Forge</h1>
+        {/* Mobile-only toggle to reveal the job list overlay (F8) */}
+        <button
+          type="button"
+          onClick={() => setListOpen(true)}
+          aria-label="Show job list"
+          className="md:hidden flex items-center justify-center size-11 rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <PanelLeft className="h-5 w-5" />
+        </button>
+      </div>
 
       {/* Master-detail body — GlassPanel wraps the list+detail row (D-11) */}
       <GlassPanel className="flex-1 flex overflow-hidden min-h-0 hover:scale-[1.01] transition-transform duration-300">
-        {/* List panel — fixed ~280px, scrollable (D-11) */}
-        <div className="w-[280px] shrink-0 border-r border-border overflow-hidden">
+        {/* Mobile backdrop for the list overlay (F8) */}
+        {listOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setListOpen(false)}
+          />
+        )}
+
+        {/* List panel — fixed ~280px on desktop; slide-in overlay on mobile (F8, D-11) */}
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-background border-r border-border overflow-hidden transform transition-transform duration-200 md:static md:z-auto md:translate-x-0 md:w-[280px] md:shrink-0 md:bg-transparent ${
+            listOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="absolute top-2 right-2 md:hidden">
+            <button
+              type="button"
+              onClick={() => setListOpen(false)}
+              aria-label="Hide job list"
+              className="flex items-center justify-center size-11 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
           <SectionErrorBoundary name="Forge Job List">
             <ForgeJobList
               jobs={jobs}
               pendingCommands={pendingCommands}
               loading={isLoading}
               selectedKey={selectedKey}
-              onSelect={setSelectedKey}
+              onSelect={(key) => {
+                setSelectedKey(key);
+                setListOpen(false);
+              }}
               onLaunchClick={() => setLaunchModalOpen(true)}
               isAuthenticated={isAuthenticated}
             />
