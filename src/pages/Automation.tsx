@@ -11,6 +11,7 @@ import HeartbeatAlertsPanel from "../components/HeartbeatAlertsPanel";
 import JobLifecyclePanel from "../components/JobLifecyclePanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
+import { PageHeader } from "@/components/PageHeader";
 import { formatDurationMs } from "../lib/formatters";
 import { CRON_SCHEDULES } from "../lib/cronSchedules";
 import { useCommandDispatch } from "../hooks/useCommandDispatch";
@@ -30,12 +31,15 @@ function relTime(epoch: number | null): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-// Convert static CRON_SCHEDULES to CronJob shape for the list
+// Convert static CRON_SCHEDULES to CronJob shape for the list.
+// `enabled` is intentionally left unset — this is a static configured catalog,
+// not a live-monitored job list; Ástríðr does not yet emit real per-job
+// enabled/disabled state (D-06, deferred). CronJobList hides the live
+// ACTIVE/DISABLED indicator when `enabled` is undefined.
 function schedulesToCronJobs(): CronJob[] {
   return CRON_SCHEDULES.map((s) => ({
     name: s.jobName,
     expression: s.interval,
-    enabled: true,
   }));
 }
 
@@ -73,20 +77,22 @@ export default function Automation() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Automation</h1>
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => { setEditJob(null); setSheetOpen(true); }}
-        >
-          <Plus className="w-4 h-4 mr-1" /> Add Cron Job
-        </Button>
-      </div>
+      <PageHeader
+        title="Automation"
+        actions={
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => { setEditJob(null); setSheetOpen(true); }}
+          >
+            <Plus className="w-4 h-4 mr-1" /> Add Cron Job
+          </Button>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <MetricCard label="Cron Jobs" value={summary?.totalJobs ?? 12} />
+        <MetricCard label="Configured Schedules" value={CRON_SCHEDULES.length} />
         <MetricCard label="Runs (1h)" value={summary?.totalRuns ?? 0} />
         <MetricCard
           label="Failed (1h)"

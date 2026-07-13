@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import OrbitalStatusRings from "../components/OrbitalStatusRings";
@@ -26,18 +26,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { useSystemResources } from "../hooks/useSystemResources";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useLiveFlash } from "@/hooks/useLiveFlash";
-
-type DockerStatusPayload = {
-  container?: string;
-  status?: string;
-  [key: string]: unknown;
-};
-
-type McpConnectionPayload = {
-  server?: string;
-  connected?: boolean;
-  [key: string]: unknown;
-};
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Infrastructure() {
   const resourceData = useSystemResources();
@@ -49,20 +38,14 @@ export default function Infrastructure() {
   const authAliases = useQuery(api.authAliases.list);
   const providerMetrics = useQuery(api.advisorEvents.providerMetrics);
 
-  // Track latest WS-driven health status (transient overlay)
-  const [_lastDockerStatus, setLastDockerStatus] = useState<DockerStatusPayload | null>(null);
-  const [_lastMcpStatus, setLastMcpStatus] = useState<McpConnectionPayload | null>(null);
-
   useEffect(() => {
-    const unsubDocker = subscribeEvent("docker_status", (event) => {
-      const data = event.data as DockerStatusPayload | undefined;
-      if (data) setLastDockerStatus(data);
+    // Docker/MCP WS events currently only drive the live-flash indicator —
+    // no per-event payload is rendered anywhere on this page.
+    const unsubDocker = subscribeEvent("docker_status", () => {
       triggerFlash();
     });
 
-    const unsubMcp = subscribeEvent("mcp_connection", (event) => {
-      const data = event.data as McpConnectionPayload | undefined;
-      if (data) setLastMcpStatus(data);
+    const unsubMcp = subscribeEvent("mcp_connection", () => {
       triggerFlash();
     });
 
@@ -75,7 +58,7 @@ export default function Infrastructure() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
       <div className="md:col-span-12">
-        <h1 className="text-2xl font-bold">Infrastructure</h1>
+        <PageHeader title="Infrastructure" />
       </div>
       <div className="md:col-span-12">
         <OrbitalStatusRings />
@@ -249,18 +232,6 @@ export default function Infrastructure() {
             <p className="text-base text-muted-foreground col-span-full">No advisor events recorded yet.</p>
           )}
         </div>
-      </SectionErrorBoundary>
-      </div>
-
-      {/* Network Policy per Provider (CPUX-12) */}
-      <div className="md:col-span-12">
-      <SectionErrorBoundary name="Network Policy">
-        <SectionHeader title="Network Policy" />
-        <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
-          <p className="text-base text-muted-foreground">
-            Per-provider network policy rules will appear here once policy configuration is ingested.
-          </p>
-        </GlassPanel>
       </SectionErrorBoundary>
       </div>
     </div>

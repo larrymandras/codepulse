@@ -12,6 +12,7 @@ import InfoTooltip from "../components/InfoTooltip";
 import LoadMoreButton from "../components/LoadMoreButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from "../components/StatusBadge";
+import { PageHeader } from "@/components/PageHeader";
 
 const SEVERITY_TABS = ["all", "critical", "high", "medium", "low"] as const;
 type SeverityFilter = (typeof SEVERITY_TABS)[number];
@@ -146,9 +147,11 @@ export default function Security() {
 
   return (
     <div ref={flashRef} className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
-      <div className="md:col-span-12 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Security Dashboard</h1>
-        <span className="text-sm text-muted-foreground">{mergedEvents.length} events</span>
+      <div className="md:col-span-12">
+        <PageHeader
+          title="Security Dashboard"
+          actions={<span className="text-sm text-muted-foreground">{mergedEvents.length} events</span>}
+        />
       </div>
 
       <div className="md:col-span-12">
@@ -219,12 +222,8 @@ export default function Security() {
                 </p>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Chain integrity</span>
-                    <span className="text-green-400">Valid</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Entry count</span>
-                    <span className="text-muted-foreground">{mergedEvents.length}</span>
+                    <span className="text-muted-foreground">Events</span>
+                    <span className="text-muted-foreground">{mergedEvents.length} events loaded</span>
                   </div>
                 </div>
               </div>
@@ -422,27 +421,6 @@ export default function Security() {
         {/* ── Network Policy Tab ── */}
         <TabsContent value="network-policy" className="space-y-6 mt-4">
           <SectionErrorBoundary name="Network Policy">
-            {/* Allowlist placeholder */}
-            <div className="bg-card border border-border rounded-xl p-4">
-              <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">
-                Provider Allowlist
-                <InfoTooltip text="Per-provider network allowlist entries from config.yaml network_policy section" />
-              </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Allowlist entries are configured in <span className="font-mono text-muted-foreground">config.yaml</span> under <span className="font-mono text-muted-foreground">network_policy</span>.
-              </p>
-              <div className="grid grid-cols-[1fr_1fr_60px_80px] items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground uppercase tracking-wider border-b border-border bg-card">
-                <span>Provider</span>
-                <span>Host</span>
-                <span>Port</span>
-                <span>Type</span>
-              </div>
-              {/* Empty state — real data comes from config ingest (future plan) */}
-              <p className="text-base text-muted-foreground py-6 text-center">
-                No network policy rules configured. Add allowlist entries in config.yaml under network_policy.
-              </p>
-            </div>
-
             {/* Network access log */}
             <div className="bg-card border border-border rounded-xl p-4">
               <h2 className="text-sm font-mono tracking-widest text-primary uppercase mb-3 flex items-center gap-2">Network Access Log</h2>
