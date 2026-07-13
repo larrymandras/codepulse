@@ -1024,6 +1024,7 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("ackCommand: sets resolvedForgeJobId and status=done on claimed command");
   it.todo("ackCommand: sets status=failed and error on failed command");
   it.todo("enqueueIntake: inserts forgeCommands row with commandType='intake' and status='queued'");
+  it.todo("enqueueIntake: a duplicate commandId is a silent no-op -- idempotent client retry, no second row (WR-04)");
   it.todo("enqueueIntake: rejects an upload exceeding MAX_INTAKE_UPLOAD_BYTES (requires a live storage-backed row)");
   it.todo("generateForgeUploadUrl: returns a usable signed upload URL");
   it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");

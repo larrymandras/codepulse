@@ -556,6 +556,19 @@ export const enqueueIntake = mutation({
       throw new Error("Authentication required to issue Forge commands");
     }
 
+    // WR-04 (phase-06 review): commandId is the client-generated ULID a UI
+    // retry re-sends after a lost response. An unconditional insert would
+    // create a duplicate row, after which ackCommand's .unique() throws for
+    // this commandId forever (permanently un-ackable, blob only reclaimed if
+    // still queued at TTL sweep). Mirror appendLogChunk's D-1 idempotency:
+    // same commandId -> silent no-op. Launch/stop share this bug class but
+    // are pre-existing Phase 80 code, deferred (see 06-REVIEW.md WR-04).
+    const existing = await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_commandId", (q) => q.eq("commandId", args.commandId))
+      .unique();
+    if (existing) return; // idempotent retry no-op
+
     // D-P6-05: exactly one of storageId / githubUrl, never both, never neither.
     const hasFile = args.storageId !== undefined;
     const hasUrl = args.githubUrl !== undefined;
