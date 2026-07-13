@@ -491,6 +491,36 @@ describe("forge.resolveClaimTypes — supportedTypes default (D-P6-11)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// claimAndUpsertHost — empty supportedTypes claims nothing (D-P6-11 +
+// Plan 06-04 review fix)
+// ---------------------------------------------------------------------------
+
+describe("forge.claimAndUpsertHost — empty supportedTypes short-circuit (D-P6-11)", () => {
+  /**
+   * Mirror of the empty-types early return in claimAndUpsertHost. In
+   * production, `types.length === 0` returns [] after the forgeHosts liveness
+   * upsert but BEFORE the queued-commands query — a zero-length spread into
+   * q.or(...) would error at runtime. Here we test the extracted decision
+   * function without a live Convex runtime.
+   */
+  function shouldSkipClaimQuery(types: string[]): boolean {
+    return types.length === 0;
+  }
+
+  it("skips the claim query for an explicit empty supportedTypes ([] -> claim nothing)", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes([]))).toBe(true);
+  });
+
+  it("does not skip for an omitted supportedTypes (defaults to launch/stop)", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes(undefined))).toBe(false);
+  });
+
+  it("does not skip for a declared non-empty capability set", () => {
+    expect(shouldSkipClaimQuery(resolveClaimTypes(["intake"]))).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // isTerminalCommandStatus — ack idempotency guard (CR-01)
 // ---------------------------------------------------------------------------
 

@@ -628,6 +628,12 @@ export const claimAndUpsertHost = internalMutation({
 
     const types = resolveClaimTypes(args.supportedTypes);
 
+    // D-P6-11: an explicit empty supportedTypes means "I can execute nothing
+    // right now" — liveness is recorded (above) but nothing is claimed. This
+    // also guards the q.or(...) below, which requires at least one expression
+    // and would error at runtime on a zero-length spread (review fix, 06-04).
+    if (types.length === 0) return [];
+
     // Atomically claim queued, non-expired commands for this host (up to 10).
     // Convex mutations are serializable — read + patch in one mutation = double-claim safe.
     const queued = await ctx.db
