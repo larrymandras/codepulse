@@ -160,7 +160,9 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OBSERVE" },
       { to: "/memory", label: "Memory", icon: "brain", group: "OBSERVE" },
       { to: "/insights", label: "Insights", icon: "insights", group: "OBSERVE" },
-      { to: "/mission-control", label: "Mission Control", icon: "layout", group: "OBSERVE" },
+      // "Mission Control" removed (WR-03): merged into Tasks — By Agent view
+      // (phase 96 Plan 04, D-02). /mission-control still redirects to
+      // /tasks?view=agent in App.tsx, so deep links keep working.
     ],
   },
   {
