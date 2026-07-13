@@ -133,17 +133,14 @@ export function CategoryEditPopover({
           Cancel
         </button>
       </div>
-      <button
-        onClick={onDelete}
-        disabled={!canDelete}
-        className={`w-full text-sm py-1.5 rounded-lg transition-colors ${
-          canDelete
-            ? "text-red-400 hover:bg-red-900/30"
-            : "text-gray-600 cursor-not-allowed"
-        }`}
-      >
-        Delete
-      </button>
+      {canDelete && (
+        <button
+          onClick={onDelete}
+          className="w-full text-sm py-1.5 rounded-lg transition-colors text-red-400 hover:bg-red-900/30"
+        >
+          Delete
+        </button>
+      )}
     </div>
   );
 }

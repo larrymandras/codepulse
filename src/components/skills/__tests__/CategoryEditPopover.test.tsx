@@ -112,10 +112,9 @@ describe("CategoryEditPopover", () => {
     });
   });
 
-  test("Delete button is disabled when canDelete is false", () => {
+  test("Delete button is not rendered when canDelete is false", () => {
     renderPopover({ canDelete: false });
-    const deleteBtn = screen.getByText("Delete");
-    expect(deleteBtn).toBeDisabled();
+    expect(screen.queryByText("Delete")).not.toBeInTheDocument();
   });
 
   test("Delete button is enabled when canDelete is true", () => {

@@ -174,7 +174,7 @@ beforeEach(() => {
 describe("Skills page", () => {
   it("renders page title", () => {
     render(<Skills />);
-    expect(screen.getByText("Skills Database")).toBeInTheDocument();
+    expect(screen.getByText("Skills")).toBeInTheDocument();
   });
 
   it("renders category cards on default view", () => {
