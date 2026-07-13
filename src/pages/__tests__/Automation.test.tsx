@@ -62,7 +62,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockSendCommand.mockResolvedValue({ status: "ok" });
   // cronSummary undefined (loading) — proves no `?? 12` fallback is used.
-  mockUseQuery.mockImplementation((ref: unknown) => {
+  (mockUseQuery as any).mockImplementation((ref: unknown) => {
     switch (ref) {
       case "cronSummary":
         return undefined;

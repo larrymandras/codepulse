@@ -62,7 +62,7 @@ const SECURITY_EVENTS = Array.from({ length: 7 }).map((_, i) => ({
 }));
 
 function setupQueries() {
-  mockUseQuery.mockImplementation((ref: unknown) => {
+  (mockUseQuery as any).mockImplementation((ref: unknown) => {
     switch (ref) {
       case "rlsStats":
         return { lastTest: null, crossProfileBlocked: 0 };

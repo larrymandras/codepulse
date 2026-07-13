@@ -88,17 +88,22 @@ export default function CronJobList({
               )}
             </Button>
 
-            {/* Toggle switch - enable/disable */}
-            <Switch
-              checked={job.enabled !== false}
-              onCheckedChange={(checked) => onToggle(job.name, checked)}
-            />
-
-            {/* Status badge */}
-            <StatusBadge
-              status={job.enabled !== false ? "ok" : "idle"}
-              label={job.enabled !== false ? "ACTIVE" : "DISABLED"}
-            />
+            {/* Toggle switch + live status badge — only shown when a real
+                enabled/disabled state is known. Static catalog entries (no
+                backing live data yet) omit `enabled` entirely rather than
+                fabricate an ACTIVE/DISABLED claim (D-06). */}
+            {job.enabled !== undefined && (
+              <>
+                <Switch
+                  checked={job.enabled}
+                  onCheckedChange={(checked) => onToggle(job.name, checked)}
+                />
+                <StatusBadge
+                  status={job.enabled ? "ok" : "idle"}
+                  label={job.enabled ? "ACTIVE" : "DISABLED"}
+                />
+              </>
+            )}
           </div>
         </div>
       ))}
