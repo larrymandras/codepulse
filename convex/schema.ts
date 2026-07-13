@@ -1660,7 +1660,13 @@ export default defineSchema({
     // Intake payload (null for launch/stop commands). Skill-intake validation
     // request: exactly one of storageId (uploaded SKILL.md) or githubUrl,
     // never both, never neither (D-P6-05, enforced by enqueueIntake).
-    intakePayload: v.union(
+    // v.optional wrapper: pre-Phase-06 rows in the live deployment were
+    // written before this field existed and omit it entirely — optional keeps
+    // them schema-valid (operator-approved prod-data compat, Plan 06-04).
+    // The inner union-with-null is unchanged so the Phase-06 insert sites
+    // (buildLaunchRow/enqueueStop/buildIntakeRow) that explicitly supply
+    // `intakePayload: null` still validate without modification.
+    intakePayload: v.optional(v.union(
       v.object({
         destination:  v.union(v.literal("global"), v.literal("project"), v.literal("cold")),  // D-P6-03
         workspaceId:  v.union(v.string(), v.null()),  // required when destination === "project" (D-P6-04)
@@ -1669,7 +1675,7 @@ export default defineSchema({
         subpath:      v.optional(v.string()),          // fan-out for a repo with N skills (D-P6-07)
       }),
       v.null()
-    ),
+    )),
 
     // State machine value: queued | executing | done | failed | expired
     status:    v.string(),
