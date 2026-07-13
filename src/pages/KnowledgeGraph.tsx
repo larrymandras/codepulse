@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
+import { PageHeader } from "../components/PageHeader";
 import {
   ForceGraphCanvas,
   type ForceGraphHandle,
@@ -598,11 +599,15 @@ export default function KnowledgeGraph() {
       {/* Header */}
       <div className="md:col-span-12 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Share2 className="h-6 w-6 text-primary" />
-            KG Explorer
-            <InfoTooltip text="Ástríðr's temporal knowledge graph: entities (type-colored) and the facts connecting them. Current relationships are solid; superseded facts dashed; contradictions red. Literal facts show as entity attributes in the details panel." />
-          </h1>
+          <PageHeader
+            icon={Share2}
+            title={
+              <>
+                KG Explorer
+                <InfoTooltip text="Ástríðr's temporal knowledge graph: entities (type-colored) and the facts connecting them. Current relationships are solid; superseded facts dashed; contradictions red. Literal facts show as entity attributes in the details panel." />
+              </>
+            }
+          />
           <p className="text-sm text-muted-foreground font-mono mt-1">
             entities · knowledge_triples — fetched on demand from /api/kg
           </p>
@@ -912,7 +917,7 @@ export default function KnowledgeGraph() {
                     </p>
                   </div>
                 ) : activeGraph.nodes.length === 0 ? (
-                  <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-[#09090b]">
+                  <div className="h-[600px] flex flex-col items-center justify-center gap-2 text-center px-6 rounded-[var(--radius)] border border-primary/20 bg-background">
                     <AlertTriangle className="h-6 w-6 text-primary/50" />
                     <p className="text-base text-muted-foreground font-mono">
                       {needsEntityName

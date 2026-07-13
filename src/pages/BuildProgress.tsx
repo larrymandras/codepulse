@@ -14,7 +14,7 @@ export default function BuildProgress() {
   const activePipelines = useQuery(api.pipelines.listActive) ?? [];
 
   const totalComponents = components.length;
-  const completedCount = components.filter((c: any) => c.status === "completed").length;
+  const completedCount = components.filter((c) => c.status === "completed").length;
   const completedPct = totalComponents > 0 ? Math.round((completedCount / totalComponents) * 100) : 0;
 
   return (
@@ -38,12 +38,12 @@ export default function BuildProgress() {
 
       {/* Two-column grid: teams + activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <TeamStatusCards components={components as any} pipelines={pipelines as any} />
-        <BuildActivityFeed entries={activity as any} />
+        <TeamStatusCards components={components} pipelines={pipelines} />
+        <BuildActivityFeed entries={activity} />
       </div>
 
       {/* Component table — full width */}
-      <ComponentTable components={components as any} />
+      <ComponentTable components={components} />
     </div>
   );
 }
