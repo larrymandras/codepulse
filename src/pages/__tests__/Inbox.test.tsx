@@ -197,3 +197,58 @@ describe("Inbox — keyboard navigation", () => {
     expect(focusedCard).not.toBeNull();
   });
 });
+
+// ─── D-11 gap closure: server-rejected approve/reject must never render as
+// success (T-96-13-01 — mirrors the T-96-03-01 fix already in ApprovalBlock).
+describe("Inbox — approval false-success gating (D-11)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+  });
+
+  test("server-rejected approve leaves the card pending — no false success", async () => {
+    mockSendCommand.mockRejectedValueOnce(new Error("No pending request found"));
+    renderInbox();
+    injectApprovalItem(makeApprovalItem("item-1"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Approve"));
+    });
+
+    // Still pending: Approve button remains, no "Approved" indicator rendered.
+    expect(screen.getByText("Approve")).toBeInTheDocument();
+    expect(screen.queryByText("Approved")).toBeNull();
+  });
+
+  test("server-rejected reject leaves the card pending — no false success", async () => {
+    mockSendCommand.mockRejectedValueOnce(new Error("No pending request found"));
+    renderInbox();
+    injectApprovalItem(makeApprovalItem("item-2"));
+
+    // Open the inline reject textarea, then submit.
+    fireEvent.click(screen.getByText("Reject"));
+    const rejectButtons = screen.getAllByText("Reject");
+    const submitButton = rejectButtons[rejectButtons.length - 1];
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    // Still pending: Approve button remains, no "Rejected" indicator rendered.
+    expect(screen.getByText("Approve")).toBeInTheDocument();
+    expect(screen.queryByText("Rejected")).toBeNull();
+  });
+
+  test("server-ok approve commits the card to approved", async () => {
+    mockSendCommand.mockResolvedValueOnce({ status: "ok" });
+    renderInbox();
+    injectApprovalItem(makeApprovalItem("item-3"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("Approve"));
+    });
+
+    expect(screen.getByText("Approved")).toBeInTheDocument();
+    expect(screen.queryByText("Approve")).toBeNull();
+  });
+});
