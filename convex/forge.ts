@@ -628,6 +628,7 @@ export const ackCommand = internalMutation({
     resolvedForgeJobId: v.union(v.string(), v.null()),
     error:              v.union(v.string(), v.null()),
     now:                v.number(),
+    report:             v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const cmd = await ctx.db
@@ -636,13 +637,24 @@ export const ackCommand = internalMutation({
       .unique();
     if (!cmd) return;  // idempotent: already acked or hard-deleted
     // Idempotent on a terminal row too — never overwrite done/failed/expired
-    // with a late or duplicate ack (CR-01).
+    // with a late or duplicate ack (CR-01). This also guarantees the blob
+    // delete below never fires twice for the same row.
     if (isTerminalCommandStatus(cmd.status)) return;
+    // D-P6-10 (site 1 of 2): delete the uploaded SKILL.md blob before the row
+    // goes terminal, mirroring sweepForgeFileRecords's storage-first ordering (D-05).
+    if (
+      cmd.commandType === "intake" &&
+      cmd.intakePayload?.storageId &&
+      (args.status === "done" || args.status === "failed")
+    ) {
+      await ctx.storage.delete(cmd.intakePayload.storageId);
+    }
     await ctx.db.patch(cmd._id, {
       status:             args.status,
       resolvedForgeJobId: args.resolvedForgeJobId,
       error:              args.error,
       completedAt:        args.now,
+      report:             args.report ?? null,
     });
   },
 });

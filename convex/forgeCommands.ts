@@ -118,7 +118,7 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
     );
   }
 
-  const { commandId, status } = body ?? {};
+  const { commandId, status, report } = body ?? {};
   if (!commandId) {
     return new Response(
       JSON.stringify({ error: "Missing required field: commandId" }),
@@ -144,6 +144,7 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
     resolvedForgeJobId: body.forgeJobId ?? null,
     error:              body.error ?? null,
     now:                Date.now(),
+    report:             report ?? null,
   });
 
   return new Response(
