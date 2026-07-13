@@ -1,7 +1,7 @@
 ---
 phase: 96
 slug: ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "existing repo init — style: new-york, baseColor: neutral, cssVariables: true, iconLibrary: lucide (components.json, no registries)"
 created: 2026-07-13
@@ -44,7 +44,7 @@ Declared values (must be multiples of 4) — unchanged from the rest of the app,
 | 3xl | 64px | Page-level spacing (rare; not used inside dashboard shell) |
 
 **Exceptions for this phase:**
-- **F8 mobile collapse controls** (ForgePage master-detail toggle, WarRoom sidebar toggle): the toggle button hit target is **44×44px minimum** regardless of visual icon size (touch-target accessibility exception, not a new spacing token — implement via padding on a `size-11` / `min-h-11 min-w-11` button wrapping a smaller Lucide icon).
+- **F8 mobile collapse controls** (ForgePage master-detail toggle, WarRoom sidebar toggle): the toggle button hit target is **44×44px minimum** regardless of visual icon size (touch-target accessibility exception, not a new spacing token — implement via padding on a `size-11` / `min-h-11 min-w-11` button wrapping a smaller Lucide icon). These buttons are icon-only, so each MUST carry an explicit `aria-label` describing its action (e.g. `aria-label="Show job list"` / `aria-label="Collapse sidebar"`), consistent with the F10 ThemeSwitcher accessibility fix.
 - No other exceptions. The existing `max-h-[500px]` caps on Chat/LiveRun/Inbox/Tasks (F7) are being **removed**, not preserved — they were never a sanctioned spacing exception, just leftover promoted-widget styling (`Tasks.tsx:98`).
 
 ---
@@ -127,15 +127,17 @@ For planner/executor reference — not part of the template's standard sections,
 | Shared approval component | D-11 unify Chat inline approvals + Inbox approvals | Built only AFTER the Ástríðr WS payload-contract verification task (F6); copy for approve/reject actions should match whichever UI's copy is already correct post-fix, not invent new wording |
 | Tasks view toggle | D-01/D-02 merged board | "By Status" / "By Agent" segmented control per Copywriting Contract above; lives in or beside `<PageHeader>` |
 
+**Visual hierarchy — merged Tasks board:** the primary focal point is the board content itself (the Kanban columns and their task cards); the "By Status"/"By Agent" segmented control is a secondary affordance seated in the PageHeader area, styled as a quiet control (accent only on the active segment, per the Color contract) — it must not compete with the board for attention.
+
 ---
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (checker FLAG — Tasks-board focal point + icon-only toggle `aria-label` — resolved in this document)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED (gsd-ui-checker, 2026-07-13)
