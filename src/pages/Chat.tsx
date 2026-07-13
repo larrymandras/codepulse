@@ -16,6 +16,7 @@ import { ChatBubble } from "../components/ChatBubble";
 import { ChatInput } from "../components/ChatInput";
 import { Volume2, VolumeX } from "lucide-react";
 import { useApprovalActions } from "@/components/ApprovalActions";
+import { PageHeader } from "@/components/PageHeader";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -332,42 +333,46 @@ export default function Chat() {
   const isDisconnected = status !== "connected";
 
   return (
-    <div className="flex flex-col h-full max-h-[500px]">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
-        <h1 className="text-base font-semibold text-(--foreground)">Chat</h1>
-        <div className="flex items-center gap-3">
-          {/* TTS toggle */}
-          <button
-            type="button"
-            onClick={() => {
-              setTtsEnabled((prev) => {
-                const next = !prev;
-                if (!next && ttsIsPlaying) {
-                  stopAudio();
-                }
-                return next;
-              });
-            }}
-            className="flex items-center justify-center w-8 h-8 rounded-none transition-colors"
-            style={{
-              color: ttsEnabled ? "var(--primary)" : "var(--muted-foreground)",
-              border: "1px solid var(--border)",
-              backgroundColor: ttsEnabled
-                ? "color-mix(in oklch, var(--primary) 10%, transparent)"
-                : undefined,
-            }}
-            aria-label={ttsEnabled ? "Disable auto-TTS" : "Enable auto-TTS"}
-            title={ttsEnabled ? "Auto-TTS enabled" : "Auto-TTS disabled"}
-          >
-            {ttsEnabled ? (
-              <Volume2 className="w-4 h-4" />
-            ) : (
-              <VolumeX className="w-4 h-4" />
-            )}
-          </button>
-          <WSStatusIndicator status={status} />
-        </div>
+      <header className="p-4 border-b border-(--border) shrink-0">
+        <PageHeader
+          title="Chat"
+          actions={
+            <div className="flex items-center gap-3">
+              {/* TTS toggle */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTtsEnabled((prev) => {
+                    const next = !prev;
+                    if (!next && ttsIsPlaying) {
+                      stopAudio();
+                    }
+                    return next;
+                  });
+                }}
+                className="flex items-center justify-center w-8 h-8 rounded-none transition-colors"
+                style={{
+                  color: ttsEnabled ? "var(--primary)" : "var(--muted-foreground)",
+                  border: "1px solid var(--border)",
+                  backgroundColor: ttsEnabled
+                    ? "color-mix(in oklch, var(--primary) 10%, transparent)"
+                    : undefined,
+                }}
+                aria-label={ttsEnabled ? "Disable auto-TTS" : "Enable auto-TTS"}
+                title={ttsEnabled ? "Auto-TTS enabled" : "Auto-TTS disabled"}
+              >
+                {ttsEnabled ? (
+                  <Volume2 className="w-4 h-4" />
+                ) : (
+                  <VolumeX className="w-4 h-4" />
+                )}
+              </button>
+              <WSStatusIndicator status={status} />
+            </div>
+          }
+        />
       </header>
 
       {/* Message list */}

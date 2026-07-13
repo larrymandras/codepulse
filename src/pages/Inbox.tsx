@@ -29,6 +29,7 @@ import { WSStatusIndicator } from "../components/WSStatusIndicator";
 import { InboxCard, type InboxItem, type InboxItemType } from "../components/InboxCard";
 import { InboxFilterBar, type InboxFilter } from "../components/InboxFilterBar";
 import { useApprovalActions } from "@/components/ApprovalActions";
+import { PageHeader } from "@/components/PageHeader";
 
 // ─── Risk inference ────────────────────────────────────────────────────────────
 
@@ -342,11 +343,10 @@ export default function Inbox() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full max-h-[500px]">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-(--border) shrink-0">
-        <h1 className="text-xl font-semibold text-(--foreground)">Inbox</h1>
-        <WSStatusIndicator status={status} />
+      <div className="p-4 border-b border-(--border) shrink-0">
+        <PageHeader title="Inbox" actions={<WSStatusIndicator status={status} />} />
       </div>
 
       {/* Offline banner */}
