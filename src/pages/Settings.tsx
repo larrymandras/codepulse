@@ -19,6 +19,7 @@ import { DeliveryHistory } from "../components/DeliveryHistory";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { PageHeader } from "@/components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../components/ui/sheet";
 import { ScrollArea } from "../components/ui/scroll-area";
 import type { AgentProfile } from "../types";
@@ -268,7 +269,7 @@ export default function Settings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <PageHeader title="Settings" />
 
       <Tabs defaultValue="general" className="w-full">
         <TabsList className="mb-6 bg-muted/50 w-full justify-start overflow-x-auto flex-nowrap rounded-lg p-1">

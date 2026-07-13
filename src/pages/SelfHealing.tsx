@@ -14,6 +14,7 @@ import {
   useUptimeStats,
   useVersionHistory,
 } from "../hooks/useSelfHealing";
+import { PageHeader } from "@/components/PageHeader";
 
 type SelfHealingEventPayload = {
   id?: string;
@@ -62,7 +63,7 @@ export default function SelfHealing() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Self-Healing</h1>
+      <PageHeader title="Self-Healing" />
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -8,6 +8,7 @@ import LoadMoreButton from "../components/LoadMoreButton";
 import { AlertLifecycleActions } from "../components/AlertLifecycleActions";
 import { WebhookStatusBadge } from "../components/WebhookStatusBadge";
 import { Clock } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 type SeverityFilter = "all" | "critical" | "error" | "warning" | "info";
 
@@ -150,9 +151,7 @@ export default function Alerts() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Alerts</h1>
-      </div>
+      <PageHeader title="Alerts" />
 
       {/* Severity Count Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
