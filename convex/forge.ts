@@ -83,6 +83,7 @@ interface LaunchRow {
     capabilities: string | null;
   };
   stopPayload: null;
+  intakePayload: null;
   status: string;
   issuedBy: string;
   createdAt: number;
@@ -117,6 +118,7 @@ export function buildLaunchRow(
       capabilities: args.capabilities,
     },
     stopPayload:        null,
+    intakePayload:      null,
     status:             "queued",
     issuedBy:           subject,
     createdAt:          now,
@@ -374,6 +376,7 @@ export const enqueueStop = mutation({
       commandType:        "stop",
       launchPayload:      null,
       stopPayload:        { forgeJobId: args.forgeJobId },
+      intakePayload:      null,
       status:             "queued",
       issuedBy:           identity.subject,
       createdAt:          now,
