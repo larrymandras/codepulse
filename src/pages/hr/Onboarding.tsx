@@ -9,6 +9,7 @@ import PersonalityStep from "@/components/hr/steps/PersonalityStep";
 import ToolsStep from "@/components/hr/steps/ToolsStep";
 import ReviewStep from "@/components/hr/steps/ReviewStep";
 import { fetchAgentDetail } from "@/lib/astridrApi";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Onboarding() {
   const { catalogId } = useParams<{ catalogId?: string }>();
@@ -59,6 +60,7 @@ export default function Onboarding() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      <PageHeader title="Onboarding" className="mx-6 mt-6" />
       <FormProvider {...wizard.form}>
         <WizardShell wizard={wizard}>{steps[wizard.currentStep]}</WizardShell>
       </FormProvider>
