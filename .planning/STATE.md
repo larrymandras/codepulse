@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v10.0
 milestone_name: Eval & Trace Observability + Hardening
 status: executing
-stopped_at: Phase 96 planned (12 plans, 2 waves)
-last_updated: "2026-07-13T14:09:21.299Z"
-last_activity: 2026-07-13 -- Phase 96 planning complete
+stopped_at: Phase 96 UI-SPEC approved
+last_updated: "2026-07-13T14:26:20.338Z"
+last_activity: 2026-07-13 -- Phase 96 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 27
-  completed_plans: 15
-  percent: 56
+  completed_phases: 0
+  total_plans: 12
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-23)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Planning next milestone — v10.0 shipped & archived 2026-07-07. Run `/gsd-new-milestone` to start the next cycle.
+**Current focus:** Phase 96 — ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa
 
 ## Current Position
 
-Phase: 96 — UI deep-dive cleanup (IA restructure, palette drift, fake telemetry, consistency)
-Plan: 12 plans / 2 waves, verified
-Status: Ready to execute
-Last activity: 2026-07-13 -- Phase 96 planning complete
+Phase: 96 (ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa) — EXECUTING
+Plan: 1 of 12
+Status: Executing Phase 96
+Last activity: 2026-07-13 -- Phase 96 execution started
 
 ## Deferred Items
 
