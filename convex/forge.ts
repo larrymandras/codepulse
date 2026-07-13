@@ -220,13 +220,19 @@ export function isAcceptedGithubUrlShape(url: string): boolean {
 }
 
 /**
- * True when `subpath` is undefined, or is a relative path with no leading
- * slash/backslash and no ".." segment. Stops path-traversal strings from
- * crossing the bridge (D-P6-07 fan-out field).
+ * True when `subpath` is undefined, or is a non-empty relative path with no
+ * leading slash/backslash, no Windows drive-letter prefix, and no ".."
+ * segment. Stops path-traversal strings from crossing the bridge (D-P6-07
+ * fan-out field). Drive-letter rejection (phase-06 review CR-01): on Windows
+ * — the daemon's only deployment target — `path.resolve(base, "C:/x")`
+ * replaces the base entirely, so "C:\evil" and drive-relative "c:foo" must
+ * be rejected here; "" is likewise rejected as distinct-from-absent noise.
  */
 export function isSafeSubpath(subpath: string | undefined): boolean {
   if (subpath === undefined) return true;
+  if (subpath.length === 0) return false;
   if (subpath.startsWith("/") || subpath.startsWith("\\")) return false;
+  if (/^[A-Za-z]:/.test(subpath)) return false; // Windows drive-letter absolute/drive-relative
   const segments = subpath.split(/[/\\]/);
   return !segments.includes("..");
 }

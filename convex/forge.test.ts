@@ -758,6 +758,22 @@ describe("forge.isSafeSubpath — traversal guard", () => {
   it("rejects a nested .. segment", () => {
     expect(isSafeSubpath("skills/../../etc")).toBe(false);
   });
+
+  it("rejects a Windows drive-letter absolute path with backslashes (CR-01)", () => {
+    expect(isSafeSubpath("C:\\evil")).toBe(false);
+  });
+
+  it("rejects a Windows drive-letter absolute path with forward slashes (CR-01)", () => {
+    expect(isSafeSubpath("C:/Users/mandr")).toBe(false);
+  });
+
+  it("rejects a Windows drive-relative path (CR-01)", () => {
+    expect(isSafeSubpath("c:relative")).toBe(false);
+  });
+
+  it("rejects an empty string (distinct from absent, CR-01)", () => {
+    expect(isSafeSubpath("")).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
