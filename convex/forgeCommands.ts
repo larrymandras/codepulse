@@ -137,6 +137,21 @@ export const forgeCommandsAck = httpAction(async (ctx, request) => {
       }
     );
   }
+  // WR-02 (phase-06 review): only done/failed are ackable — anything else
+  // would corrupt the queued|executing|done|failed|expired state machine
+  // (e.g. status:"expired" makes the row terminal without the blob delete
+  // firing; status:"queued" re-queues an executed command). 400 here gives
+  // the daemon a diagnostic instead of a validator 500; ackCommand's own
+  // v.union(v.literal(...)) validator is the defense-in-depth layer.
+  if (status !== "done" && status !== "failed") {
+    return new Response(
+      JSON.stringify({ error: `Invalid status: expected "done" or "failed", got ${JSON.stringify(status)}` }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
+      }
+    );
+  }
 
   await ctx.runMutation(internal.forge.ackCommand, {
     commandId,

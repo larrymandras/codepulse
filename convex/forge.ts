@@ -683,7 +683,13 @@ export const claimAndUpsertHost = internalMutation({
 export const ackCommand = internalMutation({
   args: {
     commandId:          v.string(),
-    status:             v.string(),  // "done" | "failed"
+    // WR-02 (phase-06 review): a daemon may only ack done/failed. Any other
+    // value either made the row terminal WITHOUT the blob delete firing
+    // ("expired" -> permanent blob leak with no remaining deletion site) or
+    // re-queued an executed command ("queued" -> double execution). The
+    // validator now enforces the schema's documented state machine; the
+    // HTTP layer (forgeCommandsAck) additionally 400s before reaching here.
+    status:             v.union(v.literal("done"), v.literal("failed")),
     resolvedForgeJobId: v.union(v.string(), v.null()),
     error:              v.union(v.string(), v.null()),
     now:                v.number(),

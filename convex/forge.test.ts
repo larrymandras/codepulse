@@ -936,6 +936,41 @@ describe("forge.enqueueLaunch / enqueueStop / enqueueIntake / generateForgeUploa
 });
 
 // ---------------------------------------------------------------------------
+// Phase 06 review WR-02: forgeCommandsAck — only done/failed are ackable
+// ---------------------------------------------------------------------------
+
+describe("forgeCommandsAck — ack status gate (WR-02)", () => {
+  /**
+   * Mirror of the HTTP-layer status gate in forgeCommandsAck (backed by
+   * ackCommand's v.union(v.literal("done"), v.literal("failed")) validator).
+   * Here we test the extracted decision function without a live Convex
+   * runtime.
+   */
+  function isAckableStatus(status: string): boolean {
+    return status === "done" || status === "failed";
+  }
+
+  it("accepts done and failed", () => {
+    expect(isAckableStatus("done")).toBe(true);
+    expect(isAckableStatus("failed")).toBe(true);
+  });
+
+  it("rejects expired (would leak the blob with no remaining deletion site)", () => {
+    expect(isAckableStatus("expired")).toBe(false);
+  });
+
+  it("rejects queued (would re-queue an executed command) and executing", () => {
+    expect(isAckableStatus("queued")).toBe(false);
+    expect(isAckableStatus("executing")).toBe(false);
+  });
+
+  it("rejects arbitrary strings", () => {
+    expect(isAckableStatus("bogus")).toBe(false);
+    expect(isAckableStatus("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 80 DB round-trip stubs
 // ---------------------------------------------------------------------------
 
