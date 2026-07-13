@@ -28,7 +28,6 @@ import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
 import GatewayTasksPanel from "../components/GatewayTasksPanel";
 import LlmProviderPanel from "../components/LlmProviderPanel";
 import AnomalyBadge from "../components/AnomalyBadge";
-import { TokenSavingsIndicator } from "../components/TokenSavingsIndicator";
 import { FlexBarChart } from "../components/FlexBarChart";
 import { SectionHeader } from "../components/SectionHeader";
 import { GlassPanel } from "../components/GlassPanel";
@@ -60,8 +59,6 @@ export default function Analytics() {
   const cacheStats = useQuery(api.llm.cacheStats, {});
   // Keep total cost (all types) for backward compat with existing components
   const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
-  // Swap 2: error trend aggregate for ErrorRateTrend (child component fetches its own data; this is available for future prop pass)
-  const errorTrend = useQuery(api.aggregates.errorTrendByPeriod, { period: "hourly" }) ?? [];
   // Swap 3: event counts aggregate for Total Events MetricCard
   const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
   const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
@@ -77,18 +74,12 @@ export default function Analytics() {
   const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
 
-  // Suppress unused variable warning — errorTrend is available for future ErrorRateTrend prop swap
-  void errorTrend;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between col-span-12 mb-6">
         <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
-        <div className="flex items-center gap-3">
-          <TokenSavingsIndicator savedTokens={0} totalTokens={0} />
-        </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
         {/* Top Row */}
         <div className="md:col-span-8">
