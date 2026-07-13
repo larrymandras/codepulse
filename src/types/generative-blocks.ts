@@ -47,6 +47,13 @@ export type ApprovalBlockData = {
   details: Record<string, unknown>;
   riskLevel: "high" | "medium" | "low";
   agentName?: string;
+  /**
+   * Wire-carried resolution status (astridr agent/response.py ApprovalBlock,
+   * unaliased `status` field). Optional so pre-D-05 fixtures that omit it
+   * stay valid; a resolution `run.blocks` event carries the SAME requestId
+   * with an updated status (D-05).
+   */
+  status?: "pending" | "approved" | "rejected" | "expired";
 };
 
 export type MarkdownBlockData = {

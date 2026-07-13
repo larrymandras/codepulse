@@ -198,6 +198,15 @@ export default function Chat() {
     // The backend emits the plural, array-shaped event (loop.py:1440,
     // post_turn_pipeline.py:437) — the old singular "run.block" was never
     // emitted, so this path was dead code until the T-96-13-02 alignment.
+    //
+    // D-05: a resolution block carries the SAME requestId as an
+    // already-rendered approval block (astridr agent/response.py
+    // ApprovalBlock.status flip). Such blocks must UPDATE the existing card
+    // in place (same array index → ChatBubble's key={idx} keeps the React
+    // component instance, so ApprovalBlock re-renders with the new status
+    // instead of a duplicate card mounting). Everything else — approval
+    // blocks with an unseen requestId, and all non-approval blocks — still
+    // appends via the existing seed-or-append-to-last-streaming logic.
     const unsubBlocks = subscribeEvent("run.blocks", (event) => {
       // Support both envelope shape (event.data) and flat shape (event
       // itself), like the approval_request handler in Inbox.tsx.
@@ -207,21 +216,71 @@ export default function Chat() {
       if (!blocks || blocks.length === 0) return;
 
       setMessages((prev) => {
-        const last = prev[prev.length - 1];
+        // 1. Lookup of requestIds already present among approval blocks
+        //    across ALL prev messages' blocks arrays.
+        const seenRequestIds = new Set<string>();
+        for (const msg of prev) {
+          for (const block of msg.blocks ?? []) {
+            if (block.type === "approval") {
+              seenRequestIds.add((block as { requestId: string }).requestId);
+            }
+          }
+        }
+
+        // 2. Partition incoming blocks into UPDATES (matching-requestId
+        //    approval blocks) and APPENDS (everything else, including
+        //    unseen-requestId approvals and all non-approval blocks).
+        const updateMap = new Map<string, GenerativeBlock>();
+        const appends: GenerativeBlock[] = [];
+        for (const block of blocks) {
+          if (block.type === "approval") {
+            const requestId = (block as { requestId: string }).requestId;
+            if (seenRequestIds.has(requestId)) {
+              updateMap.set(requestId, block);
+              continue;
+            }
+          }
+          appends.push(block);
+        }
+
+        // 3. Apply UPDATES: replace matching-requestId approval blocks in
+        //    place (spread-merge; the resolution block is authoritative).
+        const updateApplied = updateMap.size === 0
+          ? prev
+          : prev.map((msg) => {
+              if (!msg.blocks || msg.blocks.length === 0) return msg;
+              let changed = false;
+              const nextBlocks = msg.blocks.map((block) => {
+                if (block.type !== "approval") return block;
+                const requestId = (block as { requestId: string }).requestId;
+                const incoming = updateMap.get(requestId);
+                if (!incoming) return block;
+                changed = true;
+                return { ...block, ...incoming };
+              });
+              return changed ? { ...msg, blocks: nextBlocks } : msg;
+            });
+
+        // 4. Apply APPENDS using the existing seed-or-append-to-last-streaming
+        //    logic, on the update-applied array. A resolution-only event
+        //    (appends empty) never seeds a new empty assistant message.
+        if (appends.length === 0) return updateApplied;
+
+        const last = updateApplied[updateApplied.length - 1];
         if (last && last.role === "assistant" && last.streaming && last.sessionId === payload.session_id) {
           // Append every block to the existing assistant message
           return [
-            ...prev.slice(0, -1),
-            { ...last, blocks: [...(last.blocks ?? []), ...blocks] },
+            ...updateApplied.slice(0, -1),
+            { ...last, blocks: [...(last.blocks ?? []), ...appends] },
           ];
         } else {
           // Seed a new assistant message with the block array
           return [
-            ...prev,
+            ...updateApplied,
             {
               id: generateId(),
               role: "assistant" as const,
-              blocks: [...blocks],
+              blocks: [...appends],
               streaming: true,
               timestamp: Date.now(),
               sessionId: payload.session_id,

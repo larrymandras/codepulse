@@ -27,7 +27,7 @@ interface ApprovalBlockProps {
   onReject?: (requestId: string, reason?: string) => Promise<boolean>;
 }
 
-type ApprovalStatus = "pending" | "approved" | "rejected";
+type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
 
 function riskStripeClass(riskLevel: ApprovalBlockData["riskLevel"]): string {
   if (riskLevel === "high") return "border-l-4 border-(--status-error)";
@@ -77,7 +77,15 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
     }
   };
 
-  if (status === "approved") {
+  // Local click resolution takes precedence once the user has actually
+  // resolved the card (T-96-03-01: never revert a locally-committed
+  // approve/reject). Until then, an externally-supplied wire status
+  // (D-05 resolution `run.blocks` event carrying the same requestId) drives
+  // the resolved view, so a server-side resolution flips the card in place
+  // with the same visual states as a local click.
+  const effectiveStatus: ApprovalStatus = status !== "pending" ? status : (block.status ?? "pending");
+
+  if (effectiveStatus === "approved") {
     return (
       <p className="text-base text-(--muted-foreground)">
         Approved — sent to Ástríðr
@@ -85,9 +93,15 @@ export function ApprovalBlock({ block, onApprove, onReject }: ApprovalBlockProps
     );
   }
 
-  if (status === "rejected") {
+  if (effectiveStatus === "rejected") {
     return (
       <p className="text-base text-(--muted-foreground)">Rejected</p>
+    );
+  }
+
+  if (effectiveStatus === "expired") {
+    return (
+      <p className="text-base text-(--muted-foreground)">Expired</p>
     );
   }
 

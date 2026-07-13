@@ -66,7 +66,7 @@ function getRunBlocksCallback(): ((event: Record<string, unknown>) => void) | nu
   return null;
 }
 
-function injectApprovalBlock(requestId: string) {
+function injectApprovalBlock(requestId: string, extra: Record<string, unknown> = {}) {
   const cb = getRunBlocksCallback();
   if (!cb) throw new Error("run.blocks subscription not found");
   act(() => {
@@ -80,6 +80,29 @@ function injectApprovalBlock(requestId: string) {
           details: { command: "rm -rf /tmp/x" },
           riskLevel: "high",
           agentName: "Ástríðr",
+          ...extra,
+        },
+      ],
+    });
+  });
+}
+
+/** D-05: inject a resolution block — same requestId, updated status. */
+function injectResolutionBlock(requestId: string, status: "approved" | "rejected" | "expired") {
+  injectApprovalBlock(requestId, { status });
+}
+
+/** Inject a non-approval block (e.g. markdown) to verify it's never update-matched. */
+function injectMarkdownBlock(content: string) {
+  const cb = getRunBlocksCallback();
+  if (!cb) throw new Error("run.blocks subscription not found");
+  act(() => {
+    cb({
+      session_id: "sess-1",
+      blocks: [
+        {
+          type: "markdown",
+          content,
         },
       ],
     });
@@ -174,5 +197,46 @@ describe("Chat — approval payload + ack handling (F6)", () => {
     expect(toast.success).toHaveBeenCalled();
     expect(toast.error).not.toHaveBeenCalled();
     expect(screen.getByText("Approved — sent to Ástríðr")).toBeInTheDocument();
+  });
+});
+
+// ─── D-05: run.blocks update-by-requestId merge ────────────────────────────────
+
+describe("Chat — run.blocks update-by-requestId merge (D-05)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+  });
+
+  test("(a) a resolution block with a matching requestId flips the card in place — no second card", async () => {
+    renderChat();
+    injectApprovalBlock("req-A");
+    expect(screen.getByText("shell_exec")).toBeInTheDocument();
+
+    injectResolutionBlock("req-A", "approved");
+
+    expect(screen.getAllByText("Approved — sent to Ástríðr")).toHaveLength(1);
+    expect(screen.queryByText("shell_exec")).toBeNull();
+    expect(screen.queryByText("Approve")).toBeNull();
+  });
+
+  test("(b) an unknown requestId still appends as a new card — two distinct cards render", async () => {
+    renderChat();
+    injectApprovalBlock("req-A");
+    injectApprovalBlock("req-B");
+
+    expect(screen.getAllByText("Approve")).toHaveLength(2);
+    expect(screen.getAllByText("shell_exec")).toHaveLength(2);
+  });
+
+  test("(c) a non-approval block never update-matches — approval card untouched, markdown renders", async () => {
+    renderChat();
+    injectApprovalBlock("req-A");
+
+    injectMarkdownBlock("Some markdown content");
+
+    expect(screen.getByText("Approve")).toBeInTheDocument();
+    expect(screen.getByText("Some markdown content")).toBeInTheDocument();
   });
 });
