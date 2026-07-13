@@ -571,6 +571,38 @@ export function resolveClaimTypes(supportedTypes?: string[]): string[] {
   return supportedTypes ?? ["launch", "stop"];
 }
 
+// TEST-ONLY: used exclusively by scripts/verify-intake-claim.mjs (SC5,
+// D-P6-15). internalMutation — never part of the api.* surface the browser
+// SDK can call. Do not import from client code.
+export const generateVerificationUploadUrl = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// TEST-ONLY: used exclusively by scripts/verify-intake-claim.mjs (SC5,
+// D-P6-15). internalMutation — never part of the api.* surface the browser
+// SDK can call. Do not import from client code. Reuses buildIntakeRow exactly
+// like enqueueIntake does, but skips the Clerk check and enqueueIntake's own
+// validation (XOR/size/URL-shape) — the script controls its own inputs
+// directly and those paths are already unit-tested in Plan 06-01.
+export const seedIntakeRowForVerification = internalMutation({
+  args: {
+    hostId:      v.string(),
+    commandId:   v.string(),
+    destination: v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+    workspaceId: v.union(v.string(), v.null()),
+    storageId:   v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert(
+      "forgeCommands",
+      buildIntakeRow(args, "verification-script", Date.now(), FORGE_COMMAND_TTL_MS)
+    );
+  },
+});
+
 export const claimAndUpsertHost = internalMutation({
   args: {
     hostId: v.string(),
