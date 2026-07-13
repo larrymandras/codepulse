@@ -10,14 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { SectionHeader } from "@/components/SectionHeader";
 import { GlassPanel } from "@/components/GlassPanel";
 import { ExtractionFunnel } from "@/components/ExtractionFunnel";
 import { StatusBadge } from "@/components/StatusBadge";
-import MetricCard, { AnimatedNumber } from "@/components/MetricCard";
+import MetricCard from "@/components/MetricCard";
+import { FactsTable } from "@/components/FactsTable";
+import { PageHeader } from "@/components/PageHeader";
 
 type DreamingTab = "timeline" | "facts" | "cost" | "backfill";
 
@@ -63,17 +63,9 @@ export default function Dreaming() {
     ? [...new Set(facts.map((f: any) => f.category).filter(Boolean))]
     : [];
 
-  const filteredFacts = (facts ?? []).filter((f: any) => {
-    const matchesSearch =
-      !factSearch ||
-      (f.factText ?? "").toLowerCase().includes(factSearch.toLowerCase());
-    const matchesCategory = !factCategory || f.category === factCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Dreaming</h1>
+      <PageHeader title="Dreaming" />
 
       <Tabs defaultValue="timeline">
         <TabsList>
@@ -162,87 +154,15 @@ export default function Dreaming() {
 
         {/* === FACTS TAB === */}
         <TabsContent value="facts">
-          <SectionErrorBoundary name="Dreaming Facts">
-            <div className="space-y-4 mt-4">
-              <div className="flex flex-wrap gap-3">
-                <Input
-                  placeholder="Search facts..."
-                  value={factSearch}
-                  onChange={(e) => setFactSearch(e.target.value)}
-                  className="flex-1 min-w-[200px]"
-                />
-                {allCategories.length > 0 && (
-                  <select
-                    value={factCategory}
-                    onChange={(e) => setFactCategory(e.target.value)}
-                    className="bg-card border border-border rounded-lg px-3 py-2 text-base text-foreground focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">All Categories</option>
-                    {allCategories.map((cat) => (
-                      <option key={cat as string} value={cat as string}>
-                        {cat as string}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {!facts || facts.length === 0 ? (
-                <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-base text-muted-foreground">
-                    No durable facts extracted yet. Run a dreaming cycle to
-                    extract long-term facts from your conversation history.
-                  </p>
-                </div>
-              ) : filteredFacts.length === 0 ? (
-                <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-base text-muted-foreground">
-                    No facts match your search.
-                  </p>
-                </div>
-              ) : (
-                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fact</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Confidence</TableHead>
-                        <TableHead className="text-right">Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredFacts.map((fact: any) => (
-                        <TableRow key={fact._id}>
-                          <TableCell className="text-base text-foreground max-w-md">
-                            {fact.factText}
-                          </TableCell>
-                          <TableCell>
-                            {fact.category && (
-                              <StatusBadge
-                                status="idle"
-                                label={fact.category.toUpperCase()}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-base">
-                            {fact.confidence != null
-                              ? `${(fact.confidence * 100).toFixed(0)}%`
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                            {fact.timestamp
-                              ? formatRelative(fact.timestamp)
-                              : "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </GlassPanel>
-              )}
-            </div>
-          </SectionErrorBoundary>
+          <FactsTable
+            facts={facts}
+            search={factSearch}
+            onSearchChange={setFactSearch}
+            category={factCategory}
+            onCategoryChange={setFactCategory}
+            categories={allCategories as string[]}
+            sectionName="Dreaming Facts"
+          />
         </TabsContent>
 
         {/* === COST TAB === */}
@@ -342,14 +262,6 @@ export default function Dreaming() {
                     This is useful after the first installation or after a gap
                     in nightly runs.
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    Note: Backfill controls are UI-ready but require Ástríðr to
-                    expose a backfill endpoint before they can be activated.
-                  </p>
-                  {/* Threat T-63-09: button disabled; server-side identity validation required when wired */}
-                  <Button disabled className="cursor-not-allowed opacity-60">
-                    Start Backfill
-                  </Button>
                 </div>
               </GlassPanel>
             </div>

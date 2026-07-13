@@ -11,7 +11,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -31,6 +30,8 @@ import MetricCard, { AnimatedNumber } from "@/components/MetricCard";
 import { ObsidianGraph } from "../components/ObsidianGraph";
 import { getStoredVaultDirectory, requestVaultDirectory, parseVault, GraphData } from "../lib/obsidian";
 import { useEffect } from "react";
+import { FactsTable } from "@/components/FactsTable";
+import { PageHeader } from "@/components/PageHeader";
 
 type TabId = "timeline" | "tiers" | "reflections" | "quality";
 type MemoryTab = "episodic" | "preflight" | "durable" | "imports" | "obsidian";
@@ -155,15 +156,6 @@ export default function Memory() {
     ? [...new Set(durableFacts.map((f: any) => f.category).filter(Boolean))]
     : [];
 
-  const filteredDurableFacts = (durableFacts ?? []).filter((f: any) => {
-    const matchesSearch =
-      !durableSearch ||
-      (f.factText ?? "").toLowerCase().includes(durableSearch.toLowerCase());
-    const matchesCategory =
-      !durableCategory || f.category === durableCategory;
-    return matchesSearch && matchesCategory;
-  });
-
   // Top memories from preflight records
   const topMemories = preflightData
     ? [...preflightData]
@@ -174,7 +166,7 @@ export default function Memory() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
       <div className="md:col-span-12">
-        <h1 className="text-2xl font-bold">Memory Browser</h1>
+        <PageHeader title="Memory" />
       </div>
 
       <div className="md:col-span-12">
@@ -704,105 +696,27 @@ export default function Memory() {
 
         {/* === DURABLE FACTS TAB === */}
         <TabsContent value="durable">
-          <SectionErrorBoundary name="Durable Facts">
-            <div className="space-y-4 mt-4">
-              <div className="flex flex-wrap gap-3">
-                <Input
-                  placeholder="Search durable facts..."
-                  value={durableSearch}
-                  onChange={(e) => setDurableSearch(e.target.value)}
-                  className="flex-1 min-w-[200px]"
-                />
-                {allDurableCategories.length > 0 && (
-                  <select
-                    value={durableCategory}
-                    onChange={(e) => setDurableCategory(e.target.value)}
-                    className="bg-card border border-border rounded-lg px-3 py-2 text-base text-foreground focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">All Categories</option>
-                    {allDurableCategories.map((cat) => (
-                      <option key={cat as string} value={cat as string}>
-                        {cat as string}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {!durableFacts || durableFacts.length === 0 ? (
-                <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-base text-muted-foreground">
-                    No durable facts extracted yet. Run a dreaming cycle to
-                    extract long-term facts from your conversation history.
-                  </p>
-                </div>
-              ) : filteredDurableFacts.length === 0 ? (
-                <div className="bg-card border border-border rounded-xl p-8 text-center">
-                  <p className="text-base text-muted-foreground">
-                    No facts match your search.
-                  </p>
-                </div>
-              ) : (
-                <GlassPanel className="rounded-xl overflow-hidden hover:scale-[1.01] transition-transform duration-300">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fact</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="text-right">Confidence</TableHead>
-                        <TableHead className="text-right">Created</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredDurableFacts.map((fact: any) => (
-                        <TableRow key={fact._id}>
-                          <TableCell className="text-base text-foreground max-w-md">
-                            {fact.factText}
-                          </TableCell>
-                          <TableCell>
-                            {fact.category && (
-                              <StatusBadge
-                                status="idle"
-                                label={fact.category.toUpperCase()}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-base">
-                            {fact.confidence != null
-                              ? `${(fact.confidence * 100).toFixed(0)}%`
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                            {fact.timestamp
-                              ? formatRelative(fact.timestamp)
-                              : "—"}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </GlassPanel>
-              )}
-            </div>
-          </SectionErrorBoundary>
+          <FactsTable
+            facts={durableFacts}
+            search={durableSearch}
+            onSearchChange={setDurableSearch}
+            category={durableCategory}
+            onCategoryChange={setDurableCategory}
+            categories={allDurableCategories as string[]}
+            sectionName="Durable Facts"
+          />
         </TabsContent>
 
         {/* === IMPORTS TAB === */}
         <TabsContent value="imports">
           <SectionErrorBoundary name="Conversation Imports">
             <div className="space-y-6 mt-4">
-              <div className="flex justify-end">
-                {/* Requires Astridr endpoint — non-functional in Phase 63 */}
-                <Button disabled className="cursor-not-allowed opacity-60">
-                  Import Conversations
-                </Button>
-              </div>
-
               {!imports || imports.length === 0 ? (
                 <div className="bg-card border border-border rounded-xl p-8 text-center">
                   <p className="text-base text-muted-foreground">
-                    No conversation imports yet. Use Import Conversations to
-                    bring in ChatGPT, Claude Code, or markdown exports.
+                    No conversation imports yet. Importing ChatGPT, Claude
+                    Code, or markdown exports requires an Ástríðr endpoint
+                    that isn't available yet.
                   </p>
                 </div>
               ) : (
