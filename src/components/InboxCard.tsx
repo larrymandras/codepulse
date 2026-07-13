@@ -45,8 +45,14 @@ export interface InboxItem {
 
 interface InboxCardProps {
   item: InboxItem;
-  onApprove?: (requestId: string) => Promise<void>;
-  onReject?: (requestId: string, note?: string) => Promise<void>;
+  /**
+   * Must resolve true iff the server ack'd the decision. The card only
+   * commits its approved UI state on true — a false (or a throw) leaves
+   * it pending so a server-rejected approval never renders as "Approved"
+   * (mirrors ApprovalBlock.tsx, T-96-13-01).
+   */
+  onApprove?: (requestId: string) => Promise<boolean>;
+  onReject?: (requestId: string, note?: string) => Promise<boolean>;
   onMarkRead?: (id: string) => void;
 }
 
@@ -151,8 +157,10 @@ export function InboxCard({
     if (!item.requestId || !onApprove) return;
     setApproving(true);
     try {
-      await onApprove(item.requestId);
-      setApproved(true);
+      if (await onApprove(item.requestId)) setApproved(true);
+    } catch {
+      // Stay pending on a throwing callback — never render a false
+      // "Approved" (mirrors ApprovalBlock.tsx handleApprove).
     } finally {
       setApproving(false);
     }
@@ -162,9 +170,12 @@ export function InboxCard({
     if (!item.requestId || !onReject) return;
     setRejectPending(true);
     try {
-      await onReject(item.requestId, rejectNote.trim() || undefined);
-      setRejected(true);
-      setShowRejectInput(false);
+      if (await onReject(item.requestId, rejectNote.trim() || undefined)) {
+        setRejected(true);
+        setShowRejectInput(false);
+      }
+    } catch {
+      // Stay pending on a throwing callback — see handleApprove above.
     } finally {
       setRejectPending(false);
     }

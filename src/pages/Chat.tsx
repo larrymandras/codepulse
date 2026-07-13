@@ -194,28 +194,37 @@ export default function Chat() {
       }
     });
 
-    // run.block — accumulate GenerativeBlocks into assistant messages
-    const unsubBlock = subscribeEvent("run.block", (event) => {
-      const data = event as { session_id: string; block: GenerativeBlock };
+    // run.blocks — accumulate GenerativeBlocks into assistant messages.
+    // The backend emits the plural, array-shaped event (loop.py:1440,
+    // post_turn_pipeline.py:437) — the old singular "run.block" was never
+    // emitted, so this path was dead code until the T-96-13-02 alignment.
+    const unsubBlocks = subscribeEvent("run.blocks", (event) => {
+      // Support both envelope shape (event.data) and flat shape (event
+      // itself), like the approval_request handler in Inbox.tsx.
+      const data = (event as { data?: unknown }).data ?? event;
+      const payload = data as { session_id?: string; blocks?: GenerativeBlock[] };
+      const blocks = payload?.blocks;
+      if (!blocks || blocks.length === 0) return;
+
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        if (last && last.role === "assistant" && last.streaming && last.sessionId === data.session_id) {
-          // Append block to existing assistant message
+        if (last && last.role === "assistant" && last.streaming && last.sessionId === payload.session_id) {
+          // Append every block to the existing assistant message
           return [
             ...prev.slice(0, -1),
-            { ...last, blocks: [...(last.blocks ?? []), data.block] },
+            { ...last, blocks: [...(last.blocks ?? []), ...blocks] },
           ];
         } else {
-          // Create new assistant message with block
+          // Seed a new assistant message with the block array
           return [
             ...prev,
             {
               id: generateId(),
               role: "assistant" as const,
-              blocks: [data.block],
+              blocks: [...blocks],
               streaming: true,
               timestamp: Date.now(),
-              sessionId: data.session_id,
+              sessionId: payload.session_id,
             },
           ];
         }
@@ -293,7 +302,7 @@ export default function Chat() {
 
     return () => {
       unsubText();
-      unsubBlock();
+      unsubBlocks();
       unsubTts();
       unsubCompleted();
       unsubError();
