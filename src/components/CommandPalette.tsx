@@ -28,7 +28,9 @@ import {
   Zap,
   LayoutDashboard,
 } from "lucide-react";
-import { navItems, iconComponents } from "../layouts/DashboardLayout";
+// Leaf nav registry — NOT DashboardLayout, which imports CommandPalette
+// (importing it here created an import cycle; WR-02, phase 96 review).
+import { navItems, iconComponents } from "@/lib/navRegistry";
 
 interface CommandPaletteProps {
   open: boolean;
