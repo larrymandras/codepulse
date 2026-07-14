@@ -98,9 +98,15 @@ export function IntakeReportView({ row }: IntakeReportViewProps) {
     row.githubUrl ??
     row.fileName ??
     "<path to SKILL.md>";
-  const command = `skill-intake admit ${src} --to ${destination} --write${
+  // WR-06: src and rootPath are interpolated into a command the UI invites
+  // the operator to copy-run — quote them so paths with spaces survive the
+  // paste, and escape embedded double quotes so a report-derived (hostile-
+  // influenceable, per T-07-02-01) string cannot break out of its operand.
+  // `destination` is a controlled enum and needs no quoting.
+  const quoteArg = (s: string) => `"${s.replace(/"/g, '\\"')}"`;
+  const command = `skill-intake admit ${quoteArg(src)} --to ${destination} --write${
     destination === "project"
-      ? ` --project ${workspace?.rootPath ?? "<workspace path>"}`
+      ? ` --project ${quoteArg(workspace?.rootPath ?? "<workspace path>")}`
       : ""
   }`;
 

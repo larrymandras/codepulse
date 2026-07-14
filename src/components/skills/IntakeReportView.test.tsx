@@ -65,7 +65,7 @@ describe("IntakeReportView", () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/skill-intake admit https:\/\/github\.com\/owner\/repo --to global --write/)
+      screen.getByText(/skill-intake admit "https:\/\/github\.com\/owner\/repo" --to global --write/)
     ).toBeInTheDocument();
   });
 
@@ -154,7 +154,59 @@ describe("IntakeReportView", () => {
     );
 
     expect(
-      screen.getByText(/skill-intake admit owner\/repo --to project --write --project \/repo/)
+      screen.getByText(/skill-intake admit "owner\/repo" --to project --write --project "\/repo"/)
+    ).toBeInTheDocument();
+  });
+
+  it("quotes a workspace rootPath containing spaces so the copied command survives a shell paste (WR-06 regression)", () => {
+    vi.mocked(useQuery).mockReturnValue([
+      {
+        workspaceId: "ws-1",
+        name: "my-repo",
+        class: "synced",
+        rootPath: "C:\\Users\\larry mandras\\repo",
+      },
+    ]);
+    render(
+      <IntakeReportView
+        row={makeRow({
+          destination: "project",
+          workspaceId: "ws-1",
+          report: {
+            verdict: "admit",
+            candidate: { input: "owner/repo" },
+            findings: [],
+            summary: { error: 0, warning: 0, info: 0 },
+          },
+        })}
+      />
+    );
+
+    expect(
+      screen.getByText((content) =>
+        content.includes('--project "C:\\Users\\larry mandras\\repo"')
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("escapes embedded double quotes in a report-derived src so hostile content cannot break out of the quoted operand (WR-06 regression)", () => {
+    render(
+      <IntakeReportView
+        row={makeRow({
+          report: {
+            verdict: "reject",
+            candidate: { input: 'owner/repo" && evil "' },
+            findings: [],
+            summary: { error: 0, warning: 0, info: 0 },
+          },
+        })}
+      />
+    );
+
+    expect(
+      screen.getByText((content) =>
+        content.includes('skill-intake admit "owner/repo\\" && evil \\"" --to global --write')
+      )
     ).toBeInTheDocument();
   });
 
