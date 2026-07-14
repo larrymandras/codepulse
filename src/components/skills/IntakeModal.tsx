@@ -249,6 +249,12 @@ export function IntakeModal({
           headers: { "Content-Type": file!.type || "text/plain" },
           body: file!,
         });
+        // WR-04: a non-2xx storage response must surface as an upload
+        // failure — without this, storageId destructures to undefined and
+        // enqueueIntake rejects with a misleading client-contract message.
+        if (!res.ok) {
+          throw new Error(`Upload failed (${res.status})`);
+        }
         const { storageId } = await res.json();
         await enqueueIntake({
           hostId,

@@ -11,10 +11,11 @@
  * selection via a plain click on the (always-rendered, non-portal) item.
  */
 
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createContext, useContext } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { getFunctionName, type FunctionReference } from "convex/server";
 import { useForgeHostsRaw } from "@/hooks/useForge";
 import { useGithubTreeScan } from "@/hooks/useGithubTreeScan";
 
@@ -334,6 +335,46 @@ describe("IntakeModal", () => {
         "Host offline — command will expire in 5 min unless a daemon claims it."
       )
     ).toBeInTheDocument();
+  });
+
+  it("a non-2xx upload response fails the row with a descriptive upload error (WR-04 regression)", async () => {
+    const enqueueIntakeFn = vi.fn(() => Promise.resolve());
+    const generateUploadUrlFn = vi.fn(() =>
+      Promise.resolve("https://upload.example/signed")
+    );
+    // The generated `api` object is a proxy — property accesses are not
+    // reference-equal — so route the mock by function NAME instead.
+    vi.mocked(useMutation).mockImplementation(((ref: unknown) =>
+      getFunctionName(ref as FunctionReference<"mutation">).includes(
+        "generateForgeUploadUrl"
+      )
+        ? generateUploadUrlFn
+        : enqueueIntakeFn) as unknown as typeof useMutation);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "storage exploded" }),
+        })
+      )
+    );
+
+    try {
+      const { onEnqueueFailed } = renderModal();
+      selectFile();
+      pickDestination("Global");
+      fireEvent.click(getSubmitButton());
+
+      await waitFor(() => expect(onEnqueueFailed).toHaveBeenCalledTimes(1));
+      // Pre-fix, storageId destructured to undefined and enqueueIntake was
+      // still called, misreporting the failure as a client-contract bug.
+      expect(enqueueIntakeFn).not.toHaveBeenCalled();
+      expect(onEnqueueFailed.mock.calls[0][1]).toMatch(/upload failed \(500\)/i);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("paints an optimistic row via onEnqueued and closes the modal before the mutation resolves", () => {
