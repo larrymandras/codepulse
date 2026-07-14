@@ -138,7 +138,10 @@ export function IntakeModal({
   const destOk =
     destination !== "" &&
     (destination !== "project" || workspaceId.trim() !== "");
-  const submitEnabled = xorOk && destOk && !submitting;
+  // WR-03: a non-empty hostId is required — with no host selected (e.g.
+  // every host offline, so the D-08 auto-select never fires) submitting
+  // would enqueue a hostId:"" command no daemon can ever claim.
+  const submitEnabled = hostId !== "" && xorOk && destOk && !submitting;
 
   const handleFileChange = (f: File | null) => {
     setFile(f);

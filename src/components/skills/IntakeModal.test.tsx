@@ -228,6 +228,23 @@ describe("IntakeModal", () => {
     expect(getSubmitButton()).toBeDisabled();
   });
 
+  it("submit stays disabled while no host is selected, and enables once one is picked (WR-03 regression)", () => {
+    // Every host offline → the D-08 auto-select never fires → hostId stays "".
+    vi.mocked(useForgeHostsRaw).mockReturnValue([
+      { hostId: "laptop", lastSeenAt: Date.now() - 5 * 60_000, hostname: "Laptop" },
+    ]);
+    renderModal();
+    selectFile();
+    pickDestination("Global");
+    // Pre-fix this was enabled and enqueued a command with hostId: "" —
+    // unclaimable by any daemon, silently expiring after its TTL.
+    expect(getSubmitButton()).toBeDisabled();
+
+    // An offline host remains manually selectable (D-P7-12) and unblocks submit.
+    fireEvent.click(screen.getByTestId("select-item-laptop"));
+    expect(getSubmitButton()).not.toBeDisabled();
+  });
+
   it("submit is enabled once exactly one of file/url is set and a non-project destination is picked", () => {
     renderModal();
     selectFile();
