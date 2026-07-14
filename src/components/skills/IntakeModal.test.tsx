@@ -16,11 +16,27 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createContext, useContext } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useForgeHostsRaw } from "@/hooks/useForge";
+import { useGithubTreeScan } from "@/hooks/useGithubTreeScan";
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
   useMutation: vi.fn(() => vi.fn()),
 }));
+
+// Task 2b: mock the scan hook so batch-submission tests can drive
+// SkillCollectionPicker with a fixed "done, N skillPaths" scanState without
+// hitting the real GitHub API. Single-skill tests (Plan 07-02) never call
+// scan(), so the default idle state (set per-test below) never renders the
+// picker beyond its no-op idle branch.
+vi.mock("@/hooks/useGithubTreeScan", async () => {
+  const actual = await vi.importActual<typeof import("@/hooks/useGithubTreeScan")>(
+    "@/hooks/useGithubTreeScan"
+  );
+  return {
+    ...actual,
+    useGithubTreeScan: vi.fn(),
+  };
+});
 
 vi.mock("@/hooks/useForge", async () => {
   const actual = await vi.importActual<typeof import("@/hooks/useForge")>(
@@ -145,6 +161,11 @@ describe("IntakeModal", () => {
     vi.mocked(useForgeHostsRaw).mockReturnValue([
       { hostId: "desktop", lastSeenAt: Date.now(), hostname: "Desktop" },
     ]);
+    vi.mocked(useGithubTreeScan).mockReturnValue({
+      status: "idle",
+      scan: vi.fn(),
+      reset: vi.fn(),
+    });
   });
 
   it("renders 'Validate skill' as both the DialogTitle and the submit button", () => {
@@ -284,6 +305,36 @@ describe("IntakeModal", () => {
     expect(row.status).toBe("pending");
     expect(row.destination).toBe("global");
     expect(row.githubUrl).toBe("https://github.com/owner/repo");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("submitting with 3 selected skills calls onEnqueued exactly 3 times, synchronously, before enqueueIntake resolves", () => {
+    vi.mocked(useMutation).mockReturnValue(
+      vi.fn(() => new Promise(() => {})) as unknown as ReturnType<typeof useMutation>
+    );
+    vi.mocked(useGithubTreeScan).mockReturnValue({
+      status: "done",
+      result: {
+        skillPaths: ["skills/a/SKILL.md", "skills/b/SKILL.md", "skills/c/SKILL.md"],
+        truncated: false,
+      },
+      scan: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    const { onEnqueued, onClose } = renderModal();
+    const urlInput = screen.getByPlaceholderText("or paste a GitHub URL");
+    fireEvent.change(urlInput, { target: { value: "https://github.com/owner/repo" } });
+    pickDestination("Global");
+
+    const selectAll = screen.getByRole("checkbox", { name: /select all/i });
+    fireEvent.click(selectAll);
+
+    expect(screen.getByText(/validate 3 skills/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /validate 3 skills/i }));
+
+    expect(onEnqueued).toHaveBeenCalledTimes(3);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
