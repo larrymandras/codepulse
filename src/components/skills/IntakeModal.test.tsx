@@ -106,17 +106,16 @@ import { IntakeModal } from "./IntakeModal";
 
 const noop = () => {};
 
-function renderModal(overrides: Partial<Parameters<typeof IntakeModal>[0]> = {}) {
-  const onEnqueued = overrides.onEnqueued ?? vi.fn();
-  const onEnqueueFailed = overrides.onEnqueueFailed ?? vi.fn();
-  const onClose = overrides.onClose ?? vi.fn();
+function renderModal() {
+  const onEnqueued = vi.fn();
+  const onEnqueueFailed = vi.fn();
+  const onClose = vi.fn();
   const utils = render(
     <IntakeModal
       open={true}
       onClose={onClose}
       onEnqueued={onEnqueued}
       onEnqueueFailed={onEnqueueFailed}
-      {...overrides}
     />
   );
   return { ...utils, onEnqueued, onEnqueueFailed, onClose };
@@ -140,7 +139,9 @@ describe("IntakeModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useQuery).mockReturnValue([]);
-    vi.mocked(useMutation).mockReturnValue(vi.fn());
+    vi.mocked(useMutation).mockReturnValue(
+      vi.fn() as unknown as ReturnType<typeof useMutation>
+    );
     vi.mocked(useForgeHostsRaw).mockReturnValue([
       { hostId: "desktop", lastSeenAt: Date.now(), hostname: "Desktop" },
     ]);
@@ -214,11 +215,10 @@ describe("IntakeModal", () => {
   });
 
   it("enables submit for a Project destination once a workspace is picked", () => {
-    vi.mocked(useQuery).mockImplementation((_ref: unknown, args: unknown) =>
+    vi.mocked(useQuery).mockImplementation(((_ref: unknown, args: unknown) =>
       args && args !== "skip"
         ? [{ workspaceId: "ws-1", name: "my-repo", class: "synced", rootPath: "/repo" }]
-        : []
-    );
+        : []) as typeof useQuery);
     renderModal();
     selectFile();
     pickDestination("Project");
@@ -269,7 +269,9 @@ describe("IntakeModal", () => {
   });
 
   it("paints an optimistic row via onEnqueued and closes the modal before the mutation resolves", () => {
-    vi.mocked(useMutation).mockReturnValue(vi.fn(() => new Promise(() => {})));
+    vi.mocked(useMutation).mockReturnValue(
+      vi.fn(() => new Promise(() => {})) as unknown as ReturnType<typeof useMutation>
+    );
     const { onEnqueued, onClose } = renderModal();
     const urlInput = screen.getByPlaceholderText("or paste a GitHub URL");
     fireEvent.change(urlInput, { target: { value: "https://github.com/owner/repo" } });
