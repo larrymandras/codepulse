@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useIntakeCommandsRaw } from "@/hooks/useIntake";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
 
-const { pendingRowFixture } = vi.hoisted(() => ({
+const { pendingRowFixture, uploadRowFixture } = vi.hoisted(() => ({
   pendingRowFixture: {
     commandId: "cmd-pending-1",
     status: "pending",
@@ -25,6 +25,24 @@ const { pendingRowFixture } = vi.hoisted(() => ({
     githubUrl: "https://github.com/owner/repo",
     subpath: null,
     fileName: null,
+    report: null,
+    error: null,
+    createdAt: 1_700_000_000_000,
+    expiresAt: 1_700_000_000_000 + 5 * 60 * 1000,
+  },
+  // File-upload optimistic row: fileName set client-side, no githubUrl.
+  // The server echo for this row always has fileName: null (07-01's
+  // documented client-only contract) — the panel must remember it.
+  uploadRowFixture: {
+    commandId: "cmd-upload-1",
+    status: "pending",
+    hostId: "desktop",
+    destination: "global",
+    workspaceId: null,
+    storageId: null,
+    githubUrl: null,
+    subpath: null,
+    fileName: "my-skill.md",
     report: null,
     error: null,
     createdAt: 1_700_000_000_000,
@@ -65,6 +83,12 @@ vi.mock("@/components/skills/IntakeModal", () => ({
         onClick={() => onEnqueueFailed(pendingRowFixture.commandId, "boom")}
       >
         trigger-enqueue-failed
+      </button>
+      <button
+        type="button"
+        onClick={() => onEnqueued(uploadRowFixture as IntakeCommandRow)}
+      >
+        trigger-enqueue-upload
       </button>
     </div>
   ),
@@ -222,5 +246,30 @@ describe("IntakePanel", () => {
     vi.mocked(useIntakeCommandsRaw).mockReturnValue([]);
     renderPanel();
     expect(screen.getByTestId("intake-modal-stub")).toBeInTheDocument();
+  });
+
+  it("keeps showing the upload filename after the server row (fileName: null) replaces the optimistic row", () => {
+    vi.mocked(useIntakeCommandsRaw).mockReturnValue([]);
+    const { rerender, onModalOpenChange } = renderPanel();
+
+    // Optimistic upload row paints with its filename.
+    fireEvent.click(screen.getByText("trigger-enqueue-upload"));
+    expect(screen.getByText("my-skill.md")).toBeInTheDocument();
+
+    // Server echoes the same commandId — fileName is null by design (07-01
+    // client-only contract) and an upload row has no githubUrl either.
+    vi.mocked(useIntakeCommandsRaw).mockReturnValue([
+      makeRow({
+        commandId: uploadRowFixture.commandId,
+        status: "queued",
+        fileName: null,
+        githubUrl: null,
+      }),
+    ]);
+    rerender(<IntakePanel modalOpen={false} onModalOpenChange={onModalOpenChange} />);
+
+    // UI-SPEC line 158: row label is the filename for uploads — never "Unknown".
+    expect(screen.getByText("my-skill.md")).toBeInTheDocument();
+    expect(screen.queryByText("Unknown")).not.toBeInTheDocument();
   });
 });
