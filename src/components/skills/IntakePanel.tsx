@@ -12,7 +12,7 @@
  * state for intake.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Collapsible,
@@ -81,8 +81,23 @@ export function IntakePanel({
 
   const [pendingLocal, setPendingLocal] = useState<IntakeCommandRow[]>([]);
 
-  const handleEnqueued = (row: IntakeCommandRow) =>
+  // Session-scoped commandId -> fileName memory. Server rows always carry
+  // fileName: null (07-01's documented client-only contract), so once the
+  // reconciliation effect below drops the optimistic row, an upload row's
+  // label would fall through to "Unknown" (UI-SPEC line 158 violation).
+  // A ref is sufficient: the label render is driven by serverCommands/
+  // pendingLocal state changes, and the ref is always written before the
+  // setPendingLocal render that first paints the row. After a page reload
+  // the filename is legitimately unknown — this memory is session-scoped
+  // by design, never round-tripped through Convex.
+  const fileNameMemory = useRef<Record<string, string>>({});
+
+  const handleEnqueued = (row: IntakeCommandRow) => {
+    if (row.fileName !== null) {
+      fileNameMemory.current[row.commandId] = row.fileName;
+    }
     setPendingLocal((prev) => [row, ...prev]);
+  };
 
   const handleEnqueueFailed = (commandId: string, message: string) =>
     setPendingLocal((prev) =>
@@ -145,6 +160,7 @@ export function IntakePanel({
           {mergedRows.map((row) => {
             const label =
               row.fileName ??
+              fileNameMemory.current[row.commandId] ??
               (row.githubUrl
                 ? `${extractRepoLabel(row.githubUrl)}${
                     row.subpath ? " " + row.subpath : ""
