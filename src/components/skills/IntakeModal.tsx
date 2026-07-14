@@ -142,7 +142,14 @@ export function IntakeModal({
 
   const handleFileChange = (f: File | null) => {
     setFile(f);
-    if (f) setGithubUrl("");
+    if (f) {
+      setGithubUrl("");
+      // Mirror handleUrlChange (WR-02): a stale scanned selection from a
+      // previously scanned repo must never ride a file upload — the server
+      // would persist a meaningless repo-relative subpath on the row.
+      scanState.reset();
+      setSelectedSubpaths([]);
+    }
   };
 
   const handleUrlChange = (value: string) => {

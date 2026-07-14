@@ -272,6 +272,36 @@ describe("IntakeModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("selecting a file clears scan state and any scanned subpath — no stale subpath rides a file upload (WR-02 regression)", () => {
+    const reset = vi.fn();
+    vi.mocked(useGithubTreeScan).mockReturnValue({
+      status: "done",
+      result: { skillPaths: ["skills/foo/SKILL.md"], truncated: false },
+      scan: vi.fn(),
+      reset,
+    });
+    vi.mocked(useMutation).mockReturnValue(
+      vi.fn(() => new Promise(() => {})) as unknown as ReturnType<typeof useMutation>
+    );
+
+    const { onEnqueued } = renderModal();
+    const urlInput = screen.getByPlaceholderText("or paste a GitHub URL");
+    fireEvent.change(urlInput, { target: { value: "https://github.com/owner/repo" } });
+    // Picker mounts against the done scanState and auto-selects the single path.
+
+    // Now switch to a file upload instead.
+    selectFile();
+    expect(reset).toHaveBeenCalled();
+
+    pickDestination("Global");
+    fireEvent.click(getSubmitButton());
+
+    expect(onEnqueued).toHaveBeenCalledTimes(1);
+    const row = onEnqueued.mock.calls[0][0];
+    expect(row.fileName).toBe("SKILL.md");
+    expect(row.subpath).toBeNull();
+  });
+
   it("an offline host is selectable and shows the inline warning", () => {
     vi.mocked(useForgeHostsRaw).mockReturnValue([
       { hostId: "laptop", lastSeenAt: Date.now() - 5 * 60_000, hostname: "Laptop" },
