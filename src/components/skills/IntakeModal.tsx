@@ -14,8 +14,11 @@
  * below the picker, since intake execution has no live daemon yet
  * (Phase 8) and a queued command simply waits out its TTL.
  *
- * Batch label variant ("Validate {N} skills") and the multi-skill collection
- * scanner are Plan 07-03's job — this modal is single-skill only.
+ * Plan 07-03 extends this with the multi-skill collection scanner
+ * (useGithubTreeScan/SkillCollectionPicker): an explicit Scan button
+ * discovers every SKILL.md in a pasted repo, and submitting with 2+
+ * selected skills fans out one enqueueIntake call per skill via
+ * Promise.all, all sharing the batch's single destination (D-P7-09).
  */
 
 import { useState, useEffect, useRef } from "react";
@@ -43,6 +46,8 @@ import { Loader2 } from "lucide-react";
 import { useForgeHostsRaw } from "@/hooks/useForge";
 import type { ForgeHostRow } from "@/hooks/useForge";
 import type { IntakeCommandRow, IntakeDestination } from "@/hooks/useIntake";
+import { useGithubTreeScan } from "@/hooks/useGithubTreeScan";
+import { SkillCollectionPicker } from "@/components/skills/SkillCollectionPicker";
 
 /** Host is "online" when its last poll was within 30s (mirrors ForgeLaunchModal D-08). */
 const ONLINE_THRESHOLD_MS = 30_000;
@@ -72,7 +77,11 @@ export function IntakeModal({
   const [file, setFile] = useState<File | null>(null);
   const [githubUrl, setGithubUrl] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [selectedSubpaths, setSelectedSubpaths] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Plan 07-03: client-only Scan-button state machine, zero Convex involvement.
+  const scanState = useGithubTreeScan();
 
   // Convex mutations — plain (no Convex optimistic write, B2 — see handleSubmit).
   const enqueueIntake = useMutation(api.forge.enqueueIntake);
@@ -98,7 +107,10 @@ export function IntakeModal({
       setFile(null);
       setGithubUrl("");
       setSubmitting(false);
+      setSelectedSubpaths([]);
+      scanState.reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Pre-select the most-recently-seen online host once the modal opens
@@ -136,11 +148,65 @@ export function IntakeModal({
   const handleUrlChange = (value: string) => {
     setGithubUrl(value);
     if (value) setFile(null);
+    // A stale selection against a different repo must never survive a URL
+    // edit — reset the scan state and any checked/manual subpaths.
+    scanState.reset();
+    setSelectedSubpaths([]);
   };
 
   const handleSubmit = async () => {
     if (!submitEnabled) return;
     setSubmitting(true);
+
+    // Batch mode (D-P7-09): 2+ scanned/checked skills from one repo. One
+    // enqueueIntake call per checked skill, all sharing this modal's single
+    // destination/host selection.
+    if (hasUrl && selectedSubpaths.length > 1) {
+      const commandIds = selectedSubpaths.map(() => crypto.randomUUID());
+
+      // D-P7-13: paint every optimistic row synchronously in a single loop
+      // BEFORE any await — N rows appear before any network round-trip.
+      selectedSubpaths.forEach((subpath, i) => {
+        const pendingRow: IntakeCommandRow = {
+          commandId: commandIds[i],
+          status: "pending",
+          hostId,
+          destination: destination as IntakeDestination,
+          workspaceId: destination === "project" ? workspaceId : null,
+          storageId: null,
+          githubUrl: githubUrl.trim(),
+          subpath,
+          fileName: null,
+          report: null,
+          error: null,
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 5 * 60 * 1000,
+        };
+        onEnqueued(pendingRow);
+      });
+      onClose();
+
+      // Promise.all (not serial for-await) is deliberate: enqueueIntake is
+      // idempotent-by-commandId (WR-04) and tolerates N rapid concurrent
+      // enqueues (D-P6-07).
+      await Promise.all(
+        selectedSubpaths.map((subpath, i) =>
+          enqueueIntake({
+            hostId,
+            commandId: commandIds[i],
+            destination: destination as IntakeDestination,
+            workspaceId: destination === "project" ? workspaceId : null,
+            githubUrl: githubUrl.trim(),
+            subpath,
+          }).catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : String(err);
+            onEnqueueFailed(commandIds[i], message);
+          })
+        )
+      );
+      setSubmitting(false);
+      return;
+    }
 
     const commandId = crypto.randomUUID();
     const pendingRow: IntakeCommandRow = {
@@ -151,7 +217,7 @@ export function IntakeModal({
       workspaceId: destination === "project" ? workspaceId : null,
       storageId: null,
       githubUrl: hasUrl ? githubUrl.trim() : null,
-      subpath: null,
+      subpath: selectedSubpaths[0] ?? null,
       fileName: hasFile ? file!.name : null,
       report: null,
       error: null,
@@ -180,6 +246,7 @@ export function IntakeModal({
           destination: destination as IntakeDestination,
           workspaceId: destination === "project" ? workspaceId : null,
           storageId,
+          subpath: selectedSubpaths[0],
         });
       } else {
         await enqueueIntake({
@@ -188,6 +255,7 @@ export function IntakeModal({
           destination: destination as IntakeDestination,
           workspaceId: destination === "project" ? workspaceId : null,
           githubUrl: githubUrl.trim(),
+          subpath: selectedSubpaths[0],
         });
       }
     } catch (err: unknown) {
@@ -353,13 +421,29 @@ export function IntakeModal({
               ref={fileInputRef}
               onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
             />
-            <Input
-              placeholder="or paste a GitHub URL"
-              value={githubUrl}
-              onChange={(e) => handleUrlChange(e.target.value)}
-              disabled={file !== null}
-              className={file !== null ? "opacity-50 cursor-not-allowed" : ""}
-            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="or paste a GitHub URL"
+                value={githubUrl}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                disabled={file !== null}
+                className={file !== null ? "opacity-50 cursor-not-allowed" : ""}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={githubUrl.trim() === "" || scanState.status === "scanning"}
+                onClick={() => scanState.scan(githubUrl.trim())}
+              >
+                Scan
+              </Button>
+            </div>
+            {githubUrl.trim() !== "" && (
+              <SkillCollectionPicker
+                scanState={scanState}
+                onSelectionChange={setSelectedSubpaths}
+              />
+            )}
           </div>
 
           {/* Dry-run posture note (D-P7-04, always visible, verbatim) */}
@@ -381,8 +465,12 @@ export function IntakeModal({
             {submitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                Validate skill
+                {selectedSubpaths.length > 1
+                  ? `Validate ${selectedSubpaths.length} skills`
+                  : "Validate skill"}
               </>
+            ) : selectedSubpaths.length > 1 ? (
+              `Validate ${selectedSubpaths.length} skills`
             ) : (
               "Validate skill"
             )}
