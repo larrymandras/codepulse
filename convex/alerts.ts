@@ -927,7 +927,12 @@ export const getLastCriticalEvalTimestamp = internalQuery({
 
 // Critical-only evaluation for ingest hook (sub-60s alerting, per D-04)
 export const evaluateCriticalInternal = internalMutation({
-  args: {},
+  // Required arg added 2026-07-14 as a queue-drain mechanism: tens of thousands
+  // of arg-less invocations of this mutation were enqueued by the ingest path
+  // (see runtimeIngest.ts) and each burned the full 15s syscall budget. With a
+  // required arg they fail validation in milliseconds instead. Callers must
+  // pass { v2: true }.
+  args: { v2: v.boolean() },
   handler: async (ctx) => {
     const now = Date.now() / 1000;
 

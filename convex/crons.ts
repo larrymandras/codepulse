@@ -24,19 +24,26 @@ crons.daily(
   internal.aggregates.rollupDaily
 );
 
+// DISABLED 2026-07-14 (self-hosted migration incident): markStaleArchived,
+// evaluateInternal, and sweepGraphSnapshotVersions all hit the 15s syscall cap
+// on self-hosted Convex (single node, SQLite, 3.2M docs) and NEVER complete.
+// A failing cron execution retries on its own backoff regardless of schedule,
+// so throttling does not help — the retry storms starved ingest mutations.
+// Re-enable once their queries are bounded / retention has shrunk the tables.
+//
 // Phase 5: Archival at 02:00 UTC
-crons.daily(
-  "archive-stale-events",
-  { hourUTC: 2, minuteUTC: 0 },
-  internal.archival.markStaleArchived
-);
+// crons.daily(
+//   "archive-stale-events",
+//   { hourUTC: 2, minuteUTC: 0 },
+//   internal.archival.markStaleArchived
+// );
 
-// Phase 6: Alert rule evaluation (every 2 minutes)
-crons.interval(
-  "evaluate-alert-rules",
-  { minutes: 2 },
-  internal.alerts.evaluateInternal
-);
+// Phase 6: Alert rule evaluation (disabled — see note above)
+// crons.interval(
+//   "evaluate-alert-rules",
+//   { hours: 1 },
+//   internal.alerts.evaluateInternal
+// );
 
 // Phase 6: Digest delivery (every 1 hour — respects configurable interval preference)
 crons.interval(
@@ -124,12 +131,12 @@ crons.daily(
 );
 
 // Phase 83: Graph snapshot version retention (D-03)
-// Offset from the 04:00 file sweep to avoid scheduler contention.
-crons.daily(
-  "sweep-graph-snapshot-versions",
-  { hourUTC: 4, minuteUTC: 30 },
-  internal.graphSnapshots.sweepGraphSnapshotVersions,
-);
+// DISABLED 2026-07-14 — times out on self-hosted Convex; see note at archive-stale-events.
+// crons.daily(
+//   "sweep-graph-snapshot-versions",
+//   { hourUTC: 4, minuteUTC: 30 },
+//   internal.graphSnapshots.sweepGraphSnapshotVersions,
+// );
 
 // Phase 93: Nightly LLM-judge sampling (EVAL-02). Offset from the 04:30
 // graph-snapshot sweep and the 06:00 daily-digest generation to avoid
@@ -138,6 +145,14 @@ crons.daily(
   "judge-sampled-sessions",
   { hourUTC: 5, minuteUTC: 0 },
   internal.evalScores.judgeSessionsAction,
+);
+
+// Nightly retention pruning (2026-07-14, see convex/retention.ts). 09:00 UTC =
+// after the 07:30 UTC full backup export, before the workday.
+crons.daily(
+  "retention-prune",
+  { hourUTC: 9, minuteUTC: 0 },
+  internal.retention.startNightlyPrune
 );
 
 export default crons;

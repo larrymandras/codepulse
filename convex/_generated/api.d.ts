@@ -110,6 +110,7 @@ import type * as providerConfig from "../providerConfig.js";
 import type * as providerHealth from "../providerHealth.js";
 import type * as reflections from "../reflections.js";
 import type * as registry from "../registry.js";
+import type * as retention from "../retention.js";
 import type * as rosterViewPrefs from "../rosterViewPrefs.js";
 import type * as routingDecisions from "../routingDecisions.js";
 import type * as runBlocks from "../runBlocks.js";
@@ -253,6 +254,7 @@ declare const fullApi: ApiFromModules<{
   providerHealth: typeof providerHealth;
   reflections: typeof reflections;
   registry: typeof registry;
+  retention: typeof retention;
   rosterViewPrefs: typeof rosterViewPrefs;
   routingDecisions: typeof routingDecisions;
   runBlocks: typeof runBlocks;

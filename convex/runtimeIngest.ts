@@ -992,14 +992,15 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
       }
     }
 
-    // Phase 6: Trigger critical rule evaluation on ingest for sub-60s alerting (per D-04)
-    // Schedules asynchronously — does NOT block ingest response
-    // Rate-limit: skip if evaluated within last 15 seconds to avoid DB read amplification
-    const lastEvalConfig = await ctx.runQuery(internal.alerts.getLastCriticalEvalTimestamp);
-    const nowForEval = Date.now() / 1000;
-    if (!lastEvalConfig || nowForEval - lastEvalConfig > 15) {
-      await ctx.runMutation(internal.alerts.evaluateCriticalInternal);
-    }
+    // Phase 6 critical-eval trigger DISABLED 2026-07-14 (self-hosted incident).
+    // The inline runMutation blocked every ingest POST behind a 15s timeout;
+    // deferring it via scheduler was worse: the rate-limit timestamp only
+    // persists on SUCCESS (mutation rollback erases it on timeout), so every
+    // POST enqueued another doomed 15s-burning job and saturated the executor.
+    // Re-enable only once evaluateCriticalInternal reliably completes on this
+    // instance AND the rate-limit timestamp is written outside the eval itself.
+    // (Critical alerting is also covered by the hourly evaluate-alert-rules
+    // cron once that is re-enabled — see convex/crons.ts.)
 
     return new Response(JSON.stringify({ ingested: events.length }), {
       status: 200,
