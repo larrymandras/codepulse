@@ -408,6 +408,10 @@ const JOB_LIST_LIMIT = 1000;
 // to ~1 MB per job, so 5 000 chunks is a ceiling that will rarely be hit in practice.
 const LOG_CHUNK_LIMIT = 5000;
 
+// D-P7-07: intake's own display-window guarantee, independent of JOB_LIST_LIMIT
+// (1000) so launch/stop traffic can never crowd intake rows out.
+const INTAKE_LIST_LIMIT = 20;
+
 export const listJobs = query({
   args: {
     hostId: v.optional(v.string()),
@@ -830,6 +834,25 @@ export const listHosts = query({
       .withIndex("by_lastSeenAt")
       .order("desc")
       .collect();
+  },
+});
+
+// D-P7-07 (locked orchestrator decision): all-hosts only — no hostId arg — so
+// the Intake panel's live subscription and the modal's commandId-keyed
+// optimistic row never land in mismatched Convex query-cache entries
+// (07-RESEARCH.md Pitfall 2). Filtered to commandType="intake" so launch/stop
+// traffic can never crowd intake rows out of INTAKE_LIST_LIMIT.
+export const listIntakeCommands = query({
+  args: {},
+  handler: async (ctx) => {
+    // .filter() placed after .order("desc") — this ordering compiled cleanly
+    // under convex@1.42.0's query-builder types.
+    return await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .filter((q) => q.eq(q.field("commandType"), "intake"))
+      .take(INTAKE_LIST_LIMIT);
   },
 });
 
