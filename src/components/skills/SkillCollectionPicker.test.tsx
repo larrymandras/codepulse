@@ -77,6 +77,54 @@ describe("SkillCollectionPicker", () => {
     );
   });
 
+  it("clears checked paths when a new scan result arrives — no repo-A paths leak into repo-B selections (WR-01 regression)", () => {
+    const repoA: ScanState = {
+      status: "done",
+      result: {
+        skillPaths: ["a1/SKILL.md", "a2/SKILL.md", "a3/SKILL.md"],
+        truncated: false,
+      },
+    };
+    const repoB: ScanState = {
+      status: "done",
+      result: {
+        skillPaths: ["b1/SKILL.md", "b2/SKILL.md"],
+        truncated: false,
+      },
+    };
+    const onSelectionChange = vi.fn();
+    const { rerender } = render(
+      <SkillCollectionPicker scanState={repoA} onSelectionChange={onSelectionChange} />
+    );
+
+    // Check two repo-A skills.
+    const boxesA = screen.getAllByRole("checkbox");
+    fireEvent.click(boxesA[1]);
+    fireEvent.click(boxesA[2]);
+
+    // URL edit resets the parent's scanState, then repo B is scanned.
+    rerender(
+      <SkillCollectionPicker
+        scanState={{ status: "idle" }}
+        onSelectionChange={onSelectionChange}
+      />
+    );
+    rerender(
+      <SkillCollectionPicker scanState={repoB} onSelectionChange={onSelectionChange} />
+    );
+
+    // No box should be pre-checked from repo A.
+    for (const box of screen.getAllByRole("checkbox")) {
+      expect(box).not.toBeChecked();
+    }
+
+    // Toggling a repo-B box must emit ONLY repo-B paths.
+    fireEvent.click(screen.getAllByRole("checkbox")[1]);
+    const lastCall =
+      onSelectionChange.mock.calls[onSelectionChange.mock.calls.length - 1][0];
+    expect(lastCall).toEqual(["b1/SKILL.md"]);
+  });
+
   it("renders the never-disabled manual subpath fallback on scan error", () => {
     const scanState: ScanState = { status: "error", errorMessage: "network error" };
     const onSelectionChange = vi.fn();

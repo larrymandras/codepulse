@@ -64,6 +64,17 @@ export function SkillCollectionPicker({
   const skillPaths = scanState.status === "done" ? scanState.result.skillPaths : [];
   const singlePath = skillPaths.length === 1 ? skillPaths[0] : null;
 
+  // WR-01: the checked set must never survive a rescan — the picker stays
+  // mounted across URL edits (parent renders it while the URL is non-empty),
+  // so without this reset repo-A paths leak into repo-B selections and can
+  // be enqueued against the wrong repo. Keyed off the result array's
+  // identity: a new scan produces a new skillPaths array (idle/scanning map
+  // to null, so done→idle→done also resets).
+  const scanResultKey = scanState.status === "done" ? scanState.result.skillPaths : null;
+  useEffect(() => {
+    setChecked(new Set());
+  }, [scanResultKey]);
+
   // CR-01: auto-select keys off the DERIVED STABLE STRING (singlePath), never
   // the scanState object — the real hook may hand us a fresh object identity
   // per render, and depending on it re-emitted a fresh array every render,
