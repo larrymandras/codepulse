@@ -52,6 +52,15 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+// IntakePanel (Phase 07-02) is mounted unconditionally by Skills.tsx now.
+// Its own loading/empty/row-list/optimistic-merge behavior is fully covered
+// by IntakePanel.test.tsx — stub it out here so this page-level suite stays
+// isolated from api.forge.* (this file's convex/_generated/api mock only
+// defines skillCategories/registry, matching what Skills.tsx itself calls).
+vi.mock("@/components/skills/IntakePanel", () => ({
+  IntakePanel: () => null,
+}));
+
 import { useQuery } from "convex/react";
 const mockUseQuery = vi.mocked(useQuery);
 
