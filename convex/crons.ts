@@ -147,8 +147,9 @@ crons.daily(
   internal.evalScores.judgeSessionsAction,
 );
 
-// Nightly retention pruning (2026-07-14, see convex/retention.ts). 09:00 UTC =
-// after the 07:30 UTC full backup export, before the workday.
+// Nightly retention pruning (see convex/retention.ts: 30d runtime firehose,
+// 90d history, batch-capped). The historical backlog was applied offline via
+// trim+reimport (2026-07-14), so nightly runs age out ~1 day of docs.
 crons.daily(
   "retention-prune",
   { hourUTC: 9, minuteUTC: 0 },

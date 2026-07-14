@@ -2,66 +2,84 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
-// Nightly retention pruning (added 2026-07-14 after the self-hosted migration).
-// Raw telemetry events are the ~90% bulk of the DB (events + runtime_events
-// alone were ~3GB / >2.5M docs) and made snapshot exports, cold boots, and the
-// maintenance sweeps time out on self-hosted Convex. Aggregates, llmMetrics
+// Nightly retention pruning (2026-07-14, revised after the self-hosted
+// migration incidents — full history in memory note "convex-selfhosted-setup").
+//
+// Policy (decided with Larry 2026-07-14): high-rate runtime firehose tables
+// keep 30 days; build/history event tables keep 90 days. Aggregates, llmMetrics
 // (cost history), sessions, alerts, and config/audit tables are kept forever —
 // trend dashboards keep working; only drill-down to old raw events ages out.
+// The historical backlog was applied OFFLINE (trim_export.py on the export zip
+// + reimport), so nightly runs only age out ~1 day of docs.
 //
-// Tables are pruned SEQUENTIALLY, one small batch at a time (the first version
-// ran 14 parallel delete chains and starved ingest on SQLite's single writer).
-// Each batch walks oldest-first by _creationTime via the built-in index.
+// Operational constraints learned the hard way:
+// - Deletes are batched (200 docs/mutation, 3s apart, tables sequential):
+//   parallel chains starved ingest on SQLite's single writer.
+// - MAX_BATCHES_PER_NIGHT caps each run: mass deletes create tombstones that
+//   inflate boot memory until the ~2-day retention GC (OOM crash-loop cause).
+//   If the cap is hit, the log says so and the remainder waits for tomorrow.
 
-export const RETENTION_DAYS = 90;
+const RETENTION_DAYS: Record<string, number> = {
+  // runtime firehose — 30 days
+  runtime_events: 30,
+  toolExecutions: 30,
+  activeTime: 30,
+  selfHealingEvents: 30,
+  fileOps: 30,
+  heartbeatAlerts: 30,
+  // build/history — 90 days
+  events: 90,
+  environmentSnapshots: 90,
+  contextSnapshots: 90,
+  metricSnapshots: 90,
+  securityEvents: 90,
+  cronExecutions: 90,
+  jobLifecycle: 90,
+  agentCoordination: 90,
+};
+
+const PRUNED_TABLES = Object.keys(RETENTION_DAYS);
 const BATCH_SIZE = 200;
 const RESCHEDULE_DELAY_MS = 3000;
-
-// Raw per-event tables only. Do NOT add: sessions, llmMetrics, aggregates,
-// alerts, agentConfigs, configChanges, graphSnapshot* (version-based retention).
-const PRUNED_TABLES = [
-  "events",
-  "runtime_events",
-  "selfHealingEvents",
-  "toolExecutions",
-  "environmentSnapshots",
-  "activeTime",
-  "fileOps",
-  "contextSnapshots",
-  "metricSnapshots",
-  "securityEvents",
-  "cronExecutions",
-  "jobLifecycle",
-  "heartbeatAlerts",
-  "agentCoordination",
-];
+const MAX_BATCHES_PER_NIGHT = 600; // hard ceiling ~120k docs/night across the run
 
 export const startNightlyPrune = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const cutoffMs = Date.now() - RETENTION_DAYS * 86400 * 1000;
-    await ctx.scheduler.runAfter(0, internal.retention.pruneBatch, {
+    const nowMs = Date.now();
+    await ctx.scheduler.runAfter(0, internal.retention.pruneBatchV3, {
       tableIndex: 0,
-      cutoffMs,
+      nowMs,
       deletedSoFar: 0,
+      batchesUsed: 0,
     });
-    console.log(`retention: sequential prune started, cutoff ${new Date(cutoffMs).toISOString()}`);
+    console.log("retention: nightly prune started");
   },
 });
 
-export const pruneBatch = internalMutation({
+// V3 name retained: earlier signatures are burned — their pending scheduled
+// jobs were drained by making them fail validation (see incident notes).
+export const pruneBatchV3 = internalMutation({
   args: {
     tableIndex: v.number(),
-    cutoffMs: v.number(),
+    nowMs: v.number(),
     deletedSoFar: v.number(),
+    batchesUsed: v.number(),
   },
   handler: async (ctx, args) => {
     const table = PRUNED_TABLES[args.tableIndex];
     if (!table) return;
+    if (args.batchesUsed >= MAX_BATCHES_PER_NIGHT) {
+      console.log(`retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table}; remainder deferred to tomorrow`);
+      return;
+    }
+    const cutoffMs = args.nowMs - RETENTION_DAYS[table] * 86400 * 1000;
+    // Default query order is _creationTime ascending — oldest docs first,
+    // served by the built-in creation-time index (no table scan).
     const batch = await ctx.db.query(table as any).order("asc").take(BATCH_SIZE);
     let deleted = 0;
     for (const doc of batch) {
-      if (doc._creationTime < args.cutoffMs) {
+      if (doc._creationTime < cutoffMs) {
         await ctx.db.delete(doc._id);
         deleted++;
       } else {
@@ -70,42 +88,24 @@ export const pruneBatch = internalMutation({
     }
     const total = args.deletedSoFar + deleted;
     if (deleted === BATCH_SIZE) {
-      // More old docs in this table — continue after a pause so ingest breathes.
-      await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatch, {
+      await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatchV3, {
         tableIndex: args.tableIndex,
-        cutoffMs: args.cutoffMs,
+        nowMs: args.nowMs,
         deletedSoFar: total,
+        batchesUsed: args.batchesUsed + 1,
       });
     } else {
       if (total > 0) console.log(`retention: ${table} done, pruned ${total} docs`);
       if (args.tableIndex + 1 < PRUNED_TABLES.length) {
-        await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatch, {
+        await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatchV3, {
           tableIndex: args.tableIndex + 1,
-          cutoffMs: args.cutoffMs,
+          nowMs: args.nowMs,
           deletedSoFar: 0,
+          batchesUsed: args.batchesUsed + 1,
         });
       } else {
         console.log("retention: all tables pruned");
       }
     }
-  },
-});
-
-// Emergency stop: cancels every pending retention.pruneBatch scheduled job.
-export const cancelAll = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const pending = await ctx.db.system
-      .query("_scheduled_functions")
-      .filter((q) => q.eq(q.field("state.kind"), "pending"))
-      .collect();
-    let cancelled = 0;
-    for (const job of pending) {
-      if (String(job.name).includes("retention")) {
-        await ctx.scheduler.cancel(job._id);
-        cancelled++;
-      }
-    }
-    console.log(`retention: cancelled ${cancelled} pending prune jobs`);
   },
 });
