@@ -1,7 +1,7 @@
 // Scan button (owned by IntakeModal) + auto-select chip / checkbox list +
 // manual subpath fallback. Renders based purely on the scan hook's state —
 // this component never calls scan()/reset() itself.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import type { ScanState } from "@/hooks/useGithubTreeScan";
@@ -64,12 +64,23 @@ export function SkillCollectionPicker({
   const skillPaths = scanState.status === "done" ? scanState.result.skillPaths : [];
   const singlePath = skillPaths.length === 1 ? skillPaths[0] : null;
 
+  // CR-01: auto-select keys off the DERIVED STABLE STRING (singlePath), never
+  // the scanState object — the real hook may hand us a fresh object identity
+  // per render, and depending on it re-emitted a fresh array every render,
+  // looping until "Maximum update depth exceeded". The ref additionally
+  // guards against re-emitting the same selection if the callback identity
+  // changes (e.g. a parent passing an inline lambda).
+  const lastAutoSelected = useRef<string | null>(null);
   useEffect(() => {
-    if (scanState.status === "done" && scanState.result.skillPaths.length === 1) {
-      onSelectionChange([scanState.result.skillPaths[0]]);
+    if (singlePath === null) {
+      lastAutoSelected.current = null;
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanState]);
+    if (lastAutoSelected.current !== singlePath) {
+      lastAutoSelected.current = singlePath;
+      onSelectionChange([singlePath]);
+    }
+  }, [singlePath, onSelectionChange]);
 
   if (scanState.status === "idle" || scanState.status === "scanning") {
     return null;

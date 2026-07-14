@@ -1,6 +1,6 @@
 // Standalone client-only Scan-button fetch hook — zero Convex involvement.
 // Consumed by IntakeModal.tsx (Task 2b) to drive SkillCollectionPicker.tsx.
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   classifyScanError,
   extractOwnerRepoRef,
@@ -44,5 +44,9 @@ export function useGithubTreeScan(): ScanState & {
 
   const reset = useCallback(() => setState({ status: "idle" }), []);
 
-  return { ...state, scan, reset };
+  // CR-01: the returned object MUST be referentially stable across renders
+  // when nothing changed — consumers (SkillCollectionPicker's auto-select
+  // effect) key effects off it, and a fresh object literal per render drove
+  // an infinite update loop ("Maximum update depth exceeded").
+  return useMemo(() => ({ ...state, scan, reset }), [state, scan, reset]);
 }

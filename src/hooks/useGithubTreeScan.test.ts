@@ -81,6 +81,13 @@ describe("useGithubTreeScan", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("returns a referentially stable object across re-renders when state is unchanged (CR-01 regression)", () => {
+    const { result, rerender } = renderHook(() => useGithubTreeScan());
+    const first = result.current;
+    rerender();
+    expect(result.current).toBe(first);
+  });
+
   it("reset() returns state to idle", async () => {
     const mockTree = { tree: [], truncated: false };
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce({

@@ -1,9 +1,40 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { useState } from "react";
 import { SkillCollectionPicker } from "./SkillCollectionPicker";
 import type { ScanState } from "@/hooks/useGithubTreeScan";
 
 describe("SkillCollectionPicker", () => {
+  it("auto-selects without looping when the parent re-renders with a fresh scanState object each render (CR-01 regression)", () => {
+    // Reproduces the real useGithubTreeScan contract: the parent re-renders
+    // on every onSelectionChange (state update) and hands the picker a NEW
+    // scanState object identity each time. Pre-fix, the auto-select effect
+    // depended on the whole scanState object and re-emitted a fresh array
+    // every render — "Maximum update depth exceeded". The stable-literal
+    // mocks in the rest of this file cannot catch that.
+    function Harness() {
+      const [selected, setSelected] = useState<string[]>([]);
+      const scanState: ScanState = {
+        status: "done",
+        result: { skillPaths: ["skills/foo/SKILL.md"], truncated: false },
+      };
+      return (
+        <>
+          <SkillCollectionPicker
+            scanState={scanState}
+            onSelectionChange={setSelected}
+          />
+          <div data-testid="cr01-selected">{selected.join(",")}</div>
+        </>
+      );
+    }
+
+    render(<Harness />);
+    expect(screen.getByTestId("cr01-selected")).toHaveTextContent(
+      "skills/foo/SKILL.md"
+    );
+  });
+
   it("auto-selects the single discovered skill without any user click", () => {
     const scanState: ScanState = {
       status: "done",
