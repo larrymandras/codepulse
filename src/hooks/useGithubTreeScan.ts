@@ -1,6 +1,6 @@
 // Standalone client-only Scan-button fetch hook — zero Convex involvement.
 // Consumed by IntakeModal.tsx (Task 2b) to drive SkillCollectionPicker.tsx.
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   classifyScanError,
   extractOwnerRepoRef,
@@ -20,7 +20,15 @@ export function useGithubTreeScan(): ScanState & {
 } {
   const [state, setState] = useState<ScanState>({ status: "idle" });
 
+  // WR-05: generation counter — every scan() and reset() bumps it, and an
+  // in-flight fetch only commits its result if its generation is still
+  // current. Without this, a slow repo-A response resolving after a reset
+  // (URL edit) or a newer scan would overwrite the current state with stale
+  // results.
+  const genRef = useRef(0);
+
   const scan = useCallback(async (input: string) => {
+    const gen = ++genRef.current;
     const parsed = extractOwnerRepoRef(input);
     if (!parsed) {
       setState({ status: "error", errorMessage: "Not a recognized GitHub URL form" });
@@ -31,18 +39,24 @@ export function useGithubTreeScan(): ScanState & {
       const res = await fetch(
         `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/git/trees/${parsed.ref}?recursive=1`
       );
+      if (gen !== genRef.current) return; // superseded by a reset/newer scan
       if (!res.ok) {
         setState({ status: "error", errorMessage: classifyScanError(res.status) });
         return;
       }
       const data = await res.json();
+      if (gen !== genRef.current) return; // superseded by a reset/newer scan
       setState({ status: "done", result: parseTreeResponse(data) });
     } catch {
+      if (gen !== genRef.current) return; // superseded by a reset/newer scan
       setState({ status: "error", errorMessage: classifyScanError(0) });
     }
   }, []);
 
-  const reset = useCallback(() => setState({ status: "idle" }), []);
+  const reset = useCallback(() => {
+    genRef.current++;
+    setState({ status: "idle" });
+  }, []);
 
   // CR-01: the returned object MUST be referentially stable across renders
   // when nothing changed — consumers (SkillCollectionPicker's auto-select

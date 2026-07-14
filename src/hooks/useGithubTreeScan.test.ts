@@ -81,6 +81,75 @@ describe("useGithubTreeScan", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("reset() during an in-flight scan discards the stale response (WR-05 regression)", async () => {
+    let resolveFetch!: (value: unknown) => void;
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      })
+    );
+
+    const { result } = renderHook(() => useGithubTreeScan());
+    act(() => {
+      void result.current.scan("owner/repo-a");
+    });
+    expect(result.current.status).toBe("scanning");
+
+    // User edits the URL — the modal resets the scan state machine.
+    act(() => {
+      result.current.reset();
+    });
+    expect(result.current.status).toBe("idle");
+
+    // Repo A's slow response finally lands — it must NOT overwrite state.
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        status: 200,
+        json: async () => ({ tree: [{ type: "blob", path: "SKILL.md" }], truncated: false }),
+      });
+    });
+    expect(result.current.status).toBe("idle");
+  });
+
+  it("a newer scan supersedes an older in-flight scan's response (WR-05 regression)", async () => {
+    let resolveA!: (value: unknown) => void;
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveA = resolve;
+        })
+      )
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ tree: [{ type: "blob", path: "b/SKILL.md" }], truncated: false }),
+      });
+
+    const { result } = renderHook(() => useGithubTreeScan());
+    act(() => {
+      void result.current.scan("owner/repo-a");
+    });
+    await act(async () => {
+      await result.current.scan("owner/repo-b");
+    });
+    await waitFor(() => expect(result.current.status).toBe("done"));
+
+    // Repo A's response lands late — repo B's result must survive.
+    await act(async () => {
+      resolveA({
+        ok: true,
+        status: 200,
+        json: async () => ({ tree: [{ type: "blob", path: "a/SKILL.md" }], truncated: false }),
+      });
+    });
+    expect(result.current.status).toBe("done");
+    if (result.current.status === "done") {
+      expect(result.current.result.skillPaths).toEqual(["b/SKILL.md"]);
+    }
+  });
+
   it("returns a referentially stable object across re-renders when state is unchanged (CR-01 regression)", () => {
     const { result, rerender } = renderHook(() => useGithubTreeScan());
     const first = result.current;
