@@ -13,6 +13,8 @@ import { SkillPills } from "@/components/skills/SkillPills";
 import { SkillReviewDrawer } from "@/components/skills/SkillReviewDrawer";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
 import { CategoryEditPopover } from "@/components/skills/CategoryEditPopover";
+import { IntakePanel } from "@/components/skills/IntakePanel";
+import { Button } from "@/components/ui/button";
 import { originOptions } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
@@ -26,6 +28,7 @@ export default function Skills() {
   const [search, setSearch] = useState("");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [reviewing, setReviewing] = useState(false);
+  const [intakeModalOpen, setIntakeModalOpen] = useState(false);
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
@@ -165,9 +168,22 @@ export default function Skills() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <PageHeader title="Skills" className="mb-6" />
+      <PageHeader
+        title="Skills"
+        className="mb-6"
+        actions={
+          <Button onClick={() => setIntakeModalOpen(true)}>
+            Validate skill
+          </Button>
+        }
+      />
 
       <SkillPills skills={enrichedSkills} onUse={(name) => recordLaunch({ name })} />
+
+      <IntakePanel
+        modalOpen={intakeModalOpen}
+        onModalOpenChange={setIntakeModalOpen}
+      />
 
       {needsSeed && (
         <div className="bg-card border border-border rounded-lg p-6 text-center">
