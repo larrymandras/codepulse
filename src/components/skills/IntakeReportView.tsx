@@ -41,6 +41,7 @@ import {
 } from "@/components/skills/IntakeStatusBadge";
 import { useForgeWorkspace } from "@/hooks/useForge";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
+import { pluralize } from "@/lib/formatters";
 
 interface IntakeReportViewProps {
   row: IntakeCommandRow;
@@ -65,7 +66,7 @@ function buildSeverityTally(
   };
   return Object.entries(counts)
     .filter(([, n]) => n > 0)
-    .map(([k, n]) => `${n} ${k}${n === 1 ? "" : "s"}`)
+    .map(([k, n]) => pluralize(n, k))
     .join(" · ");
 }
 
