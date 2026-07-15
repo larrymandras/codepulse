@@ -991,13 +991,15 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
         }
         case "kg_benchmark": {
           // Phase 180 (KG-BENCH-02, D-09): CI KG-vs-vector benchmark run →
-          // insert-only kgBenchmarkRuns table. Inherits the validateIngestAuth
-          // Bearer-token gate above (T-180-10); no new auth surface. Field shape
-          // = docs/astridr-contract.md §2.33. Dual snake/camel coalescing with
-          // typed defaults per the WR-06/168-06 ingest-boundary convention — the
-          // boundary stays defensive regardless of what the CI emitter sends.
+          // insert-only kgBenchmarkRuns table. recordRun is an internalMutation
+          // (07 review #1) so this ingest path is genuinely gated by the
+          // validateIngestAuth Bearer check above (T-180-10) and NOT directly
+          // callable by an anonymous client — matching the WR-06 convention.
+          // Field shape = docs/astridr-contract.md §2.33. Dual snake/camel
+          // coalescing with typed defaults per the WR-06/168-06 ingest-boundary
+          // convention — the boundary stays defensive regardless of emitter.
           const d = data as any;
-          await ctx.runMutation(api.kgBenchmark.recordRun, {
+          await ctx.runMutation(internal.kgBenchmark.recordRun, {
             runTag: d.runTag ?? d.run_tag ?? "unknown",
             verdict: d.verdict ?? "error",
             categories: d.categories ?? {},

@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 /**
@@ -7,7 +7,7 @@ import { v } from "convex/values";
  * Insert-only: one immutable row per run. Field shape mirrors
  * docs/astridr-contract.md §2.33.
  */
-export const recordRun = mutation({
+export const recordRun = internalMutation({
   args: {
     runTag: v.string(),
     verdict: v.string(), // "pass" | "fail" | "error"
