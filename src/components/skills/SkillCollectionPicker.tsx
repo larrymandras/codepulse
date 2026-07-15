@@ -73,6 +73,17 @@ export function SkillCollectionPicker({
   const scanResultKey = scanState.status === "done" ? scanState.result.skillPaths : null;
   useEffect(() => {
     setChecked(new Set());
+    // review #4: clearing only local `checked` left the PARENT's selection
+    // stale on a re-scan (checkboxes render unchecked while the submit button
+    // still reads "Validate N skills" and fans out N unintended enqueues).
+    // Clear the parent too — but only for the multi-skill list; a single-skill
+    // result's selection is owned by the auto-select effect below, so stomping
+    // it here would clear a selection that effect won't re-emit for an
+    // unchanged path.
+    if (singlePath === null) {
+      onSelectionChange([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanResultKey]);
 
   // CR-01: auto-select keys off the DERIVED STABLE STRING (singlePath), never

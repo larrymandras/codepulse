@@ -125,6 +125,47 @@ describe("SkillCollectionPicker", () => {
     expect(lastCall).toEqual(["b1/SKILL.md"]);
   });
 
+  it("clears the parent selection on a re-scan of the same URL, not just the local checkboxes (review #4)", () => {
+    const paths = ["a/SKILL.md", "b/SKILL.md", "c/SKILL.md"];
+    const scan1: ScanState = {
+      status: "done",
+      result: { skillPaths: [...paths], truncated: false },
+    };
+    // Same paths, NEW array identity — exactly what a re-Scan of the same URL
+    // produces (parseTreeResponse yields a fresh array each call), with no
+    // idle transition in between.
+    const scan2: ScanState = {
+      status: "done",
+      result: { skillPaths: [...paths], truncated: false },
+    };
+    const onSelectionChange = vi.fn();
+    const { rerender } = render(
+      <SkillCollectionPicker scanState={scan1} onSelectionChange={onSelectionChange} />
+    );
+
+    const boxes = screen.getAllByRole("checkbox");
+    fireEvent.click(boxes[1]);
+    fireEvent.click(boxes[2]);
+    const beforeRescan =
+      onSelectionChange.mock.calls[onSelectionChange.mock.calls.length - 1][0];
+    expect(beforeRescan.length).toBe(2);
+
+    onSelectionChange.mockClear();
+
+    // Re-scan the same URL: new result identity, no idle transition.
+    rerender(
+      <SkillCollectionPicker scanState={scan2} onSelectionChange={onSelectionChange} />
+    );
+
+    // Checkboxes reset to unchecked...
+    for (const box of screen.getAllByRole("checkbox")) {
+      expect(box).not.toBeChecked();
+    }
+    // ...and the parent selection is cleared to match. The bug: only local
+    // `checked` reset, leaving the submit button stuck at "Validate 2 skills".
+    expect(onSelectionChange).toHaveBeenCalledWith([]);
+  });
+
   it("renders the never-disabled manual subpath fallback on scan error", () => {
     const scanState: ScanState = { status: "error", errorMessage: "network error" };
     const onSelectionChange = vi.fn();
