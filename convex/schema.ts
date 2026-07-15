@@ -759,6 +759,26 @@ export default defineSchema({
     .index("by_workflow", ["workflowName"]),
 
   // ============================================================
+  // KG BENCHMARK RUNS (Phase 180, KG-BENCH-02, D-09)
+  // ============================================================
+  //
+  // Insert-only append log — one immutable row per KG-vs-vector benchmark run
+  // pushed by the CI workflow via the `kg_benchmark` runtime-ingest event.
+  // Field shape mirrors docs/astridr-contract.md §2.33. `categories` is a
+  // heterogeneous suite-driven nested shape, so v.any() (matching the existing
+  // reflectionResults.categories / metricSnapshots.tags convention) rather than
+  // a fixed object validator. Indexed by timestamp for the latest-N query.
+  kgBenchmarkRuns: defineTable({
+    runTag: v.string(),
+    verdict: v.string(),            // "pass" | "fail" | "error"
+    categories: v.any(),            // nested per-category scores (suite-driven shape)
+    suiteSize: v.float64(),
+    durationMs: v.float64(),
+    workflowRunUrl: v.optional(v.string()),
+    timestamp: v.float64(),
+  }).index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
   // CHANNEL & PROVIDER HEALTH (Pattern 2)
   // ============================================================
 
