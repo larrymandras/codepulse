@@ -59,44 +59,53 @@ interface RowStatusBadgeProps {
   countdownLabel?: string;
 }
 
-export function RowStatusBadge({ status, countdownLabel }: RowStatusBadgeProps) {
-  const ROW_STATUS_MAP: Record<RowStatusKey, StatusConfig> = {
-    pending: {
-      label: "Queued…",
-      className: "bg-zinc-800/60 text-primary",
-      Icon: Loader2,
-    },
-    queued: {
-      label: countdownLabel ?? "Queued",
-      className: "bg-zinc-800/60 text-zinc-400",
-      Icon: Clock,
-    },
-    // Claude's Discretion — UI-SPEC's color table has no explicit "executing"
-    // row since no daemon exists yet to produce this state in dev; reuses
-    // the existing --status-info token, matching ForgeStatusBadge's
-    // "running" treatment.
-    executing: {
-      label: "Executing…",
-      className: "bg-[var(--status-info)]/20 text-[var(--status-info)]",
-      Icon: Loader2,
-    },
-    failed: {
-      label: "Failed",
-      className: "bg-[var(--status-error)]/20 text-[var(--status-error)]",
-      Icon: XCircle,
-    },
-    expired: {
-      label: "Expired",
-      className: "bg-zinc-800/30 text-zinc-600",
-      Icon: Clock,
-    },
-  };
+// Hoisted to module scope (review #8): only the queued row's countdown label
+// is runtime-dependent (overridden per-render below); everything else is
+// static, so rebuilding this whole map inside the component body on every
+// render — × every row × the 1 Hz countdown tick — was pure allocation churn.
+const ROW_STATUS_MAP: Record<RowStatusKey, StatusConfig> = {
+  pending: {
+    label: "Queued…",
+    className: "bg-zinc-800/60 text-primary",
+    Icon: Loader2,
+  },
+  queued: {
+    label: "Queued",
+    className: "bg-zinc-800/60 text-zinc-400",
+    Icon: Clock,
+  },
+  // Claude's Discretion — UI-SPEC's color table has no explicit "executing"
+  // row since no daemon exists yet to produce this state in dev; reuses
+  // the existing --status-info token, matching ForgeStatusBadge's
+  // "running" treatment.
+  executing: {
+    label: "Executing…",
+    className: "bg-[var(--status-info)]/20 text-[var(--status-info)]",
+    Icon: Loader2,
+  },
+  failed: {
+    label: "Failed",
+    className: "bg-[var(--status-error)]/20 text-[var(--status-error)]",
+    Icon: XCircle,
+  },
+  expired: {
+    label: "Expired",
+    className: "bg-zinc-800/30 text-zinc-600",
+    Icon: Clock,
+  },
+};
 
-  const config: StatusConfig =
+export function RowStatusBadge({ status, countdownLabel }: RowStatusBadgeProps) {
+  const base: StatusConfig =
     (ROW_STATUS_MAP[status] as StatusConfig | undefined) ?? {
       label: status || "Unknown",
       ...NEUTRAL_FALLBACK,
     };
+  // Only the queued countdown label varies at runtime — override just that.
+  const config: StatusConfig =
+    status === "queued" && countdownLabel
+      ? { ...base, label: countdownLabel }
+      : base;
 
   const spin = status === "pending" || status === "executing";
 
@@ -224,28 +233,18 @@ interface DestinationBadgeProps {
 }
 
 export function DestinationBadge({ destination }: DestinationBadgeProps) {
+  // review #10: single Badge for both the mapped and unmapped cases — the two
+  // branches were verbatim-identical wrappers differing only in icon/label, so
+  // any chip-shape change had to be edited twice or they'd drift. An unmapped
+  // destination falls back to the raw string with no icon.
   const config = DESTINATION_MAP[destination];
+  const Icon = config?.Icon;
+  const label = config?.label ?? destination;
 
   // UI-SPEC's chip shape (inline-flex items-center gap-1 rounded-full
   // px-2.5 py-0.5 text-sm font-semibold) applies uniformly across the chip
   // family, merged onto the shadcn Badge's own variant="outline" classes via
   // cn()/tailwind-merge (later classes win on conflicting utilities).
-  if (!config) {
-    return (
-      <Badge
-        variant="outline"
-        className={cn(
-          "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-semibold",
-          "border-border text-foreground"
-        )}
-        aria-label={destination}
-        data-status={destination}
-      >
-        {destination}
-      </Badge>
-    );
-  }
-
   return (
     <Badge
       variant="outline"
@@ -256,8 +255,8 @@ export function DestinationBadge({ destination }: DestinationBadgeProps) {
       aria-label={destination}
       data-status={destination}
     >
-      {config.Icon ? <config.Icon className="h-3 w-3" /> : null}
-      {config.label}
+      {Icon ? <Icon className="h-3 w-3" /> : null}
+      {label}
     </Badge>
   );
 }
