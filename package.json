@@ -45,7 +45,7 @@
     "radix-ui": "^1.4.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-easy-crop": "^6.0.2",
+    "react-easy-crop": "^6.1.0",
     "react-force-graph-2d": "^1.29.1",
     "react-force-graph-3d": "^1.29.1",
     "react-hook-form": "^7.72.1",
