@@ -126,12 +126,17 @@ export function IntakePanel({
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   // Shared per-second tick for the queued countdown — a single timer, not N
-  // independent per-row timers.
+  // independent per-row timers. Gated on the presence of a queued row (review
+  // #7): `now` is consumed only by the queued-row countdown, so with nothing
+  // queued the interval would re-render the whole panel every second for no
+  // visible change.
+  const hasQueuedRow = mergedRows.some((r) => r.status === "queued");
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
+    if (!hasQueuedRow) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [hasQueuedRow]);
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">

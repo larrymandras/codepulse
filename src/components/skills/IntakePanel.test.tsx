@@ -155,6 +155,32 @@ describe("IntakePanel", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not schedule the 1 Hz countdown timer when no row is queued (review #7)", () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(useIntakeCommandsRaw).mockReturnValue([]);
+      renderPanel();
+      // `now` is consumed only by the queued-row countdown; with nothing
+      // queued the per-second interval is pure wasted re-render.
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still runs the countdown timer while a row is queued (review #7 regression)", () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(useIntakeCommandsRaw).mockReturnValue([
+        makeRow({ commandId: "cmd-q", status: "queued" }),
+      ]);
+      renderPanel();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("prepends a row to the list immediately when handleEnqueued fires (before any server round-trip)", () => {
     vi.mocked(useIntakeCommandsRaw).mockReturnValue([]);
     renderPanel();
