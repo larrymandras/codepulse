@@ -35,11 +35,23 @@ export function useGithubTreeScan(): ScanState & {
       return;
     }
     setState({ status: "scanning" });
+    const treeUrl = (ref: string) =>
+      `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/git/trees/${ref}?recursive=1`;
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/git/trees/${parsed.ref}?recursive=1`
-      );
+      let res = await fetch(treeUrl(parsed.ref));
       if (gen !== genRef.current) return; // superseded by a reset/newer scan
+      // review #2: a /tree/{ref} whose branch contains a slash (e.g.
+      // release/1.0) is regex-indistinguishable from {branch}/{subpath}, so
+      // extractOwnerRepoRef's first-segment ref can 404 for a branch that
+      // plainly exists — and the server validator accepts the same URL, so
+      // scan and submit would contradict. Before surfacing a false "not
+      // found", retry against HEAD (the tree API accepts it as the default
+      // branch), so a slash-branch or deep URL still discovers the repo's
+      // skills instead of hard-failing.
+      if (res.status === 404 && parsed.ref !== "HEAD") {
+        res = await fetch(treeUrl("HEAD"));
+        if (gen !== genRef.current) return; // superseded by a reset/newer scan
+      }
       if (!res.ok) {
         setState({ status: "error", errorMessage: classifyScanError(res.status) });
         return;

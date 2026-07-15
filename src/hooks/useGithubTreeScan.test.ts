@@ -70,6 +70,51 @@ describe("useGithubTreeScan", () => {
     }
   });
 
+  it("retries against HEAD when the extracted ref 404s, so a slash-branch URL still scans (review #2)", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock
+      // /git/trees/release 404s — the ref extractor stopped at the first slash
+      // of the real branch "release/1.0".
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      // /git/trees/HEAD (default branch) succeeds.
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          tree: [{ type: "blob", path: "SKILL.md" }],
+          truncated: false,
+        }),
+      });
+
+    const { result } = renderHook(() => useGithubTreeScan());
+    await act(async () => {
+      await result.current.scan("https://github.com/owner/repo/tree/release/1.0");
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    if (result.current.status === "done") {
+      expect(result.current.result.skillPaths).toEqual(["SKILL.md"]);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/git/trees/release?recursive=1");
+    expect(String(fetchMock.mock.calls[1][0])).toContain("/git/trees/HEAD?recursive=1");
+  });
+
+  it("still errors when both the extracted ref and the HEAD retry 404 (review #2)", async () => {
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchMock
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) });
+
+    const { result } = renderHook(() => useGithubTreeScan());
+    await act(async () => {
+      await result.current.scan("https://github.com/owner/repo/tree/release/1.0");
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("error"));
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("transitions directly to error without ever calling fetch when input fails extractOwnerRepoRef", async () => {
     const { result } = renderHook(() => useGithubTreeScan());
 
