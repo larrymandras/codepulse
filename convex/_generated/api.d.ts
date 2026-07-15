@@ -83,6 +83,7 @@ import type * as instructionsLoaded from "../instructionsLoaded.js";
 import type * as integrationCalls from "../integrationCalls.js";
 import type * as integrations from "../integrations.js";
 import type * as kg from "../kg.js";
+import type * as kgBenchmark from "../kgBenchmark.js";
 import type * as kits from "../kits.js";
 import type * as lib_providers from "../lib/providers.js";
 import type * as lib_sankeyClassify from "../lib/sankeyClassify.js";
@@ -227,6 +228,7 @@ declare const fullApi: ApiFromModules<{
   integrationCalls: typeof integrationCalls;
   integrations: typeof integrations;
   kg: typeof kg;
+  kgBenchmark: typeof kgBenchmark;
   kits: typeof kits;
   "lib/providers": typeof lib_providers;
   "lib/sankeyClassify": typeof lib_sankeyClassify;

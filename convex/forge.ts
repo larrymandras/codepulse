@@ -52,7 +52,19 @@ export function capAckReport(report: unknown): unknown {
     return { truncated: true, reason: "report exceeded size cap" };
   }
   if (bytes > MAX_ACK_REPORT_BYTES) {
-    return { truncated: true, reason: "report exceeded size cap", bytes };
+    // Preserve the small top-level verdict through truncation (07 review #5):
+    // the collapsed Intake row reads report.verdict, so dropping it here makes
+    // an admitted/rejected skill render a misleading red "Error" chip.
+    const verdict =
+      report !== null && typeof report === "object" && "verdict" in report
+        ? (report as { verdict?: unknown }).verdict
+        : undefined;
+    return {
+      truncated: true,
+      reason: "report exceeded size cap",
+      bytes,
+      ...(verdict !== undefined ? { verdict } : {}),
+    };
   }
   return report;
 }
@@ -407,6 +419,10 @@ const JOB_LIST_LIMIT = 1000;
 // Oldest-first cap for log chunks. Retention sweep (D-2) already bounds the real set
 // to ~1 MB per job, so 5 000 chunks is a ceiling that will rarely be hit in practice.
 const LOG_CHUNK_LIMIT = 5000;
+
+// D-P7-07: intake's own display-window guarantee, independent of JOB_LIST_LIMIT
+// (1000) so launch/stop traffic can never crowd intake rows out.
+const INTAKE_LIST_LIMIT = 20;
 
 export const listJobs = query({
   args: {
@@ -830,6 +846,27 @@ export const listHosts = query({
       .withIndex("by_lastSeenAt")
       .order("desc")
       .collect();
+  },
+});
+
+// D-P7-07 (locked orchestrator decision): all-hosts only — no hostId arg — so
+// the Intake panel's live subscription and the modal's commandId-keyed
+// optimistic row never land in mismatched Convex query-cache entries
+// (07-RESEARCH.md Pitfall 2). Filtered to commandType="intake" so launch/stop
+// traffic can never crowd intake rows out of INTAKE_LIST_LIMIT.
+export const listIntakeCommands = query({
+  args: {},
+  handler: async (ctx) => {
+    // review #6: scope to intake rows via the compound index rather than
+    // .filter()-discarding launch/stop rows off the generic by_createdAt index
+    // (which scanned an unbounded number of non-intake docs as launch/stop
+    // volume grew). by_commandType_createdAt keeps the newest-first order
+    // within the commandType partition.
+    return await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_commandType_createdAt", (q) => q.eq("commandType", "intake"))
+      .order("desc")
+      .take(INTAKE_LIST_LIMIT);
   },
 });
 

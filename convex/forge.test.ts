@@ -995,6 +995,22 @@ describe("forge.capAckReport — report size cap (WR-03)", () => {
     expect(result.bytes).toBeGreaterThan(MAX_ACK_REPORT_BYTES);
   });
 
+  it("preserves the top-level verdict when truncating an oversized report (07 review #5)", () => {
+    // The collapsed Intake row reads report.verdict; if truncation strips it,
+    // the row falls back to a misleading red "Error" for a skill that was
+    // actually admitted/rejected. Verdict is small — keep it through the cap.
+    const oversized = {
+      verdict: "admit",
+      findings: "x".repeat(MAX_ACK_REPORT_BYTES + 1),
+    };
+    const result = capAckReport(oversized) as {
+      truncated: boolean;
+      verdict?: string;
+    };
+    expect(result.truncated).toBe(true);
+    expect(result.verdict).toBe("admit");
+  });
+
   it("keeps a report exactly at the cap", () => {
     // JSON.stringify wraps a bare string in quotes: 2 chars of overhead.
     const atCap = "x".repeat(MAX_ACK_REPORT_BYTES - 2);
@@ -1030,6 +1046,7 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");
   it.todo("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'");
   it.todo("forgeCommandsClaim: resolves storageId to a fetchable downloadUrl for a claimed intake row (SC5 — covered live by scripts/verify-intake-claim.mjs in Plan 06-04, not here)");
+  it.todo("listIntakeCommands: returns only commandType='intake' rows, newest-first, capped at INTAKE_LIST_LIMIT, across all hosts");
 
   // D-P6-10/D-P6-13 lifecycle stubs: these genuinely require a live storage-backed
   // row to verify meaningfully (the interesting behavior IS the ctx.storage.delete
