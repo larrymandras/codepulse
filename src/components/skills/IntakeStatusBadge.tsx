@@ -77,12 +77,12 @@ export function RowStatusBadge({ status, countdownLabel }: RowStatusBadgeProps) 
     // "running" treatment.
     executing: {
       label: "Executing…",
-      className: "bg-blue-900/60 text-[var(--status-info)]",
+      className: "bg-[var(--status-info)]/20 text-[var(--status-info)]",
       Icon: Loader2,
     },
     failed: {
       label: "Failed",
-      className: "bg-red-900/60 text-[var(--status-error)]",
+      className: "bg-[var(--status-error)]/20 text-[var(--status-error)]",
       Icon: XCircle,
     },
     expired: {
@@ -119,17 +119,17 @@ export function RowStatusBadge({ status, countdownLabel }: RowStatusBadgeProps) 
 const SEVERITY_MAP: Record<string, StatusConfig> = {
   error: {
     label: "Error",
-    className: "bg-red-900/60 text-[var(--status-error)]",
+    className: "bg-[var(--status-error)]/20 text-[var(--status-error)]",
     Icon: XCircle,
   },
   warning: {
     label: "Warning",
-    className: "bg-amber-900/60 text-[var(--status-warn)]",
+    className: "bg-[var(--status-warn)]/20 text-[var(--status-warn)]",
     Icon: AlertTriangle,
   },
   info: {
     label: "Info",
-    className: "bg-blue-900/60 text-[var(--status-info)]",
+    className: "bg-[var(--status-info)]/20 text-[var(--status-info)]",
     Icon: Info,
   },
 };
@@ -164,17 +164,17 @@ export function SeverityBadge({ severity }: SeverityBadgeProps) {
 const VERDICT_MAP: Record<string, StatusConfig> = {
   admit: {
     label: "Admit",
-    className: "bg-green-900/60 text-[var(--status-ok)]",
+    className: "bg-[var(--status-ok)]/20 text-[var(--status-ok)]",
     Icon: CheckCircle,
   },
   reject: {
     label: "Reject",
-    className: "bg-red-900/60 text-[var(--status-error)]",
+    className: "bg-[var(--status-error)]/20 text-[var(--status-error)]",
     Icon: XCircle,
   },
   error: {
     label: "Error",
-    className: "bg-amber-900/60 text-[var(--status-warn)]",
+    className: "bg-[var(--status-warn)]/20 text-[var(--status-warn)]",
     Icon: AlertTriangle,
   },
 };

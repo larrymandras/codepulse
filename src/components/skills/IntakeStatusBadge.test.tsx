@@ -129,3 +129,40 @@ describe("DestinationBadge", () => {
     expect(badge?.getAttribute("data-variant")).toBe("outline");
   });
 });
+
+describe("chip backgrounds follow theme tokens (review #9)", () => {
+  // CLAUDE.md: "All accents/status/glow read from CSS vars — never hardcode."
+  // The chip TEXT already used text-[var(--status-*)] but the paired
+  // backgrounds were fixed dark-palette classes (bg-red-900/60 etc.), so they
+  // kept a dark tint under the light "Paperclip" / "readable" themes. Mirror
+  // AnomalyBadge's bg-[var(--status-*)]/20 convention instead.
+  const noPalette = /bg-(red|amber|blue|green)-\d/;
+
+  it("failed uses --status-error, not bg-red-900", () => {
+    const { container } = render(<RowStatusBadge status="failed" />);
+    const el = container.querySelector('[data-status="failed"]')!;
+    expect(el.className).toContain("bg-[var(--status-error)]");
+    expect(el.className).not.toMatch(noPalette);
+  });
+
+  it("executing uses --status-info, not bg-blue-900", () => {
+    const { container } = render(<RowStatusBadge status="executing" />);
+    const el = container.querySelector('[data-status="executing"]')!;
+    expect(el.className).toContain("bg-[var(--status-info)]");
+    expect(el.className).not.toMatch(noPalette);
+  });
+
+  it("severity warning uses --status-warn, not bg-amber-900", () => {
+    const { container } = render(<SeverityBadge severity="warning" />);
+    const el = container.querySelector('[data-status="warning"]')!;
+    expect(el.className).toContain("bg-[var(--status-warn)]");
+    expect(el.className).not.toMatch(noPalette);
+  });
+
+  it("verdict admit uses --status-ok, not bg-green-900", () => {
+    const { container } = render(<VerdictBadge verdict="admit" />);
+    const el = container.querySelector('[data-status="admit"]')!;
+    expect(el.className).toContain("bg-[var(--status-ok)]");
+    expect(el.className).not.toMatch(noPalette);
+  });
+});
