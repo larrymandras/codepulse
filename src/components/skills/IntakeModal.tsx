@@ -55,6 +55,15 @@ const ONLINE_THRESHOLD_MS = 30_000;
 /** Stable empty fallback so the host list keeps a constant identity across renders. */
 const EMPTY_HOSTS: ForgeHostRow[] = [];
 
+/**
+ * Max skills per batch submit (review #3). Matches the server's
+ * INTAKE_LIST_LIMIT (convex/forge.ts) — the Intake panel's live query returns
+ * only the newest 20 intake rows, so a batch larger than this leaves overflow
+ * optimistic rows that can never reconcile against a server row and spin
+ * "Queued…" forever. Block the submit rather than orphan rows.
+ */
+const MAX_BATCH_SKILLS = 20;
+
 interface IntakeModalProps {
   open: boolean;
   onClose: () => void;
@@ -141,7 +150,11 @@ export function IntakeModal({
   // WR-03: a non-empty hostId is required — with no host selected (e.g.
   // every host offline, so the D-08 auto-select never fires) submitting
   // would enqueue a hostId:"" command no daemon can ever claim.
-  const submitEnabled = hostId !== "" && xorOk && destOk && !submitting;
+  // review #3: cap a batch at the panel's 20-row window so overflow optimistic
+  // rows can't orphan. length 0/1 (single file or URL) is always within cap.
+  const withinBatchCap = selectedSubpaths.length <= MAX_BATCH_SKILLS;
+  const submitEnabled =
+    hostId !== "" && xorOk && destOk && withinBatchCap && !submitting;
 
   const handleFileChange = (f: File | null) => {
     setFile(f);
@@ -459,6 +472,12 @@ export function IntakeModal({
                 scanState={scanState}
                 onSelectionChange={setSelectedSubpaths}
               />
+            )}
+            {!withinBatchCap && (
+              <p className="text-sm text-[var(--status-warn)]">
+                Select up to {MAX_BATCH_SKILLS} skills per batch —{" "}
+                {selectedSubpaths.length} selected.
+              </p>
             )}
           </div>
 

@@ -425,4 +425,27 @@ describe("IntakeModal", () => {
     expect(onEnqueued).toHaveBeenCalledTimes(3);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("disables submit and warns when more than 20 skills are selected in one batch (review #3)", () => {
+    const many = Array.from({ length: 21 }, (_, i) => `skills/s${i}/SKILL.md`);
+    vi.mocked(useGithubTreeScan).mockReturnValue({
+      status: "done",
+      result: { skillPaths: many, truncated: false },
+      scan: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    renderModal();
+    fireEvent.change(screen.getByPlaceholderText("or paste a GitHub URL"), {
+      target: { value: "https://github.com/owner/repo" },
+    });
+    pickDestination("Global");
+    fireEvent.click(screen.getByRole("checkbox", { name: /select all/i }));
+
+    // 21 selected — the panel's live query window is capped at 20, so the
+    // overflow optimistic rows would spin "Queued…" forever. Block instead.
+    const submit = screen.getByRole("button", { name: /validate 21 skills/i });
+    expect(submit).toBeDisabled();
+    expect(screen.getByText(/up to 20 skills per batch/i)).toBeInTheDocument();
+  });
 });
