@@ -52,7 +52,19 @@ export function capAckReport(report: unknown): unknown {
     return { truncated: true, reason: "report exceeded size cap" };
   }
   if (bytes > MAX_ACK_REPORT_BYTES) {
-    return { truncated: true, reason: "report exceeded size cap", bytes };
+    // Preserve the small top-level verdict through truncation (07 review #5):
+    // the collapsed Intake row reads report.verdict, so dropping it here makes
+    // an admitted/rejected skill render a misleading red "Error" chip.
+    const verdict =
+      report !== null && typeof report === "object" && "verdict" in report
+        ? (report as { verdict?: unknown }).verdict
+        : undefined;
+    return {
+      truncated: true,
+      reason: "report exceeded size cap",
+      bytes,
+      ...(verdict !== undefined ? { verdict } : {}),
+    };
   }
   return report;
 }

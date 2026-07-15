@@ -995,6 +995,22 @@ describe("forge.capAckReport — report size cap (WR-03)", () => {
     expect(result.bytes).toBeGreaterThan(MAX_ACK_REPORT_BYTES);
   });
 
+  it("preserves the top-level verdict when truncating an oversized report (07 review #5)", () => {
+    // The collapsed Intake row reads report.verdict; if truncation strips it,
+    // the row falls back to a misleading red "Error" for a skill that was
+    // actually admitted/rejected. Verdict is small — keep it through the cap.
+    const oversized = {
+      verdict: "admit",
+      findings: "x".repeat(MAX_ACK_REPORT_BYTES + 1),
+    };
+    const result = capAckReport(oversized) as {
+      truncated: boolean;
+      verdict?: string;
+    };
+    expect(result.truncated).toBe(true);
+    expect(result.verdict).toBe("admit");
+  });
+
   it("keeps a report exactly at the cap", () => {
     // JSON.stringify wraps a bare string in quotes: 2 chars of overhead.
     const atCap = "x".repeat(MAX_ACK_REPORT_BYTES - 2);
