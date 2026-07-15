@@ -1722,7 +1722,8 @@ export default defineSchema({
     .index("by_host_status_created", ["hostId", "status", "createdAt"])  // claim query
     .index("by_commandId",           ["commandId"])                        // optimistic reconciliation
     .index("by_expires",             ["expiresAt"])                        // TTL cron sweep
-    .index("by_createdAt",           ["createdAt"]),                       // all-hosts list, newest-first
+    .index("by_createdAt",           ["createdAt"])                        // all-hosts list, newest-first
+    .index("by_commandType_createdAt", ["commandType", "createdAt"]),      // review #6: intake-panel list, no scan of launch/stop rows
 
   // Lightweight host liveness record — upserted on every daemon claim poll (D-09).
   // The UI derives "online" from lastSeenAt > Date.now() - ONLINE_THRESHOLD_MS (30s).

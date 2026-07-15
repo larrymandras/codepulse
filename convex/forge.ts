@@ -857,13 +857,15 @@ export const listHosts = query({
 export const listIntakeCommands = query({
   args: {},
   handler: async (ctx) => {
-    // .filter() placed after .order("desc") — this ordering compiled cleanly
-    // under convex@1.42.0's query-builder types.
+    // review #6: scope to intake rows via the compound index rather than
+    // .filter()-discarding launch/stop rows off the generic by_createdAt index
+    // (which scanned an unbounded number of non-intake docs as launch/stop
+    // volume grew). by_commandType_createdAt keeps the newest-first order
+    // within the commandType partition.
     return await ctx.db
       .query("forgeCommands")
-      .withIndex("by_createdAt")
+      .withIndex("by_commandType_createdAt", (q) => q.eq("commandType", "intake"))
       .order("desc")
-      .filter((q) => q.eq(q.field("commandType"), "intake"))
       .take(INTAKE_LIST_LIMIT);
   },
 });
