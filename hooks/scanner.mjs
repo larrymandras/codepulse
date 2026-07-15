@@ -116,9 +116,12 @@ export async function runScan(sessionId, codepulseUrl, ingestKey) {
   // ── Docker containers ───────────────────────────────────────────
   snapshot.docker = [];
   try {
+    // windowsHide: the scan runs inside the detached console-less hook worker;
+    // without it each console child pops a new visible console window.
     const dockerOutput = execSync("docker ps --format json", {
       encoding: "utf-8",
       timeout: 5000,
+      windowsHide: true,
     });
     const lines = dockerOutput.trim().split("\n").filter(Boolean);
     for (const line of lines) {
@@ -158,6 +161,7 @@ export async function runScan(sessionId, codepulseUrl, ingestKey) {
       const wslOutput = execSync("wsl --list --quiet", {
         encoding: "utf-8",
         timeout: 5000,
+        windowsHide: true,
       });
       const distros = wslOutput
         .trim()

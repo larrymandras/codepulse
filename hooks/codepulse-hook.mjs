@@ -110,10 +110,12 @@ async function worker(payloadFile) {
     if (/\bgit\s+commit\b/.test(cmd) && output && !/nothing to commit/.test(output)) {
       try {
         const cwd = data.cwd || process.cwd();
-        const log = execSync("git log -1 --format=%H%n%s%n%an%n%D", { cwd, timeout: 3000, encoding: "utf-8" }).trim();
+        // windowsHide: this worker runs with no console (DETACHED_PROCESS), so any
+        // console child would otherwise allocate a NEW VISIBLE console window.
+        const log = execSync("git log -1 --format=%H%n%s%n%an%n%D", { cwd, timeout: 3000, encoding: "utf-8", windowsHide: true }).trim();
         const [sha, message, author, refs] = log.split("\n");
         const branch = (refs || "").replace(/.*HEAD -> /, "").split(",")[0].trim() || "unknown";
-        const numstat = execSync("git diff --numstat HEAD~1..HEAD", { cwd, timeout: 3000, encoding: "utf-8" }).trim();
+        const numstat = execSync("git diff --numstat HEAD~1..HEAD", { cwd, timeout: 3000, encoding: "utf-8", windowsHide: true }).trim();
         const filesChanged = numstat ? numstat.split("\n").length : 0;
         const rtHeaders = { "Content-Type": "application/json" };
         if (ingestKey) rtHeaders["Authorization"] = `Bearer ${ingestKey}`;
