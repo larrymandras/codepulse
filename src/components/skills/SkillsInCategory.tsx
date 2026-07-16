@@ -54,13 +54,11 @@ export function SkillsInCategory({
           <button
             onClick={onBack}
             aria-label="Back"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-white transition-colors"
+            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <span
-            className="text-2xl drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]"
-          >{categoryIcon}</span>
+          <span className="text-2xl">{categoryIcon}</span>
           <h2 className="text-foreground text-base font-mono font-bold tracking-widest uppercase flex items-center gap-3">
             {categoryDisplayName}
             <span 

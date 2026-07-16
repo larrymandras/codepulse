@@ -72,7 +72,7 @@ export function SkillCommandPalette({
     const favorites = visible.filter((s) => s.favorite);
     const catLabel = new Map(categories.map((c) => [c.name, c.displayName]));
     const byCat = new Map<string, PaletteSkill[]>();
-    for (const s of visible) {
+    for (const s of visible.filter((s) => !s.favorite)) {
       const key = s.categoryName ?? "";
       const list = byCat.get(key);
       if (list) list.push(s);
@@ -119,7 +119,9 @@ export function SkillCommandPalette({
         <span aria-hidden="true">{skill.categoryIcon}</span>
         <span className="font-mono text-primary">{invocation}</span>
         <span className="truncate text-muted-foreground">{skill.displayName}</span>
-        {skill.favorite && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />}
+        {skill.favorite && (
+          <Star aria-hidden="true" className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+        )}
         {isDormant(skill) && (
           <span className="ml-auto text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
             dormant

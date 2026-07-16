@@ -66,8 +66,21 @@ describe("SkillCommandPalette", () => {
   it("lists favorites group first and hides hidden skills", () => {
     renderPalette();
     expect(screen.getByText("Favorites")).toBeInTheDocument();
-    expect(screen.getAllByText("NDA Generator").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("NDA Generator")).toHaveLength(1);
     expect(screen.queryByText("Hidden")).toBeNull();
+  });
+
+  it("renders a favorited + categorized skill exactly once, under Favorites", () => {
+    renderPalette();
+    const items = screen.getAllByText("NDA Generator");
+    expect(items).toHaveLength(1);
+    // The item should live inside the "Favorites" cmdk group. Its category
+    // ("legal") has no other members, so no separate "Legal" group renders
+    // at all once the favorite is excluded from the category groups.
+    const favoritesGroup = screen.getByText("Favorites").closest("[cmdk-group]");
+    expect(favoritesGroup).not.toBeNull();
+    expect(favoritesGroup).toContainElement(items[0]);
+    expect(screen.queryByText("Legal")).toBeNull();
   });
 
   it("typing filters to matching skills", async () => {

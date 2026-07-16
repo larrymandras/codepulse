@@ -75,7 +75,9 @@ export function SkillRow({
         <span className="text-foreground font-mono font-bold text-sm tracking-wide truncate">
           {skill.displayName}
         </span>
-        {skill.favorite && <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />}
+        {skill.favorite && (
+          <Star aria-hidden="true" className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+        )}
         {dormant && (
           <span className="text-[9px] font-mono uppercase tracking-widest border border-muted-foreground/40 text-muted-foreground rounded px-1 shrink-0">
             dormant
