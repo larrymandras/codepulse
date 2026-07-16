@@ -388,6 +388,7 @@ import {
   isAcceptedGithubUrlShape,
   isSafeSubpath,
   resolveClaimTypes,
+  isValidSupportedTypesShape,
   capAckReport,
   MAX_ACK_REPORT_BYTES,
 } from "./forge";
@@ -489,6 +490,36 @@ describe("forge.resolveClaimTypes — supportedTypes default (D-P6-11)", () => {
 
   it("returns a composed list when supportedTypes declares launch + intake", () => {
     expect(resolveClaimTypes(["launch", "intake"])).toEqual(["launch", "intake"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidSupportedTypesShape — malformed-shape 400 guard (D-P10-12)
+// ---------------------------------------------------------------------------
+
+describe("forge.isValidSupportedTypesShape — malformed-shape 400 guard (D-P10-12)", () => {
+  it("returns true for undefined (field omitted)", () => {
+    expect(isValidSupportedTypesShape(undefined)).toBe(true);
+  });
+
+  it("returns true for an empty array", () => {
+    expect(isValidSupportedTypesShape([])).toBe(true);
+  });
+
+  it("returns true for an array of strings", () => {
+    expect(isValidSupportedTypesShape(["intake"])).toBe(true);
+  });
+
+  it("returns false for a bare string (not an array)", () => {
+    expect(isValidSupportedTypesShape("intake")).toBe(false);
+  });
+
+  it("returns false for an array containing a non-string member", () => {
+    expect(isValidSupportedTypesShape([1, 2])).toBe(false);
+  });
+
+  it("returns false for null", () => {
+    expect(isValidSupportedTypesShape(null)).toBe(false);
   });
 });
 
