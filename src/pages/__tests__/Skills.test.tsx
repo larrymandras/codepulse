@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 
 const mockRecordLaunch = vi.fn().mockResolvedValue(undefined);
 const mockUpdateOverride = vi.fn().mockResolvedValue(undefined);
@@ -52,13 +52,23 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-// IntakePanel (Phase 07-02) is mounted unconditionally by Skills.tsx now.
-// Its own loading/empty/row-list/optimistic-merge behavior is fully covered
-// by IntakePanel.test.tsx — stub it out here so this page-level suite stays
-// isolated from api.forge.* (this file's convex/_generated/api mock only
-// defines skillCategories/registry, matching what Skills.tsx itself calls).
-vi.mock("@/components/skills/IntakePanel", () => ({
-  IntakePanel: () => null,
+// IntakeModal talks to api.forge.* internally; stub it — its behavior is
+// covered by IntakeModal.test.tsx. The feed hook is stubbed so this suite
+// stays isolated from api.forge queries.
+vi.mock("@/components/skills/IntakeModal", () => ({
+  IntakeModal: () => null,
+}));
+vi.mock("@/hooks/useIntakeFeed", () => ({
+  useIntakeFeed: () => ({
+    rows: [],
+    isLoading: false,
+    now: 0,
+    activeCount: 0,
+    labelFor: () => "",
+    handleEnqueued: vi.fn(),
+    handleEnqueueFailed: vi.fn(),
+  }),
+  formatCountdown: () => "0:00",
 }));
 
 import { useQuery } from "convex/react";
@@ -181,6 +191,16 @@ beforeEach(() => {
   setupMocks();
 });
 
+// The recomposed page renders each category's display name twice — once as a
+// CategoryGrid nav item in the left rail, once as an AllSkillsOverview section
+// header — so a bare getByText("Legal") is ambiguous. Scope to the nav item.
+function getCategoryNavItem(displayName: string) {
+  const items = screen.getAllByTestId("category-nav-item");
+  const item = items.find((el) => within(el).queryByText(displayName));
+  if (!item) throw new Error(`Category nav item "${displayName}" not found`);
+  return item;
+}
+
 describe("Skills page", () => {
   it("renders page title", () => {
     render(<Skills />);
@@ -189,14 +209,14 @@ describe("Skills page", () => {
 
   it("renders category cards on default view", () => {
     render(<Skills />);
-    expect(screen.getByText("Legal")).toBeInTheDocument();
-    expect(screen.getByText("Project Management")).toBeInTheDocument();
+    expect(getCategoryNavItem("Legal")).toBeInTheDocument();
+    expect(getCategoryNavItem("Project Management")).toBeInTheDocument();
   });
 
   it("shows skill counts on category cards", () => {
     render(<Skills />);
-    expect(screen.getByText("2")).toBeInTheDocument();
-    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(within(getCategoryNavItem("Legal")).getByText("2")).toBeInTheDocument();
+    expect(within(getCategoryNavItem("Project Management")).getByText("1")).toBeInTheDocument();
   });
 
   it("shows New Category button", () => {
@@ -219,7 +239,7 @@ describe("Skills page", () => {
 
   it("drills into category when card is clicked", () => {
     render(<Skills />);
-    fireEvent.click(screen.getByText("Legal"));
+    fireEvent.click(getCategoryNavItem("Legal"));
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     expect(screen.getByText("Contract Review")).toBeInTheDocument();
     expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument();
@@ -227,7 +247,7 @@ describe("Skills page", () => {
 
   it("goes back to category grid from drill-in", () => {
     render(<Skills />);
-    fireEvent.click(screen.getByText("Legal"));
+    fireEvent.click(getCategoryNavItem("Legal"));
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Back"));
     expect(screen.getByText("New Category")).toBeInTheDocument();
@@ -252,15 +272,21 @@ describe("Skills page", () => {
     expect(screen.getByText(/1 new skill auto-categorized/i)).toBeInTheDocument();
   });
 
-  it("shows frequently used skills", () => {
+  it("renders the Command Deck with most-used chips", () => {
     render(<Skills />);
-    expect(screen.getByText("Frequently Used")).toBeInTheDocument();
+    expect(screen.getByText("Command Deck")).toBeInTheDocument();
+    // gsd-plan-phase has useCount 10 — its invocation chip must be present.
+    expect(screen.getByText("/gsd-plan-phase")).toBeInTheDocument();
   });
 
   it("navigates to chat via the row's Open in Chat action", async () => {
     render(<Skills />);
-    fireEvent.click(screen.getByText("Legal"));
-    fireEvent.click(screen.getByLabelText("Open legal-nda in Chat"));
+    fireEvent.click(getCategoryNavItem("Legal"));
+    // legal-nda (useCount 5) also has a chip in the Command Deck above, so its
+    // "Open in Chat" label isn't unique — the drilled-in category row is the
+    // last match in DOM order.
+    const openInChatButtons = screen.getAllByLabelText("Open legal-nda in Chat");
+    fireEvent.click(openInChatButtons[openInChatButtons.length - 1]);
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/chat?skill=legal-nda");
     });
@@ -269,10 +295,28 @@ describe("Skills page", () => {
 
   it("filters skills by search in drill-in view", () => {
     render(<Skills />);
-    fireEvent.click(screen.getByText("Legal"));
-    const searchInput = screen.getByPlaceholderText("Search all skills...");
+    fireEvent.click(getCategoryNavItem("Legal"));
+    const searchInput = screen.getByPlaceholderText("Filter skills...");
     fireEvent.change(searchInput, { target: { value: "nda" } });
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
     expect(screen.queryByText("Contract Review")).not.toBeInTheDocument();
+  });
+
+  it("global search filters the overview across all categories", () => {
+    render(<Skills />);
+    const searchInput = screen.getByPlaceholderText("Filter skills...");
+    fireEvent.change(searchInput, { target: { value: "plan" } });
+    expect(screen.getByText("Plan Phase")).toBeInTheDocument();
+    expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
+  });
+
+  it("copy is the primary action on a drilled-in skill row", async () => {
+    render(<Skills />);
+    fireEvent.click(getCategoryNavItem("Legal"));
+    fireEvent.click(screen.getByRole("button", { name: /copy \/legal-nda/i }));
+    await waitFor(() => {
+      expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

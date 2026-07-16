@@ -1,19 +1,22 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
-import { UncategorizedSkills } from "@/components/skills/UncategorizedSkills";
-import { FavoriteSkills } from "@/components/skills/FavoriteSkills";
-import { FrequentSkills } from "@/components/skills/FrequentSkills";
+import { AllSkillsOverview } from "@/components/skills/AllSkillsOverview";
+import { QuickDeck } from "@/components/skills/QuickDeck";
+import { SkillCommandPalette } from "@/components/skills/SkillCommandPalette";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
-import { SkillPills } from "@/components/skills/SkillPills";
 import { SkillReviewDrawer } from "@/components/skills/SkillReviewDrawer";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
 import { CategoryEditPopover } from "@/components/skills/CategoryEditPopover";
-import { IntakePanel } from "@/components/skills/IntakePanel";
+import { IntakeModal } from "@/components/skills/IntakeModal";
+import { IntakeStrip } from "@/components/skills/IntakeStrip";
+import { IntakeSheet } from "@/components/skills/IntakeSheet";
+import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
 import { originOptions } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
@@ -29,9 +32,12 @@ export default function Skills() {
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [reviewing, setReviewing] = useState(false);
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
+  const [intakeSheetOpen, setIntakeSheetOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
+  const feed = useIntakeFeed();
 
   const recordLaunch = useMutation(api.registry.recordSkillLaunch);
   const updateOverride = useMutation(api.skillCategories.updateSkillOverride);
@@ -58,6 +64,20 @@ export default function Skills() {
     );
   }, [enrichedSkills, originFilter]);
 
+  // One filter bar, both views: applies to the overview AND the drilled-in
+  // category (the old rail input only pretended to search "all skills").
+  const filteredSkills = useMemo(() => {
+    if (!search) return visibleSkills;
+    const q = search.toLowerCase();
+    return visibleSkills.filter(
+      (s) =>
+        s.displayName.toLowerCase().includes(q) ||
+        s.name.toLowerCase().includes(q) ||
+        (s.description ?? "").toLowerCase().includes(q) ||
+        (s.overrideDescription ?? "").toLowerCase().includes(q)
+    );
+  }, [visibleSkills, search]);
+
   const skillCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const s of visibleSkills) {
@@ -68,24 +88,10 @@ export default function Skills() {
     return counts;
   }, [visibleSkills]);
 
-  const uncategorizedSkills = useMemo(() => {
-    return visibleSkills.filter((s) => !s.categoryName);
-  }, [visibleSkills]);
-
   const categorySkills = useMemo(() => {
     if (!selectedCategory) return [];
-    let filtered = visibleSkills.filter((s) => s.categoryName === selectedCategory);
-    if (search) {
-      const q = search.toLowerCase();
-      filtered = filtered.filter(
-        (s) =>
-          s.displayName.toLowerCase().includes(q) ||
-          (s.description ?? "").toLowerCase().includes(q) ||
-          (s.overrideDescription ?? "").toLowerCase().includes(q)
-      );
-    }
-    return filtered;
-  }, [visibleSkills, selectedCategory, search]);
+    return filteredSkills.filter((s) => s.categoryName === selectedCategory);
+  }, [filteredSkills, selectedCategory]);
 
   const selectedCategoryData = useMemo(() => {
     if (!selectedCategory) return null;
@@ -94,7 +100,11 @@ export default function Skills() {
     return { name: cat.name, displayName: cat.displayName, icon: cat.icon, color: cat.color };
   }, [selectedCategory, categories]);
 
-  const handleLaunch = async (skillName: string) => {
+  const handleRecordUse = (skillName: string) => {
+    void recordLaunch({ name: skillName });
+  };
+
+  const handleOpenInChat = async (skillName: string) => {
     await recordLaunch({ name: skillName });
     navigate(`/chat?skill=${encodeURIComponent(skillName)}`);
   };
@@ -166,23 +176,55 @@ export default function Skills() {
     ? enrichedSkills.filter((s) => s.categoryName === editingCategory.name).length
     : 0;
 
+  const categoryOptions = categories.map((c) => ({
+    name: c.name,
+    displayName: c.displayName,
+    icon: c.icon,
+    color: c.color,
+  }));
+
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <PageHeader
         title="Skills"
         className="mb-6"
         actions={
-          <Button onClick={() => setIntakeModalOpen(true)}>
-            Validate skill
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setPaletteOpen(true)}
+              aria-label="Open skill palette"
+            >
+              <Search className="w-4 h-4" />
+              <span className="font-mono text-xs text-muted-foreground">Ctrl+Shift+K</span>
+            </Button>
+            <Button onClick={() => setIntakeModalOpen(true)}>Validate skill</Button>
+          </div>
         }
       />
 
-      <SkillPills skills={enrichedSkills} onUse={(name) => recordLaunch({ name })} />
+      {reviewSkills.length > 0 && (
+        <NewSkillsBanner
+          // Count what REVIEW will actually show, so the banner and the drawer
+          // never disagree. countAutoAssigned includes hidden skills; this doesn't.
+          count={reviewSkills.length}
+          onReview={() => setReviewing(true)}
+          onAcceptAll={() => bulkAccept()}
+        />
+      )}
 
-      <IntakePanel
-        modalOpen={intakeModalOpen}
-        onModalOpenChange={setIntakeModalOpen}
+      <IntakeStrip
+        rows={feed.rows}
+        activeCount={feed.activeCount}
+        labelFor={feed.labelFor}
+        onOpen={() => setIntakeSheetOpen(true)}
+      />
+
+      <QuickDeck
+        skills={enrichedSkills}
+        onUse={handleRecordUse}
+        onOpenInChat={handleOpenInChat}
+        onToggleFavorite={(name) => toggleFav({ skillName: name })}
       />
 
       {needsSeed && (
@@ -191,35 +233,18 @@ export default function Skills() {
             Skills found but no categories set up yet.
           </p>
           <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => seedAll()}
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-500 transition-colors text-base"
-            >
-              Auto-Classify
-            </button>
-            <button
-              onClick={() => setCreatingCategory(true)}
-              className="bg-muted text-foreground px-4 py-2 rounded-lg hover:bg-accent transition-colors text-base"
-            >
+            <Button onClick={() => seedAll()}>Auto-Classify</Button>
+            <Button variant="secondary" onClick={() => setCreatingCategory(true)}>
               Set Up Manually
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {!needsSeed && (
         <div className="flex flex-col lg:flex-row gap-6 items-start">
-          {/* Left Sidebar: Categories Navigation */}
+          {/* Left rail: categories navigation */}
           <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
-            <div className="relative mb-2">
-              <input
-                type="text"
-                placeholder="Search all skills..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[var(--glow-xs)]"
-              />
-            </div>
             <select
               value={originFilter}
               onChange={(e) => setOriginFilter(e.target.value)}
@@ -233,7 +258,7 @@ export default function Skills() {
                 </option>
               ))}
             </select>
-            
+
             <div className="flex flex-col gap-2">
               <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
                 <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
@@ -252,12 +277,14 @@ export default function Skills() {
                 selectedCategory={selectedCategory}
               />
             </div>
-            
+
             <div className="mt-4 pt-4 border-t border-primary/20">
               <button
                 onClick={() => setSelectedCategory(null)}
                 className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
-                  !selectedCategory ? 'bg-primary/20 text-primary border border-primary/50' : 'text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent'
+                  !selectedCategory
+                    ? "bg-primary/20 text-primary border border-primary/50"
+                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent"
                 }`}
               >
                 Overview / All
@@ -265,39 +292,26 @@ export default function Skills() {
             </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className="flex-1 min-w-0 flex flex-col gap-6">
-            {reviewSkills.length > 0 && (
-              <NewSkillsBanner
-                // Count what REVIEW will actually show, so the banner and the drawer
-                // never disagree. countAutoAssigned includes hidden skills; this doesn't.
-                count={reviewSkills.length}
-                onReview={() => setReviewing(true)}
-                onAcceptAll={() => bulkAccept()}
-              />
-            )}
+          {/* Main content */}
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
+            <input
+              type="text"
+              placeholder="Filter skills..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder:text-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[var(--glow-xs)]"
+            />
 
-            {/* Always show priority assets unless inside a specific category view that hides them. Actually, keep them visible to act as a top dock. */}
             {!selectedCategory && (
-              <>
-                <FavoriteSkills
-                  skills={enrichedSkills}
-                  onLaunch={handleLaunch}
-                  onToggleFavorite={(name) => toggleFav({ skillName: name })}
-                />
-                <FrequentSkills skills={enrichedSkills} onLaunch={handleLaunch} />
-                
-                {/* Aggregate overview when no category is selected */}
-                {uncategorizedSkills.length > 0 && (
-                  <div className="border-t border-border pt-6">
-                    <UncategorizedSkills
-                      skills={uncategorizedSkills}
-                      onLaunch={handleLaunch}
-                      onEditSkill={setEditingSkill}
-                    />
-                  </div>
-                )}
-              </>
+              <AllSkillsOverview
+                skills={filteredSkills}
+                categories={categoryOptions}
+                onSelectCategory={setSelectedCategory}
+                onRecordUse={handleRecordUse}
+                onOpenInChat={handleOpenInChat}
+                onEdit={setEditingSkill}
+                onToggleFavorite={(name) => toggleFav({ skillName: name })}
+              />
             )}
 
             {selectedCategory && selectedCategoryData && (
@@ -307,15 +321,13 @@ export default function Skills() {
                 categoryIcon={selectedCategoryData.icon}
                 categoryColor={selectedCategoryData.color}
                 skills={categorySkills}
-                categories={categories.map((c) => ({
-                  name: c.name,
-                  displayName: c.displayName,
-                  icon: c.icon,
-                  color: c.color,
-                }))}
-                onBack={() => { setSelectedCategory(null); setSearch(""); }}
-                onRecordUse={(name) => void recordLaunch({ name })}
-                onOpenInChat={handleLaunch}
+                categories={categoryOptions}
+                onBack={() => {
+                  setSelectedCategory(null);
+                  setSearch("");
+                }}
+                onRecordUse={handleRecordUse}
+                onOpenInChat={handleOpenInChat}
                 onEditSkill={setEditingSkill}
                 onReassignSkill={handleReassignSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
@@ -324,6 +336,28 @@ export default function Skills() {
           </div>
         </div>
       )}
+
+      <SkillCommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        skills={enrichedSkills}
+        categories={categoryOptions}
+        onRecordUse={handleRecordUse}
+        onOpenInChat={handleOpenInChat}
+      />
+
+      <IntakeSheet open={intakeSheetOpen} onOpenChange={setIntakeSheetOpen} feed={feed} />
+
+      <IntakeModal
+        open={intakeModalOpen}
+        onClose={() => setIntakeModalOpen(false)}
+        onEnqueued={(row) => {
+          feed.handleEnqueued(row);
+          // Immediate feedback: show the new row in context.
+          setIntakeSheetOpen(true);
+        }}
+        onEnqueueFailed={feed.handleEnqueueFailed}
+      />
 
       {reviewing && (
         <SkillReviewDrawer
