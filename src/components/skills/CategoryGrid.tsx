@@ -73,7 +73,7 @@ export function CategoryGrid({
                 ? 'bg-primary/20 border-primary shadow-[var(--glow-xs)]'
                 : isDropTarget
                 ? 'bg-primary/30 border-dashed border-primary shadow-[var(--glow-sm)]'
-                : 'bg-transparent border-transparent hover:bg-white/5 hover:border-white/10'
+                : 'bg-transparent border-transparent hover:bg-accent/50 hover:border-border'
             }`}
           >
             {/* Active glow indicator */}
@@ -81,19 +81,19 @@ export function CategoryGrid({
               <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary shadow-[var(--glow-sm)]" />
             )}
 
-            <span className="text-lg flex-shrink-0 drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">
+            <span className="text-lg flex-shrink-0">
               {cat.icon}
             </span>
             
             <div className="flex flex-col min-w-0 flex-1">
-              <span className={`text-sm font-mono font-bold truncate ${isActive ? 'text-primary' : 'text-white group-hover:text-primary transition-colors'}`}>
+              <span className={`text-sm font-mono font-bold truncate ${isActive ? 'text-primary' : 'text-foreground group-hover:text-primary transition-colors'}`}>
                 {cat.displayName}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                className="edit-btn opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-white transition-all focus:opacity-100"
+                className="edit-btn opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-background/80 text-muted-foreground hover:text-foreground transition-all focus:opacity-100"
                 onClick={(e) => {
                   e.stopPropagation();
                   onEditCategory(cat);
@@ -106,8 +106,8 @@ export function CategoryGrid({
               <span 
                 className="text-xs font-mono font-bold px-1.5 py-0.5 rounded border flex-shrink-0"
                 style={{
-                  color: isActive ? '#fff' : hex,
-                  borderColor: isActive ? '#fff' : `${hex}50`,
+                  color: isActive ? 'var(--primary-foreground)' : hex,
+                  borderColor: isActive ? 'var(--primary-foreground)' : `${hex}50`,
                   backgroundColor: isActive ? hex : `${hex}10`,
                 }}
               >
