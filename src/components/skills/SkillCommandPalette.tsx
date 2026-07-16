@@ -35,7 +35,7 @@ interface SkillCommandPaletteProps {
 }
 
 /**
- * Ctrl+K fuzzy finder over every non-hidden skill. Enter copies the
+ * Ctrl+Shift+K fuzzy finder over every non-hidden skill. Enter copies the
  * invocation (primary action, recorded); Ctrl+Enter opens the skill in Chat.
  * Composes Dialog + Command directly (not CommandDialog) because Ctrl+Enter
  * needs cmdk's controlled `value` to know the highlighted item.
@@ -53,7 +53,7 @@ export function SkillCommandPalette({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "k" && (e.ctrlKey || e.metaKey)) {
+      if (e.key.toLowerCase() === "k" && e.shiftKey && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         onOpenChange(!open);
       }

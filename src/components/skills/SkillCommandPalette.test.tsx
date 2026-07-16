@@ -53,10 +53,14 @@ function renderPalette(open = true) {
 }
 
 describe("SkillCommandPalette", () => {
-  it("Ctrl+K toggles the palette", () => {
+  it("Ctrl+Shift+K toggles the palette", () => {
     const { onOpenChange } = renderPalette(false);
-    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    fireEvent.keyDown(document, { key: "K", ctrlKey: true, shiftKey: true });
     expect(onOpenChange).toHaveBeenCalledWith(true);
+
+    onOpenChange.mockReset();
+    fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("lists favorites group first and hides hidden skills", () => {
