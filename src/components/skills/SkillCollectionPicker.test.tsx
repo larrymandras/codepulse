@@ -222,4 +222,38 @@ describe("SkillCollectionPicker", () => {
     );
     expect(scanningContainer.textContent).toBe("");
   });
+
+  // Threat T-07-03-01 (07-03-02a): scanned `path` strings are attacker-repo-
+  // controlled (the daemon returns whatever paths a hostile repo's tree names).
+  // They MUST render via React JSX text nodes only — never via
+  // dangerouslySetInnerHTML, never parsed into live DOM. The IntakeReportView
+  // suite guards the equivalent property for report `message` strings; this is
+  // the missing sibling guard on the picker's path rendering. Kills the mutant
+  // where {path} is swapped for dangerouslySetInnerHTML={{ __html: path }}.
+  it("renders an HTML-like scanned path as inert visible text, never as parsed markup (T-07-03-01)", () => {
+    const hostilePath = 'skills/<img src=x onerror="window.__pwned=1">/SKILL.md';
+    const benignPath = "skills/legit/SKILL.md";
+    const scanState: ScanState = {
+      status: "done",
+      result: { skillPaths: [hostilePath, benignPath], truncated: false },
+    };
+    const onSelectionChange = vi.fn();
+    const { container } = render(
+      <SkillCollectionPicker scanState={scanState} onSelectionChange={onSelectionChange} />
+    );
+
+    // The multi-skill list branch must render (2 paths → checkbox list).
+    expect(screen.getByText(/2 skills found/i)).toBeInTheDocument();
+
+    // 1) The hostile payload never became a live element.
+    expect(container.querySelector("img")).toBeNull();
+    // Belt-and-suspenders: no smuggled onerror attribute landed anywhere.
+    expect(container.querySelector("[onerror]")).toBeNull();
+    expect(document.body.querySelector("img")).toBeNull();
+
+    // 2) The full attacker-controlled path is present as literal, escaped text —
+    //    proof it went through JSX text-node escaping rather than being dropped
+    //    or interpreted. getByText matches the DOM text node exactly.
+    expect(screen.getByText(hostilePath)).toBeInTheDocument();
+  });
 });

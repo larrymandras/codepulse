@@ -702,6 +702,53 @@ describe("forge.buildIntakeRow — field mapping", () => {
     expect(row.intakePayload.githubUrl).toBe("https://github.com/owner/repo");
     expect(row.intakePayload.subpath).toBe("skills/foo");
   });
+
+  // SC1 / CP-01 — "no open-bag": intakePayload must carry EXACTLY the five
+  // declared fields and nothing else. The field-mapping tests above assert each
+  // field is *present*; this asserts no *extra* free-text/open-bag key can leak
+  // through buildIntakeRow into the enqueued row (e.g. via a future `...args`
+  // spread or an added open field). Guards the schema's narrowness at runtime,
+  // complementing the compile-time `v.union`/no-`v.any()` guarantee.
+  it("emits an intakePayload with exactly the 5 declared keys (no open-bag, SC1)", () => {
+    const uploadKeys = Object.keys(
+      buildIntakeRow(uploadArgs, subject, now, TTL_MS).intakePayload
+    ).sort();
+    const urlKeys = Object.keys(
+      buildIntakeRow(urlArgs, subject, now, TTL_MS).intakePayload
+    ).sort();
+    const expected = [
+      "destination",
+      "githubUrl",
+      "storageId",
+      "subpath",
+      "workspaceId",
+    ];
+    expect(uploadKeys).toEqual(expected);
+    expect(urlKeys).toEqual(expected);
+  });
+
+  it("emits a top-level intake row with no fields outside the declared command shape (no open-bag, SC1)", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(Object.keys(row).sort()).toEqual(
+      [
+        "claimedAt",
+        "commandId",
+        "commandType",
+        "completedAt",
+        "createdAt",
+        "error",
+        "executedAt",
+        "expiresAt",
+        "hostId",
+        "intakePayload",
+        "issuedBy",
+        "launchPayload",
+        "resolvedForgeJobId",
+        "status",
+        "stopPayload",
+      ].sort()
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
