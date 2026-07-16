@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowLeft, GripVertical, Pencil, Star } from "lucide-react";
+import { categoryHex } from "@/lib/categoryColors";
 
 interface SkillEntry {
   name: string;
@@ -32,13 +33,6 @@ interface SkillsInCategoryProps {
   onToggleFavorite: (skillName: string) => void;
 }
 
-const COLOR_HEX: Record<string, string> = {
-  indigo: "#6366f1", red: "#ef4444", purple: "#a855f7", amber: "#f59e0b",
-  cyan: "#06b6d4", emerald: "#10b981", violet: "#8b5cf6", blue: "#3b82f6",
-  orange: "#f97316", pink: "#ec4899", teal: "#14b8a6", rose: "#f43f5e",
-  green: "#22c55e", yellow: "#eab308", gray: "#6b7280",
-};
-
 export function SkillsInCategory({
   categoryName,
   categoryDisplayName,
@@ -52,7 +46,7 @@ export function SkillsInCategory({
   onReassignSkill,
   onToggleFavorite,
 }: SkillsInCategoryProps) {
-  const hex = COLOR_HEX[categoryColor] ?? COLOR_HEX.gray;
+  const hex = categoryHex(categoryColor);
   const otherCategories = categories.filter((c) => c.name !== categoryName);
   const [hoverTarget, setHoverTarget] = useState<string | null>(null);
 
@@ -93,7 +87,7 @@ export function SkillsInCategory({
           <div className="flex items-center gap-2">
             <span className="text-[11px] font-mono uppercase text-muted-foreground">Move target:</span>
             {otherCategories.map((cat) => {
-              const catHex = COLOR_HEX[cat.color] ?? COLOR_HEX.gray;
+              const catHex = categoryHex(cat.color);
               const isHover = hoverTarget === cat.name;
               return (
                 <div

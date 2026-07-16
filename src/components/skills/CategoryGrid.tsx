@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Plus, Settings } from "lucide-react";
 import { Doc } from "../../../convex/_generated/dataModel";
+import { categoryHex } from "@/lib/categoryColors";
 
 type Category = Doc<"skillCategories">;
 
@@ -16,13 +17,6 @@ interface CategoryGridProps {
   onDropOnCategory?: (categoryName: string, e: React.DragEvent) => void;
   selectedCategory?: string | null;
 }
-
-const COLOR_HEX: Record<string, string> = {
-  indigo: "#6366f1", red: "#ef4444", purple: "#a855f7", amber: "#f59e0b",
-  cyan: "#06b6d4", emerald: "#10b981", violet: "#8b5cf6", blue: "#3b82f6",
-  orange: "#f97316", pink: "#ec4899", teal: "#14b8a6", rose: "#f43f5e",
-  green: "#22c55e", yellow: "#eab308", gray: "#6b7280",
-};
 
 export function CategoryGrid({
   categories,
@@ -44,7 +38,7 @@ export function CategoryGrid({
   return (
     <div className="flex flex-col gap-1 w-full">
       {sorted.map((cat) => {
-        const hex = COLOR_HEX[cat.color] ?? COLOR_HEX.gray;
+        const hex = categoryHex(cat.color);
         const count = skillCounts[cat.name] ?? 0;
         const isActive = selectedCategory === cat.name;
         const isDropTarget = dropTargetCategory === cat.name;
