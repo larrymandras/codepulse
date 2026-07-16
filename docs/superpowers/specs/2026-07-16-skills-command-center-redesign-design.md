@@ -46,7 +46,7 @@ PageHeader "Skills"                    [⌘K Search] [Validate skill]
 **`src/lib/categoryColors.ts`** — single `COLOR_HEX` map + `categoryHex(color: string): string`. Kills the 4 duplicates (`CategoryGrid`, `FavoriteSkills`, `SkillsInCategory`, `FrequentSkills`).
 
 **`SkillCommandPalette.tsx`** — cmdk `CommandDialog`:
-- Opens on `Ctrl+K` (global listener on the Skills page) and from the rail's search button (the current `<input>` becomes a button styled like a search field with a `⌘K` kbd hint).
+- Opens on `Ctrl+Shift+K` (global listener on the Skills page; plain Ctrl+K stays owned by the app-wide CommandPalette in DashboardLayout — collision found during execution, decided 2026-07-16) and from the header's search button (kbd hint `Ctrl+Shift+K`).
 - Items: all non-hidden skills; grouped **Favorites** first, then by category, Uncategorized last. Each item shows invocation (mono), display name, category icon, and a dormant marker where applicable.
 - `Enter` copies the invocation (via `skillInvocation()`) + records `recordSkillLaunch`; `Ctrl+Enter` navigates to `/chat?skill=...`. Footer hints both keys.
 - Dormant skills (per `isDormant()`) render dimmed with a "dormant" badge; `Enter` on them still copies but shows "dormant — not loaded" feedback instead of "copied".

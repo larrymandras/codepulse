@@ -2333,7 +2333,7 @@ export default function Skills() {
               aria-label="Open skill palette"
             >
               <Search className="w-4 h-4" />
-              <span className="font-mono text-xs text-muted-foreground">Ctrl+K</span>
+              <span className="font-mono text-xs text-muted-foreground">Ctrl+Shift+K</span>
             </Button>
             <Button onClick={() => setIntakeModalOpen(true)}>Validate skill</Button>
           </div>
@@ -2747,7 +2747,7 @@ Expected: all green. Record final counts.
 Dev server runs at `http://localhost:5173/skills` (the `\CodePulseUI` scheduled task keeps Vite alive; check `~/.forge/codepulse-autostart.log` if down). Verify by driving the real page (Playwright script from the repo root — `node` resolves `playwright` from repo `node_modules`, so run scripts with the repo as CWD and the script file inside the repo, or use the `webapp-testing` skill):
 
 1. Page loads: Command Deck renders chips; categories rail intact.
-2. `Ctrl+K` opens the palette; typing filters; `Enter` copies (verify clipboard or the footer feedback text); `Ctrl+Enter` navigates to `/chat?skill=...`.
+2. `Ctrl+Shift+K` opens the Skills palette (plain `Ctrl+K` must still open the app-wide CommandPalette — verify both); typing filters; `Enter` copies (verify clipboard or the footer feedback text); `Ctrl+Enter` navigates to `/chat?skill=...`.
 3. Click a deck chip → "copied" state appears.
 4. Overview: groups render largest-first, "Show all (n)" expands, filter bar narrows across groups.
 5. Drill into a category → rows render, Copy primary works, drag a row onto a rail category → it moves.
