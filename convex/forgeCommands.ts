@@ -15,7 +15,7 @@
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getCorsHeaders, validateForgeIngestAuth, unauthorizedResponse } from "./ingestAuth";
-import { MAX_ACK_REPORT_BYTES } from "./forge";
+import { MAX_ACK_REPORT_BYTES, isValidSupportedTypesShape } from "./forge";
 
 // ---------------------------------------------------------------------------
 // POST /forge-commands-claim
@@ -52,6 +52,19 @@ export const forgeCommandsClaim = httpAction(async (ctx, request) => {
   if (!hostId) {
     return new Response(
       JSON.stringify({ error: "Missing required field: hostId" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
+      }
+    );
+  }
+  // D-P10-12: guard placed here, in the httpAction, BEFORE ctx.runMutation is
+  // called — claimAndUpsertHost's own arg validator throws on a malformed
+  // shape, but that throw does not become an HTTP 4xx (it 500s). See
+  // isValidSupportedTypesShape's doc comment in forge.ts.
+  if (!isValidSupportedTypesShape(supportedTypes)) {
+    return new Response(
+      JSON.stringify({ error: "Invalid supportedTypes: expected an array of strings" }),
       {
         status: 400,
         headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
