@@ -177,6 +177,7 @@ function setupMocks(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
   setupMocks();
 });
 
@@ -256,15 +257,14 @@ describe("Skills page", () => {
     expect(screen.getByText("Frequently Used")).toBeInTheDocument();
   });
 
-  it("navigates to chat on skill launch", async () => {
+  it("navigates to chat via the row's Open in Chat action", async () => {
     render(<Skills />);
     fireEvent.click(screen.getByText("Legal"));
-    const launchButtons = screen.getAllByText("Launch");
-    fireEvent.click(launchButtons[0]);
-    expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
+    fireEvent.click(screen.getByLabelText("Open legal-nda in Chat"));
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/chat?skill=legal-nda");
     });
+    expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
   });
 
   it("filters skills by search in drill-in view", () => {

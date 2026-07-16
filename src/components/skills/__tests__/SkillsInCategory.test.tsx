@@ -45,7 +45,8 @@ const defaultProps = {
   skills: mockSkills,
   categories: mockCategories,
   onBack: vi.fn(),
-  onLaunch: vi.fn(),
+  onRecordUse: vi.fn(),
+  onOpenInChat: vi.fn(),
   onEditSkill: vi.fn(),
   onReassignSkill: vi.fn(),
   onToggleFavorite: vi.fn(),
@@ -77,21 +78,19 @@ describe("SkillsInCategory", () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  test("calls onLaunch when launch button is clicked", () => {
-    const onLaunch = vi.fn();
-    render(<SkillsInCategory {...defaultProps} onLaunch={onLaunch} />);
+  test("calls onOpenInChat when a row's chat button is clicked", () => {
+    const onOpenInChat = vi.fn();
+    render(<SkillsInCategory {...defaultProps} onOpenInChat={onOpenInChat} />);
 
-    const launchButtons = screen.getAllByText("Launch");
-    fireEvent.click(launchButtons[0]);
-    expect(onLaunch).toHaveBeenCalledWith("gsd-plan-phase");
+    fireEvent.click(screen.getByLabelText("Open gsd-plan-phase in Chat"));
+    expect(onOpenInChat).toHaveBeenCalledWith("gsd-plan-phase");
   });
 
-  test("calls onEditSkill when edit button is clicked", () => {
+  test("calls onEditSkill when a row's edit button is clicked", () => {
     const onEditSkill = vi.fn();
     render(<SkillsInCategory {...defaultProps} onEditSkill={onEditSkill} />);
 
-    const editButtons = screen.getAllByTitle("Edit Metadata");
-    fireEvent.click(editButtons[0]);
+    fireEvent.click(screen.getByLabelText("Edit gsd-plan-phase"));
     expect(onEditSkill).toHaveBeenCalledWith("gsd-plan-phase");
   });
 

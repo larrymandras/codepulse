@@ -314,7 +314,8 @@ export default function Skills() {
                   color: c.color,
                 }))}
                 onBack={() => { setSelectedCategory(null); setSearch(""); }}
-                onLaunch={handleLaunch}
+                onRecordUse={(name) => void recordLaunch({ name })}
+                onOpenInChat={handleLaunch}
                 onEditSkill={setEditingSkill}
                 onReassignSkill={handleReassignSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
