@@ -479,7 +479,7 @@ export default function DashboardLayout() {
     const handler = (e: KeyboardEvent) => {
       // Cmd+K / Ctrl+K: open command palette in text mode — allowed even from input fields (VS Code behavior)
       // Voice mode is NOT set here — ⌘K always opens text mode (VOX-01 criterion: coexist with wake)
-      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+      if (e.key === "k" && !e.shiftKey && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         setVoiceMode(false);
         setPaletteOpen((prev) => !prev);

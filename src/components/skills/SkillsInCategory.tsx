@@ -78,36 +78,38 @@ export function SkillsInCategory({
         
         {otherCategories.length > 0 && (
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-mono uppercase text-muted-foreground">Move target:</span>
-            {otherCategories.map((cat) => {
-              const catHex = categoryHex(cat.color);
-              const isHover = hoverTarget === cat.name;
-              return (
-                <div
-                  key={cat.name}
-                  data-drop-target={cat.name}
-                  onDragOver={(e) => { e.preventDefault(); setHoverTarget(cat.name); }}
-                  onDragLeave={() => setHoverTarget(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const skillName = e.dataTransfer.getData("text/plain");
-                    if (skillName) onReassignSkill(skillName, cat.name);
-                    setHoverTarget(null);
-                  }}
-                  className={`flex items-center justify-center w-6 h-6 rounded border transition-all cursor-crosshair ${
-                    isHover ? "scale-110" : ""
-                  }`}
-                  title={`Drop to move to ${cat.displayName}`}
-                  style={{ 
-                    backgroundColor: catHex + (isHover ? "30" : "10"),
-                    borderColor: catHex + (isHover ? "80" : "30"),
-                    boxShadow: isHover ? `0 0 10px ${catHex}40` : "none"
-                  }}
-                >
-                  <span className="text-xs">{cat.icon}</span>
-                </div>
-              );
-            })}
+            <span className="text-[11px] font-mono uppercase text-muted-foreground shrink-0">Move target:</span>
+            <div className="flex items-center gap-2 overflow-x-auto max-w-md">
+              {otherCategories.map((cat) => {
+                const catHex = categoryHex(cat.color);
+                const isHover = hoverTarget === cat.name;
+                return (
+                  <div
+                    key={cat.name}
+                    data-drop-target={cat.name}
+                    onDragOver={(e) => { e.preventDefault(); setHoverTarget(cat.name); }}
+                    onDragLeave={() => setHoverTarget(null)}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const skillName = e.dataTransfer.getData("text/plain");
+                      if (skillName) onReassignSkill(skillName, cat.name);
+                      setHoverTarget(null);
+                    }}
+                    className={`flex items-center justify-center w-6 h-6 rounded border transition-all cursor-crosshair shrink-0 ${
+                      isHover ? "scale-110" : ""
+                    }`}
+                    title={`Drop to move to ${cat.displayName}`}
+                    style={{
+                      backgroundColor: catHex + (isHover ? "30" : "10"),
+                      borderColor: catHex + (isHover ? "80" : "30"),
+                      boxShadow: isHover ? `0 0 10px ${catHex}40` : "none"
+                    }}
+                  >
+                    <span className="text-xs">{cat.icon}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
