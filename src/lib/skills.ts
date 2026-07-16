@@ -13,6 +13,7 @@ export type SkillLike = {
   useCount?: number;
   lastUsedAt?: number;
   hidden?: boolean;
+  favorite?: boolean;
 };
 
 /** True when the skill exists on disk but Claude Code does not load it. */
@@ -122,4 +123,23 @@ export function topSkills(skills: SkillLike[], limit = 8): SkillLike[] {
       return (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0);
     })
     .slice(0, limit);
+}
+
+/**
+ * The Quick Deck: favorites pinned first (any useCount — a pinned skill is
+ * pinned), then most-used non-favorites fill the remaining slots. Dormant
+ * skills never appear — copying their invocation would do nothing.
+ */
+export function deckSkills(skills: SkillLike[], limit = 10): SkillLike[] {
+  const eligible = skills.filter((s) => !s.hidden && !isDormant(s));
+  const favorites = eligible
+    .filter((s) => s.favorite)
+    .sort(
+      (a, b) =>
+        (b.useCount ?? 0) - (a.useCount ?? 0) ||
+        (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0)
+    );
+  const favoriteNames = new Set(favorites.map((s) => s.name));
+  const fill = topSkills(eligible, limit).filter((s) => !favoriteNames.has(s.name));
+  return [...favorites, ...fill].slice(0, limit);
 }

@@ -9,6 +9,7 @@ import {
   skillInvocation,
   hasKnownUpstream,
   topSkills,
+  deckSkills,
 } from "./skills";
 
 const proj = (h: string) => `claude-code:project:${h}`;
@@ -153,5 +154,45 @@ describe("topSkills", () => {
   it("respects the limit", () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ name: `s${i}`, origins: ["claude-code"], useCount: i + 1 }));
     expect(topSkills(many, 8)).toHaveLength(8);
+  });
+});
+
+describe("deckSkills", () => {
+  const base = { origins: ["claude-code"] };
+  it("pins favorites first (by useCount), then fills with most-used non-favorites", () => {
+    const deck = deckSkills([
+      { ...base, name: "big", useCount: 50, favorite: false },
+      { ...base, name: "fav-low", useCount: 2, favorite: true },
+      { ...base, name: "fav-high", useCount: 9, favorite: true },
+      { ...base, name: "mid", useCount: 5, favorite: false },
+    ]);
+    expect(deck.map((s) => s.name)).toEqual(["fav-high", "fav-low", "big", "mid"]);
+  });
+
+  it("includes a never-used favorite but not a never-used non-favorite", () => {
+    const deck = deckSkills([
+      { ...base, name: "fav-unused", useCount: 0, favorite: true },
+      { ...base, name: "unused", useCount: 0, favorite: false },
+    ]);
+    expect(deck.map((s) => s.name)).toEqual(["fav-unused"]);
+  });
+
+  it("excludes dormant skills even when favorited, and hidden skills", () => {
+    const deck = deckSkills([
+      { name: "cold-fav", origins: [DORMANT_ORIGIN], useCount: 99, favorite: true },
+      { ...base, name: "ghost", useCount: 99, favorite: true, hidden: true },
+      { ...base, name: "alive", useCount: 1, favorite: false },
+    ]);
+    expect(deck.map((s) => s.name)).toEqual(["alive"]);
+  });
+
+  it("never duplicates a favorite in the most-used fill and caps at limit", () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      ...base, name: `s${i}`, useCount: 20 - i, favorite: i < 3,
+    }));
+    const deck = deckSkills(many, 10);
+    expect(deck).toHaveLength(10);
+    expect(new Set(deck.map((s) => s.name)).size).toBe(10);
+    expect(deck.slice(0, 3).every((s) => s.favorite)).toBe(true);
   });
 });
