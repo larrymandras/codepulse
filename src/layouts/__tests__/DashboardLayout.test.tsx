@@ -173,6 +173,21 @@ describe("DashboardLayout keyboard shortcuts (global palette vs. Skills palette 
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
     expect(screen.getByTestId("command-palette-open")).toBeInTheDocument();
   });
+
+  it("does not open the global command palette when the keydown's default was already prevented (e.g. a focused cmdk input's own Ctrl+K binding)", () => {
+    // Registered on window before the layout mounts, so it runs first and
+    // mirrors a focused cmdk input (vimBindings) consuming the event.
+    const preventOnCtrlK = (e: KeyboardEvent) => {
+      if (e.key === "k" && e.ctrlKey) e.preventDefault();
+    };
+    window.addEventListener("keydown", preventOnCtrlK);
+
+    renderLayout();
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(screen.queryByTestId("command-palette-open")).not.toBeInTheDocument();
+
+    window.removeEventListener("keydown", preventOnCtrlK);
+  });
 });
 
 describe("DashboardLayout Sidebar (UI-04)", () => {

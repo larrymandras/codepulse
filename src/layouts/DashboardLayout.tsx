@@ -477,6 +477,11 @@ export default function DashboardLayout() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // A cmdk input (e.g. the Skills palette's vimBindings) may already have
+      // consumed this keydown and called preventDefault — don't ALSO open the
+      // global palette on top of it.
+      if (e.defaultPrevented) return;
+
       // Cmd+K / Ctrl+K: open command palette in text mode — allowed even from input fields (VS Code behavior)
       // Voice mode is NOT set here — ⌘K always opens text mode (VOX-01 criterion: coexist with wake)
       if (e.key === "k" && !e.shiftKey && (e.metaKey || e.ctrlKey)) {
