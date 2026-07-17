@@ -388,4 +388,99 @@ describe("VoiceModePanel", () => {
     const polite = document.querySelectorAll('[aria-live="polite"]');
     expect(polite.length).toBeGreaterThanOrEqual(1);
   });
+
+  // ─── 10. Follow-up window + Strict Mode (CONV-02, D-05) ────────────────────
+
+  async function triggerTtsEnd(strictMode: boolean) {
+    const { useTtsPlayback } = await import("@/hooks/useTtsPlayback");
+    (useTtsPlayback as unknown as MockInstance).mockReturnValue({
+      play: mockTtsPlay,
+      stop: mockTtsStop,
+      isPlaying: true,
+    });
+    const { rerender, unmount } = render(
+      <VoiceModePanel voiceState="speaking" onClose={onClose} strictMode={strictMode} />
+    );
+    (useTtsPlayback as unknown as MockInstance).mockReturnValue({
+      play: mockTtsPlay,
+      stop: mockTtsStop,
+      isPlaying: false,
+    });
+    await act(async () => {
+      rerender(
+        <VoiceModePanel voiceState="speaking" onClose={onClose} strictMode={strictMode} />
+      );
+    });
+    return unmount;
+  }
+
+  it("strict-off TTS_END opens the follow-up window: countdown bar + 'Still listening…'", async () => {
+    const unmount = await triggerTtsEnd(false);
+    expect(screen.getByText(/still listening/i)).toBeInTheDocument();
+    expect(document.querySelector(".h-\\[3px\\]")).toBeInTheDocument();
+    unmount();
+  });
+
+  it("strict-on TTS_END renders neither the countdown bar nor 'Still listening…'", async () => {
+    const unmount = await triggerTtsEnd(true);
+    expect(screen.queryByText(/still listening/i)).not.toBeInTheDocument();
+    expect(document.querySelector(".h-\\[3px\\]")).not.toBeInTheDocument();
+    unmount();
+  });
+
+  it("dispatches FOLLOW_UP_EXPIRE at the 14s timeout (window closes silently)", async () => {
+    vi.useFakeTimers();
+    try {
+      const unmount = await triggerTtsEnd(false);
+      expect(screen.getByText(/still listening/i)).toBeInTheDocument();
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(14_100);
+      });
+
+      expect(screen.queryByText(/still listening/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/^idle$/i)).toBeInTheDocument();
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("intercepts a spoken 'strict mode on' command before dispatch — calls onStrictModeChange, no chat.send", async () => {
+    const onStrictModeChange = vi.fn();
+    render(
+      <VoiceModePanel
+        voiceState="listening"
+        onClose={onClose}
+        strictMode={false}
+        onStrictModeChange={onStrictModeChange}
+      />
+    );
+
+    await act(async () => {
+      onFinalResultCallback?.("strict mode on");
+    });
+
+    expect(onStrictModeChange).toHaveBeenCalledWith(true);
+    expect(mockSendCommand).not.toHaveBeenCalled();
+  });
+
+  it("intercepts a spoken 'strict mode off' command — calls onStrictModeChange(false), no chat.send", async () => {
+    const onStrictModeChange = vi.fn();
+    render(
+      <VoiceModePanel
+        voiceState="listening"
+        onClose={onClose}
+        strictMode={true}
+        onStrictModeChange={onStrictModeChange}
+      />
+    );
+
+    await act(async () => {
+      onFinalResultCallback?.("strict mode off");
+    });
+
+    expect(onStrictModeChange).toHaveBeenCalledWith(false);
+    expect(mockSendCommand).not.toHaveBeenCalled();
+  });
 });

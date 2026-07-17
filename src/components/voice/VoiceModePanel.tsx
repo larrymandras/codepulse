@@ -311,6 +311,19 @@ export function VoiceModePanel({
     return () => clearTimeout(t);
   }, [instantBadgeTransition]);
 
+  // CONV-02: 14s follow-up window (strict mode off) opened on TTS_END. Bar
+  // renders while open; a new interim result or expiry closes it.
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFollowUpWindow = useCallback(() => {
+    if (followUpTimerRef.current) {
+      clearTimeout(followUpTimerRef.current);
+      followUpTimerRef.current = null;
+    }
+    setFollowUpOpen(false);
+  }, []);
+
   // ─── Silence timer helpers ──────────────────────────────────────────────────
 
   const resetSilenceTimer = useCallback(() => {
@@ -418,8 +431,11 @@ export function VoiceModePanel({
       resetSilenceTimer();
       // User is still speaking — defer the end-of-turn send.
       clearSendTimer();
+      // CONV-02: a new interim result consumes the follow-up window (the bar
+      // clears — a fresh turn has started, not a lingering countdown).
+      clearFollowUpWindow();
     },
-    [voiceState, resetSilenceTimer, clearSendTimer]
+    [voiceState, resetSilenceTimer, clearSendTimer, clearFollowUpWindow]
   );
 
   const handleFinalResult = useCallback(
@@ -437,6 +453,15 @@ export function VoiceModePanel({
       setInterimText("");
       resetSilenceTimer();
 
+      // Spoken strict-mode toggle (CONV-02, D-05): intercepted BEFORE any turn
+      // dispatch — a client regex fast-path, no LLM turn, no chat.send.
+      const strictCommand = isStrictModeCommand(text);
+      if (strictCommand) {
+        onStrictModeChange(strictCommand === "on");
+        clearFollowUpWindow();
+        return;
+      }
+
       // End-phrase: exit voice mode. Discard any accumulated text — saying
       // "stop"/"goodbye" is an abort, not a message. (T-92-13 mitigation — D-01)
       if (isEndPhrase(text)) {
@@ -447,6 +472,9 @@ export function VoiceModePanel({
         onClose();
         return;
       }
+
+      // CONV-02: a real accepted utterance consumes the follow-up window.
+      clearFollowUpWindow();
 
       // Accumulate this finalized segment and show the running transcript.
       // Do NOT send yet — a mid-thought pause finalizes a segment but the user
@@ -464,6 +492,8 @@ export function VoiceModePanel({
     [
       voiceState,
       handleBargeIn,
+      onStrictModeChange,
+      clearFollowUpWindow,
       resetSilenceTimer,
       clearSilenceTimer,
       clearSendTimer,
@@ -509,6 +539,20 @@ export function VoiceModePanel({
       dispatch({ type: "TTS_END", strictMode });
       wasPlayingRef.current = false;
       resetSilenceTimer();
+
+      // CONV-02: strict off → open the 14s follow-up window; strict on → the
+      // reducer already went straight to idle, no window.
+      if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
+      if (!strictMode) {
+        setFollowUpOpen(true);
+        followUpTimerRef.current = setTimeout(() => {
+          dispatch({ type: "FOLLOW_UP_EXPIRE" });
+          setFollowUpOpen(false);
+          followUpTimerRef.current = null;
+        }, FOLLOW_UP_WINDOW_MS);
+      } else {
+        setFollowUpOpen(false);
+      }
     }
   }, [isPlaying, strictMode, resetSilenceTimer]);
 
@@ -596,7 +640,11 @@ export function VoiceModePanel({
     <div className="flex flex-col p-0" role="region" aria-label="Voice mode">
       {/* Header row: state badge + close button */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <VoiceStateBadge state={voiceState} instant={instantBadgeTransition} />
+        <VoiceStateBadge
+          state={voiceState}
+          instant={instantBadgeTransition}
+          labelOverride={followUpOpen ? "Still listening…" : undefined}
+        />
         <button
           autoFocus
           onClick={handleClose}
@@ -606,6 +654,9 @@ export function VoiceModePanel({
           <X className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Follow-up countdown bar (CONV-02) — between header and avatar */}
+      <FollowUpCountdownBar active={followUpOpen} />
 
       {/* Audio-reactive avatar (the cyber-Norse Ástríðr) */}
       {voiceState !== "error-disabled" && (
