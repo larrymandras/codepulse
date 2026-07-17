@@ -1,0 +1,74 @@
+# Requirements: v11.0 Skills Command Center — Full Lifecycle & Launch
+
+**Milestone goal:** Turn the Skills page from a read-only catalog into a real control surface — add, move, archive, restore, delete, and *launch* skills live, executed on the host by the Forge daemon.
+
+**Defined:** 2026-07-17 (via `/gsd-new-milestone`, research skipped — internal surfaces already mapped)
+
+---
+
+## Milestone v11.0 Requirements
+
+### INTAKE — Real Skill Intake (execute today's dry-run)
+
+- [ ] **INTAKE-01**: User can install a skill from an uploaded SKILL.md to a chosen scope (global / project / cold storage) and the file actually lands on the host disk — not the current "validation only, nothing written" dry-run.
+- [ ] **INTAKE-02**: User can install a skill from a GitHub URL (with optional `subpath` fan-out) to a chosen scope, with the existing URL-shape and path-traversal guards enforced.
+- [ ] **INTAKE-03**: After a successful install the skill appears in the Skills page automatically with correct origin/scope (daemon-driven registry rescan) — no manual refresh.
+- [ ] **INTAKE-04**: The intake outcome surfaces the daemon's real execution/validation report; a failed install reports an actionable error and leaves no partial state on disk.
+
+### LIFE — Skill Lifecycle Mutations
+
+- [ ] **LIFE-01**: User can archive an active skill to cold storage from the UI (host moves it to `.claude/skills-available/` / dormant origin); it stays tracked as dormant, removing its context/token load.
+- [ ] **LIFE-02**: User can restore a dormant/cold skill back to active (global or project) from the UI.
+- [ ] **LIFE-03**: User can move a skill between global and project scope from the UI.
+- [ ] **LIFE-04**: User can delete a skill — *archive-first*: the default destructive action archives to cold storage; true file deletion is a separate action requiring an explicit confirmation.
+- [ ] **LIFE-05**: Lifecycle actions respect `isShadowing` — activating/restoring a dormant skill shadowed by an active same-name skill is surfaced and guarded (no silent conflicting activation).
+- [ ] **LIFE-06**: When the Forge daemon is offline, lifecycle actions degrade gracefully — the command queues, the UI shows it will expire, and no false-success is shown (mirrors the intake expired path).
+
+### LAUNCH — Skill Launch / Dispatch
+
+- [ ] **LAUNCH-01**: User can run a skill directly in Chat — the invocation is sent via `chat.send` and executes (auto-send), not merely prefilled in the composer.
+- [ ] **LAUNCH-02**: User can launch a skill as a Forge agent run — choosing agent / workspace / mode, with the skill as the instruction (reuses `enqueueLaunch`).
+- [ ] **LAUNCH-03**: User can dispatch a skill to Ástríðr / a chosen persona to execute.
+- [ ] **LAUNCH-04**: The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time and records the launch (`useCount` / `lastUsedAt`).
+
+### UX — Control-Surface Interaction
+
+- [ ] **UX-01**: Every skill row exposes an overflow menu (⋯) with the applicable lifecycle + run actions (Move, Restore, Archive, Delete, Run), each gated by the skill's current scope.
+- [ ] **UX-02**: The Skills page presents Global / Project / Cold Storage as drag targets; dragging a skill across scopes fires the corresponding move / archive / restore command (extends today's drag-to-category).
+- [ ] **UX-03**: Mutating actions paint an optimistic/pending state and reconcile against the server command row (reuses the intake optimistic-row pattern), with clear success / failure / expiry feedback.
+- [ ] **UX-04**: The Cold Storage view offers in-app restore — the "run `/manage-skills` in a terminal" dead-end is removed.
+
+### DAEMON — Host Executor & Registry Rescan (cross-repo)
+
+- [ ] **DAEMON-01**: The Forge daemon executes `intake` commands — validates then writes SKILL.md to the destination scope (global / project / cold) on the host filesystem.
+- [ ] **DAEMON-02**: The Forge daemon executes lifecycle commands — archive (→ cold), restore, move-scope, and delete — atomically on the host, archive-first for delete.
+- [ ] **DAEMON-03**: After any successful mutation the daemon rescans and re-syncs the skills registry (`syncInventory`) so CodePulse origins/scope reflect host truth.
+- [ ] **DAEMON-04**: The daemon advertises its new supported command types so older daemons never receive commands they cannot run (extends `supportedTypes` / `resolveClaimTypes`).
+
+---
+
+## Future Requirements (deferred)
+
+- Skill **versioning / update** (pull a newer SKILL.md over an installed one, diff before overwrite) — intake covers first-install; in-place update is a later concern.
+- **Bulk multi-select** lifecycle actions (checkbox-select many skills, act at once) — considered as a UI option, deferred in favor of per-row ⋯ + drag for this milestone.
+- Skill **authoring / editing of SKILL.md body** in-app — this milestone manages placement and invocation, not content editing (metadata overrides already exist).
+- **`importSkills` catalog bulk-import** UI entry point — the mutation exists but wiring a catalog browser is out of this milestone's scope.
+
+## Out of Scope
+
+- **Editing skill file *contents*** from the browser — the browser/Convex app cannot touch the filesystem; even via the daemon, body-editing is a separate authoring concern, not lifecycle/launch.
+- **A skill marketplace / registry service** — intake is upload-or-GitHub-URL; no hosted discovery catalog.
+- **Non-Forge execution transports** — launch rides existing channels (`chat.send`, `enqueueLaunch`, Ástríðr); no new transport protocol.
+- **Retroactive migration of legacy skill origins** — already handled by the one-time `normalizeLegacySkillOrigins` backfill; not re-litigated here.
+
+## Traceability
+
+*(Filled by the roadmapper — each requirement maps to exactly one phase.)*
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| INTAKE-01..04 | TBD | Pending |
+| LIFE-01..06 | TBD | Pending |
+| LAUNCH-01..04 | TBD | Pending |
+| UX-01..04 | TBD | Pending |
+| DAEMON-01..04 | TBD | Pending |
