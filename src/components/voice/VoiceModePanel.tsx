@@ -85,6 +85,30 @@ function stateLabel(state: VoiceState): string {
   }
 }
 
+// ─── Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10) ────────────────────────
+// Placed AFTER isBargeInPhrase/isStrictModeCommand short-circuits and BEFORE
+// accumulate/send in handleFinalResult. Rejects produce zero UI trace.
+
+function shouldReject(
+  text: string,
+  isFollowUpWindowOpen: boolean,
+  confidence?: number
+): boolean {
+  // D-08: barge-in phrases always bypass the gate, in any state.
+  if (isBargeInPhrase(text)) return false;
+
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  const minWords = isFollowUpWindowOpen ? 1 : 3; // D-07
+  if (wordCount < minWords) return true;
+
+  // D-09: confidence is a lenient tiebreaker only — a near-zero floor, never a
+  // hard reject of real (multi-word) speech. Chrome's confidence is bimodal
+  // (0 or ~0.9) — do not build a "smart" threshold (RESEARCH Pitfall 5).
+  if (confidence !== undefined && confidence > 0 && confidence < 0.01) return true;
+
+  return false;
+}
+
 function stateDotClass(state: VoiceState): string {
   switch (state) {
     case "listening":
@@ -439,7 +463,7 @@ export function VoiceModePanel({
   );
 
   const handleFinalResult = useCallback(
-    (text: string) => {
+    (text: string, confidence?: number) => {
       // Echo guard + barge-in (CONV-01, D-06/D-08): while she's speaking, the
       // recognizer stays live only to catch a barge-in phrase. Any other
       // recognized text is dropped silently — this IS the echo guard.
@@ -473,6 +497,13 @@ export function VoiceModePanel({
         return;
       }
 
+      // Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10): reject cold
+      // fragments <3 words (relaxed to 1 word inside the follow-up window).
+      // Zero UI trace on reject — no state change, no render.
+      if (shouldReject(text, followUpOpen, confidence)) {
+        return;
+      }
+
       // CONV-02: a real accepted utterance consumes the follow-up window.
       clearFollowUpWindow();
 
@@ -493,6 +524,7 @@ export function VoiceModePanel({
       voiceState,
       handleBargeIn,
       onStrictModeChange,
+      followUpOpen,
       clearFollowUpWindow,
       resetSilenceTimer,
       clearSilenceTimer,

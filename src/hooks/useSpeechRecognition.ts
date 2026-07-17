@@ -41,7 +41,14 @@ export interface UseSpeechRecognitionOptions {
   continuous?: boolean;
   interimResults?: boolean;
   lang?: string;
-  onFinalResult: (transcript: string) => void;
+  /**
+   * Fires on a finalized speech result. `confidence` is additive (Phase 183,
+   * CONV-03, D-09) — the browser's SpeechRecognitionAlternative.confidence
+   * score, forwarded as-is. This hook does NOT gate on it or on word count
+   * (that logic lives in the caller — see VoiceModePanel.tsx's shouldReject —
+   * so ChatInput.tsx's unrelated single-shot dictation is never regressed).
+   */
+  onFinalResult: (transcript: string, confidence?: number) => void;
   onInterimResult?: (transcript: string) => void;
   onEnd?: () => void;
 }
@@ -129,11 +136,14 @@ export function useSpeechRecognition(
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       const result = event.results[event.resultIndex];
-      const transcript = result?.[0]?.transcript;
+      const alternative = result?.[0] as
+        | { transcript: string; confidence?: number }
+        | undefined;
+      const transcript = alternative?.transcript;
       if (!transcript) return;
 
       if (result.isFinal) {
-        onFinalResultRef.current(transcript);
+        onFinalResultRef.current(transcript, alternative?.confidence);
       } else if (options.interimResults) {
         onInterimResultRef.current?.(transcript);
       }

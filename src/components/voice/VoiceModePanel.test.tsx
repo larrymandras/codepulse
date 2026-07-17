@@ -36,12 +36,12 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
 const mockRecognitionStart = vi.fn();
 const mockRecognitionStop = vi.fn();
 const mockRecognitionAbort = vi.fn();
-let onFinalResultCallback: ((text: string) => void) | null = null;
+let onFinalResultCallback: ((text: string, confidence?: number) => void) | null = null;
 let onInterimResultCallback: ((text: string) => void) | null = null;
 
 vi.mock("@/hooks/useSpeechRecognition", () => ({
   useSpeechRecognition: vi.fn((options: {
-    onFinalResult: (text: string) => void;
+    onFinalResult: (text: string, confidence?: number) => void;
     onInterimResult?: (text: string) => void;
   }) => {
     onFinalResultCallback = options.onFinalResult;
@@ -482,5 +482,60 @@ describe("VoiceModePanel", () => {
 
     expect(onStrictModeChange).toHaveBeenCalledWith(false);
     expect(mockSendCommand).not.toHaveBeenCalled();
+  });
+
+  // ─── 11. Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10) ──────────────────
+
+  it("drops a <3-word cold transcript — no chat.send, no transcript entry", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
+
+      await act(async () => {
+        onFinalResultCallback?.("yeah okay", 0.9);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      expect(mockSendCommand).not.toHaveBeenCalled();
+      expect(screen.queryByText(/yeah okay/i)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts the same 1-2 word transcript inside an open follow-up window", async () => {
+    vi.useFakeTimers();
+    try {
+      const unmount = await triggerTtsEnd(false); // opens the follow-up window
+      // triggerTtsEnd renders its own instance — grab its own callback capture
+      await act(async () => {
+        onFinalResultCallback?.("do it", 0.9);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "chat.send", message: "do it" })
+      );
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a barge-in single word during speaking still fires despite being 1 word (D-08 bypass)", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onFinalResultCallback?.("wait", 0.9);
+    });
+
+    expect(mockTtsStop).toHaveBeenCalled();
+    expect(mockSendCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "agent.stop" })
+    );
   });
 });

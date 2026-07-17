@@ -18,7 +18,10 @@ type MockRecognition = {
 
 type MockSpeechRecognitionEvent = {
   results: {
-    [index: number]: { [index: number]: { transcript: string }; isFinal: boolean };
+    [index: number]: {
+      [index: number]: { transcript: string; confidence?: number };
+      isFinal: boolean;
+    };
     length: number;
   };
   resultIndex: number;
@@ -111,7 +114,57 @@ describe("useSpeechRecognition", () => {
       });
     });
 
-    expect(onFinalResult).toHaveBeenCalledWith("hello world");
+    expect(onFinalResult).toHaveBeenCalledWith("hello world", undefined);
+  });
+
+  // ─── CONV-03 (Phase 183): confidence forwarded additively, no reject logic ──
+
+  it("forwards confidence as the second onFinalResult argument when the result includes it", () => {
+    const onFinalResult = vi.fn();
+    const { result } = renderHook(() =>
+      useSpeechRecognition({ onFinalResult })
+    );
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      mockRecognition.onresult?.({
+        resultIndex: 0,
+        results: {
+          0: { 0: { transcript: "hello world", confidence: 0.87 }, isFinal: true },
+          length: 1,
+        },
+      });
+    });
+
+    expect(onFinalResult).toHaveBeenCalledWith("hello world", 0.87);
+  });
+
+  it("still invokes onFinalResult for a short (single-word) dictated transcript — no regression for ChatInput", () => {
+    const onFinalResult = vi.fn();
+    const { result } = renderHook(() =>
+      useSpeechRecognition({ onFinalResult, continuous: false, interimResults: false })
+    );
+
+    act(() => {
+      result.current.start();
+    });
+
+    act(() => {
+      mockRecognition.onresult?.({
+        resultIndex: 0,
+        results: {
+          0: { 0: { transcript: "yes" }, isFinal: true },
+          length: 1,
+        },
+      });
+    });
+
+    // The hook itself must never reject short transcripts — that gate lives
+    // only in VoiceModePanel.tsx, never inside this shared hook (Pitfall 3).
+    expect(onFinalResult).toHaveBeenCalledWith("yes", undefined);
   });
 
   it("onInterimResult fires with transcript when interimResults:true and non-final result arrives", () => {
