@@ -6,14 +6,20 @@
  *   - Live transcript via useSpeechRecognition (continuous + interimResults)
  *   - Streamed reply via AstridrWSContext subscribeEvent run.text / run.tts / run.completed
  *   - TTS auto-play via useTtsPlayback
- *   - Feedback guard: pause STT while isPlaying, resume after (T-92-10 mitigation)
+ *   - Feedback guard / echo guard: recognizer stays LIVE during `speaking`; only a
+ *     recognized barge-in phrase acts (CONV-01, D-06) — all other recognized text
+ *     is dropped with zero UI trace (this IS the echo guard: her own TTS is never
+ *     treated as a real command).
+ *   - Barge-in (CONV-01): a recognized barge-in phrase during `speaking` pauses TTS
+ *     instantly, cancels the in-flight server turn (`agent.stop`), and marks the
+ *     partial reply interrupted so it rides into the next `chat.send` (D-11/D-12).
+ *   - 14s follow-up window + Strict Mode (CONV-02) and the noise/banter gate
+ *     (CONV-03) are implemented alongside the above.
  *   - End-phrase exit ("stop", "goodbye", etc.) via isEndPhrase
  *   - ~30s silence timeout dispatches END + calls onClose
  *
- * Barge-in (speaking state allows STT interrupt) is deferred to a follow-on
- * (RESEARCH Open Question 2) — mic pauses while isPlaying.
- *
  * Phase 92, Plan 04 — VOX-02, VOX-03.
+ * Phase 183, Plan 03 — CONV-01, CONV-02, CONV-03.
  */
 
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
@@ -22,7 +28,13 @@ import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTtsPlayback } from "@/hooks/useTtsPlayback";
 import { AvatarAura } from "./AvatarAura";
-import { voiceReducer, isEndPhrase, type VoiceState } from "./voiceState";
+import {
+  voiceReducer,
+  isEndPhrase,
+  isBargeInPhrase,
+  isStrictModeCommand,
+  type VoiceState,
+} from "./voiceState";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +43,10 @@ export interface VoiceModePanelProps {
   voiceState?: VoiceState;
   /** Called when the panel should close (end-phrase, X button, silence timeout, Escape). */
   onClose: () => void;
+  /** Strict Mode: when true, TTS_END goes straight to idle (no follow-up window). Defaults false. */
+  strictMode?: boolean;
+  /** Called when a spoken "strict mode on/off" command is recognized (D-05), or the manual toggle changes (185 threads this to the toggle). */
+  onStrictModeChange?: (v: boolean) => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -40,6 +56,14 @@ const SILENCE_TIMEOUT_MS = 30_000; // 30 seconds (UI-SPEC §"Silence timeout (30
 // utterance after this much true silence, so a mid-thought pause (e.g. while
 // walking) no longer chops the message at the first pause.
 const SEND_DEBOUNCE_MS = 2_000;
+// CONV-02: follow-up window after a reply (strict mode off) — UI-SPEC pins 14s.
+const FOLLOW_UP_WINDOW_MS = 14_000;
+// CONV-01: interrupt flash duration (UI-SPEC §"Barge-in").
+const INTERRUPT_FLASH_MS = 1_500;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
 // ─── State label / dot class mappings (UI-SPEC §"State → visual rendering table") ─
 
@@ -79,7 +103,17 @@ function stateDotClass(state: VoiceState): string {
 
 // ─── Inline sub-components ────────────────────────────────────────────────────
 
-function VoiceStateBadge({ state }: { state: VoiceState }) {
+function VoiceStateBadge({
+  state,
+  labelOverride,
+  instant,
+}: {
+  state: VoiceState;
+  /** CONV-02: overrides the label with "Still listening…" while the follow-up window is open. */
+  labelOverride?: string;
+  /** CONV-01: skip the transition on a barge-in — speaking→transcribing must feel instantaneous. */
+  instant?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className={stateDotClass(state)} />
@@ -87,9 +121,13 @@ function VoiceStateBadge({ state }: { state: VoiceState }) {
         aria-live="assertive"
         aria-atomic="true"
         aria-label="Voice mode status"
-        className="text-xs font-semibold text-foreground transition-colors duration-200"
+        className={
+          instant
+            ? "text-xs font-semibold text-foreground"
+            : "text-xs font-semibold text-foreground transition-colors duration-200"
+        }
       >
-        {stateLabel(state)}
+        {labelOverride ?? stateLabel(state)}
       </span>
     </div>
   );
@@ -99,10 +137,13 @@ function VoiceTranscriptArea({
   interimText,
   finalText,
   state,
+  showInterruptFlash,
 }: {
   interimText: string;
   finalText: string;
   state: VoiceState;
+  /** CONV-01, D-11: transient "— interrupted —" message shown for ~1500ms after a barge-in. */
+  showInterruptFlash?: boolean;
 }) {
   const isEmpty = !interimText && !finalText;
   return (
@@ -112,6 +153,11 @@ function VoiceTranscriptArea({
       aria-label="Live transcript"
       className="min-h-[48px] px-4 py-3 font-mono text-[10px] uppercase tracking-wide"
     >
+      {showInterruptFlash && (
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-(--status-warn)">
+          — interrupted —
+        </div>
+      )}
       {isEmpty && state === "listening" ? (
         <span className="text-muted-foreground">Say a command…</span>
       ) : (
@@ -125,6 +171,50 @@ function VoiceTranscriptArea({
         </>
       )}
     </div>
+  );
+}
+
+function FollowUpCountdownBar({ active }: { active: boolean }) {
+  // Start at full width, then collapse to 0% on next paint so the CSS
+  // `transition: width` actually animates (UI-SPEC §"Follow-up countdown bar").
+  const [collapsed, setCollapsed] = useState(false);
+  const reducedMotion = prefersReducedMotion();
+
+  useEffect(() => {
+    if (!active) {
+      setCollapsed(false);
+      return;
+    }
+    if (reducedMotion) return; // static half-filled bar, no animation
+    const id = requestAnimationFrame(() => setCollapsed(true));
+    return () => cancelAnimationFrame(id);
+  }, [active, reducedMotion]);
+
+  if (!active) return null;
+
+  return (
+    <>
+      <div className="h-[3px] w-full bg-primary/20" aria-hidden="true">
+        <div
+          className="h-full bg-primary"
+          style={
+            reducedMotion
+              ? { width: "50%" }
+              : {
+                  width: collapsed ? "0%" : "100%",
+                  transitionProperty: "width",
+                  transitionDuration: `${FOLLOW_UP_WINDOW_MS}ms`,
+                  transitionTimingFunction: "linear",
+                }
+          }
+        />
+      </div>
+      {/* One-shot announcement at window-open only — never per-tick (UI-SPEC §aria-live). */}
+      <span className="sr-only" role="status" aria-live="polite">
+        Follow-up window open — speak within 14 seconds, or say &lsquo;Hey
+        Ástríðr&rsquo; again after.
+      </span>
+    </>
   );
 }
 
@@ -170,6 +260,8 @@ function VoiceWaveform({ state }: { state: VoiceState }) {
 export function VoiceModePanel({
   voiceState: initialVoiceState = "listening",
   onClose,
+  strictMode = false,
+  onStrictModeChange = () => {},
 }: VoiceModePanelProps) {
   const { sendCommand, subscribeEvent } = useAstridrWS();
 
@@ -182,6 +274,12 @@ export function VoiceModePanel({
 
   // Reply stream
   const [replyText, setReplyText] = useState("");
+  // Mirrors replyText for use inside callbacks without a stale closure
+  // (barge-in needs the LATEST streamed reply text at the moment it fires).
+  const replyTextRef = useRef("");
+  useEffect(() => {
+    replyTextRef.current = replyText;
+  }, [replyText]);
 
   // Active session for routing run.text/run.tts/run.completed
   const activeSessionRef = useRef<string | null>(null);
@@ -194,6 +292,24 @@ export function VoiceModePanel({
   // send; the send only fires after SEND_DEBOUNCE_MS of true silence.
   const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const accumulatedRef = useRef("");
+
+  // CONV-01 (D-11/D-12): the partial reply text a barge-in interrupted, sourced
+  // ONLY from replyTextRef (Ástríðr's own streamed text) — never user-editable
+  // state. Rides into the NEXT chat.send as interrupted_reply, then is cleared.
+  const interruptedReplyRef = useRef("");
+
+  // CONV-01: transient "— interrupted —" flash shown ~1500ms after a barge-in.
+  const [showInterruptFlash, setShowInterruptFlash] = useState(false);
+  const interruptFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // CONV-01: skip the state-badge transition for one render on barge-in so
+  // speaking→transcribing feels instantaneous (UI-SPEC).
+  const [instantBadgeTransition, setInstantBadgeTransition] = useState(false);
+  useEffect(() => {
+    if (!instantBadgeTransition) return;
+    const t = setTimeout(() => setInstantBadgeTransition(false), 50);
+    return () => clearTimeout(t);
+  }, [instantBadgeTransition]);
 
   // ─── Silence timer helpers ──────────────────────────────────────────────────
 
@@ -229,8 +345,16 @@ export function VoiceModePanel({
     accumulatedRef.current = "";
     dispatch({ type: "FINAL_RESULT" });
     setReplyText("");
+    // D-12: thread the prior interrupted partial (if any) into this turn, then
+    // clear it — it only ever rides into the NEXT turn once.
+    const interruptedReply = interruptedReplyRef.current || undefined;
+    interruptedReplyRef.current = "";
     try {
-      const ack = await sendCommand({ type: "chat.send", message });
+      const ack = await sendCommand({
+        type: "chat.send",
+        message,
+        ...(interruptedReply ? { interrupted_reply: interruptedReply } : {}),
+      });
       const sessionId =
         (ack.session_id as string | undefined) ??
         (ack.data?.session_id as string | undefined) ??
@@ -242,21 +366,74 @@ export function VoiceModePanel({
     }
   }, [sendCommand, clearSendTimer]);
 
+  // ─── TTS playback ───────────────────────────────────────────────────────────
+
+  // Analyser is intentionally NOT enabled: during a voice session it created an
+  // extra AudioContext that (together with the removed avatar mic tap) could
+  // disturb the wake-word engine. The avatar pulses synthetically for now; real
+  // her-voice reactivity will be re-added via a contention-free path.
+  const { play: ttsPlay, stop: ttsStop, isPlaying } = useTtsPlayback();
+  const ttsAnalyser = null;
+
+  // ─── Barge-in (CONV-01, D-06/D-08/D-11/D-12) ───────────────────────────────
+  // Fires when a barge-in phrase is recognized while state === "speaking".
+  // Cuts TTS instantly (no fade), cancels the in-flight server turn, marks the
+  // partial reply interrupted, and shows the interrupt flash.
+
+  const handleBargeIn = useCallback(() => {
+    ttsStop(); // audio.pause() equivalent — instant, no fade
+    dispatch({ type: "BARGE_IN" });
+    setInstantBadgeTransition(true);
+
+    void sendCommand({
+      type: "agent.stop",
+      request_id: crypto.randomUUID(),
+      session_id: activeSessionRef.current,
+    });
+
+    if (replyTextRef.current) {
+      interruptedReplyRef.current = replyTextRef.current;
+      setReplyText((prev) => (prev ? `${prev} [interrupted]` : prev));
+    }
+
+    setShowInterruptFlash(true);
+    if (interruptFlashTimerRef.current) clearTimeout(interruptFlashTimerRef.current);
+    interruptFlashTimerRef.current = setTimeout(() => {
+      setShowInterruptFlash(false);
+      interruptFlashTimerRef.current = null;
+    }, INTERRUPT_FLASH_MS);
+  }, [sendCommand, ttsStop]);
+
   // ─── Speech recognition ─────────────────────────────────────────────────────
 
   const handleInterimResult = useCallback(
     (text: string) => {
+      // Echo guard (D-06): while she's speaking, the recognizer stays live but
+      // ONLY a barge-in phrase (checked on the final result) may act — any
+      // other recognized text, interim or final, is dropped with zero UI trace.
+      if (voiceState === "speaking") return;
+
       setInterimText(text);
       dispatch({ type: "INTERIM_RESULT" });
       resetSilenceTimer();
       // User is still speaking — defer the end-of-turn send.
       clearSendTimer();
     },
-    [resetSilenceTimer, clearSendTimer]
+    [voiceState, resetSilenceTimer, clearSendTimer]
   );
 
   const handleFinalResult = useCallback(
     (text: string) => {
+      // Echo guard + barge-in (CONV-01, D-06/D-08): while she's speaking, the
+      // recognizer stays live only to catch a barge-in phrase. Any other
+      // recognized text is dropped silently — this IS the echo guard.
+      if (voiceState === "speaking") {
+        if (isBargeInPhrase(text)) {
+          handleBargeIn();
+        }
+        return;
+      }
+
       setInterimText("");
       resetSilenceTimer();
 
@@ -284,7 +461,15 @@ export function VoiceModePanel({
         void flushSend();
       }, SEND_DEBOUNCE_MS);
     },
-    [resetSilenceTimer, clearSilenceTimer, clearSendTimer, onClose, flushSend]
+    [
+      voiceState,
+      handleBargeIn,
+      resetSilenceTimer,
+      clearSilenceTimer,
+      clearSendTimer,
+      onClose,
+      flushSend,
+    ]
   );
 
   const handleEnd = useCallback(() => {
@@ -306,36 +491,26 @@ export function VoiceModePanel({
     onEnd: handleEnd,
   });
 
-  // ─── TTS playback ───────────────────────────────────────────────────────────
-
-  // Analyser is intentionally NOT enabled: during a voice session it created an
-  // extra AudioContext that (together with the removed avatar mic tap) could
-  // disturb the wake-word engine. The avatar pulses synthetically for now; real
-  // her-voice reactivity will be re-added via a contention-free path.
-  const { play: ttsPlay, isPlaying } = useTtsPlayback();
-  const ttsAnalyser = null;
-
-  // ─── Feedback guard (T-92-10 mitigation) ───────────────────────────────────
-  // When TTS starts playing: pause STT (recognition.stop)
-  // When TTS ends (isPlaying → false): resume STT (recognition.start)
-  // This prevents Ástríðr's spoken reply from being self-transcribed.
+  // ─── Feedback guard / echo guard (T-92-10, rewritten CONV-01/D-06) ─────────
+  // TTS starting no longer stops the recognizer (recognitionStop() removed) —
+  // it must stay LIVE through `speaking` so a barge-in phrase can be caught.
+  // Normal accumulate/send is suppressed while speaking (handleFinalResult's
+  // echo guard above); only isBargeInPhrase() matches act.
 
   const wasPlayingRef = useRef(false);
 
   useEffect(() => {
     if (isPlaying && !wasPlayingRef.current) {
-      // TTS just started — pause STT
-      recognitionStop();
+      // TTS just started — recognizer stays live (echo guard handles the rest).
       dispatch({ type: "TTS_START" });
       wasPlayingRef.current = true;
     } else if (!isPlaying && wasPlayingRef.current) {
-      // TTS just ended — resume STT for next turn
-      recognitionStart();
-      dispatch({ type: "TTS_END" });
+      // TTS just ended — recognizer was never stopped, so no restart needed.
+      dispatch({ type: "TTS_END", strictMode });
       wasPlayingRef.current = false;
       resetSilenceTimer();
     }
-  }, [isPlaying, recognitionStop, recognitionStart, resetSilenceTimer]);
+  }, [isPlaying, strictMode, resetSilenceTimer]);
 
   // ─── Subscribe to streaming events ─────────────────────────────────────────
   // Follows PATTERNS §subscribeEvent cleanup (Chat.tsx lines 186-300)
@@ -421,7 +596,7 @@ export function VoiceModePanel({
     <div className="flex flex-col p-0" role="region" aria-label="Voice mode">
       {/* Header row: state badge + close button */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <VoiceStateBadge state={voiceState} />
+        <VoiceStateBadge state={voiceState} instant={instantBadgeTransition} />
         <button
           autoFocus
           onClick={handleClose}
@@ -444,6 +619,7 @@ export function VoiceModePanel({
         interimText={interimText}
         finalText={finalText}
         state={voiceState}
+        showInterruptFlash={showInterruptFlash}
       />
 
       {/* Reply stream */}
@@ -458,7 +634,14 @@ export function VoiceModePanel({
           {voiceState === "processing" ? (
             <Loader2 className="h-4 w-4 text-primary animate-spin" aria-hidden="true" />
           ) : voiceState === "speaking" ? (
-            <Volume2 className="h-4 w-4 text-primary animate-pulse" aria-hidden="true" />
+            <span className="flex items-center gap-1.5">
+              {/* Barge-in-armed dot (CONV-01): dim, secondary cue — "still listening for an interrupt" */}
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-pulse"
+                aria-hidden="true"
+              />
+              <Volume2 className="h-4 w-4 text-primary animate-pulse" aria-hidden="true" />
+            </span>
           ) : (
             <span className="flex items-end gap-0.5 h-4 text-primary" aria-hidden="true">
               <span className="eq-bar eq-bar-1" />

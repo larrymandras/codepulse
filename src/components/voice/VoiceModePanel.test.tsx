@@ -268,20 +268,16 @@ describe("VoiceModePanel", () => {
     expect(mockTtsPlay).toHaveBeenCalledWith("/api/audio/reply.mp3");
   });
 
-  // ─── 7. Feedback guard ──────────────────────────────────────────────────────
-  // These tests use the module mock to control isPlaying via re-import.
-  // We test the reactive effect via the useEffect that watches isPlaying.
-  // Note: feedback guard is tested as an integration behavior via the panel's
-  // internal useEffect — we spy on recognition.stop/start being invoked.
+  // ─── 7. Feedback guard / echo guard (CONV-01, D-06, rewritten) ─────────────
+  // The recognizer must now stay LIVE through `speaking` — barge-in is
+  // impossible without a live recognizer during TTS playback.
 
-  it("calls recognition.stop when isPlaying becomes true", async () => {
-    // Start with isPlaying=false, render panel
+  it("does NOT call recognition.stop when isPlaying becomes true (barge-in requires a live recognizer)", async () => {
     mockIsPlaying = false;
     const { unmount, rerender } = render(
       <VoiceModePanel voiceState="listening" onClose={onClose} />
     );
 
-    // Simulate isPlaying flipping to true by patching mock and re-rendering
     const { useTtsPlayback } = await import("@/hooks/useTtsPlayback");
     (useTtsPlayback as unknown as MockInstance).mockReturnValue({
       play: mockTtsPlay,
@@ -293,39 +289,90 @@ describe("VoiceModePanel", () => {
       rerender(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
     });
 
-    expect(mockRecognitionStop).toHaveBeenCalled();
+    expect(mockRecognitionStop).not.toHaveBeenCalled();
 
     unmount();
   });
 
-  it("calls recognition.start when isPlaying transitions from true to false", async () => {
-    const { useTtsPlayback } = await import("@/hooks/useTtsPlayback");
+  // ─── 9. Barge-in (CONV-01, D-06/D-08/D-11/D-12) ────────────────────────────
 
-    // First render with isPlaying=true
-    (useTtsPlayback as unknown as MockInstance).mockReturnValue({
-      play: mockTtsPlay,
-      stop: mockTtsStop,
-      isPlaying: true,
+  it("fires agent.stop with the tracked session_id and pauses TTS audio on a barge-in phrase during speaking", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    // Establish an active session the same way flushSend does — simulate a
+    // prior chat.send ack that set activeSessionRef via a run.tts/run.text flow.
+    // Since this test starts already in "speaking", we exercise the barge-in
+    // path directly against whatever activeSessionRef currently holds (null by
+    // default, matching the component's fallback).
+    await act(async () => {
+      onFinalResultCallback?.("stop");
     });
 
-    const { rerender, unmount } = render(
-      <VoiceModePanel voiceState="speaking" onClose={onClose} />
+    expect(mockTtsStop).toHaveBeenCalled();
+    expect(mockSendCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "agent.stop", session_id: null })
     );
+  });
 
-    // Now isPlaying flips to false
-    (useTtsPlayback as unknown as MockInstance).mockReturnValue({
-      play: mockTtsPlay,
-      stop: mockTtsStop,
-      isPlaying: false,
-    });
+  it("shows the interrupt flash on a recognized barge-in phrase during speaking", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
 
     await act(async () => {
-      rerender(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+      onFinalResultCallback?.("wait");
     });
 
-    expect(mockRecognitionStart).toHaveBeenCalled();
+    expect(screen.getByText(/— interrupted —/i)).toBeInTheDocument();
+  });
 
-    unmount();
+  it("drops a non-barge-in transcript recognized during speaking (echo guard) — no chat.send, no flash", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onFinalResultCallback?.("show me the agents dashboard");
+    });
+
+    expect(mockSendCommand).not.toHaveBeenCalled();
+    expect(screen.queryByText(/— interrupted —/i)).not.toBeInTheDocument();
+  });
+
+  it("carries interrupted_reply (from the reply accumulator) on the chat.send after a barge-in", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+      // She had streamed a partial reply before being interrupted.
+      const textHandler = getSubscribeHandler("run.text");
+      await act(async () => {
+        textHandler?.({ data: { text_chunk: "The weather today is" } });
+      });
+
+      // Barge-in fires.
+      await act(async () => {
+        onFinalResultCallback?.("wait");
+      });
+
+      mockSendCommand.mockClear();
+
+      // The next turn's utterance lands (component transitions out of
+      // "speaking" via BARGE_IN internally — the reducer moves to
+      // "transcribing", so a subsequent final result flows through the normal
+      // accumulate/flush path).
+      await act(async () => {
+        onFinalResultCallback?.("never mind, what's the weather in tokyo");
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "chat.send",
+          interrupted_reply: "The weather today is",
+        })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // ─── 8. aria-live regions ───────────────────────────────────────────────────
