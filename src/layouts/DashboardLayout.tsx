@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import * as jsYaml from "js-yaml";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -15,6 +16,7 @@ import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
 import { MicToggle } from "../components/MicToggle";
+import { StrictModeToggle } from "../components/voice/StrictModeToggle";
 import { ListeningIndicatorPill } from "../components/ListeningIndicatorPill";
 import { useWakeWord } from "../hooks/useWakeWord";
 import { Separator } from "@/components/ui/separator";
@@ -381,6 +383,17 @@ export default function DashboardLayout() {
     }
   });
 
+  // Strict Mode (CONV-02, D-04) — instant-paint localStorage mirror, then
+  // hydrated from the server (source of truth) via config.get on mount.
+  // Same try/catch JSON.parse(... ?? "false") initializer shape as voiceModeEnabled.
+  const [strictMode, setStrictMode] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("codepulse-strict-mode") ?? "false");
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     const handler = () => {
       try {
@@ -402,6 +415,59 @@ export default function DashboardLayout() {
   const showSys = systemResources?.cpu != null;
 
   const { status: wsStatus, sendCommand } = useAstridrWS();
+
+  // Strict Mode (CONV-02, D-04) — hydrate from server on mount. config.get is
+  // the source of truth; the localStorage mirror above is only for instant paint.
+  useEffect(() => {
+    (async () => {
+      try {
+        const ack = await sendCommand({ type: "config.get", section: "voice-prefs" });
+        if (ack.status === "ok") {
+          const content = ((ack.data as Record<string, unknown>)?.content ??
+            (ack as Record<string, unknown>).content ??
+            "") as string;
+          const parsed = (jsYaml.load(content) as Record<string, unknown>) ?? {};
+          if (typeof parsed.strict_mode === "boolean") {
+            setStrictMode(parsed.strict_mode);
+            localStorage.setItem("codepulse-strict-mode", JSON.stringify(parsed.strict_mode));
+          }
+        } else {
+          console.warn("Failed to hydrate strict mode from server:", ack.error);
+        }
+      } catch (err) {
+        // Offline/API-failure fallback (Claude's Discretion, 183-RESEARCH.md A4/A5):
+        // keep the optimistic localStorage mirror, log, don't throw.
+        console.warn("Failed to hydrate strict mode from server:", err);
+      }
+    })();
+    // Mount-only hydration — sendCommand identity is stable per AstridrWSContext.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Toggling (manual switch OR the spoken path via onStrictModeChange) updates
+  // state, writes the localStorage mirror immediately (optimistic), and persists
+  // server-side. A failed persist keeps the optimistic local value — logged, not thrown.
+  const handleStrictModeChange = useCallback(
+    (v: boolean) => {
+      setStrictMode(v);
+      localStorage.setItem("codepulse-strict-mode", JSON.stringify(v));
+      sendCommand({
+        type: "config.update",
+        request_id: crypto.randomUUID(),
+        section: "voice-prefs",
+        changes: { strict_mode: v },
+        dry_run: false,
+      }).then((ack) => {
+        if (ack.status !== "ok") {
+          console.warn("Failed to persist strict mode:", ack.error);
+        }
+      }).catch((err) => {
+        console.warn("Failed to persist strict mode:", err);
+      });
+    },
+    [sendCommand],
+  );
+
   const [headerLatencyMs, setHeaderLatencyMs] = useState<number | null>(null);
   const headerPingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -618,6 +684,7 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
             {/* Voice mode controls — ListeningIndicatorPill only when engine is ready and voice is ON */}
             {voiceModeEnabled && wakeWordStatus === 'ready' && <ListeningIndicatorPill />}
+            <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
             <MicToggle
               enabled={voiceModeEnabled}
               status={wakeWordStatus}
@@ -668,6 +735,8 @@ export default function DashboardLayout() {
           setVoiceMode(false);
           setPaletteOpen(false);
         }}
+        strictMode={strictMode}
+        onStrictModeChange={handleStrictModeChange}
       />
     </div>
   );

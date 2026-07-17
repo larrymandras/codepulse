@@ -41,6 +41,10 @@ interface CommandPaletteProps {
   voiceState?: VoiceState;
   /** Called when VoiceModePanel requests close (end-phrase / X / silence). */
   onVoiceClose?: () => void;
+  /** Strict Mode (CONV-02, D-04): threaded through to VoiceModePanel. Defaults false. */
+  strictMode?: boolean;
+  /** Called on a spoken strict-mode command (183-03) or the manual top-bar toggle (183-04). */
+  onStrictModeChange?: (v: boolean) => void;
 }
 
 export function CommandPalette({
@@ -49,6 +53,8 @@ export function CommandPalette({
   voiceMode = false,
   voiceState,
   onVoiceClose,
+  strictMode,
+  onStrictModeChange,
 }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { sendCommand } = useAstridrWS();
@@ -69,6 +75,8 @@ export function CommandPalette({
             onVoiceClose?.();
             onOpenChange(false);
           }}
+          strictMode={strictMode}
+          onStrictModeChange={onStrictModeChange}
         />
       ) : (
       <>
