@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v10.0
-milestone_name: Eval & Trace Observability + Hardening
-status: milestone_complete
-stopped_at: Milestone complete (Phase 96 was final phase)
-last_updated: 2026-07-13T19:39:37.212Z
-last_activity: 2026-07-13 -- Phase 96 execution started
+milestone: v11.0
+milestone_name: Skills Command Center — Full Lifecycle & Launch
+status: planning
+last_updated: "2026-07-17T18:27:56.074Z"
+last_activity: 2026-07-17
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-06-23)
 
 ## Current Position
 
-Phase: 96 (final — v10.0 fully closed including Phase 96 addendum)
-Plan: 13/13 complete
-Status: Milestone complete — archived (v10.0-ROADMAP.md appendix added); next: /gsd-new-milestone
-Last activity: 2026-07-13 -- Completed quick task 260713-q9k: ApprovalBlock update-by-id in Chat (closes the D-05 cross-repo handoff from astridr 178.1)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-17 — Milestone v11.0 started
 
 ## Deferred Items
 

@@ -8,6 +8,25 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
+## Current Milestone: v11.0 Skills Command Center — Full Lifecycle & Launch
+
+**Goal:** Turn the Skills page from a read-only catalog into a real control surface — add, move, archive, restore, delete, and *launch* skills live, executed on the host by the Forge daemon.
+
+**Target features:**
+- **Real skill intake** — flip today's dry-run validator (`IntakeModal`: "Validation only — nothing is written… intake execution has no live daemon yet (Phase 8)") into an actual install. Host daemon writes a SKILL.md (upload or GitHub URL) to **global / project / cold storage**, then rescans the registry so it appears. Closes the deferred "Phase 8" intake-executor gap.
+- **Skill lifecycle mutations** — in-app **archive** (active→cold storage, frees context/tokens but stays tracked as dormant), **restore** (cold→active), **move** between global/project, and **delete** — *archive-first*, with true file deletion behind an explicit confirm (house rule: archive, don't `rm`). Respects `isShadowing` (dormant copy shadowed by an active same-name skill). Kills the current "run `/manage-skills` in a terminal" dead-end (`ColdStorageView`).
+- **Skill launch / dispatch** — a real **Run** action (today "Open in Chat" only *prefills* `/skillname`) targeting all three: **Chat (auto-send via `chat.send`)**, **Forge agent launch** (agent/workspace/mode, skill as the instruction, reuses `enqueueLaunch`), and **through Ástríðr / a chosen persona**.
+- **Control-surface UX** — per-row overflow menu (⋯: Move / Restore / Archive / Delete / Run) **plus** drag across **Global / Project / Cold Storage** lanes; wire up the coded-but-unused `isShadowing`; super usable, efficient, complete.
+- **Cross-repo Forge daemon executor** — the load-bearing piece: the daemon gains intake + lifecycle handlers + a registry rescan so origins/scope update after any mutation. Nothing above works live without it.
+
+**Key context / constraints:**
+- **Cross-repo, daemon is the critical path.** Reuses the existing Forge command channel (`forgeCommands` queue, optimistic rows, TTL/expiry, Clerk fail-closed auth, daemon-offline degradation). Pinning down where the daemon code lives (separate `forge` repo vs astridr-repo) is execution step 1.
+- **Live-integration gate closed *during* execution, not claimed after** — the v9.0 War Room lesson (feature was GREEN in tests but had never run end-to-end); every mutation verified against a running daemon before "done."
+- **Skill identity is composite `(name, origin)`**; scope is encoded in `origin` (`claude-code` = global, `claude-code:project:<hash>` = project, `claude-code:available` = dormant/cold). Intake `destination` union already carries `global|project|cold`.
+- Continues phase numbering — **Phase 97 (Skill Lifecycle Management)**, already promoted from backlog 999.1 on 2026-07-17, becomes the first phase of this milestone; new phases run 97+.
+
+> **Formalized 2026-07-17 via `/gsd-new-milestone`.** Requirements + roadmap defined below / in REQUIREMENTS.md + ROADMAP.md.
+
 ## Current State
 
 **Phase 96 complete (2026-07-13):** UI deep-dive cleanup appended to v10.0 — 13/13 plans, re-verified 16/16 after gap closure (96-13). Every UI surface tells the truth and follows one standard: CONSOLE nav cluster dissolved, CommandPalette single-sourced from `navItems` (no more drift), fabricated header/security/automation readouts removed, orphaned pages (MissionControl/Profiles/Agents) deleted with redirects, both approval consumers (Chat ApprovalBlock + InboxCard) gate on the server ack boolean against the verified Ástríðr `approval.respond` contract, Chat subscribes to the real `run.blocks` event, and all pages share one `<PageHeader>`. Outstanding cross-repo handoff (astridr-repo, out of CodePulse scope): `chat.send` bypasses the security pipeline (`_ws_agent_launcher` never calls `process_inbound`) and no approval-type block producer exists — until those land, Chat-side approval blocks can't fire live (Inbox path verified live end-to-end).
@@ -240,4 +259,11 @@ This document evolves at phase transitions and milestone boundaries.
 </details>
 
 ---
+*Last updated: 2026-07-17 — **v11.0 Skills Command Center — Full Lifecycle & Launch started** via `/gsd-new-milestone`. Scope: real skill intake (execute today's dry-run install to global/project/cold), full skill lifecycle mutations (archive/restore/move/delete, archive-first), real skill launch to Chat/Forge-agent/Ástríðr, control-surface UX (⋯ menu + drag across scope lanes), and the cross-repo Forge daemon executor that makes it all live. Continues phase numbering from 97 (Phase 97 already promoted from backlog 999.1). Prior: v10.0 SHIPPED & closed 2026-07-13 (phases 93-96, Phase 96 UI-cleanup addendum).*
+
+<details>
+<summary>Prior footer — 2026-07-13 (v10.0 closed)</summary>
+
 *Last updated: 2026-07-13 after Phase 96 (UI deep-dive cleanup) completion*
+
+</details>
