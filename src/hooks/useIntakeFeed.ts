@@ -46,7 +46,6 @@ function extractRepoLabel(url: string): string {
 export interface IntakeFeed {
   rows: IntakeCommandRow[];
   isLoading: boolean;
-  now: number;
   activeCount: number;
   labelFor: (row: IntakeCommandRow) => string;
   handleEnqueued: (row: IntakeCommandRow) => void;
@@ -105,16 +104,6 @@ export function useIntakeFeed(): IntakeFeed {
 
   const isLoading = raw === undefined && pendingLocal.length === 0;
 
-  // Shared per-second tick for the queued countdown — a single timer, gated on
-  // the presence of a queued row so an idle feed never re-renders consumers.
-  const hasQueuedRow = rows.some((r) => r.status === "queued");
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!hasQueuedRow) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [hasQueuedRow]);
-
   const activeCount = useMemo(
     () =>
       rows.filter(
@@ -133,5 +122,18 @@ export function useIntakeFeed(): IntakeFeed {
     []
   );
 
-  return { rows, isLoading, now, activeCount, labelFor, handleEnqueued, handleEnqueueFailed };
+  return { rows, isLoading, activeCount, labelFor, handleEnqueued, handleEnqueueFailed };
+}
+
+/** 1 Hz tick for the queued-row countdown, gated so an idle list never ticks.
+ * Lives with its consumer (IntakeSheet) so the page doesn't re-render each second. */
+export function useCountdownNow(rows: IntakeCommandRow[]): number {
+  const hasQueuedRow = rows.some((r) => r.status === "queued");
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasQueuedRow) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [hasQueuedRow]);
+  return now;
 }

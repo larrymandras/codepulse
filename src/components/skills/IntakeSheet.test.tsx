@@ -35,7 +35,6 @@ const row = (over: Partial<IntakeCommandRow> = {}): IntakeCommandRow => ({
 const feed = (over: Partial<IntakeFeed> = {}): IntakeFeed => ({
   rows: [],
   isLoading: false,
-  now: 0,
   activeCount: 0,
   labelFor: (r) => r.fileName ?? "acme/repo",
   handleEnqueued: vi.fn(),
@@ -89,12 +88,12 @@ describe("IntakeSheet", () => {
     expect(trigger.getAttribute("data-state")).toBe("open");
   });
 
-  it("shows the queued countdown from feed.now inside aria-live=off", () => {
+  it("shows the queued countdown inside aria-live=off, ticking off now owned by the sheet", () => {
     const { baseElement } = renderSheet(
-      feed({ rows: [row({ status: "queued", expiresAt: 125000 })], now: 0 })
+      feed({ rows: [row({ status: "queued", expiresAt: Date.now() + 125000 })] })
     );
-    expect(screen.getByText(/Expires in 2:05/)).toBeInTheDocument();
+    expect(screen.getByText(/Expires in 2:0[0-5]/)).toBeInTheDocument();
     const off = baseElement.querySelector('[aria-live="off"]');
-    expect(off?.textContent).toContain("2:05");
+    expect(off?.textContent).toMatch(/2:0[0-5]/);
   });
 });

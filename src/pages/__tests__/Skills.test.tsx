@@ -62,12 +62,12 @@ vi.mock("@/hooks/useIntakeFeed", () => ({
   useIntakeFeed: () => ({
     rows: [],
     isLoading: false,
-    now: 0,
     activeCount: 0,
     labelFor: () => "",
     handleEnqueued: vi.fn(),
     handleEnqueueFailed: vi.fn(),
   }),
+  useCountdownNow: () => 0,
   formatCountdown: () => "0:00",
 }));
 

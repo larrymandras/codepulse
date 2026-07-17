@@ -7,7 +7,7 @@ vi.mock("../../convex/_generated/api", () => ({
   api: { forge: { listIntakeCommands: "mock-listIntakeCommands" } },
 }));
 
-import { useIntakeFeed, formatCountdown } from "./useIntakeFeed";
+import { useIntakeFeed, formatCountdown, useCountdownNow } from "./useIntakeFeed";
 import type { IntakeCommandRow } from "./useIntake";
 
 const serverRow = (over: Partial<IntakeCommandRow> = {}): IntakeCommandRow => ({
@@ -108,23 +108,31 @@ describe("useIntakeFeed", () => {
     expect(result.current.rows[0].commandId).toBe("local-1");
   });
 
-  it("does not run the 1 Hz tick without a queued row, runs it with one", () => {
-    vi.useFakeTimers();
-    mockUseQuery.mockReturnValue([rawDoc({ status: "done" })]);
-    const { result, rerender } = renderHook(() => useIntakeFeed());
-    const before = result.current.now;
-    act(() => void vi.advanceTimersByTime(3000));
-    expect(result.current.now).toBe(before);
-    mockUseQuery.mockReturnValue([rawDoc({ status: "queued" })]);
-    rerender();
-    act(() => void vi.advanceTimersByTime(1100));
-    expect(result.current.now).toBeGreaterThan(before);
-  });
 });
 
 describe("formatCountdown", () => {
   it("formats m:ss and clamps at 0:00", () => {
     expect(formatCountdown(125000)).toBe("2:05");
     expect(formatCountdown(-5)).toBe("0:00");
+  });
+});
+
+describe("useCountdownNow", () => {
+  it("does not tick without a queued row", () => {
+    vi.useFakeTimers();
+    const rows = [serverRow({ status: "done" })];
+    const { result } = renderHook(() => useCountdownNow(rows));
+    const before = result.current;
+    act(() => void vi.advanceTimersByTime(3000));
+    expect(result.current).toBe(before);
+  });
+
+  it("ticks once a queued row is present", () => {
+    vi.useFakeTimers();
+    const rows = [serverRow({ status: "queued" })];
+    const { result } = renderHook(() => useCountdownNow(rows));
+    const before = result.current;
+    act(() => void vi.advanceTimersByTime(1100));
+    expect(result.current).toBeGreaterThan(before);
   });
 });

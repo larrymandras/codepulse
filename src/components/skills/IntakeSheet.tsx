@@ -18,7 +18,7 @@ import {
   DestinationBadge,
 } from "@/components/skills/IntakeStatusBadge";
 import { IntakeReportView } from "@/components/skills/IntakeReportView";
-import { formatCountdown } from "@/hooks/useIntakeFeed";
+import { formatCountdown, useCountdownNow } from "@/hooks/useIntakeFeed";
 import type { IntakeFeed } from "@/hooks/useIntakeFeed";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
 
@@ -31,7 +31,8 @@ interface IntakeSheetProps {
 /** Full intake history + reports, slid over from the right. State lives in
  * useIntakeFeed (owned by Skills.tsx) so closing the sheet loses nothing. */
 export function IntakeSheet({ open, onOpenChange, feed }: IntakeSheetProps) {
-  const { rows, isLoading, now, labelFor } = feed;
+  const { rows, isLoading, labelFor } = feed;
+  const now = useCountdownNow(rows);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
