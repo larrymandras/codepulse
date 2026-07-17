@@ -94,7 +94,7 @@ export function CategoryEditPopover({
               style={{ backgroundColor: COLOR_HEX[c] }}
               className={`w-6 h-6 rounded-full ${
                 color === c
-                  ? "ring-2 ring-white ring-offset-2 ring-offset-gray-900"
+                  ? "ring-2 ring-foreground ring-offset-2 ring-offset-card"
                   : ""
               }`}
               title={c}
