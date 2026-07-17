@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GripVertical, MessageSquare, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
 
@@ -44,6 +44,14 @@ export function SkillRow({
   const dormant = isDormant(skill);
   const invocation = skillInvocation(skill);
   const desc = skill.overrideDescription ?? skill.description ?? "";
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    },
+    []
+  );
 
   const handleCopy = async () => {
     try {
@@ -53,7 +61,8 @@ export function SkillRow({
     } catch {
       setCopyState("failed");
     }
-    setTimeout(() => setCopyState("idle"), 1800);
+    if (resetTimer.current) clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setCopyState("idle"), 1800);
     onRecordUse(skill.name);
   };
 

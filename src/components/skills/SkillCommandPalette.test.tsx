@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SkillCommandPalette } from "./SkillCommandPalette";
+import { DORMANT_ORIGIN } from "@/lib/skills";
 
 // cmdk calls scrollIntoView on selection; jsdom has no layout. cmdk also
 // requires ResizeObserver, which jsdom does not implement — polyfill both,
@@ -104,5 +105,48 @@ describe("SkillCommandPalette", () => {
     fireEvent.keyDown(screen.getByPlaceholderText("Search skills..."), { key: "Enter", ctrlKey: true });
     expect(onOpenInChat).toHaveBeenCalledWith("gsd-plan-phase");
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("copy failure shows 'copy failed' in the footer and still records use", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    const { onRecordUse } = renderPalette();
+    fireEvent.click(screen.getByText("Plan Phase"));
+    await waitFor(() => expect(screen.getByText("copy failed")).toBeInTheDocument());
+    expect(onRecordUse).toHaveBeenCalledWith("gsd-plan-phase");
+  });
+
+  it("renders a dormant skill with the dormant marker and shows dormant copy feedback on select", async () => {
+    const dormantSkills = [
+      ...skills,
+      {
+        name: "dormant-skill",
+        displayName: "Dormant Skill",
+        description: "Not loaded",
+        overrideDescription: null,
+        categoryName: "legal",
+        categoryIcon: "⚖️",
+        favorite: false,
+        origins: [DORMANT_ORIGIN],
+      },
+    ];
+    const onOpenChange = vi.fn();
+    const onRecordUse = vi.fn();
+    const onOpenInChat = vi.fn();
+    render(
+      <SkillCommandPalette
+        open
+        onOpenChange={onOpenChange}
+        skills={dormantSkills}
+        categories={categories}
+        onRecordUse={onRecordUse}
+        onOpenInChat={onOpenInChat}
+      />
+    );
+    expect(screen.getByText("dormant")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Dormant Skill"));
+    await waitFor(() =>
+      expect(screen.getByText(/\/dormant-skill copied — dormant, not loaded/)).toBeInTheDocument()
+    );
+    expect(onRecordUse).toHaveBeenCalledWith("dormant-skill");
   });
 });

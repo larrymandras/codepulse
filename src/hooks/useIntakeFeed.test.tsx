@@ -55,6 +55,14 @@ describe("useIntakeFeed", () => {
     expect(result.current.rows).toEqual([]);
   });
 
+  it("isLoading flips to false once an optimistic row is enqueued, even while the query is still undefined", () => {
+    const { result } = renderHook(() => useIntakeFeed());
+    act(() => result.current.handleEnqueued(serverRow({ status: "pending" })));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.rows[0].status).toBe("pending");
+  });
+
   it("handleEnqueued prepends an optimistic row immediately", () => {
     mockUseQuery.mockReturnValue([]);
     const { result } = renderHook(() => useIntakeFeed());

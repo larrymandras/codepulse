@@ -46,6 +46,15 @@ describe("IntakeStrip", () => {
     expect(onOpen).toHaveBeenCalled();
   });
 
+  it("wraps the status chip in an aria-live=polite region (locked contract)", () => {
+    const { container } = render(
+      <IntakeStrip rows={[row()]} activeCount={1} labelFor={labelFor} onOpen={vi.fn()} />
+    );
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live).not.toBeNull();
+    expect(live?.textContent).toContain("Queued");
+  });
+
   it("omits the active count when nothing is active", () => {
     render(
       <IntakeStrip rows={[row({ status: "done" })]} activeCount={0} labelFor={labelFor} onOpen={vi.fn()} />

@@ -310,6 +310,20 @@ describe("Skills page", () => {
     expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
   });
 
+  it("origin filter narrows the overview to skills from the selected origin", () => {
+    const mockWithOrigins = MOCK_ENRICHED_SKILLS.map((s) => ({
+      ...s,
+      origins: s.name === "legal-review" ? ["cc"] : ["claude-code"],
+    }));
+    setupMocks(mockWithOrigins);
+    render(<Skills />);
+    const originSelect = screen.getByLabelText("Filter by origin");
+    fireEvent.change(originSelect, { target: { value: "cc" } });
+    expect(screen.getByText("Contract Review")).toBeInTheDocument();
+    expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
+    expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument();
+  });
+
   it("copy is the primary action on a drilled-in skill row", async () => {
     render(<Skills />);
     fireEvent.click(getCategoryNavItem("Legal"));

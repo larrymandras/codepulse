@@ -73,6 +73,13 @@ describe("IntakeSheet", () => {
     expect(screen.getByText("Failed: boom")).toBeInTheDocument();
   });
 
+  it("wraps each row's status chip in an aria-live=polite region (locked contract)", () => {
+    const { baseElement } = renderSheet(feed({ rows: [row({ status: "failed", error: "boom" })] }));
+    const live = baseElement.querySelector('[aria-live="polite"]');
+    expect(live).not.toBeNull();
+    expect(live?.textContent).toContain("Failed");
+  });
+
   it("renders DestinationBadge for every row regardless of status", () => {
     renderSheet(feed({ rows: [row(), row({ commandId: "c2", status: "done", destination: "cold" })] }));
     expect(screen.getByText(/global/i)).toBeInTheDocument();
@@ -80,9 +87,12 @@ describe("IntakeSheet", () => {
   });
 
   it("clicking a done row's trigger toggles the report open", () => {
+    // Real verdicts are admit/reject/error (IntakeStatusBadge's VERDICT_MAP) —
+    // "admit" exercises the mapped path, not the defensive-fallback path.
     renderSheet(
-      feed({ rows: [row({ status: "done", report: { verdict: "approved" } })] })
+      feed({ rows: [row({ status: "done", report: { verdict: "admit" } })] })
     );
+    expect(screen.getByText("Admit")).toBeInTheDocument();
     const trigger = screen.getByRole("button", { name: /acme\/repo/ });
     fireEvent.click(trigger);
     expect(trigger.getAttribute("data-state")).toBe("open");

@@ -43,6 +43,7 @@ describe("SkillRow", () => {
     render(<SkillRow skill={skill} {...h} />);
     fireEvent.click(screen.getByRole("button", { name: /copy \/legal-nda/i }));
     await waitFor(() => expect(screen.getByText("Failed")).toBeTruthy());
+    expect(h.onRecordUse).toHaveBeenCalledWith("legal-nda");
   });
 
   it("dormant skill renders a dormant badge and Dormant copy feedback", async () => {
