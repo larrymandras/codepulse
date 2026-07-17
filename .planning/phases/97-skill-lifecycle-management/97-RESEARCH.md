@@ -371,14 +371,14 @@ const command = `skill-intake admit ${quoteArg(src)} --to ${destination} --write
 
 **Risk profile:** Both assumptions are LOW risk — neither blocks correct behavior if wrong, only efficiency (A1) or retry UX (A2).
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Where does today's live `/scan` snapshot come from?**
+1. **Where does today's live `/scan` snapshot come from?** — **RESOLVED: low-risk either way, deferred** (Plan 02 builds a fresh directory walk, which is correct regardless of any pre-existing astridr-side walker; reusing one would be an efficiency optimization only, not a correctness gate).
    - What we know: `convex/scan.ts`'s `scanEndpoint` and `registry.syncInventory` are live and already populate the `skills` table for some existing feeder (per `origin` values like `"native"`, `"bridge"`, `"cc"`, `"claude-code[:...]"` seen in `schema.ts` comments).
    - What's unclear: which script/service currently calls `POST /scan` — not found in `forge` or `skill-intake`; likely astridr-repo or a manual script outside GSD-tracked repos for either.
    - Recommendation: a 10-minute grep of astridr-repo's own tools/scripts before starting DAEMON-03 work, to decide "reuse an existing walker" vs. "write fresh" — either path is viable, this only affects effort/consistency, not correctness (see A1).
 
-2. **Exact wire format for a synthesized write-refusal message (Pitfall 3).**
+2. **Exact wire format for a synthesized write-refusal message (Pitfall 3).** — **RESOLVED: adapter is Convex-side, per Plan 05** (Plan 01's daemon emits a structured `write-refused:<kind>:` / `post-placement-warning:<kind>:` error string with the report kept verbatim per D-P8-10; Plan 05's `ackCommand` adapter `synthesizeWriteRefusalReport` composes the house copy into BOTH `error` and a synthetic `report.findings` entry — the `error` half is required because IntakeSheet's failed branch renders only `row.error`).
    - What we know: the CLI's refusal reason is human-readable prose in `outcome.message` (e.g., `"{path} already exists and differs from the candidate -- pass --allow-overwrite to write here"`), printed to stdout after the JSON report line.
    - What's unclear: whether to (a) regex/string-extract this from the daemon's captured stdout and inject it as a synthetic `finding` in the report object before acking (keeping `IntakeReportView` unchanged, per UI-SPEC's stated preference), or (b) add a new top-level field the daemon composes (e.g. `{...report, writeRefusal: {code, reason}}`) that CodePulse's server-side ack handler adapts.
    - Recommendation: plan-phase should decide this explicitly — UI-SPEC already anticipates "if plan-phase research finds the real skill-intake report shape diverges, an adapter belongs in `convex/forge.ts` (server-side), not a new UI branch." The synthetic-finding approach (a) is the more surgical fit: it reuses `IntakeReportView`'s existing `findings` table with zero UI changes beyond what UI-SPEC already specifies, by having the daemon (or a Convex-side adapter in `ackCommand`) inject a `{rule_id: "write-refused", severity: "error", message: <extracted reason>}` finding and flip a synthesized `verdict` when the write outcome (not the validation outcome) failed.
