@@ -496,10 +496,13 @@ Plans:
 
 *Last updated: 2026-07-13 — **v10.0 fully closed including Phase 96 addendum**. Phase 96 (UI deep-dive cleanup, 13 plans / 28 tasks, appended post-ship 2026-07-13): re-verified 16/16 after 96-13 gap closure, code review clean, SECURITY 35/35 threats closed, UAT gaps resolved (astridr-side items handed off to astridr phase 178.1). v10.0 as shipped 2026-07-07: 3 phases (93-95), 15 plans, 36 tasks, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md` (Phase 96 appendix added 2026-07-13). Next: `/gsd-new-milestone`.*
 
-## Backlog
+## Post-v10.0 — Unassigned Phases
 
-### Phase 999.1: Skill Lifecycle Management — archive/restore/delete via Forge daemon (BACKLOG)
+*Promoted from backlog 999.1 on 2026-07-17. Not yet folded into an open milestone (v10.0 closed 2026-07-07) — fold into the next milestone via `/gsd-new-milestone`, or plan directly with `/gsd-plan-phase 97`.*
 
+### Phase 97: Skill Lifecycle Management — archive/restore/delete via Forge daemon
+
+**Depends on:** Skills command-center (PR #67 — Cold Storage rail view / read-only dormancy, shipped 2026-07-17) — the precursor this builds mutation on top of.
 **Goal:** Let the Skills page mutate skill state on the host machine — archive an active skill to cold storage (`.claude/skills-available/`), restore a dormant one, or delete a skill — instead of today's view-only dormancy handling (Cold Storage rail view, PR #67) and the CLI-only `/manage-skills` path.
 **Requirements:** TBD
 **Plans:** 0 plans
@@ -511,6 +514,6 @@ Context (captured 2026-07-17, during the Skills command-center redesign):
 - UI affordances sketched: row-level overflow/hover actions ("Archive to cold storage" / "Restore" / "Delete"), wired to optimistic command rows like IntakePanel/IntakeStrip do.
 
 Plans:
-- [ ] TBD (promote with /gsd-review-backlog when ready)
+- [ ] TBD — plan with `/gsd-plan-phase 97` (requirements need defining first; cross-repo scope)
 
 *Prior: 2026-06-29 — **v9.0 Readability & Experience SHIPPED & ARCHIVED** (tagged v9.0; archive `milestones/v9.0-ROADMAP.md`). 5 phases (88-92), 30 plans, 19/19 requirements. — Prior note: Phase 90 build (90-01..90-07) complete; this session closed the cross-repo LIVE-integration gap that was never closed at scoping. Five layered gaps fixed + committed: (1) `war-room` Docker profile (LiveKit + 5 agent workers) wasn't started → create_war_room 500; (2) Phase-90 Convex fns committed-but-not-deployed → listRooms error; (3) astridr never POSTed to `/war-room-ingest` → built room.created/updated emit (astridr 97c63643, codepulse e09ce37); (4) transcript.chunk ingest from agents → built (astridr 26874fac); (5) launch-dialog form-wipe fix (codepulse 4c3372d) + new delete-room feature (codepulse 1189ff5). astridr token endpoint live (4093aec). Full record: `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md`. Remaining: 90-08 operator live sign-off. — Prior note: Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*
