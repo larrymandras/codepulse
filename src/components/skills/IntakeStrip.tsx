@@ -3,6 +3,7 @@ import {
   RowStatusBadge,
   VerdictBadge,
 } from "@/components/skills/IntakeStatusBadge";
+import { verdictOf } from "@/hooks/useIntakeFeed";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
 
 interface IntakeStripProps {
@@ -23,10 +24,7 @@ export function IntakeStrip({ rows, activeCount, labelFor, onOpen }: IntakeStrip
 
   const chip =
     latest.status === "done" ? (
-      <VerdictBadge
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        verdict={(latest.report as any)?.verdict ?? "error"}
-      />
+      <VerdictBadge verdict={verdictOf(latest)} />
     ) : (
       <RowStatusBadge status={latest.status as Exclude<IntakeCommandRow["status"], "done">} />
     );

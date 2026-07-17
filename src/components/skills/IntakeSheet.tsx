@@ -18,7 +18,7 @@ import {
   DestinationBadge,
 } from "@/components/skills/IntakeStatusBadge";
 import { IntakeReportView } from "@/components/skills/IntakeReportView";
-import { formatCountdown, useCountdownNow } from "@/hooks/useIntakeFeed";
+import { formatCountdown, useCountdownNow, verdictOf } from "@/hooks/useIntakeFeed";
 import type { IntakeFeed } from "@/hooks/useIntakeFeed";
 import type { IntakeCommandRow } from "@/hooks/useIntake";
 
@@ -81,10 +81,7 @@ export function IntakeSheet({ open, onOpenChange, feed }: IntakeSheetProps) {
                 >;
 
                 const chip = isDone ? (
-                  <VerdictBadge
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    verdict={(row.report as any)?.verdict ?? "error"}
-                  />
+                  <VerdictBadge verdict={verdictOf(row)} />
                 ) : isQueued ? (
                   // A per-second live region is hostile to screen readers — the
                   // countdown text overrides the outer aria-live="polite" chip

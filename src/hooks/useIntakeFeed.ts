@@ -43,6 +43,12 @@ function extractRepoLabel(url: string): string {
   return url.replace(/^https?:\/\/github\.com\//, "");
 }
 
+/** Report verdict for a done row; defensive "error" when the report is malformed. */
+export function verdictOf(row: IntakeCommandRow): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((row.report as any)?.verdict as string | undefined) ?? "error";
+}
+
 export interface IntakeFeed {
   rows: IntakeCommandRow[];
   isLoading: boolean;
