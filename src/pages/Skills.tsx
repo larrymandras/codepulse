@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Search } from "lucide-react";
+import { Search, Archive } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
 import { AllSkillsOverview } from "@/components/skills/AllSkillsOverview";
+import { ColdStorageView } from "@/components/skills/ColdStorageView";
 import { QuickDeck } from "@/components/skills/QuickDeck";
 import { SkillCommandPalette } from "@/components/skills/SkillCommandPalette";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
@@ -18,12 +19,13 @@ import { IntakeStrip } from "@/components/skills/IntakeStrip";
 import { IntakeSheet } from "@/components/skills/IntakeSheet";
 import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
-import { originOptions } from "@/lib/skills";
+import { originOptions, isDormant } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 export default function Skills() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [coldStorageView, setColdStorageView] = useState(false);
   const [editingSkill, setEditingSkill] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Doc<"skillCategories"> | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -92,6 +94,28 @@ export default function Skills() {
     if (!selectedCategory) return [];
     return filteredSkills.filter((s) => s.categoryName === selectedCategory);
   }, [filteredSkills, selectedCategory]);
+
+  // Dormant skills are only reachable via the origin dropdown otherwise — this
+  // rail entry + view make Cold Storage discoverable on its own.
+  const dormantCount = useMemo(
+    () => enrichedSkills.filter((s) => !s.hidden && isDormant(s)).length,
+    [enrichedSkills]
+  );
+
+  const coldStorageSkills = useMemo(
+    () => filteredSkills.filter((s) => isDormant(s)),
+    [filteredSkills]
+  );
+
+  const handleSelectCategory = (name: string | null) => {
+    setSelectedCategory(name);
+    setColdStorageView(false);
+  };
+
+  const handleSelectColdStorage = () => {
+    setColdStorageView(true);
+    setSelectedCategory(null);
+  };
 
   const selectedCategoryData = useMemo(() => {
     if (!selectedCategory) return null;
@@ -267,7 +291,7 @@ export default function Skills() {
               <CategoryGrid
                 categories={categories}
                 skillCounts={skillCounts}
-                onSelectCategory={setSelectedCategory}
+                onSelectCategory={handleSelectCategory}
                 onEditCategory={setEditingCategory}
                 onAddCategory={() => setCreatingCategory(true)}
                 dropTargetCategory={dropTarget}
@@ -278,17 +302,36 @@ export default function Skills() {
               />
             </div>
 
-            <div className="mt-4 pt-4 border-t border-primary/20">
+            <div className="mt-4 pt-4 border-t border-primary/20 flex flex-col gap-2">
               <button
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => handleSelectCategory(null)}
                 className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
-                  !selectedCategory
+                  !selectedCategory && !coldStorageView
                     ? "bg-primary/20 text-primary border border-primary/50"
                     : "text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent"
                 }`}
               >
                 Overview / All
               </button>
+
+              {dormantCount > 0 && (
+                <button
+                  onClick={handleSelectColdStorage}
+                  className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all flex items-center justify-between gap-2 ${
+                    coldStorageView
+                      ? "bg-primary/20 text-primary border border-primary/50"
+                      : "text-muted-foreground hover:bg-primary/10 hover:text-primary border border-transparent"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <Archive className="w-3.5 h-3.5" aria-hidden="true" />
+                    Cold Storage
+                  </span>
+                  <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded border border-current/30 flex-shrink-0">
+                    {dormantCount}
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -302,11 +345,9 @@ export default function Skills() {
               className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder:text-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[var(--glow-xs)]"
             />
 
-            {!selectedCategory && (
-              <AllSkillsOverview
-                skills={filteredSkills}
-                categories={categoryOptions}
-                onSelectCategory={setSelectedCategory}
+            {coldStorageView && (
+              <ColdStorageView
+                skills={coldStorageSkills}
                 onRecordUse={handleRecordUse}
                 onOpenInChat={handleOpenInChat}
                 onEdit={setEditingSkill}
@@ -314,7 +355,19 @@ export default function Skills() {
               />
             )}
 
-            {selectedCategory && selectedCategoryData && (
+            {!coldStorageView && !selectedCategory && (
+              <AllSkillsOverview
+                skills={filteredSkills}
+                categories={categoryOptions}
+                onSelectCategory={handleSelectCategory}
+                onRecordUse={handleRecordUse}
+                onOpenInChat={handleOpenInChat}
+                onEdit={setEditingSkill}
+                onToggleFavorite={(name) => toggleFav({ skillName: name })}
+              />
+            )}
+
+            {!coldStorageView && selectedCategory && selectedCategoryData && (
               <SkillsInCategory
                 categoryName={selectedCategoryData.name}
                 categoryDisplayName={selectedCategoryData.displayName}

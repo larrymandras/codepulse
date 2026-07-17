@@ -75,6 +75,7 @@ import { useQuery } from "convex/react";
 const mockUseQuery = vi.mocked(useQuery);
 
 import Skills from "../Skills";
+import { DORMANT_ORIGIN } from "@/lib/skills";
 
 const MOCK_CATEGORIES = [
   {
@@ -167,6 +168,27 @@ const MOCK_WITH_UNCATEGORIZED = [
     favorite: false,
     useCount: 0,
     discoveredAt: 1003,
+  },
+];
+
+const MOCK_WITH_DORMANT = [
+  ...MOCK_ENRICHED_SKILLS,
+  {
+    _id: "s5",
+    name: "cold-tool",
+    displayName: "Cold Tool",
+    description: "A dormant skill",
+    categoryName: null as string | null,
+    categoryDisplayName: null as string | null,
+    categoryIcon: "⚡",
+    categoryColor: "gray",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: false,
+    favorite: false,
+    useCount: 0,
+    discoveredAt: 1004,
+    origins: [DORMANT_ORIGIN],
   },
 ];
 
@@ -332,5 +354,40 @@ describe("Skills page", () => {
       expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
     });
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  describe("Cold Storage rail entry", () => {
+    it("is absent when no dormant skills exist", () => {
+      render(<Skills />);
+      expect(screen.queryByText("Cold Storage")).not.toBeInTheDocument();
+    });
+
+    it("appears with the dormant skill count when a dormant skill exists", () => {
+      setupMocks(MOCK_WITH_DORMANT as any);
+      render(<Skills />);
+      const coldStorageButton = screen.getByRole("button", { name: /cold storage/i });
+      expect(within(coldStorageButton).getByText("1")).toBeInTheDocument();
+    });
+
+    it("shows the dormant skill row and explainer, and hides overview content, when clicked", () => {
+      setupMocks(MOCK_WITH_DORMANT as any);
+      render(<Skills />);
+      fireEvent.click(screen.getByRole("button", { name: /cold storage/i }));
+      expect(screen.getByText("Cold Tool")).toBeInTheDocument();
+      expect(
+        screen.getByText(/Dormant skills live on disk but are not loaded/i)
+      ).toBeInTheDocument();
+      expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
+    });
+
+    it("leaves cold storage view when a rail category is clicked", () => {
+      setupMocks(MOCK_WITH_DORMANT as any);
+      render(<Skills />);
+      fireEvent.click(screen.getByRole("button", { name: /cold storage/i }));
+      expect(screen.getByText("Cold Tool")).toBeInTheDocument();
+      fireEvent.click(getCategoryNavItem("Legal"));
+      expect(screen.getByText("NDA Generator")).toBeInTheDocument();
+      expect(screen.queryByText("Cold Tool")).not.toBeInTheDocument();
+    });
   });
 });
