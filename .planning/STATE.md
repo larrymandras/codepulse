@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: planning
-last_updated: "2026-07-17T18:27:56.074Z"
+last_updated: "2026-07-17T19:00:00.000Z"
 last_activity: 2026-07-17
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,17 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-23)
+See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Milestone complete
+**Current focus:** v11.0 Phase 97 — Real Skill Intake & Daemon Foundation
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-07-17 — Milestone v11.0 started
+Phase: 97 — Real Skill Intake & Daemon Foundation
+Plan: — (not yet planned)
+Status: Roadmap defined, ready to plan
+Last activity: 2026-07-17 — ROADMAP.md v11.0 phase structure created (Phases 97-100), REQUIREMENTS.md traceability filled (22/22 mapped)
 
 ## Deferred Items
 
@@ -62,7 +62,21 @@ These were completed work flagged only by naming / status-marker mismatches, not
 
 The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flight snapshot** predating Phases 94/95; superseded by the three phase VERIFICATION.md files (all passed) and the archived REQUIREMENTS (9/9 complete).
 
-## v10.0 Roadmap
+## v11.0 Roadmap
+
+| Phase | Name | Requirements | Status |
+|-------|------|--------------|--------|
+| 97 | Real Skill Intake & Daemon Foundation | INTAKE-01..04, DAEMON-01, DAEMON-03, DAEMON-04 | Not started |
+| 98 | Skill Lifecycle Mutations | LIFE-01..06, DAEMON-02 | Not started |
+| 99 | Skill Launch / Dispatch | LAUNCH-01..04 | Not started |
+| 100 | Control-Surface UX | UX-01..04 | Not started |
+
+**Execution order:** 97 → 98 (98 reuses the daemon command-execution + registry-rescan plumbing 97 builds). 99 is independent of 97/98 (rides existing chat/Forge/Ástríðr channels, no daemon dependency) and can run in parallel. 100 depends on **both** 98 and 99 (the ⋯ menu and drag lanes wire against both) and is sequenced last.
+
+**Note:** the backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1, promoted 2026-07-17) is folded into **Phase 98** above — same scope (archive/restore/move/delete via Forge daemon, `isShadowing` guard, archive-not-delete default), renumbered once the daemon/intake foundation was sequenced first. Nothing dropped or duplicated.
+
+<details>
+<summary>Prior milestone (v10.0) Roadmap — SHIPPED 2026-07-07 (Phase 96 addendum 2026-07-13)</summary>
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
@@ -88,15 +102,24 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 
 </details>
 
+</details>
+
 ## Accumulated Context
 
 ### Roadmap Evolution
 
 - Phase 96 added (2026-07-13): UI deep-dive cleanup — IA restructure (dissolve CONSOLE cluster), command palette nav drift, fake header telemetry, hardcoded trust signals, orphaned pages, header/layout consistency. Full audit findings in `.planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/FINDINGS.md`.
+- v11.0 roadmap created (2026-07-17): 4 phases (97-100) derived from the 22 v11.0 requirements. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is renumbered to Phase 98 — the daemon-executor + real-intake foundation (INTAKE-01..04, DAEMON-01/03/04) was sequenced first as Phase 97 per the dependency analysis (nothing mutates the host without the daemon executor existing). Phase 99 (Launch/Dispatch) is independent of the daemon work (rides existing chat/Forge/Ástríðr channels) and can run in parallel with 97/98. Phase 100 (Control-Surface UX) depends on both 98 and 99 and is sequenced last.
 
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 scoping decisions (2026-07-17):**
+
+- **4-phase roadmap, daemon-first** — INTAKE-01..04 + DAEMON-01/03/04 cluster into Phase 97 because they share one delivery boundary: the daemon executes intake and rescans the registry, so intake literally cannot ship live without that daemon plumbing existing first. LIFE-01..06 + DAEMON-02 cluster into Phase 98 since lifecycle mutations reuse the same command-execution + rescan mechanism Phase 97 builds — genuinely a "Phase 97 extension," not a new integration surface. LAUNCH-01..04 form Phase 99, sequenced independently since launch rides existing `chat.send`/`enqueueLaunch`/Ástríðr channels with zero daemon dependency. UX-01..04 form Phase 100, the control-surface layer wiring the ⋯ menu and drag lanes over both the lifecycle mutations (98) and the Run/launch picker (99) — necessarily last.
+- **Old backlog Phase 97 renumbered to Phase 98** — its captured context (cross-repo scope, `isShadowing` caution, archive-not-delete default, daemon-offline graceful degradation) is carried forward verbatim into Phase 98's detail block in ROADMAP.md; the phase directory `.planning/phases/97-skill-lifecycle-management/` (currently empty, `.gitkeep` only) will be renamed/renumbered at plan time to match.
+- **DAEMON-04 (advertise supported command types) placed in Phase 97, not split** — it's the single capability-negotiation mechanism (`supportedTypes`/`resolveClaimTypes`) that both intake (97) and lifecycle (98) commands ride; built once in 97, lifecycle command types are added to the same array as an implementation detail of Phase 98 (not a new requirement).
 
 **v10.0 scoping decisions (2026-07-04):**
 
@@ -184,15 +207,17 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v10.0 next action:** `/gsd-discuss-phase 94` (Trace Waterfall) — Phase 93 complete 2026-07-06; 94 has no dependency on 93, ready to discuss/plan.
-- **Phase 95 note:** HARD-03 (TypeScript 6) and HARD-04 (react-day-picker 10) already have CI-red dependabot branches (PR #50, PR #49) — plan-phase should reuse/rebase those branches rather than starting migrations from scratch.
-- **v9.0 (shipped, for reference):** ✅ COMPLETE — all 5 phases done, milestone archived 2026-06-29.
+- **v11.0 next action:** `/gsd-discuss-phase 97` (Real Skill Intake & Daemon Foundation) — roadmap defined 2026-07-17, requirements traced, ready for the discuss → ui-spec → plan → execute prerequisite chain. Execution step 1 within Phase 97: pin down where the daemon code lives (separate `forge` repo vs astridr-repo).
+- **Phase 100 note:** depends on both Phase 98 (lifecycle mutations) and Phase 99 (launch/dispatch) — do not plan/execute 100 until both are complete.
+- **Phase 99 note:** independent of the daemon work in 97/98 — can be discussed/planned/executed in parallel if desired, since it rides existing `chat.send`/`enqueueLaunch`/Ástríðr channels with no daemon dependency.
+- **v10.0 (shipped, for reference):** ✅ COMPLETE — all 4 phases (93-96) done, milestone archived 2026-07-13.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
 - **Archive-name collision: ✅ RESOLVED/MOOT (2026-06-29)** — verified the feared stale `milestones/v9.0-*.md`/`v10/v11` adversarial-track archives are NOT present in this repo (milestones/ holds only v4/5/7/8; git never tracked milestones/v9.0-*). The only v9.0 file is CodePulse's own `.planning/v9.0-MILESTONE-AUDIT.md`. No rename needed.
 
 ### Blockers/Concerns
 
-- None currently blocking v10.0 — Phase 93/94 have no cross-repo dependency (both ride existing ingest); Phase 95's HARD-01 (`/cso`) may surface remediation scope once run, which would be new information, not a blocker at roadmap time.
+- None currently blocking v11.0. Phase 97's first execution step (pin down where the Forge daemon code lives — separate `forge` repo vs astridr-repo) is a scoping question to resolve during discuss/plan, not a blocker at roadmap time.
+- Cross-repo handoff carried over from v10.0 Phase 96 (out of CodePulse scope, does not block v11.0): astridr-repo `chat.send` security-pipeline bypass + missing approval-block producer, routed to astridr Phase 178.1 (code-complete, pending live UAT as of 2026-07-13).
 
 ### Quick Tasks Completed
 
@@ -207,11 +232,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-13T12:47:47.798Z
-Stopped at: Phase 96 UI-SPEC approved
-Next action: `/gsd-discuss-phase 94`
-Resume file: .planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/96-UI-SPEC.md
+Last session: 2026-07-17T19:00:00.000Z
+Stopped at: v11.0 ROADMAP.md + REQUIREMENTS.md traceability created (Phases 97-100, 22/22 requirements mapped)
+Next action: `/gsd-discuss-phase 97`
+Resume file: .planning/ROADMAP.md (v11.0 section)
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review the v11.0 roadmap draft in `.planning/ROADMAP.md` (Phases 97-100) and `.planning/REQUIREMENTS.md` traceability.
+- Once approved, proceed with `/gsd-discuss-phase 97` to begin the discuss → ui-spec → plan → execute chain for Phase 97 (Real Skill Intake & Daemon Foundation).

@@ -63,12 +63,29 @@
 
 ## Traceability
 
-*(Filled by the roadmapper — each requirement maps to exactly one phase.)*
-
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| INTAKE-01..04 | TBD | Pending |
-| LIFE-01..06 | TBD | Pending |
-| LAUNCH-01..04 | TBD | Pending |
-| UX-01..04 | TBD | Pending |
-| DAEMON-01..04 | TBD | Pending |
+| INTAKE-01 | Phase 97 | Pending |
+| INTAKE-02 | Phase 97 | Pending |
+| INTAKE-03 | Phase 97 | Pending |
+| INTAKE-04 | Phase 97 | Pending |
+| DAEMON-01 | Phase 97 | Pending |
+| DAEMON-03 | Phase 97 | Pending |
+| DAEMON-04 | Phase 97 | Pending |
+| LIFE-01 | Phase 98 | Pending |
+| LIFE-02 | Phase 98 | Pending |
+| LIFE-03 | Phase 98 | Pending |
+| LIFE-04 | Phase 98 | Pending |
+| LIFE-05 | Phase 98 | Pending |
+| LIFE-06 | Phase 98 | Pending |
+| DAEMON-02 | Phase 98 | Pending |
+| LAUNCH-01 | Phase 99 | Pending |
+| LAUNCH-02 | Phase 99 | Pending |
+| LAUNCH-03 | Phase 99 | Pending |
+| LAUNCH-04 | Phase 99 | Pending |
+| UX-01 | Phase 100 | Pending |
+| UX-02 | Phase 100 | Pending |
+| UX-03 | Phase 100 | Pending |
+| UX-04 | Phase 100 | Pending |
+
+**Coverage:** 22/22 v1 requirements mapped — no orphans, no duplicates.

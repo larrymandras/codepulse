@@ -9,6 +9,7 @@
 - ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**shipped 2026-06-23**) — unified Graphs hub + KG depth features — [archive](milestones/v8.0-ROADMAP.md)
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
 - ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
+- 🚧 **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**in progress**, started 2026-07-17) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor is the critical path
 
 ## Phases
 
@@ -144,7 +145,7 @@ Phases are sequenced so each ships independently and the riskiest unknown (live-
 
 ### Phase 82: Files + Artifact Preview + Hardening
 
-**Status**: 📋 ACTIVE
+**Status**: ✅ ACTIVE
 **Goal**: Browse a terminal job's workspace files and preview text/code/HTML + image artifacts in the cloud `/forge` UI, with metadata + capped bytes flowing daemon → Convex → cloud (the Surface-Substrate bridge used for logs in Phase 81 — NOT a tunnel/local-https/localhost path); plus end-to-end auth correctness, OPS-01 production CORS + deploy checklist, and empty/loading/error polish.
 **Requirements**: FI-12 (files/preview), FI-13 (artifact reachability), FI-14 (hardening)
 **Depends on**: Phase 81
@@ -206,7 +207,7 @@ Phase 82 (Files + Preview + Hardening)  Convex bounded-ingest bridge + e2e auth 
 
 > 19/19 requirements (TH-01..06, AR-01..03, ROOM-01..04, G3D-01..02, VOX-01..04). Full per-phase detail + success criteria archived in [milestones/v9.0-ROADMAP.md](milestones/v9.0-ROADMAP.md). The 2026-06-26 milestone audit captured a mid-flight `gaps_found` snapshot (Phases 90/91 then unbuilt); both shipped 2026-06-27..29.
 
-**Milestone goal:** Make CodePulse readable and richer to operate — a readability-first, fully token-driven theme system with the "Midnight Aubergine" editorial skin, a durable Convex analytics rollup, the Agent Room completed into a real multi-persona surface, and an opt-in 3D render mode for the code/vault/KG graph.
+**Milestone goal:** Make CodePulse readable and richer to operate — a readability-first theme system plus three experience surfaces (Agent Room, 3D graph mode, durable analytics).
 
 **Phase summary:**
 
@@ -464,6 +465,96 @@ Plans:
 
 ---
 
+## v11.0 Skills Command Center — Full Lifecycle & Launch
+
+> **Started 2026-07-17** via `/gsd-new-milestone`. Continues phase numbering from 96. Phase 97 was already promoted from backlog 999.1 (2026-07-17) as **"Skill Lifecycle Management"** (archive/restore/delete via Forge daemon); that scope is folded into **Phase 98** below now that the daemon-executor + real-intake foundation is sequenced first per the dependency analysis (nothing mutates the host without the daemon executor existing — Phase 97 is re-themed, its context carried forward, nothing dropped or duplicated).
+
+**Milestone goal:** Turn the Skills page from a read-only catalog into a real control surface — add, move, archive, restore, delete, and *launch* skills live, executed on the host by the Forge daemon.
+
+**Phase summary:**
+
+- [ ] **Phase 97 — Real Skill Intake & Daemon Foundation** — execute today's dry-run install (upload / GitHub URL) to global/project/cold storage; Forge daemon executes intake + rescans the registry; advertises supported command types
+- [ ] **Phase 98 — Skill Lifecycle Mutations** — archive / restore / move / delete, archive-first, `isShadowing`-aware, honest when the daemon is offline
+- [ ] **Phase 99 — Skill Launch / Dispatch** — real Run to Chat (auto-send) / Forge agent / Ástríðr, not just a prefilled composer
+- [ ] **Phase 100 — Control-Surface UX** — per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore
+
+**Execution order:** 97 → 98 (98 reuses the daemon command-execution + registry-rescan plumbing 97 builds) · 99 is independent of 97/98 (rides existing chat/Forge/Ástríðr channels, no daemon dependency) and can run in parallel · 100 depends on **both** 98 (lifecycle mutations) and 99 (Run target picker) since the ⋯ menu and drag lanes wire against both, so it is sequenced last.
+
+## Phase Details
+
+### Phase 97: Real Skill Intake & Daemon Foundation
+
+**Goal**: A skill upload (file or GitHub URL) actually lands on the host filesystem in the chosen scope and the Skills page reflects it automatically — closing today's "validation only, nothing is written" dry-run gap — powered by a Forge daemon that executes intake commands and rescans the registry.
+**Depends on**: Nothing new — extends the existing `forgeCommands` queue, optimistic rows, TTL/expiry, and Clerk fail-closed auth already shipped for Forge launch/stop/logs/files (Phases 80-82). Precursor: the Skills command-center Cold Storage rail view (PR #67, shipped 2026-07-17) supplies the read-only scope lanes this phase makes live. Pinning down where the daemon code lives (separate `forge` repo vs astridr-repo) is execution step 1.
+**Requirements**: INTAKE-01, INTAKE-02, INTAKE-03, INTAKE-04, DAEMON-01, DAEMON-03, DAEMON-04
+**Success Criteria** (what must be TRUE):
+
+  1. User uploads a SKILL.md, picks a destination scope (global / project / cold storage), and the file lands on the host filesystem in the correct location — not a "validation only, nothing is written" report.
+  2. User installs from a GitHub URL (with optional `subpath`), and the file lands correctly; a malformed URL shape or a path-traversal attempt is rejected before anything is written.
+  3. Immediately after a successful install, the skill appears on the Skills page with correct origin/scope — no manual refresh, no stale registry (daemon-driven rescan).
+  4. A failed install (bad file, bad URL, daemon-side validation failure) surfaces the daemon's real execution/validation report as an actionable error and leaves no partial skill directory behind on disk.
+  5. Intake commands are only dispatched to daemons that advertise support for them (`supportedTypes` / `resolveClaimTypes`) — an older daemon build is never handed a command type it cannot execute.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 98: Skill Lifecycle Mutations (Archive / Restore / Move / Delete)
+
+**Goal**: An operator can archive, restore, move, and delete skills from the UI, with every mutation executed atomically on the host by the daemon and reflected back through a registry rescan — archive-first, `isShadowing`-aware, and honest when the daemon is offline.
+**Depends on**: Phase 97 — reuses the same daemon command-execution + registry-rescan mechanism; the command-routing/advertising groundwork (DAEMON-04) and rescan (DAEMON-03) established there extend naturally to lifecycle command types.
+
+*(Supersedes/renumbers the backlog-promoted "Phase 97: Skill Lifecycle Management" (2026-07-17) — same scope and design cautions carried forward unchanged: the browser/Convex app cannot touch the filesystem, so mutations flow through the `forgeCommands` channel (same pattern as intake; `IntakeDestination` already includes `"cold"`); dormant↔active moves must respect `isShadowing` (a dormant copy shadowed by an active same-name skill); delete defaults to archive-not-delete per the "treat the vault as unrecoverable / archive, don't rm" house rule, with true deletion behind an explicit confirm; the daemon-absent case must degrade gracefully — command expires, UI says so, mirroring intake's expired path. Cross-repo: codepulse (UI actions on SkillRow/ColdStorageView + Convex command enqueue/status) + astridr-repo (daemon handler performing the move/delete + registry rescan).)*
+
+**Requirements**: LIFE-01, LIFE-02, LIFE-03, LIFE-04, LIFE-05, LIFE-06, DAEMON-02
+**Success Criteria** (what must be TRUE):
+
+  1. User archives an active skill to cold storage from the UI; the host file moves to `.claude/skills-available/` and the skill is tracked as dormant (no longer counted toward active context/token load).
+  2. User restores a dormant/cold skill back to active (global or project); if an active same-name skill would be shadowed, restore is blocked/flagged rather than silently overwriting it (`isShadowing`).
+  3. User moves a skill between global and project scope from the UI, and the host file relocates on disk to match.
+  4. Deleting a skill defaults to archive (reversible); true file deletion on disk is a separate action requiring an explicit confirmation.
+  5. When the Forge daemon is offline, lifecycle actions queue and the UI visibly shows the command will expire — no false-success state is ever shown (mirrors the intake expired-command path).
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 99: Skill Launch / Dispatch
+
+**Goal**: The Run affordance actually executes a skill live — auto-sent to Chat, launched as a Forge agent run, or dispatched to Ástríðr / a persona — instead of today's "prefills `/skillname` in the composer" dead end.
+**Depends on**: Nothing new — rides existing channels (`chat.send`, `enqueueLaunch`, Ástríðr dispatch); independent of the daemon/intake/lifecycle work in Phases 97-98 and can be built in parallel with either.
+**Requirements**: LAUNCH-01, LAUNCH-02, LAUNCH-03, LAUNCH-04
+**Success Criteria** (what must be TRUE):
+
+  1. User runs a skill in Chat and the invocation is actually sent and executed via `chat.send` (auto-send) — not merely prefilled in the composer.
+  2. User launches a skill as a Forge agent run — picking agent / workspace / mode, with the skill as the instruction (reuses `enqueueLaunch`).
+  3. User dispatches a skill to Ástríðr / a chosen persona and it executes there.
+  4. The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time, and each launch updates the skill's `useCount` / `lastUsedAt`.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 100: Control-Surface UX (⋯ Menu, Drag Lanes, Optimistic Reconcile)
+
+**Goal**: The Skills page becomes a complete, efficient control surface — every row exposes the right actions for its scope, drag-and-drop across lanes fires the right mutation, in-flight actions show honest optimistic state, and Cold Storage restore never sends the operator to a terminal.
+**Depends on**: Phase 98 (lifecycle mutations) and Phase 99 (Run/launch target picker) — this phase wires the UI control surface over both.
+**Requirements**: UX-01, UX-02, UX-03, UX-04
+**Success Criteria** (what must be TRUE):
+
+  1. Every skill row exposes an overflow (⋯) menu showing only the actions valid for its current scope (Move / Restore / Archive / Delete / Run), each wired to its mutation or launch.
+  2. Global / Project / Cold Storage lanes accept drag targets; dragging a skill across lanes fires the corresponding move / archive / restore command (extends today's drag-to-category).
+  3. A mutating action shows an optimistic/pending row state that reconciles to success, failure, or expiry once the server command resolves (reuses the intake optimistic-row pattern).
+  4. The Cold Storage view offers in-app Restore — the "run `/manage-skills` in a terminal" dead-end is gone.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -493,27 +584,10 @@ Plans:
 | 94. Trace Waterfall | v10.0 | 5/5 | Complete    | 2026-07-06 |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
+| 97. Real Skill Intake & Daemon Foundation | v11.0 | 0/TBD | Not started | — |
+| 98. Skill Lifecycle Mutations | v11.0 | 0/TBD | Not started | — |
+| 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
+| 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
 
-*Last updated: 2026-07-13 — **v10.0 fully closed including Phase 96 addendum**. Phase 96 (UI deep-dive cleanup, 13 plans / 28 tasks, appended post-ship 2026-07-13): re-verified 16/16 after 96-13 gap closure, code review clean, SECURITY 35/35 threats closed, UAT gaps resolved (astridr-side items handed off to astridr phase 178.1). v10.0 as shipped 2026-07-07: 3 phases (93-95), 15 plans, 36 tasks, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md` (Phase 96 appendix added 2026-07-13). Next: `/gsd-new-milestone`.*
-
-## Post-v10.0 — Unassigned Phases
-
-*Promoted from backlog 999.1 on 2026-07-17. Not yet folded into an open milestone (v10.0 closed 2026-07-07) — fold into the next milestone via `/gsd-new-milestone`, or plan directly with `/gsd-plan-phase 97`.*
-
-### Phase 97: Skill Lifecycle Management — archive/restore/delete via Forge daemon
-
-**Depends on:** Skills command-center (PR #67 — Cold Storage rail view / read-only dormancy, shipped 2026-07-17) — the precursor this builds mutation on top of.
-**Goal:** Let the Skills page mutate skill state on the host machine — archive an active skill to cold storage (`.claude/skills-available/`), restore a dormant one, or delete a skill — instead of today's view-only dormancy handling (Cold Storage rail view, PR #67) and the CLI-only `/manage-skills` path.
-**Requirements:** TBD
-**Plans:** 0 plans
-
-Context (captured 2026-07-17, during the Skills command-center redesign):
-- The browser/Convex app cannot touch the filesystem; mutations must flow through the existing `forgeCommands` command channel that the Forge daemon executes on the host (same pattern as intake; `IntakeDestination` already includes `"cold"`).
-- Cross-repo: codepulse (UI actions on SkillRow/ColdStorageView + Convex command enqueue/status) + astridr-repo (daemon handler performing the move/delete + registry rescan so origins update).
-- Design cautions: dormant↔active moves must respect `isShadowing` (a dormant copy shadowed by an active same-name skill); delete needs a confirm + probably archive-not-delete default per the "treat the vault as unrecoverable / archive, don't rm" house rule; daemon-absent case must degrade gracefully (command expires, UI says so — mirrors intake's expired path).
-- UI affordances sketched: row-level overflow/hover actions ("Archive to cold storage" / "Restore" / "Delete"), wired to optimistic command rows like IntakePanel/IntakeStrip do.
-
-Plans:
-- [ ] TBD — plan with `/gsd-plan-phase 97` (requirements need defining first; cross-repo scope)
-
-*Prior: 2026-06-29 — **v9.0 Readability & Experience SHIPPED & ARCHIVED** (tagged v9.0; archive `milestones/v9.0-ROADMAP.md`). 5 phases (88-92), 30 plans, 19/19 requirements. — Prior note: Phase 90 build (90-01..90-07) complete; this session closed the cross-repo LIVE-integration gap that was never closed at scoping. Five layered gaps fixed + committed: (1) `war-room` Docker profile (LiveKit + 5 agent workers) wasn't started → create_war_room 500; (2) Phase-90 Convex fns committed-but-not-deployed → listRooms error; (3) astridr never POSTed to `/war-room-ingest` → built room.created/updated emit (astridr 97c63643, codepulse e09ce37); (4) transcript.chunk ingest from agents → built (astridr 26874fac); (5) launch-dialog form-wipe fix (codepulse 4c3372d) + new delete-room feature (codepulse 1189ff5). astridr token endpoint live (4093aec). Full record: `phases/90-agent-room-war-room/90-INTEGRATION-NOTES.md`. Remaining: 90-08 operator live sign-off. — Prior note: Phase 92 (VOX-01..04) planned: 5 plans / 4 waves for the browser-side voice-activated command palette (openWakeWord ONNX wake word on onnxruntime-web, in-browser, Apache-2.0 — NO Picovoice, NO account/key/env var; Web Speech STT → existing chat.send → persona TTS via shared useTtsPlayback). Architecture: AudioWorklet capture → Web Worker ONNX pipeline (numThreads=1, no COOP/COEP) → main-thread turn loop. Independent of 89/90/91; reuses shipped Phase 2 WebSocket sender + Phase 3 palette. Custom hey_astrid.onnx classifier trained via openWakeWord Colab pipeline before VOX-01 QA (bundled "hey jarvis" model is the dev stand-in). Next: `/gsd-execute-phase 92`.*
+*Last updated: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
+</content>
