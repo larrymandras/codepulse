@@ -388,6 +388,7 @@ import {
   isAcceptedGithubUrlShape,
   isSafeSubpath,
   resolveClaimTypes,
+  isValidSupportedTypesShape,
   capAckReport,
   MAX_ACK_REPORT_BYTES,
 } from "./forge";
@@ -489,6 +490,36 @@ describe("forge.resolveClaimTypes — supportedTypes default (D-P6-11)", () => {
 
   it("returns a composed list when supportedTypes declares launch + intake", () => {
     expect(resolveClaimTypes(["launch", "intake"])).toEqual(["launch", "intake"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isValidSupportedTypesShape — malformed-shape 400 guard (D-P10-12)
+// ---------------------------------------------------------------------------
+
+describe("forge.isValidSupportedTypesShape — malformed-shape 400 guard (D-P10-12)", () => {
+  it("returns true for undefined (field omitted)", () => {
+    expect(isValidSupportedTypesShape(undefined)).toBe(true);
+  });
+
+  it("returns true for an empty array", () => {
+    expect(isValidSupportedTypesShape([])).toBe(true);
+  });
+
+  it("returns true for an array of strings", () => {
+    expect(isValidSupportedTypesShape(["intake"])).toBe(true);
+  });
+
+  it("returns false for a bare string (not an array)", () => {
+    expect(isValidSupportedTypesShape("intake")).toBe(false);
+  });
+
+  it("returns false for an array containing a non-string member", () => {
+    expect(isValidSupportedTypesShape([1, 2])).toBe(false);
+  });
+
+  it("returns false for null", () => {
+    expect(isValidSupportedTypesShape(null)).toBe(false);
   });
 });
 
@@ -701,6 +732,53 @@ describe("forge.buildIntakeRow — field mapping", () => {
     expect(row.intakePayload.storageId).toBeUndefined();
     expect(row.intakePayload.githubUrl).toBe("https://github.com/owner/repo");
     expect(row.intakePayload.subpath).toBe("skills/foo");
+  });
+
+  // SC1 / CP-01 — "no open-bag": intakePayload must carry EXACTLY the five
+  // declared fields and nothing else. The field-mapping tests above assert each
+  // field is *present*; this asserts no *extra* free-text/open-bag key can leak
+  // through buildIntakeRow into the enqueued row (e.g. via a future `...args`
+  // spread or an added open field). Guards the schema's narrowness at runtime,
+  // complementing the compile-time `v.union`/no-`v.any()` guarantee.
+  it("emits an intakePayload with exactly the 5 declared keys (no open-bag, SC1)", () => {
+    const uploadKeys = Object.keys(
+      buildIntakeRow(uploadArgs, subject, now, TTL_MS).intakePayload
+    ).sort();
+    const urlKeys = Object.keys(
+      buildIntakeRow(urlArgs, subject, now, TTL_MS).intakePayload
+    ).sort();
+    const expected = [
+      "destination",
+      "githubUrl",
+      "storageId",
+      "subpath",
+      "workspaceId",
+    ];
+    expect(uploadKeys).toEqual(expected);
+    expect(urlKeys).toEqual(expected);
+  });
+
+  it("emits a top-level intake row with no fields outside the declared command shape (no open-bag, SC1)", () => {
+    const row = buildIntakeRow(uploadArgs, subject, now, TTL_MS);
+    expect(Object.keys(row).sort()).toEqual(
+      [
+        "claimedAt",
+        "commandId",
+        "commandType",
+        "completedAt",
+        "createdAt",
+        "error",
+        "executedAt",
+        "expiresAt",
+        "hostId",
+        "intakePayload",
+        "issuedBy",
+        "launchPayload",
+        "resolvedForgeJobId",
+        "status",
+        "stopPayload",
+      ].sort()
+    );
   });
 });
 
@@ -1028,6 +1106,223 @@ describe("forge.capAckReport — report size cap (WR-03)", () => {
 // ---------------------------------------------------------------------------
 // Phase 80 DB round-trip stubs
 // ---------------------------------------------------------------------------
+//
+// D-P10-13: an in-memory forgeCommands mock + ctx.storage.delete spy,
+// extending swarmTasks.test.ts's makeStore()/mirror-function convention
+// (in-memory array per table, db.query/.withIndex/.filter/.insert/.patch
+// emulation via captured eq()/field() calls). NO existing test file mocks
+// ctx.storage — this is the first. convex-test is NOT installed in this
+// repo and must not be added; this mock is a plain vitest construct.
+//
+// Each mirror function below performs the SAME ctx.db/ctx.storage calls the
+// real handler in forge.ts does (claimAndUpsertHost/ackCommand/
+// expireStaleCommands, all unchanged by this plan) — tests call the mirror
+// against the mock store/ctx, never the real Convex-wrapped export's
+// .handler.
+
+type ForgeCommandDoc = Record<string, any> & { _id: string };
+
+function makeForgeCommandsStore() {
+  const forgeCommands: ForgeCommandDoc[] = [];
+  let seq = 0;
+  const nextId = () => `cmd_${++seq}`;
+
+  // Ordered call log shared by storage.delete and db.patch, so tests can
+  // assert delete-before-patch ordering (D-P6-10) via index comparison,
+  // not just "was called at all".
+  const opLog: Array<{ op: "delete" | "patch"; id: string }> = [];
+  const deletedStorageIds: string[] = [];
+
+  const storage = {
+    delete: async (storageId: string) => {
+      deletedStorageIds.push(storageId);
+      opLog.push({ op: "delete", id: storageId });
+    },
+  };
+
+  // Index-query builder: supports the chained q.eq(...).eq(...) form used
+  // by claimAndUpsertHost's withIndex, and the single q.lt(...)/q.eq(...)
+  // forms used by expireStaleCommands'/ackCommand's withIndex.
+  function makeIndexQ(conditions: Array<{ field: string; op: "eq" | "lt" | "gt"; value: any }>) {
+    const q: any = {
+      eq: (field: string, value: any) => {
+        conditions.push({ field, op: "eq", value });
+        return q;
+      },
+      lt: (field: string, value: any) => {
+        conditions.push({ field, op: "lt", value });
+        return q;
+      },
+      gt: (field: string, value: any) => {
+        conditions.push({ field, op: "gt", value });
+        return q;
+      },
+    };
+    return q;
+  }
+
+  // Filter builder: supports q.field(name), q.eq(fieldRef, value),
+  // q.gt(fieldRef, value), q.and(...preds), q.or(...preds) — matching
+  // claimAndUpsertHost's exact filter shape (q.and(q.gt(...), q.or(...))).
+  function makeFilterQ() {
+    const fieldName = (ref: any) => (ref && typeof ref === "object" && "__field" in ref ? ref.__field : ref);
+    return {
+      field: (name: string) => ({ __field: name }),
+      eq: (leftRef: any, value: any) => (row: ForgeCommandDoc) => row[fieldName(leftRef)] === value,
+      gt: (leftRef: any, value: any) => (row: ForgeCommandDoc) => row[fieldName(leftRef)] > value,
+      and: (...preds: Array<(row: ForgeCommandDoc) => boolean>) => (row: ForgeCommandDoc) =>
+        preds.every((p) => p(row)),
+      or: (...preds: Array<(row: ForgeCommandDoc) => boolean>) => (row: ForgeCommandDoc) =>
+        preds.some((p) => p(row)),
+    };
+  }
+
+  function applyIndexConditions(
+    rows: ForgeCommandDoc[],
+    conditions: Array<{ field: string; op: "eq" | "lt" | "gt"; value: any }>
+  ) {
+    return rows.filter((r) =>
+      conditions.every((c) => {
+        if (c.op === "eq") return r[c.field] === c.value;
+        if (c.op === "lt") return r[c.field] < c.value;
+        return r[c.field] > c.value; // "gt"
+      })
+    );
+  }
+
+  const db = {
+    query: (tableName: string) => {
+      const table = tableName === "forgeCommands" ? forgeCommands : [];
+      return {
+        withIndex: (_indexName: string, indexFn?: (q: any) => any) => {
+          const conditions: Array<{ field: string; op: "eq" | "lt" | "gt"; value: any }> = [];
+          if (indexFn) indexFn(makeIndexQ(conditions));
+          const applyIndex = (rows: ForgeCommandDoc[]) => applyIndexConditions(rows, conditions);
+          return {
+            filter: (filterFn: (q: any) => any) => {
+              const predicate = filterFn(makeFilterQ());
+              const applyBoth = (rows: ForgeCommandDoc[]) => applyIndex(rows).filter((r) => predicate(r));
+              return {
+                collect: async () => applyBoth(table).map((r) => ({ ...r })),
+                take: async (n: number) => applyBoth(table).slice(0, n).map((r) => ({ ...r })),
+              };
+            },
+            collect: async () => applyIndex(table).map((r) => ({ ...r })),
+            unique: async () => {
+              const match = applyIndex(table)[0];
+              return match ? { ...match } : null;
+            },
+            take: async (n: number) => applyIndex(table).slice(0, n).map((r) => ({ ...r })),
+          };
+        },
+      };
+    },
+    insert: async (tableName: string, data: Record<string, any>) => {
+      const doc = { ...data, _id: nextId() };
+      if (tableName === "forgeCommands") forgeCommands.push(doc as ForgeCommandDoc);
+      return doc._id;
+    },
+    patch: async (id: string, data: Record<string, any>) => {
+      const idx = forgeCommands.findIndex((r) => r._id === id);
+      if (idx !== -1) {
+        Object.assign(forgeCommands[idx], data);
+        opLog.push({ op: "patch", id });
+      }
+    },
+  };
+
+  return { forgeCommands, db, storage, deletedStorageIds, opLog };
+}
+
+// Mirror of claimAndUpsertHost's queued-commands claim loop (forge.ts
+// L692-739). Omits the forgeHosts liveness upsert (out of scope for this
+// task's claim/skip-claim behavior) but performs the SAME ctx.db.query/
+// withIndex/filter/take/patch calls the real handler does, parameterized
+// by resolveClaimTypes (imported, unchanged).
+async function claimAndUpsertHostMirror(
+  ctx: { db: any },
+  args: { hostId: string; now: number; supportedTypes?: string[] }
+) {
+  const types = resolveClaimTypes(args.supportedTypes);
+  if (types.length === 0) return [];
+
+  const queued = await ctx.db
+    .query("forgeCommands")
+    .withIndex("by_host_status_created", (q: any) => q.eq("hostId", args.hostId).eq("status", "queued"))
+    .filter((q: any) =>
+      q.and(
+        q.gt(q.field("expiresAt"), args.now),
+        q.or(...types.map((t: string) => q.eq(q.field("commandType"), t)))
+      )
+    )
+    .take(10);
+
+  for (const cmd of queued) {
+    await ctx.db.patch(cmd._id, {
+      status: "executing",
+      claimedAt: args.now,
+      executedAt: args.now,
+    });
+  }
+
+  // W1: matches production — returned docs still show the pre-patch
+  // status:"queued" snapshot.
+  return queued;
+}
+
+// Mirror of ackCommand (forge.ts L757-786): terminal-idempotency guard
+// (isTerminalCommandStatus, imported, unchanged) + blob-delete-before-patch
+// ordering for intake rows.
+async function ackCommandMirror(
+  ctx: { db: any; storage: any },
+  args: {
+    commandId: string;
+    status: "done" | "failed";
+    resolvedForgeJobId: string | null;
+    error: string | null;
+    now: number;
+    report?: any;
+  }
+) {
+  const cmd = await ctx.db
+    .query("forgeCommands")
+    .withIndex("by_commandId", (q: any) => q.eq("commandId", args.commandId))
+    .unique();
+  if (!cmd) return;
+  if (isTerminalCommandStatus(cmd.status)) return;
+  if (
+    cmd.commandType === "intake" &&
+    cmd.intakePayload?.storageId &&
+    (args.status === "done" || args.status === "failed")
+  ) {
+    await ctx.storage.delete(cmd.intakePayload.storageId);
+  }
+  await ctx.db.patch(cmd._id, {
+    status: args.status,
+    resolvedForgeJobId: args.resolvedForgeJobId,
+    error: args.error,
+    completedAt: args.now,
+    report: capAckReport(args.report ?? null),
+  });
+}
+
+// Mirror of expireStaleCommands (forge.ts L791-812): blob-delete-before-patch
+// ordering for unclaimed intake rows, gated by shouldExpireCommand (imported,
+// unchanged).
+async function expireStaleCommandsMirror(ctx: { db: any; storage: any }, now: number) {
+  const stale = await ctx.db
+    .query("forgeCommands")
+    .withIndex("by_expires", (q: any) => q.lt("expiresAt", now))
+    .collect();
+  for (const cmd of stale) {
+    if (shouldExpireCommand(cmd.status, cmd.expiresAt, now)) {
+      if (cmd.commandType === "intake" && cmd.intakePayload?.storageId) {
+        await ctx.storage.delete(cmd.intakePayload.storageId);
+      }
+      await ctx.db.patch(cmd._id, { status: "expired" });
+    }
+  }
+}
 
 describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("enqueueLaunch: inserts forgeCommands row with status='queued'");
@@ -1043,8 +1338,54 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   it.todo("enqueueIntake: a duplicate commandId is a silent no-op -- idempotent client retry, no second row (WR-04)");
   it.todo("enqueueIntake: rejects an upload exceeding MAX_INTAKE_UPLOAD_BYTES (requires a live storage-backed row)");
   it.todo("generateForgeUploadUrl: returns a usable signed upload URL");
-  it.todo("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'");
-  it.todo("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'");
+  it("claimAndUpsertHost: does not claim an intake row when supportedTypes omits 'intake'", async () => {
+    const store = makeForgeCommandsStore();
+    const now = 1_000;
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-intake-1",
+      commandType: "intake",
+      status: "queued",
+      createdAt: now - 10,
+      expiresAt: now + 60_000,
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-1" },
+    });
+
+    // supportedTypes omitted -> resolveClaimTypes defaults to ["launch", "stop"]
+    const result = await claimAndUpsertHostMirror(store, { hostId: "desktop-abc", now });
+
+    expect(result).toEqual([]);
+    expect(store.forgeCommands[0].status).toBe("queued");
+  });
+
+  it("claimAndUpsertHost: claims an intake row when supportedTypes includes 'intake'", async () => {
+    const store = makeForgeCommandsStore();
+    const now = 1_000;
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-intake-2",
+      commandType: "intake",
+      status: "queued",
+      createdAt: now - 10,
+      expiresAt: now + 60_000,
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-2" },
+    });
+
+    const result = await claimAndUpsertHostMirror(store, {
+      hostId: "desktop-abc",
+      now,
+      supportedTypes: ["intake"],
+    });
+
+    // W1: returned snapshot still shows pre-patch status:"queued"
+    expect(result).toHaveLength(1);
+    expect(result[0].commandId).toBe("cmd-intake-2");
+    expect(result[0].status).toBe("queued");
+    // Server-side, the row is atomically claimed (queued -> executing)
+    expect(store.forgeCommands[0].status).toBe("executing");
+    expect(store.forgeCommands[0].claimedAt).toBe(now);
+    expect(store.forgeCommands[0].executedAt).toBe(now);
+  });
   it.todo("forgeCommandsClaim: resolves storageId to a fetchable downloadUrl for a claimed intake row (SC5 — covered live by scripts/verify-intake-claim.mjs in Plan 06-04, not here)");
   it.todo("listIntakeCommands: returns only commandType='intake' rows, newest-first, capped at INTAKE_LIST_LIMIT, across all hosts");
 
@@ -1060,9 +1401,134 @@ describe("forge command bridge — DB round-trip (integration)", () => {
   // covered by any automation this phase; they remain honest todos with optional
   // manual spot-checks documented in 06-VALIDATION.md's Manual-Only Verifications
   // table.
-  it.todo("ackCommand: deletes the intake row's storage blob before patching status to done");
-  it.todo("ackCommand: deletes the intake row's storage blob before patching status to failed");
-  it.todo("ackCommand: does not re-delete an already-terminal intake row's blob on a duplicate ack (CR-01 idempotency)");
-  it.todo("ackCommand: stores the report field on the row for a terminal intake ack");
-  it.todo("expireStaleCommands: deletes an unclaimed intake row's storage blob before marking it expired");
+  it("ackCommand: deletes the intake row's storage blob before patching status to done", async () => {
+    const store = makeForgeCommandsStore();
+    const cmdId = await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-done",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-done" },
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-done",
+      status: "done",
+      resolvedForgeJobId: null,
+      error: null,
+      now: 2_000,
+    });
+
+    expect(store.deletedStorageIds).toContain("storage-done");
+    const deleteIdx = store.opLog.findIndex((e) => e.op === "delete");
+    const patchIdx = store.opLog.findIndex((e) => e.op === "patch" && e.id === cmdId);
+    expect(deleteIdx).toBeGreaterThanOrEqual(0);
+    expect(patchIdx).toBeGreaterThan(deleteIdx);
+    expect(store.forgeCommands[0].status).toBe("done");
+  });
+
+  it("ackCommand: deletes the intake row's storage blob before patching status to failed", async () => {
+    const store = makeForgeCommandsStore();
+    const cmdId = await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-failed",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-failed" },
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-failed",
+      status: "failed",
+      resolvedForgeJobId: null,
+      error: "daemon reported an error",
+      now: 2_000,
+    });
+
+    expect(store.deletedStorageIds).toContain("storage-failed");
+    const deleteIdx = store.opLog.findIndex((e) => e.op === "delete");
+    const patchIdx = store.opLog.findIndex((e) => e.op === "patch" && e.id === cmdId);
+    expect(deleteIdx).toBeGreaterThanOrEqual(0);
+    expect(patchIdx).toBeGreaterThan(deleteIdx);
+    expect(store.forgeCommands[0].status).toBe("failed");
+    expect(store.forgeCommands[0].error).toBe("daemon reported an error");
+  });
+
+  it("ackCommand: does not re-delete an already-terminal intake row's blob on a duplicate ack (CR-01 idempotency)", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-dup",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-dup" },
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-dup",
+      status: "done",
+      resolvedForgeJobId: null,
+      error: null,
+      now: 2_000,
+    });
+    // Second, duplicate/late ack on the now-terminal row
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-dup",
+      status: "done",
+      resolvedForgeJobId: null,
+      error: null,
+      now: 3_000,
+    });
+
+    // storage.delete called exactly once across the two sequential acks —
+    // proves CR-01 idempotency, not just that it was called at all.
+    const deleteCalls = store.opLog.filter((e) => e.op === "delete" && e.id === "storage-dup");
+    expect(deleteCalls).toHaveLength(1);
+    expect(store.forgeCommands[0].completedAt).toBe(2_000); // unchanged by the 2nd ack
+  });
+
+  it("ackCommand: stores the report field on the row for a terminal intake ack", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-report",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-report" },
+    });
+
+    const report = { verdict: "admit", findings: [] };
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-report",
+      status: "done",
+      resolvedForgeJobId: null,
+      error: null,
+      now: 2_000,
+      report,
+    });
+
+    expect(store.forgeCommands[0].report).toEqual(capAckReport(report));
+  });
+
+  it("expireStaleCommands: deletes an unclaimed intake row's storage blob before marking it expired", async () => {
+    const store = makeForgeCommandsStore();
+    const now = 10_000;
+    const cmdId = await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-expire-1",
+      commandType: "intake",
+      status: "queued",
+      expiresAt: now - 1_000, // already past TTL
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-expire" },
+    });
+
+    await expireStaleCommandsMirror(store, now);
+
+    expect(store.deletedStorageIds).toContain("storage-expire");
+    const deleteIdx = store.opLog.findIndex((e) => e.op === "delete");
+    const patchIdx = store.opLog.findIndex((e) => e.op === "patch" && e.id === cmdId);
+    expect(deleteIdx).toBeGreaterThanOrEqual(0);
+    expect(patchIdx).toBeGreaterThan(deleteIdx);
+    expect(store.forgeCommands[0].status).toBe("expired");
+  });
 });

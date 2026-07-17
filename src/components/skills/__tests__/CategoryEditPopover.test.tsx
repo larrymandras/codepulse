@@ -74,7 +74,7 @@ describe("CategoryEditPopover", () => {
 
     // After click, emerald should have the ring class
     expect(emeraldSwatch.className).toContain("ring-2");
-    expect(emeraldSwatch.className).toContain("ring-white");
+    expect(emeraldSwatch.className).toContain("ring-foreground");
   });
 
   test("clicking an emoji quick-pick updates the icon input", () => {

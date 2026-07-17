@@ -651,6 +651,19 @@ export function resolveClaimTypes(supportedTypes?: string[]): string[] {
   return supportedTypes ?? ["launch", "stop"];
 }
 
+// D-P10-12: forgeCommandsClaim's httpAction must reject a malformed
+// supportedTypes shape with an explicit 400 BEFORE ctx.runMutation(
+// internal.forge.claimAndUpsertHost, ...) is called. claimAndUpsertHost's
+// own v.optional(v.array(v.string())) arg validator throws on a bad shape,
+// but an httpAction does not auto-map a nested mutation's thrown error to
+// an HTTP 4xx — it surfaces as a 500. This guard runs upstream, in the
+// httpAction itself, so the daemon gets a diagnostic instead.
+export function isValidSupportedTypesShape(value: unknown): value is string[] | undefined {
+  if (value === undefined) return true;
+  if (!Array.isArray(value)) return false;
+  return value.every((item) => typeof item === "string");
+}
+
 // TEST-ONLY: used exclusively by scripts/verify-intake-claim.mjs (SC5,
 // D-P6-15). internalMutation — never part of the api.* surface the browser
 // SDK can call. Do not import from client code.

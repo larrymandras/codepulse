@@ -16,7 +16,7 @@
  */
 
 import { describe, test, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ─── Module mocks (declared before component import — Vitest hoisting) ──────
@@ -58,7 +58,10 @@ vi.mock("../../hooks/useAudioEvents", () => ({ useAudioEvents: () => {} }));
 vi.mock("../../components/NotificationBell", () => ({ default: () => null }));
 vi.mock("../../hooks/useNotificationToasts", () => ({ useNotificationToasts: () => {} }));
 vi.mock("../../components/EStopButton", () => ({ EStopButton: () => null }));
-vi.mock("../../components/CommandPalette", () => ({ CommandPalette: () => null }));
+vi.mock("../../components/CommandPalette", () => ({
+  CommandPalette: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="command-palette-open" /> : null,
+}));
 vi.mock("../../components/MicToggle", () => ({ MicToggle: () => null }));
 vi.mock("../../components/ListeningIndicatorPill", () => ({ ListeningIndicatorPill: () => null }));
 vi.mock("../../hooks/useWakeWord", () => ({
@@ -135,6 +138,55 @@ describe("DashboardLayout header telemetry (F3/D-04 — honest, real-or-hidden)"
     renderLayout();
 
     expect(screen.queryByText(/LAT:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("DashboardLayout keyboard shortcuts (global palette vs. Skills palette conflict)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    vi.mocked(useAstridrWS).mockReset();
+    vi.mocked(useQuery).mockReturnValue(null);
+    vi.mocked(useAstridrWS).mockReturnValue({
+      status: "disconnected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: vi.fn(),
+      reconnect: vi.fn(),
+    });
+  });
+
+  it("does not open the global command palette on Ctrl+Shift+K (reserved for the Skills palette)", () => {
+    renderLayout();
+
+    // Uppercase "K" variant, as fired by real Shift+K keyboard events.
+    fireEvent.keyDown(window, { key: "K", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByTestId("command-palette-open")).not.toBeInTheDocument();
+
+    // Lowercase "k" variant (synthetic-event style) — same guard must catch it.
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true, shiftKey: true });
+    expect(screen.queryByTestId("command-palette-open")).not.toBeInTheDocument();
+  });
+
+  it("still opens the global command palette on plain Ctrl+K", () => {
+    renderLayout();
+
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(screen.getByTestId("command-palette-open")).toBeInTheDocument();
+  });
+
+  it("does not open the global command palette when the keydown's default was already prevented (e.g. a focused cmdk input's own Ctrl+K binding)", () => {
+    // Registered on window before the layout mounts, so it runs first and
+    // mirrors a focused cmdk input (vimBindings) consuming the event.
+    const preventOnCtrlK = (e: KeyboardEvent) => {
+      if (e.key === "k" && e.ctrlKey) e.preventDefault();
+    };
+    window.addEventListener("keydown", preventOnCtrlK);
+
+    renderLayout();
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+    expect(screen.queryByTestId("command-palette-open")).not.toBeInTheDocument();
+
+    window.removeEventListener("keydown", preventOnCtrlK);
   });
 });
 
