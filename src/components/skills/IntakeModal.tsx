@@ -310,7 +310,7 @@ export function IntakeModal({
     >
       <DialogContent className="max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Validate skill</DialogTitle>
+          <DialogTitle>Install skill</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -326,7 +326,7 @@ export function IntakeModal({
               </p>
             ) : hosts.length === 0 ? (
               <p className="text-base text-muted-foreground py-2">
-                No hosts online — start the Forge daemon to validate skills.
+                No hosts online — start the Forge daemon to install skills.
               </p>
             ) : (
               <Select value={hostId} onValueChange={setHostId}>
@@ -481,15 +481,17 @@ export function IntakeModal({
             )}
           </div>
 
-          {/* Dry-run posture note (D-P7-04, always visible, verbatim) */}
+          {/* Real-write disclosure (was the D-P7-04 dry-run posture note;
+              now a real install occurs on submit, so this must say so
+              — house honesty rule, 97-UI-SPEC Copywriting Contract). */}
           <p className="text-xs text-muted-foreground">
-            Validation only — nothing is written.
+            Installs to the selected host and destination.
           </p>
         </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleCancel}>
-            Cancel
+            Cancel Install
           </Button>
           <Button
             type="button"
@@ -501,13 +503,13 @@ export function IntakeModal({
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-1" />
                 {selectedSubpaths.length > 1
-                  ? `Validate ${selectedSubpaths.length} skills`
-                  : "Validate skill"}
+                  ? `Install ${selectedSubpaths.length} skills`
+                  : "Install skill"}
               </>
             ) : selectedSubpaths.length > 1 ? (
-              `Validate ${selectedSubpaths.length} skills`
+              `Install ${selectedSubpaths.length} skills`
             ) : (
-              "Validate skill"
+              "Install skill"
             )}
           </Button>
         </DialogFooter>

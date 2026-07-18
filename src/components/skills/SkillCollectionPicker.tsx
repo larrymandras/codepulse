@@ -166,7 +166,9 @@ export function SkillCollectionPicker({
   return (
     <div className="space-y-2">
       {result.truncated && <TruncatedWarning />}
-      <p className="text-sm font-medium">{result.skillPaths.length} skills found</p>
+      <p className="text-sm font-medium">
+        {result.skillPaths.length} skills found at this path
+      </p>
       <label className="flex items-center gap-2 text-sm">
         <Checkbox checked={allChecked} onCheckedChange={toggleAll} aria-label="Select all" />
         Select all

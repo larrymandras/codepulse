@@ -61,7 +61,7 @@ describe("SkillCollectionPicker", () => {
       <SkillCollectionPicker scanState={scanState} onSelectionChange={onSelectionChange} />
     );
 
-    expect(screen.getByText(/3 skills found/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 skills found at this path/i)).toBeInTheDocument();
 
     const checkboxes = screen.getAllByRole("checkbox");
     // First checkbox is "Select all"; remaining are per-skill.
@@ -243,7 +243,7 @@ describe("SkillCollectionPicker", () => {
     );
 
     // The multi-skill list branch must render (2 paths → checkbox list).
-    expect(screen.getByText(/2 skills found/i)).toBeInTheDocument();
+    expect(screen.getByText(/2 skills found at this path/i)).toBeInTheDocument();
 
     // 1) The hostile payload never became a live element.
     expect(container.querySelector("img")).toBeNull();

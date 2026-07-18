@@ -149,7 +149,7 @@ function selectFile(name = "SKILL.md") {
 }
 
 function getSubmitButton() {
-  return screen.getByRole("button", { name: /validate skill/i });
+  return screen.getByRole("button", { name: /install skill/i });
 }
 
 describe("IntakeModal", () => {
@@ -169,9 +169,9 @@ describe("IntakeModal", () => {
     });
   });
 
-  it("renders 'Validate skill' as both the DialogTitle and the submit button", () => {
+  it("renders 'Install skill' as both the DialogTitle and the submit button", () => {
     renderModal();
-    const matches = screen.getAllByText("Validate skill");
+    const matches = screen.getAllByText("Install skill");
     expect(matches.length).toBeGreaterThanOrEqual(2);
     expect(
       matches.some((el) => el.getAttribute("data-slot") === "dialog-title")
@@ -203,10 +203,17 @@ describe("IntakeModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the dry-run posture note verbatim", () => {
+  it("renders the real-write disclosure note verbatim (house-honesty: not a dry-run)", () => {
     renderModal();
     expect(
-      screen.getByText("Validation only — nothing is written.")
+      screen.getByText("Installs to the selected host and destination.")
+    ).toBeInTheDocument();
+  });
+
+  it("renders 'Cancel Install' — not bare 'Cancel' — on the fan-out confirm surface (D-06)", () => {
+    renderModal();
+    expect(
+      screen.getByRole("button", { name: "Cancel Install" })
     ).toBeInTheDocument();
   });
 
@@ -418,9 +425,9 @@ describe("IntakeModal", () => {
     const selectAll = screen.getByRole("checkbox", { name: /select all/i });
     fireEvent.click(selectAll);
 
-    expect(screen.getByText(/validate 3 skills/i)).toBeInTheDocument();
+    expect(screen.getByText(/install 3 skills/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /validate 3 skills/i }));
+    fireEvent.click(screen.getByRole("button", { name: /install 3 skills/i }));
 
     expect(onEnqueued).toHaveBeenCalledTimes(3);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -444,7 +451,7 @@ describe("IntakeModal", () => {
 
     // 21 selected — the panel's live query window is capped at 20, so the
     // overflow optimistic rows would spin "Queued…" forever. Block instead.
-    const submit = screen.getByRole("button", { name: /validate 21 skills/i });
+    const submit = screen.getByRole("button", { name: /install 21 skills/i });
     expect(submit).toBeDisabled();
     expect(screen.getByText(/up to 20 skills per batch/i)).toBeInTheDocument();
   });
