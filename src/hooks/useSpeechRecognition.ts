@@ -123,12 +123,8 @@ export function useSpeechRecognition(
   }, []);
 
   const start = useCallback(() => {
-    // Guard against starting while an instance is live (avoids InvalidStateError).
-    // Check the ref — nulled synchronously in onend/onerror — NOT the isListening
-    // state, whose update lags a render. A restart fired from within onend (see
-    // VoiceModePanel handleEnd, CONV-01 barge-in) would otherwise read a stale
-    // isListening=true and silently no-op, leaving the recognizer dead.
-    if (recognitionRef.current) return;
+    // Guard against starting while already listening (avoids InvalidStateError)
+    if (isListening) return;
 
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) return;

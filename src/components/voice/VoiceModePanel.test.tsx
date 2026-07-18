@@ -38,17 +38,14 @@ const mockRecognitionStop = vi.fn();
 const mockRecognitionAbort = vi.fn();
 let onFinalResultCallback: ((text: string, confidence?: number) => void) | null = null;
 let onInterimResultCallback: ((text: string) => void) | null = null;
-let onEndCallback: (() => void) | null = null;
 
 vi.mock("@/hooks/useSpeechRecognition", () => ({
   useSpeechRecognition: vi.fn((options: {
     onFinalResult: (text: string, confidence?: number) => void;
     onInterimResult?: (text: string) => void;
-    onEnd?: () => void;
   }) => {
     onFinalResultCallback = options.onFinalResult;
     onInterimResultCallback = options.onInterimResult ?? null;
-    onEndCallback = options.onEnd ?? null;
     return {
       start: mockRecognitionStart,
       stop: mockRecognitionStop,
@@ -90,7 +87,6 @@ describe("VoiceModePanel", () => {
     vi.clearAllMocks();
     onFinalResultCallback = null;
     onInterimResultCallback = null;
-    onEndCallback = null;
     mockIsPlaying = false;
     mockSendCommand.mockResolvedValue({
       type: "ack",
@@ -296,42 +292,6 @@ describe("VoiceModePanel", () => {
     expect(mockRecognitionStop).not.toHaveBeenCalled();
 
     unmount();
-  });
-
-  it("restarts the recognizer when Chrome ends it during speaking (barge-in stays live) — CONV-01", async () => {
-    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
-    // Ignore the mount-time start; assert the RESTART on Chrome's onend, which
-    // fires routinely mid-TTS (echoCancellation → no-speech). Without the restart
-    // the recognizer is dead and barge-in "takes multiple attempts".
-    mockRecognitionStart.mockClear();
-
-    await act(async () => {
-      onEndCallback?.();
-    });
-
-    expect(mockRecognitionStart).toHaveBeenCalled();
-  });
-
-  it("restarts the recognizer when it ends while listening", async () => {
-    render(<VoiceModePanel voiceState="listening" onClose={onClose} />);
-    mockRecognitionStart.mockClear();
-
-    await act(async () => {
-      onEndCallback?.();
-    });
-
-    expect(mockRecognitionStart).toHaveBeenCalled();
-  });
-
-  it("does NOT restart the recognizer after end in a terminal state (error-disabled)", async () => {
-    render(<VoiceModePanel voiceState="error-disabled" onClose={onClose} />);
-    mockRecognitionStart.mockClear();
-
-    await act(async () => {
-      onEndCallback?.();
-    });
-
-    expect(mockRecognitionStart).not.toHaveBeenCalled();
   });
 
   // ─── 9. Barge-in (CONV-01, D-06/D-08/D-11/D-12) ────────────────────────────

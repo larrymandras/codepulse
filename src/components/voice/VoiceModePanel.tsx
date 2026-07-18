@@ -534,25 +534,15 @@ export function VoiceModePanel({
     ]
   );
 
-  // Mirror recognitionStart so handleEnd can restart the recognizer despite the
-  // declaration-order cycle (handleEnd feeds the hook that RETURNS recognitionStart).
-  const recognitionStartRef = useRef<() => void>(() => {});
-
   const handleEnd = useCallback(() => {
-    // Chrome fires SpeechRecognition.onend on its own — silence timeout, a
-    // `no-speech` result (which echoCancellation makes routine while her TTS
-    // plays), or periodic cycling — EVEN with continuous:true. Nothing else
-    // restarts it, so once it ends the recognizer is dead until unmount.
-    // Restart it whenever we're in an active state, INCLUDING `speaking`: that
-    // is exactly when a barge-in phrase must stay catchable (the echo guard in
-    // handleFinalResult suppresses all non-barge-in input during speaking).
-    // Without this, barge-in only works if the recognizer happens to still be
-    // alive — the "takes multiple attempts" CONV-01 failure. (D-06 / CONV-01)
-    if (voiceState === "idle" || voiceState === "error-disabled") return;
-    recognitionStartRef.current();
-    // Preserve prior silence-timer semantics: the auto-close timer is not armed
-    // while she is speaking (TTS_END re-arms it when playback finishes).
-    if (voiceState !== "speaking") resetSilenceTimer();
+    // Recognition ended naturally — only restart if we're not in a terminal state
+    if (
+      voiceState !== "idle" &&
+      voiceState !== "error-disabled" &&
+      voiceState !== "speaking"
+    ) {
+      resetSilenceTimer();
+    }
   }, [voiceState, resetSilenceTimer]);
 
   const { start: recognitionStart, stop: recognitionStop } = useSpeechRecognition({
@@ -562,11 +552,6 @@ export function VoiceModePanel({
     onInterimResult: handleInterimResult,
     onEnd: handleEnd,
   });
-
-  // Keep the restart ref pointed at the latest recognitionStart identity.
-  useEffect(() => {
-    recognitionStartRef.current = recognitionStart;
-  }, [recognitionStart]);
 
   // ─── Feedback guard / echo guard (T-92-10, rewritten CONV-01/D-06) ─────────
   // TTS starting no longer stops the recognizer (recognitionStop() removed) —
