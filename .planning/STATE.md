@@ -4,8 +4,8 @@ milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: executing
 stopped_at: Phase 97 UI-SPEC approved
-last_updated: "2026-07-17T22:10:07.453Z"
-last_activity: 2026-07-17 -- Phase 97 planning complete
+last_updated: "2026-07-18T14:33:58.382Z"
+last_activity: 2026-07-18 -- Phase 97 execution started
 progress:
   total_phases: 4
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v11.0 Phase 97 — Real Skill Intake & Daemon Foundation
+**Current focus:** Phase 97 — skill-lifecycle-management
 
 ## Current Position
 
-Phase: 97 — Real Skill Intake & Daemon Foundation
-Plan: — (not yet planned)
-Status: Ready to execute
-Last activity: 2026-07-17 -- Phase 97 planning complete
+Phase: 97 (skill-lifecycle-management) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 97
+Last activity: 2026-07-18 -- Phase 97 execution started
 
 ## Deferred Items
 
