@@ -69,6 +69,151 @@ export function capAckReport(report: unknown): unknown {
   return report;
 }
 
+// ---------------------------------------------------------------------------
+// Phase 97 Plan 05 (INTAKE-04): write-refusal → house-copy adapter
+//
+// Open Question 2 (RESOLVED, Convex-side): forge's intake-types.ts freezes
+// D-P8-10 ("the daemon never synthesizes/reshapes a report") — Plan 01's
+// mapExitCodeToResult only fills a structured, machine-readable `error`
+// string (`write-refused:<kind>:<raw>` for exit 4-7, `post-placement-
+// warning:<kind>:<raw>` for exit 8-9) while keeping `report` verbatim. This
+// adapter runs Convex-side, in ackCommand, BEFORE capAckReport, and turns
+// that signal into the actionable UI-SPEC house copy — written into BOTH
+// the persisted `error` field (IntakeSheet's failed branch renders ONLY
+// row.error) AND a synthesized report.findings entry (IntakeReportView's
+// findings table, done rows).
+// ---------------------------------------------------------------------------
+
+interface ParsedWriteRefusalError {
+  prefix: "write-refused" | "post-placement-warning";
+  kind: string;
+  raw: string;
+}
+
+/**
+ * Parses a daemon-emitted error string of the form
+ * `write-refused:<kind>:<raw>` / `post-placement-warning:<kind>:<raw>`.
+ * Returns null when `error` matches neither prefix (pass-through case) —
+ * the raw reason (`<raw>`) may itself contain colons (e.g. Windows paths
+ * like "C:/skills/foo"), so only the first two colon-delimited segments are
+ * treated as the prefix/kind; everything after is captured verbatim.
+ */
+function parseWriteRefusalError(error: string): ParsedWriteRefusalError | null {
+  const match = /^(write-refused|post-placement-warning):([^:]+):([\s\S]*)$/.exec(error);
+  if (!match) return null;
+  return {
+    prefix: match[1] as "write-refused" | "post-placement-warning",
+    kind: match[2],
+    raw: match[3],
+  };
+}
+
+/**
+ * Best-effort skill-name extraction from the CLI's raw collision reason
+ * (e.g. "C:/skills/foo already exists and differs from the candidate --
+ * pass --allow-overwrite to write here"). Returns the last path segment
+ * before " already exists", or null when the shape doesn't match — callers
+ * must fall back to a name-less phrasing rather than guessing.
+ */
+function extractSkillNameFromReason(raw: string): string | null {
+  const match = /^(.*?)\s+already exists/i.exec(raw.trim());
+  const pathLike = match?.[1]?.trim();
+  if (!pathLike) return null;
+  const segments = pathLike.split(/[\\/]/).filter(Boolean);
+  return segments.length > 0 ? segments[segments.length - 1] : null;
+}
+
+/**
+ * Composes the kind-accurate house copy (97-UI-SPEC § Copywriting Contract,
+ * D-07) ONCE, reused for both the persisted `error` string and the
+ * synthesized finding's `message`. Never returns text containing the
+ * internal 'write-refused:'/'post-placement-warning:' token prefix.
+ */
+function composeWriteRefusalHouseCopy(
+  prefix: "write-refused" | "post-placement-warning",
+  kind: string,
+  raw: string,
+  destination: string | null
+): string {
+  const reason = raw.trim();
+  if (prefix === "write-refused" && kind === "collision") {
+    const name = extractSkillNameFromReason(reason);
+    const dest = destination ?? "the selected destination";
+    return name
+      ? `A skill named "${name}" already exists at ${dest}. Choose a different destination, or remove the existing skill first.`
+      : `A skill already exists at ${dest}. Choose a different destination, or remove the existing skill first.`;
+  }
+  if (prefix === "write-refused") {
+    // unrecoverable / cold-marker / project-git — nothing was written (Pitfall 4 contrast).
+    return `Install failed: ${reason}. Nothing was written.`;
+  }
+  // post-placement-warning (catalog / ledger) — the file WAS written (Pitfall 4):
+  // never say "nothing was written" here.
+  return `Installed, but a post-placement step failed: ${reason}.`;
+}
+
+/**
+ * Convex-side write-refusal adapter (INTAKE-04, Open Question 2 RESOLVED).
+ * Reshapes a daemon-emitted `write-refused:<kind>:`/`post-placement-
+ * warning:<kind>:` error into `{ report, error }`:
+ *   - `error` becomes the actionable house copy (no internal token prefix) —
+ *     the ONLY field IntakeSheet's failed-row branch reads.
+ *   - `report` gets a synthesized `{ rule_id: 'write-refused', severity,
+ *     path: null, line: null, message }` finding appended (existing findings
+ *     preserved), with `verdict` flipped to 'reject' for the four
+ *     write-refused kinds; the two post-placement-warning kinds get a
+ *     'warning'-severity finding and leave `verdict` UNCHANGED (the skill IS
+ *     on disk — Pitfall 4).
+ * Pure (no ctx) and defensive, mirroring capAckReport's style: a null/
+ * unmatched `error` passes both fields through unchanged; a non-object
+ * `report` is treated as unshapeable and passed through as-is while the
+ * `error` string is still composed. The raw reason is carried as plain data
+ * — rendered later via JSX escaping, never interpolated unescaped into the
+ * copyable CLI command string.
+ */
+export function synthesizeWriteRefusalReport(
+  report: unknown,
+  error: string | null,
+  destination: string | null
+): { report: unknown; error: string | null } {
+  if (error === null) return { report, error };
+
+  const parsed = parseWriteRefusalError(error);
+  if (!parsed) return { report, error };
+
+  const { prefix, kind, raw } = parsed;
+  const houseCopy = composeWriteRefusalHouseCopy(prefix, kind, raw, destination);
+  const isRefusal = prefix === "write-refused";
+
+  const finding = {
+    rule_id: "write-refused",
+    severity: isRefusal ? "error" : "warning",
+    path: null,
+    line: null,
+    message: houseCopy,
+  };
+
+  // Defensive reshape (mirrors capAckReport): a non-object report cannot be
+  // safely spread — pass it through unshapeable, but still compose `error`.
+  if (report === null || report === undefined || typeof report !== "object" || Array.isArray(report)) {
+    return { report, error: houseCopy };
+  }
+
+  const reportObj = report as Record<string, unknown>;
+  const existingFindings = Array.isArray(reportObj.findings) ? reportObj.findings : [];
+  const newReport: Record<string, unknown> = {
+    ...reportObj,
+    findings: [...existingFindings, finding],
+  };
+  if (isRefusal) {
+    newReport.verdict = "reject";
+  }
+  // post-placement-warning kinds: verdict UNCHANGED (Pitfall 4) — the write
+  // already succeeded; only a secondary step failed.
+
+  return { report: newReport, error: houseCopy };
+}
+
 /**
  * Strip the `dangerous` key from a capabilities JSON string before storage (D-06, Pitfall 7).
  * Returns null when the result is empty, unparseable, or the input was null/empty.

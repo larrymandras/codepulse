@@ -391,6 +391,7 @@ import {
   isValidSupportedTypesShape,
   capAckReport,
   MAX_ACK_REPORT_BYTES,
+  synthesizeWriteRefusalReport,
 } from "./forge";
 import type { Id } from "./_generated/dataModel";
 
@@ -1100,6 +1101,150 @@ describe("forge.capAckReport — report size cap (WR-03)", () => {
     circular.self = circular;
     const result = capAckReport(circular) as { truncated: boolean };
     expect(result.truncated).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 97 Plan 05 (INTAKE-04): synthesizeWriteRefusalReport — write-refusal
+// → house-copy adapter (Open Question 2, RESOLVED: Convex-side)
+// ---------------------------------------------------------------------------
+
+describe("forge.synthesizeWriteRefusalReport — write-refusal house-copy adapter (INTAKE-04, D-07)", () => {
+  const baseReport = { schema_version: 1, verdict: "admit", findings: [] as unknown[] };
+
+  it("collision (exit 5): error becomes the D-07 actionable house copy naming skill + destination, no raw token", () => {
+    const rawError =
+      "write-refused:collision:C:/skills/foo already exists and differs from the candidate -- pass --allow-overwrite to write here";
+    const { report, error } = synthesizeWriteRefusalReport(baseReport, rawError, "global");
+
+    expect(error).not.toContain("write-refused:");
+    expect(error).toContain('"foo"');
+    expect(error).toContain("global");
+    expect(error).toContain("already exists");
+    expect(error).toBe(
+      'A skill named "foo" already exists at global. Choose a different destination, or remove the existing skill first.'
+    );
+
+    const findings = (report as { findings: Array<Record<string, unknown>> }).findings;
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      rule_id: "write-refused",
+      severity: "error",
+      path: null,
+      line: null,
+      message: error,
+    });
+    expect((report as { verdict: string }).verdict).toBe("reject");
+  });
+
+  it("collision: falls back to a name-less phrasing when the raw reason has no extractable path", () => {
+    const rawError = "write-refused:collision:already exists somewhere unusual";
+    const { error } = synthesizeWriteRefusalReport(baseReport, rawError, "project");
+    expect(error).not.toContain("write-refused:");
+    expect(error).not.toContain('"');
+    expect(error).toContain("already exists");
+    expect(error).toContain("project");
+  });
+
+  it.each([
+    ["unrecoverable", "destination is unrecoverable (gitignored) -- pass --allow-unrecoverable to write here"],
+    ["cold-marker", "ASTRIDR-01 marker not confirmed in skill-intake.toml"],
+    ["project-git", "No git top-level found for --project path"],
+  ])("write-refused:%s → error is 'Install failed: <reason>. Nothing was written.'; finding severity error + verdict reject", (kind, reason) => {
+    const rawError = `write-refused:${kind}:${reason}`;
+    const { report, error } = synthesizeWriteRefusalReport(baseReport, rawError, "global");
+
+    expect(error).not.toContain("write-refused:");
+    expect(error).toBe(`Install failed: ${reason}. Nothing was written.`);
+
+    const findings = (report as { findings: Array<Record<string, unknown>> }).findings;
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe("error");
+    expect(findings[0].rule_id).toBe("write-refused");
+    expect((report as { verdict: string }).verdict).toBe("reject");
+  });
+
+  it.each([
+    ["catalog", "CATALOG.md regeneration failed after placement"],
+    ["ledger", "provenance ledger write failed after placement"],
+  ])(
+    "post-placement-warning:%s → error is 'Installed, but a post-placement step failed: <reason>.'; never says 'nothing was written'; finding severity warning; verdict UNCHANGED",
+    (kind, reason) => {
+      const rawError = `post-placement-warning:${kind}:${reason}`;
+      const { report, error } = synthesizeWriteRefusalReport(baseReport, rawError, "global");
+
+      expect(error).not.toContain("post-placement-warning:");
+      expect(error).toBe(`Installed, but a post-placement step failed: ${reason}.`);
+      expect(error).not.toContain("nothing was written");
+      expect(error?.toLowerCase()).not.toContain("nothing was written");
+
+      const findings = (report as { findings: Array<Record<string, unknown>> }).findings;
+      expect(findings).toHaveLength(1);
+      expect(findings[0].severity).toBe("warning");
+      expect(findings[0].rule_id).toBe("write-refused");
+      // verdict UNCHANGED (Pitfall 4) — the write already succeeded.
+      expect((report as { verdict: string }).verdict).toBe("admit");
+    }
+  );
+
+  it("returns report + error unchanged when error is null", () => {
+    const result = synthesizeWriteRefusalReport(baseReport, null, "global");
+    expect(result.error).toBeNull();
+    expect(result.report).toBe(baseReport);
+  });
+
+  it("returns report + error unchanged (raw pass-through) when error matches neither known prefix", () => {
+    const result = synthesizeWriteRefusalReport(baseReport, "some other error entirely", "global");
+    expect(result.error).toBe("some other error entirely");
+    expect(result.report).toBe(baseReport);
+  });
+
+  it("preserves pre-existing findings entries — the synthetic finding is appended, not a replacement", () => {
+    const existing = {
+      schema_version: 1,
+      verdict: "reject",
+      findings: [{ rule_id: "frontmatter", severity: "error", path: "SKILL.md", line: 3, message: "bad frontmatter" }],
+    };
+    const { report } = synthesizeWriteRefusalReport(
+      existing,
+      "write-refused:collision:C:/skills/bar already exists and differs",
+      "global"
+    );
+    const findings = (report as { findings: Array<Record<string, unknown>> }).findings;
+    expect(findings).toHaveLength(2);
+    expect(findings[0].rule_id).toBe("frontmatter");
+    expect(findings[1].rule_id).toBe("write-refused");
+  });
+
+  it("defensive reshape: a null report is passed through as-is, but error is still composed (mirrors capAckReport)", () => {
+    const { report, error } = synthesizeWriteRefusalReport(
+      null,
+      "write-refused:collision:C:/skills/baz already exists and differs",
+      "global"
+    );
+    expect(report).toBeNull();
+    expect(error).not.toContain("write-refused:");
+    expect(error).toContain('"baz"');
+  });
+
+  it("defensive reshape: a non-object report (e.g. a truncation stub string) is passed through as-is, error still composed", () => {
+    const { report, error } = synthesizeWriteRefusalReport(
+      "not an object",
+      "post-placement-warning:catalog:regen failed",
+      "global"
+    );
+    expect(report).toBe("not an object");
+    expect(error).toBe("Installed, but a post-placement step failed: regen failed.");
+  });
+
+  it("behavior guard: composing into findings alone (leaving error the raw token) would fail this assertion", () => {
+    // Directly encodes the acceptance criterion: an implementation that only
+    // synthesizes a finding and passes args.error through raw would leave
+    // 'write-refused:collision:' in the persisted error string.
+    const rawError = "write-refused:collision:C:/skills/qux already exists and differs";
+    const { error } = synthesizeWriteRefusalReport(baseReport, rawError, "global");
+    expect(error).not.toBe(rawError);
+    expect(error).not.toMatch(/^write-refused:/);
   });
 });
 
