@@ -222,7 +222,7 @@ export default function Skills() {
               <Search className="w-4 h-4" />
               <span className="font-mono text-xs text-muted-foreground">Ctrl+Shift+K</span>
             </Button>
-            <Button onClick={() => setIntakeModalOpen(true)}>Validate skill</Button>
+            <Button onClick={() => setIntakeModalOpen(true)}>Install skill</Button>
           </div>
         }
       />
