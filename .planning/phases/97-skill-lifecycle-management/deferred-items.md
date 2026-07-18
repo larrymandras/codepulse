@@ -12,6 +12,16 @@ Out-of-scope findings discovered during plan execution. Not fixed (per scope bou
 
 **Not fixed** (out-of-scope per plan's scope-boundary rule: "Only auto-fix issues DIRECTLY caused by the current task's changes"). Likely environment-dependent (drive-letter enumeration behaving differently than expected on this host, or a synchronous check that unexpectedly become async/blocking). Needs its own investigation in a future plan/quick-fix.
 
+## ✅ RESOLVED during phase-97 orchestration (2026-07-18)
+
+- **97-04 Skills.tsx button** — `src/pages/Skills.tsx:225` `Validate skill` → `Install skill` (commit `fix(97-04): ...` in codepulse). House-honesty; the only remaining user-facing dishonest string. See original entry below.
+- **97-03 skill-rescan tsc strict-null errors** — fixed the `parseFrontmatter` index guards + 3 test destructures; forge `tsc --noEmit` now clean (was breaking `npm run build`). Commit `cde56dc` in forge. NOT pre-existing — 97-02 created the file; vitest just doesn't strict-typecheck. See original entry below.
+- **Production rescanCfg wiring gap** (flagged in 97-03 SUMMARY) — wired `rescanCfg` into `CommandPoller` in forge `index.ts` from `ASTRIDR_INGEST_API_KEY` + `os.homedir()` + `listWorkspaces(db)`, fail-safe when the key is absent. Commit `c7551ef` in forge. This unblocks 97-06's live "Skills page auto-reflects" check.
+
+## ⏳ OPEN follow-up (new, from the rescanCfg wiring)
+
+**forge `index.ts` — workspaces are a startup snapshot, not resolved per-rescan.** `rescanCfg.workspaces` is captured once at daemon start via `listWorkspaces(db)`. A workspace synced *after* the daemon starts won't appear in project-scope rescans until the next restart. Acceptable for now (global/cold installs — the common case — don't use workspaces; the daemon restarts on deploy), but for full correctness the rescan should resolve workspaces fresh at fire time (would require the shipped `command-poller.ts`/`skill-rescan.ts` contract to accept a workspace thunk). Trivial-to-moderate; pick up in Phase 98 or a quick-fix.
+
 ## 97-04: `src/pages/Skills.tsx:225` — page-level "Validate skill" button still opens the now-renamed "Install skill" modal
 
 **Found during:** Plan 97-04, post-task grep sweep for remaining dry-run strings repo-wide (`grep -rln "Validate skill" src/`).
