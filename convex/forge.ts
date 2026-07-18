@@ -931,15 +931,31 @@ export const ackCommand = internalMutation({
     ) {
       await ctx.storage.delete(cmd.intakePayload.storageId);
     }
+    // Phase 97 Plan 05 (INTAKE-04): reshape a write-refused/post-placement-warning
+    // signal into the actionable house copy BEFORE capAckReport, so it always
+    // lands in BOTH the persisted `error` (IntakeSheet's failed branch reads
+    // ONLY this field) and a synthesized report.findings entry. Non-intake acks
+    // (launch/stop) and unmatched/null errors pass through unchanged.
+    let patchedError = args.error;
+    let patchedReport: unknown = args.report ?? null;
+    if (cmd.commandType === "intake") {
+      const adapted = synthesizeWriteRefusalReport(
+        args.report ?? null,
+        args.error,
+        cmd.intakePayload?.destination ?? null
+      );
+      patchedReport = adapted.report;
+      patchedError = adapted.error;
+    }
     await ctx.db.patch(cmd._id, {
       status:             args.status,
       resolvedForgeJobId: args.resolvedForgeJobId,
-      error:              args.error,
+      error:              patchedError,
       completedAt:        args.now,
       // WR-03: an oversized report is replaced with a truncation stub so the
       // terminal patch (and the blob delete above) always commits — the ack
       // must never fail because the report is too large.
-      report:             capAckReport(args.report ?? null),
+      report:             capAckReport(patchedReport),
     });
   },
 });

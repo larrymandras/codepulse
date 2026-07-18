@@ -1442,12 +1442,25 @@ async function ackCommandMirror(
   ) {
     await ctx.storage.delete(cmd.intakePayload.storageId);
   }
+  // Phase 97 Plan 05 (INTAKE-04): mirrors the real ackCommand's write-refusal
+  // adapter wiring — non-intake acks and unmatched/null errors pass through.
+  let patchedError = args.error;
+  let patchedReport: unknown = args.report ?? null;
+  if (cmd.commandType === "intake") {
+    const adapted = synthesizeWriteRefusalReport(
+      args.report ?? null,
+      args.error,
+      cmd.intakePayload?.destination ?? null
+    );
+    patchedReport = adapted.report;
+    patchedError = adapted.error;
+  }
   await ctx.db.patch(cmd._id, {
     status: args.status,
     resolvedForgeJobId: args.resolvedForgeJobId,
-    error: args.error,
+    error: patchedError,
     completedAt: args.now,
-    report: capAckReport(args.report ?? null),
+    report: capAckReport(patchedReport),
   });
 }
 
@@ -1675,5 +1688,97 @@ describe("forge command bridge — DB round-trip (integration)", () => {
     expect(deleteIdx).toBeGreaterThanOrEqual(0);
     expect(patchIdx).toBeGreaterThan(deleteIdx);
     expect(store.forgeCommands[0].status).toBe("expired");
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 97 Plan 05 (INTAKE-04): ackCommand wires synthesizeWriteRefusalReport
+  // before capAckReport — end-to-end through the mirror (Task 2)
+  // -------------------------------------------------------------------------
+
+  it("ackCommand: a write-refused:collision: ack persists the actionable house copy in error AND the synthetic finding + verdict reject in report", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-collision",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-collision" },
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-collision",
+      status: "failed",
+      resolvedForgeJobId: null,
+      error:
+        "write-refused:collision:C:/skills/foo already exists and differs from the candidate -- pass --allow-overwrite to write here",
+      now: 2_000,
+      report: { schema_version: 1, verdict: "admit", findings: [] },
+    });
+
+    const row = store.forgeCommands[0];
+    expect(row.status).toBe("failed");
+    expect(row.error).not.toContain("write-refused:");
+    expect(row.error).toBe(
+      'A skill named "foo" already exists at global. Choose a different destination, or remove the existing skill first.'
+    );
+    expect(row.report.verdict).toBe("reject");
+    expect(row.report.findings).toHaveLength(1);
+    expect(row.report.findings[0]).toMatchObject({ rule_id: "write-refused", severity: "error" });
+  });
+
+  it("ackCommand: a post-placement-warning:catalog: ack (status done) stays done, error is kind-accurate (never 'nothing was written'), report has a warning finding", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-catalog-warning",
+      commandType: "intake",
+      status: "executing",
+      intakePayload: { destination: "global", workspaceId: null, storageId: "storage-catalog-warning" },
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-catalog-warning",
+      status: "done",
+      resolvedForgeJobId: null,
+      error: "post-placement-warning:catalog:CATALOG.md regeneration failed after placement",
+      now: 2_000,
+      report: { schema_version: 1, verdict: "admit", findings: [] },
+    });
+
+    const row = store.forgeCommands[0];
+    expect(row.status).toBe("done");
+    expect(row.error).not.toContain("post-placement-warning:");
+    expect(row.error?.toLowerCase()).not.toContain("nothing was written");
+    expect(row.error).toBe(
+      "Installed, but a post-placement step failed: CATALOG.md regeneration failed after placement."
+    );
+    expect(row.report.verdict).toBe("admit"); // unchanged — the skill IS on disk (Pitfall 4)
+    expect(row.report.findings).toHaveLength(1);
+    expect(row.report.findings[0]).toMatchObject({ rule_id: "write-refused", severity: "warning" });
+  });
+
+  it("ackCommand: a non-intake (launch) ack passes error through verbatim — adapter never fires for launch/stop", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-ack-launch",
+      commandType: "launch",
+      status: "executing",
+    });
+
+    await ackCommandMirror(store, {
+      commandId: "cmd-ack-launch",
+      status: "failed",
+      resolvedForgeJobId: null,
+      error: "write-refused:collision:this looks like an intake token but isn't one",
+      now: 2_000,
+    });
+
+    const row = store.forgeCommands[0];
+    expect(row.status).toBe("failed");
+    // Adapter only runs for commandType === "intake" — a launch/stop ack's
+    // error (even one that happens to look like the intake token shape)
+    // passes through completely verbatim.
+    expect(row.error).toBe("write-refused:collision:this looks like an intake token but isn't one");
   });
 });
