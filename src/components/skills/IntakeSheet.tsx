@@ -60,7 +60,7 @@ export function IntakeSheet({ open, onOpenChange, feed }: IntakeSheetProps) {
             <div className="mt-2">
               <p className="text-base font-medium">No intake commands yet</p>
               <p className="text-sm text-muted-foreground">
-                Drop a SKILL.md or paste a GitHub URL with &quot;Validate
+                Drop a SKILL.md or paste a GitHub URL with &quot;Install
                 skill&quot; — reports appear here.
               </p>
             </div>
@@ -143,8 +143,14 @@ export function IntakeSheet({ open, onOpenChange, feed }: IntakeSheetProps) {
                       </div>
                     )}
 
+                    {/* Plan 05's Convex adapter composes the full kind-accurate
+                        house copy INTO row.error (collision, generic refused
+                        with "Nothing was written.", or exit 8/9 post-placement
+                        warning) — this renders it verbatim. The RowStatusBadge
+                        chip above already carries the "Failed" label, so no
+                        redundant prefix is added here (D-07, INTAKE-04). */}
                     {row.status === "failed" && (
-                      <p className="text-sm text-foreground pb-2">Failed: {row.error}</p>
+                      <p className="text-sm text-foreground pb-2">{row.error}</p>
                     )}
                   </div>
                 );

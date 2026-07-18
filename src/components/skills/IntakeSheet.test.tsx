@@ -56,10 +56,11 @@ describe("IntakeSheet", () => {
     expect(screen.queryByText("No intake commands yet")).toBeNull();
   });
 
-  it("renders the locked empty-state copy once resolved to []", () => {
+  it("renders the locked empty-state copy once resolved to [], referencing the install-language CTA (not the old dry-run 'Validate skill')", () => {
     renderSheet(feed());
     expect(screen.getByText("No intake commands yet")).toBeInTheDocument();
     expect(screen.getByText(/Drop a SKILL\.md or paste a GitHub URL/)).toBeInTheDocument();
+    expect(screen.getByText(/"Install skill"/)).toBeInTheDocument();
   });
 
   it("renders the expired-row copy verbatim, with the Phase 8 secondary line", () => {
@@ -68,9 +69,19 @@ describe("IntakeSheet", () => {
     expect(screen.getByText(/Intake execution ships with the Forge daemon \(Phase 8\)\./)).toBeInTheDocument();
   });
 
-  it("renders a failed row's error reason", () => {
+  it("renders a failed row's error reason verbatim, with no redundant 'Failed:' prefix (the RowStatusBadge chip already carries that label)", () => {
     renderSheet(feed({ rows: [row({ status: "failed", error: "boom" })] }));
-    expect(screen.getByText("Failed: boom")).toBeInTheDocument();
+    expect(screen.getByText("boom")).toBeInTheDocument();
+    expect(screen.queryByText("Failed: boom")).toBeNull();
+  });
+
+  it("renders the Plan-05 collision house copy from row.error end-to-end, and never leaks the raw internal write-refused: token (D-07, INTAKE-04)", () => {
+    const collisionCopy =
+      'A skill named "acme-skill" already exists at global. Choose a different destination, or remove the existing skill first.';
+    renderSheet(feed({ rows: [row({ status: "failed", error: collisionCopy })] }));
+    expect(screen.getByText(collisionCopy)).toBeInTheDocument();
+    expect(screen.queryByText(/write-refused:/)).toBeNull();
+    expect(screen.queryByText(/post-placement-warning:/)).toBeNull();
   });
 
   it("wraps each row's status chip in an aria-live=polite region (locked contract)", () => {
