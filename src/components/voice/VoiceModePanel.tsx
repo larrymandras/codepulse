@@ -417,7 +417,14 @@ export function VoiceModePanel({
   // Cuts TTS instantly (no fade), cancels the in-flight server turn, marks the
   // partial reply interrupted, and shows the interrupt flash.
 
+  // Guards handleBargeIn to fire exactly once per speaking turn — barge-in is
+  // now detected on INTERIM results (see handleInterimResult), which repeat
+  // rapidly, and the final result would otherwise re-fire it. Reset on TTS_START.
+  const bargeInFiredRef = useRef(false);
+
   const handleBargeIn = useCallback(() => {
+    if (bargeInFiredRef.current) return;
+    bargeInFiredRef.current = true;
     ttsStop(); // audio.pause() equivalent — instant, no fade
     dispatch({ type: "BARGE_IN" });
     setInstantBadgeTransition(true);
@@ -445,10 +452,19 @@ export function VoiceModePanel({
 
   const handleInterimResult = useCallback(
     (text: string) => {
-      // Echo guard (D-06): while she's speaking, the recognizer stays live but
-      // ONLY a barge-in phrase (checked on the final result) may act — any
-      // other recognized text, interim or final, is dropped with zero UI trace.
-      if (voiceState === "speaking") return;
+      // Echo guard + barge-in (D-06/CONV-01): while she's speaking, the
+      // recognizer stays live but ONLY a barge-in phrase may act. Crucially we
+      // check it on INTERIM results, not just the final: with continuous audio
+      // playing, Chrome can take several seconds to finalize a result, so
+      // waiting for `final` made barge-in feel like it "took 2-3 tries". Acting
+      // on the interim fires the interrupt the instant the phrase is heard.
+      // handleBargeIn is idempotent (bargeInFiredRef) so repeated interims of
+      // the same utterance fire it once. All other text during speaking is
+      // still dropped with zero UI trace (the echo guard).
+      if (voiceState === "speaking") {
+        if (isBargeInPhrase(text)) handleBargeIn();
+        return;
+      }
 
       setInterimText(text);
       dispatch({ type: "INTERIM_RESULT" });
@@ -459,7 +475,7 @@ export function VoiceModePanel({
       // clears — a fresh turn has started, not a lingering countdown).
       clearFollowUpWindow();
     },
-    [voiceState, resetSilenceTimer, clearSendTimer, clearFollowUpWindow]
+    [voiceState, handleBargeIn, resetSilenceTimer, clearSendTimer, clearFollowUpWindow]
   );
 
   const handleFinalResult = useCallback(
@@ -564,6 +580,8 @@ export function VoiceModePanel({
   useEffect(() => {
     if (isPlaying && !wasPlayingRef.current) {
       // TTS just started — recognizer stays live (echo guard handles the rest).
+      // Re-arm barge-in for this new speaking turn.
+      bargeInFiredRef.current = false;
       dispatch({ type: "TTS_START" });
       wasPlayingRef.current = true;
     } else if (!isPlaying && wasPlayingRef.current) {

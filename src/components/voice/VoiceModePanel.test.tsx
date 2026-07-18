@@ -324,6 +324,48 @@ describe("VoiceModePanel", () => {
     expect(screen.getByText(/— interrupted —/i)).toBeInTheDocument();
   });
 
+  it("fires barge-in on an INTERIM result during speaking — no wait for Chrome's delayed final (CONV-01)", async () => {
+    // The core reliability fix: with her TTS playing, Chrome takes seconds to
+    // finalize a result, so waiting for `final` made barge-in "take 2-3 tries".
+    // A barge-in phrase must act the instant it appears in an interim.
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onInterimResultCallback?.(" stop");
+    });
+
+    expect(mockTtsStop).toHaveBeenCalled();
+    expect(mockSendCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "agent.stop" })
+    );
+  });
+
+  it("fires barge-in exactly once across repeated interims + the final of one utterance", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onInterimResultCallback?.(" stop");
+      onInterimResultCallback?.(" stop stop");
+      onFinalResultCallback?.(" stop stop");
+    });
+
+    const stopCalls = (mockSendCommand.mock.calls as unknown[][]).filter(
+      (c) => (c[0] as { type?: string })?.type === "agent.stop"
+    );
+    expect(stopCalls).toHaveLength(1);
+  });
+
+  it("still drops a non-barge-in INTERIM during speaking (echo guard) — no interrupt", async () => {
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onInterimResultCallback?.("here is your weather briefing");
+    });
+
+    expect(mockTtsStop).not.toHaveBeenCalled();
+    expect(screen.queryByText(/— interrupted —/i)).not.toBeInTheDocument();
+  });
+
   it("drops a non-barge-in transcript recognized during speaking (echo guard) — no chat.send, no flash", async () => {
     render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
 
