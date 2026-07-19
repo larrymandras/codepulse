@@ -9,7 +9,16 @@
  *
  * Recurrence is "rrule-lite" (D-05): { freq, interval, byday?, until? }.
  * `computeNextDueAt` is the pure engine — see the "Task 2" section below.
+ *
+ * CRUD mutations/queries (Task 3) extract their business logic into plain
+ * exported "*Handler" functions taking a minimal `{ db }` shape, so they are
+ * unit-testable without convex-test (not installed in this repo — see
+ * convex/runtimeIngest.test.ts:9 and convex/evalScores.ts's
+ * storeEvalScoreHandler for the precedent). The mutation()/query() builders
+ * below are thin wrappers that supply the real ctx and Date.now()/1000.
  */
+import { mutation, query } from "./_generated/server";
+import { v } from "convex/values";
 
 // ============================================================
 // Task 2 — computeNextDueAt (pure, unit-first recurrence engine)
@@ -106,3 +115,241 @@ export function computeNextDueAt(
   if (until !== undefined && nextEpoch > until) return null;
   return nextEpoch;
 }
+
+// ============================================================
+// Task 3 — CRUD mutations + queries
+// ============================================================
+
+const recurrenceValidator = v.object({
+  freq: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
+  interval: v.float64(),
+  byday: v.optional(v.array(v.string())),
+  until: v.optional(v.float64()),
+});
+
+/** Minimal ctx.db surface the handlers depend on — implemented for real by
+ * Convex's ctx.db, and by an in-memory fake in convex/reminders.test.ts. */
+interface RemindersDb {
+  insert: (table: string, doc: Record<string, unknown>) => Promise<any>;
+  get: (id: any) => Promise<any>;
+  patch: (id: any, patch: Record<string, unknown>) => Promise<void>;
+  delete: (id: any) => Promise<void>;
+  query: (table: string) => {
+    withIndex: (
+      indexName: string,
+      cb?: (q: { eq: (field: string, value: any) => any }) => any
+    ) => { collect: () => Promise<any[]>; first: () => Promise<any> };
+  };
+}
+
+export interface CreateReminderArgs {
+  profileId: string;
+  title: string;
+  notes?: string;
+  dueAt?: number;
+  priority?: string; // "low" | "med" | "high", default "med"
+  recurrence?: Recurrence;
+  tags?: string[];
+  source: string; // "dashboard" | "astridr" (D-09 — required, never gates)
+}
+
+export async function createReminderHandler(
+  ctx: { db: RemindersDb } | any,
+  args: CreateReminderArgs,
+  now: number
+) {
+  return await ctx.db.insert("reminders", {
+    profileId: args.profileId,
+    title: args.title,
+    notes: args.notes,
+    dueAt: args.dueAt,
+    priority: args.priority ?? "med",
+    status: "open",
+    recurrence: args.recurrence,
+    tags: args.tags,
+    source: args.source,
+    createdAt: now,
+    updatedAt: now,
+  });
+}
+
+export const create = mutation({
+  args: {
+    profileId: v.string(),
+    title: v.string(),
+    notes: v.optional(v.string()),
+    dueAt: v.optional(v.float64()),
+    priority: v.optional(v.string()),
+    recurrence: v.optional(recurrenceValidator),
+    tags: v.optional(v.array(v.string())),
+    source: v.string(),
+  },
+  handler: async (ctx, args) =>
+    createReminderHandler(ctx, args, Date.now() / 1000),
+});
+
+export interface UpdateReminderArgs {
+  title?: string;
+  notes?: string;
+  dueAt?: number;
+  priority?: string;
+  recurrence?: Recurrence;
+  tags?: string[];
+}
+
+export async function updateReminderHandler(
+  ctx: { db: RemindersDb } | any,
+  id: any,
+  fields: UpdateReminderArgs,
+  now: number
+) {
+  const patch: Record<string, unknown> = { updatedAt: now };
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) patch[key] = value;
+  }
+  await ctx.db.patch(id, patch);
+}
+
+export const update = mutation({
+  args: {
+    id: v.id("reminders"),
+    title: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    dueAt: v.optional(v.float64()),
+    priority: v.optional(v.string()),
+    recurrence: v.optional(recurrenceValidator),
+    tags: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, { id, ...fields }) =>
+    updateReminderHandler(ctx, id, fields, Date.now() / 1000),
+});
+
+/**
+ * D-05: completing a recurring reminder spawns the next open occurrence
+ * (new row: same title/profile/priority/recurrence/tags/source, dueAt =
+ * computeNextDueAt(original), status "open", notifiedAt cleared). A one-off
+ * (no recurrence), or a recurrence whose next occurrence is past `until`,
+ * spawns nothing.
+ */
+export async function completeReminderHandler(
+  ctx: { db: RemindersDb } | any,
+  id: any,
+  now: number
+) {
+  const existing = await ctx.db.get(id);
+  if (!existing) return;
+
+  await ctx.db.patch(id, {
+    status: "done",
+    completedAt: now,
+    updatedAt: now,
+  });
+
+  if (existing.recurrence && existing.dueAt !== undefined) {
+    const nextDueAt = computeNextDueAt(existing.dueAt, existing.recurrence);
+    if (nextDueAt !== null) {
+      await ctx.db.insert("reminders", {
+        profileId: existing.profileId,
+        title: existing.title,
+        notes: existing.notes,
+        dueAt: nextDueAt,
+        priority: existing.priority,
+        status: "open",
+        recurrence: existing.recurrence,
+        tags: existing.tags,
+        source: existing.source,
+        notifiedAt: undefined,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+}
+
+export const complete = mutation({
+  args: { id: v.id("reminders") },
+  handler: async (ctx, { id }) =>
+    completeReminderHandler(ctx, id, Date.now() / 1000),
+});
+
+export async function snoozeReminderHandler(
+  ctx: { db: RemindersDb } | any,
+  id: any,
+  until: number,
+  now: number
+) {
+  await ctx.db.patch(id, {
+    status: "snoozed",
+    snoozedUntil: until,
+    updatedAt: now,
+  });
+}
+
+export const snooze = mutation({
+  args: { id: v.id("reminders"), until: v.float64() },
+  handler: async (ctx, { id, until }) =>
+    snoozeReminderHandler(ctx, id, until, Date.now() / 1000),
+});
+
+export async function removeReminderHandler(
+  ctx: { db: RemindersDb } | any,
+  id: any
+) {
+  await ctx.db.delete(id);
+}
+
+export const remove = mutation({
+  args: { id: v.id("reminders") },
+  handler: async (ctx, { id }) => removeReminderHandler(ctx, id),
+});
+
+export async function listByProfileHandler(
+  ctx: { db: RemindersDb } | any,
+  profileId: string
+) {
+  return await ctx.db
+    .query("reminders")
+    .withIndex("by_profile", (q: { eq: (field: string, value: any) => any }) =>
+      q.eq("profileId", profileId)
+    )
+    .collect();
+}
+
+export const listByProfile = query({
+  args: { profileId: v.string() },
+  handler: async (ctx, { profileId }) =>
+    listByProfileHandler(ctx, profileId),
+});
+
+/** Open|snoozed rows with dueAt <= now+withinSeconds, never status "done". */
+export async function dueSoonHandler(
+  ctx: { db: RemindersDb } | any,
+  withinSeconds: number,
+  now: number
+) {
+  const cutoff = now + withinSeconds;
+  const rows = await ctx.db.query("reminders").withIndex("by_dueAt").collect();
+  return rows.filter(
+    (r: any) =>
+      r.status !== "done" && r.dueAt !== undefined && r.dueAt <= cutoff
+  );
+}
+
+export const dueSoon = query({
+  args: { withinSeconds: v.float64() },
+  handler: async (ctx, { withinSeconds }) =>
+    dueSoonHandler(ctx, withinSeconds, Date.now() / 1000),
+});
+
+/** Open|snoozed rows with dueAt < now, never status "done". */
+export async function overdueHandler(ctx: { db: RemindersDb } | any, now: number) {
+  const rows = await ctx.db.query("reminders").withIndex("by_dueAt").collect();
+  return rows.filter(
+    (r: any) => r.status !== "done" && r.dueAt !== undefined && r.dueAt < now
+  );
+}
+
+export const overdue = query({
+  args: {},
+  handler: async (ctx) => overdueHandler(ctx, Date.now() / 1000),
+});
