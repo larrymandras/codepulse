@@ -4,13 +4,13 @@ milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
 stopped_at: Phase 101 Plan 02 (reminders + calendar ingest httpActions) complete
-last_updated: "2026-07-19T21:52:31.782Z"
+last_updated: "2026-07-19T22:03:12.907Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — EXECUTING (2/6 plans)
-Plan: 2 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03/04/05/06 (not started, cross-repo — 03/04/05 execute in astridr-repo)
-Status: Ready to execute Wave 3
+Phase: 101 (reminders-calendar-command-center) — EXECUTING (3/6 plans)
+Plan: 3 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04/05/06 (not started — 04/05 execute in astridr-repo)
+Status: Ready to execute 101-04/05/06
 Last activity: 2026-07-19
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
@@ -216,6 +216,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 101-01]: recurrence.byday uses iCal 2-letter day codes (MO/TU/WE/TH/FR/SA/SU); Convex CRUD handlers extracted as plain *Handler(ctx,...) functions typed 'ctx: {db} | any' for unit-testing without convex-test — byday format was unspecified in the plan interface; handler pattern mirrors the existing evalScores.ts storeEvalScoreHandler precedent to sidestep QueryCtx/MutationCtx structural typing mismatch
 - [Phase 101]: Tests invoke real httpAction handlers via Convex's _handler escape hatch (raw handler fn) instead of a hand-duplicated dispatch simulation, closing the test/implementation drift gap the codebase's forgeIngest.test.ts precedent left open
 - [Phase 101]: calendarIngest requires calendarAccount (not just profileId+events) as a 400-gated field, since D-10's scoped prune is keyed on (profileId, calendarAccount)
+- [Phase 101-03]: RemindersTool (astridr-repo) registers via the manifest TOML system (astridr/tools/manifests/reminders.manifest.toml, tool_id=="reminders"==RemindersTool.name), not config/tools.yaml's builtin/optional lists — confirmed that YAML section has zero consumers in the codebase; snooze is implemented as an op:"update" dueAt shift (not a true status:"snoozed" transition) because /reminders-ingest has no op:"snooze" and drops status/snoozedUntil on op:"update" — follow-up needed in convex/remindersIngest.ts to wire the existing api.reminders.snooze mutation
 
 ### Pending Todos
 
@@ -244,10 +245,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-19T21:52:31.774Z
-Stopped at: Phase 101 Plan 02 (reminders + calendar ingest httpActions) complete
-Next action: Execute Phase 101 Wave 3 — Plans 03/04/05 (Ástríðr tool + calendar cron + nudge cron, astridr-repo) then 101-06 (Reminders page, codepulse)
-Resume file: .planning/phases/101-reminders-calendar-command-center/101-03-PLAN.md
+Last session: 2026-07-19T22:03:12.907Z
+Stopped at: Phase 101 Plan 03 (Ástríðr reminders tool, astridr-repo) complete
+Next action: Execute Phase 101 Wave 3 remainder — Plans 04/05 (Ástríðr calendar cron + nudge cron, astridr-repo) then 101-06 (Reminders page, codepulse)
+Resume file: .planning/phases/101-reminders-calendar-command-center/101-04-PLAN.md
 
 ## Operator Next Steps
 
