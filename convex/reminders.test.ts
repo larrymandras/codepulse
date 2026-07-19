@@ -7,7 +7,17 @@
  * convex/evalScores.test.ts's `storeEvalScoreHandler` coverage).
  */
 import { describe, it, expect } from "vitest";
-import { computeNextDueAt } from "./reminders";
+import {
+  computeNextDueAt,
+  createReminderHandler,
+  updateReminderHandler,
+  completeReminderHandler,
+  snoozeReminderHandler,
+  removeReminderHandler,
+  listByProfileHandler,
+  dueSoonHandler,
+  overdueHandler,
+} from "./reminders";
 
 // ---------------------------------------------------------------------------
 // Task 2 — computeNextDueAt (pure, unit-first)
@@ -97,5 +107,280 @@ describe("computeNextDueAt", () => {
   it("returns null for a one-off (no recurrence)", () => {
     const due = day(2026, 3, 10);
     expect(computeNextDueAt(due, undefined)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task 3 — CRUD mutations + queries
+// ---------------------------------------------------------------------------
+//
+// mutation()/query()-wrapped Convex functions need a real ctx, which
+// convex-test would normally provide — not installed in this repo (see
+// convex/runtimeIngest.test.ts:9). Instead the business logic is extracted
+// into plain exported "*Handler" functions taking a minimal in-memory fake
+// `ctx.db` (mirrors convex/evalScores.test.ts's storeEvalScoreHandler
+// coverage), with `now` passed explicitly so tests stay deterministic.
+
+function makeFakeDb() {
+  let idCounter = 0;
+  const rows = new Map<string, any>();
+  return {
+    rows,
+    async insert(_table: string, doc: any) {
+      const id = `id_${idCounter++}`;
+      rows.set(id, { _id: id, ...doc });
+      return id;
+    },
+    async get(id: string) {
+      return rows.get(id) ?? null;
+    },
+    async patch(id: string, patch: Record<string, unknown>) {
+      const existing = rows.get(id);
+      if (existing) rows.set(id, { ...existing, ...patch });
+    },
+    async delete(id: string) {
+      rows.delete(id);
+    },
+    query(_table: string) {
+      const list = () => Array.from(rows.values());
+      return {
+        withIndex(_indexName: string, cb?: (q: any) => any) {
+          let filtered = list();
+          if (cb) {
+            const conditions: Array<[string, any]> = [];
+            const qProxy = {
+              eq(field: string, value: any) {
+                conditions.push([field, value]);
+                return qProxy;
+              },
+            };
+            cb(qProxy);
+            filtered = filtered.filter((r) =>
+              conditions.every(([f, v]) => r[f] === v)
+            );
+          }
+          return {
+            collect: async () => filtered,
+            first: async () => filtered[0] ?? null,
+          };
+        },
+      };
+    },
+  };
+}
+
+describe("reminders CRUD handlers", () => {
+  it("create -> listByProfile roundtrip", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Water plants", source: "dashboard" },
+      1000
+    );
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]._id).toBe(id);
+    expect(rows[0].title).toBe("Water plants");
+    expect(rows[0].status).toBe("open");
+    expect(rows[0].priority).toBe("med");
+    expect(rows[0].createdAt).toBe(1000);
+    expect(rows[0].updatedAt).toBe(1000);
+  });
+
+  it("listByProfile only returns rows for the requested profile", async () => {
+    const db = makeFakeDb();
+    await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "A", source: "dashboard" },
+      1000
+    );
+    await createReminderHandler(
+      { db },
+      { profileId: "business", title: "B", source: "dashboard" },
+      1000
+    );
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].title).toBe("A");
+  });
+
+  it("create requires source and stores 'dashboard' verbatim", async () => {
+    const db = makeFakeDb();
+    await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "A", source: "dashboard" },
+      1000
+    );
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows[0].source).toBe("dashboard");
+  });
+
+  it("create stores 'astridr' as the source verbatim", async () => {
+    const db = makeFakeDb();
+    await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "A", source: "astridr" },
+      1000
+    );
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows[0].source).toBe("astridr");
+  });
+
+  it("update patches allowed fields and bumps updatedAt", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Old title", source: "dashboard" },
+      1000
+    );
+    await updateReminderHandler({ db }, id, { title: "New title" }, 2000);
+    const row = await db.get(id);
+    expect(row.title).toBe("New title");
+    expect(row.updatedAt).toBe(2000);
+  });
+
+  it("completing a one-off reminder sets status done and spawns no row", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "One-off", dueAt: 1000, source: "dashboard" },
+      500
+    );
+    await completeReminderHandler({ db }, id, 1500);
+    expect(db.rows.size).toBe(1);
+    const row = await db.get(id);
+    expect(row.status).toBe("done");
+    expect(row.completedAt).toBe(1500);
+    expect(row.updatedAt).toBe(1500);
+  });
+
+  it("completing a recurring reminder spawns exactly one next-open row with cleared notifiedAt", async () => {
+    const db = makeFakeDb();
+    const dueAt = day(2026, 3, 10);
+    const id = await createReminderHandler(
+      { db },
+      {
+        profileId: "personal",
+        title: "Recurring",
+        dueAt,
+        source: "dashboard",
+        recurrence: { freq: "daily", interval: 1 },
+      },
+      500
+    );
+    // Simulate the Ástríðr nudge cron having set notifiedAt on the original.
+    await db.patch(id, { notifiedAt: 999 });
+
+    await completeReminderHandler({ db }, id, 1500);
+
+    expect(db.rows.size).toBe(2);
+    const original = await db.get(id);
+    expect(original.status).toBe("done");
+    expect(original.completedAt).toBe(1500);
+
+    const spawned = Array.from(db.rows.values()).find(
+      (r: any) => r._id !== id
+    ) as any;
+    expect(spawned).toBeDefined();
+    expect(spawned.status).toBe("open");
+    expect(spawned.dueAt).toBe(computeNextDueAt(dueAt, { freq: "daily", interval: 1 }));
+    expect(spawned.notifiedAt).toBeUndefined();
+    expect(spawned.title).toBe("Recurring");
+    expect(spawned.profileId).toBe("personal");
+    expect(spawned.source).toBe("dashboard");
+  });
+
+  it("completing a recurring reminder past `until` spawns no row (bounded termination)", async () => {
+    const db = makeFakeDb();
+    const dueAt = day(2026, 3, 10);
+    const until = day(2026, 3, 11); // less than the daily+1 next occurrence
+    const id = await createReminderHandler(
+      { db },
+      {
+        profileId: "personal",
+        title: "Bounded",
+        dueAt,
+        source: "dashboard",
+        recurrence: { freq: "weekly", interval: 1, until },
+      },
+      500
+    );
+    await completeReminderHandler({ db }, id, 1500);
+    expect(db.rows.size).toBe(1);
+  });
+
+  it("snooze sets status snoozed and snoozedUntil", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Snoozeme", source: "dashboard" },
+      1000
+    );
+    await snoozeReminderHandler({ db }, id, 5000, 2000);
+    const row = await db.get(id);
+    expect(row.status).toBe("snoozed");
+    expect(row.snoozedUntil).toBe(5000);
+    expect(row.updatedAt).toBe(2000);
+  });
+
+  it("remove deletes the row", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Delete me", source: "dashboard" },
+      1000
+    );
+    await removeReminderHandler({ db }, id);
+    expect(await db.get(id)).toBeNull();
+  });
+
+  it("dueSoon excludes status done and rows outside the window", async () => {
+    const db = makeFakeDb();
+    const now = 1000;
+    const openInWindow = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "In window", dueAt: 1200, source: "dashboard" },
+      now
+    );
+    await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Out of window", dueAt: 5000, source: "dashboard" },
+      now
+    );
+    const doneInWindow = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Done", dueAt: 1200, source: "dashboard" },
+      now
+    );
+    await db.patch(doneInWindow, { status: "done" });
+
+    const rows = await dueSoonHandler({ db }, 500, now); // cutoff = 1500
+    expect(rows).toHaveLength(1);
+    expect(rows[0]._id).toBe(openInWindow);
+  });
+
+  it("overdue excludes status done and never returns future rows", async () => {
+    const db = makeFakeDb();
+    const now = 2000;
+    const overdueOpen = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Overdue", dueAt: 1000, source: "dashboard" },
+      now
+    );
+    await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Future", dueAt: 3000, source: "dashboard" },
+      now
+    );
+    const overdueDone = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Overdue but done", dueAt: 1000, source: "dashboard" },
+      now
+    );
+    await db.patch(overdueDone, { status: "done" });
+
+    const rows = await overdueHandler({ db }, now);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]._id).toBe(overdueOpen);
   });
 });
