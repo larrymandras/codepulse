@@ -89,3 +89,45 @@
 | UX-04 | Phase 100 | Pending |
 
 **Coverage:** 22/22 v1 requirements mapped — no orphans, no duplicates.
+
+---
+
+## Milestone v12.0 Requirements — Personal Productivity: Reminders & Calendar
+
+**Defined:** 2026-07-19 (roadmapped with Phase 101; back-filled into this file 2026-07-19 during Phase 101 execution — the v12.0 roadmapping pass wrote the IDs into ROADMAP.md and the plan frontmatter but never added them here, so `requirements.mark-complete REM-01` returned `not_found`).
+
+**Milestone goal:** A sleek, profile-organized Reminders command center — personal / business / consulting reminders creatable and editable from both CodePulse and an Ástríðr conversation, always in sync, with recurrence, proactive due-nudges, and a read-only Google Calendar overlay per profile.
+
+### REM — Reminders Store & Sync
+
+- [ ] **REM-01**: Reminders live in one Convex-backed store that is the single source of truth; CodePulse creates/updates/completes/snoozes/removes them and the UI updates in realtime via `useQuery`, with every row tagged by origin (`dashboard` / `astridr`).
+- [ ] **REM-02**: Ástríðr syncs reminders over authed CodePulse endpoints (`/reminders-ingest` write, `/reminders-read` read) that fail CLOSED — a missing `ASTRIDR_INGEST_API_KEY` never opens anonymous read or write access.
+- [ ] **REM-03**: Larry can add / list / update / complete / snooze reminders conversationally through an Ástríðr `reminders` tool that writes the same store the dashboard writes.
+- [ ] **REM-04**: A due-dated reminder can recur (daily / weekly / monthly / "every 1st"); completing or passing an occurrence spawns the next open one with nudge state cleared, a bounded recurrence terminates at `until`, and a completed one-off never respawns.
+- [ ] **REM-05**: When a reminder comes due or overdue, Ástríðr proactively nudges Larry on that reminder's profile channel exactly once (deduped via `notifiedAt`); a business reminder never nudges the personal channel.
+
+### CAL — Google Calendar Overlay (read-only)
+
+- [ ] **CAL-01**: Each profile's real Google Calendar is cached read-only into CodePulse on a bounded forward window via a per-profile cron (`personal`→mandrasle, `business`→lmandras@myprotectall, `consulting`→lemandras@forgedinai), upserted by `googleEventId` with stale rows pruned; one account's auth failure never blanks another profile's cache.
+- [ ] **CAL-02**: Google events and due-dated reminders render together on one month/week grid per profile, visually distinct — and nothing is ever written back to Google (no Google write path exists).
+
+### UI — Reminders Command Center
+
+- [ ] **UI-01**: A lazy `/reminders` route registered in `navRegistry` (COMMAND cluster) presents reminders profile-segmented (personal / business / consulting), each with its own accent, grouped Overdue / Today / Upcoming / Done.
+- [ ] **UI-02**: Complete / snooze / quick-add work inline from the page, applied optimistically and reconciled on server confirm, with all motion respecting `prefers-reduced-motion`.
+
+### v12.0 Traceability
+
+| Requirement | Phase | Plan(s) | Status |
+|-------------|-------|---------|--------|
+| REM-01 | Phase 101 | 101-01 | Pending |
+| REM-02 | Phase 101 | 101-02 | Pending |
+| REM-03 | Phase 101 | 101-03 | Pending |
+| REM-04 | Phase 101 | 101-01, 101-05 | Pending |
+| REM-05 | Phase 101 | 101-05 | Pending |
+| CAL-01 | Phase 101 | 101-02, 101-04 | Pending |
+| CAL-02 | Phase 101 | 101-06 | Pending |
+| UI-01 | Phase 101 | 101-06 | Pending |
+| UI-02 | Phase 101 | 101-06 | Pending |
+
+**Coverage:** 9/9 v12.0 requirements mapped to Phase 101 — matches the `phase_req_ids` the SDK reports for the phase; no orphans, no duplicates.
