@@ -10,6 +10,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Wrench } from "lucide-react";
 import type {
   GenerativeBlock,
   MetricBlockData,
@@ -19,6 +20,8 @@ import type {
   DiffBlockData,
   ApprovalBlockData,
   MarkdownBlockData,
+  TextBlockData,
+  ToolUseBlockData,
 } from "@/types/generative-blocks";
 import { MetricBlock } from "@/components/blocks/MetricBlock";
 import { TableBlock } from "@/components/blocks/TableBlock";
@@ -73,6 +76,31 @@ export function BlockRenderer({ block, onApprove, onReject }: BlockRendererProps
           {(b as MarkdownBlockData).content}
         </ReactMarkdown>
       );
+
+    // astridr TextBlock — plain reply text emitted in run.blocks on tool-call
+    // turns (loop.py). Render as markdown, same as a markdown block.
+    case "text":
+      return (
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          {(b as TextBlockData).text}
+        </ReactMarkdown>
+      );
+
+    // astridr ToolUseBlock — a tool the agent called this turn. Render a compact
+    // muted chip (name + args on hover), NOT raw JSON. Keeps tool-call
+    // visibility (Phase 55 D-06 intent) without leaking the block payload.
+    case "tool_use": {
+      const tu = b as ToolUseBlockData;
+      return (
+        <span
+          className="inline-flex items-center gap-1 my-0.5 px-1.5 py-0.5 rounded-none border border-(--border) bg-(--muted) font-mono text-[11px] text-(--muted-foreground)"
+          title={JSON.stringify(tu.arguments ?? {}, null, 2)}
+        >
+          <Wrench className="h-3 w-3" aria-hidden="true" />
+          {tu.name}
+        </span>
+      );
+    }
 
     default:
       return (

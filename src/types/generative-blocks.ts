@@ -61,6 +61,21 @@ export type MarkdownBlockData = {
   content: string;
 };
 
+// Backend astridr TextBlock (agent/response.py) — emitted in run.blocks on
+// tool-call turns (loop.py). Plain reply text; render as markdown.
+export type TextBlockData = {
+  type: "text";
+  text: string;
+};
+
+// Backend astridr ToolUseBlock (agent/response.py) — a tool call the agent
+// made during a tool-call turn. Rendered as a compact chip, not raw JSON.
+export type ToolUseBlockData = {
+  type: "tool_use";
+  name: string;
+  arguments: Record<string, unknown>;
+};
+
 // Fallback: any block type not in the above union renders as markdown (D-06)
 export type FallbackBlockData = {
   type: string;
@@ -75,6 +90,8 @@ export type GenerativeBlock =
   | DiffBlockData
   | ApprovalBlockData
   | MarkdownBlockData
+  | TextBlockData
+  | ToolUseBlockData
   | FallbackBlockData;
 
 // ─── WebSocket Event Envelope ────────────────────────────────────────────────
