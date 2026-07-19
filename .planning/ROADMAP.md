@@ -474,7 +474,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 97 — Real Skill Intake & Daemon Foundation** — execute today's dry-run install (upload / GitHub URL) to global/project/cold storage; Forge daemon executes intake + rescans the registry; advertises supported command types
+- [x] **Phase 97 — Real Skill Intake & Daemon Foundation** — execute today's dry-run install (upload / GitHub URL) to global/project/cold storage; Forge daemon executes intake + rescans the registry; advertises supported command types (completed 2026-07-19)
 - [ ] **Phase 98 — Skill Lifecycle Mutations** — archive / restore / move / delete, archive-first, `isShadowing`-aware, honest when the daemon is offline
 - [ ] **Phase 99 — Skill Launch / Dispatch** — real Run to Chat (auto-send) / Forge agent / Ástríðr, not just a prefilled composer
 - [ ] **Phase 100 — Control-Surface UX** — per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore
@@ -503,7 +503,7 @@ Plans:
 - [x] 97-04-PLAN.md — Wave 1 (codepulse): install-language UI copy on IntakeModal/IntakeSheet/SkillCollectionPicker + D-06 confirm + D-07 error copy (INTAKE-01, INTAKE-02, INTAKE-04)
 - [x] 97-03-PLAN.md — Wave 2 (forge): rescan trigger in command-poller after successful write + DAEMON-04 supportedTypes regression guard (DAEMON-03, DAEMON-04)
 - [x] 97-05-PLAN.md — Wave 2 (codepulse): Convex-side refusal-reason adapter in ackCommand — synthetic finding + verdict flip (INTAKE-04)
-- [ ] 97-06-PLAN.md — Wave 3 (operator): cold-storage marker checkpoint + live end-to-end round-trip (INTAKE-01, INTAKE-02, INTAKE-03)
+- [x] 97-06-PLAN.md — Wave 3 (operator): cold-storage marker checkpoint + live end-to-end round-trip (INTAKE-01, INTAKE-02, INTAKE-03)
 **UI hint**: yes
 
 ---
@@ -632,7 +632,7 @@ Plans:
 | 94. Trace Waterfall | v10.0 | 5/5 | Complete    | 2026-07-06 |
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
-| 97. Real Skill Intake & Daemon Foundation | v11.0 | 5/6 | In Progress|  |
+| 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
 | 98. Skill Lifecycle Mutations | v11.0 | 0/TBD | Not started | — |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
