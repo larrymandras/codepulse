@@ -1813,4 +1813,43 @@ export default defineSchema({
     .index("by_idempotencyKey", ["idempotencyKey"])
     .index("by_profileId", ["profileId", "timestamp"])
     .index("by_scoreName", ["scoreName", "timestamp"]),
+
+  // ============================================================
+  // REMINDERS & CALENDAR COMMAND CENTER (Phase 101, REM-01)
+  // ============================================================
+
+  // Source of truth for reminders (D-01) — both CodePulse (direct mutations)
+  // and Ástríðr (authed /reminders-ingest, /reminders-read, D-07) read/write
+  // this table. `source` records origin only and never gates a write (D-09).
+  // Timestamps are epoch SECONDS (profiles.ts Date.now()/1000 convention).
+  reminders: defineTable({
+    profileId: v.string(), // "personal" | "business" | "consulting"
+    title: v.string(),
+    notes: v.optional(v.string()),
+    dueAt: v.optional(v.float64()),
+    priority: v.string(), // "low" | "med" | "high"
+    status: v.string(), // "open" | "done" | "snoozed"
+    recurrence: v.optional(
+      v.object({
+        freq: v.union(
+          v.literal("daily"),
+          v.literal("weekly"),
+          v.literal("monthly")
+        ),
+        interval: v.float64(),
+        byday: v.optional(v.array(v.string())),
+        until: v.optional(v.float64()),
+      })
+    ),
+    tags: v.optional(v.array(v.string())),
+    source: v.string(), // "dashboard" | "astridr" (D-09 — audit only, never a write gate)
+    notifiedAt: v.optional(v.float64()), // set by the Ástríðr nudge cron to dedupe (D-04/D-11)
+    snoozedUntil: v.optional(v.float64()),
+    completedAt: v.optional(v.float64()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_profile", ["profileId", "status"])
+    .index("by_status", ["status", "dueAt"])
+    .index("by_dueAt", ["dueAt"]),
 });
