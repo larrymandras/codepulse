@@ -33,6 +33,7 @@ import type * as automation from "../automation.js";
 import type * as avatars from "../avatars.js";
 import type * as briefings from "../briefings.js";
 import type * as build from "../build.js";
+import type * as calendarEvents from "../calendarEvents.js";
 import type * as callGraphEdges from "../callGraphEdges.js";
 import type * as channelHealth from "../channelHealth.js";
 import type * as commandExecutions from "../commandExecutions.js";
@@ -179,6 +180,7 @@ declare const fullApi: ApiFromModules<{
   avatars: typeof avatars;
   briefings: typeof briefings;
   build: typeof build;
+  calendarEvents: typeof calendarEvents;
   callGraphEdges: typeof callGraphEdges;
   channelHealth: typeof channelHealth;
   commandExecutions: typeof commandExecutions;

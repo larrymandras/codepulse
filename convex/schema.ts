@@ -1852,4 +1852,23 @@ export default defineSchema({
     .index("by_profile", ["profileId", "status"])
     .index("by_status", ["status", "dueAt"])
     .index("by_dueAt", ["dueAt"]),
+
+  // Read-only cache of Google Calendar events (D-02/D-03/D-10). Written ONLY
+  // by /calendar-ingest (Ástríðr's calendar cron pushes normalized events);
+  // no reminder or CodePulse write path exists — never write back to Google.
+  // Each push upserts by googleEventId and prunes stale rows scoped to
+  // (profileId, calendarAccount), so the cache tracks the pushed window only.
+  calendarEvents: defineTable({
+    profileId: v.string(), // "personal" | "business" | "consulting"
+    googleEventId: v.string(),
+    calendarAccount: v.string(), // the google alias/email the event came from
+    title: v.string(),
+    start: v.float64(), // epoch seconds
+    end: v.float64(),
+    allDay: v.boolean(),
+    location: v.optional(v.string()),
+    fetchedAt: v.float64(),
+  })
+    .index("by_profile", ["profileId", "start"])
+    .index("by_googleEventId", ["googleEventId"]),
 });
