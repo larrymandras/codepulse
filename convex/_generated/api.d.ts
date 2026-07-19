@@ -113,6 +113,7 @@ import type * as providerHealth from "../providerHealth.js";
 import type * as reflections from "../reflections.js";
 import type * as registry from "../registry.js";
 import type * as reminders from "../reminders.js";
+import type * as remindersIngest from "../remindersIngest.js";
 import type * as retention from "../retention.js";
 import type * as rosterViewPrefs from "../rosterViewPrefs.js";
 import type * as routingDecisions from "../routingDecisions.js";
@@ -260,6 +261,7 @@ declare const fullApi: ApiFromModules<{
   reflections: typeof reflections;
   registry: typeof registry;
   reminders: typeof reminders;
+  remindersIngest: typeof remindersIngest;
   retention: typeof retention;
   rosterViewPrefs: typeof rosterViewPrefs;
   routingDecisions: typeof routingDecisions;

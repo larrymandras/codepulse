@@ -11,12 +11,11 @@
  * Mirrors convex/reminders.ts's pattern: business logic lives in plain
  * exported "*Handler" functions taking a minimal `{ db }` shape so they are
  * unit-testable without convex-test (not installed in this repo).
- *
- * The upsert/prune mutation and /calendar-ingest httpAction are added in
- * Task 3 of this plan.
  */
-import { query } from "./_generated/server";
+import { mutation, query, httpAction } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 
 /** Minimal ctx.db surface the handlers depend on — implemented for real by
  * Convex's ctx.db, and by an in-memory fake in convex/remindersIngest.test.ts. */
@@ -51,4 +50,162 @@ export async function listByProfileHandler(
 export const listByProfile = query({
   args: { profileId: v.string() },
   handler: async (ctx, { profileId }) => listByProfileHandler(ctx, profileId),
+});
+
+// ============================================================
+// upsertBatch — upsert-by-googleEventId + scoped stale prune (D-10)
+// ============================================================
+
+export interface CalendarEventInput {
+  googleEventId: string;
+  title: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  location?: string;
+}
+
+export interface UpsertCalendarBatchArgs {
+  profileId: string;
+  calendarAccount: string;
+  events: CalendarEventInput[];
+  fetchedAt: number;
+}
+
+/**
+ * Upserts every pushed event by `googleEventId` (patch if it already exists,
+ * insert if not), then deletes rows for THIS (profileId, calendarAccount)
+ * pair whose googleEventId is not in the pushed set (D-10). Rows belonging
+ * to other profiles, or other accounts within the same profile, are left
+ * untouched — the prune is strictly scoped to what this push claims
+ * authority over (T-101-04).
+ */
+export async function upsertCalendarBatchHandler(
+  ctx: { db: CalendarEventsDb } | any,
+  args: UpsertCalendarBatchArgs
+) {
+  const { profileId, calendarAccount, events, fetchedAt } = args;
+  const incomingIds = new Set(events.map((e) => e.googleEventId));
+
+  for (const ev of events) {
+    const existing = await ctx.db
+      .query("calendarEvents")
+      .withIndex("by_googleEventId", (q: { eq: (field: string, value: any) => any }) =>
+        q.eq("googleEventId", ev.googleEventId)
+      )
+      .first();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        profileId,
+        calendarAccount,
+        title: ev.title,
+        start: ev.start,
+        end: ev.end,
+        allDay: ev.allDay,
+        location: ev.location,
+        fetchedAt,
+      });
+    } else {
+      await ctx.db.insert("calendarEvents", {
+        profileId,
+        calendarAccount,
+        googleEventId: ev.googleEventId,
+        title: ev.title,
+        start: ev.start,
+        end: ev.end,
+        allDay: ev.allDay,
+        location: ev.location,
+        fetchedAt,
+      });
+    }
+  }
+
+  // Scoped stale prune: only rows for THIS (profileId, calendarAccount).
+  const scoped = await ctx.db
+    .query("calendarEvents")
+    .withIndex("by_profile", (q: { eq: (field: string, value: any) => any }) =>
+      q.eq("profileId", profileId)
+    )
+    .collect();
+  let pruned = 0;
+  for (const row of scoped) {
+    if (row.calendarAccount === calendarAccount && !incomingIds.has(row.googleEventId)) {
+      await ctx.db.delete(row._id);
+      pruned++;
+    }
+  }
+
+  return { upserted: events.length, pruned };
+}
+
+export const upsertBatch = mutation({
+  args: {
+    profileId: v.string(),
+    calendarAccount: v.string(),
+    events: v.array(
+      v.object({
+        googleEventId: v.string(),
+        title: v.string(),
+        start: v.float64(),
+        end: v.float64(),
+        allDay: v.boolean(),
+        location: v.optional(v.string()),
+      })
+    ),
+    fetchedAt: v.float64(),
+  },
+  handler: async (ctx, args) => upsertCalendarBatchHandler(ctx, args),
+});
+
+// ============================================================
+// /calendar-ingest — authed httpAction sink (D-07, CAL-01)
+// ============================================================
+
+/**
+ * POST /calendar-ingest
+ * Ástríðr's calendar cron pushes a profile+account's normalized Google
+ * events here (D-03). Auth required (T-101-01); missing profileId/
+ * calendarAccount/events -> 400. Delegates the upsert+prune to upsertBatch.
+ * This is the ONLY write path into calendarEvents — no reminder or
+ * CodePulse mutation ever writes here, and no Google write path exists
+ * anywhere in this repo (D-02).
+ */
+export const calendarIngest = httpAction(async (ctx, request) => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+  }
+
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
+  try {
+    const body = (await request.json()) as Record<string, unknown>;
+
+    if (!body.profileId || !body.calendarAccount || !Array.isArray(body.events)) {
+      return new Response(
+        JSON.stringify({
+          error: "Missing required fields: profileId, calendarAccount, events",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
+      );
+    }
+
+    await ctx.runMutation(api.calendarEvents.upsertBatch, {
+      profileId: body.profileId as string,
+      calendarAccount: body.calendarAccount as string,
+      events: body.events as CalendarEventInput[],
+      fetchedAt: (body.fetchedAt as number) ?? Date.now() / 1000,
+    });
+
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
+    });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 400,
+      headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },
+    });
+  }
 });

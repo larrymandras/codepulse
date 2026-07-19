@@ -26,6 +26,7 @@ import { forgeLogIngest } from "./forgeLogIngest";
 import { forgeFileIngest } from "./forgeFileIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 import { remindersIngest, remindersRead } from "./remindersIngest";
+import { calendarIngest } from "./calendarEvents";
 
 const http = httpRouter();
 
@@ -96,6 +97,7 @@ http.route({ path: "/reminders-ingest", method: "POST",    handler: remindersIng
 http.route({ path: "/reminders-ingest", method: "OPTIONS", handler: remindersIngest });
 http.route({ path: "/reminders-read",   method: "POST",    handler: remindersRead });
 http.route({ path: "/reminders-read",   method: "OPTIONS", handler: remindersRead });
-// /calendar-ingest registered in Task 3 (convex/calendarEvents.ts).
+http.route({ path: "/calendar-ingest",  method: "POST",    handler: calendarIngest });
+http.route({ path: "/calendar-ingest",  method: "OPTIONS", handler: calendarIngest });
 
 export default http;
