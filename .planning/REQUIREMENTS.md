@@ -108,7 +108,7 @@
 
 ### CAL — Google Calendar Overlay (read-only)
 
-- [ ] **CAL-01**: Each profile's real Google Calendar is cached read-only into CodePulse on a bounded forward window via a per-profile cron (`personal`→mandrasle, `business`→lmandras@myprotectall, `consulting`→lemandras@forgedinai), upserted by `googleEventId` with stale rows pruned; one account's auth failure never blanks another profile's cache.
+- [x] **CAL-01**: Each profile's real Google Calendar is cached read-only into CodePulse on a bounded forward window via a per-profile cron (`personal`→mandrasle, `business`→lmandras@myprotectall, `consulting`→lemandras@forgedinai), upserted by `googleEventId` with stale rows pruned; one account's auth failure never blanks another profile's cache.
 - [ ] **CAL-02**: Google events and due-dated reminders render together on one month/week grid per profile, visually distinct — and nothing is ever written back to Google (no Google write path exists).
 
 ### UI — Reminders Command Center
