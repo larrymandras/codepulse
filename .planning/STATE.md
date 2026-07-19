@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Phase 101 Plan 05 (Ástríðr reminder nudge cron, astridr-repo) complete
-last_updated: "2026-07-19T22:46:45.933Z"
+stopped_at: Phase 101 Plan 06 (Reminders command-center page, codepulse) complete — Phase 101 is 6/6 plans complete
+last_updated: "2026-07-19T23:07:35.321Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 6
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 100
 ---
 
 <!-- Counters hand-reconciled 2026-07-19 against git ground truth (gsd-sdk state.* verbs miscount).
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — EXECUTING (5/6 plans)
-Plan: 5 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (not started, codepulse)
-Status: Ready to execute 101-06
+Phase: 101 (reminders-calendar-command-center) — COMPLETE (6/6 plans)
+Plan: 6 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (complete, codepulse)
+Status: Phase 101 complete — automated verification (vitest/tsc) passed; live manual verification recommended before milestone close (see 101-06-SUMMARY.md "Next Phase Readiness")
 Last activity: 2026-07-19
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
@@ -122,6 +122,12 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v12.0 / Phase 101 Plan 06 decisions (2026-07-19):**
+
+- **Reminders page profile accents reuse `--status-ok`/`--status-warn`/`--status-info`** (not new `--profile-*` CSS vars, not `--chart-N`) — genuinely 3-hue-distinct across all 5 `data-theme` variants with zero `index.css` changes; `--chart-3/4/5` are grayscale in 3 of the 5 dark themes so couldn't guarantee distinct accents.
+- **QuickAdd focuses on "N", not the literal ⌘K/N the UI-SPEC wrote** — `DashboardLayout.tsx` already owns Cmd/Ctrl+K globally for the CommandPalette; duplicating it would double-fire both handlers on the same keystroke.
+- **Phase 101 is now 6/6 plans complete.** REM-03/REM-04/REM-05/CAL-01 were already `[x]` in REQUIREMENTS.md's checkbox list from plans 03-05 but the traceability table still said "Pending" for them — hand-synced to "Complete" alongside this plan's UI-01/UI-02/CAL-02 while closing out the phase.
 
 **v11.0 scoping decisions (2026-07-17):**
 
@@ -247,10 +253,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-19T22:46:45.923Z
-Stopped at: Phase 101 Plan 05 (Ástríðr reminder nudge cron, astridr-repo) complete
-Next action: Execute Phase 101 Wave 3 remainder — Plan 06 (Reminders page, codepulse)
-Resume file: .planning/phases/101-reminders-calendar-command-center/101-06-PLAN.md
+Last session: 2026-07-19T23:07:35.312Z
+Stopped at: Phase 101 Plan 06 (Reminders command-center page, codepulse) complete — Phase 101 is 6/6 plans complete
+Next action: Verify Phase 101 live (dev server: all-three-profile visual check, realtime cross-surface sync), then close out the phase
+Resume file: None
 
 ## Operator Next Steps
 

@@ -109,12 +109,12 @@
 ### CAL — Google Calendar Overlay (read-only)
 
 - [x] **CAL-01**: Each profile's real Google Calendar is cached read-only into CodePulse on a bounded forward window via a per-profile cron (`personal`→mandrasle, `business`→lmandras@myprotectall, `consulting`→lemandras@forgedinai), upserted by `googleEventId` with stale rows pruned; one account's auth failure never blanks another profile's cache.
-- [ ] **CAL-02**: Google events and due-dated reminders render together on one month/week grid per profile, visually distinct — and nothing is ever written back to Google (no Google write path exists).
+- [x] **CAL-02**: Google events and due-dated reminders render together on one month/week grid per profile, visually distinct — and nothing is ever written back to Google (no Google write path exists).
 
 ### UI — Reminders Command Center
 
-- [ ] **UI-01**: A lazy `/reminders` route registered in `navRegistry` (COMMAND cluster) presents reminders profile-segmented (personal / business / consulting), each with its own accent, grouped Overdue / Today / Upcoming / Done.
-- [ ] **UI-02**: Complete / snooze / quick-add work inline from the page, applied optimistically and reconciled on server confirm, with all motion respecting `prefers-reduced-motion`.
+- [x] **UI-01**: A lazy `/reminders` route registered in `navRegistry` (COMMAND cluster) presents reminders profile-segmented (personal / business / consulting), each with its own accent, grouped Overdue / Today / Upcoming / Done.
+- [x] **UI-02**: Complete / snooze / quick-add work inline from the page, applied optimistically and reconciled on server confirm, with all motion respecting `prefers-reduced-motion`.
 
 ### v12.0 Traceability
 
@@ -122,12 +122,12 @@
 |-------------|-------|---------|--------|
 | REM-01 | Phase 101 | 101-01 | Complete |
 | REM-02 | Phase 101 | 101-02 | Complete |
-| REM-03 | Phase 101 | 101-03 | Pending |
-| REM-04 | Phase 101 | 101-01, 101-05 | Pending |
-| REM-05 | Phase 101 | 101-05 | Pending |
-| CAL-01 | Phase 101 | 101-02, 101-04 | Pending |
-| CAL-02 | Phase 101 | 101-06 | Pending |
-| UI-01 | Phase 101 | 101-06 | Pending |
-| UI-02 | Phase 101 | 101-06 | Pending |
+| REM-03 | Phase 101 | 101-03 | Complete |
+| REM-04 | Phase 101 | 101-01, 101-05 | Complete |
+| REM-05 | Phase 101 | 101-05 | Complete |
+| CAL-01 | Phase 101 | 101-02, 101-04 | Complete |
+| CAL-02 | Phase 101 | 101-06 | Complete |
+| UI-01 | Phase 101 | 101-06 | Complete |
+| UI-02 | Phase 101 | 101-06 | Complete |
 
 **Coverage:** 9/9 v12.0 requirements mapped to Phase 101 — matches the `phase_req_ids` the SDK reports for the phase; no orphans, no duplicates.

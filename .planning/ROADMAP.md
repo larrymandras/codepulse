@@ -571,7 +571,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 101 — Reminders & Calendar Command Center** — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page with quick actions and effects.
+- [x] **Phase 101 — Reminders & Calendar Command Center** — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page with quick actions and effects. (completed 2026-07-19)
 
 **Execution order:** Single phase, 6 plans, cross-repo — build worktrees-OFF, sequential, commit per-repo (`git -C`). Convex foundation (01) → sync/calendar endpoints (02) → Ástríðr tool + crons (03/04/05) + Reminders page (06). Plans 03/04/05 modify **astridr-repo**; 01/02/06 modify **codepulse** (Convex is the cloud deployment tidy-whale-981).
 
@@ -598,7 +598,7 @@ Plans:
 - [x] 101-03-PLAN.md — Wave 3 (astridr): `reminders` tool (add/list/update/complete/snooze) over `ConvexHandler.send_to` + read endpoint, tool registration (tool_id == name), tests (REM-03)
 - [x] 101-04-PLAN.md — Wave 3 (astridr): calendar-cache cron — per-profile `google_workspace list_events` → normalize → `/calendar-ingest` (upsert by googleEventId, prune stale) (CAL-01)
 - [x] 101-05-PLAN.md — Wave 3 (astridr): nudge cron — scan `dueSoon`/`overdue` → `ProactiveMessenger.send_alert` to the profile channel → set `notifiedAt`; recurrence spawn on pass (REM-05, REM-04)
-- [ ] 101-06-PLAN.md — Wave 3 (codepulse): `Reminders.tsx` page + `navRegistry` (COMMAND cluster) + profile-segmented layout + calendar overlay + quick actions (complete/snooze/quick-add) + effects (CAL-02, UI-01, UI-02)
+- [x] 101-06-PLAN.md — Wave 3 (codepulse): `Reminders.tsx` page + `navRegistry` (COMMAND cluster) + profile-segmented layout + calendar overlay + quick actions (complete/snooze/quick-add) + effects (CAL-02, UI-01, UI-02)
 **UI hint**: yes
 
 ---
@@ -636,7 +636,7 @@ Plans:
 | 98. Skill Lifecycle Mutations | v11.0 | 0/TBD | Not started | — |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
-| 101. Reminders & Calendar Command Center | v12.0 | 5/6 | In Progress | — |
+| 101. Reminders & Calendar Command Center | v12.0 | 6/6 | Complete   | 2026-07-19 |
 
-*Last updated: 2026-07-19 — **v12.0 Personal Productivity (Reminders & Calendar) ACTIVATED and executing**: Phase 101 Plan 05 (Ástríðr reminder nudge cron — `reminder:nudge`, astridr-repo — REM-05 + REM-04 runtime half complete) done, 5/6 plans; v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
+*Last updated: 2026-07-19 — **v12.0 Personal Productivity (Reminders & Calendar) — Phase 101 COMPLETE**: Plan 06 (Reminders command-center page, codepulse — CAL-02/UI-01/UI-02) done, 6/6 plans; all 9 v12.0 requirements complete. Live manual verification (dev server, all-three-profile check, realtime cross-surface sync) recommended before milestone close. v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
 </content>
