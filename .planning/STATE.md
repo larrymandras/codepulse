@@ -1,18 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v11.0
-milestone_name: Skills Command Center — Full Lifecycle & Launch
+milestone: v12.0
+milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Phase 97 UI-SPEC approved
+stopped_at: Phase 101 execution started
 last_updated: "2026-07-19T00:00:00.000Z"
-last_activity: 2026-07-19 -- Phase 97 complete (6/6 plans, live round-trip verified)
+last_activity: 2026-07-19 -- v12.0 activated; Phase 101 execution started (0/6 plans)
 progress:
-  total_phases: 4
-  completed_phases: 1
+  total_phases: 1
+  completed_phases: 0
   total_plans: 6
-  completed_plans: 6
-  percent: 25
+  completed_plans: 0
+  percent: 0
 ---
+
+<!-- Counters hand-reconciled 2026-07-19 against git ground truth (gsd-sdk state.* verbs miscount).
+     v12.0 scope = Phase 101 only (6 plans). v11.0 (Phases 97-100) is PAUSED mid-milestone:
+     Phase 97 COMPLETE (6/6, verified 495946f); Phases 98/99/100 not started — resume after v12.0. -->
+
 
 # Project State
 
@@ -21,14 +26,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 97 — skill-lifecycle-management
+**Current focus:** Phase 101 — reminders-calendar-command-center (v12.0)
 
 ## Current Position
 
-Phase: 97 (skill-lifecycle-management) — COMPLETE (6/6 plans, operator-verified live 2026-07-19)
-Plan: 6 of 6 done
-Status: Phase 97 complete; next up Phase 98 (Skill Lifecycle Mutations) or Phase 99 (Launch/Dispatch)
-Last activity: 2026-07-19 -- Phase 97 complete; live cross-repo intake round-trip passed, finding-1 fixed
+Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
+Phase: 101 (reminders-calendar-command-center) — EXECUTING (0/6 plans)
+Plan: 0 of 6 done — Wave 1: 101-01 | Wave 2: 101-02 | Wave 3: 101-03/04/05/06
+Status: cross-repo (codepulse + astridr-repo); worktrees OFF, sequential main-tree execution
+Last activity: 2026-07-19 -- v12.0 activated, Phase 101 execution started
+
+**v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
 
 ## Deferred Items
 
