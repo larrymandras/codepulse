@@ -32,6 +32,8 @@ const LiveRun = lazy(() => import("./pages/LiveRun"));
 const InboxPage = lazy(() => import("./pages/Inbox"));
 const TasksPage = lazy(() => import("./pages/Tasks"));
 const ConfigEditorPage = lazy(() => import("./pages/ConfigPage"));
+// Phase 101: Reminders & Calendar Command Center (D-08)
+const RemindersPage = lazy(() => import("./pages/Reminders"));
 
 // Lazy-load interaction layer pages (Phase 03)
 const InsightsChat = lazy(() => import("./pages/InsightsChat"));
@@ -115,6 +117,8 @@ export default function App() {
               <Route path="/inbox" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Inbox...</div>}><InboxPage /></Suspense>} />
               <Route path="/tasks" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tasks...</div>}><TasksPage /></Suspense>} />
               <Route path="/config" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Config...</div>}><ConfigEditorPage /></Suspense>} />
+              {/* Phase 101: Reminders & Calendar Command Center (D-08) */}
+              <Route path="/reminders" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Reminders...</div>}><RemindersPage /></Suspense>} />
               {/* Phase 03: Interaction layer pages */}
               <Route path="/insights" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Insights...</div>}><InsightsChat /></Suspense>} />
               {/* Phase 63: Dashboard overhaul pages */}

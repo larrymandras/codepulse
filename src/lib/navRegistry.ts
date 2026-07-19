@@ -121,6 +121,7 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/tasks", label: "Tasks", icon: "kanban", group: "COMMAND" },
       { to: "/config", label: "Config", icon: "sliders", group: "COMMAND" },
       { to: "/skills", label: "Skills", icon: "wand-2", group: "COMMAND" },
+      { to: "/reminders", label: "Reminders", icon: "clock", group: "COMMAND" },
       { to: "/doc-comments", label: "Doc Review", icon: "message-square-text", group: "COMMAND" },
       { to: "/forge", label: "Forge", icon: "flame", group: "COMMAND" },
     ],
