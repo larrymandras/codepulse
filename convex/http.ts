@@ -25,6 +25,7 @@ import { forgeIngest } from "./forgeIngest";
 import { forgeLogIngest } from "./forgeLogIngest";
 import { forgeFileIngest } from "./forgeFileIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
+import { remindersIngest, remindersRead } from "./remindersIngest";
 
 const http = httpRouter();
 
@@ -88,5 +89,13 @@ http.route({ path: "/forge-commands-claim", method: "POST",    handler: forgeCom
 http.route({ path: "/forge-commands-claim", method: "OPTIONS", handler: forgeCommandsClaim });
 http.route({ path: "/forge-commands-ack",   method: "POST",    handler: forgeCommandsAck });
 http.route({ path: "/forge-commands-ack",   method: "OPTIONS", handler: forgeCommandsAck });
+
+// Phase 101: Reminders & Calendar Command Center — Ástríðr sync surface
+// (REM-02, CAL-01). All fail-closed via validateIngestAuth (D-07).
+http.route({ path: "/reminders-ingest", method: "POST",    handler: remindersIngest });
+http.route({ path: "/reminders-ingest", method: "OPTIONS", handler: remindersIngest });
+http.route({ path: "/reminders-read",   method: "POST",    handler: remindersRead });
+http.route({ path: "/reminders-read",   method: "OPTIONS", handler: remindersRead });
+// /calendar-ingest registered in Task 3 (convex/calendarEvents.ts).
 
 export default http;
