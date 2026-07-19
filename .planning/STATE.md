@@ -3,21 +3,20 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Phase 101 execution started
-last_updated: "2026-07-19T00:00:00.000Z"
-last_activity: 2026-07-19 -- v12.0 activated; Phase 101 execution started (0/6 plans)
+stopped_at: Phase 101 Plan 01 (reminders Convex store + recurrence engine) complete
+last_updated: "2026-07-19T21:35:53.942Z"
+last_activity: 2026-07-19
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
 <!-- Counters hand-reconciled 2026-07-19 against git ground truth (gsd-sdk state.* verbs miscount).
      v12.0 scope = Phase 101 only (6 plans). v11.0 (Phases 97-100) is PAUSED mid-milestone:
      Phase 97 COMPLETE (6/6, verified 495946f); Phases 98/99/100 not started — resume after v12.0. -->
-
 
 # Project State
 
@@ -31,10 +30,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — EXECUTING (0/6 plans)
-Plan: 0 of 6 done — Wave 1: 101-01 | Wave 2: 101-02 | Wave 3: 101-03/04/05/06
+Phase: 101 (reminders-calendar-command-center) — EXECUTING (1/6 plans)
+Plan: 1 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 | Wave 3: 101-03/04/05/06
 Status: cross-repo (codepulse + astridr-repo); worktrees OFF, sequential main-tree execution
-Last activity: 2026-07-19 -- v12.0 activated, Phase 101 execution started
+Last activity: 2026-07-19 -- Phase 101 Plan 01 (reminders Convex store + recurrence engine) complete, 23/23 tests green
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
 
@@ -213,6 +212,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase ?]: 93-06 user-directed: astridr web chat cookie-session auth; profile-scoped /{p}/api/* auth bypass closed
 - [Phase 95]: HARD-03: TS6 migration resolved via single tsconfig types:["node"] fix (Option A), not per-file globalThis casts; the four D-10 folded majors (diff@8, js-yaml@5, jsdom@29, react-easy-crop@6) were already merged to master and verified green under the new bar
 - [Phase 95]: HARD-04: react-day-picker resolved by deleting the dead calendar.tsx primitive (zero consumers), not a 9->10 migration
+- [Phase 101-01]: reminders is the Convex source of truth (D-01); complete() spawns the next open occurrence for recurring reminders via computeNextDueAt (D-05); one-offs and past-until recurrences spawn nothing — Locked by 101-CONTEXT.md D-01/D-05/D-09; source field records origin only and never gates writes
+- [Phase 101-01]: recurrence.byday uses iCal 2-letter day codes (MO/TU/WE/TH/FR/SA/SU); Convex CRUD handlers extracted as plain *Handler(ctx,...) functions typed 'ctx: {db} | any' for unit-testing without convex-test — byday format was unspecified in the plan interface; handler pattern mirrors the existing evalScores.ts storeEvalScoreHandler precedent to sidestep QueryCtx/MutationCtx structural typing mismatch
 
 ### Pending Todos
 
@@ -241,10 +242,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-17T20:50:17.713Z
-Stopped at: Phase 97 UI-SPEC approved
-Next action: `/gsd-discuss-phase 97`
-Resume file: .planning/phases/97-skill-lifecycle-management/97-UI-SPEC.md
+Last session: 2026-07-19T21:35:53.931Z
+Stopped at: Phase 101 Plan 01 (reminders Convex store + recurrence engine) complete
+Next action: Execute Phase 101 Plan 02 (Wave 2 — Convex /reminders-ingest + /reminders-read httpActions)
+Resume file: .planning/phases/101-reminders-calendar-command-center/101-02-PLAN.md
 
 ## Operator Next Steps
 

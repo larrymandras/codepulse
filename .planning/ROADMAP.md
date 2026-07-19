@@ -593,7 +593,7 @@ Plans:
 
 **Plans**: 6 plans (3 waves), cross-repo
 
-- [ ] 101-01-PLAN.md — Wave 1 (codepulse): Convex `reminders` table + CRUD mutations (create/update/complete/snooze/remove) + queries (listByProfile/dueSoon/overdue) + recurrence-spawn helper + tests (REM-01, REM-04)
+- [x] 101-01-PLAN.md — Wave 1 (codepulse): Convex `reminders` table + CRUD mutations (create/update/complete/snooze/remove) + queries (listByProfile/dueSoon/overdue) + recurrence-spawn helper + tests (REM-01, REM-04)
 - [ ] 101-02-PLAN.md — Wave 2 (codepulse): authed `/reminders-ingest` (write) + `/reminders-read` (authed read) + `/calendar-ingest` endpoints, `calendarEvents` read-only cache table + `listByProfile` calendar query + tests (REM-02, CAL-01)
 - [ ] 101-03-PLAN.md — Wave 3 (astridr): `reminders` tool (add/list/update/complete/snooze) over `ConvexHandler.send_to` + read endpoint, tool registration (tool_id == name), tests (REM-03)
 - [ ] 101-04-PLAN.md — Wave 3 (astridr): calendar-cache cron — per-profile `google_workspace list_events` → normalize → `/calendar-ingest` (upsert by googleEventId, prune stale) (CAL-01)
@@ -636,7 +636,7 @@ Plans:
 | 98. Skill Lifecycle Mutations | v11.0 | 0/TBD | Not started | — |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
-| 101. Reminders & Calendar Command Center | v12.0 | 0/6 | Planned (defined, not active) | — |
+| 101. Reminders & Calendar Command Center | v12.0 | 1/6 | In Progress | — |
 
-*Last updated: 2026-07-19 — **v12.0 Personal Productivity (Reminders & Calendar) defined**: Phase 101 (6 plans, cross-repo codepulse+astridr-repo) authored from the approved brainstorming spec. NOT activated — v11.0 (Phase 97) still executing, so STATE.md still tracks v11.0; v12.0 activates on v11.0 close or explicit start. Prior: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
+*Last updated: 2026-07-19 — **v12.0 Personal Productivity (Reminders & Calendar) ACTIVATED and executing**: Phase 101 Plan 01 (Convex `reminders` table + CRUD + recurrence engine, REM-01/REM-04) complete, 1/6 plans; v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
 </content>
