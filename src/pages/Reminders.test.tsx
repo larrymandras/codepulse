@@ -171,6 +171,83 @@ describe("Reminders — quick-add", () => {
   });
 });
 
+// ─── Task 3: read-only calendar overlay + reminder chips (CAL-02) ─────────
+
+describe("Reminders — calendar overlay (CAL-02)", () => {
+  test("switching profile swaps both the reminder list and the calendar overlay", () => {
+    mockUseQuery.mockImplementation((ref: { toString(): string }, args?: { profileId?: string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return args?.profileId === "consulting"
+          ? [makeEvent({ _id: "consulting-evt", title: "Consulting-only event" })]
+          : [makeEvent({ _id: "personal-evt", title: "Personal-only event" })];
+      }
+      // reminders.listByProfile
+      return args?.profileId === "consulting"
+        ? [makeReminder({ _id: "consulting-rem", title: "Consulting-only reminder", dueAt: NOW + DAY })]
+        : [makeReminder({ _id: "personal-rem", title: "Personal-only reminder", dueAt: NOW + DAY })];
+    });
+
+    render(<Reminders />);
+
+    expect(screen.getAllByText("Personal-only reminder").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Personal-only event").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("tab", { name: "Consulting" }));
+
+    expect(screen.queryByText("Personal-only reminder")).not.toBeInTheDocument();
+    expect(screen.queryByText("Personal-only event")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Consulting-only reminder").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Consulting-only event").length).toBeGreaterThan(0);
+  });
+
+  test("a due-dated reminder renders a distinct chip on its day, and a Google event renders as a distinct outline event", () => {
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return [makeEvent({ _id: "evt-tomorrow", title: "Board sync", start: NOW + DAY })];
+      }
+      return [makeReminder({ _id: "rem-tomorrow", title: "Renew passport", dueAt: NOW + DAY })];
+    });
+
+    const { container } = render(<Reminders />);
+
+    const reminderChips = container.querySelectorAll('[data-testid="calendar-reminder-chip"]');
+    const eventChips = container.querySelectorAll('[data-testid="calendar-event-chip"]');
+    expect(reminderChips.length).toBeGreaterThan(0);
+    expect(eventChips.length).toBeGreaterThan(0);
+
+    expect(Array.from(reminderChips).some((el) => el.textContent === "Renew passport")).toBe(true);
+    expect(Array.from(eventChips).some((el) => el.textContent === "Board sync")).toBe(true);
+
+    // Visually distinct: reminder chips carry a solid priority background,
+    // event chips are outline-only (no backgroundColor style).
+    const reminderChip = Array.from(reminderChips).find((el) => el.textContent === "Renew passport");
+    const eventChip = Array.from(eventChips).find((el) => el.textContent === "Board sync");
+    expect((reminderChip as HTMLElement).style.backgroundColor).not.toBe("");
+    expect((eventChip as HTMLElement).style.backgroundColor).toBe("");
+  });
+
+  test("no Google-write handler or calendarEvents mutation import exists in CalendarOverlay (D-02)", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.resolve(__dirname, "../components/reminders/CalendarOverlay.tsx"),
+      "utf-8"
+    );
+    expect(src).not.toMatch(/upsertBatch|calendarIngest|useMutation/);
+  });
+
+  test("the two-pane grid is single-column by default and only expands at the lg breakpoint (responsive collapse)", () => {
+    mockUseQuery.mockImplementation(() => []);
+    const { container } = render(<Reminders />);
+
+    const grid = container.querySelector(".grid.grid-cols-1");
+    expect(grid).not.toBeNull();
+    expect(grid?.className).toMatch(/lg:grid-cols-/);
+  });
+});
+
 // ─── Injection guard (T-101-03) ─────────────────────────────────────────────
 
 describe("Reminders — injection guard (T-101-03)", () => {
