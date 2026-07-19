@@ -103,8 +103,8 @@
 - [x] **REM-01**: Reminders live in one Convex-backed store that is the single source of truth; CodePulse creates/updates/completes/snoozes/removes them and the UI updates in realtime via `useQuery`, with every row tagged by origin (`dashboard` / `astridr`).
 - [x] **REM-02**: Ástríðr syncs reminders over authed CodePulse endpoints (`/reminders-ingest` write, `/reminders-read` read) that fail CLOSED — a missing `ASTRIDR_INGEST_API_KEY` never opens anonymous read or write access.
 - [x] **REM-03**: Larry can add / list / update / complete / snooze reminders conversationally through an Ástríðr `reminders` tool that writes the same store the dashboard writes.
-- [ ] **REM-04**: A due-dated reminder can recur (daily / weekly / monthly / "every 1st"); completing or passing an occurrence spawns the next open one with nudge state cleared, a bounded recurrence terminates at `until`, and a completed one-off never respawns.
-- [ ] **REM-05**: When a reminder comes due or overdue, Ástríðr proactively nudges Larry on that reminder's profile channel exactly once (deduped via `notifiedAt`); a business reminder never nudges the personal channel.
+- [x] **REM-04**: A due-dated reminder can recur (daily / weekly / monthly / "every 1st"); completing or passing an occurrence spawns the next open one with nudge state cleared, a bounded recurrence terminates at `until`, and a completed one-off never respawns.
+- [x] **REM-05**: When a reminder comes due or overdue, Ástríðr proactively nudges Larry on that reminder's profile channel exactly once (deduped via `notifiedAt`); a business reminder never nudges the personal channel.
 
 ### CAL — Google Calendar Overlay (read-only)
 

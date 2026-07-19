@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Phase 101 Plan 04 (Ástríðr calendar cache cron, astridr-repo) complete
-last_updated: "2026-07-19T22:26:56.509Z"
+stopped_at: Phase 101 Plan 05 (Ástríðr reminder nudge cron, astridr-repo) complete
+last_updated: "2026-07-19T22:46:45.933Z"
 last_activity: 2026-07-19
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — EXECUTING (4/6 plans)
-Plan: 4 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05/06 (not started — 05 executes in astridr-repo)
-Status: Ready to execute 101-05/06
+Phase: 101 (reminders-calendar-command-center) — EXECUTING (5/6 plans)
+Plan: 5 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (not started, codepulse)
+Status: Ready to execute 101-06
 Last activity: 2026-07-19
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
@@ -218,6 +218,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 101]: calendarIngest requires calendarAccount (not just profileId+events) as a 400-gated field, since D-10's scoped prune is keyed on (profileId, calendarAccount)
 - [Phase 101-03]: RemindersTool (astridr-repo) registers via the manifest TOML system (astridr/tools/manifests/reminders.manifest.toml, tool_id=="reminders"==RemindersTool.name), not config/tools.yaml's builtin/optional lists — confirmed that YAML section has zero consumers in the codebase; snooze is implemented as an op:"update" dueAt shift (not a true status:"snoozed" transition) because /reminders-ingest has no op:"snooze" and drops status/snoozedUntil on op:"update" — follow-up needed in convex/remindersIngest.ts to wire the existing api.reminders.snooze mutation
 - [Phase 101-04]: astridr calendar cron registers via the real scheduler (cron_builders.py + cron_dispatcher.py), not jobs.py — jobs.py is JobManager (execution-tracking only), no periodic-job-registration surface exists there; bounded 60-day forward window achieved by post-filtering normalized events since GoogleWorkspaceTool.list_events has no time_min/time_max param — same file-scope correction likely applies to 101-05's coordination note
+- [Phase 101-05]: reminder_nudge cron registers via cron_builders.py/cron_dispatcher.py (real scheduler), not jobs.py -- same file-scope correction as 101-04's calendar_cache precedent
 
 ### Pending Todos
 
@@ -246,10 +247,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-19T22:26:56.499Z
-Stopped at: Phase 101 Plan 04 (Ástríðr calendar cache cron, astridr-repo) complete
-Next action: Execute Phase 101 Wave 3 remainder — Plan 05 (Ástríðr reminder nudge cron, astridr-repo) then 101-06 (Reminders page, codepulse)
-Resume file: .planning/phases/101-reminders-calendar-command-center/101-05-PLAN.md
+Last session: 2026-07-19T22:46:45.923Z
+Stopped at: Phase 101 Plan 05 (Ástríðr reminder nudge cron, astridr-repo) complete
+Next action: Execute Phase 101 Wave 3 remainder — Plan 06 (Reminders page, codepulse)
+Resume file: .planning/phases/101-reminders-calendar-command-center/101-06-PLAN.md
 
 ## Operator Next Steps
 
