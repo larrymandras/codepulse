@@ -291,6 +291,30 @@ export const snooze = mutation({
     snoozeReminderHandler(ctx, id, until, Date.now() / 1000),
 });
 
+/**
+ * REM-05: record that the Ástríðr nudge cron has already alerted on this
+ * occurrence, so a later scan pass never nudges it twice. Deliberately
+ * narrow — it touches `notifiedAt`/`updatedAt` only and never mutates
+ * status or dueAt, so stamping a nudge can't disturb the due queries.
+ */
+export async function markNotifiedHandler(
+  ctx: { db: RemindersDb } | any,
+  id: any,
+  notifiedAt: number | undefined,
+  now: number
+) {
+  await ctx.db.patch(id, {
+    notifiedAt: notifiedAt ?? now,
+    updatedAt: now,
+  });
+}
+
+export const markNotified = mutation({
+  args: { id: v.id("reminders"), notifiedAt: v.optional(v.float64()) },
+  handler: async (ctx, { id, notifiedAt }) =>
+    markNotifiedHandler(ctx, id, notifiedAt, Date.now() / 1000),
+});
+
 export async function removeReminderHandler(
   ctx: { db: RemindersDb } | any,
   id: any

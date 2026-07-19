@@ -11,7 +11,7 @@ import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./inge
 
 /**
  * POST /reminders-ingest
- * body.op in {"create","update","complete"} dispatches to the matching
+ * body.op in {"create","update","complete","snooze","markNotified"} dispatches to the matching
  * reminders mutation. `create` always writes source:"astridr" — any
  * body.source is ignored (D-09: source is Ástríðr's own write path here,
  * never trusted from the caller).
@@ -78,9 +78,38 @@ export const remindersIngest = httpAction(async (ctx, request) => {
         );
       }
       await ctx.runMutation(api.reminders.complete, { id: body.id as any });
+    } else if (op === "snooze") {
+      // REM-03: a real snooze (status "snoozed" + snoozedUntil), NOT an
+      // update with a shifted dueAt — the latter loses the snooze state the
+      // dueSoon/overdue queries key off.
+      if (!body.id || body.until === undefined) {
+        return new Response(
+          JSON.stringify({ error: "Missing required fields for snooze: id, until" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
+        );
+      }
+      await ctx.runMutation(api.reminders.snooze, {
+        id: body.id as any,
+        until: body.until as number,
+      });
+    } else if (op === "markNotified") {
+      // REM-05: lets the Ástríðr nudge cron close its dedupe loop by stamping
+      // notifiedAt after it sends an alert. Omitting notifiedAt stamps "now".
+      if (!body.id) {
+        return new Response(
+          JSON.stringify({ error: "Missing required field for markNotified: id" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
+        );
+      }
+      await ctx.runMutation(api.reminders.markNotified, {
+        id: body.id as any,
+        notifiedAt: body.notifiedAt as number | undefined,
+      });
     } else {
       return new Response(
-        JSON.stringify({ error: `Unknown op: ${op}. Expected "create", "update", or "complete".` }),
+        JSON.stringify({
+          error: `Unknown op: ${op}. Expected "create", "update", "complete", "snooze", or "markNotified".`,
+        }),
         { status: 400, headers: { "Content-Type": "application/json", ...getCorsHeaders(request) } }
       );
     }
