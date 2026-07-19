@@ -189,6 +189,99 @@ describe("remindersIngest httpAction (REM-02, T-101-01)", () => {
     vi.unstubAllEnvs();
   });
 
+  // -------------------------------------------------------------------------
+  // op:snooze + op:markNotified (Phase 101 gap closure, REM-03 / REM-05)
+  //
+  // Plan 101-03 surfaced these as blockers: `api.reminders.snooze` and the
+  // `notifiedAt` column both shipped in plan 101-01, but neither had an
+  // HTTP op, so Ástríðr could not really snooze (it approximated by shifting
+  // dueAt) and the plan-101-05 nudge cron had NO way to write notifiedAt back
+  // — making the REM-05 "nudge exactly once" dedupe impossible.
+  // -------------------------------------------------------------------------
+
+  it("returns 400 for op:snooze without id", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const req = jsonRequest(
+      "http://localhost/reminders-ingest",
+      { op: "snooze", until: 1234 },
+      { Authorization: "Bearer k" }
+    );
+    const res = await (remindersIngest as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(400);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 400 for op:snooze without until", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const req = jsonRequest(
+      "http://localhost/reminders-ingest",
+      { op: "snooze", id: "abc123" },
+      { Authorization: "Bearer k" }
+    );
+    const res = await (remindersIngest as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(400);
+    vi.unstubAllEnvs();
+  });
+
+  it("op:snooze dispatches to reminders.snooze with id + until (real snooze, not a dueAt shift)", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = jsonRequest(
+      "http://localhost/reminders-ingest",
+      { op: "snooze", id: "abc123", until: 1795000000 },
+      { Authorization: "Bearer k" }
+    );
+    const res = await (remindersIngest as any)._handler(makeCtx({ runMutation }), req);
+    expect(res.status).toBe(200);
+    const [, args] = runMutation.mock.calls[0];
+    expect(args.id).toBe("abc123");
+    expect(args.until).toBe(1795000000);
+    // The whole point: it must NOT degrade into an update-with-shifted-dueAt.
+    expect(args.dueAt).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 400 for op:markNotified without id", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const req = jsonRequest(
+      "http://localhost/reminders-ingest",
+      { op: "markNotified" },
+      { Authorization: "Bearer k" }
+    );
+    const res = await (remindersIngest as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(400);
+    vi.unstubAllEnvs();
+  });
+
+  it("op:markNotified dispatches to reminders.markNotified so the nudge cron can dedupe (REM-05)", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = jsonRequest(
+      "http://localhost/reminders-ingest",
+      { op: "markNotified", id: "abc123", notifiedAt: 1795000123 },
+      { Authorization: "Bearer k" }
+    );
+    const res = await (remindersIngest as any)._handler(makeCtx({ runMutation }), req);
+    expect(res.status).toBe(200);
+    const [, args] = runMutation.mock.calls[0];
+    expect(args.id).toBe("abc123");
+    expect(args.notifiedAt).toBe(1795000123);
+    vi.unstubAllEnvs();
+  });
+
+  it("op:snooze and op:markNotified are auth-gated like every other write", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    for (const body of [
+      { op: "snooze", id: "abc123", until: 1 },
+      { op: "markNotified", id: "abc123" },
+    ]) {
+      const req = jsonRequest("http://localhost/reminders-ingest", body);
+      const res = await (remindersIngest as any)._handler(makeCtx(), req);
+      expect(res.status).toBe(401);
+    }
+    vi.unstubAllEnvs();
+  });
+
   it("returns 400 for an unknown op", async () => {
     vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
     const req = jsonRequest(

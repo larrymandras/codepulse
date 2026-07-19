@@ -13,6 +13,7 @@ import {
   updateReminderHandler,
   completeReminderHandler,
   snoozeReminderHandler,
+  markNotifiedHandler,
   removeReminderHandler,
   listByProfileHandler,
   dueSoonHandler,
@@ -382,5 +383,54 @@ describe("reminders CRUD handlers", () => {
     const rows = await overdueHandler({ db }, now);
     expect(rows).toHaveLength(1);
     expect(rows[0]._id).toBe(overdueOpen);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// markNotified (Phase 101 gap closure, REM-05)
+//
+// The nudge cron (plan 101-05) must record that it already alerted on an
+// occurrence so it never nudges the same one twice. `notifiedAt` shipped in
+// the schema in plan 101-01 but nothing could write it.
+// ---------------------------------------------------------------------------
+
+describe("markNotifiedHandler (REM-05 nudge dedupe)", () => {
+  it("stamps notifiedAt on the row and bumps updatedAt", async () => {
+    const db = makeFakeDb();
+    const id = await db.insert("reminders", {
+      profileId: "personal",
+      title: "Water plants",
+      status: "open",
+      dueAt: 100,
+      source: "dashboard",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    await markNotifiedHandler({ db }, id, 555, 999);
+
+    const row = db.rows.get(id);
+    expect(row.notifiedAt).toBe(555);
+    expect(row.updatedAt).toBe(999);
+    // It must not otherwise disturb the reminder.
+    expect(row.status).toBe("open");
+    expect(row.dueAt).toBe(100);
+  });
+
+  it("defaults notifiedAt to now when no explicit timestamp is given", async () => {
+    const db = makeFakeDb();
+    const id = await db.insert("reminders", {
+      profileId: "business",
+      title: "Send invoice",
+      status: "open",
+      dueAt: 100,
+      source: "astridr",
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    await markNotifiedHandler({ db }, id, undefined, 777);
+
+    expect(db.rows.get(id).notifiedAt).toBe(777);
   });
 });
