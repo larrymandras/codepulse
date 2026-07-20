@@ -126,8 +126,8 @@
 | REM-04 | Phase 101 | 101-01, 101-05 | Complete |
 | REM-05 | Phase 101 | 101-05 | Complete |
 | CAL-01 | Phase 101 | 101-02, 101-04 | Complete |
-| CAL-02 | Phase 101 | 101-06 | Complete |
+| CAL-02 | Phase 101 | 101-06, 101-07 | Complete |
 | UI-01 | Phase 101 | 101-06 | Complete |
-| UI-02 | Phase 101 | 101-06 | Complete |
+| UI-02 | Phase 101 | 101-06, 101-07 | Complete |
 
 **Coverage:** 9/9 v12.0 requirements mapped to Phase 101 — matches the `phase_req_ids` the SDK reports for the phase; no orphans, no duplicates.

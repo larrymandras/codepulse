@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Phase 101 Plan 06 (Reminders command-center page, codepulse) complete — Phase 101 is 6/6 plans complete
-last_updated: "2026-07-19T23:07:35.321Z"
-last_activity: 2026-07-19
+stopped_at: Phase 101 Plan 07 (undated-reminder day-filter gap closure, codepulse) complete — Phase 101 is 7/7 plans complete
+last_updated: "2026-07-20T22:22:03.028Z"
+last_activity: 2026-07-20
 progress:
   total_phases: 1
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 7
+  completed_plans: 7
   percent: 100
 ---
 
@@ -25,15 +25,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 101 — reminders-calendar-command-center (v12.0)
+**Current focus:** Phase 101 — reminders-calendar-command-center
 
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — COMPLETE (6/6 plans)
-Plan: 6 of 6 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (complete, codepulse)
-Status: Phase 101 complete — automated verification (vitest/tsc) passed; live manual verification recommended before milestone close (see 101-06-SUMMARY.md "Next Phase Readiness")
-Last activity: 2026-07-19
+Phase: 101 (reminders-calendar-command-center) — COMPLETE (7/7 plans)
+Plan: 7 of 7 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (complete, codepulse) | Wave 4: 101-07 (complete, codepulse — gap closure, UAT test 8)
+Status: Phase 101 complete — all automated verification (vitest/tsc) passed; gap closure plan 101-07 closed the sole UAT gap (undated reminders vanishing under a day filter)
+Last activity: 2026-07-20 -- Phase 101 Plan 07 (gap closure) executed and closed
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
 
@@ -122,6 +122,11 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v12.0 / Phase 101 Plan 07 decisions (2026-07-20, gap closure):**
+
+- **Exempt `due === undefined` from `dayFiltered` rather than add a new UI grouping** — closed the sole `101-UAT.md` gap (test 8: undated reminders vanish when a calendar day is selected). Undated rows already group under Upcoming (`groups` L493-495), so the fix is a pure filter-predicate change: `due === undefined || startOfDaySeconds(due) === selectedDay`. No Convex change, no new UI, no CSS. RED-first regression test committed before the fix (`9c246ab` test, `4afabf2` fix).
+- **Phase 101 is now 7/7 plans complete** (plan 07 added post-UAT as a gap-closure plan). This closes out Phase 101 / v12.0 milestone scope.
 
 **v12.0 / Phase 101 Plan 06 decisions (2026-07-19):**
 
@@ -253,9 +258,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-19T23:07:35.312Z
-Stopped at: Phase 101 Plan 06 (Reminders command-center page, codepulse) complete — Phase 101 is 6/6 plans complete
-Next action: Verify Phase 101 live (dev server: all-three-profile visual check, realtime cross-surface sync), then close out the phase
+Last session: 2026-07-20T22:22:03.028Z
+Stopped at: Phase 101 Plan 07 (undated-reminder day-filter gap closure, codepulse) complete — Phase 101 is 7/7 plans complete
+Next action: Phase 101 (v12.0) is done. Recommended before formal milestone close: a quick live re-check (dev server, undated reminder stays visible under a day filter). Then resume v11.0 with `/gsd-discuss-phase 97` follow-ons (Phases 98-100) or run milestone close-out for v12.0.
 Resume file: None
 
 ## Operator Next Steps
