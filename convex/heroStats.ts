@@ -1,5 +1,13 @@
 import { query } from "./_generated/server";
 
+/**
+ * Ceiling on the discoveredTools count read. Generous relative to real volume
+ * (361 rows as of 2026-07-20) so the displayed stat stays exact, while making
+ * it impossible for this query to blow the system-operation limit as the table
+ * grows — see the note at the read site.
+ */
+const TOOLS_COUNT_CAP = 5000;
+
 export const summary = query({
   args: {},
   handler: async (ctx) => {
@@ -78,8 +86,20 @@ export const summary = query({
       costSparkline[11 - bucket] += m.cost ?? 0;
     }
 
-    // Known tools
-    const tools = await ctx.db.query("discoveredTools").collect();
+    // Known tools — a plain count of the whole table.
+    //
+    // NOT indexable: there is no filter here, so an index cannot reduce the
+    // work (discoveredTools already has by_name/by_source/by_usage and none of
+    // them apply to an unfiltered count). The only way to keep this bounded is
+    // to cap the read, which is what protects the query from the same
+    // system-operation timeout that the events scan above hit.
+    //
+    // At 361 rows today the cap is nowhere near binding, so the displayed
+    // count is exact. If the table ever exceeds it the stat saturates rather
+    // than blanking the page — a wrong-but-large number beats an unhandled
+    // error that unmounts the React tree. Swap to a maintained counter if an
+    // exact count past the cap ever matters.
+    const tools = await ctx.db.query("discoveredTools").take(TOOLS_COUNT_CAP);
 
     // Security events this hour
     const recentSecurity = await ctx.db

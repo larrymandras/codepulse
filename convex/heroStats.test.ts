@@ -103,6 +103,22 @@ describe("heroStats:summary — query cost guards", () => {
     }
   });
 
+  it("caps the discoveredTools count instead of collecting the whole table", async () => {
+    // Unfiltered, so no index can help — a cap is the only thing standing
+    // between a growing table and the same timeout that blanked every page.
+    const { db } = await runSummary();
+    const toolsUse = db.uses.find((u) => u.table === "discoveredTools");
+    expect(toolsUse).toBeDefined();
+    expect(toolsUse!.limit, "discoveredTools must use a bounded take()").toBeGreaterThan(0);
+  });
+
+  it("reports the tools count exactly while under the cap", async () => {
+    const { result } = await runSummary({
+      discoveredTools: Array.from({ length: 361 }, (_, i) => ({ name: `tool-${i}` })),
+    });
+    expect(result.knownTools).toBe(361);
+  });
+
   it("still computes the hourly rollup correctly from the rows it reads", async () => {
     const now = Date.now() / 1000;
     const { result } = await runSummary({
