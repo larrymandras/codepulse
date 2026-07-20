@@ -324,6 +324,27 @@ describe("reminders CRUD handlers", () => {
     expect(row.updatedAt).toBe(2000);
   });
 
+  it("snooze clears notifiedAt so an already-nudged reminder is re-nudged at wake-up (CR-01)", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "Nudged then snoozed", dueAt: 1000, source: "dashboard" },
+      500
+    );
+    // The Ástríðr nudge cron already alerted on this occurrence (REM-05).
+    await db.patch(id, { notifiedAt: 1100 });
+
+    await snoozeReminderHandler({ db }, id, 9000, 1200);
+
+    const row = await db.get(id);
+    expect(row.status).toBe("snoozed");
+    expect(row.snoozedUntil).toBe(9000);
+    // The dedupe stamp must be gone — the wake-up is a new occurrence and
+    // must be eligible for exactly one new nudge (_is_due checks notifiedAt
+    // BEFORE the snooze branch, so a surviving stamp silences it forever).
+    expect(row.notifiedAt).toBeUndefined();
+  });
+
   it("remove deletes the row", async () => {
     const db = makeFakeDb();
     const id = await createReminderHandler(

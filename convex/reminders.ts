@@ -281,6 +281,12 @@ export async function snoozeReminderHandler(
   await ctx.db.patch(id, {
     status: "snoozed",
     snoozedUntil: until,
+    // A snooze means "nudge me again at `until`": the snoozed wake-up is a
+    // new occurrence, so clear the REM-05 dedupe stamp — otherwise a reminder
+    // that was already nudged once would never be nudged again after its
+    // snooze passes (the cron checks notifiedAt before the snooze branch).
+    // Convex removes the field when a patch sets it to undefined.
+    notifiedAt: undefined,
     updatedAt: now,
   });
 }
