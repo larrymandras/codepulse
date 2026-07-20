@@ -24,6 +24,66 @@ human_verification:
 
 # Phase 101: Reminders & Calendar Command Center Verification Report
 
+## ADDENDUM — Live verification pass, 2026-07-20
+
+The phase was deployed and exercised against the live stack after the report below was written. Four of the five `human_verification` items are now CLOSED; the deployment surfaced two real defects and one blocking misconfiguration, all fixed.
+
+**Deployed:** `npx convex deploy --yes` → tidy-whale-981 (production). Schema validation passed, no indexes dropped.
+
+### Closed by live exercise
+
+| Item | Result |
+|---|---|
+| UI create → reload persists | ✅ PASS — created via QuickAdd, survived a full reload (server round-trip, not local state) |
+| Recurrence spawn on complete | ✅ PASS — completing the 22nd's weekly reminder spawned the next occurrence on the 29th, visible on the grid |
+| Profile segmentation | ✅ PASS — switching profiles swaps both the reminder list and the calendar overlay |
+| Theme pass | ✅ PASS — cyan / emerald / readable / aubergine all apply and stay legible; **zero console errors** in any theme |
+| Fail-closed auth (T-101-01) | ✅ PASS **live** — `POST https://tidy-whale-981.convex.site/reminders-ingest` with no key returns **401** against the real deployment |
+
+### Defects found by live exercise (all fixed)
+
+1. **Calendar boxed into a 360px sidebar with fixed 64px cells** — the month grid ended partway down the page, wasting the entire lower half of a wide screen. The list is now the fixed rail and the calendar takes all remaining width, with rows templated to the view's week count so cells divide the available height. (codepulse `f08b5d8`)
+
+2. **Day cells silently dropped items.** Chips were sliced per-list (2 events + 2 reminders) but the "+N more" indicator was gated on a combined `> 4`. Three events and no reminders rendered 2 chips, evaluated `3 > 4` as false, and dropped the third with **no indicator** — the cell lied about its contents. Budget is now shared and the overflow count derived from what actually rendered. Mutation-verified: restoring the old logic shows "2 chips, +3 more" for 7 items. (codepulse `f08b5d8`)
+
+3. **Reminders lost chip slots to Google events.** Seeding realistic volume showed a busy day burying the *reminder* — the only actionable item on the page — behind four read-only meetings. Reminders now claim the budget first and render at the top of the cell. (codepulse `c94a949`)
+
+### BLOCKER found and fixed — wrong Convex backend
+
+Probing from inside the Docker network where Ástríðr actually runs:
+
+```
+LOCAL  (convex-backend:3211, astridr's CONVEX_URL)
+  /ingest, /runtime-ingest, /war-room-ingest, /transcript-ingest -> 401  (present)
+  /reminders-ingest, /calendar-ingest                            -> 404  (ABSENT)
+CLOUD  (tidy-whale-981.convex.site, what the dashboard reads)
+  /reminders-ingest                                              -> 401  (present)
+```
+
+`CONVEX_URL` resolves to the **local self-hosted backend**, which carries telemetry and war-room but has no Phase 101 routes. Every astridr path — the tool and both crons — would have posted into a backend with no such route, or silently into a database the dashboard never reads. This defeats success criterion #1 (one store, both directions) and was invisible to every test, because each side passes in isolation; only the live wire probe exposed it.
+
+Fixed in astridr `05f15c84`: all three modules prefer `CODEPULSE_CONVEX_URL`, falling back to `CONVEX_URL`. `calendar_cache` could not read the env directly (it posts through an injected `ConvexHandler` whose base URL is the shared local one), so it gained a duck-typed `CodePulsePoster` and the cron passes that instead of `self._telemetry`.
+
+**⚠ REQUIRES OPERATOR ACTION — the fix is inert until this env var is set:**
+
+```
+CODEPULSE_CONVEX_URL=https://tidy-whale-981.convex.site
+```
+
+Without it the fallback preserves today's broken target and reminders will 404. This is the single remaining gate on the cross-repo round trip.
+
+### Still open
+
+- **Live bidirectional round-trip** — gated on the env var above.
+- **Calendar cron against real Google credentials** — `GOOGLE_CREDS_CONSULTING` authorization remains operator-only.
+- **A real Telegram nudge firing exactly once** — gated on the env var and a live cron tick.
+- **Chip density at real Google volume** — judged against seeded data (month budget set to 5); worth a second look once real calendars land.
+
+Test data seeded for this pass (14 events, 6 reminders) was **removed**; both tables verified empty afterward.
+
+---
+
+
 **Phase Goal:** Add a profile-segmented Reminders command center — bidirectional CodePulse↔Ástríðr sync, recurrence, proactive due-nudges, and a read-only Google Calendar overlay per profile. Cross-repo: codepulse (01/02/06) + astridr-repo (03/04/05).
 **Verified:** 2026-07-19
 **Status:** human_needed (all code-level truths verified; live/deployed behavior explicitly unverified — see Human Verification below)
