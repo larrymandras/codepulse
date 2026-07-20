@@ -332,6 +332,34 @@ describe("Reminders — calendar overlay (CAL-02)", () => {
     expect(grid).not.toBeNull();
     expect(grid?.className).toMatch(/lg:grid-cols-/);
   });
+
+  test("an undated reminder stays visible when a calendar day is selected (regression: UAT test 8)", () => {
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return [makeEvent({ _id: "evt-day", title: "Dentist", start: NOW + DAY })];
+      }
+      // reminders.listByProfile — no dueAt at all.
+      return [makeReminder({ _id: "rem-undated", title: "Call the accountant" })];
+    });
+
+    const { container } = render(<Reminders />);
+
+    const upcomingSection = screen.getByRole("region", { name: "Upcoming" });
+    expect(within(upcomingSection).getByText("Call the accountant")).toBeInTheDocument();
+
+    // Select the day the calendar event falls on.
+    const chip = container.querySelector('[data-testid="calendar-event-chip"]');
+    expect(chip).toBeTruthy();
+    const cell = chip!.closest("[aria-pressed]") as HTMLElement;
+    expect(cell).toBeTruthy();
+    fireEvent.click(cell);
+
+    // Day filter is now active...
+    expect(screen.getByRole("button", { name: /clear/i })).toBeInTheDocument();
+    // ...but the undated reminder belongs to no day, so it must still be there.
+    expect(within(upcomingSection).getByText("Call the accountant")).toBeInTheDocument();
+  });
 });
 
 // ─── Injection guard (T-101-03) ─────────────────────────────────────────────
