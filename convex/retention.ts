@@ -20,13 +20,16 @@ import { v } from "convex/values";
 //   If the cap is hit, the log says so and the remainder waits for tomorrow.
 
 const RETENTION_DAYS: Record<string, number> = {
-  // runtime firehose — 30 days
-  runtime_events: 30,
-  toolExecutions: 30,
-  activeTime: 30,
-  selfHealingEvents: 30,
-  fileOps: 30,
-  heartbeatAlerts: 30,
+  // runtime firehose — 14 days (cut from 30d 2026-07-17 w/ Larry: 30d steady
+  // state was ~896k runtime_events pushing the snapshot-export peak >48g into an
+  // OOM loop; 14d ~halves it. Bulk cut applied offline via trim+reimport, so the
+  // nightly prune only ages ~1 day going forward — no tombstone mass-delete.)
+  runtime_events: 14,
+  toolExecutions: 14,
+  activeTime: 14,
+  selfHealingEvents: 14,
+  fileOps: 14,
+  heartbeatAlerts: 14,
   // build/history — 90 days
   events: 90,
   environmentSnapshots: 90,
