@@ -22,7 +22,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAstridrVoice, isEchoOfReply, stripEchoPrefix } from "./useAstridrVoice";
+import { useAstridrVoice, isEchoOfReply, stripEchoPrefix, isResidualEcho } from "./useAstridrVoice";
 import type { AstridrChat } from "./useAstridrChat";
 
 // ─── Echo fingerprint units (16:41 live-trace regressions) ───────────────────
@@ -40,6 +40,10 @@ describe("isEchoOfReply", () => {
 
   it("a real 2-word user interjection is NOT echo ('also sorry' worked live)", () => {
     expect(isEchoOfReply("also sorry", "Let me check your calendar for today.")).toBe(false);
+  });
+
+  it("tiny STT shards of her own sentence are echo — 's in' must not barge (18:50 false cut-off)", () => {
+    expect(isEchoOfReply("s in", "You have two entries in your personal calendar.")).toBe(true);
   });
 
   it("single word → treated as echo (explicit barge-in phrases cover short interrupts)", () => {
@@ -65,6 +69,22 @@ describe("stripEchoPrefix", () => {
 
   it("pure user speech is untouched", () => {
     expect(stripEchoPrefix("what about tomorrow evening", HER)).toBe("what about tomorrow evening");
+  });
+});
+
+describe("isResidualEcho", () => {
+  const HER = "I found three unread emails in your personal email inbox.";
+
+  it("a bare word from her reply is residue ('email' got sent live)", () => {
+    expect(isResidualEcho("email", HER)).toBe(true);
+  });
+
+  it("a short answer NOT in her reply survives ('no')", () => {
+    expect(isResidualEcho("no", HER)).toBe(false);
+  });
+
+  it("longer remainders are trusted to the prefix-stripper", () => {
+    expect(isResidualEcho("emails in your personal inbox please", HER)).toBe(false);
   });
 });
 
@@ -702,6 +722,64 @@ describe("useAstridrVoice", () => {
     });
     expect(result.current.voiceState).toBe("listening");
     expect(result.current.followUpOpen).toBe(true);
+  });
+
+  // ─── 18:50 live-trace regressions ─────────────────────────────────────────
+
+  it("a chopped sentence merges into one message instead of a fragment cancelling the answer", async () => {
+    const chat = makeChat({ isStreaming: true }); // her turn stays in flight after send #1
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" do I have any calendar entries this afternoon");
+      onFinalResultCallback?.(" do I have any calendar entries this afternoon");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2000); // debounce fires mid-pause — send #1
+    });
+    act(() => {
+      onInterimResultCallback?.(" for my personal");
+      onFinalResultCallback?.(" for my personal");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenLastCalledWith(
+      "do I have any calendar entries this afternoon for my personal",
+      { voice: true }
+    );
+  });
+
+  it("post-TTS single-word echo residue is dropped, but a fresh short answer still sends", async () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "I found three unread emails in your personal email inbox." },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+
+    // Her leaked " email" finalizes just after tts.end → dropped.
+    act(() => {
+      vi.advanceTimersByTime(300);
+      onFinalResultCallback?.(" email");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1500);
+    });
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+
+    // A genuine short answer whose word is NOT in her reply still goes out.
+    act(() => {
+      onFinalResultCallback?.(" no");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("no", {
+      interruptedReply: undefined,
+      voice: true,
+    });
   });
 
   // ─── 18:36 live-trace regressions ─────────────────────────────────────────

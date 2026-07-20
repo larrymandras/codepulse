@@ -67,6 +67,10 @@ const QUESTION_FOLLOW_UP_MS = 45_000;
 const INTERRUPT_FLASH_MS = 1_500;
 /** Turn completed but no TTS arrived within this — close the turn silently. */
 const SILENT_TURN_GRACE_MS = 3_000;
+/** A flush landing while the PREVIOUS send is still being thought about
+ *  (in flight, her TTS not yet started) within this window is the same
+ *  sentence continuing — merge and resend, don't fire a fragment. */
+const CONTINUATION_MERGE_MS = 6_000;
 /** After her TTS ends, utterances STARTING inside this window are treated as
  *  potentially echo-glued (her tail + the user's answer in one utterance). */
 const ECHO_TAIL_MS = 1_500;
@@ -158,17 +162,34 @@ function approxSubstringDistance(needle: string, hay: string): number {
 export function isEchoOfReply(heard: string, reply: string): boolean {
   const heardWords = fingerprintWords(heard);
   if (heardWords.length < 2) return true;
+  const needle = squash(heard);
+  // Too little signal to overrule the guard: tiny STT shards of her own
+  // sentence ("s in" from "entries in…") must never read as the user
+  // (live false-barge cut her off mid-answer).
+  if (needle.length < 6) return true;
   if (!reply) return false;
 
-  const needle = squash(heard);
-  if (needle.length >= 4) {
-    const dist = approxSubstringDistance(needle, squash(reply));
-    if (dist <= Math.max(1, Math.floor(needle.length * 0.2))) return true;
-  }
+  const dist = approxSubstringDistance(needle, squash(reply));
+  if (dist <= Math.max(1, Math.floor(needle.length * 0.2))) return true;
 
   const replySet = new Set(fingerprintWords(reply));
   const hits = heardWords.filter((w) => replySet.has(w)).length;
   return hits / heardWords.length >= 0.75;
+}
+
+/**
+ * Residual echo check for the post-TTS tail: a SHORT remainder (≤3 words)
+ * whose every word appears in her reply is her voice, not the user's — the
+ * prefix-stripper can't act on one-word utterances (live defect: a bare
+ * " email" leaked from her own sentence and was sent as a message). Longer
+ * remainders are trusted (stripEchoPrefix already handled the echo part).
+ */
+export function isResidualEcho(remainder: string, reply: string): boolean {
+  const words = fingerprintWords(remainder);
+  if (words.length === 0) return true;
+  if (words.length > 3 || !reply) return false;
+  const replySet = new Set(fingerprintWords(reply));
+  return words.every((w) => replySet.has(w));
 }
 
 /**
@@ -351,6 +372,12 @@ export function useAstridrVoice({
   // is never simply lost.
   const longestInterimRef = useRef("");
 
+  // Continuation merge: the last voice message sent + when. A mid-sentence
+  // pause slightly over the debounce chops the sentence — the fragment then
+  // cancelled the real question's in-flight answer (live trace: "…this
+  // afternoon" / "for my personal").
+  const lastSentRef = useRef<{ text: string; at: number }>({ text: "", at: 0 });
+
   // ─── Timer helpers ─────────────────────────────────────────────────────────
 
   const clearSilenceTimer = useCallback(() => {
@@ -485,6 +512,7 @@ export function useAstridrVoice({
       echoAnchorDeadlineRef.current = 0;
       closePendingRef.current = false;
       longestInterimRef.current = "";
+      lastSentRef.current = { text: "", at: 0 };
       setInterimText("");
       setFinalText("");
       intentionalStopRef.current = true; // the coming recognizer end is ours
@@ -581,6 +609,28 @@ export function useAstridrVoice({
     // firing mid-reply and tearing the conversation down under her).
     clearSilenceTimer();
 
+    // Continuation merge: our own PREVIOUS message is still in flight (she's
+    // thinking, no TTS yet) and this flush follows it closely — the debounce
+    // chopped one sentence in two. Cancel the half-question's turn and resend
+    // the whole sentence, so she answers it once.
+    const prev = lastSentRef.current;
+    const continuing =
+      !closePendingRef.current &&
+      prev.text !== "" &&
+      Date.now() - prev.at < CONTINUATION_MERGE_MS &&
+      chatRef.current.isStreaming &&
+      !chatRef.current.ttsIsPlaying;
+
+    if (continuing) {
+      const merged = `${prev.text} ${message}`;
+      trace("flushSend.merged-continuation", { merged });
+      chatRef.current.interrupt(); // cancel the half-question turn
+      interruptedReplyRef.current = ""; // our own continuation, not her reply
+      lastSentRef.current = { text: merged, at: Date.now() };
+      await chatRef.current.sendMessage(merged, { voice: true });
+      return;
+    }
+
     // D-12: thread the barged-in partial (if any) into this turn, then clear.
     // interrupt() is also called unconditionally: if a turn is still in flight
     // (speaking over her "thinking", or right after a barge-in) it cancels it
@@ -590,6 +640,7 @@ export function useAstridrVoice({
     const partial = chatRef.current.interrupt();
     const interruptedReply = prior || partial || undefined;
 
+    lastSentRef.current = { text: message, at: Date.now() };
     await chatRef.current.sendMessage(message, { interruptedReply, voice: true });
   }, [clearSendTimer, clearSilenceTimer]);
 
@@ -660,7 +711,7 @@ export function useAstridrVoice({
       }
       utteranceEchoAnchoredRef.current = true;
       const remainder = stripEchoPrefix(text, echoReplyRef.current);
-      if (!remainder) {
+      if (!remainder || isResidualEcho(remainder, echoReplyRef.current)) {
         trace("interim.echo-tail", { text });
         return;
       }
@@ -711,7 +762,7 @@ export function useAstridrVoice({
       // only the user's part. Pure echo → dropped entirely.
       utteranceEchoAnchoredRef.current = false;
       const remainder = stripEchoPrefix(text, echoReplyRef.current);
-      if (!remainder) {
+      if (!remainder || isResidualEcho(remainder, echoReplyRef.current)) {
         trace("final.echo-tail-dropped", { text });
         return;
       }
