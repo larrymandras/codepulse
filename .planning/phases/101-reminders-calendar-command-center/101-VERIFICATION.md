@@ -1,25 +1,12 @@
 ---
 phase: 101-reminders-calendar-command-center
 verified: 2026-07-19T23:59:00Z
-status: human_needed
+status: passed
 score: 6/6 roadmap success criteria CODE-VERIFIED; 9/9 requirements CODE-VERIFIED; 0 BLOCKERS
 overrides_applied: 0
-human_verification:
-  - test: "Run the codepulse dev server + `npx convex dev` (or point at the cloud deployment tidy-whale-981), open /reminders, and create/complete/snooze a reminder from the UI; reload and confirm it persisted."
-    expected: "Reminder created via the UI survives reload; complete moves it to Done; snooze sets a real snoozed state with a future due render."
-    why_human: "Requires a running Convex deployment + browser — cannot be exercised by static code inspection."
-  - test: "With Ástríðr running and ASTRIDR_INGEST_API_KEY/CONVEX_URL correctly pointed at codepulse's Convex HTTP host (the `.convex.site` actions domain, not `.convex.cloud`), ask Ástríðr to add a reminder, then confirm it appears on the CodePulse /reminders page without a manual refresh; then complete/snooze it via the `reminders` tool and confirm CodePulse reflects the change live."
-    expected: "Bidirectional live sync — a row created/mutated on either surface appears on the other within the Convex realtime subscription's normal latency."
-    why_human: "Requires two live systems talking over a real network boundary with real credentials; the code path is verified statically (Task-4 in this report) but the actual wire round-trip has not been executed."
-  - test: "Run the calendar-cache cron once against real Google credentials for all three accounts (`GOOGLE_CREDS_PERSONAL`/`_BUSINESS`/`_CONSULTING`) and confirm `calendarEvents` populates for personal/business/consulting, that a stale event drops on the next cycle, and that the consulting account (`lemandras@forgedinai.ai`) actually returns events (not just that the alias exists in config)."
-    expected: "All three profiles' calendars appear on the Reminders page overlay; a deleted/moved Google event disappears from the cache within one cron cycle (~20 min)."
-    why_human: "Requires live Google OAuth tokens in the token store per 101-CONTEXT.md's prerequisites section (`GOOGLE_CREDS_CONSULTING` authorization was explicitly flagged as something 'Larry must complete... the agent cannot')."
-  - test: "Create a reminder due in ~1 minute via the Ástríðr tool, wait for the `reminder:nudge` cron (every 5 min) to fire, and confirm exactly ONE Telegram nudge arrives on the correct profile's chat, and that `notifiedAt` is set (a second cron pass sends nothing)."
-    expected: "One nudge, correct profile channel, no repeat; a recurring reminder's next occurrence appears after the nudge fires."
-    why_human: "Requires a live Ástríðr deploy, a live cron scheduler tick, and a real Telegram channel to observe delivery — cannot be verified from source alone."
-  - test: "Visual/UX pass on /reminders in both light (Paperclip) and at least one dark theme: profile switch accent changes, overdue pulse animates (and stops under prefers-reduced-motion), calendar chips are visually distinct (filled reminder vs outline Google event), and the page never scrolls horizontally at a narrow viewport."
-    expected: "Matches 101-UI-SPEC.md's 'sleek... kick ass with some great effects' intent; readable in both theme families; responsive collapse works below the breakpoint."
-    why_human: "Visual/aesthetic judgment and motion-preference behavior are not verifiable via static grep — component code was inspected and looks structurally correct (CSS var accents, prefers-reduced-motion hook, responsive grid classes) but was never rendered in a browser during this verification pass."
+human_verification: []  # all 5 items CLOSED 2026-07-20 by live exercise against the
+  # running stack -- see the ADDENDUM below for the evidence per item. Kept empty rather
+  # than deleted so the schema stays valid and the closure is explicit.
 ---
 
 # Phase 101: Reminders & Calendar Command Center Verification Report
@@ -28,7 +15,7 @@ human_verification:
 
 The phase was deployed and exercised against the live stack after the report below was written. Four of the five `human_verification` items are now CLOSED; the deployment surfaced two real defects and one blocking misconfiguration, all fixed.
 
-**Deployed:** `npx convex deploy --yes` → tidy-whale-981 (production). Schema validation passed, no indexes dropped.
+**Deployed:** initially to tidy-whale-981 (cloud), then — once the two-backend split below was understood — to the **local self-hosted backend**, which is now the only deployment CodePulse and Ástríðr use. Schema validation passed on both; the local push added exactly the Phase 101 indexes, confirming it already had everything else.
 
 ### Closed by live exercise
 
@@ -64,13 +51,7 @@ CLOUD  (tidy-whale-981.convex.site, what the dashboard reads)
 
 Fixed in astridr `05f15c84`: all three modules prefer `CODEPULSE_CONVEX_URL`, falling back to `CONVEX_URL`. `calendar_cache` could not read the env directly (it posts through an injected `ConvexHandler` whose base URL is the shared local one), so it gained a duck-typed `CodePulsePoster` and the cron passes that instead of `self._telemetry`.
 
-**⚠ REQUIRES OPERATOR ACTION — the fix is inert until this env var is set:**
-
-```
-CODEPULSE_CONVEX_URL=https://tidy-whale-981.convex.site
-```
-
-Without it the fallback preserves today's broken target and reminders will 404. This is the single remaining gate on the cross-repo round trip.
+**⚠ SUPERSEDED later the same day — do NOT set `CODEPULSE_CONVEX_URL`.** The fix above assumed CodePulse would stay on the cloud deployment. It didn't: CodePulse was repointed onto the **local self-hosted backend** that Ástríðr already used, so both sides now share one store and the `CONVEX_URL` fallback is correct on its own. Leave `CODEPULSE_CONVEX_URL` **unset** — it remains only as an escape hatch if the two backends ever diverge again. The cloud deployment `tidy-whale-981` is retired (frozen at 2026-07-15). See memory [[convex-topology-all-local]].
 
 ### ✅ CLOSED 2026-07-20 — live bidirectional round-trip PASSED
 
@@ -127,8 +108,30 @@ Convex then served exactly those counts back via `calendarEvents:listByProfile` 
 
 With 73 real business events cached, the month grid peaks at **4 chips on the busiest day** (Jul 22 and Jul 29) against a budget of 5 — **zero cells overflow**, so no "+N more" appears at realistic volume and the cap is correctly sized. Rendered clean with zero console errors. Titles truncate with an ellipsis in a month cell (full text is in the `title` attribute on hover), which is inherent to the cell width and acceptable.
 
+### ✅ CLOSED 2026-07-20 — REM-05 nudge verified live, on the real cron
+
+Both Phase 101 crons are **live in the running agent** and ticking on schedule — `reminder:nudge` every 5 min, `calendar:cache_refresh` every 20 min — confirmed from container logs, not a harness.
+
+A reminder due 60s in the past was created (`source:"dashboard"`), then the real cron tick was observed:
+
+```
+17:20:39  reminder_nudge.scan_complete  nudged=0        (before it existed)
+17:25:40  proactive.alert_sent          channel_id=telegram chat_id=7815748065
+17:25:40  reminder_nudge.sent           id=kx7t8re… profile=personal
+17:25:40  reminder_nudge.scan_complete  nudged=1  failed=[]
+17:30:39  reminder_nudge.scan_complete  nudged=0        ← dedupe holds
+17:35:39  reminder_nudge.scan_complete  nudged=0        ← still silent
+```
+
+Exactly **one** `proactive.alert_sent` across the whole window, with a real Telegram message delivered to the personal profile's chat. Convex then showed `notifiedAt: 1784568339.82` stamped on the row while `status` stayed `"open"` — correct per D-05: a due one-off is nudged but never auto-completed.
+
+The reminder remained open and overdue through two further ticks and sent nothing, which is REM-05 ("nudge exactly once, deduped via `notifiedAt`") demonstrated rather than asserted.
+
+This also proves in production the `op:"markNotified"` endpoint added as the mid-phase gap closure — without it the cron had no way to write `notifiedAt` and this dedupe would have been impossible. Test row removed; all three profiles verified empty.
+
 ### Still open
-- **A real Telegram nudge firing exactly once** — no longer env-blocked (the store is shared now); needs a live `reminder:nudge` cron tick with a genuinely due reminder to observe delivery + the `notifiedAt` dedupe. This is the only remaining unverified item in the phase.
+
+Nothing. All 6 roadmap success criteria and all 9 v12.0 requirements are now live-verified against the running stack.
 
 Test data seeded for this pass (14 events, 6 reminders) was **removed**; both tables verified empty afterward.
 
