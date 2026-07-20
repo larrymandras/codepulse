@@ -15,7 +15,11 @@ import {
 } from "@/lib/skillVault";
 import { SkillVaultDetailCard } from "./SkillVaultDetailCard";
 import { ClusterDetailCard } from "./ClusterDetailCard";
+import { SkillPackView } from "./SkillPackView";
 import type { VaultViewMode } from "./SkillVaultScene";
+
+// Panel modes: the two 3D scene modes plus the 2D circle-packing ("packed") view.
+type PanelMode = VaultViewMode | "packed";
 
 // Lazy boundary keeps three.js / react-force-graph-3d out of the main bundle.
 const SkillVaultScene = lazy(() => import("./SkillVaultScene"));
@@ -38,7 +42,7 @@ export function SkillVaultView({
   const [focusedContainer, setFocusedContainer] = useState<VaultContainerId | null>(null);
   const [selected, setSelected] = useState<VaultSkill | null>(null);
   const [selectedCluster, setSelectedCluster] = useState<VaultCluster | null>(null);
-  const [mode, setMode] = useState<VaultViewMode>("constellation");
+  const [mode, setMode] = useState<PanelMode>("constellation");
   const [query, setQuery] = useState(initialQuery);
 
   const model = useMemo(() => buildVaultModel(skills), [skills]);
@@ -109,29 +113,32 @@ export function SkillVaultView({
           <Button variant="secondary" size="sm" onClick={onClose} className="gap-1.5">
             <Boxes className="h-4 w-4" /> Grid
           </Button>
-          <div className="flex items-center gap-1 rounded-[var(--radius)] border border-border/60 bg-background/70 p-1 backdrop-blur">
-            {CONTAINER_ORDER.map((id) => {
-              const c = model.containers.find((x) => x.id === id)!;
-              const active = focusedContainer === id;
-              return (
-                <button
-                  key={id}
-                  onClick={() => setFocusedContainer(active ? null : id)}
-                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                    active ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                  aria-pressed={active}
-                >
-                  {CONTAINER_LABEL[id]} <span className="opacity-60">{c.count}</span>
-                </button>
-              );
-            })}
-          </div>
+          {mode !== "packed" && (
+            <div className="flex items-center gap-1 rounded-[var(--radius)] border border-border/60 bg-background/70 p-1 backdrop-blur">
+              {CONTAINER_ORDER.map((id) => {
+                const c = model.containers.find((x) => x.id === id)!;
+                const active = focusedContainer === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() => setFocusedContainer(active ? null : id)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                      active ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    aria-pressed={active}
+                  >
+                    {CONTAINER_LABEL[id]} <span className="opacity-60">{c.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex items-center gap-1 rounded-[var(--radius)] border border-border/60 bg-background/70 p-1 backdrop-blur">
             {(
               [
                 ["constellation", "Constellation"],
                 ["usage", "Usage"],
+                ["packed", "Orchard"],
               ] as const
             ).map(([m, label]) => (
               <button
@@ -146,7 +153,7 @@ export function SkillVaultView({
               </button>
             ))}
           </div>
-          {focusedContainer && (
+          {focusedContainer && mode !== "packed" && (
             <Button variant="ghost" size="sm" onClick={() => setFocusedContainer(null)} className="gap-1 text-muted-foreground">
               <RotateCcw className="h-3.5 w-3.5" /> Overview
             </Button>
@@ -175,20 +182,24 @@ export function SkillVaultView({
         </div>
       </div>
 
-      {/* hint line */}
-      <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 text-center text-[11px] text-muted-foreground/70">
-        {mode === "usage"
-          ? "Living mode · orb size & pulse = how much you use each skill"
-          : focusedContainer
-            ? "Click a skill for detail · drag to orbit · click empty space for overview"
-            : "Click a vault to dive in · drag to orbit · scroll to zoom"}
-        {highlightIds && ` · ${highlightIds.size} match${highlightIds.size === 1 ? "" : "es"}`}
-      </div>
+      {/* hint line (3D modes only; the pack view renders its own) */}
+      {mode !== "packed" && (
+        <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 text-center text-[11px] text-muted-foreground/70">
+          {mode === "usage"
+            ? "Living mode · orb size & pulse = how much you use each skill"
+            : focusedContainer
+              ? "Click a skill for detail · drag to orbit · click empty space for overview"
+              : "Click a vault to dive in · drag to orbit · scroll to zoom"}
+          {highlightIds && ` · ${highlightIds.size} match${highlightIds.size === 1 ? "" : "es"}`}
+        </div>
+      )}
 
       {empty ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
           No skills to show yet — install one to populate the vault.
         </div>
+      ) : mode === "packed" ? (
+        <SkillPackView model={model} query={query} />
       ) : (
         <Suspense
           fallback={
@@ -230,7 +241,7 @@ export function SkillVaultView({
         </Suspense>
       )}
 
-      {selected ? (
+      {mode === "packed" ? null : selected ? (
         <SkillVaultDetailCard skill={selected} onClose={() => setSelected(null)} />
       ) : selectedCluster ? (
         <ClusterDetailCard
