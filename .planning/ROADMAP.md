@@ -543,6 +543,7 @@ Plans:
 
 **Plans**: TBD
 **UI hint**: yes
+**Cross-repo note (2026-07-20)**: astridr's planned Mission Control (astridr SEED-023) PAIRS WITH this phase — 99 launches skills; the mission jobs board (live stream-json telemetry, cost, confirm cards) is a separate surface seeded as `.planning/seeds/SEED-002-mission-control-jobs-board.md`. Keep launch plumbing (`chat.send` / `enqueueLaunch` / dispatch) reusable for mission briefs.
 
 ---
 
@@ -560,6 +561,7 @@ Plans:
 
 **Plans**: TBD
 **UI hint**: yes
+**Cross-repo note (2026-07-20)**: when planned, consider folding in armory tiles + tool-receipts display (tools_used/tool_errors under chat answers) from the JARVIS v5/TARS analysis — see `.planning/seeds/SEED-002-mission-control-jobs-board.md` and astridr SEED-024.
 
 ---
 
