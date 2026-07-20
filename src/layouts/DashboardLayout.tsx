@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import * as jsYaml from "js-yaml";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -15,10 +14,6 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
-import { MicToggle } from "../components/MicToggle";
-import { StrictModeToggle } from "../components/voice/StrictModeToggle";
-import { ListeningIndicatorPill } from "../components/ListeningIndicatorPill";
-import { useWakeWord } from "../hooks/useWakeWord";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AvatarUploader from "../components/AvatarUploader";
@@ -362,33 +357,10 @@ export default function DashboardLayout() {
     }
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
-  // Voice mode — whether the palette opened in voice mode (set by wake callback or cleared by ⌘K)
-  const [voiceMode, setVoiceMode] = useState(false);
-
-  // Persisted voice-mode-enabled toggle — OFF by default (D-06 / VOX-04)
-  // Copied from the crtEnabled initializer pattern (lines 555-560)
-  const [voiceModeEnabled, setVoiceModeEnabled] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("codepulse-voice-mode") ?? "false");
-    } catch {
-      return false;
-    }
-  });
 
   const [crtEnabled, setCrtEnabled] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("codepulse-crt") ?? "false");
-    } catch {
-      return false;
-    }
-  });
-
-  // Strict Mode (CONV-02, D-04) — instant-paint localStorage mirror, then
-  // hydrated from the server (source of truth) via config.get on mount.
-  // Same try/catch JSON.parse(... ?? "false") initializer shape as voiceModeEnabled.
-  const [strictMode, setStrictMode] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("codepulse-strict-mode") ?? "false");
     } catch {
       return false;
     }
@@ -415,58 +387,6 @@ export default function DashboardLayout() {
   const showSys = systemResources?.cpu != null;
 
   const { status: wsStatus, sendCommand } = useAstridrWS();
-
-  // Strict Mode (CONV-02, D-04) — hydrate from server on mount. config.get is
-  // the source of truth; the localStorage mirror above is only for instant paint.
-  useEffect(() => {
-    (async () => {
-      try {
-        const ack = await sendCommand({ type: "config.get", section: "voice-prefs" });
-        if (ack.status === "ok") {
-          const content = ((ack.data as Record<string, unknown>)?.content ??
-            (ack as Record<string, unknown>).content ??
-            "") as string;
-          const parsed = (jsYaml.load(content) as Record<string, unknown>) ?? {};
-          if (typeof parsed.strict_mode === "boolean") {
-            setStrictMode(parsed.strict_mode);
-            localStorage.setItem("codepulse-strict-mode", JSON.stringify(parsed.strict_mode));
-          }
-        } else {
-          console.warn("Failed to hydrate strict mode from server:", ack.error);
-        }
-      } catch (err) {
-        // Offline/API-failure fallback (Claude's Discretion, 183-RESEARCH.md A4/A5):
-        // keep the optimistic localStorage mirror, log, don't throw.
-        console.warn("Failed to hydrate strict mode from server:", err);
-      }
-    })();
-    // Mount-only hydration — sendCommand identity is stable per AstridrWSContext.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Toggling (manual switch OR the spoken path via onStrictModeChange) updates
-  // state, writes the localStorage mirror immediately (optimistic), and persists
-  // server-side. A failed persist keeps the optimistic local value — logged, not thrown.
-  const handleStrictModeChange = useCallback(
-    (v: boolean) => {
-      setStrictMode(v);
-      localStorage.setItem("codepulse-strict-mode", JSON.stringify(v));
-      sendCommand({
-        type: "config.update",
-        request_id: crypto.randomUUID(),
-        section: "voice-prefs",
-        changes: { strict_mode: v },
-        dry_run: false,
-      }).then((ack) => {
-        if (ack.status !== "ok") {
-          console.warn("Failed to persist strict mode:", ack.error);
-        }
-      }).catch((err) => {
-        console.warn("Failed to persist strict mode:", err);
-      });
-    },
-    [sendCommand],
-  );
 
   const [headerLatencyMs, setHeaderLatencyMs] = useState<number | null>(null);
   const headerPingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -511,34 +431,9 @@ export default function DashboardLayout() {
 
   const showLat = wsStatus === "connected" && headerLatencyMs != null;
 
-  // Wake-word engine — onWake opens the command palette in voice mode (VOX-01)
-  const {
-    status: wakeWordStatus,
-    errorReason: wakeWordErrorReason,
-    start: wakeWordStart,
-    stop: wakeWordStop,
-  } = useWakeWord({
-    baseUrl: '/openwakeword',
-    onWake: () => {
-      setPaletteOpen(true);
-      setVoiceMode(true);
-    },
-  });
-
-  // Drive mic start/stop from the persisted toggle (VOX-04 — no mic unless explicitly enabled).
-  // Start only from a clean 'idle' state. Critically, do NOT call stop() on 'error-disabled':
-  // stop() resets status to 'idle', which re-triggers start() → fail → error-disabled → idle …
-  // an infinite retry storm. On error we leave the engine disabled until the user toggles off
-  // (which resets to idle) and back on. Recovery: turn the mic off, then on again.
-  useEffect(() => {
-    if (!voiceModeEnabled) {
-      wakeWordStop();
-    } else if (wakeWordStatus === 'idle') {
-      void wakeWordStart();
-    }
-    // loading / ready / error-disabled while enabled → do nothing (no auto-retry).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [voiceModeEnabled, wakeWordStatus]);
+  // Voice lives on the Ástríðr presence page (/chat) — the wake-word engine,
+  // mic toggle, and strict mode all moved there (2026-07-20). The shell is
+  // voice-free; the palette is text-only.
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -548,11 +443,9 @@ export default function DashboardLayout() {
       // global palette on top of it.
       if (e.defaultPrevented) return;
 
-      // Cmd+K / Ctrl+K: open command palette in text mode — allowed even from input fields (VS Code behavior)
-      // Voice mode is NOT set here — ⌘K always opens text mode (VOX-01 criterion: coexist with wake)
+      // Cmd+K / Ctrl+K: open command palette — allowed even from input fields (VS Code behavior)
       if (e.key === "k" && !e.shiftKey && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        setVoiceMode(false);
         setPaletteOpen((prev) => !prev);
         return;
       }
@@ -682,18 +575,6 @@ export default function DashboardLayout() {
 
           <TooltipProvider delayDuration={300}>
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
-            {/* Voice mode controls — ListeningIndicatorPill only when engine is ready and voice is ON */}
-            {voiceModeEnabled && wakeWordStatus === 'ready' && <ListeningIndicatorPill />}
-            <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
-            <MicToggle
-              enabled={voiceModeEnabled}
-              status={wakeWordStatus}
-              errorReason={wakeWordErrorReason}
-              onToggle={(v) => {
-                setVoiceModeEnabled(v);
-                localStorage.setItem('codepulse-voice-mode', JSON.stringify(v));
-              }}
-            />
             <EStopButton />
             <div className="w-px h-4 bg-primary/20 mx-1" />
             <NotificationBell />
@@ -722,22 +603,8 @@ export default function DashboardLayout() {
       {/* Toast Notifications */}
       <Toaster position="bottom-right" richColors visibleToasts={3} />
 
-      {/* Global Command Palette — Cmd+K / Ctrl+K (text mode) or wake-word (voice mode) */}
-      <CommandPalette
-        open={paletteOpen}
-        onOpenChange={(open) => {
-          setPaletteOpen(open);
-          if (!open) setVoiceMode(false);
-        }}
-        voiceMode={voiceMode}
-        voiceState={voiceMode ? 'listening' : undefined}
-        onVoiceClose={() => {
-          setVoiceMode(false);
-          setPaletteOpen(false);
-        }}
-        strictMode={strictMode}
-        onStrictModeChange={handleStrictModeChange}
-      />
+      {/* Global Command Palette — Cmd+K / Ctrl+K */}
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
   );
 }

@@ -62,16 +62,21 @@ function normalize(text: string): string {
 
 // ─── End-phrase detection (mirrors voice.py:136-138) ─────────────────────────
 
-const END_PHRASES = ["stop", "goodbye", "thanks", "that's all"];
+// "stop" is deliberately NOT here: it is overloaded as the reflexive interrupt
+// ("stop talking") and lives in BARGE_IN_PHRASES only — saying "stop" pauses
+// her but NEVER ends the conversation (presence-page decision, 2026-07-20;
+// intentional divergence from voice.py's end-phrase list).
+const END_PHRASES = ["goodbye", "thanks", "that's all"];
 
 /**
- * Returns true if the transcript is an end-phrase that should exit voice mode.
+ * Returns true if the transcript is an end-phrase that should end the
+ * conversation (re-arm wake-word listening).
  *
- * Speech-to-text returns punctuated, capitalized transcripts ("Stop.",
- * "Goodbye,") and often prefixes filler ("okay goodbye"), so an exact match
- * against END_PHRASES never fires. Normalize (lowercase, strip punctuation) and
- * match if the whole utterance is an end-phrase OR ends with one — so a plain
- * "stop" / "goodbye" reliably exits without over-matching a real command.
+ * Speech-to-text returns punctuated, capitalized transcripts ("Goodbye,") and
+ * often prefixes filler ("okay goodbye"), so an exact match against
+ * END_PHRASES never fires. Normalize (lowercase, strip punctuation) and match
+ * if the whole utterance is an end-phrase OR ends with one — so a plain
+ * "goodbye" reliably exits without over-matching a real command.
  */
 export function isEndPhrase(text: string): boolean {
   const norm = normalize(text);
@@ -120,6 +125,19 @@ export function isBargeInPhrase(text: string): boolean {
     }
     return false;
   });
+}
+
+/**
+ * Returns true if the WHOLE utterance is nothing but a barge-in phrase
+ * ("stop", "wait", "hold on", …) — an interrupt reflex with no content. Used
+ * outside `speaking`: a pure interrupt cancels a thinking turn (or is ignored)
+ * instead of being sent to Ástríðr as a literal chat message. Contrast
+ * isBargeInPhrase, which matches the phrase ANYWHERE inside a longer utterance.
+ */
+export function isPureBargeInPhrase(text: string): boolean {
+  const norm = normalize(text);
+  if (!norm) return false;
+  return BARGE_IN_PHRASES.includes(norm);
 }
 
 // ─── Spoken strict-mode toggle command (D-05) ────────────────────────────────
@@ -173,16 +191,24 @@ export function voiceReducer(state: VoiceState, action: VoiceAction): VoiceState
       if (action.type === "INTERIM_RESULT") return "transcribing";
       if (action.type === "FOLLOW_UP_EXPIRE") return "idle";
       if (action.type === "END") return "idle";
+      // TTS can start from ANY live conversational state (e.g. a typed message
+      // mid-voice-conversation) — the echo guard depends on being in
+      // `speaking`, so never let her talk while we sit in listening.
+      if (action.type === "TTS_START") return "speaking";
       return state;
 
     case "transcribing":
       if (action.type === "FINAL_RESULT") return "processing";
       if (action.type === "END") return "idle";
+      if (action.type === "TTS_START") return "speaking";
       return state;
 
     case "processing":
       if (action.type === "TTS_START") return "speaking";
       if (action.type === "END") return "idle";
+      // "stop" while she's THINKING cancels the in-flight turn (now that
+      // "stop" never ends the conversation) — back to hearing you.
+      if (action.type === "BARGE_IN") return "transcribing";
       return state;
 
     case "speaking":

@@ -1,11 +1,10 @@
 /**
- * useAstridrChat — the conversation engine shared by the always-on Ástríðr rail
- * (and, during transition, the legacy /chat page).
- *
- * Extracted verbatim from Chat.tsx so the streaming/dedup/TTS/approval logic has
- * ONE home. Owns: messages, send, the run.text/run.blocks/run.tts/run.completed/
- * run.error WS subscriptions, TTS enable + playback, and approve/reject. UI
- * concerns (scroll, flash, skill badge, input box) stay in the consumer.
+ * useAstridrChat — the conversation engine behind the Ástríðr presence page
+ * (/chat). Extracted from Chat.tsx so the streaming/dedup/TTS/approval logic
+ * has ONE home. Owns: messages, send, the run.text/run.blocks/run.tts/
+ * run.completed/run.error WS subscriptions, TTS enable + playback,
+ * interrupt (barge-in), and approve/reject. UI concerns (scroll, transcript,
+ * input box) stay in the consumer; voice orchestration is useAstridrVoice.
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
@@ -24,15 +23,29 @@ export function useAstridrChat() {
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  // Synchronous mirror of isStreaming for the send guard: interrupt() must
+  // unblock sendMessage IN THE SAME TICK (the voice layer interrupts and then
+  // immediately sends the barged-in utterance — a state read would still see
+  // the pre-interrupt value and silently drop the message).
+  const isStreamingRef = useRef(false);
+  const setStreaming = useCallback((v: boolean) => {
+    isStreamingRef.current = v;
+    setIsStreaming(v);
+  }, []);
   const [ttsEnabled, setTtsEnabled] = useState(false);
   const { play: playAudio, stop: stopAudio, isPlaying: ttsIsPlaying } = useTtsPlayback();
 
   const activeSessionRef = useRef<string | null>(null);
 
+  // Mirrors the active streaming reply's text for use inside callbacks without
+  // a stale closure — interrupt() needs the LATEST streamed text at the moment
+  // a barge-in fires (D-11: sourced only from her own streamed text).
+  const streamingTextRef = useRef("");
+
   // ─── Send ────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isStreaming || status !== "connected") return;
+    async (text: string, opts?: { interruptedReply?: string }) => {
+      if (!text.trim() || isStreamingRef.current || status !== "connected") return;
 
       setMessages((prev) => [
         ...prev,
@@ -40,7 +53,13 @@ export function useAstridrChat() {
       ]);
 
       try {
-        const ack = await sendCommand({ type: "chat.send", message: text });
+        // D-12: thread the barged-in partial reply (if any) into this turn so
+        // "continue" resumes the interrupted reply server-side.
+        const ack = await sendCommand({
+          type: "chat.send",
+          message: text,
+          ...(opts?.interruptedReply ? { interrupted_reply: opts.interruptedReply } : {}),
+        });
 
         if (ack.status !== "ok") {
           setMessages((prev) => [
@@ -61,12 +80,13 @@ export function useAstridrChat() {
           (ack.data?.session_id as string | undefined) ??
           generateId();
         activeSessionRef.current = sessionId;
+        streamingTextRef.current = "";
 
         setMessages((prev) => [
           ...prev,
           { id: generateId(), role: "assistant", content: "", streaming: true, timestamp: Date.now(), sessionId },
         ]);
-        setIsStreaming(true);
+        setStreaming(true);
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -80,7 +100,7 @@ export function useAstridrChat() {
         ]);
       }
     },
-    [isStreaming, status, sendCommand]
+    [status, sendCommand, setStreaming]
   );
 
   // ─── Receive (streaming events) ──────────────────────────────────────────
@@ -93,6 +113,8 @@ export function useAstridrChat() {
       const { session_id, done } = data;
       const text = data.text_chunk ?? data.text;
       if (session_id && session_id !== activeSessionRef.current) return;
+
+      if (text) streamingTextRef.current += text;
 
       setMessages((prev) =>
         prev.map((msg) =>
@@ -214,7 +236,7 @@ export function useAstridrChat() {
       const data = event.data as { session_id?: string } | undefined;
       if (data?.session_id && data.session_id !== activeSessionRef.current) return;
       setMessages((prev) => prev.map((msg) => (msg.streaming ? { ...msg, streaming: false } : msg)));
-      setIsStreaming(false);
+      setStreaming(false);
       activeSessionRef.current = null;
     });
 
@@ -232,7 +254,7 @@ export function useAstridrChat() {
             : msg
         )
       );
-      setIsStreaming(false);
+      setStreaming(false);
       activeSessionRef.current = null;
     });
 
@@ -243,7 +265,32 @@ export function useAstridrChat() {
       unsubCompleted();
       unsubError();
     };
-  }, [subscribeEvent, playAudio]);
+  }, [subscribeEvent, playAudio, setStreaming]);
+
+  // ─── Interrupt (barge-in, CONV-01) ───────────────────────────────────────
+  // Cuts TTS instantly, cancels the in-flight server turn, finalizes the
+  // streaming message in the thread, and returns the partial reply text so the
+  // caller can thread it into the next send (D-11/D-12). Safe to call when
+  // nothing is streaming — returns "".
+  const interrupt = useCallback((): string => {
+    stopAudio();
+    const partial = streamingTextRef.current;
+    const session = activeSessionRef.current;
+    if (session) {
+      void sendCommand({
+        type: "agent.stop",
+        request_id: generateId(),
+        session_id: session,
+      }).catch(() => {
+        /* run may already be over — the interrupt still happened locally */
+      });
+    }
+    setMessages((prev) => prev.map((msg) => (msg.streaming ? { ...msg, streaming: false } : msg)));
+    setStreaming(false);
+    activeSessionRef.current = null;
+    streamingTextRef.current = "";
+    return partial;
+  }, [stopAudio, sendCommand, setStreaming]);
 
   const handleApprove = useCallback((requestId: string) => approve(requestId), [approve]);
   const handleReject = useCallback(
@@ -261,9 +308,12 @@ export function useAstridrChat() {
     playAudio,
     stopAudio,
     ttsIsPlaying,
+    interrupt,
     handleApprove,
     handleReject,
-    /** Expose the active session so the voice layer (step 3) can target barge-in. */
+    /** Expose the active session so the voice layer can target barge-in. */
     activeSessionRef,
   };
 }
+
+export type AstridrChat = ReturnType<typeof useAstridrChat>;

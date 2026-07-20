@@ -1,18 +1,20 @@
 /**
- * ChatBubble — renders a single chat message bubble with markdown support.
+ * ChatBubble — one turn of the Ástríðr conversation.
  *
- * User messages: right-aligned, bg-[--muted]
- * Assistant messages: left-aligned, bg-[--card] with border
- * Streaming: blinking cursor appended after content
+ * Assistant turns render as "transmissions" (presence-page design, 2026-07-20):
+ * a luminous left rail, a tracked mono eyebrow (ÁSTRÍÐR · 9:32 AM), body ink on
+ * a primary-tinted panel (.bubble-her in index.css). User turns are quiet
+ * right-aligned slabs with a mono clock-time meta. Both materialize in with
+ * .msg-turn (reduced-motion aware).
  *
  * Supports two rendering modes (mutually exclusive):
  *   blocks[] — Generative UI Blocks via BlockRenderer (D-04)
  *   content   — plain markdown string (backward compatible)
  *
- * Optional audioUrl prop for TTS playback on assistant messages.
+ * Optional audioUrl prop → circular replay control with live EQ bars while
+ * playing (assistant turns only).
  *
- * Phase 56, Plan 02: CPCC-01 chat UI.
- * Phase 03, Plan 04: IL-02 block rendering upgrade.
+ * Phase 56, Plan 02: CPCC-01 chat UI. Phase 03, Plan 04: IL-02 blocks.
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -22,7 +24,6 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Play, Square } from "lucide-react";
 import type { Components } from "react-markdown";
-import type { CSSProperties } from "react";
 import { BlockRenderer } from "@/components/BlockRenderer";
 import type { GenerativeBlock } from "@/types/generative-blocks";
 
@@ -43,15 +44,13 @@ export interface ChatBubbleProps {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatRelativeTime(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const secs = Math.floor(diff / 1000);
-  if (secs < 60) return "just now";
-  const mins = Math.floor(secs / 60);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+/** Clock time ("9:32 AM") — a conversation with a presence keeps real time,
+ *  not a wall of "just now". */
+function formatClockTime(timestamp: number): string {
+  return new Date(timestamp).toLocaleTimeString(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 // ─── Markdown components ──────────────────────────────────────────────────────
@@ -106,22 +105,16 @@ const markdownComponents: Components = {
   },
   // Paragraphs — tight spacing inside bubbles
   p: ({ children }) => (
-    <p className="text-base leading-relaxed mb-1 last:mb-0">{children}</p>
+    <p className="text-[0.925rem] leading-relaxed mb-1.5 last:mb-0">{children}</p>
   ),
   // Lists
   ul: ({ children }) => (
-    <ul className="text-base list-disc list-inside mb-1 space-y-0.5">{children}</ul>
+    <ul className="text-[0.925rem] list-disc list-inside mb-1 space-y-0.5">{children}</ul>
   ),
   ol: ({ children }) => (
-    <ol className="text-base list-decimal list-inside mb-1 space-y-0.5">{children}</ol>
+    <ol className="text-[0.925rem] list-decimal list-inside mb-1 space-y-0.5">{children}</ol>
   ),
-  li: ({ children }) => <li className="text-base">{children}</li>,
-};
-
-// ─── Blink cursor style ───────────────────────────────────────────────────────
-
-const blinkStyle: CSSProperties = {
-  animation: "blink-cursor 1s step-end infinite",
+  li: ({ children }) => <li className="text-[0.925rem]">{children}</li>,
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -178,95 +171,109 @@ export function ChatBubble({
     };
   };
 
-  const bubbleClass = isUser
-    ? "bg-(--muted) text-(--foreground) ml-auto max-w-[72%] p-3"
-    : "bg-(--card) border border-(--border) text-(--foreground) mr-auto max-w-[72%] p-3";
+  const time = timestamp !== undefined ? formatClockTime(timestamp) : null;
 
-  const wrapperClass = isUser
-    ? "flex flex-col items-end w-full"
-    : "flex flex-col items-start w-full";
-
-  return (
-    <>
-      <style>{`
-        @keyframes blink-cursor {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-      `}</style>
-
-      <div className={wrapperClass}>
-        <div className={bubbleClass}>
-          {isUser ? (
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{content}</p>
-          ) : blocks && blocks.length > 0 ? (
-            // Generative UI Block path (D-04)
-            <div className="flex flex-col gap-2">
-              {blocks.map((block, idx) => (
-                <BlockRenderer
-                  key={idx}
-                  block={block}
-                  onApprove={onApprove}
-                  onReject={onReject}
-                />
-              ))}
-              {streaming && (
-                <span
-                  className="inline-block text-base"
-                  style={blinkStyle}
-                  aria-hidden="true"
-                >
-                  |
-                </span>
-              )}
-            </div>
-          ) : (
-            // Existing markdown path — backward compatible
-            <div className="prose prose-sm max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
-              >
-                {content ?? ""}
-              </ReactMarkdown>
-              {streaming && (
-                <span
-                  className="inline-block text-base"
-                  style={blinkStyle}
-                  aria-hidden="true"
-                >
-                  |
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* TTS play button — assistant messages with audio only */}
-          {!isUser && audioUrl && !streaming && (
-            <button
-              type="button"
-              onClick={handlePlayToggle}
-              className="mt-2 flex items-center gap-1 text-sm transition-colors"
-              style={{ color: isPlaying ? "var(--primary)" : "var(--muted-foreground)" }}
-              aria-label={isPlaying ? "Stop audio" : "Play audio"}
-            >
-              {isPlaying ? (
-                <Square className="w-3 h-3" />
-              ) : (
-                <Play className="w-3 h-3" />
-              )}
-              <span>{isPlaying ? "Stop" : "Play"}</span>
-            </button>
-          )}
+  // ─── User turn — quiet right slab ──────────────────────────────────────────
+  if (isUser) {
+    return (
+      <div className="msg-turn flex flex-col items-end w-full">
+        <div className="bubble-you rounded-2xl max-w-[78%] px-4 py-2.5">
+          <p className="text-[0.925rem] leading-relaxed whitespace-pre-wrap text-foreground/95">
+            {content}
+          </p>
         </div>
-
-        {timestamp !== undefined && (
-          <span className="text-sm text-muted-foreground mt-0.5 px-1">
-            {formatRelativeTime(timestamp)}
+        {time && (
+          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground/80 mt-1 px-1">
+            {time}
           </span>
         )}
       </div>
-    </>
+    );
+  }
+
+  // ─── Assistant turn — transmission ─────────────────────────────────────────
+  return (
+    <div className="msg-turn flex flex-col items-start w-full">
+      {/* Eyebrow: who is speaking, when */}
+      <div className="flex items-center gap-2 mb-1 px-1">
+        <span
+          className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_var(--primary)]"
+          aria-hidden="true"
+        />
+        <span className="font-mono text-[10px] font-semibold tracking-[0.2em] text-primary/90">
+          ÁSTRÍÐR
+        </span>
+        {time && (
+          <span className="font-mono text-[10px] tracking-[0.08em] text-muted-foreground/80">
+            · {time}
+          </span>
+        )}
+      </div>
+
+      <div className="bubble-her rounded-2xl max-w-[85%] px-4 py-3 text-foreground">
+        {blocks && blocks.length > 0 ? (
+          // Generative UI Block path (D-04)
+          <div className="flex flex-col gap-2">
+            {blocks.map((block, idx) => (
+              <BlockRenderer
+                key={idx}
+                block={block}
+                onApprove={onApprove}
+                onReject={onReject}
+              />
+            ))}
+            {streaming && <span className="stream-cursor" aria-hidden="true" />}
+          </div>
+        ) : (
+          // Markdown path — backward compatible
+          <div className="prose prose-sm max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {content ?? ""}
+            </ReactMarkdown>
+            {streaming && <span className="stream-cursor" aria-hidden="true" />}
+          </div>
+        )}
+
+        {/* Replay her voice — assistant turns with audio only */}
+        {audioUrl && !streaming && (
+          <button
+            type="button"
+            onClick={handlePlayToggle}
+            aria-label={isPlaying ? "Stop audio" : "Replay Ástríðr's voice"}
+            title={isPlaying ? "Stop" : "Replay her voice"}
+            className={`mt-2.5 flex items-center gap-2 h-7 pl-1.5 pr-2.5 rounded-full border text-[11px] font-mono tracking-wide transition-colors ${
+              isPlaying
+                ? "border-primary/50 bg-primary/15 text-primary"
+                : "border-border bg-background/40 text-muted-foreground hover:text-primary hover:border-primary/40"
+            }`}
+          >
+            <span
+              className={`grid place-items-center w-4.5 h-4.5 rounded-full ${
+                isPlaying ? "bg-primary/20" : "bg-muted"
+              }`}
+            >
+              {isPlaying ? (
+                <Square className="w-2.5 h-2.5" />
+              ) : (
+                <Play className="w-2.5 h-2.5 translate-x-[0.5px]" />
+              )}
+            </span>
+            {isPlaying ? (
+              <span className="flex items-end gap-0.5 h-3 text-primary" aria-hidden="true">
+                <span className="eq-bar eq-bar-1" />
+                <span className="eq-bar eq-bar-2" />
+                <span className="eq-bar eq-bar-3" />
+              </span>
+            ) : (
+              <span>REPLAY</span>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

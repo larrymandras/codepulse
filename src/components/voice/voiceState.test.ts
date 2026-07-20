@@ -9,7 +9,8 @@
  * 4. speaking + TTS_END(strictMode) → listening | idle
  * 5. idle/listening/transcribing/processing + END → idle
  * 6. any + ERROR → error-disabled
- * 7. isEndPhrase: "stop"/"goodbye"/"thanks"/"that's all" → true; others → false
+ * 7. isEndPhrase: "goodbye"/"thanks"/"that's all" → true; "stop" is barge-in
+ *    only (presence-page decision 2026-07-20) → false
  * 8. speaking + BARGE_IN → transcribing; BARGE_IN elsewhere is a no-op
  * 9. speaking + END is a no-op (D-01) — no longer exits mid-reply
  * 10. listening + FOLLOW_UP_EXPIRE → idle; no-op elsewhere
@@ -24,10 +25,37 @@ import {
   voiceReducer,
   isEndPhrase,
   isBargeInPhrase,
+  isPureBargeInPhrase,
   isStrictModeCommand,
   type VoiceState,
   type VoiceAction,
 } from "./voiceState";
+
+describe("isPureBargeInPhrase", () => {
+  it('"stop" → true (whole utterance is the interrupt)', () => {
+    expect(isPureBargeInPhrase("stop")).toBe(true);
+  });
+
+  it('"Stop." → true (normalized)', () => {
+    expect(isPureBargeInPhrase("Stop.")).toBe(true);
+  });
+
+  it('"hold on" → true (multi-word phrase)', () => {
+    expect(isPureBargeInPhrase("hold on")).toBe(true);
+  });
+
+  it('"stop the deploy" → false (content around the phrase — a real message)', () => {
+    expect(isPureBargeInPhrase("stop the deploy")).toBe(false);
+  });
+
+  it('"okay wait" → false (not the whole utterance)', () => {
+    expect(isPureBargeInPhrase("okay wait")).toBe(false);
+  });
+
+  it("empty → false", () => {
+    expect(isPureBargeInPhrase("")).toBe(false);
+  });
+});
 
 describe("voiceReducer", () => {
   it("listening + INTERIM_RESULT → transcribing", () => {
@@ -111,11 +139,27 @@ describe("voiceReducer", () => {
     // e.g. FINAL_RESULT while idle (no STT running) — stay idle
     expect(voiceReducer("idle", { type: "FINAL_RESULT" })).toBe("idle");
   });
+
+  it("TTS_START from listening → speaking (typed message mid-conversation)", () => {
+    expect(voiceReducer("listening", { type: "TTS_START" })).toBe("speaking");
+  });
+
+  it("TTS_START from transcribing → speaking", () => {
+    expect(voiceReducer("transcribing", { type: "TTS_START" })).toBe("speaking");
+  });
+
+  it("TTS_START in idle stays idle (typed turn while armed — no echo risk, recognition off)", () => {
+    expect(voiceReducer("idle", { type: "TTS_START" })).toBe("idle");
+  });
+
+  it("BARGE_IN from processing → transcribing ('stop' cancels a thinking turn)", () => {
+    expect(voiceReducer("processing", { type: "BARGE_IN" })).toBe("transcribing");
+  });
 });
 
 describe("isEndPhrase", () => {
-  it('"stop" → true', () => {
-    expect(isEndPhrase("stop")).toBe(true);
+  it('"stop" → false (barge-in only — never ends the conversation)', () => {
+    expect(isEndPhrase("stop")).toBe(false);
   });
 
   it('"goodbye" → true', () => {
@@ -130,8 +174,8 @@ describe("isEndPhrase", () => {
     expect(isEndPhrase("that's all")).toBe(true);
   });
 
-  it("case-insensitive: STOP → true", () => {
-    expect(isEndPhrase("STOP")).toBe(true);
+  it('case-insensitive: "STOP" → false (barge-in only)', () => {
+    expect(isEndPhrase("STOP")).toBe(false);
   });
 
   it("case-insensitive: Goodbye → true", () => {
@@ -139,7 +183,7 @@ describe("isEndPhrase", () => {
   });
 
   it("leading/trailing whitespace trimmed", () => {
-    expect(isEndPhrase("  stop  ")).toBe(true);
+    expect(isEndPhrase("  goodbye  ")).toBe(true);
   });
 
   it('"show me agents" → false', () => {

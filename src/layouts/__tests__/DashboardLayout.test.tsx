@@ -8,8 +8,8 @@
  *   - SYS shows the rounded cpu value when systemResources.current is present
  *   - LAT hidden when the WS is not connected / no measurement exists
  *
- * All heavy/side-effecting children (CommandPalette, wake-word engine, audio,
- * notifications, avatar uploader, etc.) are stubbed so the layout mounts in
+ * All heavy/side-effecting children (CommandPalette, audio, notifications,
+ * avatar uploader, etc.) are stubbed so the layout mounts in
  * jsdom without pulling in their own contexts/dependencies — this test is
  * scoped to the header telemetry contract, not the full sidebar/palette UX
  * (see the original sidebar IA test.todo stubs below, still pending).
@@ -61,11 +61,6 @@ vi.mock("../../components/EStopButton", () => ({ EStopButton: () => null }));
 vi.mock("../../components/CommandPalette", () => ({
   CommandPalette: ({ open }: { open: boolean }) =>
     open ? <div data-testid="command-palette-open" /> : null,
-}));
-vi.mock("../../components/MicToggle", () => ({ MicToggle: () => null }));
-vi.mock("../../components/ListeningIndicatorPill", () => ({ ListeningIndicatorPill: () => null }));
-vi.mock("../../hooks/useWakeWord", () => ({
-  useWakeWord: () => ({ status: "idle", errorReason: null, start: vi.fn(), stop: vi.fn() }),
 }));
 vi.mock("../../components/AvatarUploader", () => ({ default: () => null }));
 vi.mock("sonner", () => ({

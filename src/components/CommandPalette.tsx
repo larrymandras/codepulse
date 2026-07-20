@@ -12,8 +12,6 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 import { useCommandPaletteSearch } from "@/hooks/useCommandPaletteSearch";
-import { VoiceModePanel } from "@/components/voice/VoiceModePanel";
-import type { VoiceState } from "@/components/voice/voiceState";
 import {
   Bot,
   Clock,
@@ -32,30 +30,14 @@ import {
 // (importing it here created an import cycle; WR-02, phase 96 review).
 import { navItems, iconComponents } from "@/lib/navRegistry";
 
+// Voice moved to the Ástríðr presence page (/chat, 2026-07-20) — the palette
+// is text-only again.
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When true, renders VoiceModePanel instead of the text search UI. */
-  voiceMode?: boolean;
-  /** Voice state passed through to VoiceModePanel. Defaults to 'listening'. */
-  voiceState?: VoiceState;
-  /** Called when VoiceModePanel requests close (end-phrase / X / silence). */
-  onVoiceClose?: () => void;
-  /** Strict Mode (CONV-02, D-04): threaded through to VoiceModePanel. Defaults false. */
-  strictMode?: boolean;
-  /** Called on a spoken strict-mode command (183-03) or the manual top-bar toggle (183-04). */
-  onStrictModeChange?: (v: boolean) => void;
 }
 
-export function CommandPalette({
-  open,
-  onOpenChange,
-  voiceMode = false,
-  voiceState,
-  onVoiceClose,
-  strictMode,
-  onStrictModeChange,
-}: CommandPaletteProps) {
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { sendCommand } = useAstridrWS();
   const { agents, sessions, alerts, cronJobs } = useCommandPaletteSearch();
@@ -68,18 +50,6 @@ export function CommandPalette({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      {voiceMode ? (
-        <VoiceModePanel
-          voiceState={voiceState ?? "listening"}
-          onClose={() => {
-            onVoiceClose?.();
-            onOpenChange(false);
-          }}
-          strictMode={strictMode}
-          onStrictModeChange={onStrictModeChange}
-        />
-      ) : (
-      <>
       <CommandInput placeholder="Search pages, agents, sessions, commands..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
@@ -231,8 +201,6 @@ export function CommandPalette({
           )}
         </CommandGroup>
       </CommandList>
-      </>
-      )}
     </CommandDialog>
   );
 }

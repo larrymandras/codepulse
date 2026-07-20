@@ -141,7 +141,11 @@ describe("Chat — approval payload + ack handling (F6)", () => {
         decision: "approve",
       })
     );
-    const call = mockSendCommand.mock.calls[0][0];
+    // The page also sends config.get (strict-mode hydration) on mount — assert
+    // on the approval call specifically, not calls[0].
+    const call = mockSendCommand.mock.calls.find(
+      (c) => (c[0] as { type?: string })?.type === "approval.respond"
+    )![0];
     expect(call).not.toHaveProperty("requestId");
     expect(call).not.toHaveProperty("approved");
   });
@@ -162,15 +166,23 @@ describe("Chat — approval payload + ack handling (F6)", () => {
         decision: "reject",
       })
     );
-    const call = mockSendCommand.mock.calls[0][0];
+    const call = mockSendCommand.mock.calls.find(
+      (c) => (c[0] as { type?: string })?.type === "approval.respond"
+    )![0];
     expect(call).not.toHaveProperty("requestId");
     expect(call).not.toHaveProperty("approved");
   });
 
   test("shows toast.error, no success toast, and keeps the block pending when sendCommand rejects (real contract)", async () => {
     // The REAL context rejects on error acks/timeouts/queue-full — it never
-    // resolves { status: "error" }.
-    mockSendCommand.mockRejectedValueOnce(new Error("bad"));
+    // resolves { status: "error" }. Reject the APPROVAL send specifically:
+    // the page also sends config.get on mount, which must not eat a
+    // rejected-once. Mount-time calls resolve ok.
+    mockSendCommand.mockImplementation((cmd: { type?: string }) =>
+      cmd?.type === "approval.respond"
+        ? Promise.reject(new Error("bad"))
+        : Promise.resolve({ status: "ok" })
+    );
     renderChat();
     injectApprovalBlock("req-3");
 
