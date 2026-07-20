@@ -233,6 +233,33 @@ describe("Reminders — calendar overlay (CAL-02)", () => {
     expect(eventChips.length + hidden).toBe(EVENT_COUNT);
   });
 
+  test("on an overloaded day the reminder is never the thing that gets hidden", () => {
+    // Reminders are the only actionable item on this page; Google events are
+    // read-only context. Events used to claim chip slots first, so a day with
+    // enough meetings buried the reminder inside "+N more".
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return Array.from({ length: 8 }, (_, i) =>
+          makeEvent({ _id: `evt-${i}`, title: `Meeting ${i}`, start: NOW + DAY })
+        );
+      }
+      return [makeReminder({ _id: "rem-buried", title: "Pay the tax bill", dueAt: NOW + DAY })];
+    });
+
+    const { container } = render(<Reminders />);
+
+    const reminderChips = Array.from(
+      container.querySelectorAll('[data-testid="calendar-reminder-chip"]')
+    );
+    expect(reminderChips.some((el) => el.textContent === "Pay the tax bill")).toBe(true);
+
+    // And it must not be visually buried below the events either.
+    const cell = container.querySelector('[data-testid="calendar-reminder-chip"]')?.parentElement;
+    const firstChip = cell?.querySelector("[data-testid]");
+    expect(firstChip?.getAttribute("data-testid")).toBe("calendar-reminder-chip");
+  });
+
   test("a due-dated reminder renders a distinct chip on its day, and a Google event renders as a distinct outline event", () => {
     mockUseQuery.mockImplementation((ref: { toString(): string }) => {
       const path = ref.toString();

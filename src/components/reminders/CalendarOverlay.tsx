@@ -64,7 +64,7 @@ function startOfDaySeconds(date: Date): number {
 
 // Chips a single day cell shows before collapsing to "+N more". Week cells are
 // far taller than month cells, so they carry more.
-const MAX_CHIPS_MONTH = 4;
+const MAX_CHIPS_MONTH = 5;
 const MAX_CHIPS_WEEK = 10;
 
 const PRIORITY_VAR: Record<string, string> = {
@@ -198,11 +198,16 @@ export function CalendarOverlay({
           // count from what was actually rendered. The previous code sliced each
           // list to 2 but gated "+N more" on a combined `> 4`, so e.g. 3 events
           // and 0 reminders silently dropped the third with no indicator.
+          //
+          // REMINDERS CLAIM SLOTS FIRST. They are the actionable items and the
+          // only thing this page can act on; Google events are read-only context
+          // Larry already sees in Google. Filling the budget with events first
+          // meant a busy day hid the reminder behind meetings.
           const chipBudget = mode === "week" ? MAX_CHIPS_WEEK : MAX_CHIPS_MONTH;
-          const shownEvents = dayEvents.slice(0, chipBudget);
-          const shownReminders = dayReminders.slice(
+          const shownReminders = dayReminders.slice(0, chipBudget);
+          const shownEvents = dayEvents.slice(
             0,
-            Math.max(0, chipBudget - shownEvents.length)
+            Math.max(0, chipBudget - shownReminders.length)
           );
           const hiddenCount =
             dayEvents.length + dayReminders.length - shownEvents.length - shownReminders.length;
@@ -230,16 +235,6 @@ export function CalendarOverlay({
                 {format(day, "d")}
               </span>
               <div className="flex flex-col gap-0.5 w-full min-h-0 overflow-hidden">
-                {shownEvents.map((ev) => (
-                  <span
-                    key={ev._id}
-                    data-testid="calendar-event-chip"
-                    title={ev.title}
-                    className="text-[11px] leading-tight rounded border border-muted-foreground/50 text-muted-foreground px-1 truncate"
-                  >
-                    {ev.title}
-                  </span>
-                ))}
                 {shownReminders.map((r) => {
                   const priorityVar = PRIORITY_VAR[r.priority ?? "med"] ?? "--status-warn";
                   return (
@@ -254,6 +249,16 @@ export function CalendarOverlay({
                     </span>
                   );
                 })}
+                {shownEvents.map((ev) => (
+                  <span
+                    key={ev._id}
+                    data-testid="calendar-event-chip"
+                    title={ev.title}
+                    className="text-[11px] leading-tight rounded border border-muted-foreground/50 text-muted-foreground px-1 truncate"
+                  >
+                    {ev.title}
+                  </span>
+                ))}
                 {hiddenCount > 0 && (
                   <span className="text-[11px] text-muted-foreground">+{hiddenCount} more</span>
                 )}
