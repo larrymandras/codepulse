@@ -88,16 +88,24 @@ export async function upsertCalendarBatchHandler(
   const incomingIds = new Set(events.map((e) => e.googleEventId));
 
   for (const ev of events) {
-    const existing = await ctx.db
-      .query("calendarEvents")
-      .withIndex("by_googleEventId", (q: { eq: (field: string, value: any) => any }) =>
-        q.eq("googleEventId", ev.googleEventId)
-      )
-      .first();
+    // Match scoped to THIS push's (profileId, calendarAccount) — Google gives
+    // every attendee's copy of an invite the SAME event id, so an unscoped
+    // by_googleEventId match let each account's 20-minute push steal the one
+    // cached row (re-owning profileId/calendarAccount), ping-ponging a shared
+    // event between profiles. Each (profile, account) pair keeps its own row,
+    // and ownership fields are never patched.
+    const existing = (
+      await ctx.db
+        .query("calendarEvents")
+        .withIndex("by_googleEventId", (q: { eq: (field: string, value: any) => any }) =>
+          q.eq("googleEventId", ev.googleEventId)
+        )
+        .collect()
+    ).find(
+      (r: any) => r.profileId === profileId && r.calendarAccount === calendarAccount
+    );
     if (existing) {
       await ctx.db.patch(existing._id, {
-        profileId,
-        calendarAccount,
         title: ev.title,
         start: ev.start,
         end: ev.end,

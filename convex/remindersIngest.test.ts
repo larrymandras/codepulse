@@ -588,6 +588,76 @@ describe("calendarEvents upsertCalendarBatchHandler (CAL-01, D-10)", () => {
     expect(result.upserted).toBe(2);
   });
 
+  it("a shared googleEventId never steals another profile/account's row (WR-04)", async () => {
+    // Google assigns the SAME event id to each attendee's copy of an invite.
+    // Two of Larry's accounts each cache their own copy; neither push may
+    // re-own (or overwrite) the other's row.
+    const db = makeFakeDb();
+    const personalRowId = await db.insert("calendarEvents", {
+      profileId: "personal",
+      calendarAccount: "mandrasle@gmail.com",
+      googleEventId: "g-shared-invite",
+      title: "Cross-account lunch",
+      start: 100,
+      end: 200,
+      allDay: false,
+      fetchedAt: 1,
+    });
+
+    // The BUSINESS account pushes the same googleEventId.
+    await upsertCalendarBatchHandler(
+      { db },
+      {
+        profileId: "business",
+        calendarAccount: "lmandras@myprotectall.com",
+        events: [
+          {
+            googleEventId: "g-shared-invite",
+            title: "Cross-account lunch",
+            start: 100,
+            end: 200,
+            allDay: false,
+          },
+        ],
+        fetchedAt: 999,
+      }
+    );
+
+    // Each (profile, account) pair holds its own copy of the shared event.
+    const rows = Array.from(db.rows.values());
+    expect(rows).toHaveLength(2);
+
+    // The personal row was NOT stolen or re-owned.
+    const personalRow = db.rows.get(personalRowId);
+    expect(personalRow.profileId).toBe("personal");
+    expect(personalRow.calendarAccount).toBe("mandrasle@gmail.com");
+    expect(personalRow.fetchedAt).toBe(1);
+
+    // A second business push patches the business copy in place (no dupes).
+    await upsertCalendarBatchHandler(
+      { db },
+      {
+        profileId: "business",
+        calendarAccount: "lmandras@myprotectall.com",
+        events: [
+          {
+            googleEventId: "g-shared-invite",
+            title: "Cross-account lunch (moved)",
+            start: 150,
+            end: 250,
+            allDay: false,
+          },
+        ],
+        fetchedAt: 1500,
+      }
+    );
+    const after = Array.from(db.rows.values());
+    expect(after).toHaveLength(2);
+    const businessRow = after.find((r: any) => r.profileId === "business") as any;
+    expect(businessRow.title).toBe("Cross-account lunch (moved)");
+    expect(businessRow.fetchedAt).toBe(1500);
+  });
+
   it("does not prune rows for a different profileId", async () => {
     const db = makeFakeDb();
     await db.insert("calendarEvents", {
