@@ -100,10 +100,35 @@ Reverse direction confirmed too — a `source:"dashboard"` row created on the Co
 
 This also proves live: D-09 server-side origin tagging (the tool cannot spoof `source`), D-07 authed POST reads, and profile scoping (the business probe appeared only under `business`). Both probe rows were removed; all three profiles verified empty afterward.
 
+### ✅ CLOSED 2026-07-20 — CAL-01 live against real Google calendars
+
+**`GOOGLE_CREDS_CONSULTING` was already authorized** — the "operator-only" blocker was stale. The token exists at `/home/astridr/tokens/consulting.json`, carries `https://www.googleapis.com/auth/calendar`, holds a refresh token, and was auto-refreshed the same day. All three accounts return success:
+
+```
+personal    (mandrasle@gmail.com)        list_events -> success, 5 events
+business    (lmandras@myprotectall.com)  list_events -> success, 5 events
+consulting  (lemandras@forgedinai.ai)    list_events -> success, 0 events
+```
+
+Consulting returns **0 because that calendar has no upcoming events**, not because auth fails — an important distinction, since an empty overlay looks identical to a broken one.
+
+The real `calendar_cache.refresh()` was then run once with the real per-account tools and the real `CodePulsePoster`:
+
+```
+calendar_cache.pushed  profile=personal    account=mandrasle@gmail.com        count=3
+calendar_cache.pushed  profile=business    account=lmandras@myprotectall.com  count=73
+calendar_cache.pushed  profile=consulting  account=lemandras@forgedinai.ai    count=0
+refresh_complete  pushed=[personal, business, consulting]  failed=[]
+```
+
+Convex then served exactly those counts back via `calendarEvents:listByProfile` (3 / 73 / 0), proving the full CAL-01 path: Google → normalize → authed `/calendar-ingest` → Convex → dashboard query. Per-profile isolation held (no profile blocked another) and D-02 is intact (only `list_events` is reachable).
+
+### ✅ CLOSED — chip density judged at real volume
+
+With 73 real business events cached, the month grid peaks at **4 chips on the busiest day** (Jul 22 and Jul 29) against a budget of 5 — **zero cells overflow**, so no "+N more" appears at realistic volume and the cap is correctly sized. Rendered clean with zero console errors. Titles truncate with an ellipsis in a month cell (full text is in the `title` attribute on hover), which is inherent to the cell width and acceptable.
+
 ### Still open
-- **Calendar cron against real Google credentials** — `GOOGLE_CREDS_CONSULTING` authorization remains operator-only.
-- **A real Telegram nudge firing exactly once** — no longer env-blocked (the store is shared now); needs a live `reminder:nudge` cron tick with a genuinely due reminder to observe delivery + the `notifiedAt` dedupe.
-- **Chip density at real Google volume** — judged against seeded data (month budget set to 5); worth a second look once real calendars land.
+- **A real Telegram nudge firing exactly once** — no longer env-blocked (the store is shared now); needs a live `reminder:nudge` cron tick with a genuinely due reminder to observe delivery + the `notifiedAt` dedupe. This is the only remaining unverified item in the phase.
 
 Test data seeded for this pass (14 events, 6 reminders) was **removed**; both tables verified empty afterward.
 
