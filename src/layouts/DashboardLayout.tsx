@@ -15,7 +15,6 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
-import { AstridrRail } from "../components/astridr/AstridrRail";
 import { MicToggle } from "../components/MicToggle";
 import { StrictModeToggle } from "../components/voice/StrictModeToggle";
 import { ListeningIndicatorPill } from "../components/ListeningIndicatorPill";
@@ -716,9 +715,6 @@ export default function DashboardLayout() {
           </ErrorBoundary>
         </main>
       </div>
-
-      {/* Always-on Ástríðr presence — docked right across every route */}
-      <AstridrRail />
 
       {/* Onboarding Guide */}
       <OnboardingGuide />
