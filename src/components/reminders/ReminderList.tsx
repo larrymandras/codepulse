@@ -218,9 +218,13 @@ function EditPopover({
 }) {
   const [title, setTitle] = useState(reminder.title);
   const [priority, setPriority] = useState(reminder.priority ?? "med");
+  // Seed with LOCAL wall time: datetime-local strings are parsed as local
+  // time on save (`new Date("YYYY-MM-DDTHH:mm")`), so seeding with
+  // toISOString() (UTC) both displayed the wrong time and shifted dueAt by
+  // the UTC offset on every save — even a title-only edit.
   const [dueAt, setDueAt] = useState(
     reminder.dueAt !== undefined
-      ? new Date(reminder.dueAt * 1000).toISOString().slice(0, 16)
+      ? format(new Date(reminder.dueAt * 1000), "yyyy-MM-dd'T'HH:mm")
       : ""
   );
 
