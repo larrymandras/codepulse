@@ -127,6 +127,21 @@ const recurrenceValidator = v.object({
   until: v.optional(v.float64()),
 });
 
+/**
+ * Rejects malformed recurrence intervals at the handler level, covering the
+ * UI, /reminders-ingest, and Ástríðr tool paths at once. Convex has no
+ * integer validator (interval is v.float64()), and an unbounded interval is
+ * dangerous: interval 0 makes computeNextDueAt return the SAME dueAt, so the
+ * nudge cron's auto-roll spawns an identical open row and re-nudges it every
+ * scan forever; negative intervals walk the series backward.
+ */
+function assertValidRecurrence(recurrence: Recurrence | undefined): void {
+  if (!recurrence) return;
+  if (!Number.isInteger(recurrence.interval) || recurrence.interval < 1) {
+    throw new Error("recurrence.interval must be an integer >= 1");
+  }
+}
+
 /** Minimal ctx.db surface the handlers depend on — implemented for real by
  * Convex's ctx.db, and by an in-memory fake in convex/reminders.test.ts. */
 interface RemindersDb {
@@ -158,6 +173,7 @@ export async function createReminderHandler(
   args: CreateReminderArgs,
   now: number
 ) {
+  assertValidRecurrence(args.recurrence);
   return await ctx.db.insert("reminders", {
     profileId: args.profileId,
     title: args.title,
@@ -203,6 +219,7 @@ export async function updateReminderHandler(
   fields: UpdateReminderArgs,
   now: number
 ) {
+  assertValidRecurrence(fields.recurrence);
   const patch: Record<string, unknown> = { updatedAt: now };
   for (const [key, value] of Object.entries(fields)) {
     if (value !== undefined) patch[key] = value;

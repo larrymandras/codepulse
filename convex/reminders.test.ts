@@ -240,6 +240,54 @@ describe("reminders CRUD handlers", () => {
     expect(row.updatedAt).toBe(2000);
   });
 
+  it("create rejects recurrence.interval 0, negative, and non-integer values (WR-02)", async () => {
+    const db = makeFakeDb();
+    for (const interval of [0, -1, 1.5]) {
+      await expect(
+        createReminderHandler(
+          { db },
+          {
+            profileId: "personal",
+            title: "Bad interval",
+            dueAt: 1000,
+            source: "dashboard",
+            recurrence: { freq: "daily", interval },
+          },
+          500
+        )
+      ).rejects.toThrow(/interval must be an integer >= 1/);
+    }
+    // Nothing was inserted — interval 0 would otherwise spawn an identical
+    // open row on every nudge-cron auto-roll, forever.
+    expect(db.rows.size).toBe(0);
+  });
+
+  it("update rejects an invalid recurrence.interval but accepts a valid one (WR-02)", async () => {
+    const db = makeFakeDb();
+    const id = await createReminderHandler(
+      { db },
+      { profileId: "personal", title: "R", source: "dashboard" },
+      500
+    );
+    await expect(
+      updateReminderHandler(
+        { db },
+        id,
+        { recurrence: { freq: "weekly", interval: 0 } },
+        1000
+      )
+    ).rejects.toThrow(/interval must be an integer >= 1/);
+    expect((await db.get(id)).recurrence).toBeUndefined();
+
+    await updateReminderHandler(
+      { db },
+      id,
+      { recurrence: { freq: "weekly", interval: 2 } },
+      1000
+    );
+    expect((await db.get(id)).recurrence).toEqual({ freq: "weekly", interval: 2 });
+  });
+
   it("completing a one-off reminder sets status done and spawns no row", async () => {
     const db = makeFakeDb();
     const id = await createReminderHandler(
