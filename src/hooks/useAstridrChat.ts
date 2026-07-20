@@ -42,6 +42,11 @@ export function useAstridrChat() {
   // a barge-in fires (D-11: sourced only from her own streamed text).
   const streamingTextRef = useRef("");
 
+  // Interrupt latch: after a barge-in, TTS chunks from the CANCELLED turn can
+  // still arrive (server in flight) — without this they auto-play and she
+  // "keeps talking" right after being stopped. Cleared on the next send.
+  const ttsSuppressedRef = useRef(false);
+
   // ─── Send ────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(
     async (text: string, opts?: { interruptedReply?: string; voice?: boolean }) => {
@@ -84,6 +89,7 @@ export function useAstridrChat() {
           generateId();
         activeSessionRef.current = sessionId;
         streamingTextRef.current = "";
+        ttsSuppressedRef.current = false; // new turn — her voice is welcome again
 
         setMessages((prev) => [
           ...prev,
@@ -230,7 +236,14 @@ export function useAstridrChat() {
         )
       );
       setTtsEnabled((current) => {
-        if (current) playAudio(data.audio_url!);
+        // Post-interrupt suppression: a barged-in turn's late TTS must never
+        // play ("she would not stop"). The bubble still gets its replay URL.
+        if (current && !ttsSuppressedRef.current) {
+          playAudio(data.audio_url!);
+        } else if (current) {
+          // eslint-disable-next-line no-console
+          console.log("[voice] tts.suppressed — late chunk from an interrupted turn");
+        }
         return current;
       });
     });
@@ -277,6 +290,7 @@ export function useAstridrChat() {
   // nothing is streaming — returns "".
   const interrupt = useCallback((): string => {
     stopAudio();
+    ttsSuppressedRef.current = true; // late chunks from this turn stay silent
     const partial = streamingTextRef.current;
     const session = activeSessionRef.current;
     if (session) {
