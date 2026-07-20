@@ -291,6 +291,33 @@ describe("reminders CRUD handlers", () => {
     expect(spawned.source).toBe("dashboard");
   });
 
+  it("complete is idempotent: a second complete on a done recurring reminder spawns no duplicate (WR-01)", async () => {
+    const db = makeFakeDb();
+    const dueAt = day(2026, 3, 10);
+    const id = await createReminderHandler(
+      { db },
+      {
+        profileId: "personal",
+        title: "Raced",
+        dueAt,
+        source: "dashboard",
+        recurrence: { freq: "daily", interval: 1 },
+      },
+      500
+    );
+
+    // The nudge cron auto-rolls (op:complete) racing Larry's dashboard click.
+    await completeReminderHandler({ db }, id, 1500);
+    await completeReminderHandler({ db }, id, 1600);
+
+    // Exactly ONE next occurrence spawned, and the second call didn't
+    // re-patch the done row's timestamps.
+    expect(db.rows.size).toBe(2);
+    const original = await db.get(id);
+    expect(original.completedAt).toBe(1500);
+    expect(original.updatedAt).toBe(1500);
+  });
+
   it("completing a recurring reminder past `until` spawns no row (bounded termination)", async () => {
     const db = makeFakeDb();
     const dueAt = day(2026, 3, 10);

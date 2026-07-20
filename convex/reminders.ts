@@ -237,7 +237,11 @@ export async function completeReminderHandler(
   now: number
 ) {
   const existing = await ctx.db.get(id);
-  if (!existing) return;
+  // Idempotency guard: a second complete on an already-done row must be a
+  // no-op. Without it, the nudge cron's auto-roll racing a dashboard click
+  // re-patched the row AND spawned a duplicate next occurrence (Convex
+  // serializes the mutations, but both would pass the null check).
+  if (!existing || existing.status === "done") return;
 
   await ctx.db.patch(id, {
     status: "done",
