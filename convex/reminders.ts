@@ -80,6 +80,17 @@ function nextBydayOccurrence(date: Date, byday: string[]): Date {
   return fallback;
 }
 
+/** Epoch ms of the UTC week start (Sunday, matching ICAL_DAY_CODES[0]) for
+ * the calendar date of `date` — used to detect week rollover in the
+ * weekly+byday interval math. */
+function startOfUtcWeekMs(date: Date): number {
+  const d = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+  d.setUTCDate(d.getUTCDate() - d.getUTCDay());
+  return d.getTime();
+}
+
 /**
  * Advances `dueAt` (epoch seconds) by one occurrence of `recurrence`.
  * Deterministic — operates only on the passed dueAt, never the wall clock.
@@ -99,14 +110,19 @@ export function computeNextDueAt(
     next = new Date(date);
     next.setUTCDate(next.getUTCDate() + interval);
   } else if (freq === "weekly") {
-    next =
-      byday && byday.length > 0
-        ? nextBydayOccurrence(date, byday)
-        : (() => {
-            const d = new Date(date);
-            d.setUTCDate(d.getUTCDate() + 7 * interval);
-            return d;
-          })();
+    if (byday && byday.length > 0) {
+      next = nextBydayOccurrence(date, byday);
+      // Honor `interval` with byday (rrule-style): matches WITHIN the same
+      // week continue normally (e.g. MO->WE of an "on" week), but once the
+      // match rolls into a new week the series jumps (interval - 1) extra
+      // weeks — "every 2 weeks on Monday" recurs 14 days later, not 7.
+      if (interval > 1 && startOfUtcWeekMs(next) !== startOfUtcWeekMs(date)) {
+        next.setUTCDate(next.getUTCDate() + (interval - 1) * 7);
+      }
+    } else {
+      next = new Date(date);
+      next.setUTCDate(next.getUTCDate() + 7 * interval);
+    }
   } else {
     next = addMonthsClamped(date, interval);
   }

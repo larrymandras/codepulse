@@ -68,6 +68,29 @@ describe("computeNextDueAt", () => {
     expect(next).toBe(day(2026, 3, 11));
   });
 
+  it("honors a multi-week interval with byday: every 2 weeks on Monday recurs 14 days later (WR-03)", () => {
+    const due = day(2026, 3, 9); // Monday
+    expect(
+      computeNextDueAt(due, { freq: "weekly", interval: 2, byday: ["MO"] })
+    ).toBe(day(2026, 3, 23)); // NOT 2026-03-16 — that would be weekly
+  });
+
+  it("multi-week interval with byday still hits later weekdays of the SAME week without a jump (WR-03)", () => {
+    const due = day(2026, 3, 9); // Monday of an "on" week
+    // Wednesday of the same week is still part of this occurrence's week.
+    expect(
+      computeNextDueAt(due, { freq: "weekly", interval: 2, byday: ["MO", "WE"] })
+    ).toBe(day(2026, 3, 11));
+    // ...and rolling FROM that Wednesday wraps to Monday two weeks out.
+    expect(
+      computeNextDueAt(day(2026, 3, 11), {
+        freq: "weekly",
+        interval: 2,
+        byday: ["MO", "WE"],
+      })
+    ).toBe(day(2026, 3, 23));
+  });
+
   it("advances monthly by interval months", () => {
     const due = day(2026, 1, 15);
     expect(computeNextDueAt(due, { freq: "monthly", interval: 1 })).toBe(
