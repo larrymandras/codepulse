@@ -29,15 +29,14 @@ import type { VoiceState } from "@/components/voice/voiceState";
 
 const LS_LISTENING = "codepulse-astridr-listening";
 const LS_STRICT = "codepulse-strict-mode";
-const FOLLOW_UP_WINDOW_MS = 14_000; // CONV-02 (UI-SPEC pinned)
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   Boolean(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 
-// ─── Follow-up countdown bar (CONV-02) — ported from VoiceModePanel ──────────
+// ─── Follow-up countdown bar (CONV-02) — duration is stay-hot aware ──────────
 
-function FollowUpCountdownBar({ active }: { active: boolean }) {
+function FollowUpCountdownBar({ active, durationMs }: { active: boolean; durationMs: number }) {
   const [collapsed, setCollapsed] = useState(false);
   const reducedMotion = prefersReducedMotion();
 
@@ -64,7 +63,7 @@ function FollowUpCountdownBar({ active }: { active: boolean }) {
               : {
                   width: collapsed ? "0%" : "100%",
                   transitionProperty: "width",
-                  transitionDuration: `${FOLLOW_UP_WINDOW_MS}ms`,
+                  transitionDuration: `${durationMs}ms`,
                   transitionTimingFunction: "linear",
                 }
           }
@@ -362,9 +361,9 @@ export default function Chat() {
           </div>
         )}
 
-        {/* Follow-up window countdown (CONV-02) */}
+        {/* Follow-up window countdown (CONV-02, stay-hot aware) */}
         <div className="w-full mt-2 px-4">
-          <FollowUpCountdownBar active={voice.followUpOpen} />
+          <FollowUpCountdownBar active={voice.followUpOpen} durationMs={voice.followUpMs} />
         </div>
 
         {/* Wake engine failure — recovery is toggle off → on */}

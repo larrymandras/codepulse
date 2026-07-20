@@ -51,15 +51,18 @@ const mockRecognitionStop = vi.fn();
 const mockRecognitionAbort = vi.fn();
 let onFinalResultCallback: ((text: string, confidence?: number) => void) | null = null;
 let onInterimResultCallback: ((text: string) => void) | null = null;
+let onRecognitionEndCallback: (() => void) | null = null;
 
 vi.mock("@/hooks/useSpeechRecognition", () => ({
   useSpeechRecognition: vi.fn(
     (options: {
       onFinalResult: (text: string, confidence?: number) => void;
       onInterimResult?: (text: string) => void;
+      onEnd?: () => void;
     }) => {
       onFinalResultCallback = options.onFinalResult;
       onInterimResultCallback = options.onInterimResult ?? null;
+      onRecognitionEndCallback = options.onEnd ?? null;
       return {
         start: mockRecognitionStart,
         stop: mockRecognitionStop,
@@ -88,6 +91,7 @@ function makeChat(overrides: Partial<AstridrChat> = {}): AstridrChat {
     handleApprove: vi.fn(),
     handleReject: vi.fn(),
     activeSessionRef: { current: null },
+    streamingReplyRef: { current: "" },
     ...overrides,
   } as unknown as AstridrChat;
 }
@@ -134,6 +138,7 @@ describe("useAstridrVoice", () => {
     onWakeCallback = null;
     onFinalResultCallback = null;
     onInterimResultCallback = null;
+    onRecognitionEndCallback = null;
   });
 
   afterEach(() => {
@@ -218,6 +223,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith("what's the weather like tomorrow", {
       interruptedReply: undefined,
+      voice: true,
     });
   });
 
@@ -241,7 +247,7 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).toHaveBeenCalledTimes(1);
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "remind me to call the vet tomorrow at nine am",
-      { interruptedReply: undefined }
+      { interruptedReply: undefined, voice: true }
     );
   });
 
@@ -278,6 +284,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith("continue", {
       interruptedReply: "partial reply so far",
+      voice: true,
     });
   });
 
@@ -358,7 +365,7 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("yes", { interruptedReply: undefined });
+    expect(chat.sendMessage).toHaveBeenCalledWith("yes", { interruptedReply: undefined, voice: true });
   });
 
   it("follow-up window expiry re-arms the wake word", () => {
@@ -393,6 +400,177 @@ describe("useAstridrVoice", () => {
     });
     expect(result.current.followUpOpen).toBe(false);
     expect(result.current.voiceState).toBe("idle");
+  });
+
+  // ─── 12+. Trace-driven fixes (2026-07-20 live repro) ──────────────────────
+
+  it("recognizer keep-alive: unexpected end mid-conversation restarts recognition", () => {
+    renderVoice(makeChat());
+    wake();
+    mockRecognitionStart.mockClear();
+
+    act(() => {
+      onRecognitionEndCallback?.(); // Chrome gave up (the live-trace bug)
+      vi.advanceTimersByTime(400);
+    });
+    expect(mockRecognitionStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("keep-alive does NOT restart after an intentional end ('goodbye')", () => {
+    renderVoice(makeChat());
+    wake();
+    act(() => {
+      onFinalResultCallback?.("goodbye");
+    });
+    mockRecognitionStart.mockClear();
+    act(() => {
+      onRecognitionEndCallback?.(); // the end our own stop() produced
+      vi.advanceTimersByTime(1000);
+    });
+    expect(mockRecognitionStart).not.toHaveBeenCalled();
+  });
+
+  it("keep-alive storm guard: restarts are capped inside the window", () => {
+    renderVoice(makeChat());
+    wake();
+    mockRecognitionStart.mockClear();
+    act(() => {
+      for (let i = 0; i < 6; i++) {
+        onRecognitionEndCallback?.();
+        vi.advanceTimersByTime(400);
+      }
+    });
+    expect(mockRecognitionStart.mock.calls.length).toBeLessThanOrEqual(3);
+  });
+
+  it("silence clock pauses during her turn: no teardown while processing/speaking a long reply", async () => {
+    let chat = makeChat();
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    act(() => {
+      onFinalResultCallback?.("what's the weather like the next two days");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2000); // flushSend — her turn begins
+    });
+    // 40s of processing + speaking (the live trace showed teardown at 30s)
+    await act(async () => {
+      vi.advanceTimersByTime(15_000);
+    });
+    chat = setTtsPlaying(rerender, chat, true);
+    await act(async () => {
+      vi.advanceTimersByTime(25_000);
+    });
+    expect(result.current.conversationActive).toBe(true);
+    expect(result.current.voiceState).toBe("speaking");
+  });
+
+  it("talk-over with content: non-echo speech during speaking interrupts AND becomes the message", async () => {
+    let chat = makeChat({
+      interrupt: vi.fn(() => "the weather tomorrow is"),
+      streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees with strong winds" },
+    } as Partial<AstridrChat>);
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    expect(result.current.voiceState).toBe("speaking");
+
+    act(() => {
+      onFinalResultCallback?.("actually just give me Tuesday please");
+    });
+    expect(chat.interrupt).toHaveBeenCalled(); // interrupted her
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("actually just give me Tuesday please", {
+      interruptedReply: "the weather tomorrow is",
+      voice: true,
+    });
+  });
+
+  it("echo guard still drops her own reply text during speaking", async () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees" },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+
+    act(() => {
+      onFinalResultCallback?.("rain showers near ninety degrees");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(chat.interrupt).not.toHaveBeenCalled();
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("adaptive send: a warm short answer flushes at ~800ms, not 2s", async () => {
+    let chat = makeChat();
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false); // warm now, follow-up open
+
+    act(() => {
+      onFinalResultCallback?.("no");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("no", { interruptedReply: undefined, voice: true });
+  });
+
+  it("stay-hot: her reply ending in a question opens a 30s window instead of 14s", () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "High of ninety tomorrow. Anything else you need?" },
+    } as Partial<AstridrChat>);
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+
+    expect(result.current.followUpOpen).toBe(true);
+    expect(result.current.followUpMs).toBe(30_000);
+    act(() => {
+      vi.advanceTimersByTime(14_500); // would have expired under the old window
+    });
+    expect(result.current.followUpOpen).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(16_000);
+    });
+    expect(result.current.followUpOpen).toBe(false);
+    expect(result.current.voiceState).toBe("idle");
+  });
+
+  it("silent-turn watchdog: a turn that ends with no audio returns to listening", async () => {
+    let chat = makeChat();
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.("what is on my calendar"); // real speech: interim first
+      onFinalResultCallback?.("what is on my calendar for today");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2000); // flushSend → processing
+    });
+    expect(result.current.voiceState).toBe("processing");
+
+    // Turn streams and completes with NO TTS
+    chat = makeChat({ ...(chat as unknown as Record<string, unknown>), isStreaming: true } as Partial<AstridrChat>);
+    act(() => {
+      rerender({ chat, enabled: true });
+    });
+    chat = makeChat({ ...(chat as unknown as Record<string, unknown>), isStreaming: false } as Partial<AstridrChat>);
+    act(() => {
+      rerender({ chat, enabled: true });
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3500);
+    });
+    expect(result.current.voiceState).toBe("listening");
+    expect(result.current.followUpOpen).toBe(true);
   });
 
   // ─── 11. Spoken strict-mode command ────────────────────────────────────────

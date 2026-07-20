@@ -209,6 +209,10 @@ export function voiceReducer(state: VoiceState, action: VoiceAction): VoiceState
       // "stop" while she's THINKING cancels the in-flight turn (now that
       // "stop" never ends the conversation) — back to hearing you.
       if (action.type === "BARGE_IN") return "transcribing";
+      // A turn can complete with NO audio (error, empty reply, TTS disabled
+      // upstream) — treat it as turn-end so the conversation returns to
+      // listening instead of sitting in processing forever.
+      if (action.type === "TTS_END") return action.strictMode ? "idle" : "listening";
       return state;
 
     case "speaking":

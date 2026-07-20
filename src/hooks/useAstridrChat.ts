@@ -44,7 +44,7 @@ export function useAstridrChat() {
 
   // ─── Send ────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (text: string, opts?: { interruptedReply?: string }) => {
+    async (text: string, opts?: { interruptedReply?: string; voice?: boolean }) => {
       if (!text.trim() || isStreamingRef.current || status !== "connected") return;
 
       setMessages((prev) => [
@@ -54,11 +54,14 @@ export function useAstridrChat() {
 
       try {
         // D-12: thread the barged-in partial reply (if any) into this turn so
-        // "continue" resumes the interrupted reply server-side.
+        // "continue" resumes the interrupted reply server-side. voice:true
+        // marks a SPOKEN turn — the backend answers in short conversational
+        // speech instead of full-detail text.
         const ack = await sendCommand({
           type: "chat.send",
           message: text,
           ...(opts?.interruptedReply ? { interrupted_reply: opts.interruptedReply } : {}),
+          ...(opts?.voice ? { voice: true } : {}),
         });
 
         if (ack.status !== "ok") {
@@ -313,6 +316,9 @@ export function useAstridrChat() {
     handleReject,
     /** Expose the active session so the voice layer can target barge-in. */
     activeSessionRef,
+    /** Her current/last reply text — the voice layer fingerprints recognized
+     *  speech against this to tell mic echo from a real user interjection. */
+    streamingReplyRef: streamingTextRef,
   };
 }
 

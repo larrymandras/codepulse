@@ -55,6 +55,8 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const visibilityHandlerRef = useRef<(() => void) | null>(null);
+  // Synchronous re-entry guard for start() — see the comment inside start().
+  const startingRef = useRef(false);
 
   /** Stop all active resources and release the mic. Does NOT set status — caller does that. */
   const releaseResources = useCallback((): void => {
@@ -95,8 +97,14 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
   }, [releaseResources]);
 
   const start = useCallback(async (): Promise<void> => {
-    // Guard against double-start
+    // Guard against double-start. The status check alone is NOT enough: two
+    // start() calls in the same tick (e.g. StrictMode re-running the gating
+    // effect) both read the stale 'idle' status and spin up TWO workers + TWO
+    // mic streams — the first pair is orphaned with a hot mic and fires
+    // duplicate wake events. The ref guard is synchronous.
+    if (startingRef.current) return;
     if (status === 'loading' || status === 'ready') return;
+    startingRef.current = true;
 
     setStatus('loading');
     setErrorReason(null);
@@ -251,6 +259,8 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       releaseResources();
       setStatus('error-disabled');
       setErrorReason(message);
+    } finally {
+      startingRef.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [baseUrl, releaseResources, status]);
