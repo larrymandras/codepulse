@@ -16,7 +16,11 @@ import { PageHeader } from "@/components/PageHeader";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { QuickAdd, type NewReminderInput } from "@/components/reminders/QuickAdd";
 import { ReminderList, type ReminderDoc } from "@/components/reminders/ReminderList";
-import { CalendarOverlay, type CalendarEventDoc } from "@/components/reminders/CalendarOverlay";
+import {
+  CalendarOverlay,
+  calendarEventDayKey,
+  type CalendarEventDoc,
+} from "@/components/reminders/CalendarOverlay";
 
 export type ProfileId = "personal" | "business" | "consulting";
 
@@ -114,12 +118,11 @@ export default function Reminders() {
   // select into a blank pane; these give the click something to show.
   const selectedDayEvents = useMemo(() => {
     if (selectedDay === null) return [];
+    // calendarEventDayKey (shared with CalendarOverlay) keys all-day events
+    // by their UTC calendar date — they're cached as UTC midnight, so keying
+    // by local midnight put them on the previous local day (WR-05).
     return events
-      .filter((e) => {
-        const d = new Date(e.start * 1000);
-        d.setHours(0, 0, 0, 0);
-        return Math.floor(d.getTime() / 1000) === selectedDay;
-      })
+      .filter((e) => calendarEventDayKey(e) === selectedDay)
       .sort((a, b) => a.start - b.start);
   }, [events, selectedDay]);
 

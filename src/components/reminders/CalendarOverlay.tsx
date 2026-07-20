@@ -62,6 +62,23 @@ function startOfDaySeconds(date: Date): number {
   return Math.floor(d.getTime() / 1000);
 }
 
+/** Day-cell key (local-midnight epoch seconds) for a cached Google event.
+ * Timed events bucket by the LOCAL day of their start. All-day events are
+ * cached as UTC midnight of their calendar date (calendar_cache.py), so
+ * bucketing them by local midnight shifted every birthday/holiday/PTO one
+ * day EARLY in any negative-UTC-offset timezone — key them by their UTC
+ * calendar date instead, rendered as the matching local day. Shared with
+ * Reminders.tsx's selected-day filter so both sides agree on the day. */
+export function calendarEventDayKey(ev: { start: number; allDay: boolean }): number {
+  const d = new Date(ev.start * 1000);
+  if (ev.allDay) {
+    return Math.floor(
+      new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()).getTime() / 1000
+    );
+  }
+  return startOfDaySeconds(d);
+}
+
 // Chips a single day cell shows before collapsing to "+N more". Week cells are
 // far taller than month cells, so they carry more.
 const MAX_CHIPS_MONTH = 5;
@@ -97,7 +114,7 @@ export function CalendarOverlay({
   const eventsByDay = useMemo(() => {
     const map = new Map<number, CalendarEventDoc[]>();
     for (const ev of events) {
-      const key = startOfDaySeconds(new Date(ev.start * 1000));
+      const key = calendarEventDayKey(ev);
       const list = map.get(key) ?? [];
       list.push(ev);
       map.set(key, list);

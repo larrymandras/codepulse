@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import { format } from "date-fns";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
@@ -312,6 +313,50 @@ describe("Reminders — calendar overlay (CAL-02)", () => {
     const eventChip = Array.from(eventChips).find((el) => el.textContent === "Board sync");
     expect((reminderChip as HTMLElement).style.backgroundColor).not.toBe("");
     expect((eventChip as HTMLElement).style.backgroundColor).toBe("");
+  });
+
+  test("an all-day event lands on its own calendar date, not the previous local day (WR-05)", async () => {
+    // All-day events are cached as UTC midnight of their calendar date
+    // (calendar_cache.py). Local-midnight bucketing put them one day EARLY in
+    // any negative-UTC-offset timezone (July 21 00:00 UTC = July 20 evening
+    // US Central) — they must bucket by their UTC calendar date instead.
+    const today = new Date();
+    const allDayStart =
+      Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) / 1000;
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return [
+          makeEvent({
+            _id: "evt-allday",
+            title: "Company Holiday",
+            start: allDayStart,
+            end: allDayStart + DAY,
+            allDay: true,
+          }),
+        ];
+      }
+      return [];
+    });
+
+    render(<Reminders />);
+
+    // The chip must sit in TODAY's cell (its calendar date), never yesterday's.
+    const cell = screen.getByRole("button", {
+      name: format(
+        new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+        "PPPP"
+      ),
+    });
+    const chip = within(cell).getByTestId("calendar-event-chip");
+    expect(chip.textContent).toBe("Company Holiday");
+
+    // And clicking its real day must show it in the left pane, marked All day.
+    fireEvent.click(cell);
+    const dayEvents = await screen.findAllByTestId("day-calendar-event");
+    expect(dayEvents).toHaveLength(1);
+    expect(dayEvents[0].textContent).toContain("Company Holiday");
+    expect(dayEvents[0].textContent).toContain("All day");
   });
 
   test("no Google-write handler or calendarEvents mutation import exists in CalendarOverlay (D-02)", async () => {
