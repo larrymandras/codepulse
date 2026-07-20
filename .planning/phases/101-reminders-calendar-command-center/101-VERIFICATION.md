@@ -72,11 +72,37 @@ CODEPULSE_CONVEX_URL=https://tidy-whale-981.convex.site
 
 Without it the fallback preserves today's broken target and reminders will 404. This is the single remaining gate on the cross-repo round trip.
 
-### Still open
+### ✅ CLOSED 2026-07-20 — live bidirectional round-trip PASSED
 
-- **Live bidirectional round-trip** — gated on the env var above.
+Success criterion #1 ("one Convex store, both write directions, origin-tagged") is now **LIVE-VERIFIED**, not just code-verified.
+
+The blocker above resolved differently than expected: CodePulse was repointed off the cloud deployment onto the **local self-hosted backend** (which Ástríðr already used), so both sides share one store and `CODEPULSE_CONVEX_URL` is correctly **unset** — the fallback to `CONVEX_URL` is the right default again.
+
+Exercised through Ástríðr's real `RemindersTool` inside the running container (real `CONVEX_URL`, real ingest key), not a simulation:
+
+```
+CONVEX_URL           = http://convex-backend:3211
+CODEPULSE_CONVEX_URL = <unset>
+
+ADD    -> success, "Added reminder ... for personal"
+LIST   -> success, found it, source= astridr, status= open
+COMPLETE -> success
+```
+
+CodePulse then read the **same `_id`** back through `reminders:listByProfile`:
+
+```
+_id: kx7stx8jr6n305tgkwyrwn0q858awa57
+source: "astridr"   status: "done"   profileId: "personal"
+```
+
+Reverse direction confirmed too — a `source:"dashboard"` row created on the CodePulse side was visible to Ástríðr's `list` over the authed `/reminders-read` endpoint (`astridr sees the dashboard-created reminder: True`).
+
+This also proves live: D-09 server-side origin tagging (the tool cannot spoof `source`), D-07 authed POST reads, and profile scoping (the business probe appeared only under `business`). Both probe rows were removed; all three profiles verified empty afterward.
+
+### Still open
 - **Calendar cron against real Google credentials** — `GOOGLE_CREDS_CONSULTING` authorization remains operator-only.
-- **A real Telegram nudge firing exactly once** — gated on the env var and a live cron tick.
+- **A real Telegram nudge firing exactly once** — no longer env-blocked (the store is shared now); needs a live `reminder:nudge` cron tick with a genuinely due reminder to observe delivery + the `notifiedAt` dedupe.
 - **Chip density at real Google volume** — judged against seeded data (month budget set to 5); worth a second look once real calendars land.
 
 Test data seeded for this pass (14 events, 6 reminders) was **removed**; both tables verified empty afterward.
