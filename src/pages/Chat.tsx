@@ -268,19 +268,41 @@ export default function Chat() {
 
         const last = updateApplied[updateApplied.length - 1];
         if (last && last.role === "assistant" && last.streaming && last.sessionId === payload.session_id) {
-          // Append every block to the existing assistant message
+          // Append, deduping blocks already present in THIS message. The backend
+          // duplicates blocks two ways: send+send_live both hit the WS, and on
+          // tool turns the tool-round TextBlock and the final TextBlock carry the
+          // same text (claude-cli brain). Both surface as identical blocks in the
+          // same assistant turn — collapse them. (Cross-turn repeats live in a
+          // separate message, so they're preserved.) TODO(backend): emit once.
+          const existing = last.blocks ?? [];
+          const seen = new Set(existing.map((bl) => JSON.stringify(bl)));
+          const fresh = appends.filter((bl) => {
+            const s = JSON.stringify(bl);
+            if (seen.has(s)) return false;
+            seen.add(s);
+            return true;
+          });
+          if (fresh.length === 0) return updateApplied;
           return [
             ...updateApplied.slice(0, -1),
-            { ...last, blocks: [...(last.blocks ?? []), ...appends] },
+            { ...last, blocks: [...existing, ...fresh] },
           ];
         } else {
-          // Seed a new assistant message with the block array
+          // Seed a new assistant message — dedup identical blocks within the
+          // seeding payload (same doubled-delivery reasoning as above).
+          const seen = new Set<string>();
+          const fresh = appends.filter((bl) => {
+            const s = JSON.stringify(bl);
+            if (seen.has(s)) return false;
+            seen.add(s);
+            return true;
+          });
           return [
             ...updateApplied,
             {
               id: generateId(),
               role: "assistant" as const,
-              blocks: [...appends],
+              blocks: fresh,
               streaming: true,
               timestamp: Date.now(),
               sessionId: payload.session_id,
