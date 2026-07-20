@@ -535,7 +535,9 @@ export function ReminderList({
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto gap-4 pr-1">
+    // Same panel chrome as CalendarOverlay so the two columns read as one
+    // composed surface rather than a card sitting next to bare text.
+    <div className="glow-card flex flex-col h-full overflow-y-auto gap-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-3">
       {selectedDay !== null && (
         <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-1.5 text-sm">
           <span className="text-muted-foreground">Filtered to selected day</span>
