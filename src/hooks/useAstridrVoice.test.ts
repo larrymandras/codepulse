@@ -358,15 +358,47 @@ describe("useAstridrVoice", () => {
 
   // ─── 8. End-phrase re-arms ─────────────────────────────────────────────────
 
-  it("'goodbye' ends the conversation and re-arms (recognition stopped)", () => {
-    const { result } = renderVoice(makeChat());
+  it("'goodbye' closes GRACEFULLY: sent to her, re-arms only after her reply ends", async () => {
+    let chat = makeChat();
+    const { result, rerender } = renderVoice(chat);
     wake();
     act(() => {
+      onInterimResultCallback?.("goodbye");
       onFinalResultCallback?.("Goodbye.");
     });
+    await act(async () => {
+      vi.advanceTimersByTime(50); // graceful close sends immediately, no debounce
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("Goodbye.", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+    // Conversation stays live so her warm close can play…
+    expect(result.current.voiceState).not.toBe("idle");
+
+    // …and re-arms once her goodbye TTS finishes.
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
     expect(result.current.voiceState).toBe("idle");
     expect(mockRecognitionStop).toHaveBeenCalled();
     expect(result.current.conversationActive).toBe(false);
+  });
+
+  it("'thanks' is never silently discarded — it sends and she gets to answer", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.("thanks");
+      onFinalResultCallback?.("Thanks.");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("Thanks.", {
+      interruptedReply: undefined,
+      voice: true,
+    });
   });
 
   it("'stop' alone does NOT end an idle-listening conversation", () => {
@@ -411,15 +443,20 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).toHaveBeenCalledWith("yes", { interruptedReply: undefined, voice: true });
   });
 
-  it("follow-up window expiry re-arms the wake word", () => {
+  it("follow-up window is the FULL 30s (no more 14s undercut) and expiry re-arms", () => {
     let chat = makeChat();
     const { result, rerender } = renderVoice(chat);
     wake();
     chat = setTtsPlaying(rerender, chat, true);
     chat = setTtsPlaying(rerender, chat, false);
     expect(result.current.followUpOpen).toBe(true);
+    expect(result.current.followUpMs).toBe(30_000);
     act(() => {
-      vi.advanceTimersByTime(14_000);
+      vi.advanceTimersByTime(14_500); // the old window would have expired here
+    });
+    expect(result.current.followUpOpen).toBe(true);
+    act(() => {
+      vi.advanceTimersByTime(16_000);
     });
     expect(result.current.followUpOpen).toBe(false);
     expect(result.current.voiceState).toBe("idle");
@@ -459,12 +496,21 @@ describe("useAstridrVoice", () => {
     expect(mockRecognitionStart).toHaveBeenCalledTimes(1);
   });
 
-  it("keep-alive does NOT restart after an intentional end ('goodbye')", () => {
-    renderVoice(makeChat());
+  it("keep-alive does NOT restart after a completed graceful close", async () => {
+    let chat = makeChat();
+    const { rerender } = renderVoice(chat);
     wake();
     act(() => {
+      onInterimResultCallback?.("goodbye");
       onFinalResultCallback?.("goodbye");
     });
+    await act(async () => {
+      vi.advanceTimersByTime(50);
+    });
+    // Her goodbye plays out — conversation re-arms on its end.
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+
     mockRecognitionStart.mockClear();
     act(() => {
       onRecognitionEndCallback?.(); // the end our own stop() produced
@@ -607,7 +653,7 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).toHaveBeenCalledWith("no", { interruptedReply: undefined, voice: true });
   });
 
-  it("stay-hot: her reply ending in a question opens a 30s window instead of 14s", () => {
+  it("stay-hot: her reply ending in a question opens a 45s window instead of 30s", () => {
     let chat = makeChat({
       streamingReplyRef: { current: "High of ninety tomorrow. Anything else you need?" },
     } as Partial<AstridrChat>);
@@ -617,13 +663,13 @@ describe("useAstridrVoice", () => {
     chat = setTtsPlaying(rerender, chat, false);
 
     expect(result.current.followUpOpen).toBe(true);
-    expect(result.current.followUpMs).toBe(30_000);
+    expect(result.current.followUpMs).toBe(45_000);
     act(() => {
-      vi.advanceTimersByTime(14_500); // would have expired under the old window
+      vi.advanceTimersByTime(30_500); // the plain window would have expired here
     });
     expect(result.current.followUpOpen).toBe(true);
     act(() => {
-      vi.advanceTimersByTime(16_000);
+      vi.advanceTimersByTime(15_000);
     });
     expect(result.current.followUpOpen).toBe(false);
     expect(result.current.voiceState).toBe("idle");

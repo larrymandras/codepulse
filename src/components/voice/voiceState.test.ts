@@ -175,6 +175,14 @@ describe("isEndPhrase", () => {
     expect(isEndPhrase("thanks")).toBe(true);
   });
 
+  it('"thank you" → true (STT renders it both ways — both close gracefully)', () => {
+    expect(isEndPhrase("thank you")).toBe(true);
+  });
+
+  it('"no I\'m good thank you" → true (ends with a close)', () => {
+    expect(isEndPhrase("no I'm good thank you")).toBe(true);
+  });
+
   it('"that\'s all" → true', () => {
     expect(isEndPhrase("that's all")).toBe(true);
   });

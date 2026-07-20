@@ -66,7 +66,10 @@ function normalize(text: string): string {
 // ("stop talking") and lives in BARGE_IN_PHRASES only — saying "stop" pauses
 // her but NEVER ends the conversation (presence-page decision, 2026-07-20;
 // intentional divergence from voice.py's end-phrase list).
-const END_PHRASES = ["goodbye", "thanks", "that's all"];
+// End-phrases are NOT silent: the voice engine sends them so she closes
+// warmly, then re-arms after her reply — a silently discarded "thanks" read
+// as "she did nothing" (live defect 2026-07-20).
+const END_PHRASES = ["goodbye", "thanks", "thank you", "that's all"];
 
 /**
  * Returns true if the transcript is an end-phrase that should end the
