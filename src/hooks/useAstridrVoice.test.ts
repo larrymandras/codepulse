@@ -473,6 +473,48 @@ describe("useAstridrVoice", () => {
     expect(mockRecognitionStart).not.toHaveBeenCalled();
   });
 
+  it("routine periodic recognizer deaths (healthy lifetime) restart PAST the storm cap — the countdown never goes deaf", () => {
+    renderVoice(makeChat());
+    wake();
+    mockRecognitionStart.mockClear();
+    act(() => {
+      for (let i = 0; i < 5; i++) {
+        onInterimResultCallback?.("still here talking to you"); // keeps the silence clock reset
+        vi.advanceTimersByTime(15_000); // recognizer lived a healthy while
+        onRecognitionEndCallback?.();
+        vi.advanceTimersByTime(400); // restart delay elapses
+      }
+    });
+    expect(mockRecognitionStart).toHaveBeenCalledTimes(5);
+  });
+
+  it("echo-tail anchor expires: an abandoned tail utterance stops stripping later speech", async () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "You're welcome. Is there anything else I can assist you with?" },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+
+    act(() => {
+      vi.advanceTimersByTime(100);
+      onInterimResultCallback?.(" you're welcome is there"); // echo tail, never finalized
+    });
+    act(() => {
+      vi.advanceTimersByTime(6_000); // past ECHO_ANCHOR_MAX_MS — anchor dead
+      onFinalResultCallback?.(" is there anything else I can assist");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    // Without expiry this would be anchored → stripped to "" → dropped.
+    expect(chat.sendMessage).toHaveBeenCalledWith(" is there anything else I can assist".trim(), {
+      interruptedReply: undefined,
+      voice: true,
+    });
+  });
+
   it("keep-alive storm guard: restarts are capped inside the window", () => {
     renderVoice(makeChat());
     wake();

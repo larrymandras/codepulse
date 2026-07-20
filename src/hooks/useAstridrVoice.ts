@@ -67,10 +67,17 @@ const SILENT_TURN_GRACE_MS = 3_000;
 /** After her TTS ends, utterances STARTING inside this window are treated as
  *  potentially echo-glued (her tail + the user's answer in one utterance). */
 const ECHO_TAIL_MS = 1_500;
-/** Keep-alive storm guard: max restarts inside the window, then give up. */
+/** Keep-alive storm guard: only RAPID-CYCLE deaths count (recognizer lived
+ *  under MIN_HEALTHY_MS). Chrome ends a healthy recognizer every ~10-15 quiet
+ *  seconds as a matter of course — those periodic deaths must restart freely,
+ *  or a few normal turns burn the cap and the follow-up window goes deaf. */
 const RESTART_MAX = 3;
 const RESTART_WINDOW_MS = 10_000;
 const RESTART_DELAY_MS = 300;
+const RECOGNIZER_MIN_HEALTHY_MS = 2_000;
+/** Echo-tail anchor expiry: if Chrome abandons the tail utterance without a
+ *  final, the anchor must not keep stripping later, unrelated speech. */
+const ECHO_ANCHOR_MAX_MS = 5_000;
 
 // ─── Echo fingerprint (talk-over-with-content) ───────────────────────────────
 
@@ -289,14 +296,21 @@ export function useAstridrVoice({
   const echoReplyRef = useRef("");
   const echoTailUntilRef = useRef(0);
   const utteranceEchoAnchoredRef = useRef(false);
+  const echoAnchorDeadlineRef = useRef(0);
+
+  const isEchoAnchored = () =>
+    utteranceEchoAnchoredRef.current && Date.now() < echoAnchorDeadlineRef.current;
 
   const currentReply = () =>
     chatRef.current.streamingReplyRef.current || echoReplyRef.current;
 
   // Keep-alive bookkeeping: intentional stops must NOT trigger a restart, and
-  // restarts are rate-limited (storm guard).
+  // rapid-cycle restarts are rate-limited (storm guard). Lifetime tracking
+  // distinguishes a storm (start→die in <2s) from Chrome's routine periodic
+  // recognizer deaths, which must restart freely.
   const intentionalStopRef = useRef(false);
   const restartTimesRef = useRef<number[]>([]);
+  const recognizerStartedAtRef = useRef(0);
 
   // ─── Timer helpers ─────────────────────────────────────────────────────────
 
@@ -347,12 +361,16 @@ export function useAstridrVoice({
     onFinalResult: (t, c) => handleFinalResultRef.current(t, c),
     onInterimResult: (t) => handleInterimResultRef.current(t),
     onEnd: () => {
-      // Keep-alive: Chrome ends its recognizer after ~14s without speech —
+      const lifetimeMs = Date.now() - recognizerStartedAtRef.current;
+      // Keep-alive: Chrome ends its recognizer after ~10-15s without speech —
       // during a live conversation that deafens barge-in and follow-ups (the
       // live-trace bug: it died while she was thinking). Restart, but ONLY:
       //   - when the end was not one we asked for (intentionalStopRef),
       //   - while a conversation is live and the mic toggle is on,
-      //   - within the storm guard (max RESTART_MAX per RESTART_WINDOW_MS).
+      //   - and, for RAPID-CYCLE deaths only (<2s lifetime), within the storm
+      //     guard. Routine periodic deaths restart freely — counting them
+      //     burned the cap after a few turns and left the follow-up window
+      //     deaf ("she doesn't catch my voice during the countdown").
       if (intentionalStopRef.current) {
         intentionalStopRef.current = false;
         return;
@@ -361,14 +379,16 @@ export function useAstridrVoice({
         voiceStateRef.current !== "idle" && voiceStateRef.current !== "error-disabled";
       if (!active || !enabledRef.current) return;
 
-      const now = Date.now();
-      restartTimesRef.current = restartTimesRef.current.filter(
-        (t) => now - t < RESTART_WINDOW_MS
-      );
-      if (restartTimesRef.current.length >= RESTART_MAX) {
-        return;
+      if (lifetimeMs < RECOGNIZER_MIN_HEALTHY_MS) {
+        const now = Date.now();
+        restartTimesRef.current = restartTimesRef.current.filter(
+          (t) => now - t < RESTART_WINDOW_MS
+        );
+        if (restartTimesRef.current.length >= RESTART_MAX) {
+          return;
+        }
+        restartTimesRef.current.push(now);
       }
-      restartTimesRef.current.push(now);
 
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       restartTimerRef.current = setTimeout(() => {
@@ -377,6 +397,7 @@ export function useAstridrVoice({
           voiceStateRef.current !== "idle" &&
           voiceStateRef.current !== "error-disabled";
         if (stillActive && enabledRef.current) {
+          recognizerStartedAtRef.current = Date.now();
           recognitionStart();
         }
       }, RESTART_DELAY_MS);
@@ -405,6 +426,7 @@ export function useAstridrVoice({
       echoReplyRef.current = "";
       echoTailUntilRef.current = 0;
       utteranceEchoAnchoredRef.current = false;
+      echoAnchorDeadlineRef.current = 0;
       setInterimText("");
       setFinalText("");
       intentionalStopRef.current = true; // the coming recognizer end is ours
@@ -541,14 +563,15 @@ export function useAstridrVoice({
       }
       handleBargeIn();
       // fall through — this interim is YOUR speech, show and track it
-    } else if (
-      utteranceEchoAnchoredRef.current ||
-      Date.now() < echoTailUntilRef.current
-    ) {
+    } else if (isEchoAnchored() || Date.now() < echoTailUntilRef.current) {
       // Echo tail: her TTS just ended but the recognizer may still be
       // finalizing an utterance that STARTED as her voice — and Chrome glues
-      // the user's answer onto it. Anchor the utterance and track only the
-      // non-echo remainder (live-trace mashup bug).
+      // the user's answer onto it. Anchor the utterance (with an expiry — an
+      // abandoned tail utterance must not strip later, unrelated speech) and
+      // track only the non-echo remainder (live-trace mashup bug).
+      if (!utteranceEchoAnchoredRef.current) {
+        echoAnchorDeadlineRef.current = Date.now() + ECHO_ANCHOR_MAX_MS;
+      }
       utteranceEchoAnchoredRef.current = true;
       const remainder = stripEchoPrefix(text, echoReplyRef.current);
       if (!remainder) {
@@ -580,10 +603,7 @@ export function useAstridrVoice({
       }
       handleBargeIn();
       // fall through — this final is YOUR speech, process it normally
-    } else if (
-      utteranceEchoAnchoredRef.current ||
-      Date.now() < echoTailUntilRef.current
-    ) {
+    } else if (isEchoAnchored() || Date.now() < echoTailUntilRef.current) {
       // Echo tail (see interim handler): strip her glued echo prefix; keep
       // only the user's part. Pure echo → dropped entirely.
       utteranceEchoAnchoredRef.current = false;
@@ -751,6 +771,7 @@ export function useAstridrVoice({
       setInterimText("");
       setFinalText("");
       restartTimesRef.current = [];
+      recognizerStartedAtRef.current = Date.now();
       recognitionStart();
       resetSilenceTimer();
     },
