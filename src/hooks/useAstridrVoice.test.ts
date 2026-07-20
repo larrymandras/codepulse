@@ -724,6 +724,49 @@ describe("useAstridrVoice", () => {
     expect(result.current.followUpOpen).toBe(true);
   });
 
+  // ─── 19:05 live-trace regression ──────────────────────────────────────────
+
+  it("post-barge, a garbled short 'continue' utterance normalizes to a clean resume", async () => {
+    let chat = makeChat({ interrupt: vi.fn(() => "The forecast for tomorrow shows") });
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    act(() => {
+      onInterimResultCallback?.("hold on"); // barge — partial now pending
+    });
+    act(() => {
+      onInterimResultCallback?.(" not continue");
+      onFinalResultCallback?.(" not continue"); // STT flipped "no, continue"
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(900);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("continue", {
+      interruptedReply: "The forecast for tomorrow shows",
+      voice: true,
+    });
+  });
+
+  it("a longer resume sentence is NOT normalized — user's qualifiers survive", async () => {
+    let chat = makeChat({ interrupt: vi.fn(() => "The forecast for tomorrow shows") });
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    act(() => {
+      onInterimResultCallback?.("hold on");
+    });
+    act(() => {
+      onFinalResultCallback?.(" continue but only give me tomorrow's forecast");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "continue but only give me tomorrow's forecast",
+      { interruptedReply: "The forecast for tomorrow shows", voice: true }
+    );
+  });
+
   // ─── 18:50 live-trace regressions ─────────────────────────────────────────
 
   it("a chopped sentence merges into one message instead of a fragment cancelling the answer", async () => {

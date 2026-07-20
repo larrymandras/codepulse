@@ -839,6 +839,21 @@ export function useAstridrVoice({
       return;
     }
 
+    // Resume-intent normalization: right after a barge-in (an interrupted
+    // partial is pending), a SHORT utterance containing a resume word is a
+    // resume — always. STT garbles the lead-in ("not continue" for "no,
+    // continue", conf 0.73, live 19:05) and a flipped negation made her stop
+    // instead of resuming. Longer utterances pass through untouched
+    // ("continue but only for tomorrow" stays verbatim).
+    if (
+      interruptedReplyRef.current &&
+      text.trim().split(/\s+/).filter(Boolean).length <= 4 &&
+      /(continue|go on|keep going|resume|finish)/i.test(text)
+    ) {
+      trace("final.resume-normalized", { from: text });
+      text = "continue";
+    }
+
     // CONV-02: a real accepted utterance consumes the follow-up window.
     clearFollowUpWindow();
 
