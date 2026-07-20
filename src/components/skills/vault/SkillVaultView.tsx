@@ -17,10 +17,12 @@ import { SkillVaultDetailCard } from "./SkillVaultDetailCard";
 import { ClusterDetailCard } from "./ClusterDetailCard";
 import { SkillPackView } from "./SkillPackView";
 import { SkillLeaderboardView } from "./SkillLeaderboardView";
+import { SkillKanbanView } from "./SkillKanbanView";
+import { SkillRecencyView } from "./SkillRecencyView";
 import type { VaultViewMode } from "./SkillVaultScene";
 
 // Panel modes: the two 3D scene modes, the 2D circle-packing view, and list views.
-type PanelMode = VaultViewMode | "packed" | "ranked";
+type PanelMode = VaultViewMode | "packed" | "ranked" | "lanes" | "recent";
 
 // Lazy boundary keeps three.js / react-force-graph-3d out of the main bundle.
 const SkillVaultScene = lazy(() => import("./SkillVaultScene"));
@@ -142,6 +144,8 @@ export function SkillVaultView({
                 ["usage", "Usage"],
                 ["packed", "Orchard"],
                 ["ranked", "Ranked"],
+                ["lanes", "Lanes"],
+                ["recent", "Recent"],
               ] as const
             ).map(([m, label]) => (
               <button
@@ -203,8 +207,17 @@ export function SkillVaultView({
         </div>
       ) : mode === "packed" ? (
         <SkillPackView model={model} query={query} />
-      ) : mode === "ranked" ? (
-        <SkillLeaderboardView model={model} query={query} />
+      ) : mode === "ranked" || mode === "lanes" || mode === "recent" ? (
+        // list views sit below the absolute top chrome bar
+        <div className="absolute inset-x-0 bottom-0 top-[54px]">
+          {mode === "ranked" ? (
+            <SkillLeaderboardView model={model} query={query} />
+          ) : mode === "lanes" ? (
+            <SkillKanbanView model={model} query={query} />
+          ) : (
+            <SkillRecencyView model={model} query={query} />
+          )}
+        </div>
       ) : (
         <Suspense
           fallback={
