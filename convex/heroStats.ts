@@ -18,10 +18,23 @@ export const summary = query({
       .withIndex("by_status", (q) => q.eq("status", "running"))
       .collect();
 
-    // Recent events (last hour for sparkline + error rate)
+    // Recent events (last hour for sparkline + error rate).
+    //
+    // The index scan MUST be bounded to the hour we actually use. An unbounded
+    // `.order("desc").take(500)` on this table blows Convex's system-operation
+    // limit on a large deployment ("Your request timed out performing too many
+    // system operations") — and because this query runs on every page via
+    // useHeroStats, that error is unhandled and unmounts the whole React tree,
+    // blanking the page. Measured on the self-hosted backend: unbounded
+    // take(500) fails, take(50) works, and this range-bounded form returns the
+    // same rows cheaply. `events` is the only table where this bites;
+    // llmMetrics/securityEvents below use the same pattern at lower volume.
+    //
+    // Semantically identical to the old code, which took the newest 500 and
+    // then discarded everything older than an hour.
     const recentEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", oneHourAgo))
       .order("desc")
       .take(500);
     const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);
