@@ -8,7 +8,7 @@
  * calendar pane is READ-ONLY (D-02) — nothing on this page ever writes to
  * Google, and no calendarEvents mutation is imported here.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { toast } from "sonner";
@@ -109,6 +109,20 @@ export default function Reminders() {
   const reminders = (remindersRaw ?? []) as unknown as ReminderDoc[];
   const events = (eventsRaw ?? []) as unknown as CalendarEventDoc[];
 
+  // Google events falling on the selected day, sorted by start. The reminder
+  // list renders reminders only, so a day holding just calendar events used to
+  // select into a blank pane; these give the click something to show.
+  const selectedDayEvents = useMemo(() => {
+    if (selectedDay === null) return [];
+    return events
+      .filter((e) => {
+        const d = new Date(e.start * 1000);
+        d.setHours(0, 0, 0, 0);
+        return Math.floor(d.getTime() / 1000) === selectedDay;
+      })
+      .sort((a, b) => a.start - b.start);
+  }, [events, selectedDay]);
+
   // ─── Mutations (optimistic — reconciled by children, UI-02) ───────────
   const createReminder = useMutation(api.reminders.create);
   const completeReminder = useMutation(api.reminders.complete);
@@ -164,6 +178,7 @@ export default function Reminders() {
             loading={remindersRaw === undefined}
             accentVar={accentVar}
             selectedDay={selectedDay}
+            dayEvents={selectedDayEvents}
             onClearDayFilter={() => setSelectedDay(null)}
             onComplete={handleComplete}
             onSnooze={handleSnooze}

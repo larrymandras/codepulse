@@ -19,8 +19,10 @@ import {
   Pencil,
   ChevronDown,
   ChevronRight,
+  CalendarDays,
   X,
 } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -65,11 +67,25 @@ interface ReminderOverride {
   priority?: string;
 }
 
+/** Minimal shape of a cached Google event. Declared structurally rather than
+ *  imported from CalendarOverlay, which already imports ReminderDoc from here —
+ *  importing back would create a cycle. */
+export interface DayCalendarEvent {
+  _id: string;
+  title: string;
+  start: number;
+  allDay: boolean;
+}
+
 interface ReminderListProps {
   reminders: ReminderDoc[];
   loading: boolean;
   accentVar: string;
   selectedDay: number | null;
+  /** Google events on the selected day. Read-only context: without these,
+   *  clicking a day that holds only calendar events shows a blank pane and
+   *  looks broken. */
+  dayEvents?: DayCalendarEvent[];
   onClearDayFilter: () => void;
   onComplete: (id: string) => Promise<unknown>;
   onSnooze: (id: string, until: number) => Promise<unknown>;
@@ -418,6 +434,7 @@ export function ReminderList({
   loading,
   accentVar,
   selectedDay,
+  dayEvents,
   onClearDayFilter,
   onComplete,
   onSnooze,
@@ -540,11 +557,47 @@ export function ReminderList({
     <div className="glow-card flex flex-col h-full overflow-y-auto gap-4 rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-3">
       {selectedDay !== null && (
         <div className="flex items-center justify-between bg-muted rounded-lg px-3 py-1.5 text-sm">
-          <span className="text-muted-foreground">Filtered to selected day</span>
+          <span className="text-muted-foreground">
+            Showing {format(new Date(selectedDay * 1000), "EEE, MMM d")}
+          </span>
           <Button variant="ghost" size="xs" onClick={onClearDayFilter}>
             <X className="h-3 w-3" /> Clear
           </Button>
         </div>
+      )}
+
+      {/* Calendar events for the selected day. The list otherwise renders only
+          reminders, so clicking a day that holds nothing BUT Google events
+          produced an empty pane with no explanation — it read as a bug. */}
+      {selectedDay !== null && (dayEvents?.length ?? 0) > 0 && (
+        <section aria-label="Calendar events">
+          <div className="flex items-center gap-2 px-1 py-1">
+            <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-sm font-mono uppercase tracking-widest text-muted-foreground">
+              Calendar
+            </h3>
+            <span className="text-xs font-mono text-muted-foreground/70">
+              {dayEvents!.length}
+            </span>
+          </div>
+          <ul className="flex flex-col gap-1.5 mt-1">
+            {dayEvents!.map((ev) => (
+              <li
+                key={ev._id}
+                data-testid="day-calendar-event"
+                className="flex items-baseline gap-2 rounded-lg border-l-2 border-muted-foreground/40 bg-muted/30 px-3 py-2"
+              >
+                <span className="text-xs font-mono tabular-nums text-muted-foreground shrink-0">
+                  {ev.allDay ? "All day" : format(new Date(ev.start * 1000), "h:mm a")}
+                </span>
+                <span className="text-sm text-foreground/90 min-w-0 break-words">{ev.title}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground/70 px-1 pt-1.5">
+            From Google — read-only here.
+          </p>
+        </section>
       )}
 
       {groupDefs.map(({ key, label, loud }) => {

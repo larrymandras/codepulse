@@ -233,6 +233,33 @@ describe("Reminders — calendar overlay (CAL-02)", () => {
     expect(eventChips.length + hidden).toBe(EVENT_COUNT);
   });
 
+  test("clicking a day that holds only a calendar event shows that event, not a blank pane", async () => {
+    // The list renders reminders only, so selecting a day whose sole content is
+    // a Google event used to filter everything away and leave an empty pane with
+    // no explanation — it read as a broken click.
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return [makeEvent({ _id: "evt-only", title: "LM Dermatologist", start: NOW + DAY })];
+      }
+      return []; // no reminders anywhere
+    });
+
+    const { container } = render(<Reminders />);
+
+    // Select the day the event falls on, via its calendar cell.
+    const chip = container.querySelector('[data-testid="calendar-event-chip"]');
+    expect(chip).toBeTruthy();
+    const cell = chip!.closest("[aria-pressed]") as HTMLElement;
+    expect(cell).toBeTruthy();
+    fireEvent.click(cell);
+
+    // The event must now be visible in the left pane.
+    const dayEvents = await screen.findAllByTestId("day-calendar-event");
+    expect(dayEvents.length).toBe(1);
+    expect(dayEvents[0].textContent).toContain("LM Dermatologist");
+  });
+
   test("on an overloaded day the reminder is never the thing that gets hidden", () => {
     // Reminders are the only actionable item on this page; Google events are
     // read-only context. Events used to claim chip slots first, so a day with
