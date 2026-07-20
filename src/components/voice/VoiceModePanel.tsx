@@ -340,6 +340,17 @@ export function VoiceModePanel({
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const followUpTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Conversational gate (CONV-03 refinement): once she has engaged in this
+  // session — started a reply (TTS_START) or you've interrupted her (BARGE_IN) —
+  // you are clearly in a live back-and-forth, so short replies ("continue",
+  // "go on", "yes") are accepted. The >=3-word noise gate only guards the COLD
+  // start (ambient noise before the first exchange). This is a REF, not state,
+  // so it survives the re-render that a preceding interim result triggers — the
+  // follow-up window's `followUpOpen` was being wiped by that interim before the
+  // final's gate could read it, which silently dropped every short continuation
+  // (the "she freezes when I say continue" bug). Reset only when the panel ends.
+  const conversationWarmRef = useRef(false);
+
   const clearFollowUpWindow = useCallback(() => {
     if (followUpTimerRef.current) {
       clearTimeout(followUpTimerRef.current);
@@ -421,10 +432,20 @@ export function VoiceModePanel({
   // now detected on INTERIM results (see handleInterimResult), which repeat
   // rapidly, and the final result would otherwise re-fire it. Reset on TTS_START.
   const bargeInFiredRef = useRef(false);
+  // Barge-in now fires on the INTERIM "stop" (so it's instant). Chrome then still
+  // emits a FINAL "stop" for the same utterance — but by then state has left
+  // `speaking`, so without this guard that final falls through to isEndPhrase
+  // ("stop" is also an end-phrase) and CLOSES the panel ("she stopped but
+  // disappeared"). Latch this on barge-in; swallow the matching trailing final.
+  const bargeInSwallowFinalRef = useRef(false);
 
   const handleBargeIn = useCallback(() => {
     if (bargeInFiredRef.current) return;
     bargeInFiredRef.current = true;
+    bargeInSwallowFinalRef.current = true;
+    // You interrupted her mid-reply — you're clearly mid-conversation, so accept
+    // whatever you say next, however short ("continue", "go on", "no wait").
+    conversationWarmRef.current = true;
     ttsStop(); // audio.pause() equivalent — instant, no fade
     dispatch({ type: "BARGE_IN" });
     setInstantBadgeTransition(true);
@@ -490,6 +511,16 @@ export function VoiceModePanel({
         return;
       }
 
+      // Swallow the trailing final of the barge-in utterance. Barge-in fired on
+      // the interim (state already left `speaking`); this final still carries the
+      // "stop"/"wait" text, which would otherwise hit isEndPhrase below and close
+      // the panel ("she stopped but disappeared"). Only swallow if it's still a
+      // barge-in phrase — a genuinely new utterance ("continue") is let through.
+      if (bargeInSwallowFinalRef.current) {
+        bargeInSwallowFinalRef.current = false;
+        if (isBargeInPhrase(text)) return;
+      }
+
       setInterimText("");
       resetSilenceTimer();
 
@@ -513,10 +544,12 @@ export function VoiceModePanel({
         return;
       }
 
-      // Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10): reject cold
-      // fragments <3 words (relaxed to 1 word inside the follow-up window).
+      // Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10): reject cold fragments
+      // <3 words. Once the conversation is warm (she has replied, or you barged
+      // in) short replies are accepted — driven by conversationWarmRef (a ref,
+      // so a preceding interim result can't wipe it the way it wiped followUpOpen).
       // Zero UI trace on reject — no state change, no render.
-      if (shouldReject(text, followUpOpen, confidence)) {
+      if (shouldReject(text, conversationWarmRef.current || followUpOpen, confidence)) {
         return;
       }
 
@@ -582,6 +615,9 @@ export function VoiceModePanel({
       // TTS just started — recognizer stays live (echo guard handles the rest).
       // Re-arm barge-in for this new speaking turn.
       bargeInFiredRef.current = false;
+      // She's now actively replying — the session is a live conversation, so
+      // short follow-ups after this turn are accepted (see conversationWarmRef).
+      conversationWarmRef.current = true;
       dispatch({ type: "TTS_START" });
       wasPlayingRef.current = true;
     } else if (!isPlaying && wasPlayingRef.current) {
@@ -679,6 +715,7 @@ export function VoiceModePanel({
     clearSilenceTimer();
     clearSendTimer();
     accumulatedRef.current = "";
+    conversationWarmRef.current = false; // fresh session starts cold again
     recognitionStop();
     dispatch({ type: "END" });
     onClose();

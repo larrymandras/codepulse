@@ -355,6 +355,22 @@ describe("VoiceModePanel", () => {
     expect(stopCalls).toHaveLength(1);
   });
 
+  it("does NOT close the panel when the barge-in utterance's trailing final 'stop' arrives", async () => {
+    // "stop" is both a barge-in phrase and an end-phrase. Barge-in fires on the
+    // interim (state leaves speaking); the trailing final "stop" must be
+    // swallowed, not treated as an end-phrase that closes the panel.
+    render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+    await act(async () => {
+      onInterimResultCallback?.(" stop"); // fires barge-in
+    });
+    await act(async () => {
+      onFinalResultCallback?.(" stop", 0.9); // trailing final of the same utterance
+    });
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("still drops a non-barge-in INTERIM during speaking (echo guard) — no interrupt", async () => {
     render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
 
@@ -553,6 +569,59 @@ describe("VoiceModePanel", () => {
       const unmount = await triggerTtsEnd(false); // opens the follow-up window
       // triggerTtsEnd renders its own instance — grab its own callback capture
       await act(async () => {
+        onFinalResultCallback?.("do it", 0.9);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "chat.send", message: "do it" })
+      );
+      unmount();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts a short 'continue' after a barge-in — the stop→continue freeze fix (CONV-01/CONV-03)", async () => {
+    vi.useFakeTimers();
+    try {
+      render(<VoiceModePanel voiceState="speaking" onClose={onClose} />);
+
+      // Barge-in: "stop" while she's speaking (warms the conversation).
+      await act(async () => {
+        onFinalResultCallback?.("stop", 0.9);
+      });
+      mockSendCommand.mockClear(); // drop the agent.stop from the barge-in
+
+      // Now a short continuation, spoken as interim THEN final (realistic path).
+      await act(async () => {
+        onInterimResultCallback?.("continue");
+        onFinalResultCallback?.("continue", 0.9);
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2100);
+      });
+
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "chat.send", message: "continue" })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("accepts a short follow-up spoken as interim→final after her reply (warm gate survives the interim)", async () => {
+    // Regression: the interim result used to wipe followUpOpen before the final's
+    // gate read it, so short follow-ups were silently dropped in real usage. The
+    // conversationWarmRef survives that re-render. Without the fix this FAILS.
+    vi.useFakeTimers();
+    try {
+      const unmount = await triggerTtsEnd(false); // she replied → warm
+
+      await act(async () => {
+        onInterimResultCallback?.("do it"); // the re-render that used to wipe the window
         onFinalResultCallback?.("do it", 0.9);
       });
       await act(async () => {
