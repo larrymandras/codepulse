@@ -724,6 +724,43 @@ describe("useAstridrVoice", () => {
     expect(result.current.followUpOpen).toBe(true);
   });
 
+  // ─── 19:09 live-trace regression ──────────────────────────────────────────
+
+  it("a mid-utterance Chrome reset rejoins the lost interim with the tail final", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" do I have any");
+      // Chrome resets; the final carries only the tail.
+      onFinalResultCallback?.(" on my personal account");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "do I have any on my personal account",
+      { interruptedReply: undefined, voice: true }
+    );
+  });
+
+  it("a final that already contains the interim is NOT double-prepended", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" what is the weather");
+      onFinalResultCallback?.(" what is the weather in Cumming Georgia");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what is the weather in Cumming Georgia",
+      { interruptedReply: undefined, voice: true }
+    );
+  });
+
   // ─── 19:05 live-trace regression ──────────────────────────────────────────
 
   it("post-barge, a garbled short 'continue' utterance normalizes to a clean resume", async () => {

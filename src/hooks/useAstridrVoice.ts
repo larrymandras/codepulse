@@ -86,11 +86,13 @@ const RECOGNIZER_MIN_HEALTHY_MS = 2_000;
  *  final, the anchor must not keep stripping later, unrelated speech. */
 const ECHO_ANCHOR_MAX_MS = 5_000;
 
-// ─── Live-repro instrumentation (kept until a fully clean live run) ──────────
+// ─── Live-repro instrumentation ──────────────────────────────────────────────
 // Ring buffer + console lines; the Chat page shows a COPY TRACE chip while
-// VOICE_DEBUG is on. Every fix so far came from one of these traces.
+// VOICE_DEBUG is on. Every voice-timing fix in this engine came from one of
+// these traces (2026-07-20 sessions) — when a new symptom appears, flip this
+// on, reproduce ONCE, and fix from the trace. Never reason blind.
 
-const VOICE_DEBUG = true;
+const VOICE_DEBUG = false;
 /** Chat page shows a COPY TRACE chip while instrumentation is on. */
 export const VOICE_DEBUG_ENABLED = VOICE_DEBUG;
 
@@ -741,7 +743,11 @@ export function useAstridrVoice({
   handleFinalResultRef.current = (rawText: string, confidence?: number) => {
     let text = rawText;
     trace("final", { text, confidence, state: voiceStateRef.current });
-    longestInterimRef.current = ""; // a real final supersedes the salvage buffer
+    // Capture the salvage buffer — the accept path rejoins it if Chrome reset
+    // the utterance and finalized only the tail (19:09: "do I have any" was
+    // interim-only, the final carried just "on my personal account").
+    const lostInterim = longestInterimRef.current.trim();
+    longestInterimRef.current = "";
 
     // Echo guard + talk-over (see interim handler above).
     if (voiceStateRef.current === "speaking") {
@@ -837,6 +843,18 @@ export function useAstridrVoice({
     if (shouldReject(text, conversationWarmRef.current || followUpOpen, confidence)) {
       trace("final.noise-rejected", { text, warm: conversationWarmRef.current, followUpOpen });
       return;
+    }
+
+    // Rejoin a lost interim: Chrome sometimes resets mid-utterance and the
+    // final carries only the tail. If a substantive interim (≥3 words) is not
+    // contained in this final, the user said BOTH parts — prepend it.
+    if (lostInterim && lostInterim.split(/\s+/).filter(Boolean).length >= 3) {
+      const needle = squash(lostInterim);
+      const dist = approxSubstringDistance(needle, squash(text));
+      if (dist > Math.max(1, Math.floor(needle.length * 0.2))) {
+        trace("final.rejoined-lost-interim", { lostInterim, final: text });
+        text = `${lostInterim} ${text.trim()}`;
+      }
     }
 
     // Resume-intent normalization: right after a barge-in (an interrupted

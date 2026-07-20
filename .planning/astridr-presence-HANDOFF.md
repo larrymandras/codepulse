@@ -1,6 +1,31 @@
 # Ástríðr Presence — Resume Handoff
 
-_Checkpoint: 2026-07-20. Design approved, presence page built + committed. Next: wire real voice._
+_Checkpoint: 2026-07-20 EOD. **SHIPPED + LIVE-VERIFIED CLEAN** (final trace
+19:08–19:09: wake → weather → barge "hold on" swallowed → garbled resume
+normalized to "continue" → follow-up in countdown → "great thank you" →
+her warm close → tidy re-arm)._
+
+**What shipped (codepulse master, commits `316cdff`…`42ccb0f`+):** the /chat
+presence page with wake-word-armed conversations (`useAstridrVoice`), the
+"transmissions" chat redesign, avatar glow-up (248px, orbital satellites,
+ember motes), shell voice removal, and ~10 live-trace-driven turn-taking
+fixes: recognizer keep-alive w/ lifetime storm guard, echo fingerprint
+(fuzzy squashed-substring), echo-tail prefix strip + residue drop, talk-over
+with content (min-signal gated), continuation merge, salvage + rejoin of
+Chrome-abandoned utterances, graceful close (end-phrases are SENT, she says
+goodbye, THEN re-arm), unified 30/45s conversational clock, post-interrupt
+TTS suppression, resume-intent normalization, stale stop-latch fix,
+useWakeWord double-start guard. Backend (astridr `feature/brain-swap`
+`f76222fa`): chat.send voice flag → spoken-style prompt; resume scope fence.
+
+**Debug:** `VOICE_DEBUG` in useAstridrVoice.ts (currently false) re-enables
+the [voice] trace + COPY TRACE chip — every fix above came from that trace.
+Flip it on for any new voice symptom; fix from a trace, never blind.
+
+**Open (non-blocking):** run.blocks double-delivery (backend TODO), tool-round
+duplicate text (claude-cli brain), possible future: maxAlternatives STT voting.
+
+_Original pre-wiring handoff below for context:_
 
 ## What this is
 Redesign of how you interact with Ástríðr in CodePulse: she moved from a transient
