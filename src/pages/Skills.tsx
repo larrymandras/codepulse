@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Search, Archive } from "lucide-react";
+import { Search, Archive, Boxes } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
@@ -17,6 +17,7 @@ import { CategoryEditPopover } from "@/components/skills/CategoryEditPopover";
 import { IntakeModal } from "@/components/skills/IntakeModal";
 import { IntakeStrip } from "@/components/skills/IntakeStrip";
 import { IntakeSheet } from "@/components/skills/IntakeSheet";
+import { SkillVaultView } from "@/components/skills/vault/SkillVaultView";
 import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
 import { originOptions, isDormant } from "@/lib/skills";
@@ -26,6 +27,7 @@ export default function Skills() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [coldStorageView, setColdStorageView] = useState(false);
+  const [vaultView, setVaultView] = useState(false);
   const [editingSkill, setEditingSkill] = useState<string | null>(null);
   const [editingCategory, setEditingCategory] = useState<Doc<"skillCategories"> | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
@@ -222,6 +224,16 @@ export default function Skills() {
               <Search className="w-4 h-4" />
               <span className="font-mono text-xs text-muted-foreground">Ctrl+Shift+K</span>
             </Button>
+            <Button
+              variant={vaultView ? "default" : "outline"}
+              onClick={() => setVaultView((v) => !v)}
+              aria-pressed={vaultView}
+              aria-label="Toggle 3D vault view"
+              className="gap-1.5"
+            >
+              <Boxes className="w-4 h-4" />
+              Vault
+            </Button>
             <Button onClick={() => setIntakeModalOpen(true)}>Install skill</Button>
           </div>
         }
@@ -244,6 +256,14 @@ export default function Skills() {
         onOpen={() => setIntakeSheetOpen(true)}
       />
 
+      {vaultView ? (
+        <SkillVaultView
+          skills={enrichedSkills}
+          onClose={() => setVaultView(false)}
+          initialQuery={search}
+        />
+      ) : (
+      <>
       <QuickDeck
         skills={enrichedSkills}
         onUse={handleRecordUse}
@@ -388,6 +408,8 @@ export default function Skills() {
             )}
           </div>
         </div>
+      )}
+      </>
       )}
 
       <SkillCommandPalette
