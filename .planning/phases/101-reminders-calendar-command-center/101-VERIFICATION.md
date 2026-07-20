@@ -1,8 +1,8 @@
 ---
 phase: 101-reminders-calendar-command-center
-verified: 2026-07-19T23:59:00Z
+verified: 2026-07-20T18:35:00Z
 status: passed
-score: 6/6 roadmap success criteria CODE-VERIFIED; 9/9 requirements CODE-VERIFIED; 0 BLOCKERS
+score: 6/6 roadmap success criteria CODE-VERIFIED; 9/9 requirements CODE-VERIFIED; 0 BLOCKERS; UAT gap (test 8, undated reminders hidden by day filter) CLOSED via 101-07 (RED 9c246ab + GREEN 4afabf2, re-verified 2026-07-20)
 overrides_applied: 0
 human_verification: []  # all 5 items CLOSED 2026-07-20 by live exercise against the
   # running stack -- see the ADDENDUM below for the evidence per item. Kept empty rather
@@ -232,4 +232,58 @@ See YAML frontmatter `human_verification` for the full structured list. Summary:
 ---
 
 *Verified: 2026-07-19*
+*Verifier: Claude (gsd-verifier)*
+
+
+---
+
+## Gap-closure re-verification (101-07), 2026-07-20
+
+**Source gap:** `101-UAT.md` test 8, severity major — "reminders show up (Upcoming), but clicking a future day in the calendar makes them disappear." Root cause diagnosed in the UAT Gaps block: `ReminderList.tsx:472-478` `dayFiltered` required a defined `dueAt` matching `selectedDay`, unconditionally excluding every undated row once any day was selected.
+
+**Closure plan:** `101-07-PLAN.md` (gap_closure: true, gap_source: 101-UAT.md, gap_test: 8). Executed as two atomic commits: `9c246ab` (RED regression test) → `4afabf2` (GREEN one-line predicate fix).
+
+### Per-must-have verdict
+
+| # | Must-have | Verdict | Evidence |
+|---|---|---|---|
+| Truth 1 | Undated reminder (`dueAt === undefined`) stays visible while a day is selected | VERIFIED | `src/components/reminders/ReminderList.tsx:472-480` — current `dayFiltered`:<br>`return due === undefined || startOfDaySeconds(due) === selectedDay;` (with an explanatory comment on lines 476-477). Independently confirmed by temporarily reverting this file to the pre-fix blob (`git checkout 9c246ab -- ReminderList.tsx`, which still has the old predicate) and re-running the regression test: it fails at `src/pages/Reminders.test.tsx:361` (`within(upcomingSection).getByText("Call the accountant")` — element not found, "Nothing upcoming." renders instead). Restored the fixed file (`git checkout HEAD -- ReminderList.tsx`) and re-ran: passes. This proves the fix — not the test's presence — is what makes the behavior true. |
+| Truth 2 | Dated reminders still filter to the selected day (unchanged behavior) | VERIFIED | Same predicate: the `startOfDaySeconds(due) === selectedDay` branch is preserved unchanged (only the `due === undefined` OR-clause was added; the original `&&` condition was not weakened for dated rows — a dated row on a non-selected day still fails both disjuncts and is excluded). Confirmed by the full `Reminders.test.tsx` suite passing (see below), which includes the pre-existing "clicking a day that holds only a calendar event" test exercising dated-row day-filtering. |
+| Truth 3 | Regression test fails on old code, passes on new code (RED-then-GREEN) | VERIFIED | Test `"an undated reminder stays visible when a calendar day is selected (regression: UAT test 8)"` at `src/pages/Reminders.test.tsx:336-362`. RED reproduced live in this verification pass (see above — fails at line 361, not at setup/click, matching the plan's acceptance criteria). GREEN reproduced: full file run is 14/14 passing. Commit history also shows the correct order: `9c246ab` (test only, 28 insertions in `Reminders.test.tsx`, zero changes to `ReminderList.tsx`) committed before `4afabf2` (3 insertions/1 deletion in `ReminderList.tsx` only). |
+
+### Artifacts
+
+| Artifact | Expected | Status | Details |
+|---|---|---|---|
+| `src/components/reminders/ReminderList.tsx` | `dayFiltered` contains `due === undefined` exemption | VERIFIED | Line 478: `return due === undefined || startOfDaySeconds(due) === selectedDay;` — pattern present exactly as specified in the plan's `must_haves.artifacts`. |
+| `src/pages/Reminders.test.tsx` | Regression test containing `"day is selected"` | VERIFIED | Line 336: `test("an undated reminder stays visible when a calendar day is selected (regression: UAT test 8)", ...)` — matches. |
+
+### Key link
+
+| From | To | Via | Status | Details |
+|---|---|---|---|---|
+| `ReminderList.tsx` `dayFiltered` | `ReminderList.tsx` `groups` (Upcoming bucket) | undated rows pass `dayFiltered` then land in `upcoming` via its own `due === undefined` branch | WIRED | `dayFiltered` (line 478) no longer strips undated rows; `groups`' `upcoming` filter (line 497: `return due === undefined || due >= tomorrowStart;`) was untouched and already included `due === undefined` — so an undated row that now survives `dayFiltered` flows straight into the existing Upcoming bucket with zero JSX/grouping changes, exactly as the plan specified ("no `groups`/JSX/CSS change was needed"). Confirmed by direct read of both memos (lines 472-500) in the current file. |
+
+### Regression check — full test suite and type-check (re-run independently, not trusted from SUMMARY)
+
+- `npx vitest run src/pages/Reminders.test.tsx` → **14/14 passing** (re-run by this verifier; includes the new regression test and all 13 pre-existing tests in the file, e.g. the dated-day-filter and injection-guard tests).
+- `npx vitest run` (full repo suite) → **197 test files passed, 17 skipped; 2155 tests passed, 193 todo** — matches the 101-07-SUMMARY.md claim of "2155 passed" exactly, independently reproduced.
+- `npx tsc --noEmit` → clean, exit 0.
+- Commit inspection: `git show --stat 9c246ab` touches only `Reminders.test.tsx` (+28); `git show --stat 4afabf2` touches only `ReminderList.tsx` (+3/-1) — matches the plan's "no Convex changes, no new dependencies, no UI/CSS changes" success criterion.
+
+### Cross-check against 101-UAT.md
+
+The closed gap in `101-UAT.md` (`## Gaps`, `test: 8`) states the missing behavior as: *"Undated reminders must remain visible while a day filter is active... exempt due===undefined from dayFiltered"* and cites the exact defect location `ReminderList.tsx:472-478`. This is the same file, same lines, same predicate, and the same exemption strategy the plan and the fix both implement — confirmed as the same gap, not a different or partial fix.
+
+**Note:** UAT test 8's secondary finding (the Ástríðr conversational NL round-trip) is explicitly out of scope for 101-07 per both the UAT doc's "Secondary findings" and the plan's own scoping — both operator repro rows were `source:"dashboard"` QuickAdd-created, not Ástríðr-originated. This is correctly left unaddressed by 101-07 and is not a gap in this closure (it was never claimed as fixed).
+
+### Re-verification score
+
+**3/3 must-have truths VERIFIED, 2/2 artifacts VERIFIED, 1/1 key link WIRED, 0 blockers.** UAT test 8 (the sole open item from `101-UAT.md`) is now CLOSED. Phase 101 has no remaining open gaps.
+
+**Status: passed** (unchanged from the underlying phase verification — this re-verification confirms the one post-verification UAT gap is genuinely closed in the codebase, not merely claimed in SUMMARY.md).
+
+---
+
+*Re-verified: 2026-07-20*
 *Verifier: Claude (gsd-verifier)*

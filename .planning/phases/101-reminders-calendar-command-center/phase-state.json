@@ -1,0 +1,64 @@
+{
+  "phase": 101,
+  "phaseName": "reminders-calendar-command-center",
+  "created": "2026-07-20T22:26:31.274Z",
+  "history": [
+    {
+      "timestamp": "2026-07-20T22:26:31.275Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-07-20T22:26:31.275Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "101-CONTEXT.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "101-UI-SPEC.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 7,
+      "files": [
+        "101-01-PLAN.md",
+        "101-02-PLAN.md",
+        "101-03-PLAN.md",
+        "101-04-PLAN.md",
+        "101-05-PLAN.md",
+        "101-06-PLAN.md",
+        "101-07-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 7,
+      "files": [
+        "101-01-SUMMARY.md",
+        "101-02-SUMMARY.md",
+        "101-03-SUMMARY.md",
+        "101-04-SUMMARY.md",
+        "101-05-SUMMARY.md",
+        "101-06-SUMMARY.md",
+        "101-07-SUMMARY.md"
+      ]
+    },
+    "VERIFICATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "101-VERIFICATION.md"
+      ]
+    }
+  }
+}
