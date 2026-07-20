@@ -704,6 +704,72 @@ describe("useAstridrVoice", () => {
     expect(result.current.followUpOpen).toBe(true);
   });
 
+  // ─── 18:36 live-trace regressions ─────────────────────────────────────────
+
+  it("a mic-off teardown with NO live recognizer does not eat the next session's keep-alive restart", () => {
+    const chat = makeChat();
+    const { rerender } = renderVoice(chat);
+    // Toggle off while armed-idle: teardown runs, no recognizer was live —
+    // the intentional-stop latch would go stale here.
+    act(() => {
+      rerender({ chat, enabled: false });
+    });
+    act(() => {
+      rerender({ chat, enabled: true });
+    });
+    wake();
+    mockRecognitionStart.mockClear();
+    act(() => {
+      vi.advanceTimersByTime(15_000); // healthy lifetime
+      onRecognitionEndCallback?.(); // Chrome's routine death
+      vi.advanceTimersByTime(400);
+    });
+    expect(mockRecognitionStart).toHaveBeenCalledTimes(1);
+  });
+
+  it("post-talk-over trailing final that is her echo is swallowed, not sent", async () => {
+    let chat = makeChat({
+      interrupt: vi.fn(() => "Today is mostly clear"),
+      streamingReplyRef: { current: "Today is mostly clear at ninety one degrees" },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    act(() => {
+      onInterimResultCallback?.(" today hold"); // talk-over fires the barge
+    });
+    (chat.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+    act(() => {
+      onFinalResultCallback?.(" today"); // Chrome's trailing final = her echo
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("recognizer death mid-utterance salvages the longest interim as the message", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" do I have any");
+      onInterimResultCallback?.(" do I have any entries on");
+      onInterimResultCallback?.(" today"); // Chrome resets the utterance…
+    });
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+      onRecognitionEndCallback?.(); // …then dies without ever finalizing
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100); // normal accept path debounce
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("do I have any entries on", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+  });
+
   // ─── 16:41 live-trace regressions ─────────────────────────────────────────
 
   it("her own closing line ('all right…') never fires a false barge-in", () => {

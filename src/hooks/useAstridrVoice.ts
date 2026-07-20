@@ -344,6 +344,13 @@ export function useAstridrVoice({
   // finishes. A silently discarded "thanks" read as "she did nothing".
   const closePendingRef = useRef(false);
 
+  // Death-without-final salvage: Chrome sometimes abandons an utterance and
+  // never finalizes it (live trace: "do I have any entries on…" vanished).
+  // Track the longest user interim since the last final; if the recognizer
+  // dies mid-transcription, synthesize a final from it so the user's speech
+  // is never simply lost.
+  const longestInterimRef = useRef("");
+
   // ─── Timer helpers ─────────────────────────────────────────────────────────
 
   const clearSilenceTimer = useCallback(() => {
@@ -412,6 +419,18 @@ export function useAstridrVoice({
         voiceStateRef.current !== "idle" && voiceStateRef.current !== "error-disabled";
       if (!active || !enabledRef.current) return;
 
+      // Salvage an abandoned utterance BEFORE restarting: mid-transcription
+      // death with a substantive interim → synthesize the final ourselves.
+      const salvage = longestInterimRef.current.trim();
+      if (
+        voiceStateRef.current === "transcribing" &&
+        salvage.split(/\s+/).filter(Boolean).length >= 3
+      ) {
+        trace("final.synthesized-from-interim", { text: salvage });
+        longestInterimRef.current = "";
+        handleFinalResultRef.current(salvage, undefined);
+      }
+
       if (lifetimeMs < RECOGNIZER_MIN_HEALTHY_MS) {
         const now = Date.now();
         restartTimesRef.current = restartTimesRef.current.filter(
@@ -432,6 +451,7 @@ export function useAstridrVoice({
           voiceStateRef.current !== "error-disabled";
         if (stillActive && enabledRef.current) {
           trace("recognizer.restart");
+          intentionalStopRef.current = false; // fresh session, fresh latch
           recognizerStartedAtRef.current = Date.now();
           recognitionStart();
         }
@@ -464,6 +484,7 @@ export function useAstridrVoice({
       utteranceEchoAnchoredRef.current = false;
       echoAnchorDeadlineRef.current = 0;
       closePendingRef.current = false;
+      longestInterimRef.current = "";
       setInterimText("");
       setFinalText("");
       intentionalStopRef.current = true; // the coming recognizer end is ours
@@ -552,6 +573,7 @@ export function useAstridrVoice({
     trace("flushSend", { message, closing: closePendingRef.current });
     if (!message) return;
     accumulatedRef.current = "";
+    longestInterimRef.current = "";
     setFinalText("");
     dispatch({ type: "FINAL_RESULT" });
 
@@ -650,6 +672,14 @@ export function useAstridrVoice({
       trace("interim", { text, state: voiceStateRef.current });
     }
 
+    // Track the longest user interim since the last final (salvage source if
+    // Chrome abandons the utterance — a later, shorter interim must not
+    // replace the good one; the live trace showed "do I have any entries on"
+    // collapsing to " today").
+    if (text.trim().length > longestInterimRef.current.trim().length) {
+      longestInterimRef.current = text;
+    }
+
     setInterimText(text);
     dispatch({ type: "INTERIM_RESULT" });
     resetSilenceTimer();
@@ -660,6 +690,7 @@ export function useAstridrVoice({
   handleFinalResultRef.current = (rawText: string, confidence?: number) => {
     let text = rawText;
     trace("final", { text, confidence, state: voiceStateRef.current });
+    longestInterimRef.current = ""; // a real final supersedes the salvage buffer
 
     // Echo guard + talk-over (see interim handler above).
     if (voiceStateRef.current === "speaking") {
@@ -690,11 +721,13 @@ export function useAstridrVoice({
       text = remainder;
     }
 
-    // Swallow the trailing final of the barge-in utterance ("stop" would
-    // otherwise be re-processed after the interim already fired the interrupt).
+    // Swallow the trailing final of the barge-in utterance: barge phrases
+    // ("stop") AND her own echo — after a talk-over cut, Chrome's final for
+    // that utterance is often just her leaked words (live trace: a bare
+    // " today" from her "Today is…" got SENT as a message).
     if (bargeInSwallowFinalRef.current) {
       bargeInSwallowFinalRef.current = false;
-      if (isBargeInPhrase(text)) {
+      if (isBargeInPhrase(text) || isEchoOfReply(text, echoReplyRef.current)) {
         trace("final.barge-swallowed", { text });
         return;
       }
@@ -863,6 +896,11 @@ export function useAstridrVoice({
       setInterimText("");
       setFinalText("");
       restartTimesRef.current = [];
+      longestInterimRef.current = "";
+      // A stale intentional-stop latch (set when teardown ran with NO live
+      // recognizer to consume it) must never eat this session's keep-alive —
+      // the live trace showed exactly that killing the restart.
+      intentionalStopRef.current = false;
       recognizerStartedAtRef.current = Date.now();
       recognitionStart();
       resetSilenceTimer();
