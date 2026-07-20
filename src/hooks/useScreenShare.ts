@@ -1,10 +1,11 @@
 /**
- * useScreenShare — the SOLE caller of getDisplayMedia in codepulse (D-09/D-10).
+ * useScreenShare — the SOLE caller of the screen-capture picker API in
+ * codepulse (D-09/D-10).
  *
  * The live MediaStream is held in a ref, never React state (CONTEXT.md) — a
  * re-render must never risk re-triggering a picker prompt or being diffed away.
  * `arm()` flips a UI-only "armed" state without opening the picker at all,
- * because voice cannot invoke getDisplayMedia (no user gesture) — a subsequent
+ * because voice cannot invoke it (no user gesture) — a subsequent
  * user-gesture `start()` is what actually opens it (D-09). `start()` requests a
  * "monitor" displaySurface *preference* and never branches on what the picker
  * actually returns (D-10). `captureFrame()` always grabs a FRESH frame from the
@@ -79,7 +80,7 @@ export function useScreenShare(opts?: UseScreenShareOptions) {
 
   const arm = useCallback(() => {
     // D-09: voice cannot open the picker (no user gesture) — arm just flips UI
-    // state. getDisplayMedia is NOT called here.
+    // state. The picker API is NOT called here.
     trace("arm");
     setState("armed");
   }, []);
