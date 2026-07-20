@@ -51,9 +51,6 @@ export interface UseSpeechRecognitionOptions {
   onFinalResult: (transcript: string, confidence?: number) => void;
   onInterimResult?: (transcript: string) => void;
   onEnd?: () => void;
-  /** Fires on recognizer errors (incl. benign "aborted"/"no-speech") — lets
-   *  callers trace the recognizer lifecycle without console-only visibility. */
-  onError?: (error: string) => void;
 }
 
 export interface UseSpeechRecognitionReturn {
@@ -83,11 +80,6 @@ export function useSpeechRecognition(
   const onFinalResultRef = useRef(options.onFinalResult);
   const onInterimResultRef = useRef(options.onInterimResult);
   const onEndRef = useRef(options.onEnd);
-  const onErrorRef = useRef(options.onError);
-
-  useEffect(() => {
-    onErrorRef.current = options.onError;
-  }, [options.onError]);
 
   useEffect(() => {
     onFinalResultRef.current = options.onFinalResult;
@@ -168,7 +160,6 @@ export function useSpeechRecognition(
       if (event.error !== "aborted" && event.error !== "no-speech") {
         console.warn("Speech recognition error:", event.error);
       }
-      onErrorRef.current?.(event.error);
       setIsListening(false);
       recognitionRef.current = null;
     };

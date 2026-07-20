@@ -23,7 +23,7 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
-import { useAstridrVoice, VOICE_DEBUG_ENABLED } from "@/hooks/useAstridrVoice";
+import { useAstridrVoice } from "@/hooks/useAstridrVoice";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import type { VoiceState } from "@/components/voice/voiceState";
 
@@ -270,22 +270,6 @@ export default function Chat() {
               )}
               {pill.text}
             </span>
-          )}
-          {/* TEMP repro instrumentation — copies the voice lifecycle trace */}
-          {VOICE_DEBUG_ENABLED && (
-            <button
-              type="button"
-              onClick={() => {
-                const buf = window.__astridrVoiceTrace ?? [];
-                void navigator.clipboard.writeText(
-                  buf.map((e) => `${e.t} ${e.ev} ${e.d ? JSON.stringify(e.d) : ""}`).join("\n")
-                );
-              }}
-              title="Copy the voice lifecycle trace (temporary debug)"
-              className="font-mono text-[10px] tracking-wide px-2 py-1 rounded border border-border text-muted-foreground hover:text-foreground"
-            >
-              COPY TRACE
-            </button>
           )}
           <TooltipProvider delayDuration={300}>
             <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />

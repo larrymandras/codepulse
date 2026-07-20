@@ -72,33 +72,6 @@ const RESTART_MAX = 3;
 const RESTART_WINDOW_MS = 10_000;
 const RESTART_DELAY_MS = 300;
 
-// ─── TEMPORARY live-repro instrumentation (2026-07-20) ───────────────────────
-// Traces the full recognizer/state lifecycle so voice-timing bugs are fixed
-// from a real trace, never from reasoning blind (restart-storm lesson).
-// Console `[voice]` lines + window.__astridrVoiceTrace ring buffer (the Chat
-// page shows a COPY TRACE chip while this is on). Remove once the natural-
-// conversation pack is live-verified.
-
-const VOICE_DEBUG = true;
-/** Chat page shows a COPY TRACE chip while instrumentation is on. */
-export const VOICE_DEBUG_ENABLED = VOICE_DEBUG;
-
-declare global {
-  interface Window {
-    __astridrVoiceTrace?: Array<{ t: string; ev: string; d?: unknown }>;
-  }
-}
-
-function trace(ev: string, d?: unknown) {
-  if (!VOICE_DEBUG || typeof window === "undefined") return;
-  const entry = { t: new Date().toISOString().slice(11, 23), ev, d };
-  // eslint-disable-next-line no-console
-  console.log(`[voice] ${entry.t} ${ev}`, d ?? "");
-  const buf = (window.__astridrVoiceTrace ??= []);
-  buf.push(entry);
-  if (buf.length > 500) buf.shift();
-}
-
 // ─── Echo fingerprint (talk-over-with-content) ───────────────────────────────
 
 function fingerprintWords(text: string): string[] {
@@ -374,7 +347,6 @@ export function useAstridrVoice({
     onFinalResult: (t, c) => handleFinalResultRef.current(t, c),
     onInterimResult: (t) => handleInterimResultRef.current(t),
     onEnd: () => {
-      trace("recognizer.end", { state: voiceStateRef.current });
       // Keep-alive: Chrome ends its recognizer after ~14s without speech —
       // during a live conversation that deafens barge-in and follow-ups (the
       // live-trace bug: it died while she was thinking). Restart, but ONLY:
@@ -394,7 +366,6 @@ export function useAstridrVoice({
         (t) => now - t < RESTART_WINDOW_MS
       );
       if (restartTimesRef.current.length >= RESTART_MAX) {
-        trace("recognizer.restart-suppressed", { reason: "storm-guard" });
         return;
       }
       restartTimesRef.current.push(now);
@@ -406,13 +377,9 @@ export function useAstridrVoice({
           voiceStateRef.current !== "idle" &&
           voiceStateRef.current !== "error-disabled";
         if (stillActive && enabledRef.current) {
-          trace("recognizer.restart");
           recognitionStart();
         }
       }, RESTART_DELAY_MS);
-    },
-    onError: (error) => {
-      trace("recognizer.error", { error, state: voiceStateRef.current });
     },
   });
 
@@ -420,7 +387,6 @@ export function useAstridrVoice({
 
   const teardownConversation = useCallback(
     (mode: "stop" | "abort") => {
-      trace("conversation.teardown", { mode, state: voiceStateRef.current });
       clearSilenceTimer();
       clearSendTimer();
       clearFollowUpWindow();
@@ -466,7 +432,6 @@ export function useAstridrVoice({
   const resetSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
     silenceTimerRef.current = setTimeout(() => {
-      trace("silence.timeout → re-arm");
       endConversation();
     }, SILENCE_TIMEOUT_MS);
   }, [endConversation]);
@@ -484,11 +449,9 @@ export function useAstridrVoice({
       const reply = chatRef.current.streamingReplyRef.current;
       const askedQuestion = /\?\s*$/.test(reply.trim());
       const windowMs = askedQuestion ? QUESTION_FOLLOW_UP_MS : FOLLOW_UP_WINDOW_MS;
-      trace("followup.open", { ms: windowMs, askedQuestion });
       setFollowUpMs(windowMs);
       setFollowUpOpen(true);
       followUpTimerRef.current = setTimeout(() => {
-        trace("followup.expire → re-arm");
         dispatch({ type: "FOLLOW_UP_EXPIRE" });
         setFollowUpOpen(false);
         followUpTimerRef.current = null;
@@ -507,7 +470,6 @@ export function useAstridrVoice({
   const flushSend = useCallback(async () => {
     clearSendTimer();
     const message = accumulatedRef.current.trim();
-    trace("flushSend", { message });
     if (!message) return;
     accumulatedRef.current = "";
     setFinalText("");
@@ -533,7 +495,6 @@ export function useAstridrVoice({
 
   const handleBargeIn = useCallback(() => {
     if (bargeInFiredRef.current) return;
-    trace("barge-in.fired");
     bargeInFiredRef.current = true;
     bargeInSwallowFinalRef.current = true;
     // You interrupted her mid-reply — clearly mid-conversation: accept whatever
@@ -572,15 +533,12 @@ export function useAstridrVoice({
     // your live utterance (talk-over-with-content).
     if (voiceStateRef.current === "speaking") {
       if (isBargeInPhrase(text)) {
-        trace("interim.barge-in", { text });
         handleBargeIn();
         return;
       }
       if (isEchoOfReply(text, currentReply())) {
-        trace("interim.echo-dropped", { text });
         return;
       }
-      trace("interim.talk-over", { text });
       handleBargeIn();
       // fall through — this interim is YOUR speech, show and track it
     } else if (
@@ -594,16 +552,13 @@ export function useAstridrVoice({
       utteranceEchoAnchoredRef.current = true;
       const remainder = stripEchoPrefix(text, echoReplyRef.current);
       if (!remainder) {
-        trace("interim.echo-tail", { text });
         return;
       }
       if (remainder !== text.trim()) {
-        trace("interim.echo-tail-stripped", { from: text, to: remainder });
       }
       text = remainder;
     }
 
-    trace("interim", { text, state: voiceStateRef.current });
     setInterimText(text);
     dispatch({ type: "INTERIM_RESULT" });
     resetSilenceTimer();
@@ -613,20 +568,16 @@ export function useAstridrVoice({
 
   handleFinalResultRef.current = (rawText: string, confidence?: number) => {
     let text = rawText;
-    trace("final", { text, confidence, state: voiceStateRef.current });
 
     // Echo guard + talk-over (see interim handler above).
     if (voiceStateRef.current === "speaking") {
       if (isBargeInPhrase(text)) {
-        trace("final.barge-in", { text });
         handleBargeIn();
         return;
       }
       if (isEchoOfReply(text, currentReply())) {
-        trace("final.echo-dropped", { text });
         return;
       }
-      trace("final.talk-over", { text });
       handleBargeIn();
       // fall through — this final is YOUR speech, process it normally
     } else if (
@@ -638,11 +589,9 @@ export function useAstridrVoice({
       utteranceEchoAnchoredRef.current = false;
       const remainder = stripEchoPrefix(text, echoReplyRef.current);
       if (!remainder) {
-        trace("final.echo-tail-dropped", { text });
         return;
       }
       if (remainder !== text.trim()) {
-        trace("final.echo-tail-stripped", { from: text, to: remainder });
       }
       text = remainder;
     }
@@ -652,7 +601,6 @@ export function useAstridrVoice({
     if (bargeInSwallowFinalRef.current) {
       bargeInSwallowFinalRef.current = false;
       if (isBargeInPhrase(text)) {
-        trace("final.barge-swallowed", { text });
         return;
       }
     }
@@ -664,7 +612,6 @@ export function useAstridrVoice({
     // no content around it): cancel a thinking turn if one is in flight,
     // otherwise ignore — NEVER send it to Ástríðr as a literal message.
     if (isPureBargeInPhrase(text)) {
-      trace("final.pure-barge", { text, inFlight: chatRef.current.isStreaming });
       if (chatRef.current.isStreaming) {
         conversationWarmRef.current = true;
         const partial = chatRef.current.interrupt();
@@ -683,7 +630,6 @@ export function useAstridrVoice({
     // Spoken strict-mode toggle (D-05): client fast-path, no LLM turn.
     const strictCommand = isStrictModeCommand(text);
     if (strictCommand) {
-      trace("final.strict-command", { text, to: strictCommand });
       onStrictModeChange(strictCommand === "on");
       clearFollowUpWindow();
       return;
@@ -693,7 +639,6 @@ export function useAstridrVoice({
     // conversation and re-arm the wake word. Discard accumulated text (an
     // abort, not a message — D-01).
     if (isEndPhrase(text)) {
-      trace("final.end-phrase", { text });
       endConversation();
       return;
     }
@@ -701,12 +646,6 @@ export function useAstridrVoice({
     // Noise/banter gate (CONV-03): reject cold fragments <3 words; warm
     // conversations accept short replies. Zero UI trace on reject.
     if (shouldReject(text, conversationWarmRef.current || followUpOpen, confidence)) {
-      trace("final.noise-rejected", {
-        text,
-        confidence,
-        warm: conversationWarmRef.current,
-        followUpOpen,
-      });
       return;
     }
 
@@ -725,7 +664,6 @@ export function useAstridrVoice({
       conversationWarmRef.current && words <= SHORT_ANSWER_MAX_WORDS
         ? SHORT_SEND_DEBOUNCE_MS
         : SEND_DEBOUNCE_MS;
-    trace("final.accepted", { text, warm: conversationWarmRef.current, debounceMs });
 
     clearSendTimer();
     sendTimerRef.current = setTimeout(() => {
@@ -739,7 +677,6 @@ export function useAstridrVoice({
   useEffect(() => {
     if (chat.ttsIsPlaying && !wasPlayingRef.current) {
       wasPlayingRef.current = true;
-      trace("tts.start", { state: voiceStateRef.current });
       clearSilentTurnTimer(); // audio arrived — the watchdog stands down
       // Re-arm barge-in for this speaking turn; the session is now warm.
       bargeInFiredRef.current = false;
@@ -751,7 +688,6 @@ export function useAstridrVoice({
       dispatch({ type: "TTS_START" });
     } else if (!chat.ttsIsPlaying && wasPlayingRef.current) {
       wasPlayingRef.current = false;
-      trace("tts.end", { state: voiceStateRef.current, strict: strictModeRef.current });
       // Arm the echo-tail window: the recognizer may still be finalizing her
       // trailing words (and gluing the user's answer onto them).
       if (chatRef.current.streamingReplyRef.current) {
@@ -762,7 +698,6 @@ export function useAstridrVoice({
       if (bargeInFiredRef.current) {
         // TTS end CAUSED BY a barge-in isn't her finishing — the user is
         // already talking. No follow-up countdown; just resume your clock.
-        trace("tts.end.barged — no follow-up window");
         resetSilenceTimer();
       } else {
         onTurnEnd();
@@ -787,7 +722,6 @@ export function useAstridrVoice({
           voiceStateRef.current === "processing" &&
           !chatRef.current.ttsIsPlaying
         ) {
-          trace("turn.end-no-audio → back to listening");
           dispatch({ type: "TTS_END", strictMode: strictModeRef.current });
           onTurnEnd();
         }
@@ -810,11 +744,9 @@ export function useAstridrVoice({
       // one tick, before the reducer state updates (live trace: double
       // "conversation open" raced two recognizer starts).
       if (conversationOpenRef.current || voiceStateRef.current !== "idle") {
-        trace("wake.ignored", { state: voiceStateRef.current });
         return;
       }
       conversationOpenRef.current = true;
-      trace("wake → conversation open");
       dispatch({ type: "WAKE" });
       setInterimText("");
       setFinalText("");
@@ -830,11 +762,9 @@ export function useAstridrVoice({
   // Recovery from error: toggle off (resets to idle), then on.
   useEffect(() => {
     if (!enabled) {
-      trace("mic.off → release everything");
       wakeWordStop();
       endConversation("abort"); // release the recognizer mic instantly
     } else if (wakeWordStatus === "idle") {
-      trace("mic.on → wake engine start");
       void wakeWordStart();
     }
     // loading / ready / error-disabled while enabled → do nothing.
