@@ -155,6 +155,11 @@ describe("voiceReducer", () => {
   it("BARGE_IN from processing → transcribing ('stop' cancels a thinking turn)", () => {
     expect(voiceReducer("processing", { type: "BARGE_IN" })).toBe("transcribing");
   });
+
+  it("TTS_END from processing → listening/idle (silent-turn watchdog close)", () => {
+    expect(voiceReducer("processing", { type: "TTS_END", strictMode: false })).toBe("listening");
+    expect(voiceReducer("processing", { type: "TTS_END", strictMode: true })).toBe("idle");
+  });
 });
 
 describe("isEndPhrase", () => {
