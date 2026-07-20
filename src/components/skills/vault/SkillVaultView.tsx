@@ -16,10 +16,11 @@ import {
 import { SkillVaultDetailCard } from "./SkillVaultDetailCard";
 import { ClusterDetailCard } from "./ClusterDetailCard";
 import { SkillPackView } from "./SkillPackView";
+import { SkillLeaderboardView } from "./SkillLeaderboardView";
 import type { VaultViewMode } from "./SkillVaultScene";
 
-// Panel modes: the two 3D scene modes plus the 2D circle-packing ("packed") view.
-type PanelMode = VaultViewMode | "packed";
+// Panel modes: the two 3D scene modes, the 2D circle-packing view, and list views.
+type PanelMode = VaultViewMode | "packed" | "ranked";
 
 // Lazy boundary keeps three.js / react-force-graph-3d out of the main bundle.
 const SkillVaultScene = lazy(() => import("./SkillVaultScene"));
@@ -44,6 +45,7 @@ export function SkillVaultView({
   const [selectedCluster, setSelectedCluster] = useState<VaultCluster | null>(null);
   const [mode, setMode] = useState<PanelMode>("constellation");
   const [query, setQuery] = useState(initialQuery);
+  const is3D = mode === "constellation" || mode === "usage";
 
   const model = useMemo(() => buildVaultModel(skills), [skills]);
   const data = useMemo(() => computeVaultLayout(model), [model]);
@@ -113,7 +115,7 @@ export function SkillVaultView({
           <Button variant="secondary" size="sm" onClick={onClose} className="gap-1.5">
             <Boxes className="h-4 w-4" /> Grid
           </Button>
-          {mode !== "packed" && (
+          {is3D && (
             <div className="flex items-center gap-1 rounded-[var(--radius)] border border-border/60 bg-background/70 p-1 backdrop-blur">
               {CONTAINER_ORDER.map((id) => {
                 const c = model.containers.find((x) => x.id === id)!;
@@ -139,6 +141,7 @@ export function SkillVaultView({
                 ["constellation", "Constellation"],
                 ["usage", "Usage"],
                 ["packed", "Orchard"],
+                ["ranked", "Ranked"],
               ] as const
             ).map(([m, label]) => (
               <button
@@ -153,7 +156,7 @@ export function SkillVaultView({
               </button>
             ))}
           </div>
-          {focusedContainer && mode !== "packed" && (
+          {focusedContainer && is3D && (
             <Button variant="ghost" size="sm" onClick={() => setFocusedContainer(null)} className="gap-1 text-muted-foreground">
               <RotateCcw className="h-3.5 w-3.5" /> Overview
             </Button>
@@ -182,8 +185,8 @@ export function SkillVaultView({
         </div>
       </div>
 
-      {/* hint line (3D modes only; the pack view renders its own) */}
-      {mode !== "packed" && (
+      {/* hint line (3D modes only; other modes render their own) */}
+      {is3D && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2 text-center text-[11px] text-muted-foreground/70">
           {mode === "usage"
             ? "Living mode · orb size & pulse = how much you use each skill"
@@ -200,6 +203,8 @@ export function SkillVaultView({
         </div>
       ) : mode === "packed" ? (
         <SkillPackView model={model} query={query} />
+      ) : mode === "ranked" ? (
+        <SkillLeaderboardView model={model} query={query} />
       ) : (
         <Suspense
           fallback={
@@ -241,7 +246,7 @@ export function SkillVaultView({
         </Suspense>
       )}
 
-      {mode === "packed" ? null : selected ? (
+      {!is3D ? null : selected ? (
         <SkillVaultDetailCard skill={selected} onClose={() => setSelected(null)} />
       ) : selectedCluster ? (
         <ClusterDetailCard

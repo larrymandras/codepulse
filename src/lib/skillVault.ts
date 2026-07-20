@@ -204,6 +204,25 @@ export function buildVaultModel(skills: VaultSkillInput[]): VaultModel {
   return { containers, shadowLinks, total };
 }
 
+/** All skill instances across every container (a shadowing skill appears once per container). */
+export function flattenSkills(model: VaultModel): VaultSkill[] {
+  const out: VaultSkill[] = [];
+  for (const c of model.containers) for (const cl of c.clusters) out.push(...cl.skills);
+  return out;
+}
+
+/** One row per distinct skill name (first container instance wins). For ranking/lists. */
+export function uniqueSkills(model: VaultModel): VaultSkill[] {
+  const seen = new Set<string>();
+  const out: VaultSkill[] = [];
+  for (const s of flattenSkills(model)) {
+    if (seen.has(s.name)) continue;
+    seen.add(s.name);
+    out.push(s);
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Layout — deterministic fixed positions for react-force-graph (physics off).
 // ---------------------------------------------------------------------------
