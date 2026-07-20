@@ -29,6 +29,7 @@ Operators can see the complete operational state of Ástríðr — what's runnin
 
 ## Current State
 
+**v12.0 Phase 101 complete (2026-07-20):** Reminders & Calendar Command Center shipped — 7/7 plans (incl. 101-07 UAT gap closure), verification passed (mutation-tested regression guard), live UAT 9/10 passed with the sole gap closed. Convex `reminders` store is the single source of truth written by both the CodePulse UI and Ástríðr's chat tool; Ástríðr crons drive proactive nudges and the per-profile read-only Google Calendar cache. Milestone close-out pending; advisory code review (`101-REVIEW.md`) flagged 2 criticals (snooze suppresses future nudges; edit popover UTC-shifts `dueAt`) to fix. v11.0 (Phases 98-100) remains paused mid-milestone.
 **Phase 96 complete (2026-07-13):** UI deep-dive cleanup appended to v10.0 — 13/13 plans, re-verified 16/16 after gap closure (96-13). Every UI surface tells the truth and follows one standard: CONSOLE nav cluster dissolved, CommandPalette single-sourced from `navItems` (no more drift), fabricated header/security/automation readouts removed, orphaned pages (MissionControl/Profiles/Agents) deleted with redirects, both approval consumers (Chat ApprovalBlock + InboxCard) gate on the server ack boolean against the verified Ástríðr `approval.respond` contract, Chat subscribes to the real `run.blocks` event, and all pages share one `<PageHeader>`. Outstanding cross-repo handoff (astridr-repo, out of CodePulse scope): `chat.send` bypasses the security pipeline (`_ws_agent_launcher` never calls `process_inbound`) and no approval-type block producer exists — until those land, Chat-side approval blocks can't fire live (Inbox path verified live end-to-end).
 **Shipped:** v10.0 Eval & Trace Observability + Hardening (2026-07-07) — all 3 phases (93-95), 15 plans, 9/9 requirements (EVAL-01..03, TRACE-01/02, HARD-01..04); each phase has a `VERIFICATION.md`. **Phase 93:** `evalScores` eval pipeline live end-to-end on prod — idempotent `task_quality` ingest, nightly LLM-as-judge `internalAction`, per-persona quality KPI grid + regression detection (verified 18/18, real cross-repo score path). **Phase 94:** `traceId` grouping live end-to-end — Ástríðr per-turn contextvar at `_process_inner` → all 3 provider emits → `/runtime-ingest` alias → `llmMetrics.traceId` → Gantt `TraceWaterfall` on SessionDetail (`?tab=trace`) + Analytics cross-link; dead `LangfuseTraceLink.tsx` deleted (verified 22/22 + operator sign-off). **Phase 95:** TypeScript 6.0.3 green via one tsconfig fix + react-day-picker deleted + four folded majors verified (HARD-03/04); Forge & Ástríðr ingest keys verified real on both sides via a live round-trip, no rotation (HARD-02); `/cso` audit SHIP — 0 vulns, 0 secrets, 4 LOW findings all remediated (ingest fail-closed, LLM action auth-gated, `.gitignore`, CI SHA-pins) (HARD-01); verified 16/16. Also fixed the Forge daemon (SQLite migration FK crash + ingest-config durability, merged to forge master). Archive: `milestones/v10.0-ROADMAP.md`.
 **Prior shipped:** v9.0 Readability & Experience (2026-06-29) — all 5 phases (88-92), 30 plans, 19/19 requirements (TH-01..06, AR-01..03, ROOM-01..04, G3D-01..02, VOX-01..04). Durable ingest-time analytics rollups replacing fragile `.take()` caps (under Convex 16 MiB/exec at any volume); a fully token-driven theme system with a WCAG-AA readable theme + Midnight Aubergine editorial skin + no-flash persisted switcher (axe-clean across 4 themes × 5 surfaces); the Agent/War Room finished into a real multi-persona surface with a genuine operator Join via LiveKit (closed 5 live cross-repo integration gaps); an opt-in lazy-loaded `react-force-graph-3d` mode on `CodeVaultGraph` (~4,038 nodes at ≥30 FPS, operator GPU sign-off); and a local-wake-word Voice Command Palette (openWakeWord ONNX, no Picovoice). Archive: `milestones/v9.0-ROADMAP.md`.
@@ -154,6 +155,14 @@ v5.0 added 12 phases:
 
 Full definitions + traceability: archived in `.planning/milestones/v8.0-REQUIREMENTS.md` (fresh `REQUIREMENTS.md` is created by the next `/gsd-new-milestone`). Closed v6.0 requirements (DS/GAL/MCP/KG/CON/HUB/OPS) retained in the archive as well.
 
+### Validated (v12.0 Personal Productivity — Reminders & Calendar — Phase 101 complete 2026-07-20)
+
+- ✓ REM-01..05 — Convex `reminders` source-of-truth table + CRUD/recurrence engine (`computeNextDueAt`, spawn-on-complete), authed `/reminders-ingest`//`/reminders-read` endpoints, Ástríðr `reminders` tool (add/list/update/complete/snooze via chat, `source:"astridr"`), proactive due-reminder nudges (Ástríðr cron, `notifiedAt` dedupe, recurrence roll-forward) — Phase 101 plans 01-03/05 (verified + live UAT 2026-07-20)
+- ✓ CAL-01..02 — Read-only Google Calendar cache: Ástríðr cron fetches per-profile calendars → `/calendar-ingest` → `calendarEvents`; CodePulse calendar overlay beside the reminder list (browser never touches Google) — Phase 101 plans 04/02/06
+- ✓ UI-01..02 — Profile-segmented (personal/business/consulting) Reminders command-center page: grouped list (Overdue/Today/Upcoming/Done), quick actions, QuickAdd, day-filter with undated-reminder exemption (101-07 gap closure, UAT test 8) — Phase 101 plans 06/07
+
+Post-completion advisory: `101-REVIEW.md` (2 critical, 6 warning) — snooze-vs-nudge dedupe and edit-popover timezone handling to fix before heavy live use.
+
 ### Validated (v10.0 Eval & Trace Observability + Hardening — shipped 2026-07-07)
 
 - ✓ EVAL-01..03 — Per-persona quality persistence (`evalScores` + idempotent `task_quality` ingest + Ástríðr mirror), nightly 4-dimension LLM judge (isolated `intelligence.llm_eval` slot, rubric v1, previous-complete-day window), window-mean regression detection with delivered alerts + `/quality` KPI grid/drill-in — Phase 93 (2026-07-06, live E2E operator-verified; quality trends gated on E3 ≥0.7 judge-calibration agreement, labels pending)
@@ -259,7 +268,14 @@ This document evolves at phase transitions and milestone boundaries.
 </details>
 
 ---
+*Last updated: 2026-07-20 — **v12.0 Phase 101 (Reminders & Calendar Command Center) COMPLETE**: 7/7 plans incl. 101-07 UAT gap closure; REM-01..05, CAL-01..02, UI-01..02 validated (verification passed with mutation-tested regression guard; live UAT). Milestone close-out pending; `101-REVIEW.md` advisory criticals (snooze/nudge dedupe, edit-popover UTC shift) queued for fix. v11.0 paused mid-milestone (Phase 97 done; 98-100 not started).*
+
+<details>
+<summary>Prior footer — 2026-07-17 (v11.0 started)</summary>
+
 *Last updated: 2026-07-17 — **v11.0 Skills Command Center — Full Lifecycle & Launch started** via `/gsd-new-milestone`. Scope: real skill intake (execute today's dry-run install to global/project/cold), full skill lifecycle mutations (archive/restore/move/delete, archive-first), real skill launch to Chat/Forge-agent/Ástríðr, control-surface UX (⋯ menu + drag across scope lanes), and the cross-repo Forge daemon executor that makes it all live. Continues phase numbering from 97 (Phase 97 already promoted from backlog 999.1). Prior: v10.0 SHIPPED & closed 2026-07-13 (phases 93-96, Phase 96 UI-cleanup addendum).*
+
+</details>
 
 <details>
 <summary>Prior footer — 2026-07-13 (v10.0 closed)</summary>

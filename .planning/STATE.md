@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
-status: executing
-stopped_at: Phase 101 Plan 07 (undated-reminder day-filter gap closure, codepulse) complete — Phase 101 is 7/7 plans complete
-last_updated: "2026-07-20T22:22:03.028Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 101 was final phase)
+last_updated: 2026-07-20T22:35:02.101Z
 last_activity: 2026-07-20
 progress:
   total_phases: 1
@@ -14,8 +14,9 @@ progress:
   percent: 100
 ---
 
-<!-- Counters hand-reconciled 2026-07-19 against git ground truth (gsd-sdk state.* verbs miscount).
-     v12.0 scope = Phase 101 only (6 plans). v11.0 (Phases 97-100) is PAUSED mid-milestone:
+<!-- Counters hand-reconciled 2026-07-20 against git ground truth (gsd-sdk state.* verbs miscount;
+     phase.complete wrote completed_plans:26 — corrected to 7).
+     v12.0 scope = Phase 101 only (7 plans incl. 101-07 gap closure). v11.0 (Phases 97-100) is PAUSED mid-milestone:
      Phase 97 COMPLETE (6/6, verified 495946f); Phases 98/99/100 not started — resume after v12.0. -->
 
 # Project State
@@ -25,15 +26,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 101 — reminders-calendar-command-center
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19
-Phase: 101 (reminders-calendar-command-center) — COMPLETE (7/7 plans)
-Plan: 7 of 7 done — Wave 1: 101-01 (complete) | Wave 2: 101-02 (complete) | Wave 3: 101-03 (complete, astridr-repo) | 101-04 (complete, astridr-repo) | 101-05 (complete, astridr-repo) | 101-06 (complete, codepulse) | Wave 4: 101-07 (complete, codepulse — gap closure, UAT test 8)
-Status: Phase 101 complete — all automated verification (vitest/tsc) passed; gap closure plan 101-07 closed the sole UAT gap (undated reminders vanishing under a day filter)
-Last activity: 2026-07-20 -- Phase 101 Plan 07 (gap closure) executed and closed
+Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
+Phase: 101 (reminders-calendar-command-center) — COMPLETE (7/7 plans, verification passed incl. gap-closure re-verification)
+Plan: 7 of 7 done — Wave 1: 101-01 | Wave 2: 101-02 | Wave 3: 101-03/04/05 (astridr-repo) + 101-06 (codepulse) | Wave 4: 101-07 (gap closure, UAT test 8 — resolved)
+Status: Phase 101 complete + verified (101-VERIFICATION.md passed, mutation-tested). Code review (101-REVIEW.md) filed 2 critical + 6 warning advisory findings (snooze kills future nudges; edit popover UTC-shifts dueAt) — fix via /gsd-code-review 101 --fix before or after milestone close.
+Last activity: 2026-07-20 — 101-07 gap closure executed, verified, reviewed; UAT test-8 gap resolved
 
 **v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
 
@@ -258,9 +259,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-20T22:22:03.028Z
-Stopped at: Phase 101 Plan 07 (undated-reminder day-filter gap closure, codepulse) complete — Phase 101 is 7/7 plans complete
-Next action: Phase 101 (v12.0) is done. Recommended before formal milestone close: a quick live re-check (dev server, undated reminder stays visible under a day filter). Then resume v11.0 with `/gsd-discuss-phase 97` follow-ons (Phases 98-100) or run milestone close-out for v12.0.
+Last session: 2026-07-20T22:45:00.000Z
+Stopped at: Phase 101 fully closed — 101-07 executed, gap-closure re-verification passed (mutation-tested), UAT test-8 gap resolved, code review committed (2 critical + 6 warning advisory findings in 101-REVIEW.md)
+Next action: Address 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt), retest UAT test 8's NL half via real Ástríðr chat, then run v12.0 milestone close-out (`/gsd-complete-milestone`) or resume v11.0 (`/gsd-discuss-phase 98`).
 Resume file: None
 
 ## Operator Next Steps

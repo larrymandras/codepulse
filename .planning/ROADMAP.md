@@ -10,7 +10,7 @@
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
 - ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
 - 🚧 **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**in progress**, started 2026-07-17) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor is the critical path
-- 📋 **v12.0 Personal Productivity — Reminders & Calendar** — Phase 101 (**defined 2026-07-19**, not yet active — v11.0 still executing) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo)
+- ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phase 101 (**complete 2026-07-20**, 7/7 plans incl. gap closure; formal close-out/archive pending) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo)
 
 ## Phases
 
@@ -573,7 +573,7 @@ Plans:
 
 **Phase summary:**
 
-- [x] **Phase 101 — Reminders & Calendar Command Center** — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page with quick actions and effects. (completed 2026-07-19)
+- [x] **Phase 101 — Reminders & Calendar Command Center** — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page with quick actions and effects. (completed 2026-07-20 — 7/7 plans incl. 101-07 UAT gap closure)
 
 **Execution order:** Single phase, 6 plans, cross-repo — build worktrees-OFF, sequential, commit per-repo (`git -C`). Convex foundation (01) → sync/calendar endpoints (02) → Ástríðr tool + crons (03/04/05) + Reminders page (06). Plans 03/04/05 modify **astridr-repo**; 01/02/06 modify **codepulse** (Convex is the cloud deployment tidy-whale-981).
 
@@ -593,7 +593,7 @@ Plans:
   5. The consulting profile's calendar reads the real `lemandras@forgedinai.ai` account (`consulting` Google alias); personal reads `mandrasle@gmail.com`, business reads `lmandras@myprotectall.com`.
   6. Add / edit / complete / snooze all succeed from BOTH the CodePulse page and an Ástríðr conversation, with the other surface reflecting the change.
 
-**Plans**: 6 plans (3 waves), cross-repo
+**Plans**: 7 plans (4 waves; 101-07 gap closure added post-UAT), cross-repo
 
 - [x] 101-01-PLAN.md — Wave 1 (codepulse): Convex `reminders` table + CRUD mutations (create/update/complete/snooze/remove) + queries (listByProfile/dueSoon/overdue) + recurrence-spawn helper + tests (REM-01, REM-04)
 - [x] 101-02-PLAN.md — Wave 2 (codepulse): authed `/reminders-ingest` (write) + `/reminders-read` (authed read) + `/calendar-ingest` endpoints, `calendarEvents` read-only cache table + `listByProfile` calendar query + tests (REM-02, CAL-01)
@@ -638,7 +638,7 @@ Plans:
 | 98. Skill Lifecycle Mutations | v11.0 | 0/TBD | Not started | — |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
-| 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete   | 2026-07-20 |
+| 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 
 *Last updated: 2026-07-20 — **v12.0 Personal Productivity (Reminders & Calendar) — Phase 101 COMPLETE**: Plan 07 (gap closure, codepulse — UI-02/CAL-02) done, 7/7 plans; closed the sole `101-UAT.md` gap (test 8: undated reminders vanishing under a calendar day filter) via a RED-first regression test + one-line predicate fix. All v12.0 requirements complete. Live manual re-check (dev server, undated reminder stays visible under a day filter) recommended before milestone close. v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-19 — Plan 06 (Reminders command-center page, codepulse) done, 6/6 plans; all 9 v12.0 requirements complete. Earlier: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
 </content>
