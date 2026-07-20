@@ -167,6 +167,15 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
     const ttsBuf = new Uint8Array(new ArrayBuffer(128));
     const FRAME_MS = 1000 / 30;
 
+    // Ember motes — sparks drifting up through the aura; density/brightness
+    // scale with the live amplitude. Seeded once per mount.
+    const motes = Array.from({ length: 18 }, () => ({
+      x: Math.random() * 2 - 1, // −1..1 of base radius
+      sp: 0.25 + Math.random() * 0.5, // rise speed
+      ph: Math.random() * 1000, // phase offset
+      r: 0.8 + Math.random() * 1.5, // size
+    }));
+
     let raf = 0;
     let smoothed = 0; // eased amplitude 0..1
     let lastDraw = -Infinity;
@@ -234,6 +243,26 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
         ctx.stroke();
       }
 
+      // Ember motes — small additive sparks rising through the aura. Cheap:
+      // 18 tiny arcs, no shadows; brightness rides the live amplitude.
+      if (!reduced) {
+        const span = base * 2.3;
+        for (const m of motes) {
+          const prog = ((t * m.sp + m.ph) % 260) / 260; // 0..1 rising
+          const my = cy + base * 1.05 - prog * span;
+          const mx =
+            cx + m.x * base * (0.95 + 0.25 * Math.sin(t * 0.012 + m.ph));
+          // Fade in low, peak mid-rise, fade out high.
+          const alpha =
+            Math.max(0, prog * (1 - prog) * 4) * (0.10 + level * 0.45);
+          if (alpha <= 0.01) continue;
+          ctx.beginPath();
+          ctx.fillStyle = `rgba(${r},${g},${b},${alpha})`;
+          ctx.arc(mx, my, m.r * px * (1 + level * 0.8), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       // Rotating scan arc — most visible while thinking.
       const scanAlpha = s === "processing" ? 0.6 : 0.22 + level * 0.3;
       const scanR = base * 1.7;
@@ -275,7 +304,7 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative mx-auto aspect-[4/5] w-full max-w-[200px] select-none ${className ?? ""}`}
+      className={`relative mx-auto aspect-[4/5] w-full max-w-[260px] select-none ${className ?? ""}`}
       aria-hidden="true"
     >
       {/* Probe: resolves --primary to a normalized rgb() we can read. */}
@@ -285,26 +314,38 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       />
       {/* Aura (behind) */}
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
-      {/* Calm frame — always present as the base layer. */}
-      <img
-        src={avatarSrc}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-contain"
-        style={{ WebkitMaskImage: AVATAR_MASK, maskImage: AVATAR_MASK }}
-      />
-      {/* Speaking frame — crossfades in over the calm frame during her turn. */}
-      <img
-        src={avatarSpeakingSrc}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-out"
-        style={{
-          WebkitMaskImage: AVATAR_MASK,
-          maskImage: AVATAR_MASK,
-          opacity: state === "speaking" ? 1 : 0,
-        }}
-      />
+      {/* Orbital rings — counter-rotating, each carrying a glowing satellite. */}
+      <div className="aura-ring aura-ring-1" aria-hidden="true" />
+      <div className="aura-ring aura-ring-2" aria-hidden="true" />
+      {/* The figure floats gently; both frames bob together. */}
+      <div className="aura-float absolute inset-0">
+        {/* Calm frame — always present as the base layer. */}
+        <img
+          src={avatarSrc}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-contain"
+          style={{
+            WebkitMaskImage: AVATAR_MASK,
+            maskImage: AVATAR_MASK,
+            filter:
+              "drop-shadow(0 0 18px color-mix(in oklab, var(--primary) 35%, transparent))",
+          }}
+        />
+        {/* Speaking frame — crossfades in over the calm frame during her turn. */}
+        <img
+          src={avatarSpeakingSrc}
+          alt=""
+          draggable={false}
+          className="absolute inset-0 h-full w-full object-contain transition-opacity duration-300 ease-out"
+          style={{
+            WebkitMaskImage: AVATAR_MASK,
+            maskImage: AVATAR_MASK,
+            opacity: state === "speaking" ? 1 : 0,
+            filter: "drop-shadow(0 0 22px rgba(16,185,129,0.35))",
+          }}
+        />
+      </div>
     </div>
   );
 }

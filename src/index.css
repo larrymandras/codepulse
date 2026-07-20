@@ -761,3 +761,61 @@ code, pre, .font-mono {
   .msg-turn { animation: none; }
   .stream-cursor { animation: none; }
 }
+
+/* ── Avatar orbital rings + float (presence hero) ───────────────────────────
+   Two counter-rotating rings, each carrying a glowing satellite mote — the
+   rotation reads through the satellites. The figure itself bobs gently. */
+
+@keyframes aura-orbit {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes aura-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+.aura-ring {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  pointer-events: none;
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, transparent);
+}
+.aura-ring::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 9999px;
+  background: var(--primary);
+  box-shadow:
+    0 0 10px var(--primary),
+    0 0 22px color-mix(in oklab, var(--primary) 60%, transparent);
+}
+.aura-ring-1 {
+  width: 96%;
+  animation: aura-orbit 26s linear infinite;
+}
+.aura-ring-2 {
+  width: 78%;
+  border-color: color-mix(in oklab, #8b5cf6 22%, transparent);
+  animation: aura-orbit 34s linear infinite reverse;
+}
+.aura-ring-2::before {
+  background: #8b5cf6;
+  box-shadow: 0 0 10px #8b5cf6, 0 0 22px rgba(139, 92, 246, 0.6);
+}
+
+.aura-float { animation: aura-float 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-ring { animation: none; }
+  .aura-ring::before { display: none; }
+  .aura-float { animation: none; }
+}

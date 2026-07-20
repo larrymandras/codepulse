@@ -298,7 +298,7 @@ export default function Chat() {
       {/* Avatar hero */}
       <div className="flex flex-col items-center pt-5 pb-2 shrink-0">
         <div
-          className={`w-[172px] transition-[opacity,filter] duration-300 ${
+          className={`w-[248px] transition-[opacity,filter] duration-300 ${
             listening ? "" : "opacity-45 saturate-50"
           }`}
         >
