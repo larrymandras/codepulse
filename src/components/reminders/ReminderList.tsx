@@ -540,6 +540,25 @@ export function ReminderList({
       await onEdit(id, fields);
     } catch {
       toast.error("Failed to save reminder.");
+    } finally {
+      // Edit overrides carry no `status`, so the status-keyed reconcile
+      // effect above never drops them: a failed edit would show unsaved
+      // values forever (contradicting the toast), and even a successful
+      // edit's override would mask later remote changes to those fields.
+      // Clear the edit fields once the mutation settles — on success the
+      // realtime row already carries the new values (Convex mutations
+      // resolve after local queries reflect the write); on failure this
+      // rolls the UI back to server truth. A concurrent status/snooze
+      // override on the same row is preserved.
+      setOverrides((o) => {
+        const existing = o[id];
+        if (!existing) return o;
+        const { title: _t, dueAt: _d, priority: _p, ...rest } = existing;
+        const next = { ...o };
+        if (Object.keys(rest).length > 0) next[id] = rest;
+        else delete next[id];
+        return next;
+      });
     }
   }
 
