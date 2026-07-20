@@ -201,6 +201,38 @@ describe("Reminders — calendar overlay (CAL-02)", () => {
     expect(screen.getAllByText("Consulting-only event").length).toBeGreaterThan(0);
   });
 
+  test("a day with more items than fit never silently drops one — overflow is always accounted for", () => {
+    // Regression: chips were sliced per-list (2 events + 2 reminders) but the
+    // "+N more" indicator was gated on a COMBINED `> 4`. With 3 events and no
+    // reminders, only 2 rendered, 3 > 4 was false, and the third vanished with
+    // no indicator at all. Every item must be either rendered or counted.
+    const EVENT_COUNT = 7;
+    mockUseQuery.mockImplementation((ref: { toString(): string }) => {
+      const path = ref.toString();
+      if (path.includes("calendarEvents")) {
+        return Array.from({ length: EVENT_COUNT }, (_, i) =>
+          makeEvent({ _id: `evt-${i}`, title: `Event ${i}`, start: NOW + DAY })
+        );
+      }
+      return [];
+    });
+
+    const { container } = render(<Reminders />);
+
+    const eventChips = container.querySelectorAll('[data-testid="calendar-event-chip"]');
+    const overflow = Array.from(container.querySelectorAll("span")).find((el) =>
+      /^\+\d+ more$/.test(el.textContent ?? "")
+    );
+
+    expect(eventChips.length).toBeGreaterThan(0);
+    expect(eventChips.length).toBeLessThan(EVENT_COUNT);
+    expect(overflow).toBeDefined();
+
+    const hidden = Number((overflow!.textContent ?? "").match(/\+(\d+) more/)![1]);
+    // Rendered + hidden must equal the truth. This is what the old code broke.
+    expect(eventChips.length + hidden).toBe(EVENT_COUNT);
+  });
+
   test("a due-dated reminder renders a distinct chip on its day, and a Google event renders as a distinct outline event", () => {
     mockUseQuery.mockImplementation((ref: { toString(): string }) => {
       const path = ref.toString();

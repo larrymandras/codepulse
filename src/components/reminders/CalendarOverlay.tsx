@@ -62,6 +62,11 @@ function startOfDaySeconds(date: Date): number {
   return Math.floor(d.getTime() / 1000);
 }
 
+// Chips a single day cell shows before collapsing to "+N more". Week cells are
+// far taller than month cells, so they carry more.
+const MAX_CHIPS_MONTH = 4;
+const MAX_CHIPS_WEEK = 10;
+
 const PRIORITY_VAR: Record<string, string> = {
   low: "--status-info",
   med: "--status-warn",
@@ -133,8 +138,13 @@ export function CalendarOverlay({
     );
   }
 
+  // Week rows in the current view (5 or 6 for a month, 1 for a week). Drives the
+  // grid's row template so cells divide the available height instead of sitting
+  // at a fixed 64px and leaving the rest of the page empty.
+  const weekRows = Math.max(1, Math.ceil(days.length / 7));
+
   return (
-    <div className="flex flex-col h-full min-w-0 overflow-x-hidden overflow-y-auto">
+    <div className="flex flex-col h-full min-w-0 overflow-hidden">
       <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-1.5">
           <CalendarDays className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -168,9 +178,12 @@ export function CalendarOverlay({
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-sm w-full min-w-0">
+      <div
+        className="flex-1 min-h-0 grid grid-cols-7 gap-1 text-sm w-full min-w-0"
+        style={{ gridTemplateRows: `auto repeat(${weekRows}, minmax(0, 1fr))` }}
+      >
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-          <div key={i} className="text-center text-muted-foreground text-sm font-mono">
+          <div key={i} className="text-center text-muted-foreground text-sm font-mono pb-1">
             {d}
           </div>
         ))}
@@ -181,6 +194,19 @@ export function CalendarOverlay({
           const dimmed = mode === "month" && !isSameMonth(day, viewDate);
           const selected = selectedDay === key;
 
+          // Budget chips across BOTH lists together, then derive the overflow
+          // count from what was actually rendered. The previous code sliced each
+          // list to 2 but gated "+N more" on a combined `> 4`, so e.g. 3 events
+          // and 0 reminders silently dropped the third with no indicator.
+          const chipBudget = mode === "week" ? MAX_CHIPS_WEEK : MAX_CHIPS_MONTH;
+          const shownEvents = dayEvents.slice(0, chipBudget);
+          const shownReminders = dayReminders.slice(
+            0,
+            Math.max(0, chipBudget - shownEvents.length)
+          );
+          const hiddenCount =
+            dayEvents.length + dayReminders.length - shownEvents.length - shownReminders.length;
+
           return (
             <button
               type="button"
@@ -188,7 +214,7 @@ export function CalendarOverlay({
               onClick={() => handleDayClick(day)}
               aria-label={format(day, "PPPP")}
               aria-pressed={selected}
-              className={`flex flex-col items-start gap-0.5 rounded-md border p-1 min-h-[64px] text-left transition-colors ${
+              className={`flex flex-col items-start gap-0.5 rounded-md border p-1.5 min-h-[64px] h-full overflow-hidden text-left transition-colors ${
                 dimmed ? "opacity-40" : ""
               } ${selected ? "border-2" : "border-border"}`}
               style={
@@ -203,35 +229,33 @@ export function CalendarOverlay({
               >
                 {format(day, "d")}
               </span>
-              <div className="flex flex-col gap-0.5 w-full">
-                {dayEvents.slice(0, 2).map((ev) => (
+              <div className="flex flex-col gap-0.5 w-full min-h-0 overflow-hidden">
+                {shownEvents.map((ev) => (
                   <span
                     key={ev._id}
                     data-testid="calendar-event-chip"
                     title={ev.title}
-                    className="text-[10px] leading-tight rounded border border-muted-foreground/50 text-muted-foreground px-1 truncate"
+                    className="text-[11px] leading-tight rounded border border-muted-foreground/50 text-muted-foreground px-1 truncate"
                   >
                     {ev.title}
                   </span>
                 ))}
-                {dayReminders.slice(0, 2).map((r) => {
+                {shownReminders.map((r) => {
                   const priorityVar = PRIORITY_VAR[r.priority ?? "med"] ?? "--status-warn";
                   return (
                     <span
                       key={r._id}
                       data-testid="calendar-reminder-chip"
                       title={r.title}
-                      className="text-[10px] leading-tight rounded px-1 truncate text-white"
+                      className="text-[11px] leading-tight rounded px-1 truncate text-white"
                       style={{ backgroundColor: `var(${priorityVar})` }}
                     >
                       {r.title}
                     </span>
                   );
                 })}
-                {dayEvents.length + dayReminders.length > 4 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    +{dayEvents.length + dayReminders.length - 4} more
-                  </span>
+                {hiddenCount > 0 && (
+                  <span className="text-[11px] text-muted-foreground">+{hiddenCount} more</span>
                 )}
               </div>
             </button>

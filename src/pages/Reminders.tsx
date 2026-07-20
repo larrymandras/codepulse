@@ -155,7 +155,9 @@ export default function Reminders() {
 
       <QuickAdd profileId={profileId} accentVar={accentVar} onAdd={handleAdd} />
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 mt-3 min-h-0 overflow-hidden">
+      {/* List is a fixed rail; the calendar takes ALL remaining width and stretches
+          to full height, so wide screens grow the grid instead of the dead zone. */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4 mt-3 min-h-0 overflow-hidden">
         <SectionErrorBoundary name="Reminder List">
           <ReminderList
             reminders={reminders}
