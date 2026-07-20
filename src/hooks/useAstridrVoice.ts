@@ -64,6 +64,9 @@ const QUESTION_FOLLOW_UP_MS = 30_000;
 const INTERRUPT_FLASH_MS = 1_500;
 /** Turn completed but no TTS arrived within this — close the turn silently. */
 const SILENT_TURN_GRACE_MS = 3_000;
+/** After her TTS ends, utterances STARTING inside this window are treated as
+ *  potentially echo-glued (her tail + the user's answer in one utterance). */
+const ECHO_TAIL_MS = 1_500;
 /** Keep-alive storm guard: max restarts inside the window, then give up. */
 const RESTART_MAX = 3;
 const RESTART_WINDOW_MS = 10_000;
@@ -106,20 +109,92 @@ function fingerprintWords(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Lowercase alphanumerics only — spaces/punctuation removed, so STT spelling
+ *  variants ("all right") line up against her text ("Alright,"). */
+function squash(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/** Min edit distance for `needle` to appear ANYWHERE inside `hay`
+ *  (approximate-substring DP — free start, free end). Small inputs only. */
+function approxSubstringDistance(needle: string, hay: string): number {
+  const m = needle.length;
+  const n = hay.length;
+  if (!m) return 0;
+  if (!n) return m;
+  let prev: number[] = new Array<number>(n + 1).fill(0);
+  for (let i = 1; i <= m; i++) {
+    const cur: number[] = new Array<number>(n + 1);
+    cur[0] = i;
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (needle[i - 1] === hay[j - 1] ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return Math.min(...prev);
+}
+
 /**
  * True if what the mic heard is (probably) Ástríðr's own TTS leaking back in.
- * Word-set overlap against her streamed reply text: if ≥75% of the heard
- * words appear in her reply, it's echo. Utterances under 2 words are treated
- * as echo (too little signal to overrule the guard — the explicit barge-in
- * phrases already cover short interrupts).
+ * Two signals against her streamed reply text:
+ *   1. Fuzzy squashed-substring (edit distance ≤20%) — catches STT variants;
+ *      the live false-barge was "all right" vs her "Alright," slipping past
+ *      word-level matching and cutting off her closing line.
+ *   2. Word-set overlap ≥75% — catches longer, reordered echoes.
+ * Utterances under 2 words are treated as echo (too little signal — explicit
+ * barge-in phrases already cover short interrupts).
  */
 export function isEchoOfReply(heard: string, reply: string): boolean {
   const heardWords = fingerprintWords(heard);
   if (heardWords.length < 2) return true;
   if (!reply) return false;
+
+  const needle = squash(heard);
+  if (needle.length >= 4) {
+    const dist = approxSubstringDistance(needle, squash(reply));
+    if (dist <= Math.max(1, Math.floor(needle.length * 0.2))) return true;
+  }
+
   const replySet = new Set(fingerprintWords(reply));
   const hits = heardWords.filter((w) => replySet.has(w)).length;
   return hits / heardWords.length >= 0.75;
+}
+
+/**
+ * Echo-tail repair: Chrome glues her trailing TTS and the user's answer into
+ * ONE utterance when the user replies as she finishes (live trace: "you're
+ * welcome is there anything else I can assist you with no I'm good thank
+ * you"). Strip the longest leading run that fuzzy-matches her reply, backing
+ * off any boundary words that aren't hers — the user's "no" glued right after
+ * her echoed question must survive. Returns "" when the whole thing is echo.
+ */
+export function stripEchoPrefix(heard: string, reply: string): string {
+  const words = heard.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0 || !reply) return heard.trim();
+  const hay = squash(reply);
+  const replyWords = new Set(fingerprintWords(reply));
+
+  let k = 0;
+  for (let i = words.length; i >= 2; i--) {
+    const prefix = squash(words.slice(0, i).join(" "));
+    if (prefix.length < 6) break;
+    const dist = approxSubstringDistance(prefix, hay);
+    if (dist <= Math.max(1, Math.floor(prefix.length * 0.15))) {
+      k = i;
+      break;
+    }
+  }
+  // Boundary backoff: never strip trailing words that aren't in her reply.
+  while (k > 0) {
+    const w = words[k - 1].toLowerCase().replace(/[^\w']/g, "");
+    if (replyWords.has(w)) break;
+    k--;
+  }
+  return words.slice(k).join(" ");
 }
 
 // ─── Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10) ────────────────────────
@@ -231,6 +306,19 @@ export function useAstridrVoice({
   // one tick (the live trace showed a double "conversation open" racing two
   // recognizer starts). Synchronous latch; cleared on teardown.
   const conversationOpenRef = useRef(false);
+
+  // Echo bookkeeping. echoReplyRef snapshots her reply text for fingerprinting
+  // — chat.interrupt() clears the live streamingReplyRef, so barge-in/tail
+  // checks need their own copy. echoTailUntilRef marks the post-TTS window in
+  // which a starting utterance may be echo-glued; utteranceEchoAnchoredRef
+  // latches that per-utterance so the (possibly much later) final still gets
+  // its echo prefix stripped.
+  const echoReplyRef = useRef("");
+  const echoTailUntilRef = useRef(0);
+  const utteranceEchoAnchoredRef = useRef(false);
+
+  const currentReply = () =>
+    chatRef.current.streamingReplyRef.current || echoReplyRef.current;
 
   // Keep-alive bookkeeping: intentional stops must NOT trigger a restart, and
   // restarts are rate-limited (storm guard).
@@ -348,6 +436,9 @@ export function useAstridrVoice({
       bargeInSwallowFinalRef.current = false;
       conversationOpenRef.current = false;
       restartTimesRef.current = [];
+      echoReplyRef.current = "";
+      echoTailUntilRef.current = 0;
+      utteranceEchoAnchoredRef.current = false;
       setInterimText("");
       setFinalText("");
       intentionalStopRef.current = true; // the coming recognizer end is ours
@@ -449,6 +540,12 @@ export function useAstridrVoice({
     // comes next, however short.
     conversationWarmRef.current = true;
 
+    // Snapshot her reply BEFORE interrupt() clears it — the trailing echo of
+    // the cut-off TTS still needs fingerprinting against it.
+    if (chatRef.current.streamingReplyRef.current) {
+      echoReplyRef.current = chatRef.current.streamingReplyRef.current;
+    }
+
     // Cuts TTS instantly, cancels the server turn, returns the partial reply.
     const partial = chatRef.current.interrupt();
     if (partial) interruptedReplyRef.current = partial;
@@ -465,7 +562,9 @@ export function useAstridrVoice({
 
   // ─── Recognition handlers (latest-closure via refs) ────────────────────────
 
-  handleInterimResultRef.current = (text: string) => {
+  handleInterimResultRef.current = (rawText: string) => {
+    let text = rawText;
+
     // While she's speaking, the recognizer hears BOTH her TTS echo and you.
     // Explicit barge-in phrases act instantly; anything else is fingerprinted
     // against her own reply text — her echo is dropped, but a real user
@@ -477,13 +576,31 @@ export function useAstridrVoice({
         handleBargeIn();
         return;
       }
-      if (isEchoOfReply(text, chatRef.current.streamingReplyRef.current)) {
+      if (isEchoOfReply(text, currentReply())) {
         trace("interim.echo-dropped", { text });
         return;
       }
       trace("interim.talk-over", { text });
       handleBargeIn();
       // fall through — this interim is YOUR speech, show and track it
+    } else if (
+      utteranceEchoAnchoredRef.current ||
+      Date.now() < echoTailUntilRef.current
+    ) {
+      // Echo tail: her TTS just ended but the recognizer may still be
+      // finalizing an utterance that STARTED as her voice — and Chrome glues
+      // the user's answer onto it. Anchor the utterance and track only the
+      // non-echo remainder (live-trace mashup bug).
+      utteranceEchoAnchoredRef.current = true;
+      const remainder = stripEchoPrefix(text, echoReplyRef.current);
+      if (!remainder) {
+        trace("interim.echo-tail", { text });
+        return;
+      }
+      if (remainder !== text.trim()) {
+        trace("interim.echo-tail-stripped", { from: text, to: remainder });
+      }
+      text = remainder;
     }
 
     trace("interim", { text, state: voiceStateRef.current });
@@ -494,7 +611,8 @@ export function useAstridrVoice({
     clearFollowUpWindow(); // CONV-02: a new interim consumes the window
   };
 
-  handleFinalResultRef.current = (text: string, confidence?: number) => {
+  handleFinalResultRef.current = (rawText: string, confidence?: number) => {
+    let text = rawText;
     trace("final", { text, confidence, state: voiceStateRef.current });
 
     // Echo guard + talk-over (see interim handler above).
@@ -504,13 +622,29 @@ export function useAstridrVoice({
         handleBargeIn();
         return;
       }
-      if (isEchoOfReply(text, chatRef.current.streamingReplyRef.current)) {
+      if (isEchoOfReply(text, currentReply())) {
         trace("final.echo-dropped", { text });
         return;
       }
       trace("final.talk-over", { text });
       handleBargeIn();
       // fall through — this final is YOUR speech, process it normally
+    } else if (
+      utteranceEchoAnchoredRef.current ||
+      Date.now() < echoTailUntilRef.current
+    ) {
+      // Echo tail (see interim handler): strip her glued echo prefix; keep
+      // only the user's part. Pure echo → dropped entirely.
+      utteranceEchoAnchoredRef.current = false;
+      const remainder = stripEchoPrefix(text, echoReplyRef.current);
+      if (!remainder) {
+        trace("final.echo-tail-dropped", { text });
+        return;
+      }
+      if (remainder !== text.trim()) {
+        trace("final.echo-tail-stripped", { from: text, to: remainder });
+      }
+      text = remainder;
     }
 
     // Swallow the trailing final of the barge-in utterance ("stop" would
@@ -610,16 +744,31 @@ export function useAstridrVoice({
       // Re-arm barge-in for this speaking turn; the session is now warm.
       bargeInFiredRef.current = false;
       conversationWarmRef.current = true;
+      // Snapshot her reply for echo fingerprinting (survives interrupt()).
+      echoReplyRef.current = chatRef.current.streamingReplyRef.current;
       // Her turn — your silence clock stays paused while she talks.
       clearSilenceTimer();
       dispatch({ type: "TTS_START" });
     } else if (!chat.ttsIsPlaying && wasPlayingRef.current) {
       wasPlayingRef.current = false;
       trace("tts.end", { state: voiceStateRef.current, strict: strictModeRef.current });
+      // Arm the echo-tail window: the recognizer may still be finalizing her
+      // trailing words (and gluing the user's answer onto them).
+      if (chatRef.current.streamingReplyRef.current) {
+        echoReplyRef.current = chatRef.current.streamingReplyRef.current;
+      }
+      echoTailUntilRef.current = Date.now() + ECHO_TAIL_MS;
       dispatch({ type: "TTS_END", strictMode: strictModeRef.current });
-      onTurnEnd();
+      if (bargeInFiredRef.current) {
+        // TTS end CAUSED BY a barge-in isn't her finishing — the user is
+        // already talking. No follow-up countdown; just resume your clock.
+        trace("tts.end.barged — no follow-up window");
+        resetSilenceTimer();
+      } else {
+        onTurnEnd();
+      }
     }
-  }, [chat.ttsIsPlaying, onTurnEnd, clearSilenceTimer, clearSilentTurnTimer]);
+  }, [chat.ttsIsPlaying, onTurnEnd, clearSilenceTimer, clearSilentTurnTimer, resetSilenceTimer]);
 
   // ─── Silent-turn watchdog ──────────────────────────────────────────────────
   // A turn can complete with NO audio (error, empty reply, TTS hiccup). If

@@ -22,8 +22,51 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAstridrVoice } from "./useAstridrVoice";
+import { useAstridrVoice, isEchoOfReply, stripEchoPrefix } from "./useAstridrVoice";
 import type { AstridrChat } from "./useAstridrChat";
+
+// ─── Echo fingerprint units (16:41 live-trace regressions) ───────────────────
+
+describe("isEchoOfReply", () => {
+  it("catches STT spelling variants — 'all right' vs her 'Alright,' (the false-barge cut-off)", () => {
+    expect(isEchoOfReply("all right I'm", "Alright, I'm here if you need me.")).toBe(true);
+  });
+
+  it("verbatim echo of her reply → true", () => {
+    expect(
+      isEchoOfReply("rain showers near ninety degrees", "Tomorrow brings rain showers near ninety degrees")
+    ).toBe(true);
+  });
+
+  it("a real 2-word user interjection is NOT echo ('also sorry' worked live)", () => {
+    expect(isEchoOfReply("also sorry", "Let me check your calendar for today.")).toBe(false);
+  });
+
+  it("single word → treated as echo (explicit barge-in phrases cover short interrupts)", () => {
+    expect(isEchoOfReply("no", "anything at all")).toBe(true);
+  });
+});
+
+describe("stripEchoPrefix", () => {
+  const HER = "You're welcome. Is there anything else I can assist you with?";
+
+  it("strips her glued echo and keeps the user's answer (the live mashup)", () => {
+    expect(
+      stripEchoPrefix(
+        "you're welcome is there anything else I can assist you with no I'm good thank you",
+        HER
+      )
+    ).toBe("no I'm good thank you");
+  });
+
+  it("pure echo → empty string", () => {
+    expect(stripEchoPrefix("you're welcome is there anything else I", HER)).toBe("");
+  });
+
+  it("pure user speech is untouched", () => {
+    expect(stripEchoPrefix("what about tomorrow evening", HER)).toBe("what about tomorrow evening");
+  });
+});
 
 // ─── useWakeWord mock ─────────────────────────────────────────────────────────
 
@@ -571,6 +614,87 @@ describe("useAstridrVoice", () => {
     });
     expect(result.current.voiceState).toBe("listening");
     expect(result.current.followUpOpen).toBe(true);
+  });
+
+  // ─── 16:41 live-trace regressions ─────────────────────────────────────────
+
+  it("her own closing line ('all right…') never fires a false barge-in", () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "Alright, I'm here if you need me." },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+
+    act(() => {
+      onInterimResultCallback?.(" all");
+      onInterimResultCallback?.(" all right");
+      onInterimResultCallback?.(" all right I'm");
+    });
+    expect(chat.interrupt).not.toHaveBeenCalled();
+  });
+
+  it("echo tail: her glued trailing question is stripped, only the user's answer sends", async () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "You're welcome. Is there anything else I can assist you with?" },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false); // tts.end — tail window arms
+
+    act(() => {
+      vi.advanceTimersByTime(100); // utterance starts just after tts.end
+      onInterimResultCallback?.(" you're welcome is there anything else I");
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000); // final arrives past the tail window itself
+      onFinalResultCallback?.(
+        " you're welcome is there anything else I can assist you with no I'm good thank you"
+      );
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+    expect(chat.sendMessage).toHaveBeenCalledWith("no I'm good thank you", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+  });
+
+  it("echo tail: pure echo final is dropped entirely — nothing sends", async () => {
+    let chat = makeChat({
+      streamingReplyRef: { current: "You're welcome. Is there anything else I can assist you with?" },
+    } as Partial<AstridrChat>);
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+
+    act(() => {
+      vi.advanceTimersByTime(200);
+      onFinalResultCallback?.(" is there anything else I can assist you with");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("a barge-in-caused TTS end does not open a follow-up window", () => {
+    let chat = makeChat({
+      interrupt: vi.fn(() => "partial"),
+      streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees" },
+    } as Partial<AstridrChat>);
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    act(() => {
+      onInterimResultCallback?.("stop"); // barge-in cuts TTS
+    });
+    chat = setTtsPlaying(rerender, chat, false); // TTS stops BECAUSE of the barge
+    expect(result.current.followUpOpen).toBe(false);
   });
 
   // ─── 11. Spoken strict-mode command ────────────────────────────────────────
