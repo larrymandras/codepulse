@@ -473,7 +473,9 @@ export function ReminderList({
     if (selectedDay === null) return merged;
     return merged.filter((r) => {
       const due = effectiveDueAt(r);
-      return due !== undefined && startOfDaySeconds(due) === selectedDay;
+      // Undated reminders belong to no day, so a day filter must not hide
+      // them — they stay visible under Upcoming (UAT test 8 regression).
+      return due === undefined || startOfDaySeconds(due) === selectedDay;
     });
   }, [merged, selectedDay]);
 
