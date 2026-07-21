@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 context gathered
-last_updated: "2026-07-21T18:43:08.124Z"
-last_activity: 2026-07-21 — Phase 98 (v11.0 Skills Command Center) context gathered via discuss-phase
+stopped_at: Phase 98 UI-SPEC approved
+last_updated: "2026-07-21T18:52:58.696Z"
+last_activity: 2026-07-21 — Phase 98 (v11.0 Skills Command Center) UI-SPEC created and approved via ui-phase
 progress:
   total_phases: 1
   completed_phases: 1
@@ -259,10 +259,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-21T18:43:08.115Z
-Stopped at: Phase 98 context gathered
-Next action: Address 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt), retest UAT test 8's NL half via real Ástríðr chat, then run v12.0 milestone close-out (`/gsd-complete-milestone`) or resume v11.0 (`/gsd-discuss-phase 98`).
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-CONTEXT.md
+Last session: 2026-07-21T18:52:58.688Z
+Stopped at: Phase 98 UI-SPEC approved
+Next action: Address 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt), retest UAT test 8's NL half via real Ástríðr chat, then run v12.0 milestone close-out (`/gsd-complete-milestone`) or resume v11.0 (`/gsd-plan-phase 98` — CONTEXT + UI-SPEC done).
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-UI-SPEC.md
 
 ## Operator Next Steps
 
