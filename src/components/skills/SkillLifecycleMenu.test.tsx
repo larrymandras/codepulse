@@ -246,6 +246,28 @@ describe("SkillLifecycleMenu — shadow-blocked Restore (D-09/T-98-09)", () => {
   });
 });
 
+describe("SkillLifecycleMenu — self-contained TooltipProvider (98-REVIEW CR-02)", () => {
+  // Regression class documented by CodeVaultGraph.tooltip.test.tsx: nothing
+  // above the routed Skills page provides a TooltipProvider, so these render
+  // with NO ancestor provider — the exact production condition. Without the
+  // component's own local provider, opening the menu throws
+  // "`Tooltip` must be used within `TooltipProvider`" and the page-level
+  // ErrorBoundary blanks the whole Skills page.
+  it("multi-scope menu opens with NO ancestor TooltipProvider", () => {
+    render(<SkillLifecycleMenu skill={multiScope} hostId="desktop" />);
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: /Archive/i })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /Move/i })).toBeInTheDocument();
+  });
+
+  it("shadow-blocked dormant menu opens with NO ancestor TooltipProvider", () => {
+    vi.mocked(isShadowing).mockReturnValue(true);
+    render(<SkillLifecycleMenu skill={dormant} hostId="desktop" />);
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: /Restore/i })).toBeInTheDocument();
+  });
+});
+
 describe("SkillLifecycleMenu — multi-scope guard (Pitfall 1a / T-98-08)", () => {
   it("disables Archive and Move with the honest multi-scope reason, never guessing origins[0]", () => {
     renderMenu(multiScope);

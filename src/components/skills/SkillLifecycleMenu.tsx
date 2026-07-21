@@ -31,6 +31,7 @@ import {
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { isDormant, isShadowing, DORMANT_ORIGIN } from "@/lib/skills";
@@ -151,7 +152,12 @@ export function SkillLifecycleMenu({
     : undefined;
 
   return (
-    <>
+    // Local provider (98-REVIEW CR-02): this repo's tooltip.tsx does NOT embed
+    // a provider, and neither of DashboardLayout's TooltipProviders wraps the
+    // routed <Outlet /> — a bare <Tooltip> here throws at render time and the
+    // page ErrorBoundary blanks the whole Skills page. Mirrors
+    // CodeVaultGraph.tsx's documented own-provider pattern.
+    <TooltipProvider delayDuration={200}>
       <div className="flex items-center gap-1.5">
         {inFlight && (
           <RowStatusBadge
@@ -278,6 +284,6 @@ export function SkillLifecycleMenu({
           onOpenChange={setDeleteOpen}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 }
