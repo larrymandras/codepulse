@@ -387,6 +387,7 @@ import {
   buildIntakeRow,
   isAcceptedGithubUrlShape,
   isSafeSubpath,
+  isSafeSkillName,
   resolveClaimTypes,
   isValidSupportedTypesShape,
   capAckReport,
@@ -870,6 +871,69 @@ describe("forge.isSafeSubpath — traversal guard", () => {
   it("rejects an empty string (distinct from absent, CR-01)", () => {
     expect(isSafeSubpath("")).toBe(false);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 98 (skill lifecycle mutations): isSafeSkillName — bare directory-name
+// guard (T-98-01). Stricter than isSafeSubpath: skillName drives a real
+// fs.rmSync/rename in the daemon, so a skill name must be exactly one path
+// segment (no separators at all, not just no traversal).
+// ---------------------------------------------------------------------------
+
+describe("forge.isSafeSkillName — bare directory-name guard (T-98-01)", () => {
+  it("accepts a plain skill name", () => {
+    expect(isSafeSkillName("legal")).toBe(true);
+  });
+
+  it("rejects a traversal segment", () => {
+    expect(isSafeSkillName("../etc")).toBe(false);
+  });
+
+  it("rejects a forward-slash separator", () => {
+    expect(isSafeSkillName("a/b")).toBe(false);
+  });
+
+  it("rejects a backslash separator", () => {
+    expect(isSafeSkillName("a\\b")).toBe(false);
+  });
+
+  it("rejects a Windows drive-letter prefix", () => {
+    expect(isSafeSkillName("C:foo")).toBe(false);
+  });
+
+  it("rejects an empty string", () => {
+    expect(isSafeSkillName("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 98 Task 1: RED scaffolds for the Task 2/3 lifecycle surface. These
+// reference the not-yet-exported symbols by NAME ONLY (never imported —
+// importing a nonexistent named export from a real module would fail
+// npx tsc --noEmit, which this task's acceptance criteria requires to stay
+// green). Each placeholder is upgraded to a real `it(...)` in the commit
+// that implements the corresponding symbol; until then they are honest
+// it.todo() entries, mirroring this file's established DB-round-trip
+// it.todo() convention (see "forge command bridge — DB round-trip" below).
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueLifecycle — RED scaffold (Task 2 not yet implemented)", () => {
+  it.todo("enqueueLifecycle: unauthenticated call throws 'Authentication required to issue Forge commands'");
+  it.todo("enqueueLifecycle: duplicate commandId is a silent no-op (no second row inserted)");
+  it.todo("enqueueLifecycle: action='restore' destination='global' shadow-blocked by an active claude-code row throws lifecycle-refused:shadow:");
+  it.todo("enqueueLifecycle: action='archive' cold-collision with an existing DORMANT_ORIGIN row throws lifecycle-refused:collision:");
+  it.todo("enqueueLifecycle: action='move' destination='global' collision with an existing claude-code row throws lifecycle-refused:collision:");
+  it.todo("enqueueLifecycle: action='delete' refused when the skill has any non-dormant origin row (D-05 cold-only)");
+  it.todo("enqueueLifecycle: destination='project' with a null workspaceId throws");
+  it.todo("enqueueLifecycle: skillName failing isSafeSkillName throws before any insert");
+  it.todo("enqueueLifecycle: a valid archive/restore/move/delete inserts exactly one forgeCommands row with commandType 'lifecycle' and the populated lifecyclePayload");
+});
+
+describe("forge.synthesizeLifecycleRefusalReport — RED scaffold (Task 3 not yet implemented)", () => {
+  it.todo("synthesizeLifecycleRefusalReport: lifecycle-refused:collision: for an archive returns the UI-SPEC cold-collision house copy naming the skill");
+  it.todo("synthesizeLifecycleRefusalReport: lifecycle-refused:shadow: returns the UI-SPEC shadow-block house copy naming the skill + scope");
+  it.todo("synthesizeLifecycleRefusalReport: a non-framed error string passes through unchanged");
+  it.todo("listLifecycleCommands: returns only commandType 'lifecycle' rows, newest-first, bounded");
 });
 
 // ---------------------------------------------------------------------------

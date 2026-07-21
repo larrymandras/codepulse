@@ -434,6 +434,22 @@ export function isSafeSubpath(subpath: string | undefined): boolean {
   return !segments.includes("..");
 }
 
+/**
+ * True when `name` is a bare directory-name segment safe to join onto a real
+ * fs root for a lifecycle mutation (Phase 98, T-98-01). Stricter than
+ * isSafeSubpath: `skillName` drives a real `fs.rmSync`/rename in the daemon
+ * (Plan 98-02), not just a validated CLI arg, so ANY path separator is
+ * rejected outright (isSafeSubpath permits multi-segment relative paths;
+ * a skill name must be exactly one segment).
+ */
+export function isSafeSkillName(name: string): boolean {
+  if (name.length === 0) return false;
+  if (name.includes("/") || name.includes("\\")) return false;
+  if (name === "..") return false;
+  if (/^[A-Za-z]:/.test(name)) return false; // Windows drive-letter prefix
+  return true;
+}
+
 // ---------------------------------------------------------------------------
 // Upsert mutations (called from httpAction — must be internalMutation)
 // ---------------------------------------------------------------------------

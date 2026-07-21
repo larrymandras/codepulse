@@ -1654,7 +1654,7 @@ export default defineSchema({
   forgeCommands: defineTable({
     hostId:      v.string(),
     commandId:   v.string(),  // client-generated ULID for optimistic reconciliation
-    commandType: v.union(v.literal("launch"), v.literal("stop"), v.literal("intake")),
+    commandType: v.union(v.literal("launch"), v.literal("stop"), v.literal("intake"), v.literal("lifecycle")),
 
     // Launch payload (null for stop/intake commands)
     launchPayload: v.union(
@@ -1693,6 +1693,21 @@ export default defineSchema({
         storageId:    v.optional(v.id("_storage")),   // uploaded SKILL.md (D-P6-05)
         githubUrl:    v.optional(v.string()),          // GitHub URL/shorthand (D-P6-05, D-P6-06)
         subpath:      v.optional(v.string()),          // fan-out for a repo with N skills (D-P6-07)
+      }),
+      v.null()
+    )),
+
+    // Lifecycle payload (null for launch/stop/intake commands). Skill lifecycle
+    // mutation request (Phase 98, LIFE-01..06): archive/restore/move/delete an
+    // EXISTING named skill. v.optional wrapper mirrors intakePayload exactly —
+    // pre-Phase-98 rows omit this field entirely and remain schema-valid.
+    lifecyclePayload: v.optional(v.union(
+      v.object({
+        action:       v.union(v.literal("archive"), v.literal("restore"), v.literal("move"), v.literal("delete")),
+        skillName:    v.string(),
+        sourceOrigin: v.string(),
+        destination:  v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+        workspaceId:  v.union(v.string(), v.null()),
       }),
       v.null()
     )),
