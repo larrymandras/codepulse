@@ -613,7 +613,10 @@ export function buildLifecycleRow(
  *   - `lifecycle-refused:collision:...` — D-02: archiving over an existing
  *     dormant copy, or moving into an already-occupied destination scope.
  *   - `lifecycle-refused:not-cold:...` — D-05: permanent delete attempted
- *     while a non-dormant origin row still exists for this name.
+ *     on a non-cold source row. The target must be the Cold Storage copy;
+ *     other ACTIVE copies of the same name do NOT block it (deleting the
+ *     dormant copy never touches them — this unwedges the archive-collision
+ *     "delete it first" remediation for shadowed skills, 98-REVIEW WR-04).
  *
  * Only the `destination === "global"` case is checked here for
  * restore/move — a `project` destination's exact origin key
@@ -660,9 +663,11 @@ export function validateLifecyclePreflight(
   }
 
   if (args.action === "delete") {
-    const hasNonDormantOrigin = originsForName.some((o) => o !== DORMANT_ORIGIN);
-    if (hasNonDormantOrigin) {
-      throw new Error("lifecycle-refused:not-cold:skill exists outside cold storage");
+    // D-05, target-scoped: delete may only aim at the Cold Storage copy.
+    // Deleting it is safe regardless of what else exists for this name — the
+    // active copy is untouched — so co-existing active origins do not refuse.
+    if (args.sourceOrigin !== DORMANT_ORIGIN) {
+      throw new Error("lifecycle-refused:not-cold:permanent delete may only target the Cold Storage copy");
     }
   }
 }

@@ -321,6 +321,7 @@ export function SkillLifecycleMenu({
           hostId={hostId}
           open={deleteOpen}
           onOpenChange={setDeleteOpen}
+          shadowed={shadowed}
         />
       )}
     </TooltipProvider>

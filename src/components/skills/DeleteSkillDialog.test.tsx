@@ -75,6 +75,20 @@ describe("DeleteSkillDialog", () => {
     expect(getConfirmInput()).toBeInTheDocument();
   });
 
+  it("appends the active-copy-unaffected line when shadowed (D-05 target-scoped, WR-04)", () => {
+    renderDialog({ shadowed: true });
+    expect(
+      screen.getByText(/The active copy of this skill is not affected/)
+    ).toBeInTheDocument();
+  });
+
+  it("omits the active-copy-unaffected line by default (not shadowed)", () => {
+    renderDialog();
+    expect(
+      screen.queryByText(/The active copy of this skill is not affected/)
+    ).not.toBeInTheDocument();
+  });
+
   it("renders 'Delete Permanently' and default 'Cancel' buttons", () => {
     renderDialog();
     expect(getDeleteButton()).toBeInTheDocument();

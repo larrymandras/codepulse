@@ -998,13 +998,25 @@ describe("forge.validateLifecyclePreflight — LAYER-1 refusal rules (D-02/D-03/
     ).toThrow(/^lifecycle-refused:collision:/);
   });
 
-  it("action='delete' throws lifecycle-refused: when any non-dormant origin row exists (D-05 cold-only)", () => {
+  it("action='delete' does NOT throw for a shadowed skill when the target is the dormant copy (D-05 target-scoped, WR-04)", () => {
+    // The active "claude-code" copy co-exists — deleting the dormant copy
+    // never touches it, so it must not refuse (unwedges the archive-collision
+    // "delete it first" remediation).
     expect(() =>
       validateLifecyclePreflight(
         { action: "delete", destination: "cold", workspaceId: null, sourceOrigin: "claude-code:available" },
         ["claude-code", "claude-code:available"]
       )
-    ).toThrow(/^lifecycle-refused:/);
+    ).not.toThrow();
+  });
+
+  it("action='delete' throws lifecycle-refused:not-cold: when the target is an ACTIVE copy (D-05)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "delete", destination: "cold", workspaceId: null, sourceOrigin: "claude-code" },
+        ["claude-code", "claude-code:available"]
+      )
+    ).toThrow(/^lifecycle-refused:not-cold:/);
   });
 
   it("action='delete' does not throw when the skill exists ONLY at the dormant origin", () => {

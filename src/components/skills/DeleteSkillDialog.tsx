@@ -37,6 +37,12 @@ interface DeleteSkillDialogProps {
   onOpenChange: (open: boolean) => void;
   /** Fired after enqueueLifecycle resolves successfully. */
   onDeleted?: () => void;
+  /**
+   * True when this name ALSO has an active copy (shadowed row). Deleting the
+   * dormant copy is allowed and leaves the active copy untouched (D-05 is
+   * target-scoped, WR-04 sign-off) — the confirmation copy says so honestly.
+   */
+  shadowed?: boolean;
 }
 
 export function DeleteSkillDialog({
@@ -46,6 +52,7 @@ export function DeleteSkillDialog({
   open,
   onOpenChange,
   onDeleted,
+  shadowed = false,
 }: DeleteSkillDialogProps) {
   // No pre-fill, no autofocus-and-select-all (D-06) — deliberate typing (or
   // an explicit paste) is required every time the dialog opens.
@@ -101,6 +108,13 @@ export function DeleteSkillDialog({
           <AlertDialogDescription>
             This removes the file from disk. There is no undo and no git
             history for .claude/ — type the skill name to confirm.
+            {shadowed && (
+              <>
+                {" "}
+                The active copy of this skill is not affected — only the
+                archived Cold Storage copy is deleted.
+              </>
+            )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
