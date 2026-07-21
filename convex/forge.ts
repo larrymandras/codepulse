@@ -214,6 +214,121 @@ export function synthesizeWriteRefusalReport(
   return { report: newReport, error: houseCopy };
 }
 
+interface ParsedLifecycleRefusalError {
+  kind: string;
+  raw: string;
+}
+
+/**
+ * Parses a daemon/Convex-emitted error string of the form
+ * `lifecycle-refused:<kind>:<raw>` (Phase 98). A NEW prefix, deliberately
+ * distinct from `write-refused:`/`post-placement-warning:` (Pitfall 6) —
+ * this parser must never match those, and parseWriteRefusalError must never
+ * match this one.
+ */
+function parseLifecycleRefusalError(error: string): ParsedLifecycleRefusalError | null {
+  const match = /^lifecycle-refused:([^:]+):([\s\S]*)$/.exec(error);
+  if (!match) return null;
+  return { kind: match[1], raw: match[2] };
+}
+
+/** The scope word for a lifecycle payload's destination, for house-copy interpolation. */
+function scopeLabel(destination: string | null | undefined): string {
+  if (destination === "global") return "global";
+  if (destination === "project") return "this project";
+  if (destination === "cold") return "cold storage";
+  return "the target scope";
+}
+
+/**
+ * Composes the kind-and-action-accurate house copy (98-UI-SPEC § Copywriting
+ * Contract) ONCE, reused for both the persisted `error` string and the
+ * synthesized finding's `message`. Never returns text containing the
+ * internal 'lifecycle-refused:' token prefix.
+ *
+ * `kind: "collision"` means two different things depending on `action`
+ * (D-02 covers both archive-vs-cold-copy and move-vs-active-target
+ * collisions with the SAME kind token) — the UI-SPEC's cold-collision and
+ * move-target-collision strings differ, so `action` disambiguates them.
+ */
+function composeLifecycleRefusalHouseCopy(
+  kind: string,
+  raw: string,
+  action: string | null,
+  skillName: string | null,
+  destination: string | null
+): string {
+  const name = skillName ?? "the skill";
+  const scope = scopeLabel(destination);
+
+  if (kind === "collision" && action === "archive") {
+    return `A dormant copy of "${name}" already exists in Cold Storage. Rename or delete it first, then archive again.`;
+  }
+  if (kind === "collision" && action === "move") {
+    return `A skill named "${name}" is already active in ${scope}. Rename or remove it first, then move again.`;
+  }
+  if (kind === "shadow") {
+    return `"${name}" is active in ${scope} — archive it first.`;
+  }
+  // Unmapped kind (e.g. "not-cold") — generic house-copy fallback (98-UI-SPEC
+  // "Lifecycle command failed (generic)"): never leak the raw token, always
+  // state the atomic-mutation guarantee (D-01/D-02: nothing changed on disk).
+  const label = action ? action.charAt(0).toUpperCase() + action.slice(1) : "Lifecycle action";
+  return `${label} failed: ${raw.trim()}. Nothing changed on disk.`;
+}
+
+/**
+ * Convex-side lifecycle-refusal adapter (Phase 98, sibling of
+ * synthesizeWriteRefusalReport — NOT an edit to it, per Pitfall 6). Reshapes
+ * a daemon/Convex-emitted `lifecycle-refused:<kind>:` error into
+ * `{ report, error }`, mirroring synthesizeWriteRefusalReport's contract
+ * exactly: `error` becomes the actionable house copy (no internal token
+ * prefix); `report` gets a synthesized finding appended with `verdict`
+ * flipped to `"reject"`. A null/unmatched `error` or a non-object `report`
+ * passes through unchanged/unshapeable, same defensive style.
+ */
+export function synthesizeLifecycleRefusalReport(
+  report: unknown,
+  error: string | null,
+  payload: { action: string; skillName: string; destination: string } | null
+): { report: unknown; error: string | null } {
+  if (error === null) return { report, error };
+
+  const parsed = parseLifecycleRefusalError(error);
+  if (!parsed) return { report, error };
+
+  const { kind, raw } = parsed;
+  const houseCopy = composeLifecycleRefusalHouseCopy(
+    kind,
+    raw,
+    payload?.action ?? null,
+    payload?.skillName ?? null,
+    payload?.destination ?? null
+  );
+
+  const finding = {
+    rule_id: "lifecycle-refused",
+    severity: "error",
+    path: null,
+    line: null,
+    message: houseCopy,
+  };
+
+  if (report === null || report === undefined || typeof report !== "object" || Array.isArray(report)) {
+    return { report, error: houseCopy };
+  }
+
+  const reportObj = report as Record<string, unknown>;
+  const existingFindings = Array.isArray(reportObj.findings) ? reportObj.findings : [];
+  const newReport: Record<string, unknown> = {
+    ...reportObj,
+    findings: [...existingFindings, finding],
+    verdict: "reject",
+  };
+
+  return { report: newReport, error: houseCopy };
+}
+
 /**
  * Strip the `dangerous` key from a capabilities JSON string before storage (D-06, Pitfall 7).
  * Returns null when the result is empty, unparseable, or the input was null/empty.
@@ -1189,6 +1304,18 @@ export const ackCommand = internalMutation({
       );
       patchedReport = adapted.report;
       patchedError = adapted.error;
+    } else if (cmd.commandType === "lifecycle") {
+      // Phase 98: reshape a lifecycle-refused:<kind>: signal into the
+      // actionable house copy BEFORE capAckReport — sibling of the intake
+      // branch above (Pitfall 6: NEW prefix, NEW adapter, this branch never
+      // touches the intake dispatch above it).
+      const adapted = synthesizeLifecycleRefusalReport(
+        args.report ?? null,
+        args.error,
+        cmd.lifecyclePayload ?? null
+      );
+      patchedReport = adapted.report;
+      patchedError = adapted.error;
     }
     await ctx.db.patch(cmd._id, {
       status:             args.status,
@@ -1284,6 +1411,23 @@ export const listIntakeCommands = query({
       .withIndex("by_commandType_createdAt", (q) => q.eq("commandType", "intake"))
       .order("desc")
       .take(INTAKE_LIST_LIMIT);
+  },
+});
+
+// Phase 98: lifecycle command rows get their own bounded, scoped list query —
+// same compound-index technique as listIntakeCommands, a NEW sibling query
+// (never a filter added to listIntakeCommands, which would let lifecycle
+// volume crowd intake rows out of INTAKE_LIST_LIMIT).
+const LIFECYCLE_LIST_LIMIT = 30;
+
+export const listLifecycleCommands = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_commandType_createdAt", (q) => q.eq("commandType", "lifecycle"))
+      .order("desc")
+      .take(LIFECYCLE_LIST_LIMIT);
   },
 });
 

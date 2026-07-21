@@ -395,6 +395,7 @@ import {
   capAckReport,
   MAX_ACK_REPORT_BYTES,
   synthesizeWriteRefusalReport,
+  synthesizeLifecycleRefusalReport,
   FORGE_COMMAND_TTL_MS,
 } from "./forge";
 import type { Id } from "./_generated/dataModel";
@@ -1256,11 +1257,120 @@ describe("forge.enqueueLifecycle — mutation handler order (auth -> idempotency
   });
 });
 
-describe("forge.synthesizeLifecycleRefusalReport — RED scaffold (Task 3 not yet implemented)", () => {
-  it.todo("synthesizeLifecycleRefusalReport: lifecycle-refused:collision: for an archive returns the UI-SPEC cold-collision house copy naming the skill");
-  it.todo("synthesizeLifecycleRefusalReport: lifecycle-refused:shadow: returns the UI-SPEC shadow-block house copy naming the skill + scope");
-  it.todo("synthesizeLifecycleRefusalReport: a non-framed error string passes through unchanged");
-  it.todo("listLifecycleCommands: returns only commandType 'lifecycle' rows, newest-first, bounded");
+describe("forge.synthesizeLifecycleRefusalReport — lifecycle-refusal house-copy adapter (Phase 98 Task 3)", () => {
+  const baseReport = { schema_version: 1, verdict: "admit", findings: [] as unknown[] };
+
+  it("lifecycle-refused:collision: for an archive returns the UI-SPEC cold-collision house copy naming the skill", () => {
+    const { report, error } = synthesizeLifecycleRefusalReport(
+      baseReport,
+      "lifecycle-refused:collision:a dormant copy already exists in cold storage",
+      { action: "archive", skillName: "legal", destination: "cold" }
+    );
+    expect(error).toBe(
+      'A dormant copy of "legal" already exists in Cold Storage. Rename or delete it first, then archive again.'
+    );
+    expect(error).not.toContain("lifecycle-refused:");
+    expect((report as any).verdict).toBe("reject");
+    expect((report as any).findings).toHaveLength(1);
+    expect((report as any).findings[0]).toMatchObject({ rule_id: "lifecycle-refused", severity: "error" });
+  });
+
+  it("lifecycle-refused:collision: for a move returns the UI-SPEC move-target-collision house copy naming the skill + scope", () => {
+    const { error } = synthesizeLifecycleRefusalReport(
+      baseReport,
+      "lifecycle-refused:collision:already active in global",
+      { action: "move", skillName: "docs", destination: "global" }
+    );
+    expect(error).toBe(
+      'A skill named "docs" is already active in global. Rename or remove it first, then move again.'
+    );
+  });
+
+  it("lifecycle-refused:shadow: returns the UI-SPEC shadow-block house copy naming the skill + scope", () => {
+    const { error } = synthesizeLifecycleRefusalReport(
+      baseReport,
+      "lifecycle-refused:shadow:already active in global",
+      { action: "restore", skillName: "legal", destination: "global" }
+    );
+    expect(error).toBe('"legal" is active in global — archive it first.');
+    expect(error).not.toContain("lifecycle-refused:");
+  });
+
+  it("an unmapped kind (e.g. not-cold) falls back to the generic 'Nothing changed on disk' house copy", () => {
+    const { error } = synthesizeLifecycleRefusalReport(
+      baseReport,
+      "lifecycle-refused:not-cold:skill exists outside cold storage",
+      { action: "delete", skillName: "old-skill", destination: "cold" }
+    );
+    expect(error).toBe("Delete failed: skill exists outside cold storage. Nothing changed on disk.");
+  });
+
+  it("a non-framed error string passes through unchanged", () => {
+    const { report, error } = synthesizeLifecycleRefusalReport(
+      baseReport,
+      "some unrelated daemon error",
+      { action: "archive", skillName: "legal", destination: "cold" }
+    );
+    expect(error).toBe("some unrelated daemon error");
+    expect(report).toBe(baseReport);
+  });
+
+  it("a null error passes through unchanged", () => {
+    const result = synthesizeLifecycleRefusalReport(baseReport, null, null);
+    expect(result.error).toBeNull();
+    expect(result.report).toBe(baseReport);
+  });
+
+  it("a non-object report is passed through as-is, error still composed", () => {
+    const { report, error } = synthesizeLifecycleRefusalReport(
+      "not an object",
+      "lifecycle-refused:shadow:already active in global",
+      { action: "restore", skillName: "legal", destination: "global" }
+    );
+    expect(report).toBe("not an object");
+    expect(error).toBe('"legal" is active in global — archive it first.');
+  });
+});
+
+describe("forge.listLifecycleCommands — scoping (Phase 98 Task 3)", () => {
+  // Mirrors listIntakeCommands' compound-index scoping technique exactly —
+  // never a .filter()-discard on the generic by_createdAt index.
+  const LIFECYCLE_LIST_LIMIT = 30; // mirrors the module-level const in forge.ts
+
+  async function listLifecycleCommandsMirror(ctx: { db: any }) {
+    return await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_commandType_createdAt", (q: any) => q.eq("commandType", "lifecycle"))
+      .order("desc")
+      .take(LIFECYCLE_LIST_LIMIT);
+  }
+
+  it("returns only commandType='lifecycle' rows, newest-first", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", { commandId: "cmd-launch", commandType: "launch", createdAt: 1 });
+    await store.db.insert("forgeCommands", { commandId: "cmd-intake", commandType: "intake", createdAt: 2 });
+    await store.db.insert("forgeCommands", { commandId: "cmd-life-1", commandType: "lifecycle", createdAt: 3 });
+    await store.db.insert("forgeCommands", { commandId: "cmd-life-2", commandType: "lifecycle", createdAt: 4 });
+
+    const result = await listLifecycleCommandsMirror(store);
+
+    expect(result.map((r: any) => r.commandId)).toEqual(["cmd-life-2", "cmd-life-1"]);
+  });
+
+  it("bounds the result to LIFECYCLE_LIST_LIMIT", async () => {
+    const store = makeForgeCommandsStore();
+    for (let i = 0; i < LIFECYCLE_LIST_LIMIT + 5; i++) {
+      await store.db.insert("forgeCommands", {
+        commandId: `cmd-life-${i}`,
+        commandType: "lifecycle",
+        createdAt: i,
+      });
+    }
+
+    const result = await listLifecycleCommandsMirror(store);
+
+    expect(result).toHaveLength(LIFECYCLE_LIST_LIMIT);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1749,6 +1859,17 @@ function makeForgeCommandsStore() {
               return match ? { ...match } : null;
             },
             take: async (n: number) => applyIndex(table).slice(0, n).map((r) => ({ ...r })),
+            // Phase 98: listLifecycleCommands' .order("desc").take(n) chain —
+            // mirrors listIntakeCommands' same real-query shape.
+            order: (dir: "asc" | "desc") => ({
+              take: async (n: number) => {
+                const rows = applyIndex(table).map((r) => ({ ...r }));
+                rows.sort((a, b) =>
+                  dir === "desc" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt
+                );
+                return rows.slice(0, n);
+              },
+            }),
           };
         },
       };
@@ -1842,6 +1963,16 @@ async function ackCommandMirror(
       args.report ?? null,
       args.error,
       cmd.intakePayload?.destination ?? null
+    );
+    patchedReport = adapted.report;
+    patchedError = adapted.error;
+  } else if (cmd.commandType === "lifecycle") {
+    // Phase 98 Task 3: mirrors the real ackCommand's lifecycle-refusal
+    // adapter wiring — sibling of the intake branch above.
+    const adapted = synthesizeLifecycleRefusalReport(
+      args.report ?? null,
+      args.error,
+      cmd.lifecyclePayload ?? null
     );
     patchedReport = adapted.report;
     patchedError = adapted.error;
