@@ -21,9 +21,11 @@ import { Send, Mic, MicOff, WifiOff, AlertCircle } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
+import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED } from "@/hooks/useAstridrVoice";
+import { useScreenShare } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import type { VoiceState } from "@/components/voice/voiceState";
 
@@ -160,6 +162,9 @@ export default function Chat() {
     [sendCommand]
   );
 
+  // ── Screen share (VISION-01) — sole caller of getDisplayMedia (D-09) ─────
+  const screenShare = useScreenShare();
+
   // ── Voice engine ────────────────────────────────────────────────────────
   const voice = useAstridrVoice({
     enabled: listening,
@@ -289,6 +294,11 @@ export default function Chat() {
           )}
           <TooltipProvider delayDuration={300}>
             <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
+            <ShareScreenToggle
+              state={screenShare.state}
+              onStart={screenShare.start}
+              onStop={screenShare.stop}
+            />
           </TooltipProvider>
           {/* Listening on/off — full off = text-only */}
           <button
