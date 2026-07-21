@@ -73,6 +73,23 @@ export function adaptLifecycleCommand(doc: any): LifecycleCommandRow {
 }
 
 // ---------------------------------------------------------------------------
+// LAYER-1 refusal message extraction (98-REVIEW CR-03). enqueueLifecycle
+// deliberately THROWS before any row is inserted on a preflight refusal, so
+// no forgeCommands doc (and no badge) ever exists — the rejection itself is
+// the only signal. Callers catch it and toast this message. The thrown
+// message may carry the internal `lifecycle-refused:<kind>:<raw>` token
+// (possibly wrapped in Convex's own error prefix) — never leak the token to
+// the user; surface only the raw human-readable reason.
+// ---------------------------------------------------------------------------
+
+export function lifecycleRefusalMessage(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const match = /lifecycle-refused:[^:]+:([\s\S]+)/.exec(raw);
+  const message = (match ? match[1] : raw).split("\n")[0].trim();
+  return message || "Lifecycle command failed";
+}
+
+// ---------------------------------------------------------------------------
 // Hooks
 // ---------------------------------------------------------------------------
 

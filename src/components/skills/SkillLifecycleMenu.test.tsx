@@ -18,9 +18,17 @@
  *  - an in-flight lifecycle command renders RowStatusBadge
  */
 
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
+
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DORMANT_ORIGIN, isShadowing } from "@/lib/skills";
 import type { RowSkill } from "./SkillRow";
@@ -303,6 +311,26 @@ describe("SkillLifecycleMenu — Archive (no dialog)", () => {
       })
     );
     expect(screen.queryByTestId("move-dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("SkillLifecycleMenu — LAYER-1 refusal surfaces via toast (98-REVIEW CR-03)", () => {
+  it("toasts the stripped refusal reason when enqueueLifecycle rejects", async () => {
+    enqueueMock.mockReturnValue(
+      Promise.reject(
+        new Error(
+          "lifecycle-refused:collision:a dormant copy already exists in cold storage"
+        )
+      )
+    );
+    renderMenu(activeGlobal);
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /^Archive$/i }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "a dormant copy already exists in cold storage"
+      )
+    );
   });
 });
 

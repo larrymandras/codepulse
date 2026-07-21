@@ -13,6 +13,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   MoreVertical,
   Archive as ArchiveIcon,
@@ -40,6 +41,7 @@ import { useForgeHostsRaw } from "@/hooks/useForge";
 import {
   useLifecycleCommands,
   latestLifecycleForSkill,
+  lifecycleRefusalMessage,
 } from "@/hooks/useLifecycle";
 import { RowStatusBadge } from "./IntakeStatusBadge";
 import { MoveToProjectDialog } from "./MoveToProjectDialog";
@@ -121,12 +123,17 @@ export function SkillLifecycleMenu({
     destination: "global" | "project" | "cold";
     workspaceId?: string | null;
   }) => {
-    void enqueueLifecycle({
+    // NOT fire-and-forget (98-REVIEW CR-03): a LAYER-1 preflight refusal
+    // throws BEFORE any forgeCommands row exists, so no badge will ever
+    // surface it — the rejection here is the only signal the user gets.
+    enqueueLifecycle({
       hostId,
       commandId: crypto.randomUUID(),
       skillName: skill.name,
       workspaceId: null,
       ...overrides,
+    }).catch((err: unknown) => {
+      toast.error(lifecycleRefusalMessage(err));
     });
   };
 

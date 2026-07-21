@@ -12,7 +12,15 @@
 
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { toast } from "sonner";
 import { useMutation } from "convex/react";
+
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => vi.fn()),
@@ -124,6 +132,30 @@ describe("DeleteSkillDialog", () => {
     });
     expect(typeof args.commandId).toBe("string");
     expect(args.commandId.length).toBeGreaterThan(0);
+  });
+
+  it("closes the dialog (onOpenChange(false)) after a successful confirm", async () => {
+    const { onOpenChange } = renderDialog();
+    fireEvent.change(getConfirmInput(), { target: { value: "legal" } });
+    fireEvent.click(getDeleteButton());
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("keeps the dialog open and toasts the stripped refusal when enqueueLifecycle rejects (98-REVIEW CR-03)", async () => {
+    enqueueLifecycleMock.mockReturnValue(
+      Promise.reject(
+        new Error("lifecycle-refused:not-cold:skill exists outside cold storage")
+      )
+    );
+    const { onOpenChange } = renderDialog();
+    fireEvent.change(getConfirmInput(), { target: { value: "legal" } });
+    fireEvent.click(getDeleteButton());
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("skill exists outside cold storage")
+    );
+    // Neither our success path nor Radix's Action auto-close may close it.
+    expect(onOpenChange).not.toHaveBeenCalledWith(false);
   });
 
   it("does not call enqueueLifecycle when the destructive button is clicked while disabled", () => {

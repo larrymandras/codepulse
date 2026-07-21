@@ -12,8 +12,10 @@
  */
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { lifecycleRefusalMessage } from "@/hooks/useLifecycle";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +40,7 @@ interface MoveToProjectDialogProps {
   hostId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Fired after enqueueLifecycle resolves (fire-and-forget by the caller). */
+  /** Fired after enqueueLifecycle resolves successfully. */
   onMoved?: () => void;
 }
 
@@ -89,9 +91,14 @@ export function MoveToProjectDialog({
         workspaceId,
       });
       onMoved?.();
+      // Close ONLY on success (98-REVIEW CR-03): a LAYER-1 preflight refusal
+      // rejects before any row is inserted, so closing here would silently
+      // swallow it — keep the dialog open with the error toasted instead.
+      onOpenChange(false);
+    } catch (err: unknown) {
+      toast.error(lifecycleRefusalMessage(err));
     } finally {
       setSubmitting(false);
-      onOpenChange(false);
     }
   };
 

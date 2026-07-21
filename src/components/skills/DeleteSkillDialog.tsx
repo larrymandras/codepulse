@@ -13,8 +13,10 @@
  */
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { lifecycleRefusalMessage } from "@/hooks/useLifecycle";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +35,7 @@ interface DeleteSkillDialogProps {
   hostId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Fired after enqueueLifecycle resolves (fire-and-forget by the caller). */
+  /** Fired after enqueueLifecycle resolves successfully. */
   onDeleted?: () => void;
 }
 
@@ -78,9 +80,14 @@ export function DeleteSkillDialog({
         workspaceId: null,
       });
       onDeleted?.();
+      // Close ONLY on success (98-REVIEW CR-03): a LAYER-1 preflight refusal
+      // rejects before any row is inserted, so closing here would silently
+      // swallow it — keep the dialog open with the error toasted instead.
+      onOpenChange(false);
+    } catch (err: unknown) {
+      toast.error(lifecycleRefusalMessage(err));
     } finally {
       setSubmitting(false);
-      onOpenChange(false);
     }
   };
 
@@ -108,7 +115,13 @@ export function DeleteSkillDialog({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             disabled={!canDelete}
-            onClick={handleConfirm}
+            onClick={(e) => {
+              // Radix's Action auto-closes the dialog on click — prevent that
+              // so a rejected enqueue keeps the dialog open (CR-03); success
+              // closes explicitly in handleConfirm.
+              e.preventDefault();
+              void handleConfirm();
+            }}
             className="bg-destructive/10 text-destructive hover:bg-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30"
           >
             Delete Permanently

@@ -13,8 +13,45 @@ import {
   mapLifecycleStatus,
   adaptLifecycleCommand,
   latestLifecycleForSkill,
+  lifecycleRefusalMessage,
   type LifecycleCommandRow,
 } from "./useLifecycle";
+
+// ---------------------------------------------------------------------------
+// lifecycleRefusalMessage (98-REVIEW CR-03) — extracts the human reason from
+// a rejected enqueueLifecycle, never leaking the internal token prefix.
+// ---------------------------------------------------------------------------
+
+describe("lifecycleRefusalMessage", () => {
+  it("strips the lifecycle-refused:<kind>: token and returns the raw reason", () => {
+    expect(
+      lifecycleRefusalMessage(
+        new Error("lifecycle-refused:collision:a dormant copy already exists in cold storage")
+      )
+    ).toBe("a dormant copy already exists in cold storage");
+  });
+
+  it("finds the token even when Convex wraps the message in its own prefix", () => {
+    expect(
+      lifecycleRefusalMessage(
+        new Error(
+          "[CONVEX M(forge:enqueueLifecycle)] Uncaught Error: lifecycle-refused:shadow:already active in global\n  at handler"
+        )
+      )
+    ).toBe("already active in global");
+  });
+
+  it("passes a plain (non-token) Error message through", () => {
+    expect(lifecycleRefusalMessage(new Error("workspaceId is required when destination is 'project'"))).toBe(
+      "workspaceId is required when destination is 'project'"
+    );
+  });
+
+  it("never returns an empty string, and stringifies non-Error rejections", () => {
+    expect(lifecycleRefusalMessage(new Error(""))).toBe("Lifecycle command failed");
+    expect(lifecycleRefusalMessage("boom")).toBe("boom");
+  });
+});
 
 // ---------------------------------------------------------------------------
 // mapLifecycleStatus — same behavior as mapIntakeStatus: every known raw

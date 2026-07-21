@@ -9,7 +9,15 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createContext, useContext } from "react";
+import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
+
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
+}));
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
@@ -192,6 +200,26 @@ describe("MoveToProjectDialog", () => {
     fireEvent.click(screen.getByTestId("select-item-ws-1"));
     fireEvent.click(getMoveButton());
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("keeps the dialog open and toasts the stripped refusal when enqueueLifecycle rejects (98-REVIEW CR-03)", async () => {
+    enqueueLifecycleMock.mockReturnValue(
+      Promise.reject(
+        new Error("lifecycle-refused:collision:already active in this project")
+      )
+    );
+    vi.mocked(useQuery).mockReturnValue([
+      { workspaceId: "ws-1", name: "repo-a", class: "synced", rootPath: "/a" },
+    ]);
+    const { onOpenChange } = renderDialog();
+    fireEvent.click(screen.getByTestId("select-item-ws-1"));
+    fireEvent.click(getMoveButton());
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("already active in this project")
+    );
+    // The dialog must NOT close as if the move succeeded.
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 
   it("does not call enqueueLifecycle when Cancel Move is clicked", () => {
