@@ -34,7 +34,8 @@ export function ColdStorageView({
         </span>
       </div>
       <p className="text-xs text-muted-foreground/60 px-1">
-        Dormant skills live on disk but are not loaded. Restore them with /manage-skills.
+        Dormant skills live on disk but are not loaded. Use the ⋯ menu on a
+        row to restore or permanently delete it.
       </p>
 
       {skills.length === 0 ? (

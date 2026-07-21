@@ -2,6 +2,15 @@ import { describe, test, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { SkillsInCategory } from "../SkillsInCategory";
 
+// Phase 98: SkillRow now always renders SkillLifecycleMenu, which calls
+// useQuery/useMutation (host list, lifecycle commands, enqueueLifecycle) —
+// stub convex/react so this suite doesn't need a real ConvexProvider. The
+// menu's own behavior is covered by SkillLifecycleMenu.test.tsx.
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => []),
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
 const mockSkills = [
   {
     name: "gsd-plan-phase",

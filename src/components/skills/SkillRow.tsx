@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GripVertical, MessageSquare, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
+import { SkillLifecycleMenu } from "./SkillLifecycleMenu";
 
 export type RowSkill = SkillLike & {
   displayName: string;
@@ -17,6 +18,13 @@ interface SkillRowProps {
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
   draggable?: boolean;
+  /**
+   * Optional host override for the ⋯ lifecycle menu (Phase 98). When
+   * omitted, SkillLifecycleMenu resolves one itself (IntakeModal's D-08
+   * online-newest convention) — this prop stays optional so every existing
+   * SkillRow call site keeps compiling untouched.
+   */
+  hostId?: string;
 }
 
 type CopyState = "idle" | "copied" | "dormant" | "failed";
@@ -39,6 +47,7 @@ export function SkillRow({
   onEdit,
   onToggleFavorite,
   draggable = true,
+  hostId,
 }: SkillRowProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const dormant = isDormant(skill);
@@ -135,6 +144,8 @@ export function SkillRow({
             <Pencil className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        <SkillLifecycleMenu skill={skill} hostId={hostId} />
 
         <button
           onClick={handleCopy}

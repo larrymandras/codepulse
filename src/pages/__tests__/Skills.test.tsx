@@ -40,6 +40,17 @@ vi.mock("../../../convex/_generated/api", () => ({
     registry: {
       recordSkillLaunch: "mock-recordSkillLaunch",
     },
+    // Phase 98: SkillRow now always renders SkillLifecycleMenu, which reads
+    // api.forge.* (host list, lifecycle commands, enqueueLifecycle) via the
+    // real useForgeHostsRaw/useLifecycleCommands hooks. Stub these refs so
+    // that generic useQuery mock below can recognize and no-op them — the
+    // menu's own behavior is covered by SkillLifecycleMenu.test.tsx.
+    forge: {
+      listHosts: "mock-listHosts",
+      listLifecycleCommands: "mock-listLifecycleCommands",
+      listWorkspaces: "mock-listWorkspaces",
+      enqueueLifecycle: "mock-enqueueLifecycle",
+    },
   },
 }));
 

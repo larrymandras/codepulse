@@ -3,6 +3,15 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { SkillRow } from "./SkillRow";
 import { DORMANT_ORIGIN } from "@/lib/skills";
 
+// Phase 98: SkillRow now always renders SkillLifecycleMenu, which calls
+// useQuery/useMutation (host list, lifecycle commands, enqueueLifecycle) —
+// stub convex/react so these tests don't need a real ConvexProvider. The
+// menu's own behavior is covered by SkillLifecycleMenu.test.tsx.
+vi.mock("convex/react", () => ({
+  useQuery: vi.fn(() => []),
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
 const writeText = vi.fn();
 
 beforeEach(() => {
