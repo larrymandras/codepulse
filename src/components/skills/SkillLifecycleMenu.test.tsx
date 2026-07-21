@@ -402,6 +402,40 @@ describe("SkillLifecycleMenu — in-flight status badge (LIFE-06/D-08)", () => {
     expect(screen.getByText("Executing…")).toBeInTheDocument();
   });
 
+  it("failed badge carries the persisted house copy in a tooltip (98-REVIEW WR-02)", async () => {
+    const houseCopy =
+      'A dormant copy of "legal" already exists in Cold Storage. Rename or delete it first, then archive again.';
+    lifecycleRows = [
+      {
+        commandId: "cmd-1",
+        status: "failed",
+        lifecyclePayload: {
+          action: "archive",
+          skillName: "legal",
+          sourceOrigin: "claude-code",
+          destination: "cold",
+          workspaceId: null,
+        },
+        error: houseCopy,
+        createdAt: 1000,
+        expiresAt: 2000,
+      },
+    ];
+    renderMenu(activeGlobal);
+    expect(screen.getByText("Failed")).toBeInTheDocument();
+
+    // Radix opens the tooltip on trigger focus — content mounts in a portal
+    // (plus a visually-hidden aria duplicate, hence getAllByText).
+    fireEvent.focus(
+      screen.getByLabelText("Failure reason for Legal")
+    );
+    await waitFor(() =>
+      expect(
+        screen.getAllByText(/already exists in Cold Storage/).length
+      ).toBeGreaterThan(0)
+    );
+  });
+
   it("renders no badge when the latest command for this skill is done", () => {
     lifecycleRows = [
       {

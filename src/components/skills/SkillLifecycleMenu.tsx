@@ -166,11 +166,26 @@ export function SkillLifecycleMenu({
     // CodeVaultGraph.tsx's documented own-provider pattern.
     <TooltipProvider delayDuration={200}>
       <div className="flex items-center gap-1.5">
-        {inFlight && (
-          <RowStatusBadge
-            status={inFlight.status as Exclude<typeof inFlight.status, "done">}
-          />
-        )}
+        {inFlight &&
+          (inFlight.status === "failed" && inFlight.error ? (
+            // WR-02 (98-REVIEW): ackCommand persists actionable house copy in
+            // row.error — a bare "Failed" chip dropped it on the floor. Carry
+            // it in a Tooltip (local provider guaranteed by CR-02's fix).
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0} aria-label={`Failure reason for ${skill.displayName}`}>
+                  <RowStatusBadge status="failed" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[320px]">
+                {inFlight.error}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <RowStatusBadge
+              status={inFlight.status as Exclude<typeof inFlight.status, "done">}
+            />
+          ))}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
