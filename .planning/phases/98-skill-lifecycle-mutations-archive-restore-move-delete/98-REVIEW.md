@@ -33,7 +33,19 @@ findings:
   warning: 4
   info: 2
   total: 9
-status: issues_found
+status: fixes_applied
+fixed_at: 2026-07-21
+fix_scope: critical_warning
+fixes:
+  CR-01: fixed — forge 0bd6ae4 (daemon resolves project source via forward repoKey match)
+  CR-02: fixed — codepulse 950bcf6 (local TooltipProvider in SkillLifecycleMenu)
+  CR-03: fixed — codepulse 0733c7e (catch + toast at all three call sites, dialogs close only on success)
+  WR-01: fixed — forge c9cdb50 (distinct refusal kinds; collision/shadow reserved for destination-exists)
+  WR-02: fixed — codepulse 35e7e2e (failed chip carries row.error in a Tooltip)
+  WR-03: fixed — forge 5b10acb (partial-dest cleanup on mid-copy failure, mutation-verified)
+  WR-04: fixed-partial — codepulse 2637f90 (shadowed dormant copy visible in Cold Storage, dead branch now live; delete of that copy still blocked by D-05 both layers — needs design decision)
+  IN-01: skipped — Info tier, outside critical_warning fix scope
+  IN-02: skipped — Info tier, outside critical_warning fix scope
 ---
 
 # Phase 98: Code Review Report
@@ -41,7 +53,7 @@ status: issues_found
 **Reviewed:** 2026-07-21
 **Depth:** standard
 **Files Reviewed:** 24
-**Status:** issues_found
+**Status:** fixes_applied (was: issues_found) — CR-01/02/03, WR-01/02/03 fixed; WR-04 fixed-partial; IN-01/02 skipped (out of scope). Per-finding details under each heading.
 
 ## Summary
 
@@ -52,6 +64,8 @@ Reviewed the full Phase 98 surface: Convex mutation/preflight/adapter (`convex/f
 ## Critical Issues
 
 ### CR-01: Archive / Move-to-Global of a project-scoped skill can never succeed — UI sends `workspaceId: null`, daemon cannot resolve the project source root
+
+**Fix status:** FIXED (forge `0bd6ae4`) — `runLifecycle` now recovers a project SOURCE root by forward-hashing every synced workspace rootPath with the same `repoKey()` the rescan used and matching the origin key (exactly-one required; zero/multiple refuse as `lifecycle-refused:unresolvable`). An explicit `workspaceId` still wins. No Convex/UI contract change needed — `workspaceId: null` is now genuinely correct for project sources. Guard tests: project archive/move with null workspaceId, unknown-key refusal, ambiguity refusal, explicit-workspaceId precedence.
 
 **Confidence:** High
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:117-147`, `C:/Users/mandr/forge/src/process/lifecycle-exec.ts:131-139, 303-311`, `convex/forge.ts:634-636`
@@ -83,6 +97,8 @@ const ws = getWorkspace(deps.db, workspaceId);
 
 ### CR-02: Opening the ⋯ menu on a multi-scope skill throws "`Tooltip` must be used within `TooltipProvider`" and blanks the Skills page
 
+**Fix status:** FIXED (codepulse `950bcf6`) — `SkillLifecycleMenu` wraps its tree in a local `<TooltipProvider delayDuration={200}>` (CodeVaultGraph pattern). No-mock-provider regression tests added (multi-scope + shadow branches), mutation-verified (2 failures without the provider).
+
 **Confidence:** High
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:216-237`, `src/components/ui/tooltip.tsx:21-25`, `src/layouts/DashboardLayout.tsx:182/309, 576/588, 592-597`
 
@@ -95,6 +111,8 @@ A skill active in both global and a project (`origins: ["claude-code", "claude-c
 **Fix:** Wrap `SkillLifecycleMenu`'s returned tree (or at minimum each `<Tooltip>` usage) in a local `<TooltipProvider delayDuration={200}>`, mirroring `CodeVaultGraph.tsx:585`'s documented pattern, and add a no-mock provider regression test like `CodeVaultGraph.tooltip.test.tsx`.
 
 ### CR-03: Every LAYER-1 preflight refusal is silently swallowed — the user's click does nothing, and the spec'd refusal copy is unreachable
+
+**Fix status:** FIXED (codepulse `0733c7e`) — all three call sites catch the rejection and `toast.error` the reason via a new `lifecycleRefusalMessage` helper (strips the internal `lifecycle-refused:<kind>:` token, Convex-wrapper tolerant). Dialogs close only on success; Radix `AlertDialogAction` auto-close is `preventDefault`ed so a refused delete keeps the dialog open.
 
 **Confidence:** High
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:123-129`, `src/components/skills/MoveToProjectDialog.tsx:81-95`, `src/components/skills/DeleteSkillDialog.tsx:70-84`, `convex/forge.ts:644-668, 1116-1127`
@@ -111,6 +129,8 @@ Because no row is inserted, there is no `forgeCommands` doc → no `RowStatusBad
 ## Warnings
 
 ### WR-01: Daemon overloads the `collision` kind for six non-collision failures, so the Convex adapter composes factually wrong user-facing copy
+
+**Fix status:** FIXED (forge `c9cdb50`) — `collision`/`shadow` are now reserved for genuine destination-exists refusals; the six mislabeled failures emit `invalid-name`, `unresolvable`, `not-cold`, `source-missing`, or `reparse`, all of which fall through to the Convex adapter's generic accurate branch (`${label} failed: ${raw}. Nothing changed on disk.`). Kind taxonomy documented in lifecycle-exec.ts's module header.
 
 **Confidence:** High
 **Files:** `C:/Users/mandr/forge/src/process/lifecycle-exec.ts:250, 262, 269, 281, 292, 309, 317, 337, 347`, `convex/forge.ts:264-272`
@@ -132,6 +152,8 @@ An archive whose source vanished therefore persists the error "A dormant copy of
 
 ### WR-02: The persisted lifecycle failure copy (`row.error`) is never rendered anywhere — a failed command shows only a bare "Failed" chip
 
+**Fix status:** FIXED (codepulse `35e7e2e`) — the failed `RowStatusBadge` is wrapped in a `Tooltip` carrying `inFlight.error` (house copy), opened on hover/focus; provider guaranteed by the CR-02 fix.
+
 **Confidence:** High (as-submitted scope)
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:156-159`, `src/components/skills/IntakeStatusBadge.tsx:98-122`, `src/hooks/useLifecycle.ts:69`
 
@@ -140,6 +162,8 @@ An archive whose source vanished therefore persists the error "A dormant copy of
 **Fix:** Surface `inFlight.error` for `status === "failed"` — e.g. wrap the failed `RowStatusBadge` in a `Tooltip` carrying the house copy (once CR-02's provider fix lands), or a `title` attribute at minimum.
 
 ### WR-03: `moveTree`'s copy+delete fallback leaves a partial destination on mid-copy failure, and the orphan then blocks every retry as a phantom "collision"
+
+**Fix status:** FIXED (forge `5b10acb`) — the cross-volume fallback wraps `copyTreeReadWrite` in try/catch and `fs.rmSync(dest, { recursive: true, force: true })` before rethrowing. Guard test (mid-copy ENOSPC → dest cleaned, source intact, retry succeeds) mutation-verified.
 
 **Confidence:** Medium-high
 **Files:** `C:/Users/mandr/forge/src/process/lifecycle-exec.ts:214-222, 324-331`
@@ -158,6 +182,8 @@ If `copyTreeReadWrite` throws partway (disk full, Drive I/O error — and cross-
 
 ### WR-04: The shadow-blocked Restore branch is dead code (`isDormant` and `isShadowing` are mutually exclusive), and the dormant copy of a shadowed skill is unreachable — the collision copy's own remediation is impossible in the UI
 
+**Fix status:** FIXED-PARTIAL (codepulse `2637f90`) — Cold Storage now filters by a new `hasDormantCopy` (any dormant origin) instead of `isDormant`, and rows render with `lane="cold"` threaded ColdStorageView → SkillRow → SkillLifecycleMenu, forcing the dormant-branch menu: the previously-dead shadow-blocked Restore branch is now LIVE and tested against real merged-row data (real `isShadowing`, no spy), plus Delete Permanently is offered. REMAINING (deliberately not changed): deleting the dormant copy of a shadowed skill is still refused by both layers (LAYER-1 `not-cold` preflight + daemon cold-only host-truth check, both deliberate D-05 tests) — the archive-collision copy's "delete it first" remediation therefore still dead-ends, now visibly via the CR-03 toast instead of silently. Relaxing D-05 (allow deleting the cold copy while an active copy exists) is a destructive-path design decision that needs sign-off, not a review fix.
+
 **Confidence:** High
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:108-109, 178-204`, `src/lib/skills.ts:20-29`, `src/components/skills/SkillLifecycleMenu.test.tsx:28-41`
 
@@ -175,11 +201,15 @@ The menu's shadow-tooltip branch requires `dormant && shadowed` (SkillLifecycleM
 
 ### IN-01: No action↔destination coherence validation on `enqueueLifecycle` or in the daemon
 
+**Fix status:** SKIPPED — Info tier, outside the critical_warning fix scope.
+
 **File:** `convex/forge.ts:1073-1129`, `C:/Users/mandr/forge/src/process/lifecycle-exec.ts:300-353`
 **Issue:** `action: "archive"` with `destination: "global"` (or `"restore"` with `"cold"`, etc.) passes both the validator unions and `validateLifecyclePreflight`; the daemon executes archive/restore/move identically as `moveTree(src, dest)`, so a mislabeled action performs a differently-labeled move and, on refusal, composes the wrong action's house copy. Only the UI enforces the pairing, but the mutation is a public (Clerk-authed) surface.
 **Fix:** Add a coherence guard to `validateLifecyclePreflight` (archive⇒cold, restore⇒global|project, delete⇒cold).
 
 ### IN-02: `commandId` comments promise a ULID; the UI sends UUIDv4
+
+**Fix status:** SKIPPED — Info tier, outside the critical_warning fix scope.
 
 **File:** `convex/forge.ts:1076` (`// client-generated ULID`), `src/components/skills/SkillLifecycleMenu.tsx:125`, `MoveToProjectDialog.tsx:80`, `DeleteSkillDialog.tsx:69` (`crypto.randomUUID()`)
 **Issue:** Harmless functionally (opaque unique string), but the comment contract and any future lexicographic-ordering assumption on commandId would be wrong.
