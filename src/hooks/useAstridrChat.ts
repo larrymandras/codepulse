@@ -333,6 +333,13 @@ export function useAstridrChat() {
       const frameRequestId = data?.request_id;
       const sessionId = data?.session_id;
       if (!frameRequestId || !sessionId) return;
+      // 184 code-review CR-02: frame_request pushes fan out to EVERY connected
+      // WS client — only the tab whose active session was asked may answer.
+      // Echoing a foreign session_id would defeat the backend's session-scoped
+      // resolve (T-184-11) and answer with the WRONG screen. Drop silently:
+      // the requesting tab replies; an empty reply from us would prematurely
+      // honest-fail its legit turn.
+      if (sessionId !== activeSessionRef.current) return;
 
       const share = screenShareRef.current;
       if (share.state !== "active") {

@@ -892,6 +892,14 @@ export function useAstridrVoice({
               error: err instanceof Error ? err.message : String(err),
             });
             setIsLooking(false);
+            // 184 code-review CR-03: FINAL_RESULT already moved the reducer
+            // into `processing` and no send happened — nothing will ever fire
+            // TTS_START/TTS_END, and the silent-turn watchdog only arms on a
+            // chat.isStreaming falling edge, so without an explicit close the
+            // conversation wedges in "Thinking…" until a manual mic toggle.
+            // Mirror the watchdog's close: end the turn, back to listening.
+            dispatch({ type: "TTS_END", strictMode: strictModeRef.current });
+            onTurnEnd();
           }
         })();
       } else {
