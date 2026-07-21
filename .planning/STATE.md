@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 Plan 03 (lifecycle UI building blocks) complete
-last_updated: "2026-07-21T21:16:13.661Z"
+stopped_at: Phase 98 Plan 04 (lifecycle menu assembly) complete
+last_updated: "2026-07-21T21:38:55.367Z"
 last_activity: 2026-07-21
 progress:
   total_phases: 1
@@ -32,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
 Phase: 98 (skill-lifecycle-mutations-archive-restore-move-delete) — EXECUTING
-Plan: 3 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (Forge daemon lifecycle executor) complete and verified (47/47 new tests passing across lifecycle-exec.test.ts + command-poller.test.ts, tsc clean; 925/926 full forge suite — 1 pre-existing unrelated flake in manager.test.ts); Plan 98-03 (lifecycle UI building blocks) complete and verified (32/32 new tests passing across useLifecycle/MoveToProjectDialog/DeleteSkillDialog, tsc clean; repo-wide `npx vitest run` 2281/2281 passing, 0 regressions); Plan 98-04 (menu assembly, wave 3) next.
-Status: Plan 98-03 complete (3/3 tasks, commits 3ff1bde/fe08fba/4f1feed). LIFE-03/LIFE-04/LIFE-06 NOT marked complete yet — this plan shipped the reusable UI building blocks (dropdown-menu primitive, useLifecycle hook, MoveToProjectDialog, DeleteSkillDialog) but nothing is wired into SkillRow/ColdStorageView yet; Plan 98-04 assembles the ⋯ menu, and a manual UAT (real archive + real cross-volume move) remains before phase verification.
+Plan: 4 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (Forge daemon lifecycle executor) complete and verified (47/47 new tests passing across lifecycle-exec.test.ts + command-poller.test.ts, tsc clean; 925/926 full forge suite — 1 pre-existing unrelated flake in manager.test.ts); Plan 98-03 (lifecycle UI building blocks) complete and verified (32/32 new tests passing across useLifecycle/MoveToProjectDialog/DeleteSkillDialog, tsc clean; repo-wide `npx vitest run` 2281/2281 passing, 0 regressions); Plan 98-04 (menu assembly) complete and verified (19/19 new tests across SkillLifecycleMenu.test.tsx + 5/5 new ColdStorageView.test.tsx, tsc clean; repo-wide `npx vitest run` 204 files / 2305 tests passing, 0 regressions after fixing 4 pre-existing suites broken by SkillRow now mounting real Convex hooks — see 98-04-SUMMARY.md).
+Status: Plan 98-04 complete (2/2 tasks, commits a8c24ef/eb91eda). All 4 plans of Phase 98 are now code-complete end-to-end (Convex enqueue -> daemon executor -> UI). LIFE-01..06 traceability stays "Pending" in REQUIREMENTS.md — a manual UAT (real archive + real cross-volume move against a live Forge daemon) is still required before the phase can be marked verified (see 98-04-SUMMARY.md "Next Phase Readiness").
 Last activity: 2026-07-21
 
-**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Plan 98-04 (menu assembly) and Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
+**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 4/4 plans code-complete; manual UAT still outstanding before phase verification. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
 ## Deferred Items
 
@@ -123,6 +123,14 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 98 Plan 04 decisions (2026-07-21, lifecycle menu assembly — final integration wave):**
+
+- **`isDormant(skill)`/`isShadowing(skill)` are mutually exclusive against the real registry data model** — `convex/skillSync.ts`'s `groupSkillRowsByName` merges every origin for a skill name into ONE row, so a row can never have ALL origins `=== DORMANT_ORIGIN` (isDormant) AND also a non-dormant origin (isShadowing) simultaneously. The shadow-disabled-Restore branch in `SkillLifecycleMenu.tsx` is implemented exactly as the plan specifies (D-09's client-side half of the two-layer shadow check) and is unit-tested by spying on `isShadowing` directly rather than an impossible origins fixture — it's correct, harmless defensive code, not naturally reachable via today's grouped-row data, and the daemon's LAYER-2 re-check (98-02) remains the real backstop.
+- **Restore only ever targets `destination: "global"`** — no destination picker; matches the UI-SPEC's single "Restore" menu item and `validateLifecyclePreflight`'s global-only shadow pre-check (98-01).
+- **Host resolved inside `SkillLifecycleMenu` itself** via `useForgeHostsRaw` (IntakeModal's D-08 online-newest convention), with an optional `hostId` override prop — avoids threading a new required prop through every `SkillRow` call site (`AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView`).
+- **`gsd-sdk state.advance-plan` and `state.update-progress` both re-clobbered this file's frontmatter** (`status: milestone_complete` → `executing` → `verifying`, `stopped_at` reverted to the Plan-03 text) via the same full-frontmatter-resync side effect documented in Plans 98-01/02/03's own decisions — reverted to `milestone_complete`/Plan-04-complete by hand each time. `state.record-metric`/`state.add-decision`/`state.record-session` were skipped entirely this plan for the same reason (all route through the same disk-rebuild resync); this Decisions entry and the Session Continuity update above were hand-written instead, following the established workaround.
+- **LIFE-01..06/DAEMON-02 still NOT marked complete in REQUIREMENTS.md** — this is the final integration plan of Phase 98 (all 4 plans are now code-complete end-to-end: Convex enqueue -> daemon executor -> UI), but the phase's manual UAT (real archive + a real cross-volume move against a live Forge daemon) has not yet run. Matches 98-01/02/03's own precedent of deferring completion to full, human-verified end-to-end delivery — not per-plan code-completion.
 
 **v11.0 / Phase 98 Plan 03 decisions (2026-07-21, lifecycle UI building blocks):**
 
@@ -283,10 +291,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-21T21:30:00.000Z
-Stopped at: Phase 98 Plan 03 (lifecycle UI building blocks) complete
-Next action: Execute Phase 98 Plan 04 (menu assembly — wire useLifecycle/MoveToProjectDialog/DeleteSkillDialog into SkillRow/ColdStorageView via the new DropdownMenu, codepulse repo) — see 98-03-SUMMARY.md "Next Phase Readiness". A manual UAT (real archive + real cross-volume move against a live daemon) is still required before the phase can be verified — do not skip it once 98-04 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-03-SUMMARY.md
+Last session: 2026-07-21T21:38:00.000Z
+Stopped at: Phase 98 Plan 04 (lifecycle menu assembly) complete — all 4 plans of Phase 98 code-complete
+Next action: Phase 98 is code-complete end-to-end but NOT yet phase-verified — a manual UAT (real archive + a real cross-volume move against a live Forge daemon) is still required before the phase can be marked verified (see 98-04-SUMMARY.md "Next Phase Readiness"). Once that UAT passes, mark LIFE-01..06/DAEMON-02 complete in REQUIREMENTS.md and proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) or Phase 100 (Control-Surface UX, depends on both 98 and 99). Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-04-SUMMARY.md
 
 ## Operator Next Steps
 

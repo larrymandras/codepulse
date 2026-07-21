@@ -134,3 +134,15 @@ None — no external service configuration required. All Convex functions this p
 ---
 *Phase: 98-skill-lifecycle-mutations-archive-restore-move-delete*
 *Completed: 2026-07-21*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/skills/SkillLifecycleMenu.tsx
+- FOUND: src/components/skills/SkillLifecycleMenu.test.tsx
+- FOUND: src/components/skills/ColdStorageView.test.tsx
+- FOUND: src/components/skills/SkillRow.tsx
+- FOUND: src/components/skills/ColdStorageView.tsx
+- FOUND: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-04-SUMMARY.md
+- FOUND: a8c24ef (Task 1 commit)
+- FOUND: eb91eda (Task 2 commit)
+- FOUND: 6d4407e (Summary commit)
