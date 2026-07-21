@@ -17,12 +17,12 @@
 
 ### LIFE — Skill Lifecycle Mutations
 
-- [ ] **LIFE-01**: User can archive an active skill to cold storage from the UI (host moves it to `.claude/skills-available/` / dormant origin); it stays tracked as dormant, removing its context/token load.
-- [ ] **LIFE-02**: User can restore a dormant/cold skill back to active (global or project) from the UI.
-- [ ] **LIFE-03**: User can move a skill between global and project scope from the UI.
-- [ ] **LIFE-04**: User can delete a skill — *archive-first*: the default destructive action archives to cold storage; true file deletion is a separate action requiring an explicit confirmation.
-- [ ] **LIFE-05**: Lifecycle actions respect `isShadowing` — activating/restoring a dormant skill shadowed by an active same-name skill is surfaced and guarded (no silent conflicting activation).
-- [ ] **LIFE-06**: When the Forge daemon is offline, lifecycle actions degrade gracefully — the command queues, the UI shows it will expire, and no false-success is shown (mirrors the intake expired path).
+- [x] **LIFE-01**: User can archive an active skill to cold storage from the UI (host moves it to `.claude/skills-available/` / dormant origin); it stays tracked as dormant, removing its context/token load.
+- [x] **LIFE-02**: User can restore a dormant/cold skill back to active (global or project) from the UI.
+- [x] **LIFE-03**: User can move a skill between global and project scope from the UI.
+- [x] **LIFE-04**: User can delete a skill — *archive-first*: the default destructive action archives to cold storage; true file deletion is a separate action requiring an explicit confirmation.
+- [x] **LIFE-05**: Lifecycle actions respect `isShadowing` — activating/restoring a dormant skill shadowed by an active same-name skill is surfaced and guarded (no silent conflicting activation).
+- [x] **LIFE-06**: When the Forge daemon is offline, lifecycle actions degrade gracefully — the command queues, the UI shows it will expire, and no false-success is shown (mirrors the intake expired path).
 
 ### LAUNCH — Skill Launch / Dispatch
 
@@ -41,7 +41,7 @@
 ### DAEMON — Host Executor & Registry Rescan (cross-repo)
 
 - [ ] **DAEMON-01**: The Forge daemon executes `intake` commands — validates then writes SKILL.md to the destination scope (global / project / cold) on the host filesystem.
-- [ ] **DAEMON-02**: The Forge daemon executes lifecycle commands — archive (→ cold), restore, move-scope, and delete — atomically on the host, archive-first for delete.
+- [x] **DAEMON-02**: The Forge daemon executes lifecycle commands — archive (→ cold), restore, move-scope, and delete — atomically on the host, archive-first for delete.
 - [ ] **DAEMON-03**: After any successful mutation the daemon rescans and re-syncs the skills registry (`syncInventory`) so CodePulse origins/scope reflect host truth.
 - [ ] **DAEMON-04**: The daemon advertises its new supported command types so older daemons never receive commands they cannot run (extends `supportedTypes` / `resolveClaimTypes`).
 
@@ -72,13 +72,13 @@
 | DAEMON-01 | Phase 97 | Pending |
 | DAEMON-03 | Phase 97 | Pending |
 | DAEMON-04 | Phase 97 | Pending |
-| LIFE-01 | Phase 98 | Pending |
-| LIFE-02 | Phase 98 | Pending |
-| LIFE-03 | Phase 98 | Pending |
-| LIFE-04 | Phase 98 | Pending |
-| LIFE-05 | Phase 98 | Pending |
-| LIFE-06 | Phase 98 | Pending |
-| DAEMON-02 | Phase 98 | Pending |
+| LIFE-01 | Phase 98 | Complete |
+| LIFE-02 | Phase 98 | Complete |
+| LIFE-03 | Phase 98 | Complete |
+| LIFE-04 | Phase 98 | Complete |
+| LIFE-05 | Phase 98 | Complete |
+| LIFE-06 | Phase 98 | Complete |
+| DAEMON-02 | Phase 98 | Complete |
 | LAUNCH-01 | Phase 99 | Pending |
 | LAUNCH-02 | Phase 99 | Pending |
 | LAUNCH-03 | Phase 99 | Pending |

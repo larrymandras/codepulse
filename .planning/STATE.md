@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 Plan 04 (lifecycle menu assembly) complete
-last_updated: "2026-07-21T21:38:55.367Z"
+stopped_at: Phase 98 complete (4/4, verified + UAT approved 2026-07-21) — next: Phase 99 (v11.0 resume)
+last_updated: 2026-07-21T22:55:11.617Z
 last_activity: 2026-07-21
 progress:
   total_phases: 1
@@ -17,7 +17,7 @@ progress:
 <!-- Counters hand-reconciled 2026-07-20 against git ground truth (gsd-sdk state.* verbs miscount;
      phase.complete wrote completed_plans:26 — corrected to 7).
      v12.0 scope = Phase 101 only (7 plans incl. 101-07 gap closure). v11.0 (Phases 97-100) is PAUSED mid-milestone:
-     Phase 97 COMPLETE (6/6, verified 495946f); Phases 98/99/100 not started — resume after v12.0. -->
+     Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (4/4, verified + UAT approved 2026-07-21); Phases 99/100 not started. -->
 
 # Project State
 
@@ -26,14 +26,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 98 — skill-lifecycle-mutations-archive-restore-move-delete
+**Current focus:** v11.0 resume — Phase 99 (Skill Launch / Dispatch) is next
 
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
-Phase: 98 (skill-lifecycle-mutations-archive-restore-move-delete) — EXECUTING
-Plan: 4 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (Forge daemon lifecycle executor) complete and verified (47/47 new tests passing across lifecycle-exec.test.ts + command-poller.test.ts, tsc clean; 925/926 full forge suite — 1 pre-existing unrelated flake in manager.test.ts); Plan 98-03 (lifecycle UI building blocks) complete and verified (32/32 new tests passing across useLifecycle/MoveToProjectDialog/DeleteSkillDialog, tsc clean; repo-wide `npx vitest run` 2281/2281 passing, 0 regressions); Plan 98-04 (menu assembly) complete and verified (19/19 new tests across SkillLifecycleMenu.test.tsx + 5/5 new ColdStorageView.test.tsx, tsc clean; repo-wide `npx vitest run` 204 files / 2305 tests passing, 0 regressions after fixing 4 pre-existing suites broken by SkillRow now mounting real Convex hooks — see 98-04-SUMMARY.md).
-Status: Plan 98-04 complete (2/2 tasks, commits a8c24ef/eb91eda). All 4 plans of Phase 98 are now code-complete end-to-end (Convex enqueue -> daemon executor -> UI). LIFE-01..06 traceability stays "Pending" in REQUIREMENTS.md — a manual UAT (real archive + real cross-volume move against a live Forge daemon) is still required before the phase can be marked verified (see 98-04-SUMMARY.md "Next Phase Readiness").
+Phase: 98 (skill-lifecycle-mutations) — COMPLETE 2026-07-21 (4/4 plans, 11/11 must-haves verified, code review 9 findings all fixed incl. WR-04 D-05 target-scoping sign-off, UAT approved by Larry). LIFE-01..06 + DAEMON-02 marked Complete.
+Plan: n/a
+Status: v11.0 resumes at Phase 99 (Skill Launch / Dispatch); Phase 100 (Control-Surface UX) depends on 98+99.
 Last activity: 2026-07-21
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 4/4 plans code-complete; manual UAT still outstanding before phase verification. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
