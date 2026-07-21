@@ -43,7 +43,7 @@ fixes:
   WR-01: fixed — forge c9cdb50 (distinct refusal kinds; collision/shadow reserved for destination-exists)
   WR-02: fixed — codepulse 35e7e2e (failed chip carries row.error in a Tooltip)
   WR-03: fixed — forge 5b10acb (partial-dest cleanup on mid-copy failure, mutation-verified)
-  WR-04: fixed-partial — codepulse 2637f90 (shadowed dormant copy visible in Cold Storage, dead branch now live; delete of that copy still blocked by D-05 both layers — needs design decision)
+  WR-04: fixed — codepulse 2637f90 + d4ab72f, forge 42d2f79 (shadowed dormant copy visible in Cold Storage AND deletable: D-05 narrowed to target-scoped cold-only per Larry sign-off 2026-07-21)
   IN-01: skipped — Info tier, outside critical_warning fix scope
   IN-02: skipped — Info tier, outside critical_warning fix scope
 ---
@@ -53,7 +53,7 @@ fixes:
 **Reviewed:** 2026-07-21
 **Depth:** standard
 **Files Reviewed:** 24
-**Status:** fixes_applied (was: issues_found) — CR-01/02/03, WR-01/02/03 fixed; WR-04 fixed-partial; IN-01/02 skipped (out of scope). Per-finding details under each heading.
+**Status:** fixes_applied (was: issues_found) — CR-01/02/03, WR-01/02/03/04 fixed; IN-01/02 skipped (out of scope). Per-finding details under each heading.
 
 ## Summary
 
@@ -182,7 +182,7 @@ If `copyTreeReadWrite` throws partway (disk full, Drive I/O error — and cross-
 
 ### WR-04: The shadow-blocked Restore branch is dead code (`isDormant` and `isShadowing` are mutually exclusive), and the dormant copy of a shadowed skill is unreachable — the collision copy's own remediation is impossible in the UI
 
-**Fix status:** FIXED-PARTIAL (codepulse `2637f90`) — Cold Storage now filters by a new `hasDormantCopy` (any dormant origin) instead of `isDormant`, and rows render with `lane="cold"` threaded ColdStorageView → SkillRow → SkillLifecycleMenu, forcing the dormant-branch menu: the previously-dead shadow-blocked Restore branch is now LIVE and tested against real merged-row data (real `isShadowing`, no spy), plus Delete Permanently is offered. REMAINING (deliberately not changed): deleting the dormant copy of a shadowed skill is still refused by both layers (LAYER-1 `not-cold` preflight + daemon cold-only host-truth check, both deliberate D-05 tests) — the archive-collision copy's "delete it first" remediation therefore still dead-ends, now visibly via the CR-03 toast instead of silently. Relaxing D-05 (allow deleting the cold copy while an active copy exists) is a destructive-path design decision that needs sign-off, not a review fix.
+**Fix status:** FIXED (codepulse `2637f90` + `d4ab72f`, forge `42d2f79`) — RESOLUTION 2026-07-21: Larry signed off on narrowing D-05 to *target-scoped* cold-only ("the delete target must be the Cold Storage copy" — an implementation fix, not a relaxation: D-05's stated intent was always "permanent delete exists solely on cold-storage rows"). LAYER-1 now refuses only when `sourceOrigin !== DORMANT_ORIGIN`; the daemon dropped the global/workspace existence walk and re-asserts the same target check host-side; rmSync still only ever resolves under the cold root. Deleting a shadowed skill's dormant copy now succeeds and never touches the active copy (test-guarded on both sides), and DeleteSkillDialog states "The active copy of this skill is not affected" for shadowed rows. The archive-collision "delete it first" remediation is fully unwedged. ORIGINAL PARTIAL FIX (codepulse `2637f90`) — Cold Storage now filters by a new `hasDormantCopy` (any dormant origin) instead of `isDormant`, and rows render with `lane="cold"` threaded ColdStorageView → SkillRow → SkillLifecycleMenu, forcing the dormant-branch menu: the previously-dead shadow-blocked Restore branch is now LIVE and tested against real merged-row data (real `isShadowing`, no spy), plus Delete Permanently is offered. REMAINING (deliberately not changed): deleting the dormant copy of a shadowed skill is still refused by both layers (LAYER-1 `not-cold` preflight + daemon cold-only host-truth check, both deliberate D-05 tests) — the archive-collision copy's "delete it first" remediation therefore still dead-ends, now visibly via the CR-03 toast instead of silently. Relaxing D-05 (allow deleting the cold copy while an active copy exists) is a destructive-path design decision that needs sign-off, not a review fix.
 
 **Confidence:** High
 **Files:** `src/components/skills/SkillLifecycleMenu.tsx:108-109, 178-204`, `src/lib/skills.ts:20-29`, `src/components/skills/SkillLifecycleMenu.test.tsx:28-41`
