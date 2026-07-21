@@ -173,6 +173,37 @@ export function isStrictModeCommand(text: string): "on" | "off" | null {
   return null;
 }
 
+// ─── Vision-intent phrase detection (D-01 client fast-path) ──────────────────
+
+// Discretion-granted draft phrase list (184-UI-SPEC.md Open Questions #1).
+const VISION_INTENT_PHRASES = [
+  "what's on my screen",
+  "look at this",
+  "what do you see",
+  "read this",
+];
+
+/**
+ * Returns true if the transcript is a vision-intent phrase — a request to
+ * look at the shared screen (D-01 client regex fast-path). Reuses
+ * `normalize()` and matches whole-utterance OR as a trailing/contiguous
+ * phrase (mirrors `isEndPhrase`/`isBargeInPhrase`) so a filler-prefixed
+ * utterance ("okay, what do you see?") still fires. Stays pure — no
+ * `MediaStream` reference, no side effects (file contract).
+ */
+export function isVisionIntentPhrase(text: string): boolean {
+  const norm = normalize(text);
+  if (!norm) return false;
+  if (VISION_INTENT_PHRASES.includes(norm)) return true;
+  const words = norm.split(" ");
+  return VISION_INTENT_PHRASES.some((phrase) => {
+    const phraseWords = phrase.split(" ");
+    if (phraseWords.length > words.length) return false;
+    const start = words.length - phraseWords.length;
+    return phraseWords.every((w, j) => words[start + j] === w);
+  });
+}
+
 // ─── State machine ────────────────────────────────────────────────────────────
 
 /**
