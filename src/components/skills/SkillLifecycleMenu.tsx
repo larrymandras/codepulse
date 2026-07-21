@@ -10,6 +10,9 @@
  *   - dormant row            -> Restore, Delete Permanently
  *   - active, single scope   -> Archive, Move to {other scope}…
  *   - active, multiple scopes -> Archive/Move disabled, honest reason (Pitfall 1a)
+ *   - lane="cold" (98-REVIEW WR-04): rendered from ColdStorageView for a row
+ *     whose name ALSO has an active copy (merged shadowed row) — acts on the
+ *     DORMANT copy: Restore disabled with the shadow tooltip, Delete offered.
  */
 
 import { useMemo, useState } from "react";
@@ -87,11 +90,21 @@ interface SkillLifecycleMenuProps {
    * the existing host hook — no new host-resolution mechanism invented.
    */
   hostId?: string;
+  /**
+   * Which lane this row is rendered in (98-REVIEW WR-04). The registry merges
+   * every origin for a name into ONE row, so a skill that is active AND has a
+   * dormant copy renders in both the active list and Cold Storage — the menu
+   * must act on the lane's copy, not guess. "cold" forces the dormant-branch
+   * menu (Restore — shadow-blocked when an active copy exists — plus Delete
+   * Permanently). Defaults to "active" so existing call sites are unchanged.
+   */
+  lane?: "active" | "cold";
 }
 
 export function SkillLifecycleMenu({
   skill,
   hostId: hostIdProp,
+  lane = "active",
 }: SkillLifecycleMenuProps) {
   const [moveOpen, setMoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -108,7 +121,11 @@ export function SkillLifecycleMenu({
   // "done" means the rescan should already reflect the mutation — no badge.
   const inFlight = latest && latest.status !== "done" ? latest : null;
 
-  const dormant = isDormant(skill);
+  // The cold lane always shows the dormant-branch menu: a merged shadowed row
+  // (active + dormant copies) has isDormant === false, but in Cold Storage the
+  // menu acts on the DORMANT copy (98-REVIEW WR-04 — this is what makes the
+  // shadow-blocked Restore branch reachable against live merged-row data).
+  const dormant = isDormant(skill) || lane === "cold";
   const shadowed = isShadowing(skill);
   const nonDormantOrigins = (skill.origins ?? []).filter(
     (o) => o !== DORMANT_ORIGIN

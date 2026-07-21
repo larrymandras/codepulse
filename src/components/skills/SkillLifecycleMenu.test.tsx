@@ -36,13 +36,12 @@ import type { RowSkill } from "./SkillRow";
 // isDormant(skill)/isShadowing(skill) are mutually exclusive by construction
 // (isDormant requires EVERY origin === DORMANT_ORIGIN; isShadowing requires
 // at least one origin that ISN'T) — the real `skills` registry groups all
-// origins for a name into ONE row (convex/skillSync.ts groupSkillRowsByName),
-// so a row can never be both at once against live data. isShadowing stays a
-// real, directly-testable pure function (see src/lib/skills.ts's own test
-// suite) — here it's spied so the shadow-disabled-Restore branch can still
-// be exercised in isolation as a defensive guard (D-09's client half of the
-// two-layer check; the daemon's LAYER-2 re-check is the real backstop for
-// any registry-staleness edge case this can't naturally reach).
+// origins for a name into ONE row (convex/skillSync.ts groupSkillRowsByName).
+// Since 98-REVIEW WR-04, the shadow-blocked-Restore branch is REACHABLE
+// against live merged-row data via lane="cold" (see the cold-lane suite
+// below, which restores the real isShadowing) — the spy remains only so the
+// older shadow tests can exercise the branch in isolation for a plain
+// dormant fixture.
 vi.mock("@/lib/skills", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/skills")>();
   return { ...actual, isShadowing: vi.fn(actual.isShadowing) };
@@ -292,6 +291,60 @@ describe("SkillLifecycleMenu — multi-scope guard (Pitfall 1a / T-98-08)", () =
     fireEvent.click(screen.getByRole("menuitem", { name: /Archive/i }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Move/i }));
     expect(enqueueMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW WR-04)", () => {
+  // A merged shadowed row exactly as groupSkillRowsByName produces it: one
+  // row, dormant copy + active global copy. The REAL isShadowing is restored
+  // for this suite — no spy — so the shadow-blocked branch is exercised
+  // against live-shaped data, not a mocked impossibility.
+  const shadowedMerged: RowSkill = {
+    ...activeGlobal,
+    origins: [DORMANT_ORIGIN, "claude-code"],
+  };
+
+  async function useRealIsShadowing() {
+    const actual = await vi.importActual<typeof import("@/lib/skills")>("@/lib/skills");
+    vi.mocked(isShadowing).mockImplementation(actual.isShadowing);
+  }
+
+  it('lane="cold" renders the dormant-branch menu: shadow-DISABLED Restore + Delete Permanently, no Archive/Move', async () => {
+    await useRealIsShadowing();
+    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />);
+    openMenu();
+    const restoreItem = screen.getByRole("menuitem", { name: /Restore/i });
+    expect(restoreItem).toHaveAttribute("data-disabled");
+    expect(
+      screen.getByRole("menuitem", { name: /Delete Permanently/i })
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /^Archive$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Move/i })).not.toBeInTheDocument();
+  });
+
+  it('lane="cold" clicking the shadow-disabled Restore never enqueues', async () => {
+    await useRealIsShadowing();
+    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />);
+    openMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: /Restore/i }));
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
+  it('lane="cold" for a purely dormant row keeps Restore ENABLED (unchanged behavior)', async () => {
+    await useRealIsShadowing();
+    render(<SkillLifecycleMenu skill={dormant} hostId="desktop" lane="cold" />);
+    openMenu();
+    expect(
+      screen.getByRole("menuitem", { name: /Restore/i })
+    ).not.toHaveAttribute("data-disabled");
+  });
+
+  it("default (active) lane still renders the active-branch menu for the same merged row", async () => {
+    await useRealIsShadowing();
+    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" />);
+    openMenu();
+    expect(screen.getByRole("menuitem", { name: /^Archive$/i })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: /Delete Permanently/i })).not.toBeInTheDocument();
   });
 });
 

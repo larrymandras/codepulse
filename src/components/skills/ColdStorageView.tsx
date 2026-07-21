@@ -2,7 +2,11 @@ import { Archive } from "lucide-react";
 import { SkillRow, type RowSkill } from "./SkillRow";
 
 interface ColdStorageViewProps {
-  /** Already filtered by the page: non-hidden, dormant, + search. */
+  /**
+   * Already filtered by the page: non-hidden, has a dormant copy, + search.
+   * Includes SHADOWED rows (dormant copy + an active copy elsewhere,
+   * 98-REVIEW WR-04) — their dormant copy must stay reachable here.
+   */
   skills: RowSkill[];
   onRecordUse: (skillName: string) => void;
   onOpenInChat: (skillName: string) => void;
@@ -11,9 +15,11 @@ interface ColdStorageViewProps {
 }
 
 /**
- * Main-area view for dormant skills (origins === ["claude-code:available"]).
- * They live on disk but aren't loaded by Claude Code — this makes them
- * discoverable without digging through the origin dropdown.
+ * Main-area view for skills with a cold-storage copy (origins include
+ * "claude-code:available"). They live on disk but that copy isn't loaded by
+ * Claude Code — this makes them discoverable without digging through the
+ * origin dropdown. Rows render with lane="cold" so the ⋯ menu acts on the
+ * DORMANT copy even for merged shadowed rows (98-REVIEW WR-04).
  */
 export function ColdStorageView({
   skills,
@@ -52,6 +58,7 @@ export function ColdStorageView({
               onOpenInChat={onOpenInChat}
               onEdit={onEdit}
               onToggleFavorite={onToggleFavorite}
+              lane="cold"
             />
           ))}
         </div>

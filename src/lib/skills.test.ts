@@ -3,6 +3,7 @@ import {
   DORMANT_ORIGIN,
   isDormant,
   isShadowing,
+  hasDormantCopy,
   projectNameFromSource,
   originLabel,
   originOptions,
@@ -25,6 +26,20 @@ describe("isDormant / isShadowing", () => {
   });
   it("not dormant with no origins", () => {
     expect(isDormant({ name: "a", origins: [] })).toBe(false);
+  });
+});
+
+describe("hasDormantCopy (98-REVIEW WR-04)", () => {
+  it("true for a purely dormant skill", () => {
+    expect(hasDormantCopy({ name: "a", origins: [DORMANT_ORIGIN] })).toBe(true);
+  });
+  it("true for a SHADOWED skill (dormant copy + active copy) — the cold copy must stay reachable", () => {
+    expect(hasDormantCopy({ name: "a", origins: [DORMANT_ORIGIN, "claude-code"] })).toBe(true);
+  });
+  it("false for an active-only skill and for no origins", () => {
+    expect(hasDormantCopy({ name: "a", origins: ["claude-code"] })).toBe(false);
+    expect(hasDormantCopy({ name: "a", origins: [] })).toBe(false);
+    expect(hasDormantCopy({ name: "a" })).toBe(false);
   });
 });
 

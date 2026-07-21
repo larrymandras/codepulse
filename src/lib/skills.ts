@@ -29,6 +29,16 @@ export function isShadowing(skill: SkillLike): boolean {
 }
 
 /**
+ * True when ANY origin is the dormant one — i.e. a copy of this skill sits in
+ * cold storage, whether or not another copy is also active (98-REVIEW WR-04:
+ * a shadowed skill's dormant copy must still be visible in Cold Storage;
+ * filtering by isDormant alone made it unreachable in the UI).
+ */
+export function hasDormantCopy(skill: SkillLike): boolean {
+  return (skill.origins ?? []).includes(DORMANT_ORIGIN);
+}
+
+/**
  * Recover the repo directory name from a project skill's SKILL.md path, so five
  * `claude-code:project:<hash>` origins don't all render as an identical "Project".
  * Returns null when the path doesn't look like `<repo>/.claude/skills/<name>/SKILL.md`.

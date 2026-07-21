@@ -20,7 +20,7 @@ import { IntakeSheet } from "@/components/skills/IntakeSheet";
 import { SkillVaultView } from "@/components/skills/vault/SkillVaultView";
 import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
-import { originOptions, isDormant } from "@/lib/skills";
+import { originOptions, hasDormantCopy } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 export default function Skills() {
@@ -98,14 +98,17 @@ export default function Skills() {
   }, [filteredSkills, selectedCategory]);
 
   // Dormant skills are only reachable via the origin dropdown otherwise — this
-  // rail entry + view make Cold Storage discoverable on its own.
+  // rail entry + view make Cold Storage discoverable on its own. hasDormantCopy
+  // (not isDormant) so a SHADOWED skill's dormant copy stays reachable too
+  // (98-REVIEW WR-04): the registry merges origins into one row, and filtering
+  // by isDormant hid the cold copy of any name that was also active.
   const dormantCount = useMemo(
-    () => enrichedSkills.filter((s) => !s.hidden && isDormant(s)).length,
+    () => enrichedSkills.filter((s) => !s.hidden && hasDormantCopy(s)).length,
     [enrichedSkills]
   );
 
   const coldStorageSkills = useMemo(
-    () => filteredSkills.filter((s) => isDormant(s)),
+    () => filteredSkills.filter((s) => hasDormantCopy(s)),
     [filteredSkills]
   );
 

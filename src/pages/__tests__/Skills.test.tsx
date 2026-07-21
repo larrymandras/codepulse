@@ -400,5 +400,38 @@ describe("Skills page", () => {
       expect(screen.getByText("NDA Generator")).toBeInTheDocument();
       expect(screen.queryByText("Cold Tool")).not.toBeInTheDocument();
     });
+
+    it("a SHADOWED skill (dormant copy + active copy) still surfaces in Cold Storage (98-REVIEW WR-04)", () => {
+      // The registry merges every origin for a name into ONE row — filtering
+      // by isDormant hid the cold copy of any name that was also active,
+      // making the archive-collision remediation ('delete it first')
+      // unreachable. hasDormantCopy keeps it visible.
+      const MOCK_WITH_SHADOWED = [
+        ...MOCK_ENRICHED_SKILLS,
+        {
+          _id: "s6",
+          name: "shadowed-tool",
+          displayName: "Shadowed Tool",
+          description: "Active AND dormant",
+          categoryName: null as string | null,
+          categoryDisplayName: null as string | null,
+          categoryIcon: "⚡",
+          categoryColor: "gray",
+          overrideDescription: null,
+          hidden: false,
+          isAutoAssigned: false,
+          favorite: false,
+          useCount: 0,
+          discoveredAt: 1005,
+          origins: [DORMANT_ORIGIN, "claude-code"],
+        },
+      ];
+      setupMocks(MOCK_WITH_SHADOWED as any);
+      render(<Skills />);
+      const coldStorageButton = screen.getByRole("button", { name: /cold storage/i });
+      expect(within(coldStorageButton).getByText("1")).toBeInTheDocument();
+      fireEvent.click(coldStorageButton);
+      expect(screen.getByText("Shadowed Tool")).toBeInTheDocument();
+    });
   });
 });

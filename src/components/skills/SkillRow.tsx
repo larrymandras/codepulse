@@ -25,6 +25,12 @@ interface SkillRowProps {
    * SkillRow call site keeps compiling untouched.
    */
   hostId?: string;
+  /**
+   * Which lane this row renders in (98-REVIEW WR-04) — forwarded to
+   * SkillLifecycleMenu so a merged shadowed row shown in Cold Storage gets
+   * the dormant-copy menu. Optional; defaults to "active".
+   */
+  lane?: "active" | "cold";
 }
 
 type CopyState = "idle" | "copied" | "dormant" | "failed";
@@ -48,6 +54,7 @@ export function SkillRow({
   onToggleFavorite,
   draggable = true,
   hostId,
+  lane,
 }: SkillRowProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const dormant = isDormant(skill);
@@ -145,7 +152,7 @@ export function SkillRow({
           </button>
         </div>
 
-        <SkillLifecycleMenu skill={skill} hostId={hostId} />
+        <SkillLifecycleMenu skill={skill} hostId={hostId} lane={lane} />
 
         <button
           onClick={handleCopy}
