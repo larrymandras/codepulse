@@ -12,10 +12,33 @@ import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useTtsPlayback } from "@/hooks/useTtsPlayback";
 import { useApprovalActions } from "@/components/ApprovalActions";
 import type { ChatMessage, GenerativeBlock } from "@/types/generative-blocks";
+import type { ScreenShareState, CaptureFrameOptions, CapturedFrame } from "@/hooks/useScreenShare";
 
 function generateId(): string {
   return crypto.randomUUID();
 }
+
+// ─── vision.frame_request round-trip (VISION-01, D-01 backend half + D-02) ──
+// Closes the backend-initiated `see_screen` loop: the server pushes
+// `vision.frame_request` (T-184-17/18) when the model calls the tool for a
+// phrasing the client regex missed; this hook captures a FRESH frame and
+// replies with `vision.frame_reply`. Chat.tsx creates `chat` BEFORE the
+// page's SOLE `useScreenShare()` instance (voice needs it too), so the live
+// instance can't be passed as a call-time option — `registerScreenShare` lets
+// useAstridrVoice.ts (which receives both `chat` and `screenShare`) hand it
+// over post-mount. Never opens the picker itself — read-only over an
+// already-consented share.
+export interface ScreenShareLike {
+  state: ScreenShareState;
+  captureFrame: (options?: CaptureFrameOptions) => Promise<CapturedFrame>;
+}
+
+const NOOP_SCREEN_SHARE: ScreenShareLike = {
+  state: "idle",
+  captureFrame: async () => {
+    throw new Error("screenShare not registered on useAstridrChat");
+  },
+};
 
 export function useAstridrChat() {
   const { status, sendCommand, subscribeEvent } = useAstridrWS();
@@ -36,6 +59,13 @@ export function useAstridrChat() {
   const { play: playAudio, stop: stopAudio, isPlaying: ttsIsPlaying } = useTtsPlayback();
 
   const activeSessionRef = useRef<string | null>(null);
+
+  // VISION-01: the live screenShare instance, handed over post-mount by
+  // useAstridrVoice.ts (see registerScreenShare doc comment above).
+  const screenShareRef = useRef<ScreenShareLike>(NOOP_SCREEN_SHARE);
+  const registerScreenShare = useCallback((share: ScreenShareLike) => {
+    screenShareRef.current = share;
+  }, []);
 
   // Mirrors the active streaming reply's text for use inside callbacks without
   // a stale closure — interrupt() needs the LATEST streamed text at the moment
@@ -287,14 +317,50 @@ export function useAstridrChat() {
       activeSessionRef.current = null;
     });
 
+    // vision.frame_request (server→client push): the pending frame request's
+    // OWN id (in `request_id`) becomes `frame_request_id` on the reply — it is
+    // NEVER reused as the reply's envelope `request_id` (sendCommand assigns
+    // that itself). No active share, or a capture failure (ended track),
+    // still gets a prompt reply with no `frame` so the backend's
+    // PendingFrameRequests.resolve() returns None and see_screen fails
+    // honestly instead of hanging the turn (T-184-18).
+    const unsubFrameRequest = subscribeEvent("vision.frame_request", async (event) => {
+      const data = event.data as { request_id?: string } | undefined;
+      const frameRequestId = data?.request_id;
+      if (!frameRequestId) return;
+
+      const share = screenShareRef.current;
+      if (share.state !== "active") {
+        await sendCommand({ type: "vision.frame_reply", frame_request_id: frameRequestId }).catch(
+          () => {}
+        );
+        return;
+      }
+
+      try {
+        const frame = await share.captureFrame();
+        await sendCommand({
+          type: "vision.frame_reply",
+          frame_request_id: frameRequestId,
+          frame: frame.base64,
+          frame_mime_type: frame.mimeType,
+        });
+      } catch {
+        await sendCommand({ type: "vision.frame_reply", frame_request_id: frameRequestId }).catch(
+          () => {}
+        );
+      }
+    });
+
     return () => {
       unsubText();
       unsubBlocks();
       unsubTts();
       unsubCompleted();
       unsubError();
+      unsubFrameRequest();
     };
-  }, [subscribeEvent, playAudio, setStreaming]);
+  }, [subscribeEvent, sendCommand, playAudio, setStreaming]);
 
   // ─── Interrupt (barge-in, CONV-01) ───────────────────────────────────────
   // Cuts TTS instantly, cancels the in-flight server turn, finalizes the
@@ -355,6 +421,9 @@ export function useAstridrChat() {
     appendLocalAssistantMessage,
     handleApprove,
     handleReject,
+    /** VISION-01: hands the page's SOLE useScreenShare instance to the
+     *  vision.frame_request round-trip (see doc comment above). */
+    registerScreenShare,
     /** Expose the active session so the voice layer can target barge-in. */
     activeSessionRef,
     /** Her current/last reply text — the voice layer fingerprints recognized

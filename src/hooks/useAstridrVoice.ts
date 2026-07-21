@@ -351,6 +351,14 @@ export function useAstridrVoice({
   enabledRef.current = enabled;
   const screenShareRef = useRef(screenShare);
   screenShareRef.current = screenShare;
+  // VISION-01: hand the live screenShare instance to chat's vision.frame_request
+  // round-trip (useAstridrChat.ts). Chat.tsx creates `chat` before its SOLE
+  // `useScreenShare()` instance, so this is the post-mount wiring point —
+  // both are already in scope here. registerScreenShare only mutates a ref
+  // (mirrors the plain assignment above), so calling it during render — every
+  // render, keeping it current — is safe; optional-chained for callers/tests
+  // that predate VISION-01 (see NOOP_SCREEN_SHARE precedent below).
+  chat.registerScreenShare?.(screenShare);
 
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
