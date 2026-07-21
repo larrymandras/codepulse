@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 UI-SPEC approved
-last_updated: "2026-07-21T19:35:51.204Z"
-last_activity: 2026-07-21 -- Phase 98 planning complete
+stopped_at: Phase 98 Plan 01 (Convex lifecycle substrate) complete
+last_updated: "2026-07-21T20:40:11.726Z"
+last_activity: 2026-07-21 -- Phase 98 Plan 01 executed (enqueueLifecycle mutation, LAYER-1 pre-flight validation, ackCommand lifecycle-refusal adapter, listLifecycleCommands query)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -26,17 +26,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Milestone complete
+**Current focus:** Phase 98 — skill-lifecycle-mutations-archive-restore-move-delete
 
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
-Phase: 101 (reminders-calendar-command-center) — COMPLETE (7/7 plans, verification passed incl. gap-closure re-verification)
-Plan: 7 of 7 done — Wave 1: 101-01 | Wave 2: 101-02 | Wave 3: 101-03/04/05 (astridr-repo) + 101-06 (codepulse) | Wave 4: 101-07 (gap closure, UAT test 8 — resolved)
-Status: Phase 101 complete + verified (101-VERIFICATION.md passed, mutation-tested). Code review (101-REVIEW.md) filed 2 critical + 6 warning advisory findings (snooze kills future nudges; edit popover UTC-shifts dueAt) — fix via /gsd-code-review 101 --fix before or after milestone close.
-Last activity: 2026-07-21 — Phase 98 (v11.0) planned: 4 plans in 3 waves, verification passed — ready to execute
+Phase: 98 (skill-lifecycle-mutations-archive-restore-move-delete) — EXECUTING
+Plan: 1 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (daemon executor) next.
+Status: Plan 98-01 complete (3/3 tasks, commits 61378d7/b4873fb/bc63f32). LIFE-01..06 NOT marked complete yet — this plan shipped only the Convex API/backend substrate; daemon (98-02) and UI (98-03/04) still needed for end-to-end delivery.
+Last activity: 2026-07-21 -- Phase 98 Plan 01 executed (enqueueLifecycle mutation, LAYER-1 pre-flight validation, ackCommand lifecycle-refusal adapter, listLifecycleCommands query)
 
-**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed — ready to execute; daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale). Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
+**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
 ## Deferred Items
 
@@ -123,6 +123,13 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 98 Plan 01 decisions (2026-07-21, Convex lifecycle substrate):**
+
+- **LAYER-1 pre-flight only enforces global-destination collisions** — Convex has no way to resolve a `workspaceId` to its eventual `claude-code:project:<key>` origin at enqueue time (that mapping only exists after the daemon's registry rescan), so restore/move collisions against a `project` destination are deliberately left to the daemon's LAYER-2 filesystem re-check (D-04: host truth wins over a possibly-stale registry).
+- **`kind="collision"` is shared between archive (cold-collision) and move (move-target-collision) refusals** in `lifecycle-refused:<kind>:` — the adapter (`synthesizeLifecycleRefusalReport`) disambiguates house copy by `payload.action`, not a second kind value; delete's cold-only refusal got its own `kind="not-cold"` with a generic UI-SPEC-fallback copy (no specific string was defined for it in the Copywriting Contract).
+- **LIFE-01..06 NOT marked complete in REQUIREMENTS.md** — this plan ships only the Convex API/backend substrate (enqueueLifecycle, the pre-flight guards, the ack adapter, the list query); no daemon executes a lifecycle command yet (Plan 98-02) and no UI enqueues one yet (Plans 98-03/04), so the requirements aren't genuinely end-to-end satisfied. Matches the existing precedent that Phase 97's INTAKE-01..04 also remain "Pending" in REQUIREMENTS.md despite Phase 97 shipping live-verified — completion is tracked at full delivery, not per-plan.
+- **Corrected two gsd-sdk `state.*` side effects by hand** — `state.advance-plan` set the body "Status:" line to the generic "Ready to execute" (hand-rewritten to describe what actually shipped) and a subsequent `state.update-progress` call's frontmatter resync flipped the top-level `status:` key from `milestone_complete` to `completed` (this file's frontmatter tracks the ALREADY-shipped v12.0 milestone's 7/7 plan counters, not Phase 98's; the resync recomputed status from those counters independent of which phase is actually being worked). Reverted to `milestone_complete`, matching the file's own pre-existing hand-reconciliation convention documented in the HTML comment below the frontmatter. No `state.record-metric`/`state.add-decision` calls were run this plan (both route through the same disk-rebuild resync); this decisions entry and the Current Position update above were hand-written instead.
 
 **v12.0 / Phase 101 Plan 07 decisions (2026-07-20, gap closure):**
 
@@ -259,10 +266,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-21T18:52:58.688Z
-Stopped at: Phase 98 UI-SPEC approved
-Next action: Address 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt), retest UAT test 8's NL half via real Ástríðr chat, then run v12.0 milestone close-out (`/gsd-complete-milestone`) or resume v11.0 (`/gsd-plan-phase 98` — CONTEXT + UI-SPEC done).
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-UI-SPEC.md
+Last session: 2026-07-21T20:39:28.588Z
+Stopped at: Phase 98 Plan 01 (Convex lifecycle substrate) complete
+Next action: Execute Phase 98 Plan 02 (daemon lifecycle executor, C:\Users\mandr\forge) — see 98-01-SUMMARY.md "Next Phase Readiness". Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-01-SUMMARY.md
 
 ## Operator Next Steps
 
