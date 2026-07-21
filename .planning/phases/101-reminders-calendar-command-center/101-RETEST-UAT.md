@@ -73,9 +73,25 @@ resolution: |
   complete → model chained list → complete with real id → reminders.completed, row
   done in Convex; dated-row day-filter behavior conforms to 101-07 spec. Result
   upgraded to pass; see test 6.
-  STILL OPEN (astridr-repo, minor): (a) NL "4pm" parsed as 16:00 UTC not local (tool
-  replied honestly "4 PM UTC"); (b) google create_event still 400s on naive datetimes
-  (now moot for reminders, still broken for genuine NL calendar-event creation).
+  FOLLOW-UP SESSION (2026-07-21, operator-directed "fix all of this"): both former
+  STILL-OPEN items plus the two pre-existing log errors fixed in astridr-repo
+  (feature/brain-swap), TDD'd, hot-loaded into the container, live-verified:
+  - e9b0d3a8 + 36f5c60b: naive dueAt = operator-local (ASTRIDR_TIMEZONE) + param docs
+    teach local naive time + compose TZ env. LIVE: "tomorrow at 3pm" → model emitted
+    naive '2026-07-22T15:00:00' → stored 15:00 local. ✓
+  - 5bfb4872: create_event attaches timeZone to naive datetimes. LIVE: NL event landed
+    on Google as 15:00-04:00 America/New_York (was: 400 every time). Test event deleted. ✓
+  - 2ae2c58d + dd3221e6: dep_scanner pyproject repos audit via positional project_path,
+    failed audits degrade gracefully, parser accepts real {"dependencies":[...]} shape
+    (crashed on first-ever successful run). LIVE: full astridr-repo audit clean, 0 vulns,
+    no crash. ✓
+  - 9f1c776f: heartbeat alerts never empty — str(TimeoutError()) fallback to type name
+    (the "unhealthy supabase" alert was a one-off 5s probe timeout rendered as error:'';
+    supabase probes at 9ms, zero alerts since). Verified by tests; alert path not
+    force-triggered live. ✓
+  The transient boot-order persistence.background_error (init race) was observed once
+  post-restart, self-heals, and was left alone deliberately (bootstrap ordering is
+  active WIP territory on brain-swap).
 
 ### 7. Snooze re-nudges (CR-01)
 expected: Snooze a reminder that has already fired its nudge to a few minutes out. When the snoozed time arrives, exactly one NEW nudge arrives (pre-fix: snooze permanently killed all future nudges for that row).
