@@ -27,6 +27,7 @@ import {
   isBargeInPhrase,
   isPureBargeInPhrase,
   isStrictModeCommand,
+  isVisionIntentPhrase,
   type VoiceState,
   type VoiceAction,
 } from "./voiceState";
@@ -281,6 +282,40 @@ describe("isStrictModeCommand", () => {
 
   it("case-insensitive: STRICT MODE ON → \"on\"", () => {
     expect(isStrictModeCommand("STRICT MODE ON")).toBe("on");
+  });
+});
+
+describe("isVisionIntentPhrase (D-01 client fast-path)", () => {
+  it('"what\'s on my screen" → true', () => {
+    expect(isVisionIntentPhrase("what's on my screen")).toBe(true);
+  });
+
+  it('"look at this" → true', () => {
+    expect(isVisionIntentPhrase("look at this")).toBe(true);
+  });
+
+  it('"what do you see" → true', () => {
+    expect(isVisionIntentPhrase("what do you see")).toBe(true);
+  });
+
+  it('"read this" → true', () => {
+    expect(isVisionIntentPhrase("read this")).toBe(true);
+  });
+
+  it('"okay, what do you see" → true (filler prefix + STT punctuation)', () => {
+    expect(isVisionIntentPhrase("Okay, what do you see?")).toBe(true);
+  });
+
+  it('"what is the weather" → false (near-miss, unrelated utterance)', () => {
+    expect(isVisionIntentPhrase("what is the weather")).toBe(false);
+  });
+
+  it("empty string → false", () => {
+    expect(isVisionIntentPhrase("")).toBe(false);
+  });
+
+  it("whitespace-only → false", () => {
+    expect(isVisionIntentPhrase("   ")).toBe(false);
   });
 });
 
