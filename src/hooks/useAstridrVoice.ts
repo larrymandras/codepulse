@@ -42,12 +42,15 @@ import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { useWakeWord, type WakeWordStatus } from "@/hooks/useWakeWord";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import type { AstridrChat } from "@/hooks/useAstridrChat";
+import type { ScreenShareState, CaptureFrameOptions, CapturedFrame } from "@/hooks/useScreenShare";
 import {
   voiceReducer,
   isEndPhrase,
   isBargeInPhrase,
   isPureBargeInPhrase,
   isStrictModeCommand,
+  decideVisionIntent,
+  runVisionRefusal,
   type VoiceState,
 } from "@/components/voice/voiceState";
 
@@ -110,6 +113,32 @@ function trace(ev: string, d?: unknown) {
   const buf = (window.__astridrVoiceTrace ??= []);
   buf.push(entry);
   if (buf.length > 500) buf.shift();
+}
+
+// ─── Vision capture instrumentation (D-13, mirrors VOICE_DEBUG) ─────────────
+
+const VISION_DEBUG = false;
+export const VISION_DEBUG_ENABLED = VISION_DEBUG;
+
+function visionTrace(ev: string, d?: unknown) {
+  if (!VISION_DEBUG) return;
+  // eslint-disable-next-line no-console
+  console.log(`[vision] ${ev}`, d ?? "");
+}
+
+// ─── System-line TTS (D-03 refusal / D-11 lost-screen) ──────────────────────
+// These are CLIENT-ONLY synthesized lines — no LLM turn, no server audio_url
+// — spoken via the browser's native SpeechSynthesis API (same Web Speech
+// family as useSpeechRecognition). Never throws; a synthesis failure still
+// leaves the durable transcript entry (appendLocalAssistantMessage) as the
+// text counterpart, per the text+audio-never-voice-only constraint.
+export function speakSystemLine(text: string): void {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  } catch (err) {
+    visionTrace("speak.failed", { error: err instanceof Error ? err.message : String(err) });
+  }
 }
 
 // ─── Echo fingerprint (talk-over-with-content) ───────────────────────────────
@@ -259,7 +288,24 @@ export interface UseAstridrVoiceOptions {
   onStrictModeChange?: (v: boolean) => void;
   /** The page's chat engine instance — sends and interrupts go through it. */
   chat: AstridrChat;
+  /** The page's SOLE `useScreenShare` instance (D-09) — the vision fast-path
+   *  reads its live state and captures fresh frames through it. Optional for
+   *  backward compatibility with callers/tests that predate VISION-01 — the
+   *  vision fast-path simply never matches "active" without it. */
+  screenShare?: {
+    state: ScreenShareState;
+    arm: () => void;
+    captureFrame: (options?: CaptureFrameOptions) => Promise<CapturedFrame>;
+  };
 }
+
+const NOOP_SCREEN_SHARE: NonNullable<UseAstridrVoiceOptions["screenShare"]> = {
+  state: "idle",
+  arm: () => {},
+  captureFrame: async () => {
+    throw new Error("screenShare not configured on useAstridrVoice");
+  },
+};
 
 export interface UseAstridrVoiceReturn {
   voiceState: VoiceState;
@@ -278,6 +324,9 @@ export interface UseAstridrVoiceReturn {
   wakeWordStatus: WakeWordStatus;
   wakeWordError: string | null;
   speechAvailable: boolean;
+  /** D-04: a vision-triggered capture+routing is in flight — state badge
+   *  shows "Looking…" instead of "Thinking…"/"Processing…". */
+  isLooking: boolean;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -287,6 +336,7 @@ export function useAstridrVoice({
   strictMode = false,
   onStrictModeChange = () => {},
   chat,
+  screenShare = NOOP_SCREEN_SHARE,
 }: UseAstridrVoiceOptions): UseAstridrVoiceReturn {
   const [voiceState, dispatch] = useReducer(voiceReducer, "idle");
 
@@ -299,12 +349,18 @@ export function useAstridrVoice({
   strictModeRef.current = strictMode;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const screenShareRef = useRef(screenShare);
+  screenShareRef.current = screenShare;
 
   const [interimText, setInterimText] = useState("");
   const [finalText, setFinalText] = useState("");
   const [showInterruptFlash, setShowInterruptFlash] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [followUpMs, setFollowUpMs] = useState(FOLLOW_UP_WINDOW_MS);
+  // D-04: "Looking…" — set the instant a vision-triggered capture starts,
+  // cleared the moment the model's answer begins streaming or TTS_START
+  // fires, whichever comes first (184-UI-SPEC.md).
+  const [isLooking, setIsLooking] = useState(false);
 
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sendTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -793,6 +849,56 @@ export function useAstridrVoice({
     setInterimText("");
     resetSilenceTimer();
 
+    // Vision-intent fast-path (D-01/D-02/D-03/D-04): a share-context question
+    // bypasses the normal accumulate/debounce pipeline entirely — it's a
+    // direct command, not banter. An active share captures a FRESH frame and
+    // attaches it to this SAME turn (D-02, no extra hop); no active share
+    // gets the honest spoken+written refusal and arms the control (D-03) —
+    // never a silent blind chat.send.
+    const visionAction = decideVisionIntent(text, screenShareRef.current.state === "active");
+    if (visionAction) {
+      visionTrace("intent.match", { text, action: visionAction });
+      closePendingRef.current = false;
+      clearFollowUpWindow();
+      clearSendTimer();
+      accumulatedRef.current = "";
+      setFinalText("");
+
+      if (visionAction === "capture") {
+        // Inline within the existing `processing` state (184-UI-SPEC.md) — no
+        // new top-level reducer state; isLooking only overrides the label.
+        dispatch({ type: "FINAL_RESULT" });
+        setIsLooking(true);
+        chatRef.current.interrupt(); // cancel any in-flight turn so this send isn't dropped
+        void (async () => {
+          try {
+            const frame = await screenShareRef.current.captureFrame();
+            visionTrace("frame.captured", { bytes: frame.blob.size, mimeType: frame.mimeType });
+            await chatRef.current.sendMessage(text, {
+              voice: true,
+              frame: frame.base64,
+              frameMimeType: frame.mimeType,
+            });
+          } catch (err) {
+            visionTrace("frame.capture-failed", {
+              error: err instanceof Error ? err.message : String(err),
+            });
+            setIsLooking(false);
+          }
+        })();
+      } else {
+        // D-03 locked refusal (VISION_REFUSAL_TEXT, voiceState.ts):
+        // "I can't see your screen — start a share and ask again."
+        visionTrace("intent.refuse", { text });
+        runVisionRefusal({
+          speak: speakSystemLine,
+          appendLocalAssistantMessage: chatRef.current.appendLocalAssistantMessage,
+          arm: screenShareRef.current.arm,
+        });
+      }
+      return;
+    }
+
     // Pure interrupt reflex outside `speaking` ("stop", "wait", "hold on" with
     // no content around it): cancel a thinking turn if one is in flight,
     // otherwise ignore — NEVER send it to Ástríðr as a literal message.
@@ -956,6 +1062,16 @@ export function useAstridrVoice({
     }
   }, [chat.isStreaming, onTurnEnd, clearSilentTurnTimer]);
 
+  // ─── "Looking…" clear (D-04) ────────────────────────────────────────────
+  // Clears the instant either signal fires first: the model's answer begins
+  // streaming (chat.isStreaming — set true as soon as the send ack lands, the
+  // earliest available "answer is coming" signal) or TTS_START (ttsIsPlaying).
+  useEffect(() => {
+    if (isLooking && (chat.isStreaming || chat.ttsIsPlaying)) {
+      setIsLooking(false);
+    }
+  }, [isLooking, chat.isStreaming, chat.ttsIsPlaying]);
+
   // ─── Wake word engine ─────────────────────────────────────────────────────
 
   const {
@@ -1036,5 +1152,6 @@ export function useAstridrVoice({
     wakeWordStatus,
     wakeWordError,
     speechAvailable,
+    isLooking,
   };
 }

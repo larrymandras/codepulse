@@ -204,6 +204,56 @@ export function isVisionIntentPhrase(text: string): boolean {
   });
 }
 
+// ─── Vision-intent decision + system-line side effects (D-01/D-02/D-03/D-11) ─
+
+/** D-03 locked copy — no active share. */
+export const VISION_REFUSAL_TEXT = "I can't see your screen — start a share and ask again.";
+/** D-11 locked [DEFAULT] copy — the shared track ended natively. */
+export const LOST_SCREEN_TEXT = "Looks like I lost your screen.";
+
+export type VisionIntentAction = "capture" | "refuse";
+
+/**
+ * Pure decision: does this transcript express vision intent, and if so,
+ * should the caller capture-and-send (a share is already active, D-02) or
+ * refuse-and-arm (no active share, D-03)? Returns null for non-vision
+ * utterances so the caller's normal pipeline (accumulate/send, end-phrase,
+ * noise gate) proceeds unchanged. Stays pure — no side effects.
+ */
+export function decideVisionIntent(text: string, shareActive: boolean): VisionIntentAction | null {
+  if (!isVisionIntentPhrase(text)) return null;
+  return shareActive ? "capture" : "refuse";
+}
+
+/**
+ * D-03: runs the no-share refusal's side effects via injected callbacks —
+ * kept here (not useAstridrVoice.ts) so the "spoken AND written, never
+ * voice-only" invariant is unit-testable without rendering the full voice
+ * hook. This function itself performs no browser/DOM/MediaStream access —
+ * only invokes what the caller provides.
+ */
+export function runVisionRefusal(callbacks: {
+  speak: (text: string) => void;
+  appendLocalAssistantMessage: (text: string) => void;
+  arm: () => void;
+}): void {
+  callbacks.speak(VISION_REFUSAL_TEXT);
+  callbacks.appendLocalAssistantMessage(VISION_REFUSAL_TEXT);
+  callbacks.arm();
+}
+
+/**
+ * D-11: runs the lost-screen acknowledgement's side effects via injected
+ * callbacks — same rationale as `runVisionRefusal`.
+ */
+export function runLostScreenAck(callbacks: {
+  speak: (text: string) => void;
+  appendLocalAssistantMessage: (text: string) => void;
+}): void {
+  callbacks.speak(LOST_SCREEN_TEXT);
+  callbacks.appendLocalAssistantMessage(LOST_SCREEN_TEXT);
+}
+
 // ─── State machine ────────────────────────────────────────────────────────────
 
 /**

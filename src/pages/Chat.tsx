@@ -17,17 +17,17 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react";
 import * as jsYaml from "js-yaml";
-import { Send, Mic, MicOff, WifiOff, AlertCircle } from "lucide-react";
+import { Send, Mic, MicOff, WifiOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
-import { useAstridrVoice, VOICE_DEBUG_ENABLED } from "@/hooks/useAstridrVoice";
+import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
 import { useScreenShare } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
-import type { VoiceState } from "@/components/voice/voiceState";
+import { runLostScreenAck, type VoiceState } from "@/components/voice/voiceState";
 
 const LS_LISTENING = "codepulse-astridr-listening";
 const LS_STRICT = "codepulse-strict-mode";
@@ -163,7 +163,18 @@ export default function Chat() {
   );
 
   // ── Screen share (VISION-01) — sole caller of getDisplayMedia (D-09) ─────
-  const screenShare = useScreenShare();
+  // D-11: on a native track `ended` (Chrome's "Stop sharing" bar, tab/window
+  // close — never fires for our own ShareScreenToggle stop() click), speak
+  // AND write the lost-screen acknowledgement so the next vision question
+  // correctly hits the D-03 refusal path.
+  const screenShare = useScreenShare({
+    onEnded: () => {
+      runLostScreenAck({
+        speak: speakSystemLine,
+        appendLocalAssistantMessage: chat.appendLocalAssistantMessage,
+      });
+    },
+  });
 
   // ── Voice engine ────────────────────────────────────────────────────────
   const voice = useAstridrVoice({
@@ -171,6 +182,7 @@ export default function Chat() {
     strictMode,
     onStrictModeChange: handleStrictModeChange,
     chat,
+    screenShare,
   });
 
   const voiceError = listening && voice.wakeWordStatus === "error-disabled";
@@ -215,15 +227,17 @@ export default function Chat() {
     : voiceError
       ? "Voice unavailable"
       : voice.conversationActive
-        ? voice.voiceState === "speaking"
-          ? "Ástríðr speaking"
-          : voice.voiceState === "transcribing"
-            ? "Hearing you"
-            : voice.voiceState === "processing" || isStreaming
-              ? "Thinking…"
-              : voice.followUpOpen
-                ? "Still listening…"
-                : "Listening…"
+        ? voice.isLooking
+          ? "Looking…"
+          : voice.voiceState === "speaking"
+            ? "Ástríðr speaking"
+            : voice.voiceState === "transcribing"
+              ? "Hearing you"
+              : voice.voiceState === "processing" || isStreaming
+                ? "Thinking…"
+                : voice.followUpOpen
+                  ? "Still listening…"
+                  : "Listening…"
         : isStreaming
           ? "Thinking…"
           : "Say “Hey Ástríðr”";
@@ -339,6 +353,14 @@ export default function Chat() {
               <span className="w-[3px] h-2 bg-primary rounded-full animate-pulse [animation-delay:240ms]" />
               <span className="w-[3px] h-4 bg-primary rounded-full animate-pulse [animation-delay:360ms]" />
             </span>
+          )}
+          {voice.isLooking && (
+            <Eye
+              className={`w-3 h-3 text-muted-foreground ${
+                prefersReducedMotion() ? "" : "animate-pulse"
+              }`}
+              aria-hidden="true"
+            />
           )}
           <span
             aria-live="polite"

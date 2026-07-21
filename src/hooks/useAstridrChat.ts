@@ -49,7 +49,17 @@ export function useAstridrChat() {
 
   // ─── Send ────────────────────────────────────────────────────────────────
   const sendMessage = useCallback(
-    async (text: string, opts?: { interruptedReply?: string; voice?: boolean }) => {
+    async (
+      text: string,
+      opts?: {
+        interruptedReply?: string;
+        voice?: boolean;
+        /** D-05: a fresh captured frame (base64 JPEG, no `data:` prefix) to attach to this turn. */
+        frame?: string;
+        /** e.g. "image/jpeg" — required alongside `frame`. */
+        frameMimeType?: string;
+      }
+    ) => {
       if (!text.trim() || isStreamingRef.current || status !== "connected") return;
 
       setMessages((prev) => [
@@ -61,12 +71,15 @@ export function useAstridrChat() {
         // D-12: thread the barged-in partial reply (if any) into this turn so
         // "continue" resumes the interrupted reply server-side. voice:true
         // marks a SPOKEN turn — the backend answers in short conversational
-        // speech instead of full-detail text.
+        // speech instead of full-detail text. frame/frame_mime_type (D-05)
+        // attach a fresh vision-intent capture to this SAME turn — no extra
+        // hop, same single chat.send.
         const ack = await sendCommand({
           type: "chat.send",
           message: text,
           ...(opts?.interruptedReply ? { interrupted_reply: opts.interruptedReply } : {}),
           ...(opts?.voice ? { voice: true } : {}),
+          ...(opts?.frame ? { frame: opts.frame, frame_mime_type: opts.frameMimeType } : {}),
         });
 
         if (ack.status !== "ok") {
@@ -309,6 +322,19 @@ export function useAstridrChat() {
     return partial;
   }, [stopAudio, sendCommand, setStreaming]);
 
+  // ─── Local-only transcript entry (D-03/D-11 text+audio, never voice-only) ──
+  // Appends a purely local assistant message — NO chat.send, no server turn.
+  // Used for client-synthesized system lines (the D-03 no-share refusal and
+  // the D-11 lost-screen acknowledgement) so each spoken line also gets a
+  // durable chat-log entry (accessibility, logging, searchability) rather than
+  // being voice-only.
+  const appendLocalAssistantMessage = useCallback((text: string) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: generateId(), role: "assistant", content: text, streaming: false, timestamp: Date.now() },
+    ]);
+  }, []);
+
   const handleApprove = useCallback((requestId: string) => approve(requestId), [approve]);
   const handleReject = useCallback(
     (requestId: string, reason?: string) => reject(requestId, reason),
@@ -326,6 +352,7 @@ export function useAstridrChat() {
     stopAudio,
     ttsIsPlaying,
     interrupt,
+    appendLocalAssistantMessage,
     handleApprove,
     handleReject,
     /** Expose the active session so the voice layer can target barge-in. */
