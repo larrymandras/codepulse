@@ -320,20 +320,27 @@ export function useAstridrChat() {
     // vision.frame_request (server→client push): the pending frame request's
     // OWN id (in `request_id`) becomes `frame_request_id` on the reply — it is
     // NEVER reused as the reply's envelope `request_id` (sendCommand assigns
-    // that itself). No active share, or a capture failure (ended track),
-    // still gets a prompt reply with no `frame` so the backend's
+    // that itself). `session_id` is REQUIRED on VisionFrameReplyCommand
+    // (astridr/api/ws_commands.py) and must be echoed back verbatim from this
+    // same push — it scopes resolve() to the originating session (T-184-11);
+    // omitting it fails Pydantic validation and silently breaks the whole
+    // round-trip. No active share, or a capture failure (ended track), still
+    // gets a prompt reply with no `frame` so the backend's
     // PendingFrameRequests.resolve() returns None and see_screen fails
     // honestly instead of hanging the turn (T-184-18).
     const unsubFrameRequest = subscribeEvent("vision.frame_request", async (event) => {
-      const data = event.data as { request_id?: string } | undefined;
+      const data = event.data as { request_id?: string; session_id?: string } | undefined;
       const frameRequestId = data?.request_id;
-      if (!frameRequestId) return;
+      const sessionId = data?.session_id;
+      if (!frameRequestId || !sessionId) return;
 
       const share = screenShareRef.current;
       if (share.state !== "active") {
-        await sendCommand({ type: "vision.frame_reply", frame_request_id: frameRequestId }).catch(
-          () => {}
-        );
+        await sendCommand({
+          type: "vision.frame_reply",
+          frame_request_id: frameRequestId,
+          session_id: sessionId,
+        }).catch(() => {});
         return;
       }
 
@@ -342,13 +349,16 @@ export function useAstridrChat() {
         await sendCommand({
           type: "vision.frame_reply",
           frame_request_id: frameRequestId,
+          session_id: sessionId,
           frame: frame.base64,
           frame_mime_type: frame.mimeType,
         });
       } catch {
-        await sendCommand({ type: "vision.frame_reply", frame_request_id: frameRequestId }).catch(
-          () => {}
-        );
+        await sendCommand({
+          type: "vision.frame_reply",
+          frame_request_id: frameRequestId,
+          session_id: sessionId,
+        }).catch(() => {});
       }
     });
 

@@ -154,7 +154,9 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     });
 
     await act(async () => {
-      await getHandler("vision.frame_request")?.({ data: { request_id: "freq-1" } });
+      await getHandler("vision.frame_request")?.({
+        data: { request_id: "freq-1", session_id: "sess-1" },
+      });
     });
 
     expect(mockCaptureFrame).toHaveBeenCalledTimes(1);
@@ -163,6 +165,7 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
       expect.objectContaining({
         type: "vision.frame_reply",
         frame_request_id: "freq-1",
+        session_id: "sess-1",
         frame: "ZmFrZWZyYW1l",
         frame_mime_type: "image/jpeg",
       })
@@ -190,7 +193,22 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     });
 
     await act(async () => {
-      await getHandler("vision.frame_request")?.({ data: {} });
+      await getHandler("vision.frame_request")?.({ data: { session_id: "sess-x" } });
+    });
+
+    expect(mockCaptureFrame).not.toHaveBeenCalled();
+    expect(findFrameReplyCall()).toBeUndefined();
+  });
+
+  it("ignores a vision.frame_request with no session_id (VisionFrameReplyCommand requires it — T-184-11)", async () => {
+    const mockCaptureFrame = vi.fn();
+    const { result } = renderHook(() => useAstridrChat());
+    act(() => {
+      result.current.registerScreenShare({ state: "active", captureFrame: mockCaptureFrame });
+    });
+
+    await act(async () => {
+      await getHandler("vision.frame_request")?.({ data: { request_id: "freq-x" } });
     });
 
     expect(mockCaptureFrame).not.toHaveBeenCalled();
@@ -206,12 +224,15 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     });
 
     await act(async () => {
-      await getHandler("vision.frame_request")?.({ data: { request_id: "freq-2" } });
+      await getHandler("vision.frame_request")?.({
+        data: { request_id: "freq-2", session_id: "sess-2" },
+      });
     });
 
     expect(mockCaptureFrame).not.toHaveBeenCalled();
     const call = findFrameReplyCall();
     expect(call?.frame_request_id).toBe("freq-2");
+    expect(call?.session_id).toBe("sess-2");
     expect(call?.frame).toBeUndefined();
   });
 
@@ -224,12 +245,15 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     });
 
     await act(async () => {
-      await getHandler("vision.frame_request")?.({ data: { request_id: "freq-3" } });
+      await getHandler("vision.frame_request")?.({
+        data: { request_id: "freq-3", session_id: "sess-3" },
+      });
     });
 
     expect(mockCaptureFrame).toHaveBeenCalledTimes(1);
     const call = findFrameReplyCall();
     expect(call?.frame_request_id).toBe("freq-3");
+    expect(call?.session_id).toBe("sess-3");
     expect(call?.frame).toBeUndefined();
   });
 
@@ -237,11 +261,14 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     renderHook(() => useAstridrChat());
 
     await act(async () => {
-      await getHandler("vision.frame_request")?.({ data: { request_id: "freq-4" } });
+      await getHandler("vision.frame_request")?.({
+        data: { request_id: "freq-4", session_id: "sess-4" },
+      });
     });
 
     const call = findFrameReplyCall();
     expect(call?.frame_request_id).toBe("freq-4");
+    expect(call?.session_id).toBe("sess-4");
     expect(call?.frame).toBeUndefined();
   });
 });
