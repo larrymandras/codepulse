@@ -20,7 +20,7 @@
  * Phase 183, Plan 02 — CONV-01/CONV-02, D-01/D-02/D-03/D-05.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   voiceReducer,
   isEndPhrase,
@@ -28,6 +28,11 @@ import {
   isPureBargeInPhrase,
   isStrictModeCommand,
   isVisionIntentPhrase,
+  decideVisionIntent,
+  runVisionRefusal,
+  runLostScreenAck,
+  VISION_REFUSAL_TEXT,
+  LOST_SCREEN_TEXT,
   type VoiceState,
   type VoiceAction,
 } from "./voiceState";
@@ -316,6 +321,55 @@ describe("isVisionIntentPhrase (D-01 client fast-path)", () => {
 
   it("whitespace-only → false", () => {
     expect(isVisionIntentPhrase("   ")).toBe(false);
+  });
+});
+
+describe("decideVisionIntent (D-01/D-02/D-03 pure branch selection)", () => {
+  it('vision phrase + shareActive=true → "capture"', () => {
+    expect(decideVisionIntent("what do you see", true)).toBe("capture");
+  });
+
+  it('vision phrase + shareActive=false → "refuse"', () => {
+    expect(decideVisionIntent("what do you see", false)).toBe("refuse");
+  });
+
+  it("non-vision phrase → null regardless of share state", () => {
+    expect(decideVisionIntent("what is the weather", true)).toBe(null);
+    expect(decideVisionIntent("what is the weather", false)).toBe(null);
+  });
+
+  it("empty string → null", () => {
+    expect(decideVisionIntent("", true)).toBe(null);
+  });
+});
+
+describe("runVisionRefusal (D-03 — spoken AND written, never voice-only)", () => {
+  it("speaks and writes the exact locked refusal copy, then arms the control", () => {
+    const speak = vi.fn();
+    const appendLocalAssistantMessage = vi.fn();
+    const arm = vi.fn();
+    runVisionRefusal({ speak, appendLocalAssistantMessage, arm });
+    expect(speak).toHaveBeenCalledWith(VISION_REFUSAL_TEXT);
+    expect(appendLocalAssistantMessage).toHaveBeenCalledWith(VISION_REFUSAL_TEXT);
+    expect(arm).toHaveBeenCalledOnce();
+  });
+
+  it("locked copy is exactly the D-03 string", () => {
+    expect(VISION_REFUSAL_TEXT).toBe("I can't see your screen — start a share and ask again.");
+  });
+});
+
+describe("runLostScreenAck (D-11 — spoken AND written, never voice-only)", () => {
+  it("speaks and writes the exact locked lost-screen copy", () => {
+    const speak = vi.fn();
+    const appendLocalAssistantMessage = vi.fn();
+    runLostScreenAck({ speak, appendLocalAssistantMessage });
+    expect(speak).toHaveBeenCalledWith(LOST_SCREEN_TEXT);
+    expect(appendLocalAssistantMessage).toHaveBeenCalledWith(LOST_SCREEN_TEXT);
+  });
+
+  it("locked copy is exactly the D-11 default string", () => {
+    expect(LOST_SCREEN_TEXT).toBe("Looks like I lost your screen.");
   });
 });
 
