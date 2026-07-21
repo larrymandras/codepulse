@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 Plan 01 (Convex lifecycle substrate) complete
-last_updated: "2026-07-21T20:40:11.726Z"
-last_activity: 2026-07-21 -- Phase 98 Plan 01 executed (enqueueLifecycle mutation, LAYER-1 pre-flight validation, ackCommand lifecycle-refusal adapter, listLifecycleCommands query)
+stopped_at: Phase 98 Plan 02 (Forge daemon lifecycle executor) complete
+last_updated: "2026-07-21T21:06:03.038Z"
+last_activity: 2026-07-21
 progress:
   total_phases: 1
   completed_phases: 1
@@ -32,11 +32,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
 Phase: 98 (skill-lifecycle-mutations-archive-restore-move-delete) — EXECUTING
-Plan: 1 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (daemon executor) next.
-Status: Plan 98-01 complete (3/3 tasks, commits 61378d7/b4873fb/bc63f32). LIFE-01..06 NOT marked complete yet — this plan shipped only the Convex API/backend substrate; daemon (98-02) and UI (98-03/04) still needed for end-to-end delivery.
-Last activity: 2026-07-21 -- Phase 98 Plan 01 executed (enqueueLifecycle mutation, LAYER-1 pre-flight validation, ackCommand lifecycle-refusal adapter, listLifecycleCommands query)
+Plan: 2 of 4 done — Plan 98-01 (Convex lifecycle substrate) complete and verified (163/184 tests passing + 21 pre-existing todo, 0 regressions; tsc clean); Plan 98-02 (Forge daemon lifecycle executor) complete and verified (47/47 new tests passing across lifecycle-exec.test.ts + command-poller.test.ts, tsc clean; 925/926 full forge suite — 1 pre-existing unrelated flake in manager.test.ts); Plan 98-03 (lifecycle UI hook + menu) next.
+Status: Plan 98-02 complete (3/3 tasks, commits 66b2979/45f6364/47d420d in the forge repo). LIFE-01..06/DAEMON-02 NOT marked complete yet — this plan shipped the Forge daemon executor (native fs archive/restore/move/delete, cross-volume-safe, host-truth re-checked); UI (98-03/04) still needed for end-to-end delivery, and a manual UAT (real archive + real cross-volume move) remains before phase verification.
+Last activity: 2026-07-21
 
-**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
+**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
 ## Deferred Items
 
@@ -123,6 +123,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 98 Plan 02 decisions (2026-07-21, Forge daemon lifecycle executor):**
+
+- **`workspaceId` resolves whichever side of the mutation is the project scope** (source for archive/move-from-project, destination for restore/move-to-project) — never a second field. LIFE-03's scope (move only ever crosses global↔project, never project↔project) makes this unambiguous.
+- **Delete's cold-only host-truth re-check walks every synced project workspace, not just the global root** — the plan's must_haves truth says "verifies the skill exists ONLY at the cold root", so `runLifecycle` calls `listWorkspaces(db)` and checks each workspace's `.claude/skills` dir before permitting `fs.rmSync`, in addition to the global root.
+- **The per-skillName in-flight mutex (Pitfall 4) lives in `CommandPoller`, not `lifecycle-exec.ts`** — the executor stays a pure, stateless function; concurrency control is a dispatch-layer concern, matching where Phase 97's serial intake queue already lives.
+- **`rescanCfg.workspaces` became a getter, not a thunk-typed interface change** — zero changes to `skill-rescan.ts`'s `RescanAndSyncDeps`/`BuildSkillSnapshotDeps`; `buildSkillSnapshot`'s existing `const { workspaces } = deps` destructuring transparently invokes the getter, closing the Pitfall-5 startup-snapshot gap entirely at the `index.ts` call site.
+- **LIFE-01..06/DAEMON-02 still NOT marked complete in REQUIREMENTS.md** — this plan ships the Forge daemon executor (native fs archive/restore/move/delete, cross-volume-safe, host-truth re-checked, wired into `CommandPoller`), but the UI (Plans 98-03/04) still needs to land, and a manual UAT (real archive + real cross-volume move) is still required before end-to-end delivery is genuinely proven. Matches Plan 98-01's own precedent.
+- **`gsd-sdk state.record-metric` re-clobbered the frontmatter `status` field a second time** (flipped `milestone_complete` → `verifying`, and reset `stopped_at` back to "Phase 98 Plan 01") via the same `readModifyWriteStateMd` full-frontmatter-resync side effect documented in Plan 98-01's decisions — reverted to `milestone_complete`/Plan-02-complete by hand. `state.record-metric` itself reported `recorded: false` (this STATE.md has no `## Performance Metrics` section to append to) — no metrics row was added; not worth adding a new section for. `state.add-decision`/`state.record-session` were skipped entirely this plan (same clobbering risk) — this Decisions entry and the Session Continuity update below were hand-written instead, following 98-01's established workaround.
 
 **v11.0 / Phase 98 Plan 01 decisions (2026-07-21, Convex lifecycle substrate):**
 
@@ -266,10 +275,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-21T20:39:28.588Z
-Stopped at: Phase 98 Plan 01 (Convex lifecycle substrate) complete
-Next action: Execute Phase 98 Plan 02 (daemon lifecycle executor, C:\Users\mandr\forge) — see 98-01-SUMMARY.md "Next Phase Readiness". Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-01-SUMMARY.md
+Last session: 2026-07-21T21:06:03.038Z
+Stopped at: Phase 98 Plan 02 (Forge daemon lifecycle executor) complete
+Next action: Execute Phase 98 Plan 03 (lifecycle UI hook + menu, codepulse repo) — see 98-02-SUMMARY.md "Next Phase Readiness". A manual UAT (real archive + real cross-volume move against a live daemon) is still required before the phase can be verified — do not skip it once 98-03/04 land. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-02-SUMMARY.md
 
 ## Operator Next Steps
 
