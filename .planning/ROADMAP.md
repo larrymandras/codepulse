@@ -540,6 +540,10 @@ Plans:
 
 - [x] 98-04-PLAN.md — Assembly: scope-gated SkillLifecycleMenu (shadow + multi-scope guards), always-visible menu trigger on SkillRow, Cold Storage copy refresh
 
+**Gap-closure addendum** *(from 98-HUMAN-UAT test 1)*
+
+- [ ] 98-05-PLAN.md — Rescan reconciles emptied origins: forge scannedOrigins manifest + computeSkillPrunes prunes declared-but-empty origins (stale project row after a move); reachability-gated so a transient unmount never over-prunes
+
 **UI hint**: yes
 
 ---
