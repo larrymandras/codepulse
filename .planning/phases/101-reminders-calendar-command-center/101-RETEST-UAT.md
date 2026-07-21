@@ -41,9 +41,9 @@ evidence: Same googleEventId pushed via real upsertBatch to (personal, uat-a) an
 
 ### 6. Ástríðr NL chat round-trip + future-day persistence (test-8 NL half + 101-07)
 expected: Via real Ástríðr chat — "remind me to X tomorrow at 3pm" appears on the Reminders page in realtime with its origin marker; asking Ástríðr to list reminders includes it; completing via chat updates the page. Then clicking a future day in the calendar keeps undated/other-day reminders visible under Upcoming (the 101-07 fix, now exercised with chat-created rows).
-result: issue
-reported: "Automated run 2026-07-21 ~07:01: sent 'remind me to check the UAT retest result tomorrow at 4pm' via web chat. Ástríðr replied 'I couldn't set that reminder for you… issue connecting to your Google Calendar.' No reminder row ever appeared."
-severity: major
+result: pass (after in-session astridr-repo fixes — see Gaps #2 resolution)
+reported: "Initial run 2026-07-21 ~07:01 FAILED: 'remind me to check the UAT retest result tomorrow at 4pm' → Ástríðr replied 'I couldn't set that reminder… issue connecting to your Google Calendar.' No reminder created. After the three fixes + container hot-patch: create via NL works (tool chip 'reminders', row realtime with Ástríðr marker, source=astridr), and one-shot NL complete works (model chains list → complete with the real Convex id; row done in Convex, verified). Dated-row day-filtering conforms to spec (dated rows filter on other days; only undated rows are exempt per 101-07)."
+severity: major (resolved in session)
 root_cause: |
   Two astridr-repo defects, mechanism verified in live logs + source:
   (a) RemindersTool (tool_id "reminders", category "productivity") is in NO cluster in
@@ -58,6 +58,24 @@ root_cause: |
   CodePulse-side path (reminders-ingest → Convex → realtime UI) was NOT reached; no
   CodePulse defect involved. Cross-repo fix: astridr-repo (add "reminders" to a cluster
   reachable from default/commander categories + fix create_event tz handling).
+resolution: |
+  FIXED during session (operator-directed) — three astridr-repo commits, all TDD'd,
+  hot-patched into the running astridr-agent container and re-verified live:
+  - feature/brain-swap dcc0f8d2 (cherry-pick of main d5d948e6): reminders added to the
+    utility tool cluster → tool now survives filtering.
+  - feature/brain-swap 0c3ae57c: list output now includes each reminder's Convex _id
+    (model had NO id source, guessed index '4', v.id validator 400'd).
+  - feature/brain-swap abcbd57b: id-required errors for complete/update/snooze now
+    instruct the model to call action='list' first (bare error made gemini-flash give
+    up instead of chaining).
+  RE-RUN RESULT: full round-trip green — NL create via chat → tool chip "reminders" →
+  row realtime on page with Ástríðr origin marker (source: astridr); one-shot NL
+  complete → model chained list → complete with real id → reminders.completed, row
+  done in Convex; dated-row day-filter behavior conforms to 101-07 spec. Result
+  upgraded to pass; see test 6.
+  STILL OPEN (astridr-repo, minor): (a) NL "4pm" parsed as 16:00 UTC not local (tool
+  replied honestly "4 PM UTC"); (b) google create_event still 400s on naive datetimes
+  (now moot for reminders, still broken for genuine NL calendar-event creation).
 
 ### 7. Snooze re-nudges (CR-01)
 expected: Snooze a reminder that has already fired its nudge to a few minutes out. When the snoozed time arrives, exactly one NEW nudge arrives (pre-fix: snooze permanently killed all future nudges for that row).
@@ -67,8 +85,8 @@ evidence: End-to-end live: reminder due 07:00 → cron nudged 07:00:34 (Telegram
 ## Summary
 
 total: 7
-passed: 6
-issues: 1
+passed: 7
+issues: 0 (1 found during session, root-caused to astridr-repo, fixed + re-verified live in session)
 pending: 0
 skipped: 0
 
