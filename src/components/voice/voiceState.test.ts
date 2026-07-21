@@ -322,6 +322,26 @@ describe("isVisionIntentPhrase (D-01 client fast-path)", () => {
   it("whitespace-only → false", () => {
     expect(isVisionIntentPhrase("   ")).toBe(false);
   });
+
+  // 184-08 live-verification regression: the exact-phrase/trailing-only
+  // matcher missed EVERY natural phrasing in the live UAT (2026-07-21) — the
+  // fast-path never fired all day; every turn fell through to see_screen.
+  // These are Larry's real utterances from the session.
+  it('"what is on my screen" → true (STT expands the contraction)', () => {
+    expect(isVisionIntentPhrase("What is on my screen?")).toBe(true);
+  });
+
+  it('"what do you see on the screen i am sharing" → true (trailing words)', () => {
+    expect(isVisionIntentPhrase("what do you see on the screen i am sharing")).toBe(true);
+  });
+
+  it('"what do you see on the tab that i shared with you" → true', () => {
+    expect(isVisionIntentPhrase("what do you see on the tab that I shared with you")).toBe(true);
+  });
+
+  it('"did you see the screenshots i saved yesterday" → false (screenshots ≠ screen token)', () => {
+    expect(isVisionIntentPhrase("did you see the screenshots i saved yesterday")).toBe(false);
+  });
 });
 
 describe("decideVisionIntent (D-01/D-02/D-03 pure branch selection)", () => {
@@ -340,6 +360,28 @@ describe("decideVisionIntent (D-01/D-02/D-03 pure branch selection)", () => {
 
   it("empty string → null", () => {
     expect(decideVisionIntent("", true)).toBe(null);
+  });
+
+  // 184-08: strength tiering. STRONG matches (unambiguous screen phrases /
+  // the original literal list) refuse when no share is active (D-03). WEAK
+  // co-occurrence matches (screen-word + look-word, e.g. "shared" + "look")
+  // capture when a share is active but fall through to the normal pipeline
+  // (null) when none is — a false positive must never produce a wrong
+  // "I can't see your screen" refusal.
+  it('strong: "what is on my screen" + no share → "refuse"', () => {
+    expect(decideVisionIntent("what is on my screen", false)).toBe("refuse");
+  });
+
+  it('strong: "what do you see on the screen i am sharing" + share → "capture"', () => {
+    expect(decideVisionIntent("what do you see on the screen i am sharing", true)).toBe("capture");
+  });
+
+  it('weak: "can you look at what i shared" + share → "capture"', () => {
+    expect(decideVisionIntent("can you look at what I shared", true)).toBe("capture");
+  });
+
+  it('weak: "can you look at what i shared" + no share → null (no wrong refusal)', () => {
+    expect(decideVisionIntent("can you look at what I shared", false)).toBe(null);
   });
 });
 
