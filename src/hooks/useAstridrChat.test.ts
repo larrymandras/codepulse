@@ -134,6 +134,21 @@ function findFrameReplyCall(): Record<string, unknown> | undefined {
     .find((cmd) => cmd.type === "vision.frame_reply");
 }
 
+// 184 code-review CR-02: the handler only answers frame_requests for its OWN
+// active session, so every round-trip test must first establish one via a
+// real chat.send ack (mirrors production: sendMessage always precedes the
+// see_screen push for the same session).
+async function establishSession(
+  result: { current: ReturnType<typeof useAstridrChat> },
+  sess: string
+): Promise<void> {
+  mockSendCommand.mockResolvedValueOnce({ status: "ok", session_id: sess });
+  await act(async () => {
+    await result.current.sendMessage("establish session");
+  });
+  mockSendCommand.mockClear();
+}
+
 describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,6 +167,7 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     act(() => {
       result.current.registerScreenShare({ state: "active", captureFrame: mockCaptureFrame });
     });
+    await establishSession(result, "sess-1");
 
     await act(async () => {
       await getHandler("vision.frame_request")?.({
@@ -222,6 +238,7 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     act(() => {
       result.current.registerScreenShare({ state: "idle", captureFrame: mockCaptureFrame });
     });
+    await establishSession(result, "sess-2");
 
     await act(async () => {
       await getHandler("vision.frame_request")?.({
@@ -243,6 +260,7 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     act(() => {
       result.current.registerScreenShare({ state: "active", captureFrame: mockCaptureFrame });
     });
+    await establishSession(result, "sess-3");
 
     await act(async () => {
       await getHandler("vision.frame_request")?.({
@@ -258,7 +276,8 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
   });
 
   it("with no registered screenShare (default), still replies honestly with no frame", async () => {
-    renderHook(() => useAstridrChat());
+    const { result } = renderHook(() => useAstridrChat());
+    await establishSession(result, "sess-4");
 
     await act(async () => {
       await getHandler("vision.frame_request")?.({
@@ -270,5 +289,28 @@ describe("useAstridrChat — vision.frame_request round-trip (VISION-01)", () =>
     expect(call?.frame_request_id).toBe("freq-4");
     expect(call?.session_id).toBe("sess-4");
     expect(call?.frame).toBeUndefined();
+  });
+
+  it("CR-02: DROPS a frame_request for a different session — no reply, no capture (T-184-11 client half)", async () => {
+    // frame_request pushes fan out to every connected WS client; a tab whose
+    // active session was NOT asked must stay silent. Replying (even empty)
+    // would resolve the pending Future and prematurely honest-fail the
+    // requesting tab's legit turn; capturing would answer with the WRONG
+    // screen and defeat the backend's session-scoped resolve (T-184-11).
+    const mockCaptureFrame = vi.fn();
+    const { result } = renderHook(() => useAstridrChat());
+    act(() => {
+      result.current.registerScreenShare({ state: "active", captureFrame: mockCaptureFrame });
+    });
+    await establishSession(result, "sess-mine");
+
+    await act(async () => {
+      await getHandler("vision.frame_request")?.({
+        data: { request_id: "freq-hijack", session_id: "sess-other-tab" },
+      });
+    });
+
+    expect(mockCaptureFrame).not.toHaveBeenCalled();
+    expect(findFrameReplyCall()).toBeUndefined();
   });
 });

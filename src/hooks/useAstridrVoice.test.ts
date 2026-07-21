@@ -1029,4 +1029,45 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).not.toHaveBeenCalled();
   });
+
+  // ─── 184 code-review CR-03: vision fast-path capture failure ──────────────
+  // FINAL_RESULT moves the reducer into `processing` BEFORE captureFrame runs;
+  // if capture throws (track ends mid-capture), no send ever happens, so no
+  // TTS_START/TTS_END fires and the silent-turn watchdog never arms (it only
+  // arms on a chat.isStreaming falling edge). Without an explicit close the
+  // conversation wedges in "Thinking…" until a manual mic toggle.
+  it("CR-03: captureFrame rejection closes the turn back to listening (not wedged in processing)", async () => {
+    const chat = makeChat();
+    const failingShare = {
+      state: "active" as const,
+      arm: vi.fn(),
+      captureFrame: vi.fn().mockRejectedValue(new Error("Screen share track is not live")),
+    };
+    const { result } = renderHook(() =>
+      useAstridrVoice({ chat, enabled: true, screenShare: failingShare })
+    );
+    wake();
+
+    // Real flow: an interim moves listening → transcribing, THEN the final
+    // moves transcribing → processing (listening + FINAL_RESULT is a no-op
+    // transition, which would mask the wedge).
+    act(() => {
+      onInterimResultCallback?.("what's on");
+    });
+    expect(result.current.voiceState).toBe("transcribing");
+    act(() => {
+      onFinalResultCallback?.("what's on my screen");
+    });
+
+    // Let the async capture attempt reject and its catch run.
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(failingShare.captureFrame).toHaveBeenCalledTimes(1);
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+    expect(result.current.isLooking).toBe(false);
+    expect(result.current.voiceState).toBe("listening");
+  });
 });
