@@ -524,7 +524,12 @@ Plans:
   4. Deleting a skill defaults to archive (reversible); true file deletion on disk is a separate action requiring an explicit confirmation.
   5. When the Forge daemon is offline, lifecycle actions queue and the UI visibly shows the command will expire — no false-success state is ever shown (mirrors the intake expired-command path).
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 98-01-PLAN.md — Convex substrate: forgeCommands lifecycle type + payload, enqueueLifecycle with pre-flight checks, ack refusal adapter, list query
+- [ ] 98-02-PLAN.md — Forge daemon (C:/Users/mandr/forge): native-TS lifecycle-exec (cross-volume move, host-truth re-check, cold-only delete), executeLifecycle poller branch, fresh-workspace fix
+- [ ] 98-03-PLAN.md — UI building blocks: dropdown-menu primitive, useLifecycle hook, MoveToProjectDialog, DeleteSkillDialog (type-to-confirm)
+- [ ] 98-04-PLAN.md — Assembly: scope-gated SkillLifecycleMenu (shadow + multi-scope guards), always-visible menu trigger on SkillRow, Cold Storage copy refresh
 **UI hint**: yes
 
 ---
