@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Milestone complete (Phase 101 was final phase)
-last_updated: 2026-07-20T22:35:02.101Z
-last_activity: 2026-07-20
+stopped_at: Phase 98 context gathered
+last_updated: "2026-07-21T18:43:08.124Z"
+last_activity: 2026-07-21 — Phase 98 (v11.0 Skills Command Center) context gathered via discuss-phase
 progress:
   total_phases: 1
   completed_phases: 1
@@ -259,10 +259,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-20T22:45:00.000Z
-Stopped at: Phase 101 fully closed — 101-07 executed, gap-closure re-verification passed (mutation-tested), UAT test-8 gap resolved, code review committed (2 critical + 6 warning advisory findings in 101-REVIEW.md)
+Last session: 2026-07-21T18:43:08.115Z
+Stopped at: Phase 98 context gathered
 Next action: Address 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt), retest UAT test 8's NL half via real Ástríðr chat, then run v12.0 milestone close-out (`/gsd-complete-milestone`) or resume v11.0 (`/gsd-discuss-phase 98`).
-Resume file: None
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-CONTEXT.md
 
 ## Operator Next Steps
 
