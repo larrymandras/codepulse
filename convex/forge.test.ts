@@ -388,11 +388,14 @@ import {
   isAcceptedGithubUrlShape,
   isSafeSubpath,
   isSafeSkillName,
+  buildLifecycleRow,
+  validateLifecyclePreflight,
   resolveClaimTypes,
   isValidSupportedTypesShape,
   capAckReport,
   MAX_ACK_REPORT_BYTES,
   synthesizeWriteRefusalReport,
+  FORGE_COMMAND_TTL_MS,
 } from "./forge";
 import type { Id } from "./_generated/dataModel";
 
@@ -907,26 +910,350 @@ describe("forge.isSafeSkillName — bare directory-name guard (T-98-01)", () => 
 });
 
 // ---------------------------------------------------------------------------
-// Phase 98 Task 1: RED scaffolds for the Task 2/3 lifecycle surface. These
-// reference the not-yet-exported symbols by NAME ONLY (never imported —
-// importing a nonexistent named export from a real module would fail
-// npx tsc --noEmit, which this task's acceptance criteria requires to stay
-// green). Each placeholder is upgraded to a real `it(...)` in the commit
-// that implements the corresponding symbol; until then they are honest
-// it.todo() entries, mirroring this file's established DB-round-trip
-// it.todo() convention (see "forge command bridge — DB round-trip" below).
+// Phase 98 Task 2: validateLifecyclePreflight — LAYER-1 pre-flight refusal
+// rules (D-02/D-03/D-05/T-98-06), exercised directly against an
+// originsForName array — the extracted decision function this file's
+// convention calls for (mirrors xorGuard/storageMetaGuard/
+// projectWorkspaceGuard: real logic, no live Convex runtime needed).
 // ---------------------------------------------------------------------------
 
-describe("forge.enqueueLifecycle — RED scaffold (Task 2 not yet implemented)", () => {
-  it.todo("enqueueLifecycle: unauthenticated call throws 'Authentication required to issue Forge commands'");
-  it.todo("enqueueLifecycle: duplicate commandId is a silent no-op (no second row inserted)");
-  it.todo("enqueueLifecycle: action='restore' destination='global' shadow-blocked by an active claude-code row throws lifecycle-refused:shadow:");
-  it.todo("enqueueLifecycle: action='archive' cold-collision with an existing DORMANT_ORIGIN row throws lifecycle-refused:collision:");
-  it.todo("enqueueLifecycle: action='move' destination='global' collision with an existing claude-code row throws lifecycle-refused:collision:");
-  it.todo("enqueueLifecycle: action='delete' refused when the skill has any non-dormant origin row (D-05 cold-only)");
-  it.todo("enqueueLifecycle: destination='project' with a null workspaceId throws");
-  it.todo("enqueueLifecycle: skillName failing isSafeSkillName throws before any insert");
-  it.todo("enqueueLifecycle: a valid archive/restore/move/delete inserts exactly one forgeCommands row with commandType 'lifecycle' and the populated lifecyclePayload");
+describe("forge.validateLifecyclePreflight — LAYER-1 refusal rules (D-02/D-03/D-05)", () => {
+  const baseArgs = {
+    action: "archive" as const,
+    destination: "cold" as const,
+    workspaceId: null as string | null,
+    sourceOrigin: "claude-code",
+  };
+
+  it("throws when destination='project' and workspaceId is null", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { ...baseArgs, action: "move", destination: "project", workspaceId: null },
+        ["claude-code"]
+      )
+    ).toThrow("workspaceId is required when destination is 'project'");
+  });
+
+  it("does not throw when destination='project' and workspaceId is present", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { ...baseArgs, action: "move", destination: "project", workspaceId: "ws-1" },
+        ["claude-code"]
+      )
+    ).not.toThrow();
+  });
+
+  it("throws when sourceOrigin does not match any existing origin row (V5)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { ...baseArgs, sourceOrigin: "claude-code:project:deadbeef" },
+        ["claude-code", "claude-code:available"]
+      )
+    ).toThrow(/sourceOrigin .* does not match/);
+  });
+
+  it("action='restore' destination='global' throws lifecycle-refused:shadow: when claude-code is already active (LIFE-05/D-03)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "restore", destination: "global", workspaceId: null, sourceOrigin: "claude-code:available" },
+        ["claude-code", "claude-code:available"]
+      )
+    ).toThrow(/^lifecycle-refused:shadow:/);
+  });
+
+  it("action='restore' destination='global' does not throw when no active claude-code row exists", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "restore", destination: "global", workspaceId: null, sourceOrigin: "claude-code:available" },
+        ["claude-code:available"]
+      )
+    ).not.toThrow();
+  });
+
+  it("action='archive' throws lifecycle-refused:collision: when a dormant copy already exists (D-02)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "archive", destination: "cold", workspaceId: null, sourceOrigin: "claude-code" },
+        ["claude-code", "claude-code:available"]
+      )
+    ).toThrow(/^lifecycle-refused:collision:/);
+  });
+
+  it("action='archive' does not throw when no dormant copy exists", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "archive", destination: "cold", workspaceId: null, sourceOrigin: "claude-code" },
+        ["claude-code"]
+      )
+    ).not.toThrow();
+  });
+
+  it("action='move' destination='global' throws lifecycle-refused:collision: when claude-code is already active (D-02)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "move", destination: "global", workspaceId: null, sourceOrigin: "claude-code:project:abc1234" },
+        ["claude-code", "claude-code:project:abc1234"]
+      )
+    ).toThrow(/^lifecycle-refused:collision:/);
+  });
+
+  it("action='delete' throws lifecycle-refused: when any non-dormant origin row exists (D-05 cold-only)", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "delete", destination: "cold", workspaceId: null, sourceOrigin: "claude-code:available" },
+        ["claude-code", "claude-code:available"]
+      )
+    ).toThrow(/^lifecycle-refused:/);
+  });
+
+  it("action='delete' does not throw when the skill exists ONLY at the dormant origin", () => {
+    expect(() =>
+      validateLifecyclePreflight(
+        { action: "delete", destination: "cold", workspaceId: null, sourceOrigin: "claude-code:available" },
+        ["claude-code:available"]
+      )
+    ).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 98 Task 2: buildLifecycleRow — field mapping (mirrors buildIntakeRow's
+// own field-mapping test precedent).
+// ---------------------------------------------------------------------------
+
+describe("forge.buildLifecycleRow — field mapping", () => {
+  it("maps all lifecyclePayload fields and sets commandType='lifecycle', launch/stop/intakePayload=null", () => {
+    const row = buildLifecycleRow(
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-lifecycle-1",
+        action: "archive",
+        skillName: "legal",
+        sourceOrigin: "claude-code",
+        destination: "cold",
+        workspaceId: null,
+      },
+      "user_abc123",
+      1_000,
+      FORGE_COMMAND_TTL_MS
+    );
+
+    expect(row.commandType).toBe("lifecycle");
+    expect(row.launchPayload).toBeNull();
+    expect(row.stopPayload).toBeNull();
+    expect(row.intakePayload).toBeNull();
+    expect(row.lifecyclePayload).toEqual({
+      action: "archive",
+      skillName: "legal",
+      sourceOrigin: "claude-code",
+      destination: "cold",
+      workspaceId: null,
+    });
+    expect(row.status).toBe("queued");
+    expect(row.issuedBy).toBe("user_abc123");
+    expect(row.createdAt).toBe(1_000);
+    expect(row.expiresAt).toBe(1_000 + FORGE_COMMAND_TTL_MS);
+    expect(row.claimedAt).toBeNull();
+    expect(row.executedAt).toBeNull();
+    expect(row.completedAt).toBeNull();
+    expect(row.resolvedForgeJobId).toBeNull();
+    expect(row.error).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 98 Task 2: enqueueLifecycle — mutation handler order (DB round-trip
+// mirror). enqueueLifecycleMirror (defined near this file's other DB
+// round-trip mirrors, below) performs the SAME ctx.db calls the real handler
+// does; the skills-registry query is stood in for by a directly-passed
+// originsForName array — the same "extract the decision, skip the live
+// runtime" convention as storageMetaGuard/projectWorkspaceGuard above.
+// ---------------------------------------------------------------------------
+
+describe("forge.enqueueLifecycle — mutation handler order (auth -> idempotency -> validation -> insert)", () => {
+  it("throws when unauthenticated (D-13 fail-closed)", async () => {
+    const store = makeForgeCommandsStore();
+    await expect(
+      enqueueLifecycleMirror(
+        store,
+        {
+          hostId: "desktop-abc",
+          commandId: "cmd-1",
+          action: "archive",
+          skillName: "legal",
+          sourceOrigin: "claude-code",
+          destination: "cold",
+          workspaceId: null,
+          originsForName: ["claude-code"],
+        },
+        null,
+        1_000
+      )
+    ).rejects.toThrow("Authentication required to issue Forge commands");
+    expect(store.forgeCommands).toHaveLength(0);
+  });
+
+  it("a duplicate commandId is a silent no-op — no second row inserted (WR-04 parity)", async () => {
+    const store = makeForgeCommandsStore();
+    await store.db.insert("forgeCommands", {
+      hostId: "desktop-abc",
+      commandId: "cmd-dup",
+      commandType: "lifecycle",
+      status: "queued",
+    });
+
+    const result = await enqueueLifecycleMirror(
+      store,
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-dup",
+        action: "archive",
+        skillName: "legal",
+        sourceOrigin: "claude-code",
+        destination: "cold",
+        workspaceId: null,
+        originsForName: ["claude-code"],
+      },
+      { subject: "user_abc123" },
+      2_000
+    );
+
+    expect(result).toBeNull();
+    expect(store.forgeCommands).toHaveLength(1); // still just the pre-existing row
+  });
+
+  it("throws before any insert when skillName fails isSafeSkillName", async () => {
+    const store = makeForgeCommandsStore();
+    await expect(
+      enqueueLifecycleMirror(
+        store,
+        {
+          hostId: "desktop-abc",
+          commandId: "cmd-bad-name",
+          action: "archive",
+          skillName: "../etc",
+          sourceOrigin: "claude-code",
+          destination: "cold",
+          workspaceId: null,
+          originsForName: ["claude-code"],
+        },
+        { subject: "user_abc123" },
+        3_000
+      )
+    ).rejects.toThrow("Invalid skill name: ../etc");
+    expect(store.forgeCommands).toHaveLength(0);
+  });
+
+  it("throws before any insert when LAYER-1 pre-flight refuses (archive cold-collision)", async () => {
+    const store = makeForgeCommandsStore();
+    await expect(
+      enqueueLifecycleMirror(
+        store,
+        {
+          hostId: "desktop-abc",
+          commandId: "cmd-collision",
+          action: "archive",
+          skillName: "legal",
+          sourceOrigin: "claude-code",
+          destination: "cold",
+          workspaceId: null,
+          originsForName: ["claude-code", "claude-code:available"],
+        },
+        { subject: "user_abc123" },
+        4_000
+      )
+    ).rejects.toThrow(/^lifecycle-refused:collision:/);
+    expect(store.forgeCommands).toHaveLength(0);
+  });
+
+  it("a valid archive inserts exactly one forgeCommands row with commandType='lifecycle' and the populated lifecyclePayload", async () => {
+    const store = makeForgeCommandsStore();
+    const id = await enqueueLifecycleMirror(
+      store,
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-valid-archive",
+        action: "archive",
+        skillName: "legal",
+        sourceOrigin: "claude-code",
+        destination: "cold",
+        workspaceId: null,
+        originsForName: ["claude-code"],
+      },
+      { subject: "user_abc123" },
+      5_000
+    );
+
+    expect(id).not.toBeNull();
+    expect(store.forgeCommands).toHaveLength(1);
+    const row = store.forgeCommands[0];
+    expect(row.commandType).toBe("lifecycle");
+    expect(row.status).toBe("queued");
+    expect(row.lifecyclePayload).toEqual({
+      action: "archive",
+      skillName: "legal",
+      sourceOrigin: "claude-code",
+      destination: "cold",
+      workspaceId: null,
+    });
+  });
+
+  it("a valid restore/move/delete each insert exactly one lifecycle row", async () => {
+    const store = makeForgeCommandsStore();
+
+    await enqueueLifecycleMirror(
+      store,
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-restore",
+        action: "restore",
+        skillName: "legal",
+        sourceOrigin: "claude-code:available",
+        destination: "global",
+        workspaceId: null,
+        originsForName: ["claude-code:available"],
+      },
+      { subject: "user_abc123" },
+      6_000
+    );
+    await enqueueLifecycleMirror(
+      store,
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-move",
+        action: "move",
+        skillName: "docs",
+        sourceOrigin: "claude-code",
+        destination: "project",
+        workspaceId: "ws-1",
+        originsForName: ["claude-code"],
+      },
+      { subject: "user_abc123" },
+      7_000
+    );
+    await enqueueLifecycleMirror(
+      store,
+      {
+        hostId: "desktop-abc",
+        commandId: "cmd-delete",
+        action: "delete",
+        skillName: "old-skill",
+        sourceOrigin: "claude-code:available",
+        destination: "cold",
+        workspaceId: null,
+        originsForName: ["claude-code:available"],
+      },
+      { subject: "user_abc123" },
+      8_000
+    );
+
+    expect(store.forgeCommands).toHaveLength(3);
+    expect(store.forgeCommands.map((r) => r.lifecyclePayload.action).sort()).toEqual([
+      "delete",
+      "move",
+      "restore",
+    ]);
+  });
 });
 
 describe("forge.synthesizeLifecycleRefusalReport — RED scaffold (Task 3 not yet implemented)", () => {
@@ -1544,6 +1871,57 @@ async function expireStaleCommandsMirror(ctx: { db: any; storage: any }, now: nu
       await ctx.db.patch(cmd._id, { status: "expired" });
     }
   }
+}
+
+// Mirror of enqueueLifecycle (forge.ts, Phase 98): performs the SAME
+// ctx.db.query/withIndex/unique/insert calls the real handler does. The
+// skills-registry pre-flight query is stood in for by a directly-passed
+// `originsForName` array on `args` (this file's established "extract the
+// decision, skip the live runtime" convention — see storageMetaGuard /
+// projectWorkspaceGuard above) rather than modeling a second mock table,
+// since validateLifecyclePreflight (imported, unchanged) is exercised
+// directly and exhaustively in its own describe block.
+async function enqueueLifecycleMirror(
+  ctx: { db: any },
+  args: {
+    hostId: string;
+    commandId: string;
+    action: "archive" | "restore" | "move" | "delete";
+    skillName: string;
+    sourceOrigin: string;
+    destination: "global" | "project" | "cold";
+    workspaceId: string | null;
+    originsForName: string[];
+  },
+  identity: { subject: string } | null,
+  now: number
+): Promise<string | null> {
+  if (identity === null) {
+    throw new Error("Authentication required to issue Forge commands");
+  }
+
+  const existing = await ctx.db
+    .query("forgeCommands")
+    .withIndex("by_commandId", (q: any) => q.eq("commandId", args.commandId))
+    .unique();
+  if (existing) return null; // idempotent retry no-op
+
+  if (!isSafeSkillName(args.skillName)) {
+    throw new Error(`Invalid skill name: ${args.skillName}`);
+  }
+
+  validateLifecyclePreflight(
+    {
+      action: args.action,
+      destination: args.destination,
+      workspaceId: args.workspaceId,
+      sourceOrigin: args.sourceOrigin,
+    },
+    args.originsForName
+  );
+
+  const row = buildLifecycleRow(args, identity.subject, now, FORGE_COMMAND_TTL_MS);
+  return await ctx.db.insert("forgeCommands", row);
 }
 
 describe("forge command bridge — DB round-trip (integration)", () => {

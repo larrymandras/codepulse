@@ -391,6 +391,167 @@ export function buildIntakeRow(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Phase 98 (LIFE-01..06): Skill lifecycle mutation row builder + LAYER-1
+// pre-flight validation (enqueueLifecycle's decision logic, extracted so it
+// can be exercised without a live Convex runtime — this repo's established
+// testing convention).
+// ---------------------------------------------------------------------------
+
+/** Global (non-project, non-cold) origin string — matches src/lib/skills.ts. */
+const GLOBAL_ORIGIN = "claude-code";
+
+/**
+ * Dormant/cold-storage origin string — DUPLICATED from src/lib/skills.ts's
+ * DORMANT_ORIGIN (not imported: convex/ functions do not import from src/,
+ * keeping the backend bundle independent of the browser bundle). Keep these
+ * two literals in sync if the origin convention ever changes.
+ */
+const DORMANT_ORIGIN = "claude-code:available";
+
+interface LifecycleRowArgs {
+  hostId: string;
+  commandId: string;
+  action: "archive" | "restore" | "move" | "delete";
+  skillName: string;
+  sourceOrigin: string;
+  destination: "global" | "project" | "cold";
+  workspaceId: string | null;
+}
+
+interface LifecycleRow {
+  hostId: string;
+  commandId: string;
+  commandType: "lifecycle";
+  launchPayload: null;
+  stopPayload: null;
+  intakePayload: null;
+  lifecyclePayload: {
+    action: "archive" | "restore" | "move" | "delete";
+    skillName: string;
+    sourceOrigin: string;
+    destination: "global" | "project" | "cold";
+    workspaceId: string | null;
+  };
+  status: string;
+  issuedBy: string;
+  createdAt: number;
+  expiresAt: number;
+  claimedAt: null;
+  executedAt: null;
+  completedAt: null;
+  resolvedForgeJobId: null;
+  error: null;
+}
+
+/**
+ * Build the forgeCommands insert object for a lifecycle command.
+ * Mirrors buildIntakeRow/buildLaunchRow exactly.
+ */
+export function buildLifecycleRow(
+  args: LifecycleRowArgs,
+  subject: string,
+  now: number,
+  ttlMs: number
+): LifecycleRow {
+  return {
+    hostId:      args.hostId,
+    commandId:   args.commandId,
+    commandType: "lifecycle",
+    launchPayload: null,
+    stopPayload:   null,
+    intakePayload: null,
+    lifecyclePayload: {
+      action:       args.action,
+      skillName:    args.skillName,
+      sourceOrigin: args.sourceOrigin,
+      destination:  args.destination,
+      workspaceId:  args.workspaceId,
+    },
+    status:             "queued",
+    issuedBy:           subject,
+    createdAt:          now,
+    expiresAt:          now + ttlMs,
+    claimedAt:          null,
+    executedAt:         null,
+    completedAt:        null,
+    resolvedForgeJobId: null,
+    error:              null,
+  };
+}
+
+/**
+ * LAYER-1 pre-flight validation (D-04 layer 1) for a lifecycle mutation,
+ * given the FULL set of origin strings already on record for `skillName`
+ * (i.e. `(await ctx.db.query("skills").withIndex("by_name", ...).collect())
+ * .map(r => r.origin)`). Never touches the database itself — pure decision
+ * logic, exercised directly in tests without a live Convex runtime (mirrors
+ * this file's projectWorkspaceGuard/storageMetaGuard/xorGuard convention).
+ *
+ * Throws (never returns a value) on refusal:
+ *   - `workspaceId is required...` — plain Error, same shape as enqueueIntake's
+ *     project-destination guard (D-P6-04 precedent).
+ *   - `sourceOrigin "..." does not match...` — plain Error (V5: never trust a
+ *     client's origin claim for a name that does not exist at that origin).
+ *   - `lifecycle-refused:shadow:...` — LIFE-05/D-03: restoring into a scope
+ *     where the name is already active.
+ *   - `lifecycle-refused:collision:...` — D-02: archiving over an existing
+ *     dormant copy, or moving into an already-occupied destination scope.
+ *   - `lifecycle-refused:not-cold:...` — D-05: permanent delete attempted
+ *     while a non-dormant origin row still exists for this name.
+ *
+ * Only the `destination === "global"` case is checked here for
+ * restore/move — a `project` destination's exact origin key
+ * (`claude-code:project:<key>`) is derived by the daemon's rescan, not
+ * knowable to Convex at enqueue time, so that collision is intentionally
+ * left to the daemon's LAYER-2 re-check (D-04: host truth wins over a
+ * possibly-stale registry).
+ */
+export function validateLifecyclePreflight(
+  args: {
+    action: "archive" | "restore" | "move" | "delete";
+    destination: "global" | "project" | "cold";
+    workspaceId: string | null;
+    sourceOrigin: string;
+  },
+  originsForName: string[]
+): void {
+  if (args.destination === "project" && !args.workspaceId) {
+    throw new Error("workspaceId is required when destination is 'project'");
+  }
+
+  if (!originsForName.includes(args.sourceOrigin)) {
+    throw new Error(
+      `sourceOrigin "${args.sourceOrigin}" does not match any existing skill row for this name`
+    );
+  }
+
+  if (args.action === "restore" && args.destination === "global") {
+    if (originsForName.includes(GLOBAL_ORIGIN)) {
+      throw new Error("lifecycle-refused:shadow:already active in global");
+    }
+  }
+
+  if (args.action === "archive") {
+    if (originsForName.includes(DORMANT_ORIGIN)) {
+      throw new Error("lifecycle-refused:collision:a dormant copy already exists in cold storage");
+    }
+  }
+
+  if (args.action === "move" && args.destination === "global") {
+    if (originsForName.includes(GLOBAL_ORIGIN)) {
+      throw new Error("lifecycle-refused:collision:already active in global");
+    }
+  }
+
+  if (args.action === "delete") {
+    const hasNonDormantOrigin = originsForName.some((o) => o !== DORMANT_ORIGIN);
+    if (hasNonDormantOrigin) {
+      throw new Error("lifecycle-refused:not-cold:skill exists outside cold storage");
+    }
+  }
+}
+
 // Direct TypeScript port of skill_intake's github_url.py FULL_URL/SHORTHAND
 // regexes (D-P6-06). Must never accept a form the Python parser would reject —
 // port, don't reinterpret. Source: skill-intake repo,
@@ -782,6 +943,72 @@ export const enqueueIntake = mutation({
     }
 
     const row = buildIntakeRow(args, identity.subject, Date.now(), FORGE_COMMAND_TTL_MS);
+    await ctx.db.insert("forgeCommands", row);
+  },
+});
+
+/**
+ * Enqueue a skill lifecycle mutation (archive/restore/move/delete) for the
+ * Forge daemon to execute (Phase 98, LIFE-01..06). Handler order mirrors
+ * enqueueIntake exactly: fail-closed auth -> commandId idempotency ->
+ * isSafeSkillName (T-98-01) -> LAYER-1 pre-flight (D-04 layer 1, T-98-06) ->
+ * build+insert. Every refusal throws BEFORE any row is inserted — no doomed
+ * command is ever queued for the daemon to discover it can only fail.
+ */
+export const enqueueLifecycle = mutation({
+  args: {
+    hostId:       v.string(),
+    commandId:    v.string(),  // client-generated ULID for optimistic reconciliation (D-10)
+    action:       v.union(v.literal("archive"), v.literal("restore"), v.literal("move"), v.literal("delete")),
+    skillName:    v.string(),
+    sourceOrigin: v.string(),
+    destination:  v.union(v.literal("global"), v.literal("project"), v.literal("cold")),
+    workspaceId:  v.union(v.string(), v.null()),
+  },
+  handler: async (ctx, args) => {
+    // D-13: Fail-closed — DELIBERATE divergence from read-query graceful-skip.
+    // DO NOT change to graceful-skip. This is a write/control path.
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
+      throw new Error("Authentication required to issue Forge commands");
+    }
+
+    // WR-04 precedent (enqueueIntake): same commandId -> silent no-op, applied
+    // from day one for lifecycle (do not repeat launch/stop's deferred bug).
+    const existing = await ctx.db
+      .query("forgeCommands")
+      .withIndex("by_commandId", (q) => q.eq("commandId", args.commandId))
+      .unique();
+    if (existing) return; // idempotent retry no-op
+
+    // T-98-01: skillName drives a real fs rename/rmSync in the daemon — reject
+    // before any row is inserted.
+    if (!isSafeSkillName(args.skillName)) {
+      throw new Error(`Invalid skill name: ${args.skillName}`);
+    }
+
+    // LAYER-1 pre-flight (D-04 layer 1): query the live registry for every
+    // origin this skill name currently has, then apply the action-specific
+    // refusal rules (T-98-06, T-98-02, T-98-05 shadow/collision/cold-only).
+    const rows = await ctx.db
+      .query("skills")
+      .withIndex("by_name", (q) => q.eq("name", args.skillName))
+      .collect();
+    const originsForName = rows
+      .map((r) => r.origin)
+      .filter((o): o is string => typeof o === "string");
+
+    validateLifecyclePreflight(
+      {
+        action:       args.action,
+        destination:  args.destination,
+        workspaceId:  args.workspaceId,
+        sourceOrigin: args.sourceOrigin,
+      },
+      originsForName
+    );
+
+    const row = buildLifecycleRow(args, identity.subject, Date.now(), FORGE_COMMAND_TTL_MS);
     await ctx.db.insert("forgeCommands", row);
   },
 });
