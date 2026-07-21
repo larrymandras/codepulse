@@ -38,8 +38,6 @@ created: 2026-07-21
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
-|---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
 | 01-1 | 98-01 | 1 | LIFE-01..06 | T-98-01/05 | isSafeSkillName rejects traversal; schema migration-free | unit | `npx vitest run convex/forge.test.ts -t "isSafeSkillName"` (codepulse) | ✅ forge.test.ts | ⬜ pending |
 | 01-2 | 98-01 | 1 | LIFE-01..06 | T-98-02/05/06 | Clerk fail-closed + pre-flight shadow/collision/cold-only refusals | unit | `npx vitest run convex/forge.test.ts -t "enqueueLifecycle"` | ✅ forge.test.ts | ⬜ pending |
 | 01-3 | 98-01 | 1 | LIFE-05/06 | T-98-06 | lifecycle-refused adapter → house copy; scoped list query | unit | `npx vitest run convex/forge.test.ts -t "lifecycle"` | ✅ forge.test.ts | ⬜ pending |

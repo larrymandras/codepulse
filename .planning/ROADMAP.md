@@ -504,6 +504,7 @@ Plans:
 - [x] 97-03-PLAN.md — Wave 2 (forge): rescan trigger in command-poller after successful write + DAEMON-04 supportedTypes regression guard (DAEMON-03, DAEMON-04)
 - [x] 97-05-PLAN.md — Wave 2 (codepulse): Convex-side refusal-reason adapter in ackCommand — synthetic finding + verdict flip (INTAKE-04)
 - [x] 97-06-PLAN.md — Wave 3 (operator): cold-storage marker checkpoint + live end-to-end round-trip (INTAKE-01, INTAKE-02, INTAKE-03)
+
 **UI hint**: yes
 
 ---
@@ -526,10 +527,19 @@ Plans:
 
 **Plans**: 4 plans
 Plans:
+**Wave 1**
+
 - [ ] 98-01-PLAN.md — Convex substrate: forgeCommands lifecycle type + payload, enqueueLifecycle with pre-flight checks, ack refusal adapter, list query
 - [ ] 98-02-PLAN.md — Forge daemon (C:/Users/mandr/forge): native-TS lifecycle-exec (cross-volume move, host-truth re-check, cold-only delete), executeLifecycle poller branch, fresh-workspace fix
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 98-03-PLAN.md — UI building blocks: dropdown-menu primitive, useLifecycle hook, MoveToProjectDialog, DeleteSkillDialog (type-to-confirm)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 98-04-PLAN.md — Assembly: scope-gated SkillLifecycleMenu (shadow + multi-scope guards), always-visible menu trigger on SkillRow, Cold Storage copy refresh
+
 **UI hint**: yes
 
 ---
@@ -606,6 +616,7 @@ Plans:
 - [x] 101-04-PLAN.md — Wave 3 (astridr): calendar-cache cron — per-profile `google_workspace list_events` → normalize → `/calendar-ingest` (upsert by googleEventId, prune stale) (CAL-01)
 - [x] 101-05-PLAN.md — Wave 3 (astridr): nudge cron — scan `dueSoon`/`overdue` → `ProactiveMessenger.send_alert` to the profile channel → set `notifiedAt`; recurrence spawn on pass (REM-05, REM-04)
 - [x] 101-06-PLAN.md — Wave 3 (codepulse): `Reminders.tsx` page + `navRegistry` (COMMAND cluster) + profile-segmented layout + calendar overlay + quick actions (complete/snooze/quick-add) + effects (CAL-02, UI-01, UI-02)
+
 **UI hint**: yes
 
 ---

@@ -4,8 +4,8 @@ milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
 stopped_at: Phase 98 UI-SPEC approved
-last_updated: "2026-07-21T18:52:58.696Z"
-last_activity: 2026-07-21 — Phase 98 (v11.0 Skills Command Center) UI-SPEC created and approved via ui-phase
+last_updated: "2026-07-21T19:35:51.204Z"
+last_activity: 2026-07-21 -- Phase 98 planning complete
 progress:
   total_phases: 1
   completed_phases: 1
@@ -34,9 +34,9 @@ Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 
 Phase: 101 (reminders-calendar-command-center) — COMPLETE (7/7 plans, verification passed incl. gap-closure re-verification)
 Plan: 7 of 7 done — Wave 1: 101-01 | Wave 2: 101-02 | Wave 3: 101-03/04/05 (astridr-repo) + 101-06 (codepulse) | Wave 4: 101-07 (gap closure, UAT test 8 — resolved)
 Status: Phase 101 complete + verified (101-VERIFICATION.md passed, mutation-tested). Code review (101-REVIEW.md) filed 2 critical + 6 warning advisory findings (snooze kills future nudges; edit popover UTC-shifts dueAt) — fix via /gsd-code-review 101 --fix before or after milestone close.
-Last activity: 2026-07-20 — 101-07 gap closure executed, verified, reviewed; UAT test-8 gap resolved
+Last activity: 2026-07-21 — Phase 98 (v11.0) planned: 4 plans in 3 waves, verification passed — ready to execute
 
-**v11.0 paused mid-milestone:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phases 98 (Lifecycle Mutations), 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started — resume v11.0 after v12.0 Phase 101 closes.
+**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed — ready to execute; daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale). Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
 ## Deferred Items
 
