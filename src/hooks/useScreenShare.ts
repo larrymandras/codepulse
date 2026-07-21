@@ -38,6 +38,11 @@ export interface UseScreenShareOptions {
   onEnded?: () => void;
 }
 
+// D-06 EMPIRICALLY LOCKED (184-08 live verification, 2026-07-21): four real
+// captures across three UIs (webpage comparison table, GoDaddy domain page
+// with small gray metadata text, Telegram window) — all fully legible at
+// 1568/0.85, 71-100 KB per frame (raw debug JPEGs inspected, far under the
+// 16 MiB WS ceiling). No step-down needed; the starting point held.
 const DEFAULT_MAX_EDGE = 1568;
 const DEFAULT_QUALITY = 0.85;
 

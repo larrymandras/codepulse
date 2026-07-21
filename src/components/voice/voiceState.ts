@@ -183,25 +183,64 @@ const VISION_INTENT_PHRASES = [
   "read this",
 ];
 
+// 184-08 live-UAT fix (2026-07-21): the exact-phrase/trailing-only matcher
+// missed EVERY natural phrasing in the live verification — STT expands
+// contractions ("what's" → "what is") and people append trailing words
+// ("…on the screen i am sharing"), so the fast-path never fired all day and
+// every vision turn fell through to the slower see_screen round-trip.
+// Strength tiers:
+//   strong — the original literal list (whole/trailing) OR an unambiguous
+//            screen-context substring anywhere in the utterance.
+//   weak   — whole-token co-occurrence of a screen-word AND a look-word
+//            ("can you look at what i shared"). Weak matches capture when a
+//            share is active but never trigger the D-03 refusal (a false
+//            positive must not wrongly claim "I can't see your screen").
+const VISION_STRONG_SUBSTRINGS = [
+  "on my screen",
+  "on the screen",
+  "on my monitor",
+  "screen i am sharing",
+  "screen i'm sharing",
+  "i am sharing",
+  "i'm sharing",
+  "shared with you",
+];
+const VISION_SCREEN_TOKENS = new Set(["screen", "screens", "monitor", "sharing", "shared"]);
+const VISION_LOOK_TOKENS = new Set(["see", "look", "looking", "read", "reading", "show", "describe"]);
+
+export type VisionIntentStrength = "strong" | "weak";
+
 /**
- * Returns true if the transcript is a vision-intent phrase — a request to
- * look at the shared screen (D-01 client regex fast-path). Reuses
- * `normalize()` and matches whole-utterance OR as a trailing/contiguous
- * phrase (mirrors `isEndPhrase`/`isBargeInPhrase`) so a filler-prefixed
- * utterance ("okay, what do you see?") still fires. Stays pure — no
- * `MediaStream` reference, no side effects (file contract).
+ * Pure tiered matcher — see the strength-tier comment above. Reuses
+ * `normalize()`; token checks are whole-token so "screenshots" never counts
+ * as "screen". Stays pure — no `MediaStream` reference, no side effects
+ * (file contract).
  */
-export function isVisionIntentPhrase(text: string): boolean {
+export function visionIntentStrength(text: string): VisionIntentStrength | null {
   const norm = normalize(text);
-  if (!norm) return false;
-  if (VISION_INTENT_PHRASES.includes(norm)) return true;
+  if (!norm) return null;
+  if (VISION_INTENT_PHRASES.includes(norm)) return "strong";
   const words = norm.split(" ");
-  return VISION_INTENT_PHRASES.some((phrase) => {
+  const trailingMatch = VISION_INTENT_PHRASES.some((phrase) => {
     const phraseWords = phrase.split(" ");
     if (phraseWords.length > words.length) return false;
     const start = words.length - phraseWords.length;
     return phraseWords.every((w, j) => words[start + j] === w);
   });
+  if (trailingMatch) return "strong";
+  if (VISION_STRONG_SUBSTRINGS.some((p) => norm.includes(p))) return "strong";
+  const hasScreenWord = words.some((w) => VISION_SCREEN_TOKENS.has(w));
+  const hasLookWord = words.some((w) => VISION_LOOK_TOKENS.has(w));
+  if (hasScreenWord && hasLookWord) return "weak";
+  return null;
+}
+
+/**
+ * Returns true if the transcript expresses vision intent at ANY strength —
+ * a request to look at the shared screen (D-01 client fast-path).
+ */
+export function isVisionIntentPhrase(text: string): boolean {
+  return visionIntentStrength(text) !== null;
 }
 
 // ─── Vision-intent decision + system-line side effects (D-01/D-02/D-03/D-11) ─
@@ -221,8 +260,14 @@ export type VisionIntentAction = "capture" | "refuse";
  * noise gate) proceeds unchanged. Stays pure — no side effects.
  */
 export function decideVisionIntent(text: string, shareActive: boolean): VisionIntentAction | null {
-  if (!isVisionIntentPhrase(text)) return null;
-  return shareActive ? "capture" : "refuse";
+  const strength = visionIntentStrength(text);
+  if (strength === null) return null;
+  if (shareActive) return "capture";
+  // No active share: only STRONG matches earn the D-03 refusal. A weak
+  // co-occurrence false positive falls through to the normal pipeline —
+  // the backend see_screen net still answers honestly if it really was a
+  // vision question (184-08 tiering).
+  return strength === "strong" ? "refuse" : null;
 }
 
 /**
