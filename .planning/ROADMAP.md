@@ -534,7 +534,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 98-03-PLAN.md — UI building blocks: dropdown-menu primitive, useLifecycle hook, MoveToProjectDialog, DeleteSkillDialog (type-to-confirm)
+- [x] 98-03-PLAN.md — UI building blocks: dropdown-menu primitive, useLifecycle hook, MoveToProjectDialog, DeleteSkillDialog (type-to-confirm)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -651,7 +651,7 @@ Plans:
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
 | 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
-| 98. Skill Lifecycle Mutations | v11.0 | 2/4 | In Progress|  |
+| 98. Skill Lifecycle Mutations | v11.0 | 3/4 | In Progress|  |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
