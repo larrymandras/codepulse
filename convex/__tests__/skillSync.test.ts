@@ -80,6 +80,50 @@ describe("computeSkillPrunes", () => {
     const prunes = computeSkillPrunes([legacy], [{ name: "other" }]);
     expect(prunes.map((p) => p._id)).toEqual(["6"]);
   });
+
+  // ---------------------------------------------------------------------
+  // scannedOrigins manifest (98-05 gap closure)
+  // ---------------------------------------------------------------------
+
+  it("REGRESSION: a declared-but-empty origin (in scannedOrigins, absent from incoming) prunes all its rows", () => {
+    const prunes = computeSkillPrunes(
+      [cc, proj],
+      [{ name: "deploy", origin: "claude-code" }],
+      ["claude-code", "claude-code:project:abc"]
+    );
+    expect(prunes.map((p) => p._id)).toEqual(["4"]); // proj pruned — declared-but-empty
+  });
+
+  it("REGRESSION: an undeclared origin (not in scannedOrigins, not in incoming) stays untouched", () => {
+    const prunes = computeSkillPrunes(
+      [cc, proj],
+      [{ name: "deploy", origin: "claude-code" }],
+      ["claude-code"] // proj's origin is NOT declared
+    );
+    expect(prunes.map((p) => p._id)).toEqual([]); // proj untouched — unscanned/unreachable
+  });
+
+  it("backward-compat: omitting scannedOrigins reproduces the legacy 'never prune an absent origin' result", () => {
+    const prunes = computeSkillPrunes(
+      [cc, proj],
+      [{ name: "deploy", origin: "claude-code" }]
+      // no third arg
+    );
+    expect(prunes.map((p) => p._id)).toEqual([]); // proj untouched, same as today
+  });
+
+  it("a declared origin present in incoming still prunes only its own missing names (no over-pruning)", () => {
+    const projDeployGone = { _id: "5", name: "deploy", origin: "claude-code:project:abc" };
+    const prunes = computeSkillPrunes(
+      [cc, projDeployGone],
+      [
+        { name: "deploy", origin: "claude-code" },
+        { name: "repo-skill", origin: "claude-code:project:abc" },
+      ],
+      ["claude-code", "claude-code:project:abc"]
+    );
+    expect(prunes.map((p) => p._id)).toEqual(["5"]); // only the stale project 'deploy' pruned
+  });
 });
 
 describe("groupSkillRowsByName", () => {

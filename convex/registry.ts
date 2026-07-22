@@ -167,9 +167,15 @@ export const syncInventory = mutation({
         }
       }
 
-      // Per-origin pruning (only when snapshot included non-empty skills)
-      if (snap.skills.length > 0) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills)) {
+      // Per-origin pruning: fires when the snapshot has skills OR declares a
+      // scannedOrigins manifest (98-05 — a manifest lets an emptied-but-covered
+      // origin prune even with zero incoming skills; a totally empty,
+      // manifest-less snapshot still cannot wipe anything).
+      if (
+        snap.skills.length > 0 ||
+        (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)
+      ) {
+        for (const row of computeSkillPrunes(existingSkills, snap.skills, snap.scannedOrigins)) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,
@@ -325,9 +331,15 @@ export const syncFullInventory = mutation({
         }
       }
 
-      // Per-origin pruning (only when snapshot included non-empty skills)
-      if (snap.skills.length > 0) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills)) {
+      // Per-origin pruning: fires when the snapshot has skills OR declares a
+      // scannedOrigins manifest (98-05 — a manifest lets an emptied-but-covered
+      // origin prune even with zero incoming skills; a totally empty,
+      // manifest-less snapshot still cannot wipe anything).
+      if (
+        snap.skills.length > 0 ||
+        (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)
+      ) {
+        for (const row of computeSkillPrunes(existingSkills, snap.skills, snap.scannedOrigins)) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,

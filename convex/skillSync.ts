@@ -22,14 +22,27 @@ export function normalizeOrigin(origin?: string | null): string {
 
 /**
  * Decide which existing skill rows to delete given an incoming snapshot.
- * Pruning is PER-ORIGIN: only origins present in the incoming snapshot are
- * eligible, and within each such origin only names absent from that origin's
- * incoming set are removed. Origins not present in the snapshot are untouched,
- * so other feeders' skills survive.
+ * Pruning is PER-ORIGIN.
+ *
+ * Without `scannedOrigins` (legacy/backward-compatible path): only origins
+ * PRESENT IN `incoming` are eligible for pruning, and within each such origin
+ * only names absent from that origin's incoming set are removed. Origins not
+ * present in the snapshot are untouched, so other feeders' skills survive.
+ *
+ * With `scannedOrigins` (manifest-driven path, 98-05 gap closure): the
+ * producer declares which origins it actually COVERED on this scan — home
+ * roots plus every reachable workspace, including one whose skills dir is now
+ * empty. Any declared origin becomes eligible for pruning even when it has
+ * ZERO incoming skills (all its rows are removed), which is exactly the
+ * "moved/deleted the last skill out of a project" case. An origin that is
+ * neither in `incoming` nor in `scannedOrigins` (e.g. an unreachable/unmounted
+ * workspace, deliberately never declared) remains untouched — the manifest is
+ * additive, never more permissive than incoming presence for undeclared origins.
  */
 export function computeSkillPrunes<T extends SkillRow>(
   existing: T[],
-  incoming: IncomingSkill[]
+  incoming: IncomingSkill[],
+  scannedOrigins?: Array<string | null | undefined>
 ): T[] {
   const incomingByOrigin = new Map<string, Set<string>>();
   for (const s of incoming) {
@@ -37,12 +50,22 @@ export function computeSkillPrunes<T extends SkillRow>(
     if (!incomingByOrigin.has(o)) incomingByOrigin.set(o, new Set());
     incomingByOrigin.get(o)!.add(s.name);
   }
+
+  // Prunable-origin set: legacy (undefined manifest) path is exactly the
+  // incoming origins, byte-for-byte preserving today's behavior. When a
+  // manifest is provided, it's unioned in so a declared-but-empty origin
+  // becomes eligible too.
+  const prunableOrigins = new Set<string>(incomingByOrigin.keys());
+  if (scannedOrigins) {
+    for (const o of scannedOrigins) prunableOrigins.add(normalizeOrigin(o));
+  }
+
   const prunes: T[] = [];
   for (const row of existing) {
     const o = normalizeOrigin(row.origin);
+    if (!prunableOrigins.has(o)) continue; // origin not scanned/declared → untouched
     const names = incomingByOrigin.get(o);
-    if (!names) continue; // origin not in this snapshot → untouched
-    if (!names.has(row.name)) prunes.push(row);
+    if (!names || !names.has(row.name)) prunes.push(row);
   }
   return prunes;
 }
