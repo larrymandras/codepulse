@@ -3,12 +3,12 @@ status: partial
 phase: 98-skill-lifecycle-mutations-archive-restore-move-delete
 source: [98-VERIFICATION.md]
 started: 2026-07-21T18:20:00Z
-updated: 2026-07-21T23:45:00Z
+updated: 2026-07-22T09:00:00Z
 ---
 
 ## Current Test
 
-[testing paused — 2 items outstanding: browser-visual halves of tests 4 & 5, blocked on a signed-in browser session]
+[testing paused — 4 items outstanding: tests 6 & 7 (live-mount checks for the 98-05 prune fix, need deployed convex + rebuilt daemon), plus browser-visual halves of tests 4 & 5, blocked on a signed-in browser session]
 
 ## Tests
 
@@ -51,12 +51,22 @@ result: blocked
 blocked_by: third-party
 reason: "Server half PASSED: with active+cold copies staged, enqueueLifecycle threw 'lifecycle-refused:collision:a dormant copy already exists in cold storage' BEFORE inserting any row (verified no new command queued). The visual toast render requires a signed-in browser — same Clerk blocker as test 4."
 
+### 6. Live re-repro of the stale-origin prune fix (98-05, phase gate — post-deploy)
+expected: After deploying the 98-05 convex changes and rebuilding/restarting the Forge daemon, delete the residual `uat-ws-placeholder` skill from `G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\`, trigger one rescan, and confirm the `claude-code:project:559ce8ebf812` row disappears from the Skills page and the previously-moved skill no longer renders multi-scope (Archive/Move re-enabled)
+result: pending
+notes: "Prerequisites: `npx convex deploy` of the 98-05+GC changes to the local self-hosted backend, forge `npx tsc` rebuild, daemon restarted pointing at http://127.0.0.1:3211 (forge\\.env still needs the manual local-URL edit per Session Notes)."
+
+### 7. Transient-unmount negative check (T-98-10, 98-05 safety valve)
+expected: With a skill present in a G:\ workspace, PAUSE/disconnect the live Google Drive mount and trigger one rescan — the workspace's `claude-code:project:<key>` origin must NOT appear in scannedOrigins and its registry row must NOT be pruned (the unit test only covers a nonexistent path; a paused Drive mount can keep the G: letter mounted while reads misbehave — do not trust the unmount mitigation until observed on the real mount)
+result: pending
+notes: "GC-01 hardened this path (non-ENOENT read failures never declare an origin), but the plan's own verification section requires live observation."
+
 ## Summary
 
-total: 5
+total: 7
 passed: 2
 issues: 1
-pending: 0
+pending: 2
 skipped: 0
 blocked: 2
 
@@ -73,7 +83,8 @@ blocked: 2
 ## Gaps
 
 - truth: "After a move, the Skills page reflects host truth for BOTH the destination and the source lane"
-  status: failed
+  status: resolved
+  resolution: "Gap-closure plan 98-05 executed 2026-07-22 (forge 360e8a5 + codepulse 107e64d, hardened by GC-01..03 fixes a95194f/3a2e9a0/3b14323): buildSkillSnapshot declares a scannedOrigins manifest for every reachable+readable root; computeSkillPrunes prunes declared-but-empty origins. Unit-verified both sides (forge 28/28, codepulse 20/20, full suites green); LIVE confirmation pending as tests 6 & 7 (post-deploy)."
   reason: "Moving (or deleting) the last skill of a project workspace leaves a stale project-origin skills row in Convex forever; the row then renders as multi-scope, which also disables Archive/Move in the lifecycle menu for that skill"
   severity: major
   test: 1
