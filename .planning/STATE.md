@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
-status: Phase 102 planned — ready to execute
-stopped_at: Phase 102 planned (3 plans, 2 waves)
-last_updated: "2026-07-22T14:51:10.538Z"
-last_activity: 2026-07-22 -- Phase 102 planning complete
+status: executing
+stopped_at: Completed 102-01-PLAN.md
+last_updated: "2026-07-22T16:53:28.762Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
   percent: 50
 ---
 
@@ -31,15 +31,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v11.0 resume — Phase 99 (Skill Launch / Dispatch) is next
+**Current focus:** Phase 102 — address-tech-debt-reminders-dead-code-astridr-comment-cleanu
 
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
-Phase: 98 (skill-lifecycle-mutations) — COMPLETE 2026-07-21 (4/4 plans, 11/11 must-haves verified, code review 9 findings all fixed incl. WR-04 D-05 target-scoping sign-off, UAT approved by Larry). Gap-closure Plan 98-05 executed 2026-07-22 (stale-origin prune fix — cross-repo forge+codepulse, unit-tested both sides, full codepulse suite green 204/204 files). LIFE-01..06 + DAEMON-02 marked Complete.
-Plan: n/a
+Phase: 102 (address-tech-debt-reminders-dead-code-astridr-comment-cleanu) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-22 -- Phase 102 planning complete
+Last activity: 2026-07-22
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
@@ -279,6 +279,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 101-03]: RemindersTool (astridr-repo) registers via the manifest TOML system (astridr/tools/manifests/reminders.manifest.toml, tool_id=="reminders"==RemindersTool.name), not config/tools.yaml's builtin/optional lists — confirmed that YAML section has zero consumers in the codebase; snooze is implemented as an op:"update" dueAt shift (not a true status:"snoozed" transition) because /reminders-ingest has no op:"snooze" and drops status/snoozedUntil on op:"update" — follow-up needed in convex/remindersIngest.ts to wire the existing api.reminders.snooze mutation
 - [Phase 101-04]: astridr calendar cron registers via the real scheduler (cron_builders.py + cron_dispatcher.py), not jobs.py — jobs.py is JobManager (execution-tracking only), no periodic-job-registration surface exists there; bounded 60-day forward window achieved by post-filtering normalized events since GoogleWorkspaceTool.list_events has no time_min/time_max param — same file-scope correction likely applies to 101-05's coordination note
 - [Phase 101-05]: reminder_nudge cron registers via cron_builders.py/cron_dispatcher.py (real scheduler), not jobs.py -- same file-scope correction as 101-04's calendar_cache precedent
+- [Phase 102]: Phase 102 Plan 01: self-hosted Convex codegen needed a freshly-generated admin key (docker exec convex-backend ./generate_admin_key.sh) passed as inline shell env vars for a single command, since the stored local admin key was stale and secret config files cannot be read or written per project security policy
 
 ### Pending Todos
 
@@ -304,13 +305,14 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | 260629-ow5 | Memory ?event= deep-link focus — close the KG-provenance cross-nav target | 2026-06-29 | 58b999f | [260629-mem-event-deeplink](./quick-archive/260629-mem-event-deeplink/) |
 | 260629-pcy | Hive swarm-task → agent cross-graph deep-link — Hive joins the cross-nav web | 2026-06-29 | b7b8e84 | [260629-hive-task-agent-link](./quick-archive/260629-hive-task-agent-link/) |
 | 260629-qaj | Close out cross-nav — back-chip labels (Hive/Memory) + inbound agent→Hive (?goal=) | 2026-06-29 | b0253b3 | [260629-close-crossnav](./quick-archive/260629-close-crossnav/) |
+| Phase 102 P01 | 6min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-22T14:24:44.324Z
-Stopped at: Phase 102 context gathered
+Last session: 2026-07-22T16:53:28.752Z
+Stopped at: Completed 102-01-PLAN.md
 Next action: Phase 98's 98-05 fix closes the sole gap `98-HUMAN-UAT.md` found (stale `claude-code:project:<key>` row surviving a move/delete of the last skill in a workspace). Two MANUAL verification steps from the 98-05 plan's own `<verification>` section remain outstanding (live G: workspace repro re-check; transient-unmount negative check pausing the live G: mount mid-scan) — both require a live Forge daemon + live Google Drive mount, deferred as non-blocking. Proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or Phase 100 (Control-Surface UX, depends on both 98 and 99) once 99 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-CONTEXT.md
+Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-02-PLAN.md
 
 ## Operator Next Steps
 
