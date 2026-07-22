@@ -369,6 +369,12 @@ const SWAP_MODEL_TARGET_PREFIXES = [
   "try on ",
   "switch your brain to ",
   "switch brain to ",
+  // 185-08 live finding: natural phrasings that fell through to the LLM.
+  // Mirrors the backend _TARGET_PATTERN expansion (swap_model.py).
+  "change your brain to ",
+  "change brain to ",
+  "move yourself over to ",
+  "move yourself to ",
 ];
 
 /**
@@ -376,10 +382,16 @@ const SWAP_MODEL_TARGET_PREFIXES = [
  * "switch your brain to X", or `{ restore: "true" }` for the restore
  * phrasing. Returns null for anything else. Pure — no fetch/resolution.
  */
+/** Spoken commands often lead with a politeness word ("please try on grok")
+ *  — strip it so the prefix anchor still matches (185-08 live finding). */
+function stripLeadingPlease(norm: string): string {
+  return norm.startsWith("please ") ? norm.slice("please ".length) : norm;
+}
+
 export const SWAP_MODEL_VERB: ClientControlVerb = {
   name: "swap_model",
   match: (text: string): Record<string, string> | null => {
-    const norm = normalize(text);
+    const norm = stripLeadingPlease(normalize(text));
     if (!norm) return null;
     if (SWAP_MODEL_RESTORE_PHRASES.includes(norm)) return { restore: "true" };
     for (const prefix of SWAP_MODEL_TARGET_PREFIXES) {
@@ -413,7 +425,7 @@ const SWAP_VOICE_TARGET_PREFIXES = [
 export const SWAP_VOICE_VERB: ClientControlVerb = {
   name: "swap_voice",
   match: (text: string): Record<string, string> | null => {
-    const norm = normalize(text);
+    const norm = stripLeadingPlease(normalize(text));
     if (!norm) return null;
     if (SWAP_VOICE_RESTORE_PHRASES.includes(norm)) return { restore: "true" };
     for (const prefix of SWAP_VOICE_TARGET_PREFIXES) {

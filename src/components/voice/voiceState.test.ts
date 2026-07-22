@@ -450,6 +450,23 @@ describe("SWAP_MODEL_VERB (SWAP-01 client target extraction)", () => {
     expect(SWAP_MODEL_VERB.match("go back to your usual brain")).toEqual({ restore: "true" });
   });
 
+  // 185-08 live finding: natural phrasings + leading politeness word.
+  it('"change your brain to a Gemini model" → { target: "a gemini model" }', () => {
+    expect(SWAP_MODEL_VERB.match("change your brain to a Gemini model")).toEqual({
+      target: "a gemini model",
+    });
+  });
+
+  it('"please move yourself over to a grok brain" → { target: "a grok brain" }', () => {
+    expect(SWAP_MODEL_VERB.match("please move yourself over to a grok brain")).toEqual({
+      target: "a grok brain",
+    });
+  });
+
+  it('"please try on grok" → { target: "grok" } (leading please stripped)', () => {
+    expect(SWAP_MODEL_VERB.match("please try on grok")).toEqual({ target: "grok" });
+  });
+
   it('"what\'s the weather" → null', () => {
     expect(SWAP_MODEL_VERB.match("what's the weather")).toBe(null);
   });
