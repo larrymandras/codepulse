@@ -43,9 +43,14 @@ findings_9805:
   warning: 2
   info: 1
   total: 3
-status: issues_found
+status: fixes_applied
 fixed_at: 2026-07-21
+fixed_9805_at: 2026-07-22
 fix_scope: critical_warning
+fixes_9805:
+  GC-01: fixed — forge a95194f (readSkillsDir returns { entries, readOk }; an origin is declared in scannedOrigins only on a successful or genuinely-ENOENT read — transient EACCES/EIO/EMFILE never authorizes a prune)
+  GC-02: fixed — forge 3a2e9a0 (both home-origin declarations gated on isReachable(~/.claude); a daemon with no ~/.claude declares neither home origin; ENOENT on a skills subdir under an existing ~/.claude remains covered-but-empty)
+  GC-03: fixed — codepulse 3b14323 (new sanitizeScannedOrigins helper hoisted at both registry.ts prune sites, used in guard AND computeSkillPrunes call; malformed manifests degrade to the legacy prune path instead of throwing/iterating per-character)
 fixes:
   CR-01: fixed — forge 0bd6ae4 (daemon resolves project source via forward repoKey match)
   CR-02: fixed — codepulse 950bcf6 (local TooltipProvider in SkillLifecycleMenu)
@@ -243,6 +248,8 @@ _Depth: standard_
 
 **Verdict:** issues_found — 0 Critical, 2 Warning, 1 Info. The core design is sound and the four review priorities check out (details under "Verified"), but the "transient unavailability never prunes" invariant this plan exists to enforce has two residual holes on the producer side: a declared origin is never conditioned on its skills directory actually having been *read successfully*, and the two home origins are declared with no reachability check at all.
 
+**Fix status (2026-07-22):** all three findings FIXED — GC-01 (forge `a95194f`), GC-02 (forge `3a2e9a0`), GC-03 (codepulse `3b14323`). Both suites green post-fix (forge skill-rescan 28/28, codepulse skillSync 20/20), both repos `tsc --noEmit` clean. See per-finding status lines and the `fixes_9805` frontmatter block.
+
 ### Verified (review priorities — all pass)
 
 - **Reachability keyed on workspace ROOT, not skills subdir:** `skill-rescan.ts:224` (`if (!isReachable(ws.rootPath)) continue;`) stats the root itself (`isReachable`, skill-rescan.ts:240-247); an unmounted drive is declared nowhere (test: skill-rescan.test.ts:216-228), an empty-but-reachable workspace is declared with zero skills (test: 207-214).
@@ -254,6 +261,8 @@ _Depth: standard_
 ### Warnings
 
 #### GC-01: A declared origin is never conditioned on a successful directory read — a transient non-ENOENT `readdir` failure now deletes every registry row for that origin
+
+**Fix status:** FIXED (forge `a95194f`) — `readSkillsDir` now returns `{ entries, readOk }`; `readOk` is true only on a successful enumeration or genuine absence (`ENOENT`/`ENOTDIR`), and all three declaration sites in `buildSkillSnapshot` push into `scannedOrigins` only when `readOk`. Guard tests: EACCES on a workspace skills dir → origin absent from the manifest with other roots' skills and declarations intact; EACCES on the global home skills dir → only `claude-code` dropped, `claude-code:available` still declared.
 
 **Confidence:** High (mechanism), Medium (real-world trigger frequency)
 **Files:** `C:/Users/mandr/forge/src/emit/skill-rescan.ts:146-149, 207-213, 226-229`, `convex/skillSync.ts:66-68`
@@ -277,6 +286,8 @@ This is a regression introduced by 98-05, not a pre-existing hazard: before the 
 
 #### GC-02: Home origins are declared with no reachability check — a daemon running with the wrong/absent home wipes every global and cold-storage row
 
+**Fix status:** FIXED (forge `3a2e9a0`) — both home declarations are now gated on `isReachable(path.join(home, '.claude'))` (the same stat-the-root discipline the workspace loop uses), composed with GC-01's `readOk`. A home with no `~/.claude` (or a wholly nonexistent home path) declares neither home origin; ENOENT on `skills`/`skills-available` under an existing `~/.claude` remains a legitimate covered-but-empty declaration (test updated to create `~/.claude` explicitly, plus two new no-home tests).
+
 **Confidence:** High (mechanism), Medium (trigger requires deployment-context change)
 **Files:** `C:/Users/mandr/forge/src/emit/skill-rescan.ts:206-213`, `C:/Users/mandr/forge/src/index.ts:165`, `convex/registry.ts:174-188`
 
@@ -293,6 +304,8 @@ scannedOrigins.push('claude-code');
 ### Info
 
 #### GC-03: `snap.scannedOrigins` is passed to `computeSkillPrunes` unvalidated — a truthy non-iterable value throws and rolls back the entire sync
+
+**Fix status:** FIXED (codepulse `3b14323`) — new exported `sanitizeScannedOrigins()` in `skillSync.ts` (`Array.isArray ? value : undefined`) hoisted as `const scannedOrigins = …` at both `registry.ts` prune sites and used in both the guard and the `computeSkillPrunes` call. `{}`/`42` no longer throw mid-mutation and a string no longer iterates per-character — every malformed shape degrades to the legacy incoming-origins-only prune path. Unit tests cover array pass-through, all non-array shapes → undefined, and the malformed-manifest → legacy-behavior regression.
 
 **Confidence:** High
 **Files:** `convex/registry.ts:174-178` (same shape at 338-342), `convex/skillSync.ts:59-61`
