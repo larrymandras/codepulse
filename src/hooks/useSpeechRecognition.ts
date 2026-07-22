@@ -123,8 +123,13 @@ export function useSpeechRecognition(
   }, []);
 
   const start = useCallback(() => {
-    // Guard against starting while already listening (avoids InvalidStateError)
-    if (isListening) return;
+    // Guard on the LIVE instance ref (updated synchronously in onend/stop/
+    // abort), never on the `isListening` state: state is captured per-render,
+    // and the keep-alive restart timer fires from a closure created BEFORE
+    // the post-onend re-render — the stale `isListening === true` silently
+    // no-opped every lifetime-expiry restart, leaving a dead mic during an
+    // open follow-up window (185-08 live trace, 2026-07-22).
+    if (recognitionRef.current) return;
 
     const SpeechRecognitionClass = getSpeechRecognitionClass();
     if (!SpeechRecognitionClass) return;
@@ -165,9 +170,18 @@ export function useSpeechRecognition(
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      // InvalidStateError etc. — keep ref/state consistent so the caller's
+      // keep-alive machinery can retry instead of wedging on a phantom
+      // "already listening".
+      recognitionRef.current = null;
+      setIsListening(false);
+      return;
+    }
     setIsListening(true);
-  }, [isListening, options.continuous, options.interimResults, options.lang]);
+  }, [options.continuous, options.interimResults, options.lang]);
 
   return {
     start,

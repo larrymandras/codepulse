@@ -250,6 +250,75 @@ describe("useSpeechRecognition", () => {
     expect(mockRecognition.lang).toBe("fr-FR");
   });
 
+  // ─── 185-08 live-trace regression: keep-alive restart via a stale closure ──
+
+  it("a start reference captured BEFORE onend still restarts after onend (keep-alive path)", () => {
+    // The real keep-alive restart timer fires from a closure created before
+    // the post-onend re-render. Guarding on render-captured isListening state
+    // silently no-opped every lifetime-expiry restart (dead mic during an
+    // open follow-up window, live trace 2026-07-22). The guard must read the
+    // synchronously-updated instance ref instead.
+    const { result } = renderHook(() =>
+      useSpeechRecognition({ onFinalResult: vi.fn() })
+    );
+
+    act(() => {
+      result.current.start();
+    });
+    // Capture the callback exactly as the restart timer does — while the
+    // recognizer is still live.
+    const staleStart = result.current.start;
+    const instancesBefore = MockSpeechRecognitionClass.mock.calls.length;
+
+    // Chrome ends the recognizer (lifetime expiry).
+    act(() => {
+      mockRecognition.onend?.();
+    });
+
+    // The restart timer fires with the pre-onend callback reference.
+    act(() => {
+      staleStart();
+    });
+
+    expect(MockSpeechRecognitionClass.mock.calls.length).toBe(instancesBefore + 1);
+    expect(result.current.isListening).toBe(true);
+  });
+
+  it("recognition.start() throwing leaves state consistent and a retry succeeds", () => {
+    const { result } = renderHook(() =>
+      useSpeechRecognition({ onFinalResult: vi.fn() })
+    );
+
+    // First construction: make the underlying start() throw (InvalidStateError).
+    act(() => {
+      MockSpeechRecognitionClass.mockImplementationOnce(function (
+        this: MockRecognition
+      ) {
+        this.continuous = false;
+        this.interimResults = false;
+        this.lang = "";
+        this.start = vi.fn(() => {
+          throw new Error("InvalidStateError");
+        });
+        this.stop = vi.fn();
+        this.abort = vi.fn();
+        this.onresult = null;
+        this.onend = null;
+        this.onerror = null;
+        mockRecognition = this;
+      });
+      result.current.start();
+    });
+
+    expect(result.current.isListening).toBe(false);
+
+    // Retry must not be wedged on a phantom live instance.
+    act(() => {
+      result.current.start();
+    });
+    expect(result.current.isListening).toBe(true);
+  });
+
   it("abort() cleans up recognition and sets isListening false", () => {
     const { result } = renderHook(() =>
       useSpeechRecognition({ onFinalResult: vi.fn() })
