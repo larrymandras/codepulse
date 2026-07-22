@@ -22,6 +22,7 @@ import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
+import { SwapBadge } from "@/components/voice/SwapBadge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
@@ -88,7 +89,7 @@ export default function Chat() {
     handleApprove,
     handleReject,
   } = chat;
-  const { sendCommand } = useAstridrWS();
+  const { sendCommand, subscribeEvent } = useAstridrWS();
 
   // ── Mic toggle (persisted) ──────────────────────────────────────────────
   const [listening, setListening] = useState<boolean>(() => {
@@ -161,6 +162,50 @@ export default function Chat() {
     },
     [sendCommand]
   );
+
+  // ── Brain/voice swap badge (SWAP-01/02, D-04/D-16) ──────────────────────
+  // In-memory-only backend state (Pitfall 6) — never persisted, never read
+  // from localStorage/config. Seeded on mount/reconnect via `swap.get_state`
+  // (the pull) and kept live via the `swap.state` push (fired by the
+  // chat.send fast-path right after a swap executes, 185-05). A restart
+  // resets both fields to null server-side, so a fresh mount's pull hides
+  // the badge again — proving it never survives a restart.
+  const [swapState, setSwapState] = useState<{
+    modelOverride: string | null;
+    voiceOverride: string | null;
+  }>({ modelOverride: null, voiceOverride: null });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const ack = await sendCommand({ type: "swap.get_state" });
+        if (ack.status === "ok") {
+          setSwapState({
+            modelOverride: (ack.model_override as string | null | undefined) ?? null,
+            voiceOverride: (ack.voice_override_name as string | null | undefined) ?? null,
+          });
+        } else {
+          console.warn("Failed to hydrate swap state from server:", ack.error);
+        }
+      } catch (err) {
+        console.warn("Failed to hydrate swap state from server:", err);
+      }
+    })();
+    // Mount-only hydration — sendCommand identity is stable per AstridrWSContext.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const unsubSwapState = subscribeEvent("swap.state", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      if (!data) return;
+      setSwapState({
+        modelOverride: (data.model_override as string | null | undefined) ?? null,
+        voiceOverride: (data.voice_override_name as string | null | undefined) ?? null,
+      });
+    });
+    return unsubSwapState;
+  }, [subscribeEvent]);
 
   // ── Screen share (VISION-01) — sole caller of getDisplayMedia (D-09) ─────
   // D-11: on a native track `ended` (Chrome's "Stop sharing" bar, tab/window
@@ -307,6 +352,10 @@ export default function Chat() {
             </button>
           )}
           <TooltipProvider delayDuration={300}>
+            <SwapBadge
+              modelOverride={swapState.modelOverride}
+              voiceOverride={swapState.voiceOverride}
+            />
             <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
             <ShareScreenToggle
               state={screenShare.state}

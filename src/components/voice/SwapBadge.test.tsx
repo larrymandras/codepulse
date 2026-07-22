@@ -1,0 +1,62 @@
+/**
+ * SwapBadge.test.tsx — Phase 185 Plan 07 (SWAP-01/02, D-04/D-16)
+ *
+ * Covers:
+ *   - both overrides null/undefined → renders nothing (default, D-04/D-16)
+ *   - modelOverride only → "Brain: <model>" shown, no "Voice:" badge
+ *   - voiceOverride only → "Voice: <name>" shown, no "Brain:" badge
+ *   - both set → both badges shown simultaneously
+ *   - read-only: no Switch/button rendered (unlike StrictModeToggle)
+ *
+ * Tooltip copy (Radix Portal content, only rendered on hover/focus open state)
+ * is not asserted here — matching the StrictModeToggle.test.tsx precedent.
+ */
+
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { SwapBadge } from "./SwapBadge";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+function renderSwapBadge(props: { modelOverride?: string | null; voiceOverride?: string | null }) {
+  return render(
+    <TooltipProvider>
+      <SwapBadge {...props} />
+    </TooltipProvider>,
+  );
+}
+
+describe("SwapBadge", () => {
+  it("renders nothing when both overrides are null (default state, D-04/D-16)", () => {
+    const { container } = renderSwapBadge({ modelOverride: null, voiceOverride: null });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("renders nothing when both overrides are undefined", () => {
+    const { container } = renderSwapBadge({});
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows only the brain badge when modelOverride is set", () => {
+    renderSwapBadge({ modelOverride: "Grok 4.5", voiceOverride: null });
+    expect(screen.getByText(/Brain: Grok 4\.5/)).toBeInTheDocument();
+    expect(screen.queryByText(/Voice:/)).not.toBeInTheDocument();
+  });
+
+  it("shows only the voice badge when voiceOverride is set", () => {
+    renderSwapBadge({ modelOverride: null, voiceOverride: "Rachel" });
+    expect(screen.getByText(/Voice: Rachel/)).toBeInTheDocument();
+    expect(screen.queryByText(/Brain:/)).not.toBeInTheDocument();
+  });
+
+  it("shows both badges when both overrides are active", () => {
+    renderSwapBadge({ modelOverride: "Grok 4.5", voiceOverride: "Rachel" });
+    expect(screen.getByText(/Brain: Grok 4\.5/)).toBeInTheDocument();
+    expect(screen.getByText(/Voice: Rachel/)).toBeInTheDocument();
+  });
+
+  it("is read-only — no Switch or button controls (unlike StrictModeToggle)", () => {
+    renderSwapBadge({ modelOverride: "Grok 4.5", voiceOverride: "Rachel" });
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+});
