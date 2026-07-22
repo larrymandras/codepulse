@@ -387,36 +387,3 @@ export const listByProfile = query({
   handler: async (ctx, { profileId }) =>
     listByProfileHandler(ctx, profileId),
 });
-
-/** Open|snoozed rows with dueAt <= now+withinSeconds, never status "done". */
-export async function dueSoonHandler(
-  ctx: { db: RemindersDb } | any,
-  withinSeconds: number,
-  now: number
-) {
-  const cutoff = now + withinSeconds;
-  const rows = await ctx.db.query("reminders").withIndex("by_dueAt").collect();
-  return rows.filter(
-    (r: any) =>
-      r.status !== "done" && r.dueAt !== undefined && r.dueAt <= cutoff
-  );
-}
-
-export const dueSoon = query({
-  args: { withinSeconds: v.float64() },
-  handler: async (ctx, { withinSeconds }) =>
-    dueSoonHandler(ctx, withinSeconds, Date.now() / 1000),
-});
-
-/** Open|snoozed rows with dueAt < now, never status "done". */
-export async function overdueHandler(ctx: { db: RemindersDb } | any, now: number) {
-  const rows = await ctx.db.query("reminders").withIndex("by_dueAt").collect();
-  return rows.filter(
-    (r: any) => r.status !== "done" && r.dueAt !== undefined && r.dueAt < now
-  );
-}
-
-export const overdue = query({
-  args: {},
-  handler: async (ctx) => overdueHandler(ctx, Date.now() / 1000),
-});

@@ -16,8 +16,6 @@ import {
   markNotifiedHandler,
   removeReminderHandler,
   listByProfileHandler,
-  dueSoonHandler,
-  overdueHandler,
 } from "./reminders";
 
 // ---------------------------------------------------------------------------
@@ -454,55 +452,6 @@ describe("reminders CRUD handlers", () => {
     expect(await db.get(id)).toBeNull();
   });
 
-  it("dueSoon excludes status done and rows outside the window", async () => {
-    const db = makeFakeDb();
-    const now = 1000;
-    const openInWindow = await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "In window", dueAt: 1200, source: "dashboard" },
-      now
-    );
-    await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "Out of window", dueAt: 5000, source: "dashboard" },
-      now
-    );
-    const doneInWindow = await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "Done", dueAt: 1200, source: "dashboard" },
-      now
-    );
-    await db.patch(doneInWindow, { status: "done" });
-
-    const rows = await dueSoonHandler({ db }, 500, now); // cutoff = 1500
-    expect(rows).toHaveLength(1);
-    expect(rows[0]._id).toBe(openInWindow);
-  });
-
-  it("overdue excludes status done and never returns future rows", async () => {
-    const db = makeFakeDb();
-    const now = 2000;
-    const overdueOpen = await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "Overdue", dueAt: 1000, source: "dashboard" },
-      now
-    );
-    await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "Future", dueAt: 3000, source: "dashboard" },
-      now
-    );
-    const overdueDone = await createReminderHandler(
-      { db },
-      { profileId: "personal", title: "Overdue but done", dueAt: 1000, source: "dashboard" },
-      now
-    );
-    await db.patch(overdueDone, { status: "done" });
-
-    const rows = await overdueHandler({ db }, now);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]._id).toBe(overdueOpen);
-  });
 });
 
 // ---------------------------------------------------------------------------

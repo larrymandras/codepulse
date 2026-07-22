@@ -80,8 +80,10 @@ export const remindersIngest = httpAction(async (ctx, request) => {
       await ctx.runMutation(api.reminders.complete, { id: body.id as any });
     } else if (op === "snooze") {
       // REM-03: a real snooze (status "snoozed" + snoozedUntil), NOT an
-      // update with a shifted dueAt — the latter loses the snooze state the
-      // dueSoon/overdue queries key off.
+      // update with a shifted dueAt — the latter loses the snooze state that
+      // reminder_nudge.py's client-side _is_due() consumes via
+      // /reminders-read + listByProfile (the surviving canonical nudge
+      // mechanism; no dedicated Convex queries key off it).
       if (!body.id || body.until === undefined) {
         return new Response(
           JSON.stringify({ error: "Missing required fields for snooze: id, until" }),
