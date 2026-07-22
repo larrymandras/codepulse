@@ -351,16 +351,93 @@ export function runLostScreenAck(callbacks: {
   callbacks.appendLocalAssistantMessage(LOST_SCREEN_TEXT);
 }
 
+// ─── Brain/voice hot-swap client matchers (SWAP-01/SWAP-02, D-09 mechanism) ──
+//
+// Pure target/restore EXTRACTION only — no fetch, no catalogue resolution,
+// no fuzzy matching, no refusal. Catalogue resolution + D-08 refusal are
+// backend-only (185-02/03); this client matcher just forwards the raw
+// target string to the backend swap executor (wired in 185-07).
+
+const SWAP_MODEL_RESTORE_PHRASES = [
+  "back to your usual brain",
+  "switch back to your usual brain",
+  "go back to your usual brain",
+  "restore your usual brain",
+];
+
+const SWAP_MODEL_TARGET_PREFIXES = [
+  "try on ",
+  "switch your brain to ",
+  "switch brain to ",
+];
+
+/**
+ * "swap_model" verb — extracts the raw target brain name from "try on X" /
+ * "switch your brain to X", or `{ restore: "true" }` for the restore
+ * phrasing. Returns null for anything else. Pure — no fetch/resolution.
+ */
+export const SWAP_MODEL_VERB: ClientControlVerb = {
+  name: "swap_model",
+  match: (text: string): Record<string, string> | null => {
+    const norm = normalize(text);
+    if (!norm) return null;
+    if (SWAP_MODEL_RESTORE_PHRASES.includes(norm)) return { restore: "true" };
+    for (const prefix of SWAP_MODEL_TARGET_PREFIXES) {
+      if (norm.startsWith(prefix)) {
+        const target = norm.slice(prefix.length).trim();
+        if (target) return { target };
+      }
+    }
+    return null;
+  },
+};
+
+const SWAP_VOICE_RESTORE_PHRASES = [
+  "back to your usual voice",
+  "switch back to your usual voice",
+  "go back to your usual voice",
+  "restore your usual voice",
+];
+
+const SWAP_VOICE_TARGET_PREFIXES = [
+  "switch your voice to ",
+  "switch voice to ",
+  "change your voice to ",
+];
+
+/**
+ * "swap_voice" verb — extracts the raw target voice name from "switch your
+ * voice to X", or `{ restore: "true" }` for the restore phrasing. Returns
+ * null for anything else. Pure — no fetch/resolution.
+ */
+export const SWAP_VOICE_VERB: ClientControlVerb = {
+  name: "swap_voice",
+  match: (text: string): Record<string, string> | null => {
+    const norm = normalize(text);
+    if (!norm) return null;
+    if (SWAP_VOICE_RESTORE_PHRASES.includes(norm)) return { restore: "true" };
+    for (const prefix of SWAP_VOICE_TARGET_PREFIXES) {
+      if (norm.startsWith(prefix)) {
+        const target = norm.slice(prefix.length).trim();
+        if (target) return { target };
+      }
+    }
+    return null;
+  },
+};
+
 /**
  * The generalized client control-verb table (D-09, Phase 185 Plan 06).
- * Currently: strict_mode, vision_intent (migrated from 183/184,
- * behavior-identical) plus swap_model/swap_voice (SWAP-01/SWAP-02, added
- * below). Every entry is pure over normalize() — no DOM/React/fetch/side
- * effects; dispatch/resolution live in the caller.
+ * strict_mode, vision_intent (migrated from 183/184, behavior-identical)
+ * plus swap_model/swap_voice (SWAP-01/SWAP-02). Every entry is pure over
+ * normalize() — no DOM/React/fetch/side effects; dispatch/resolution live
+ * in the caller.
  */
 export const CLIENT_VERB_REGISTRY: ClientControlVerb[] = [
   STRICT_MODE_VERB,
   VISION_INTENT_VERB,
+  SWAP_MODEL_VERB,
+  SWAP_VOICE_VERB,
 ];
 
 // ─── State machine ────────────────────────────────────────────────────────────

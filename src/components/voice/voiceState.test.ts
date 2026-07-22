@@ -33,6 +33,9 @@ import {
   runLostScreenAck,
   VISION_REFUSAL_TEXT,
   LOST_SCREEN_TEXT,
+  CLIENT_VERB_REGISTRY,
+  SWAP_MODEL_VERB,
+  SWAP_VOICE_VERB,
   type VoiceState,
   type VoiceAction,
 } from "./voiceState";
@@ -412,6 +415,83 @@ describe("runLostScreenAck (D-11 — spoken AND written, never voice-only)", () 
 
   it("locked copy is exactly the D-11 default string", () => {
     expect(LOST_SCREEN_TEXT).toBe("Looks like I lost your screen.");
+  });
+});
+
+describe("CLIENT_VERB_REGISTRY (D-09, Phase 185 Plan 06)", () => {
+  it("registers strict_mode, vision_intent, swap_model, swap_voice", () => {
+    const names = CLIENT_VERB_REGISTRY.map((v) => v.name);
+    expect(names).toEqual(["strict_mode", "vision_intent", "swap_model", "swap_voice"]);
+  });
+});
+
+describe("SWAP_MODEL_VERB (SWAP-01 client target extraction)", () => {
+  it('"try on grok" → { target: "grok" }', () => {
+    expect(SWAP_MODEL_VERB.match("try on grok")).toEqual({ target: "grok" });
+  });
+
+  it('"try on grok 3 mini" → { target: "grok 3 mini" }', () => {
+    expect(SWAP_MODEL_VERB.match("try on grok 3 mini")).toEqual({ target: "grok 3 mini" });
+  });
+
+  it('"Try on GPT-5." → { target: "gpt 5" } (normalized)', () => {
+    expect(SWAP_MODEL_VERB.match("Try on GPT-5.")).toEqual({ target: "gpt 5" });
+  });
+
+  it('"switch your brain to grok" → { target: "grok" }', () => {
+    expect(SWAP_MODEL_VERB.match("switch your brain to grok")).toEqual({ target: "grok" });
+  });
+
+  it('"back to your usual brain" → { restore: "true" }', () => {
+    expect(SWAP_MODEL_VERB.match("back to your usual brain")).toEqual({ restore: "true" });
+  });
+
+  it('"go back to your usual brain" → { restore: "true" }', () => {
+    expect(SWAP_MODEL_VERB.match("go back to your usual brain")).toEqual({ restore: "true" });
+  });
+
+  it('"what\'s the weather" → null', () => {
+    expect(SWAP_MODEL_VERB.match("what's the weather")).toBe(null);
+  });
+
+  it("empty string → null", () => {
+    expect(SWAP_MODEL_VERB.match("")).toBe(null);
+  });
+
+  it("no fetch/await inside the matcher body (pure — no network)", () => {
+    const src = SWAP_MODEL_VERB.match.toString();
+    expect(src).not.toMatch(/fetch|await/);
+  });
+});
+
+describe("SWAP_VOICE_VERB (SWAP-02 client target extraction)", () => {
+  it('"switch your voice to rachel" → { target: "rachel" }', () => {
+    expect(SWAP_VOICE_VERB.match("switch your voice to rachel")).toEqual({ target: "rachel" });
+  });
+
+  it('"change your voice to rachel" → { target: "rachel" }', () => {
+    expect(SWAP_VOICE_VERB.match("change your voice to rachel")).toEqual({ target: "rachel" });
+  });
+
+  it('"back to your usual voice" → { restore: "true" }', () => {
+    expect(SWAP_VOICE_VERB.match("back to your usual voice")).toEqual({ restore: "true" });
+  });
+
+  it('"switch back to your usual voice" → { restore: "true" }', () => {
+    expect(SWAP_VOICE_VERB.match("switch back to your usual voice")).toEqual({ restore: "true" });
+  });
+
+  it('"play some music" → null', () => {
+    expect(SWAP_VOICE_VERB.match("play some music")).toBe(null);
+  });
+
+  it("empty string → null", () => {
+    expect(SWAP_VOICE_VERB.match("")).toBe(null);
+  });
+
+  it("no fetch/await inside the matcher body (pure — no network)", () => {
+    const src = SWAP_VOICE_VERB.match.toString();
+    expect(src).not.toMatch(/fetch|await/);
   });
 });
 
