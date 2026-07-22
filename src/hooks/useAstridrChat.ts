@@ -88,6 +88,11 @@ export function useAstridrChat() {
         frame?: string;
         /** e.g. "image/jpeg" — required alongside `frame`. */
         frameMimeType?: string;
+        /** SWAP-03/D-11: set when the client's own swap-verb fast-path (useAstridrVoice.ts)
+         *  already recognized+dispatched a brain/voice swap for this turn — spread onto
+         *  chat.send as `swap_handled` so the backend's own inbound fast-path (185-05)
+         *  treats it as already handled and does not re-fire the swap a second time. */
+        swapHandled?: boolean;
       }
     ) => {
       if (!text.trim() || isStreamingRef.current || status !== "connected") return;
@@ -110,6 +115,7 @@ export function useAstridrChat() {
           ...(opts?.interruptedReply ? { interrupted_reply: opts.interruptedReply } : {}),
           ...(opts?.voice ? { voice: true } : {}),
           ...(opts?.frame ? { frame: opts.frame, frame_mime_type: opts.frameMimeType } : {}),
+          ...(opts?.swapHandled ? { swap_handled: true } : {}),
         });
 
         if (ack.status !== "ok") {

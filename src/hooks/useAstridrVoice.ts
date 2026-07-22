@@ -51,6 +51,8 @@ import {
   isStrictModeCommand,
   decideVisionIntent,
   runVisionRefusal,
+  SWAP_MODEL_VERB,
+  SWAP_VOICE_VERB,
   type VoiceState,
 } from "@/components/voice/voiceState";
 
@@ -941,6 +943,28 @@ export function useAstridrVoice({
     if (strictCommand) {
       onStrictModeChange(strictCommand === "on");
       clearFollowUpWindow();
+      return;
+    }
+
+    // Brain/voice hot-swap fast-path (SWAP-01/02/03, D-09/D-11): "try on X" /
+    // "switch your voice to X" bypasses the normal accumulate/debounce pipeline
+    // entirely, same as vision-intent above — zero-latency, no LLM turn spent
+    // on recognizing the command. The client matcher only EXTRACTS the target
+    // (voiceState.ts, 185-06); it never resolves/validates it. Forwarding this
+    // SAME transcript text lets the backend's own inbound regex fast-path
+    // (185-05, apply_inbound_control_verbs) resolve + execute the swap exactly
+    // once — swapHandled:true is the D-11/Pitfall-5 dedup marker telling the
+    // backend "the client already recognized this as a swap" so a mismatched
+    // client/backend match can never double-fire.
+    if (SWAP_MODEL_VERB.match(text) || SWAP_VOICE_VERB.match(text)) {
+      trace("final.swap-dispatch", { text });
+      clearFollowUpWindow();
+      clearSendTimer();
+      accumulatedRef.current = "";
+      setFinalText("");
+      dispatch({ type: "FINAL_RESULT" });
+      chatRef.current.interrupt(); // cancel any in-flight turn so this send isn't dropped
+      void chatRef.current.sendMessage(text, { voice: true, swapHandled: true });
       return;
     }
 

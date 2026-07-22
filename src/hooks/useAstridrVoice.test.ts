@@ -1030,6 +1030,57 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).not.toHaveBeenCalled();
   });
 
+  // ─── 185-07: brain/voice hot-swap fast-path (SWAP-01/02/03, D-09/D-11) ─────
+
+  it("'try on grok' fast-paths to a swap send with the swapHandled dedup marker — no accumulate debounce", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onFinalResultCallback?.("try on grok");
+    });
+    // Zero-latency: no debounce wait needed, unlike the normal accumulate path.
+    expect(chat.sendMessage).toHaveBeenCalledWith("try on grok", {
+      voice: true,
+      swapHandled: true,
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+    // Only the one swap-dispatch send — never doubles into the normal pipeline.
+    expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("'switch your voice to rachel' fast-paths to a swap send with the swapHandled dedup marker", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onFinalResultCallback?.("switch your voice to rachel");
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("switch your voice to rachel", {
+      voice: true,
+      swapHandled: true,
+    });
+    expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("a non-swap utterance is unaffected — normal accumulate/send pipeline still fires without swapHandled", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onFinalResultCallback?.("what's the weather like tomorrow");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("what's the weather like tomorrow", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+  });
+
   // ─── 184 code-review CR-03: vision fast-path capture failure ──────────────
   // FINAL_RESULT moves the reducer into `processing` BEFORE captureFrame runs;
   // if capture throws (track ends mid-capture), no send ever happens, so no
