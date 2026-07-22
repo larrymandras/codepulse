@@ -98,3 +98,11 @@ None. Both repos' scoped test suites and `tsc --noEmit` were green on first pass
 *Phase: 98-skill-lifecycle-mutations-archive-restore-move-delete*
 *Plan: 05*
 *Completed: 2026-07-22*
+
+## Self-Check: PASSED
+
+- FOUND: `.planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-05-SUMMARY.md`
+- FOUND: `convex/skillSync.ts`, `convex/registry.ts`
+- FOUND (codepulse commits): `107e64d`, `ef306ac`
+- FOUND: `C:\Users\mandr\forge\src\emit\skill-rescan.ts`
+- FOUND (forge commit): `360e8a5`
