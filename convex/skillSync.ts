@@ -21,6 +21,21 @@ export function normalizeOrigin(origin?: string | null): string {
 }
 
 /**
+ * Guard an untrusted snapshot's `scannedOrigins` before it can act as a
+ * prune-authorizing manifest (the /scan snapshot body is `v.any()`). Only a
+ * real array passes through; any other shape falls back to `undefined` — the
+ * legacy incoming-origins-only prune path (98-05 GC-03). Without this, a
+ * truthy non-iterable (`{}`, `42`) would throw inside computeSkillPrunes and
+ * roll back the entire sync, and a string would iterate per-character into
+ * bogus one-char origins.
+ */
+export function sanitizeScannedOrigins(
+  value: unknown
+): Array<string | null | undefined> | undefined {
+  return Array.isArray(value) ? value : undefined;
+}
+
+/**
  * Decide which existing skill rows to delete given an incoming snapshot.
  * Pruning is PER-ORIGIN.
  *

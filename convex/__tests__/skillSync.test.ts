@@ -4,6 +4,7 @@ import {
   computeSkillPrunes,
   groupSkillRowsByName,
   maxDefined,
+  sanitizeScannedOrigins,
 } from "../skillSync";
 
 describe("maxDefined", () => {
@@ -123,6 +124,38 @@ describe("computeSkillPrunes", () => {
       ["claude-code", "claude-code:project:abc"]
     );
     expect(prunes.map((p) => p._id)).toEqual(["5"]); // only the stale project 'deploy' pruned
+  });
+});
+
+describe("sanitizeScannedOrigins (GC-03)", () => {
+  const cc = { _id: "1", name: "deploy", origin: "claude-code" };
+  const proj = { _id: "4", name: "repo-skill", origin: "claude-code:project:abc" };
+
+  it("passes a real array through unchanged", () => {
+    const manifest = ["claude-code", "claude-code:available"];
+    expect(sanitizeScannedOrigins(manifest)).toBe(manifest);
+    expect(sanitizeScannedOrigins([])).toEqual([]);
+  });
+
+  it("maps every non-array shape to undefined (object, number, string, null, undefined)", () => {
+    expect(sanitizeScannedOrigins({})).toBeUndefined();
+    expect(sanitizeScannedOrigins(42)).toBeUndefined();
+    // A string is iterable — passing it through would pollute prunableOrigins
+    // with one-character origins; it must be rejected too.
+    expect(sanitizeScannedOrigins("claude-code")).toBeUndefined();
+    expect(sanitizeScannedOrigins(null)).toBeUndefined();
+    expect(sanitizeScannedOrigins(undefined)).toBeUndefined();
+  });
+
+  it("REGRESSION: a malformed manifest degrades to legacy prune behavior instead of throwing mid-sync", () => {
+    // Pre-fix, snap.skills.length > 0 passed the guard and the raw `{}` reached
+    // computeSkillPrunes' for..of → TypeError → whole sync rolled back.
+    const prunes = computeSkillPrunes(
+      [cc, proj],
+      [{ name: "deploy", origin: "claude-code" }],
+      sanitizeScannedOrigins({})
+    );
+    expect(prunes.map((p) => p._id)).toEqual([]); // proj untouched — legacy path
   });
 });
 

@@ -1,7 +1,12 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { normalizeOrigin, computeSkillPrunes, maxDefined } from "./skillSync";
+import {
+  normalizeOrigin,
+  computeSkillPrunes,
+  maxDefined,
+  sanitizeScannedOrigins,
+} from "./skillSync";
 
 export const syncInventory = mutation({
   args: {
@@ -170,12 +175,16 @@ export const syncInventory = mutation({
       // Per-origin pruning: fires when the snapshot has skills OR declares a
       // scannedOrigins manifest (98-05 — a manifest lets an emptied-but-covered
       // origin prune even with zero incoming skills; a totally empty,
-      // manifest-less snapshot still cannot wipe anything).
+      // manifest-less snapshot still cannot wipe anything). The manifest is
+      // sanitized once and used for BOTH the guard and the call — a malformed
+      // non-array value degrades to the legacy prune path instead of throwing
+      // mid-sync (GC-03).
+      const scannedOrigins = sanitizeScannedOrigins(snap.scannedOrigins);
       if (
         snap.skills.length > 0 ||
-        (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)
+        (scannedOrigins !== undefined && scannedOrigins.length > 0)
       ) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills, snap.scannedOrigins)) {
+        for (const row of computeSkillPrunes(existingSkills, snap.skills, scannedOrigins)) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,
@@ -334,12 +343,16 @@ export const syncFullInventory = mutation({
       // Per-origin pruning: fires when the snapshot has skills OR declares a
       // scannedOrigins manifest (98-05 — a manifest lets an emptied-but-covered
       // origin prune even with zero incoming skills; a totally empty,
-      // manifest-less snapshot still cannot wipe anything).
+      // manifest-less snapshot still cannot wipe anything). The manifest is
+      // sanitized once and used for BOTH the guard and the call — a malformed
+      // non-array value degrades to the legacy prune path instead of throwing
+      // mid-sync (GC-03).
+      const scannedOrigins = sanitizeScannedOrigins(snap.scannedOrigins);
       if (
         snap.skills.length > 0 ||
-        (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)
+        (scannedOrigins !== undefined && scannedOrigins.length > 0)
       ) {
-        for (const row of computeSkillPrunes(existingSkills, snap.skills, snap.scannedOrigins)) {
+        for (const row of computeSkillPrunes(existingSkills, snap.skills, scannedOrigins)) {
           await ctx.db.delete(row._id);
           await ctx.db.insert("configChanges", {
             configKey: `skill:${row.name}`,
