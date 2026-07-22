@@ -16,9 +16,12 @@ export const markStaleArchived = internalMutation({
 
     const tables = ["events", "runtime_events", "llmMetrics", "toolExecutions", "agentMetrics", "emailDeliveryLog", "pagerdutyDeliveryLog", "githubTriggerLog"] as const;
     for (const table of tables) {
+      // events' timestamp index was rebuilt as by_timestamp2 (2026-07-21
+      // tombstone incident — see schema.ts); the other tables keep by_timestamp.
+      const byTimestamp = table === "events" ? "by_timestamp2" : "by_timestamp";
       const stale = await ctx.db
         .query(table)
-        .withIndex("by_timestamp", (q) => q.lt("timestamp", cutoff))
+        .withIndex(byTimestamp as any, (q: any) => q.lt("timestamp", cutoff))
         .filter((q) => q.neq(q.field("archived"), true))
         .take(500);
       for (const row of stale) {

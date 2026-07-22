@@ -247,7 +247,9 @@ export const evaluate = mutation({
     // High error rate
     const recentEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", Date.now() / 1000 - 3600).lte("timestamp", Date.now() / 1000 + 3600)
+      )
       .order("desc")
       .take(200);
     const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);
@@ -748,7 +750,9 @@ export const evaluateInternal = internalMutation({
     // ---- STATIC RULE EVALUATION ----
     const recentEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", Date.now() / 1000 - 3600).lte("timestamp", Date.now() / 1000 + 3600)
+      )
       .order("desc")
       .take(200);
 
@@ -975,7 +979,9 @@ export const evaluateCriticalInternal = internalMutation({
     const criticalStaticRules = alertRules.filter((r) => r.severity === "critical");
     const recentEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", Date.now() / 1000 - 3600).lte("timestamp", Date.now() / 1000 + 3600)
+      )
       .order("desc")
       .take(100);
     const oneHourAgo = now - 3600;

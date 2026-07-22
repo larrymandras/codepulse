@@ -79,6 +79,16 @@ All `fetch()` calls to the Ástríðr backend (`ASTRIDR_API_BASE`) MUST include 
 - For FormData/multipart: add `Authorization` header manually (do NOT set Content-Type — browser handles it)
 - Applies to any new file making Ástríðr API calls, not just `astridrApi.ts`
 
+## Self-Hosted Convex — Operational Rules (2026-07-22 incident)
+
+The production backend is SELF-HOSTED (single node, SQLite) at `C:\Users\mandr\convex-selfhost\`. Its MVCC tombstone GC cannot absorb mass deletes while serving load. Hard rules:
+
+- **NEVER run `npx convex import --replace-all` against the live instance.** It deletes every existing row first — millions of tombstones that poisoned every index, ballooned memory 4x, and took the dashboard down for days (2026-07-21/22). To restore or trim: import into a FRESH EMPTY instance (new volume, same INSTANCE_SECRET) and swap volumes.
+- **Never bulk-delete or bulk-patch a large table on the live instance** (mass archival sweeps included). Retention-style deletes must stay batch-capped like `convex/retention.ts`.
+- A dashboard-wide "no data / all zeros / reconnect loop" is index rot or memory starvation until proven otherwise — check `docker stats convex-backend`, then the soak-watch canary log (`convex-selfhost\soak-watch.log`), before touching frontend code.
+- `docker inspect` showing `OOMKilled:false, ExitCode:0` does NOT rule out OOM — the kernel reaps the child server process and PID 1 exits cleanly. Check `wsl -e dmesg | grep -i oom`.
+- Full incident history: Claude memory file `convex-selfhosted-setup`.
+
 ## Environment Variables
 
 - `VITE_CONVEX_URL` — Required. Convex deployment URL.

@@ -51,7 +51,9 @@ export const healthStatus = query({
       .first();
     const gitEvent = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", now / 1000 - 7 * 86400).lte("timestamp", now / 1000 + 3600)
+      )
       .order("desc")
       .first();
     // Use the most recent of gitCommits or events that look git-related

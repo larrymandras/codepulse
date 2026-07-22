@@ -77,7 +77,7 @@ describe("heroStats:summary — query cost guards", () => {
 
     const eventsUse = db.uses.find((u) => u.table === "events");
     expect(eventsUse).toBeDefined();
-    expect(eventsUse!.index).toBe("by_timestamp");
+    expect(eventsUse!.index).toBe("by_timestamp2");
 
     // The regression: no bounds at all == unbounded end-scan == page-blanking timeout.
     expect(eventsUse!.bounds.length).toBeGreaterThan(0);

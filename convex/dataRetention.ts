@@ -13,7 +13,7 @@ export const purgeOldTelemetryEvents = internalMutation({
     const cutoff = Date.now() / 1000 - 30 * 86400;
     const old = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2")
       .filter((q) => q.lt(q.field("timestamp"), cutoff))
       .take(BATCH_SIZE);
 

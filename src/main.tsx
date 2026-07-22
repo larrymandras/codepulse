@@ -5,6 +5,7 @@ import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { PrivacyProvider } from "./contexts/PrivacyContext";
 import { AmbientProvider } from "./contexts/AmbientContext";
+import AppErrorBoundary from "./components/AppErrorBoundary";
 import App from "./App";
 import "./index.css";
 
@@ -14,9 +15,11 @@ const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefin
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ConvexProvider client={convex}>
-      <PrivacyProvider>
-        <AmbientProvider>{children}</AmbientProvider>
-      </PrivacyProvider>
+      <AppErrorBoundary>
+        <PrivacyProvider>
+          <AmbientProvider>{children}</AmbientProvider>
+        </PrivacyProvider>
+      </AppErrorBoundary>
     </ConvexProvider>
   );
 }
@@ -26,9 +29,11 @@ function Providers({ children }: { children: React.ReactNode }) {
 function ClerkConvexProviders({ children }: { children: React.ReactNode }) {
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-      <PrivacyProvider>
-        <AmbientProvider>{children}</AmbientProvider>
-      </PrivacyProvider>
+      <AppErrorBoundary>
+        <PrivacyProvider>
+          <AmbientProvider>{children}</AmbientProvider>
+        </PrivacyProvider>
+      </AppErrorBoundary>
     </ConvexProviderWithClerk>
   );
 }

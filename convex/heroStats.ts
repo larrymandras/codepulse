@@ -42,7 +42,7 @@ export const summary = query({
     // then discarded everything older than an hour.
     const recentEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", oneHourAgo))
+      .withIndex("by_timestamp2", (q) => q.gte("timestamp", oneHourAgo))
       .order("desc")
       .take(500);
     const hourEvents = recentEvents.filter((e) => e.timestamp >= oneHourAgo);

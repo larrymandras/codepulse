@@ -8,17 +8,19 @@ export const buckets = query({
     bucketMinutes: v.float64(),
   },
   handler: async (ctx, args) => {
+    // Range-bound via the index using the args the caller already provides —
+    // the old unbounded take(2000)+JS-filter scanned from the top of the index
+    // and died under pressure (2026-07-22 incident).
     const events = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", args.startTime).lte("timestamp", args.endTime)
+      )
       .order("desc")
       .take(2000);
 
     const filtered = events.filter(
-      (e) =>
-        e.timestamp >= args.startTime &&
-        e.timestamp <= args.endTime &&
-        (e.eventType === "message_received" || e.eventType === "message_sent")
+      (e) => e.eventType === "message_received" || e.eventType === "message_sent"
     );
 
     const bucketSec = args.bucketMinutes * 60;

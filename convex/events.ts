@@ -53,9 +53,13 @@ export const listRecent = query({
   },
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
+    // Range-bound (last 48h, seconds) — see listRecentUnified comment.
+    const nowSec = Date.now() / 1000;
     return await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) =>
+        q.gte("timestamp", nowSec - 48 * 3600).lte("timestamp", nowSec + 3600)
+      )
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(limit);
@@ -152,7 +156,7 @@ export const listRecentPaginated = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2")
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .paginate(args.paginationOpts);
@@ -166,17 +170,24 @@ export const listRecentUnified = query({
   handler: async (ctx, args) => {
     const limit = args.limit ?? 50;
     const fetchCount = Math.max(limit, 100);
+    // Range-bound to the last 48h (timestamps are SECONDS): an unbounded desc
+    // scan streams from the very top of the index and dies under memory
+    // pressure or index garbage (2026-07-22 incident; same fix as heroStats
+    // 2026-07-20). Upper bound excludes any future/ms-scale junk rows.
+    const nowSec = Date.now() / 1000;
+    const lo = nowSec - 48 * 3600;
+    const hi = nowSec + 3600;
 
     const buildEvents = await ctx.db
       .query("events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp2", (q) => q.gte("timestamp", lo).lte("timestamp", hi))
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(fetchCount);
 
     const runtimeEvents = await ctx.db
       .query("runtime_events")
-      .withIndex("by_timestamp")
+      .withIndex("by_timestamp", (q) => q.gte("timestamp", lo).lte("timestamp", hi))
       .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
       .take(fetchCount);

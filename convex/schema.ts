@@ -36,7 +36,12 @@ export default defineSchema({
     .index("by_session", ["sessionId", "timestamp"])
     .index("by_type", ["eventType", "timestamp"])
     .index("by_tool", ["toolName", "timestamp"])
-    .index("by_timestamp", ["timestamp"])
+    // by_timestamp was renamed by_timestamp2 (2026-07-21): the original index
+    // accumulated so many un-GC'd tombstones (mass deletes from the 07-17
+    // --replace-all reimport + nightly retention) that even single-row reads
+    // exceeded the syscall budget. Renaming forces a clean backfill over live
+    // rows only. Do not rename back while the old index's garbage may linger.
+    .index("by_timestamp2", ["timestamp"])
     .index("by_idempotencyKey", ["idempotencyKey"]),
 
   sessions: defineTable({
