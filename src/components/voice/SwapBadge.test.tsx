@@ -17,7 +17,7 @@ import { render, screen } from "@testing-library/react";
 import { SwapBadge } from "./SwapBadge";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-function renderSwapBadge(props: { modelOverride?: string | null; voiceOverride?: string | null }) {
+function renderSwapBadge(props: { modelOverride?: string | null; voiceOverride?: string | null; lastModel?: string | null }) {
   return render(
     <TooltipProvider>
       <SwapBadge {...props} />
@@ -36,6 +36,18 @@ describe("SwapBadge", () => {
     renderSwapBadge({});
     expect(screen.getByText(/Brain: Auto/)).toBeInTheDocument();
     expect(screen.queryByText(/Voice:/)).not.toBeInTheDocument();
+  });
+
+  it("shows the last resolved model muted when no override is pinned (185-08)", () => {
+    renderSwapBadge({ modelOverride: null, voiceOverride: null, lastModel: "google/gemini-2.5-flash" });
+    expect(screen.getByText(/Brain: google\/gemini-2\.5-flash/)).toBeInTheDocument();
+    expect(screen.queryByText(/Brain: Auto/)).not.toBeInTheDocument();
+  });
+
+  it("override wins over lastModel", () => {
+    renderSwapBadge({ modelOverride: "grok-4.5", voiceOverride: null, lastModel: "google/gemini-2.5-flash" });
+    expect(screen.getByText(/Brain: grok-4\.5/)).toBeInTheDocument();
+    expect(screen.queryByText(/gemini/)).not.toBeInTheDocument();
   });
 
   it("shows the pinned model (not Auto) when modelOverride is set", () => {

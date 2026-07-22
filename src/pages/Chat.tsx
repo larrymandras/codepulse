@@ -207,6 +207,22 @@ export default function Chat() {
     return unsubSwapState;
   }, [subscribeEvent]);
 
+  // Live effective model (185-08): run.completed now carries the resolved
+  // model of each finished turn, so the Brain pill can show what actually
+  // answered instead of the "Auto" umbrella. Swap overrides still win in
+  // SwapBadge's display; this only feeds the unswapped (muted) state. The
+  // fast-path's zero-LLM run.completed has no/empty model — keep the last
+  // real one.
+  const [lastTurnModel, setLastTurnModel] = useState<string | null>(null);
+  useEffect(() => {
+    const unsubCompleted = subscribeEvent("run.completed", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      const model = data?.model as string | undefined;
+      if (model) setLastTurnModel(model);
+    });
+    return unsubCompleted;
+  }, [subscribeEvent]);
+
   // ── Screen share (VISION-01) — sole caller of getDisplayMedia (D-09) ─────
   // D-11: on a native track `ended` (Chrome's "Stop sharing" bar, tab/window
   // close — never fires for our own ShareScreenToggle stop() click), speak
@@ -355,6 +371,7 @@ export default function Chat() {
             <SwapBadge
               modelOverride={swapState.modelOverride}
               voiceOverride={swapState.voiceOverride}
+              lastModel={lastTurnModel}
             />
             <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
             <ShareScreenToggle

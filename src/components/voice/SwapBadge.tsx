@@ -35,9 +35,16 @@ export interface SwapBadgeProps {
   modelOverride?: string | null;
   /** The active non-default voice name, or null/undefined at default. */
   voiceOverride?: string | null;
+  /**
+   * The resolved model of the last completed turn (from run.completed's
+   * `model` field, 185-08). Shown muted when no override is pinned, so the
+   * pill reads what actually answered instead of the "Auto" umbrella.
+   */
+  lastModel?: string | null;
 }
 
-export function SwapBadge({ modelOverride, voiceOverride }: SwapBadgeProps) {
+export function SwapBadge({ modelOverride, voiceOverride, lastModel }: SwapBadgeProps) {
+  const brainLabel = modelOverride ?? lastModel ?? "Auto";
   return (
     <div className="flex items-center gap-1.5">
       <Tooltip>
@@ -51,7 +58,7 @@ export function SwapBadge({ modelOverride, voiceOverride }: SwapBadgeProps) {
             }
           >
             <Brain className="h-3 w-3" aria-hidden="true" />
-            Brain: {modelOverride ?? "Auto"}
+            Brain: {brainLabel}
           </Badge>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={8}>
@@ -59,7 +66,9 @@ export function SwapBadge({ modelOverride, voiceOverride }: SwapBadgeProps) {
             {modelOverride
               ? `Running on ${modelOverride} instead of her usual brain — say
               "switch back to your usual brain" to restore.`
-              : 'Adaptive routing — her brain is picked per task. Say "try on grok" (or another model) to pin one.'}
+              : lastModel
+                ? `Last reply ran on ${lastModel}, picked by adaptive routing. Say "try on grok" (or another model) to pin one.`
+                : 'Adaptive routing — her brain is picked per task. Say "try on grok" (or another model) to pin one.'}
           </p>
         </TooltipContent>
       </Tooltip>
