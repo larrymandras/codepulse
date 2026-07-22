@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: milestone_complete
-stopped_at: Phase 98 complete (4/4, verified + UAT approved 2026-07-21) — next: Phase 99 (v11.0 resume)
-last_updated: 2026-07-21T22:55:11.617Z
-last_activity: 2026-07-21
+stopped_at: Phase 98 Plan 05 gap closure complete (stale-origin prune fix, commits 360e8a5/forge + 107e64d/codepulse) — Phase 98 code-complete 5/5; manual live UAT re-check still outstanding — next: Phase 99 (v11.0 resume)
+last_updated: "2026-07-22T13:00:00.000Z"
+last_activity: 2026-07-22
 progress:
   total_phases: 1
   completed_phases: 1
@@ -17,7 +17,12 @@ progress:
 <!-- Counters hand-reconciled 2026-07-20 against git ground truth (gsd-sdk state.* verbs miscount;
      phase.complete wrote completed_plans:26 — corrected to 7).
      v12.0 scope = Phase 101 only (7 plans incl. 101-07 gap closure). v11.0 (Phases 97-100) is PAUSED mid-milestone:
-     Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (4/4, verified + UAT approved 2026-07-21); Phases 99/100 not started. -->
+     Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (5/5 incl. 98-05 gap closure, verified + UAT approved 2026-07-21, gap closed 2026-07-22); Phases 99/100 not started.
+     NOTE 2026-07-22: this file's WORKING COPY was found reverted to an earlier "executing / Plan 1 of 5" snapshot at the
+     start of Plan 98-05's execution (frontmatter status/stopped_at/Current Position all regressed vs. the committed
+     HEAD, which correctly showed Phase 98 as milestone_complete/4-4-done) — the same gsd-sdk state.* full-frontmatter-
+     resync clobbering bug documented throughout this file's own Decisions history below. Rebuilt from git HEAD
+     (`git show HEAD:.planning/STATE.md`) plus this plan's own edits rather than committing the stale regression. -->
 
 # Project State
 
@@ -31,12 +36,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
-Phase: 98 (skill-lifecycle-mutations) — COMPLETE 2026-07-21 (4/4 plans, 11/11 must-haves verified, code review 9 findings all fixed incl. WR-04 D-05 target-scoping sign-off, UAT approved by Larry). LIFE-01..06 + DAEMON-02 marked Complete.
+Phase: 98 (skill-lifecycle-mutations) — COMPLETE 2026-07-21 (4/4 plans, 11/11 must-haves verified, code review 9 findings all fixed incl. WR-04 D-05 target-scoping sign-off, UAT approved by Larry). Gap-closure Plan 98-05 executed 2026-07-22 (stale-origin prune fix — cross-repo forge+codepulse, unit-tested both sides, full codepulse suite green 204/204 files). LIFE-01..06 + DAEMON-02 marked Complete.
 Plan: n/a
-Status: v11.0 resumes at Phase 99 (Skill Launch / Dispatch); Phase 100 (Control-Surface UX) depends on 98+99.
-Last activity: 2026-07-21
+Status: v11.0 resumes at Phase 99 (Skill Launch / Dispatch); Phase 100 (Control-Surface UX) depends on 98+99. Phase 98's manual live UAT re-check of the 98-05 fix (real G: workspace repro + transient-unmount negative check) is still outstanding but non-blocking for Phase 99.
+Last activity: 2026-07-22
 
-**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 4/4 plans code-complete; manual UAT still outstanding before phase verification. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
+**v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
 ## Deferred Items
 
@@ -123,6 +128,16 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 98 Plan 05 decisions (2026-07-22, gap closure — stale-origin prune fix, cross-repo):**
+
+- **Producer-declares-coverage manifest pattern** — forge's `buildSkillSnapshot` now returns `scannedOrigins: string[]` alongside `skills`, declaring exactly which origins it covered on this scan (both home roots unconditionally, plus each synced workspace whose root passed an `fs.statSync` reachability check). This lets codepulse's `computeSkillPrunes` distinguish "covered but now empty" (safe to prune) from "unscanned/unreachable" (must stay untouched) — the root cause of the UAT-found gap where the last skill moved out of a project workspace left its `claude-code:project:<key>` row forever, rendering the skill as false multi-scope and disabling Archive/Move.
+- **Reachability is keyed on the workspace ROOT, not `.claude/skills`** — an empty-but-reachable workspace still contributes its origin to the manifest (zero skills, origin still declared); an unreachable root (unmounted G: drive) contributes to neither `skills` nor `scannedOrigins` — the T-98-10 transient-unmount safety valve.
+- **`computeSkillPrunes`'s legacy no-arg path is byte-for-byte unchanged** — the prunable-origin set defaults to exactly `incomingByOrigin.keys()` when `scannedOrigins` is `undefined`; the manifest, when present, only ever ADDS origins to eligibility (union, never replaces), so all 5 pre-existing tests stayed green with zero test rewrites.
+- **`registry.ts`'s prune guard relaxed from a single length check to an OR** (`snap.skills.length > 0 || (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)`) at both `syncInventory` and `syncFullInventory` call sites — a snapshot that emptied an origin now reconciles, while a fully-empty, manifest-less snapshot still cannot wipe the registry (T-98-11).
+- **No TDD RED/GREEN split commits** — tests and implementation were authored together per task (one commit per repo) rather than a literal separate failing-test commit; both repos' scoped suites plus `tsc --noEmit` were verified green, and codepulse's full suite (204 test files, 2331 tests) was run as an extra check since this closes out Phase 98's wave — zero regressions.
+- **STATE.md working copy was found reverted to a stale "Plan 1 of 5 / executing" snapshot at session start** (frontmatter + Current Position regressed vs. the already-committed `milestone_complete`/4-4-done HEAD) — the same gsd-sdk `state.*` full-frontmatter-resync clobbering bug documented in every prior Phase 98 plan's Decisions entry below. Rebuilt this file from `git show HEAD:.planning/STATE.md` plus this plan's own edits, per the established workaround; no `gsd-sdk state.*` mutating verbs were run this plan.
+- **Phase 98's two MANUAL verification steps from the 98-05 plan's own `<verification>` section (live G: repro re-check + transient-unmount negative check) are explicitly deferred** — both require a live Forge daemon and a live Google Drive mount, out of scope for an automated executor pass. LIFE-03/LIFE-04/DAEMON-02/DAEMON-03 (this plan's `requirements` frontmatter) are the specific requirement IDs this gap-closure plan targets; they were already marked Complete in REQUIREMENTS.md at Phase 98's original completion (commit `54b6278`) and remain so — this plan is a bugfix on already-complete requirements, not a new completion event.
 
 **v11.0 / Phase 98 Plan 04 decisions (2026-07-21, lifecycle menu assembly — final integration wave):**
 
@@ -266,7 +281,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v11.0 next action:** `/gsd-discuss-phase 97` (Real Skill Intake & Daemon Foundation) — roadmap defined 2026-07-17, requirements traced, ready for the discuss → ui-spec → plan → execute prerequisite chain. Execution step 1 within Phase 97: pin down where the daemon code lives (separate `forge` repo vs astridr-repo).
+- **v11.0 next action:** Phase 98 is now 5/5 code-complete (98-05 gap closure landed 2026-07-22, see `98-05-SUMMARY.md`). Its own two MANUAL verification steps (live G: workspace repro re-check + transient-unmount negative check, both require a live Forge daemon + live Google Drive mount) remain outstanding but are non-blocking. Proceed with Phase 99 (Skill Launch / Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or run the manual UAT re-checks first if operating the live daemon is convenient right now.
 - **Phase 100 note:** depends on both Phase 98 (lifecycle mutations) and Phase 99 (launch/dispatch) — do not plan/execute 100 until both are complete.
 - **Phase 99 note:** independent of the daemon work in 97/98 — can be discussed/planned/executed in parallel if desired, since it rides existing `chat.send`/`enqueueLaunch`/Ástríðr channels with no daemon dependency.
 - **v10.0 (shipped, for reference):** ✅ COMPLETE — all 4 phases (93-96) done, milestone archived 2026-07-13.
@@ -275,7 +290,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Blockers/Concerns
 
-- None currently blocking v11.0. Phase 97's first execution step (pin down where the Forge daemon code lives — separate `forge` repo vs astridr-repo) is a scoping question to resolve during discuss/plan, not a blocker at roadmap time.
+- None currently blocking v11.0. Phase 98's 98-05 gap closure landed 2026-07-22; its own manual verification steps (live G: repro + transient-unmount negative check) are outstanding but non-blocking for proceeding to Phase 99.
 - Cross-repo handoff carried over from v10.0 Phase 96 (out of CodePulse scope, does not block v11.0): astridr-repo `chat.send` security-pipeline bypass + missing approval-block producer, routed to astridr Phase 178.1 (code-complete, pending live UAT as of 2026-07-13).
 
 ### Quick Tasks Completed
@@ -291,12 +306,13 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-21T21:38:00.000Z
-Stopped at: Phase 98 Plan 04 (lifecycle menu assembly) complete — all 4 plans of Phase 98 code-complete
-Next action: Phase 98 is code-complete end-to-end but NOT yet phase-verified — a manual UAT (real archive + a real cross-volume move against a live Forge daemon) is still required before the phase can be marked verified (see 98-04-SUMMARY.md "Next Phase Readiness"). Once that UAT passes, mark LIFE-01..06/DAEMON-02 complete in REQUIREMENTS.md and proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) or Phase 100 (Control-Surface UX, depends on both 98 and 99). Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-04-SUMMARY.md
+Last session: 2026-07-22T13:00:00.000Z
+Stopped at: Phase 98 Plan 05 (stale-origin prune gap closure) complete — Phase 98 now 5/5 plans code-complete
+Next action: Phase 98's 98-05 fix closes the sole gap `98-HUMAN-UAT.md` found (stale `claude-code:project:<key>` row surviving a move/delete of the last skill in a workspace). Two MANUAL verification steps from the 98-05 plan's own `<verification>` section remain outstanding (live G: workspace repro re-check; transient-unmount negative check pausing the live G: mount mid-scan) — both require a live Forge daemon + live Google Drive mount, deferred as non-blocking. Proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or Phase 100 (Control-Surface UX, depends on both 98 and 99) once 99 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
+Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-05-SUMMARY.md
 
 ## Operator Next Steps
 
 - Review the v11.0 roadmap draft in `.planning/ROADMAP.md` (Phases 97-100) and `.planning/REQUIREMENTS.md` traceability.
-- Once approved, proceed with `/gsd-discuss-phase 97` to begin the discuss → ui-spec → plan → execute chain for Phase 97 (Real Skill Intake & Daemon Foundation).
+- Once approved, proceed with `/gsd-discuss-phase 99` to begin the discuss → ui-spec → plan → execute chain for Phase 99 (Skill Launch / Dispatch) — independent of 97/98, can run any time.
+- Optional, whenever a live Forge daemon + Google Drive mount are convenient: run the two manual verification steps from 98-05's plan to fully close out Phase 98's live UAT.

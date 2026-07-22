@@ -525,7 +525,7 @@ Plans:
   4. Deleting a skill defaults to archive (reversible); true file deletion on disk is a separate action requiring an explicit confirmation.
   5. When the Forge daemon is offline, lifecycle actions queue and the UI visibly shows the command will expire — no false-success state is ever shown (mirrors the intake expired-command path).
 
-**Plans**: 4 plans
+**Plans**: 5 plans (4 build + 1 gap-closure)
 Plans:
 **Wave 1**
 
@@ -542,7 +542,7 @@ Plans:
 
 **Gap-closure addendum** *(from 98-HUMAN-UAT test 1)*
 
-- [ ] 98-05-PLAN.md — Rescan reconciles emptied origins: forge scannedOrigins manifest + computeSkillPrunes prunes declared-but-empty origins (stale project row after a move); reachability-gated so a transient unmount never over-prunes
+- [x] 98-05-PLAN.md — Rescan reconciles emptied origins: forge scannedOrigins manifest + computeSkillPrunes prunes declared-but-empty origins (stale project row after a move); reachability-gated so a transient unmount never over-prunes
 
 **UI hint**: yes
 
@@ -655,7 +655,7 @@ Plans:
 | 95. Hardening — Security, Key Rotation, Dependency Majors | v10.0 | 4/4 | Complete   | 2026-07-07 |
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
 | 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
-| 98. Skill Lifecycle Mutations | v11.0 | 4/4 | Complete    | 2026-07-21 |
+| 98. Skill Lifecycle Mutations | v11.0 | 5/5 | Complete   | 2026-07-22 |
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |

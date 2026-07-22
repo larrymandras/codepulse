@@ -42,7 +42,7 @@
 
 - [ ] **DAEMON-01**: The Forge daemon executes `intake` commands — validates then writes SKILL.md to the destination scope (global / project / cold) on the host filesystem.
 - [x] **DAEMON-02**: The Forge daemon executes lifecycle commands — archive (→ cold), restore, move-scope, and delete — atomically on the host, archive-first for delete.
-- [ ] **DAEMON-03**: After any successful mutation the daemon rescans and re-syncs the skills registry (`syncInventory`) so CodePulse origins/scope reflect host truth.
+- [x] **DAEMON-03**: After any successful mutation the daemon rescans and re-syncs the skills registry (`syncInventory`) so CodePulse origins/scope reflect host truth.
 - [ ] **DAEMON-04**: The daemon advertises its new supported command types so older daemons never receive commands they cannot run (extends `supportedTypes` / `resolveClaimTypes`).
 
 ---
@@ -70,7 +70,7 @@
 | INTAKE-03 | Phase 97 | Pending |
 | INTAKE-04 | Phase 97 | Pending |
 | DAEMON-01 | Phase 97 | Pending |
-| DAEMON-03 | Phase 97 | Pending |
+| DAEMON-03 | Phase 97 | Complete |
 | DAEMON-04 | Phase 97 | Pending |
 | LIFE-01 | Phase 98 | Complete |
 | LIFE-02 | Phase 98 | Complete |
