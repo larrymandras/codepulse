@@ -26,26 +26,29 @@ function renderSwapBadge(props: { modelOverride?: string | null; voiceOverride?:
 }
 
 describe("SwapBadge", () => {
-  it("renders nothing when both overrides are null (default state, D-04/D-16)", () => {
-    const { container } = renderSwapBadge({ modelOverride: null, voiceOverride: null });
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("renders nothing when both overrides are undefined", () => {
-    const { container } = renderSwapBadge({});
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("shows only the brain badge when modelOverride is set", () => {
-    renderSwapBadge({ modelOverride: "Grok 4.5", voiceOverride: null });
-    expect(screen.getByText(/Brain: Grok 4\.5/)).toBeInTheDocument();
+  it("shows a persistent muted 'Brain: Auto' pill when both overrides are null (185-08 request)", () => {
+    renderSwapBadge({ modelOverride: null, voiceOverride: null });
+    expect(screen.getByText(/Brain: Auto/)).toBeInTheDocument();
     expect(screen.queryByText(/Voice:/)).not.toBeInTheDocument();
   });
 
-  it("shows only the voice badge when voiceOverride is set", () => {
+  it("shows 'Brain: Auto' when both overrides are undefined", () => {
+    renderSwapBadge({});
+    expect(screen.getByText(/Brain: Auto/)).toBeInTheDocument();
+    expect(screen.queryByText(/Voice:/)).not.toBeInTheDocument();
+  });
+
+  it("shows the pinned model (not Auto) when modelOverride is set", () => {
+    renderSwapBadge({ modelOverride: "Grok 4.5", voiceOverride: null });
+    expect(screen.getByText(/Brain: Grok 4\.5/)).toBeInTheDocument();
+    expect(screen.queryByText(/Brain: Auto/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Voice:/)).not.toBeInTheDocument();
+  });
+
+  it("shows the voice badge alongside 'Brain: Auto' when only voiceOverride is set", () => {
     renderSwapBadge({ modelOverride: null, voiceOverride: "Rachel" });
     expect(screen.getByText(/Voice: Rachel/)).toBeInTheDocument();
-    expect(screen.queryByText(/Brain:/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Brain: Auto/)).toBeInTheDocument();
   });
 
   it("shows both badges when both overrides are active", () => {
