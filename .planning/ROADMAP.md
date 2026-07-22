@@ -631,8 +631,13 @@ Plans:
 **Plans:** 3 plans (2 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 102-01-PLAN.md — Wave 1 (codepulse): delete dead dueSoon/overdue queries+handlers+tests, drop by_dueAt index, codegen + static bar (D-01, D-02, D-05, D-06)
 - [ ] 102-02-PLAN.md — Wave 1 (astridr-repo): delete CodePulsePoster + orphaned constants, cron → self._telemetry, fix dispatcher test, sweep stale two-backend narrative (D-03, D-04, D-06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 102-03-PLAN.md — Wave 2 (operator, cross-repo): live self-hosted index-DROP deploy + one real calendar_cache tick (pushed>0/failed=0, events on /reminders) (D-02, D-07)
 
 ---
