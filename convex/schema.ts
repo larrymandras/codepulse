@@ -1870,8 +1870,7 @@ export default defineSchema({
     updatedAt: v.float64(),
   })
     .index("by_profile", ["profileId", "status"])
-    .index("by_status", ["status", "dueAt"])
-    .index("by_dueAt", ["dueAt"]),
+    .index("by_status", ["status", "dueAt"]),
 
   // Read-only cache of Google Calendar events (D-02/D-03/D-10). Written ONLY
   // by /calendar-ingest (Ástríðr's calendar cron pushes normalized events);
