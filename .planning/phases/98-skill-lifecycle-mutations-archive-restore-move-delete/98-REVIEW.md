@@ -1,8 +1,8 @@
 ---
 phase: 98-skill-lifecycle-mutations-archive-restore-move-delete
-reviewed: 2026-07-21T00:00:00Z
+reviewed: 2026-07-22T12:21:00Z
 depth: standard
-files_reviewed: 24
+files_reviewed: 29
 files_reviewed_list:
   - convex/forge.test.ts
   - convex/forge.ts
@@ -28,12 +28,22 @@ files_reviewed_list:
   - src/hooks/useLifecycle.test.ts
   - src/hooks/useLifecycle.ts
   - src/pages/__tests__/Skills.test.tsx
+  - C:/Users/mandr/forge/src/emit/skill-rescan.ts
+  - C:/Users/mandr/forge/src/emit/skill-rescan.test.ts
+  - convex/skillSync.ts
+  - convex/__tests__/skillSync.test.ts
+  - convex/registry.ts
 findings:
-  critical: 3
-  warning: 4
-  info: 2
-  total: 9
-status: fixes_applied
+  critical: 0
+  warning: 2
+  info: 1
+  total: 3
+findings_9805:
+  critical: 0
+  warning: 2
+  info: 1
+  total: 3
+status: issues_found
 fixed_at: 2026-07-21
 fix_scope: critical_warning
 fixes:
@@ -222,5 +232,92 @@ The menu's shadow-tooltip branch requires `dormant && shadowed` (SkillLifecycleM
 ---
 
 _Reviewed: 2026-07-21_
+_Reviewer: Claude (gsd-code-reviewer)_
+_Depth: standard_
+
+---
+
+## Gap-Closure Review (98-05) — 2026-07-22
+
+**Scope:** plan 98-05 only — forge `360e8a5` (`scannedOrigins` manifest in `buildSkillSnapshot`) and codepulse `107e64d` (`computeSkillPrunes` manifest param + both `registry.ts` guard relaxations). Both commit diffs read in full; both unit suites run green (forge skill-rescan 24/24, codepulse skillSync 17/17).
+
+**Verdict:** issues_found — 0 Critical, 2 Warning, 1 Info. The core design is sound and the four review priorities check out (details under "Verified"), but the "transient unavailability never prunes" invariant this plan exists to enforce has two residual holes on the producer side: a declared origin is never conditioned on its skills directory actually having been *read successfully*, and the two home origins are declared with no reachability check at all.
+
+### Verified (review priorities — all pass)
+
+- **Reachability keyed on workspace ROOT, not skills subdir:** `skill-rescan.ts:224` (`if (!isReachable(ws.rootPath)) continue;`) stats the root itself (`isReachable`, skill-rescan.ts:240-247); an unmounted drive is declared nowhere (test: skill-rescan.test.ts:216-228), an empty-but-reachable workspace is declared with zero skills (test: 207-214).
+- **No-manifest path byte-for-byte:** with `scannedOrigins === undefined`, `prunableOrigins` is exactly `incomingByOrigin.keys()` (skillSync.ts:58-61), so the `!prunableOrigins.has(o)` continue is equivalent to the old `!names` continue, and `!names` in the final condition (skillSync.ts:68) is unreachable for any origin admitted by the legacy set. All 5 pre-existing tests unchanged and green; backward-compat test at skillSync.test.ts:106-113.
+- **Guard correctness at both call sites:** `registry.ts:174-177` and `registry.ts:338-341` are identical; a fully-empty manifest-less snapshot (`skills: []`, no `scannedOrigins`) fails the guard AND would prune nothing even if it reached `computeSkillPrunes` (empty incoming, no manifest) — double-safe.
+- **normalizeOrigin consistency:** producer origin strings (`claude-code`, `claude-code:available`, `claude-code:project:<12-hex>`) are non-empty with no surrounding whitespace, so `normalizeOrigin` passes them through unchanged; manifest entries are normalized at skillSync.ts:60 with the same function used for row origins (registry.ts:124/300 at write, skillSync.ts:65 at prune) — no mismatch possible.
+- **End-to-end pass-through:** `/scan` forwards the raw JSON body (`scan.ts:22-23` — `snapshot: body`), so `scannedOrigins` reaches `syncInventory` intact. `syncFullInventory`'s only feeder (`runtimeIngest.ts:629`, `capability_sync`) sends no manifest → legacy path, unchanged.
+
+### Warnings
+
+#### GC-01: A declared origin is never conditioned on a successful directory read — a transient non-ENOENT `readdir` failure now deletes every registry row for that origin
+
+**Confidence:** High (mechanism), Medium (real-world trigger frequency)
+**Files:** `C:/Users/mandr/forge/src/emit/skill-rescan.ts:146-149, 207-213, 226-229`, `convex/skillSync.ts:66-68`
+
+`buildSkillSnapshot` declares each origin unconditionally (home) or on root-stat alone (workspace), then calls `readSkillsDir`, whose catch is a blanket skip:
+
+```ts
+// skill-rescan.ts:146-149
+try {
+  names = fs.readdirSync(skillsDir);
+} catch {
+  return out; // missing/unreadable root — skip silently
+}
+```
+
+The catch conflates ENOENT (dir genuinely absent — declaring the origin empty is the *intended* 98-05 behavior) with transient failures on a dir that exists and has skills: EACCES/EPERM (Windows AV lock, ACL change), EIO (network share degrading after the root stat succeeded), EMFILE (fd exhaustion in a long-running daemon). In every non-ENOENT case the origin is still pushed into `scannedOrigins` (line 207/211 before the read; line 227 with no feedback from the read), so the consumer sees a declared origin with zero incoming and deletes **all** of its rows (`skillSync.ts:68`: `if (!names || !names.has(row.name)) prunes.push(row)`).
+
+This is a regression introduced by 98-05, not a pre-existing hazard: before the manifest, a failed whole-dir read simply left the origin absent from `incoming` → legacy path → untouched. The rows self-heal on the next successful rescan and `configChanges` retains `oldValue`, but per-row `useCount`/`lastUsedAt` (dashboard `recordSkillLaunch` data) are permanently reset — forge snapshot entries carry no counts, so the re-insert at `registry.ts:132-142` writes `useCount: undefined`.
+
+**Fix:** Make `readSkillsDir` distinguish outcome — e.g. return `null` (or `{ ok: false }`) when `readdirSync` fails with a code other than `ENOENT`/`ENOTDIR`, and have `buildSkillSnapshot` declare an origin only when the read succeeded or the dir is genuinely absent. Add a test: workspace root reachable, `readdirSync` on the skills dir throwing `EACCES` → origin absent from `scannedOrigins`.
+
+#### GC-02: Home origins are declared with no reachability check — a daemon running with the wrong/absent home wipes every global and cold-storage row
+
+**Confidence:** High (mechanism), Medium (trigger requires deployment-context change)
+**Files:** `C:/Users/mandr/forge/src/emit/skill-rescan.ts:206-213`, `C:/Users/mandr/forge/src/index.ts:165`, `convex/registry.ts:174-188`
+
+```ts
+// skill-rescan.ts:206-207
+// Global — origin 'claude-code'. Home roots are always reachable (D-04).
+scannedOrigins.push('claude-code');
+```
+
+"Always reachable" is a claim, not a check — the `isReachable()` guard added for workspaces (line 224) is not applied to the two home roots, and the wiring hardcodes `home: os.homedir()` (`index.ts:165`). If the daemon ever runs under an account whose profile has no `~/.claude` (service/system account, scheduled-task context change, mis-set `USERPROFILE`), every successful lifecycle/intake command fires a rescan that POSTs `{ skills: [], scannedOrigins: ['claude-code', 'claude-code:available'] }` — which the relaxed guard now accepts (`registry.ts:176`) and which prunes **every** `claude-code` and `claude-code:available` row in the shared registry. Pre-98-05 the identical misconfiguration was a guaranteed no-op (`snap.skills.length > 0` blocked it). The producer test suite codifies snapshot-building against a nonexistent home (`skill-rescan.test.ts:155-168`), so nothing on the forge side would ever surface the misconfiguration — the first symptom would be an emptied Skills page.
+
+**Fix:** Gate the two home declarations on `isReachable(path.join(home, '.claude'))` — a home with no `.claude` directory at all covered nothing and must declare nothing. (This also composes with GC-01's fix: `ENOENT` on `~/.claude/skills` *under an existing* `~/.claude` remains a legitimate empty declaration.)
+
+### Info
+
+#### GC-03: `snap.scannedOrigins` is passed to `computeSkillPrunes` unvalidated — a truthy non-iterable value throws and rolls back the entire sync
+
+**Confidence:** High
+**Files:** `convex/registry.ts:174-178` (same shape at 338-342), `convex/skillSync.ts:59-61`
+
+The `Array.isArray` check lives only inside the guard's OR-branch, not on the argument itself:
+
+```ts
+// registry.ts:174-178
+if (
+  snap.skills.length > 0 ||
+  (Array.isArray(snap.scannedOrigins) && snap.scannedOrigins.length > 0)
+) {
+  for (const row of computeSkillPrunes(existingSkills, snap.skills, snap.scannedOrigins)) {
+```
+
+A snapshot with `skills: [ … ]` and a malformed `scannedOrigins: {}` (or `42`) passes the guard via `skills.length > 0`, then `for (const o of scannedOrigins)` (skillSync.ts:60) throws `TypeError: scannedOrigins is not iterable`, failing the whole mutation — Convex rolls back the already-completed MCP/plugin/skill upserts and `/scan` returns 400. The snapshot is `v.any()` and this mutation is elsewhere deliberately robust to bad rows (the hooks skip-malformed comment at registry.ts:194-197). A string value doesn't throw but iterates per-character, silently polluting `prunableOrigins` with one-character origins (harmless against current data; still wrong).
+
+**Fix:** Pass `Array.isArray(snap.scannedOrigins) ? snap.scannedOrigins : undefined` as the third argument (both call sites), or hoist `const manifest = Array.isArray(snap.scannedOrigins) ? snap.scannedOrigins : undefined;` and use it in both the guard and the call.
+
+---
+
+**What I dropped and why:** the hook feeder emits plugin-cache skills under origin `claude-code` from dirs forge never walks (`hooks/skillScan.mjs:139-141`) — but the legacy prune already deleted those rows whenever forge's global dir held ≥1 skill, so it is a pre-existing feeder-coverage mismatch, not a 98-05 regression; `migrations.ts:10-13`'s "only prunes origins PRESENT in an incoming snapshot" comment is now stale for the manifest path (out-of-scope file, doc-only); a manifest entry of `""`/`null` normalizing to `"unknown"` would authorize wiping all legacy `unknown` rows (no live producer can emit one — forge's manifest is a typed `string[]` of literals); the millisecond TOCTOU between root-stat and skills-dir readdir on a dropping network share (indistinguishable errnos, subsumed by GC-01's fix direction).
+
+---
+
+_Gap-closure reviewed: 2026-07-22_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
