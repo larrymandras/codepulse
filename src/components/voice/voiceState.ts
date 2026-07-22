@@ -164,13 +164,14 @@ const STRICT_MODE_OFF_PHRASES = [
  * command, or null otherwise (the component only fast-paths on a real command
  * — no fuzzy/trailing match here, unlike isBargeInPhrase, since a false
  * positive would silently flip a persisted preference).
+ *
+ * Thin wrapper over CLIENT_VERB_REGISTRY's "strict_mode" entry (D-09,
+ * Phase 185) — identical phrase lists / behavior, just re-expressed through
+ * the generalized verb table below.
  */
 export function isStrictModeCommand(text: string): "on" | "off" | null {
-  const norm = normalize(text);
-  if (!norm) return null;
-  if (STRICT_MODE_ON_PHRASES.includes(norm)) return "on";
-  if (STRICT_MODE_OFF_PHRASES.includes(norm)) return "off";
-  return null;
+  const result = STRICT_MODE_VERB.match(text);
+  return (result?.state as "on" | "off" | undefined) ?? null;
 }
 
 // ─── Vision-intent phrase detection (D-01 client fast-path) ──────────────────
@@ -243,6 +244,40 @@ export function isVisionIntentPhrase(text: string): boolean {
   return visionIntentStrength(text) !== null;
 }
 
+// ─── Generalized client control-verb table (D-09, Phase 185 Plan 06) ────────
+//
+// 183's strict-mode and 184's vision-intent matchers, migrated into one
+// generalized table alongside the swap_model/swap_voice matchers added below
+// (SWAP-01/SWAP-02). Every entry is a pure function over normalize() with no
+// DOM/React/side effects — the client only extracts intent/targets; dispatch
+// and any resolution/side-effects happen in the caller (useAstridrVoice.ts /
+// 185-07's executor). isStrictModeCommand and decideVisionIntent above are
+// kept as thin wrappers over their registry entries — same phrase lists,
+// same thresholds, same return shapes (D-09 behavior-identical guard).
+
+export type ClientControlVerb = {
+  name: string;
+  match: (
+    text: string,
+    ctx?: { shareActive?: boolean }
+  ) => Record<string, string> | null;
+};
+
+/**
+ * "strict_mode" verb — identical phrase lists / logic as the pre-Phase-185
+ * isStrictModeCommand. Returns `{ state: "on" | "off" }` or null.
+ */
+const STRICT_MODE_VERB: ClientControlVerb = {
+  name: "strict_mode",
+  match: (text: string) => {
+    const norm = normalize(text);
+    if (!norm) return null;
+    if (STRICT_MODE_ON_PHRASES.includes(norm)) return { state: "on" };
+    if (STRICT_MODE_OFF_PHRASES.includes(norm)) return { state: "off" };
+    return null;
+  },
+};
+
 // ─── Vision-intent decision + system-line side effects (D-01/D-02/D-03/D-11) ─
 
 /** D-03 locked copy — no active share. */
@@ -253,21 +288,38 @@ export const LOST_SCREEN_TEXT = "Looks like I lost your screen.";
 export type VisionIntentAction = "capture" | "refuse";
 
 /**
+ * "vision_intent" verb — identical strength-tiered logic as the
+ * pre-Phase-185 decideVisionIntent. Returns `{ action: "capture" | "refuse",
+ * strength }` or null; `ctx.shareActive` defaults to false.
+ */
+const VISION_INTENT_VERB: ClientControlVerb = {
+  name: "vision_intent",
+  match: (text: string, ctx?: { shareActive?: boolean }) => {
+    const strength = visionIntentStrength(text);
+    if (strength === null) return null;
+    const shareActive = ctx?.shareActive ?? false;
+    if (shareActive) return { action: "capture", strength };
+    // No active share: only STRONG matches earn the D-03 refusal. A weak
+    // co-occurrence false positive falls through to the normal pipeline —
+    // the backend see_screen net still answers honestly if it really was a
+    // vision question (184-08 tiering).
+    return strength === "strong" ? { action: "refuse", strength } : null;
+  },
+};
+
+/**
  * Pure decision: does this transcript express vision intent, and if so,
  * should the caller capture-and-send (a share is already active, D-02) or
  * refuse-and-arm (no active share, D-03)? Returns null for non-vision
  * utterances so the caller's normal pipeline (accumulate/send, end-phrase,
  * noise gate) proceeds unchanged. Stays pure — no side effects.
+ *
+ * Thin wrapper over CLIENT_VERB_REGISTRY's "vision_intent" entry (D-09,
+ * Phase 185) — identical strength tiering / behavior.
  */
 export function decideVisionIntent(text: string, shareActive: boolean): VisionIntentAction | null {
-  const strength = visionIntentStrength(text);
-  if (strength === null) return null;
-  if (shareActive) return "capture";
-  // No active share: only STRONG matches earn the D-03 refusal. A weak
-  // co-occurrence false positive falls through to the normal pipeline —
-  // the backend see_screen net still answers honestly if it really was a
-  // vision question (184-08 tiering).
-  return strength === "strong" ? "refuse" : null;
+  const result = VISION_INTENT_VERB.match(text, { shareActive });
+  return (result?.action as VisionIntentAction | undefined) ?? null;
 }
 
 /**
@@ -298,6 +350,18 @@ export function runLostScreenAck(callbacks: {
   callbacks.speak(LOST_SCREEN_TEXT);
   callbacks.appendLocalAssistantMessage(LOST_SCREEN_TEXT);
 }
+
+/**
+ * The generalized client control-verb table (D-09, Phase 185 Plan 06).
+ * Currently: strict_mode, vision_intent (migrated from 183/184,
+ * behavior-identical) plus swap_model/swap_voice (SWAP-01/SWAP-02, added
+ * below). Every entry is pure over normalize() — no DOM/React/fetch/side
+ * effects; dispatch/resolution live in the caller.
+ */
+export const CLIENT_VERB_REGISTRY: ClientControlVerb[] = [
+  STRICT_MODE_VERB,
+  VISION_INTENT_VERB,
+];
 
 // ─── State machine ────────────────────────────────────────────────────────────
 
