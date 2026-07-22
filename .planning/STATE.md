@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
 status: executing
-stopped_at: Completed 102-01-PLAN.md
-last_updated: "2026-07-22T16:53:28.762Z"
+stopped_at: Completed 102-02-PLAN.md
+last_updated: "2026-07-22T17:08:13.151Z"
 last_activity: 2026-07-22
 progress:
   total_phases: 2
   completed_phases: 1
   total_plans: 10
-  completed_plans: 8
+  completed_plans: 9
   percent: 50
 ---
 
@@ -37,7 +37,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
 Phase: 102 (address-tech-debt-reminders-dead-code-astridr-comment-cleanu) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-07-22
 
@@ -280,6 +280,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 101-04]: astridr calendar cron registers via the real scheduler (cron_builders.py + cron_dispatcher.py), not jobs.py — jobs.py is JobManager (execution-tracking only), no periodic-job-registration surface exists there; bounded 60-day forward window achieved by post-filtering normalized events since GoogleWorkspaceTool.list_events has no time_min/time_max param — same file-scope correction likely applies to 101-05's coordination note
 - [Phase 101-05]: reminder_nudge cron registers via cron_builders.py/cron_dispatcher.py (real scheduler), not jobs.py -- same file-scope correction as 101-04's calendar_cache precedent
 - [Phase 102]: Phase 102 Plan 01: self-hosted Convex codegen needed a freshly-generated admin key (docker exec convex-backend ./generate_admin_key.sh) passed as inline shell env vars for a single command, since the stored local admin key was stale and secret config files cannot be read or written per project security policy
+- [Phase 102-02]: Deleted dead CodePulsePoster class + orphaned constants from calendar_cache.py, switched cron_dispatcher.py's _run_calendar_cache_refresh to pass self._telemetry (shared ConvexHandler), and swept the stale two-backend/404/transitional narrative out of tools/reminders.py's comment block to state the current single-local-backend truth. Live cron-tick proof deferred to plan 102-03. AUDIT-TD-02.
 
 ### Pending Todos
 
@@ -306,13 +307,14 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | 260629-pcy | Hive swarm-task → agent cross-graph deep-link — Hive joins the cross-nav web | 2026-06-29 | b7b8e84 | [260629-hive-task-agent-link](./quick-archive/260629-hive-task-agent-link/) |
 | 260629-qaj | Close out cross-nav — back-chip labels (Hive/Memory) + inbound agent→Hive (?goal=) | 2026-06-29 | b0253b3 | [260629-close-crossnav](./quick-archive/260629-close-crossnav/) |
 | Phase 102 P01 | 6min | 2 tasks | 4 files |
+| Phase 102 P02 | 25min | 2 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-07-22T16:53:28.752Z
-Stopped at: Completed 102-01-PLAN.md
+Last session: 2026-07-22T17:08:13.141Z
+Stopped at: Completed 102-02-PLAN.md
 Next action: Phase 98's 98-05 fix closes the sole gap `98-HUMAN-UAT.md` found (stale `claude-code:project:<key>` row surviving a move/delete of the last skill in a workspace). Two MANUAL verification steps from the 98-05 plan's own `<verification>` section remain outstanding (live G: workspace repro re-check; transient-unmount negative check pausing the live G: mount mid-scan) — both require a live Forge daemon + live Google Drive mount, deferred as non-blocking. Proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or Phase 100 (Control-Surface UX, depends on both 98 and 99) once 99 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-02-PLAN.md
+Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-03-PLAN.md
 
 ## Operator Next Steps
 
