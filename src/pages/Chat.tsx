@@ -337,20 +337,6 @@ export default function Chat() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {disconnected ? (
-            <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-muted-foreground px-2.5 py-1 rounded-full bg-muted border border-border">
-              <WifiOff className="w-3 h-3" /> OFFLINE
-            </span>
-          ) : (
-            <span
-              className={`flex items-center gap-1.5 font-mono text-[10px] tracking-wide px-2.5 py-1 rounded-full border ${pill.cls}`}
-            >
-              {pill.dot && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_var(--primary)] animate-pulse" />
-              )}
-              {pill.text}
-            </span>
-          )}
           {/* Repro instrumentation — copies the voice lifecycle trace */}
           {VOICE_DEBUG_ENABLED && (
             <button
@@ -368,11 +354,6 @@ export default function Chat() {
             </button>
           )}
           <TooltipProvider delayDuration={300}>
-            <SwapBadge
-              modelOverride={swapState.modelOverride}
-              voiceOverride={swapState.voiceOverride}
-              lastModel={lastTurnModel}
-            />
             <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
             <ShareScreenToggle
               state={screenShare.state}
@@ -403,12 +384,42 @@ export default function Chat() {
 
       {/* Avatar hero */}
       <div className="flex flex-col items-center pt-5 pb-2 shrink-0">
-        <div
-          className={`w-[248px] transition-[opacity,filter] duration-300 ${
-            listening ? "" : "opacity-45 saturate-50"
-          }`}
-        >
-          <AvatarAura state={avatarState} ttsAnalyser={null} />
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
+          <div
+            className={`w-[248px] transition-[opacity,filter] duration-300 ${
+              listening ? "" : "opacity-45 saturate-50"
+            }`}
+          >
+            <AvatarAura state={avatarState} ttsAnalyser={null} />
+          </div>
+
+          {/* Vital Signs — read-only status indicators, grouped beside the avatar */}
+          <div className="rounded-xl border border-border p-3 flex flex-col gap-2">
+            <span className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
+              VITAL SIGNS
+            </span>
+            {disconnected ? (
+              <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-muted-foreground px-2.5 py-1 rounded-full bg-muted border border-border">
+                <WifiOff className="w-3 h-3" /> OFFLINE
+              </span>
+            ) : (
+              <span
+                className={`flex items-center gap-1.5 font-mono text-[10px] tracking-wide px-2.5 py-1 rounded-full border ${pill.cls}`}
+              >
+                {pill.dot && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_var(--primary)] animate-pulse" />
+                )}
+                {pill.text}
+              </span>
+            )}
+            <TooltipProvider delayDuration={300}>
+              <SwapBadge
+                modelOverride={swapState.modelOverride}
+                voiceOverride={swapState.voiceOverride}
+                lastModel={lastTurnModel}
+              />
+            </TooltipProvider>
+          </div>
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-sm text-foreground/90">
