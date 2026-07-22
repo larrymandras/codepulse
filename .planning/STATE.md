@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
-status: milestone_complete
-stopped_at: Phase 98 Plan 05 gap closure complete (stale-origin prune fix, commits 360e8a5/forge + 107e64d/codepulse) — Phase 98 code-complete 5/5; manual live UAT re-check still outstanding — next: Phase 99 (v11.0 resume)
-last_updated: "2026-07-22T13:00:00.000Z"
+status: tech_debt phase open — Phase 102 added to v12.0 (not yet planned)
+stopped_at: Phase 102 context gathered
+last_updated: "2026-07-22T14:24:44.333Z"
 last_activity: 2026-07-22
 progress:
-  total_phases: 1
+  total_phases: 2
   completed_phases: 1
   total_plans: 7
   completed_plans: 7
-  percent: 100
+  percent: 50
 ---
 
 <!-- Counters hand-reconciled 2026-07-20 against git ground truth (gsd-sdk state.* verbs miscount;
@@ -38,7 +38,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
 Phase: 98 (skill-lifecycle-mutations) — COMPLETE 2026-07-21 (4/4 plans, 11/11 must-haves verified, code review 9 findings all fixed incl. WR-04 D-05 target-scoping sign-off, UAT approved by Larry). Gap-closure Plan 98-05 executed 2026-07-22 (stale-origin prune fix — cross-repo forge+codepulse, unit-tested both sides, full codepulse suite green 204/204 files). LIFE-01..06 + DAEMON-02 marked Complete.
 Plan: n/a
-Status: v11.0 resumes at Phase 99 (Skill Launch / Dispatch); Phase 100 (Control-Surface UX) depends on 98+99. Phase 98's manual live UAT re-check of the 98-05 fix (real G: workspace repro + transient-unmount negative check) is still outstanding but non-blocking for Phase 99.
+Status: tech_debt phase open — Phase 102 added to v12.0 (not yet planned)
 Last activity: 2026-07-22
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
@@ -124,6 +124,7 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 
 - Phase 96 added (2026-07-13): UI deep-dive cleanup — IA restructure (dissolve CONSOLE cluster), command palette nav drift, fake header telemetry, hardcoded trust signals, orphaned pages, header/layout consistency. Full audit findings in `.planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/FINDINGS.md`.
 - v11.0 roadmap created (2026-07-17): 4 phases (97-100) derived from the 22 v11.0 requirements. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is renumbered to Phase 98 — the daemon-executor + real-intake foundation (INTAKE-01..04, DAEMON-01/03/04) was sequenced first as Phase 97 per the dependency analysis (nothing mutates the host without the daemon executor existing). Phase 99 (Launch/Dispatch) is independent of the daemon work (rides existing chat/Forge/Ástríðr channels) and can run in parallel with 97/98. Phase 100 (Control-Surface UX) depends on both 98 and 99 and is sequenced last.
+- Phase 102 added: Address tech debt: reminders dead code + astridr comment cleanup
 
 ### Decisions
 
@@ -306,10 +307,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-22T13:00:00.000Z
-Stopped at: Phase 98 Plan 05 (stale-origin prune gap closure) complete — Phase 98 now 5/5 plans code-complete
+Last session: 2026-07-22T14:24:44.324Z
+Stopped at: Phase 102 context gathered
 Next action: Phase 98's 98-05 fix closes the sole gap `98-HUMAN-UAT.md` found (stale `claude-code:project:<key>` row surviving a move/delete of the last skill in a workspace). Two MANUAL verification steps from the 98-05 plan's own `<verification>` section remain outstanding (live G: workspace repro re-check; transient-unmount negative check pausing the live G: mount mid-scan) — both require a live Forge daemon + live Google Drive mount, deferred as non-blocking. Proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or Phase 100 (Control-Surface UX, depends on both 98 and 99) once 99 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/98-skill-lifecycle-mutations-archive-restore-move-delete/98-05-SUMMARY.md
+Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-CONTEXT.md
 
 ## Operator Next Steps
 

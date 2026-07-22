@@ -623,6 +623,16 @@ Plans:
 
 **UI hint**: yes
 
+### Phase 102: Address tech debt: reminders dead code + astridr comment cleanup
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 101
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 102 to break down)
+
 ---
 
 ## Progress
