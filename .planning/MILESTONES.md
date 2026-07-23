@@ -1,5 +1,25 @@
 # Milestones
 
+## v12.0 Personal Productivity — Reminders & Calendar (Shipped: 2026-07-23)
+
+**Phases completed:** 2 phases (101-102), 10 plans (~22 tasks), cross-repo (codepulse + astridr-repo)
+**Timeline:** 2026-07-19 → 2026-07-23 (5 days) | ~49 commits touching the reminders/calendar surface + phase docs
+**Requirements:** 9/9 (REM-01..05, CAL-01..02, UI-01..02)
+**Verification:** Phase 101 `VERIFICATION.md` passed (code-verified → live-verification addendum closed all 5 human items against the running stack: real Ástríðr container, real Google OAuth ×3, real Telegram nudge, real cron ticks; 101-07 gap-closure mutation-tested). Phase 101 Nyquist-compliant (`101-VALIDATION.md`, 17/17 tasks). Phase 102 verification 10/10, live self-hosted deploy + one real calendar tick (75 pushed / 0 failed).
+**Milestone audit:** `tech_debt` — 0 blockers; the 2 flagged tech-debt items were closed by Phase 102. See `milestones/v12.0-MILESTONE-AUDIT.md`.
+**Known deferred items at close:** 3 non-blocking (`102-REVIEW.md` 4 advisory warnings for a future tech-debt pass; QuickAdd NL date-parse backlog; astridr boot-order transient — self-heals).
+**Non-linear note:** executed as an interleaved side-quest while **v11.0 (Skills, Phases 97-100) is still in progress** (97/98 done; 99/100 not started). Closing v12.0 did not change the active milestone — v11.0 resumes at Phase 99. `REQUIREMENTS.md` was not deleted at close; only its v12.0 section was extracted to `milestones/v12.0-REQUIREMENTS.md`.
+
+**Key accomplishments:**
+
+- **REM — one Convex store, bidirectional sync:** A single Convex `reminders` table is the source of truth, written by both the CodePulse UI and an Ástríðr chat tool (`reminders`: add/list/update/complete/snooze over `ConvexHandler.send_to`), every row origin-tagged (`dashboard` / `astridr`). A reminder created on either side appears live on the other — verified live end-to-end (NL round-trip both directions).
+- **REM — recurrence + proactive nudges:** Due-dated reminders recur (daily / weekly / monthly / "every 1st", iCal `byday` codes); completing or passing an occurrence spawns the next open one with nudge state cleared, bounded recurrences terminate at `until`, and one-offs never respawn. An Ástríðr cron nudges exactly once per due occurrence on the reminder's own profile channel (deduped via `notifiedAt`) — live cron proof: 1 Telegram send, dedupe held 2 ticks.
+- **CAL — read-only Google Calendar overlay:** Per-profile cron caches each real Google calendar (`personal`→mandrasle, `business`→lmandras@myprotectall, `consulting`→lemandras@forgedinai) into `calendarEvents` on a bounded forward window, upserted by `googleEventId` with stale rows pruned; one account's auth failure never blanks another. Events + due reminders render together on one grid, visually distinct — and **no Google write path exists** (grep-verified). Live: 3/73/0 events across the 3 real accounts.
+- **UI — profile-segmented command center:** A lazy `/reminders` route in `navRegistry` (COMMAND cluster) presents reminders segmented personal / business / consulting, grouped Overdue / Today / Upcoming / Done, with optimistic complete/snooze/quick-add reconciled on server confirm and `prefers-reduced-motion`-safe motion. The sole UAT gap (undated reminders hidden by the day-filter) was closed by 101-07 with a RED-first regression test.
+- **Quality gates:** `101-REVIEW` / `101-REVIEW-FIX` fixed 8/8 findings (2 Critical + 6 Warning), each regression-tested; `101-RETEST-UAT` 7/7 pass via Playwright against the live backend + live astridr cron/chat (also fixed pre-existing astridr log errors in-session). Phase 102 then removed the audit-flagged dead code cross-repo (dead `dueSoon`/`overdue` + `by_dueAt` index in codepulse; dead `CodePulsePoster` + stale two-backend narrative in astridr-repo) and live-verified the index-drop deploy + real calendar tick.
+
+---
+
 ## v10.0 Eval & Trace Observability + Hardening (Shipped: 2026-07-07)
 
 **Phases completed:** 3 phases (93-95), 15 plans, 36 tasks

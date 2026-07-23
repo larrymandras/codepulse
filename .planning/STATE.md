@@ -1,22 +1,23 @@
 ---
 gsd_state_version: 1.0
-milestone: v12.0
-milestone_name: Personal Productivity — Reminders & Calendar
-status: milestone_complete
-stopped_at: Milestone complete (Phase 102 was final phase)
-last_updated: 2026-07-23T12:20:53.482Z
-last_activity: 2026-07-22
+milestone: v11.0
+milestone_name: Skills Command Center — Full Lifecycle & Launch
+status: in_progress
+stopped_at: v12.0 shipped & archived 2026-07-23; v11.0 resumes at Phase 99 (Skill Launch / Dispatch)
+last_updated: 2026-07-23T13:00:00.000Z
+last_activity: 2026-07-23
 progress:
-  total_phases: 2
+  total_phases: 4
   completed_phases: 2
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_plans: 11
+  completed_plans: 11
+  percent: 50
 ---
 
-<!-- Counters hand-reconciled 2026-07-23 against git ground truth (gsd-sdk state.* verbs miscount;
-     phase.complete wrote completed_plans:34 on 102 close — corrected to 10; previously wrote 26 on 101 close — corrected to 7).
-     v12.0 scope = Phases 101 (7 plans incl. 101-07 gap closure) + 102 (3 plans, tech-debt close-out). v11.0 (Phases 97-100) is PAUSED mid-milestone:
+<!-- Counters hand-reconciled 2026-07-23 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used at v12.0 close).
+     ACTIVE MILESTONE = v11.0 (Skills, Phases 97-100): 97 COMPLETE (6 plans), 98 COMPLETE (5 plans), 99/100 NOT started — completed_plans:11 = 97's 6 + 98's 5; percent by phase = 2/4 = 50.
+     v12.0 (Reminders & Calendar, Phases 101-102) SHIPPED & ARCHIVED 2026-07-23 (10/10 plans, tagged v12.0) — closed by hand (extract-don't-delete: REQUIREMENTS.md kept live, only the v12.0 section extracted to milestones/v12.0-REQUIREMENTS.md; ROADMAP.md collapsed; audit moved to milestones/). v12.0 scope was Phases 101 (7 plans incl. 101-07 gap closure) + 102 (3 plans, tech-debt close-out).
+     v11.0 (Phases 97-100) detail:
      Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (5/5 incl. 98-05 gap closure, verified + UAT approved 2026-07-21, gap closed 2026-07-22); Phases 99/100 not started.
      NOTE 2026-07-22: this file's WORKING COPY was found reverted to an earlier "executing / Plan 1 of 5" snapshot at the
      start of Plan 98-05's execution (frontmatter status/stopped_at/Current Position all regressed vs. the committed
@@ -31,14 +32,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Milestone complete
+**Current focus:** v11.0 Skills Command Center — resume at Phase 99 (Skill Launch / Dispatch)
 
 ## Current Position
 
-Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-23 (Phase 101 done 2026-07-20; Phase 102 tech-debt close-out done + live-verified 2026-07-23; formal close-out/archive pending)
-Phase: 102 (address-tech-debt) — COMPLETE, verification passed 10/10
-Plan: 3 of 3 complete
-Status: Milestone complete
+Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98 COMPLETE; **resumes at Phase 99 (Skill Launch / Dispatch, independent of 97/98)**; Phase 100 (Control-Surface UX) depends on both 98 and 99, sequenced last.
+Status: in_progress (v11.0 was paused during the v12.0 side-quest; now the sole active milestone)
+
+**v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-23
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
@@ -311,10 +312,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-22T17:08:13.141Z
-Stopped at: Completed 102-02-PLAN.md
-Next action: Phase 98's 98-05 fix closes the sole gap `98-HUMAN-UAT.md` found (stale `claude-code:project:<key>` row surviving a move/delete of the last skill in a workspace). Two MANUAL verification steps from the 98-05 plan's own `<verification>` section remain outstanding (live G: workspace repro re-check; transient-unmount negative check pausing the live G: mount mid-scan) — both require a live Forge daemon + live Google Drive mount, deferred as non-blocking. Proceed to Phase 99 (Skill Launch/Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or Phase 100 (Control-Surface UX, depends on both 98 and 99) once 99 lands. Separately, 101-REVIEW.md criticals (`/gsd-code-review 101 --fix` — CR-01 snooze never re-nudges, CR-02 edit popover UTC-shifts dueAt) and v12.0 milestone close-out (`/gsd-complete-milestone`) remain outstanding whenever convenient.
-Resume file: .planning/phases/102-address-tech-debt-reminders-dead-code-astridr-comment-cleanu/102-03-PLAN.md
+Last session: 2026-07-23 (v12.0 milestone close-out)
+Stopped at: v12.0 SHIPPED & ARCHIVED — archives written (milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md), ROADMAP collapsed, REQUIREMENTS.md v12.0 section extracted (v11.0 kept live), MILESTONES.md + RETROSPECTIVE.md + PROJECT.md updated, phase dirs 101/102 moved to milestones/v12.0-phases/, tagged `v12.0`.
+Next action: **Resume v11.0** — `/gsd-discuss-phase 99` for Skill Launch / Dispatch (LAUNCH-01..04; independent of 97/98, rides existing `chat.send`/`enqueueLaunch`/Ástríðr channels). Phase 100 (Control-Surface UX, UX-01..04) depends on both 98 and 99, sequenced last. Non-blocking carryovers: Phase 98's two MANUAL verification steps (live G: repro + transient-unmount negative check — need a live Forge daemon + Google Drive mount); `102-REVIEW.md`'s 4 advisory warnings (candidate future tech-debt phase).
+Resume file: .planning/ROADMAP.md (v11.0 Phase 99 detail)
 
 ## Operator Next Steps
 

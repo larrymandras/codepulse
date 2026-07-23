@@ -10,7 +10,7 @@
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
 - ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
 - 🚧 **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**in progress**, started 2026-07-17) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor is the critical path
-- ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phases 101 (**complete 2026-07-20**, 7/7 plans incl. gap closure) + 102 tech-debt close-out (**complete 2026-07-23**, 3/3 plans, live-verified; formal close-out/archive pending) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo)
+- ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phases 101-102 (**shipped 2026-07-23**, 10/10 plans; tagged `v12.0`) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo) — [archive](milestones/v12.0-ROADMAP.md)
 
 ## Phases
 
@@ -584,62 +584,17 @@ Plans:
 
 ---
 
-## v12.0 Personal Productivity — Reminders & Calendar
+<details>
+<summary>✅ v12.0 Personal Productivity — Reminders & Calendar (Phases 101-102) — SHIPPED 2026-07-23</summary>
 
-> **Defined 2026-07-19** from an approved brainstorming design (`docs/superpowers/specs/2026-07-19-reminders-calendar-command-center-design.md`). **NOT yet the active milestone** — v11.0 (Skills, Phase 97) is still executing, so `STATE.md` intentionally still tracks v11.0. v12.0 activates when v11.0 completes or Larry starts it explicitly. Continues phase numbering from 100.
+> **Defined 2026-07-19**, executed as an interleaved side-quest while v11.0 (Skills, Phases 97-100) remained in progress. 2 phases (101-102), 10 plans, 9/9 requirements, cross-repo (codepulse + astridr-repo). Milestone audit `tech_debt` (0 blockers; the 2 flagged items were closed by Phase 102). Full per-phase detail + success criteria archived in [milestones/v12.0-ROADMAP.md](milestones/v12.0-ROADMAP.md); requirements in [milestones/v12.0-REQUIREMENTS.md](milestones/v12.0-REQUIREMENTS.md); audit in [milestones/v12.0-MILESTONE-AUDIT.md](milestones/v12.0-MILESTONE-AUDIT.md).
 
-**Milestone goal:** Give Larry a sleek, profile-organized Reminders command center where he tracks personal / business / consulting reminders — creatable and editable both in CodePulse and by talking to Ástríðr, always in sync — with recurrence, proactive due-nudges, and a read-only Google Calendar overlay per profile.
+**Milestone goal:** A sleek, profile-organized Reminders command center — personal / business / consulting reminders creatable and editable from both CodePulse and an Ástríðr conversation, always in sync, with recurrence, proactive due-nudges, and a read-only Google Calendar overlay per profile.
 
-**Phase summary:**
+- [x] **Phase 101 — Reminders & Calendar Command Center** (7/7 plans, incl. 101-07 UAT gap closure) — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + `reminders` tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page — completed 2026-07-20, live-verified
+- [x] **Phase 102 — Address tech debt: reminders dead code + astridr comment cleanup** (3/3 plans) — deleted the orphaned `dueSoon`/`overdue` queries + `by_dueAt` index (codepulse) and the dead `CodePulsePoster` class + stale two-backend narrative (astridr-repo); live-verified via self-hosted index-drop deploy + one real calendar tick (75 events pushed, 0 failed) — completed 2026-07-23, verification 10/10
 
-- [x] **Phase 101 — Reminders & Calendar Command Center** — Convex-backed reminders store (source of truth), authed Ástríðr sync endpoints + tool, recurrence, proactive nudges via `ProactiveMessenger`, per-profile read-only Google Calendar cache + overlay, and the profile-segmented Reminders page with quick actions and effects. (completed 2026-07-20 — 7/7 plans incl. 101-07 UAT gap closure)
-- [x] **Phase 102 — Address tech debt: reminders dead code + astridr comment cleanup** — deleted the orphaned `dueSoon`/`overdue` queries + `by_dueAt` index (codepulse) and the dead `CodePulsePoster` class + stale two-backend narrative (astridr-repo); live-verified via self-hosted index-drop deploy and one real calendar tick (75 events pushed, failed=0). (completed 2026-07-23 — 3/3 plans, verification 10/10)
-
-**Execution order:** Single phase, 6 plans, cross-repo — build worktrees-OFF, sequential, commit per-repo (`git -C`). Convex foundation (01) → sync/calendar endpoints (02) → Ástríðr tool + crons (03/04/05) + Reminders page (06). Plans 03/04/05 modify **astridr-repo**; 01/02/06 modify **codepulse** (Convex is the cloud deployment tidy-whale-981).
-
-## Phase Details
-
-### Phase 101: Reminders & Calendar Command Center
-
-**Goal**: A new Reminders page in the command center where Larry tracks reminders across his three profiles (personal / business / consulting). Reminders are the same store on both sides — create/edit/complete/snooze work from the CodePulse UI *and* from a conversation with Ástríðr, always in sync. Due-dated reminders can recur, Ástríðr proactively nudges when they come due, and each profile shows its real Google Calendar events overlaid (read-only) with its due-dated reminders on one grid.
-**Depends on**: Nothing new in CodePulse (extends the existing Convex store + `ingestAuth` ingest-endpoint family + lazy-page/`navRegistry` conventions). Ástríðr side reuses `google_workspace` calendar (`list_events`, per-account `personal`/`business`/`consulting`), `ConvexHandler.send_to`, `ProactiveMessenger.send_alert`, and the `cron.py`/`jobs.py` scheduler. Cross-repo (codepulse + astridr-repo), like Phase 97's forge-repo plans.
-**Requirements**: REM-01, REM-02, REM-03, REM-04, REM-05, CAL-01, CAL-02, UI-01, UI-02
-**Success Criteria** (what must be TRUE):
-
-  1. A reminder created in CodePulse is visible when Larry asks Ástríðr, and one Larry tells Ástríðr to create appears live in CodePulse — one Convex store, both write directions, each row tagged with its origin (`dashboard` / `astridr`).
-  2. Reminders are organized by profile; each profile shows its own reminders (grouped Overdue / Today / Upcoming / Done) and its own Google Calendar events overlaid with due-dated reminders on one month/week grid — read-only, nothing ever written back to Google.
-  3. A due-dated reminder can recur (daily / weekly / monthly / "every 1st"); completing or passing an occurrence spawns the next open one (nudge state cleared), and a completed one-off never respawns.
-  4. When a reminder comes due or overdue, Ástríðr proactively nudges Larry on that profile's channel exactly once (deduped via `notifiedAt`), and CodePulse renders due-soon / overdue state.
-  5. The consulting profile's calendar reads the real `lemandras@forgedinai.ai` account (`consulting` Google alias); personal reads `mandrasle@gmail.com`, business reads `lmandras@myprotectall.com`.
-  6. Add / edit / complete / snooze all succeed from BOTH the CodePulse page and an Ástríðr conversation, with the other surface reflecting the change.
-
-**Plans**: 7 plans (4 waves; 101-07 gap closure added post-UAT), cross-repo
-
-- [x] 101-01-PLAN.md — Wave 1 (codepulse): Convex `reminders` table + CRUD mutations (create/update/complete/snooze/remove) + queries (listByProfile/dueSoon/overdue) + recurrence-spawn helper + tests (REM-01, REM-04)
-- [x] 101-02-PLAN.md — Wave 2 (codepulse): authed `/reminders-ingest` (write) + `/reminders-read` (authed read) + `/calendar-ingest` endpoints, `calendarEvents` read-only cache table + `listByProfile` calendar query + tests (REM-02, CAL-01)
-- [x] 101-03-PLAN.md — Wave 3 (astridr): `reminders` tool (add/list/update/complete/snooze) over `ConvexHandler.send_to` + read endpoint, tool registration (tool_id == name), tests (REM-03)
-- [x] 101-04-PLAN.md — Wave 3 (astridr): calendar-cache cron — per-profile `google_workspace list_events` → normalize → `/calendar-ingest` (upsert by googleEventId, prune stale) (CAL-01)
-- [x] 101-05-PLAN.md — Wave 3 (astridr): nudge cron — scan `dueSoon`/`overdue` → `ProactiveMessenger.send_alert` to the profile channel → set `notifiedAt`; recurrence spawn on pass (REM-05, REM-04)
-- [x] 101-06-PLAN.md — Wave 3 (codepulse): `Reminders.tsx` page + `navRegistry` (COMMAND cluster) + profile-segmented layout + calendar overlay + quick actions (complete/snooze/quick-add) + effects (CAL-02, UI-01, UI-02)
-
-**UI hint**: yes
-
-### Phase 102: Address tech debt: reminders dead code + astridr comment cleanup
-
-**Goal:** Close v12.0 milestone-audit tech-debt items 1-2 — remove the orphaned `dueSoon`/`overdue` dead code + `by_dueAt` index from codepulse, and delete the dead `CodePulsePoster` class plus sweep the stale two-backend narrative from astridr-repo — leaving zero references to either and both repos' suites green, verified against the running stack.
-**Requirements**: none formal — cleanup phase scoped by 102-CONTEXT.md decisions D-01..D-07 (audit items AUDIT-TD-01 reminders dead code, AUDIT-TD-02 astridr comment cleanup)
-**Depends on:** Phase 101
-**Plans:** 3/3 plans complete
-
-Plans:
-**Wave 1**
-
-- [x] 102-01-PLAN.md — Wave 1 (codepulse): delete dead dueSoon/overdue queries+handlers+tests, drop by_dueAt index, codegen + static bar (D-01, D-02, D-05, D-06)
-- [x] 102-02-PLAN.md — Wave 1 (astridr-repo): delete CodePulsePoster + orphaned constants, cron → self._telemetry, fix dispatcher test, sweep stale two-backend narrative (D-03, D-04, D-06)
-
-**Wave 2** *(blocked on Wave 1 completion)*
-
-- [x] 102-03-PLAN.md — Wave 2 (operator, cross-repo): live self-hosted index-DROP deploy + one real calendar_cache tick (pushed>0/failed=0, events on /reminders) (D-02, D-07)
+</details>
 
 ---
 
@@ -677,6 +632,7 @@ Plans:
 | 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
+| 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 
 *Last updated: 2026-07-23 — **v12.0 Phase 102 COMPLETE — all v12.0 phases done**: tech-debt close-out — dead `dueSoon`/`overdue` queries + `by_dueAt` index removed from codepulse (index drop deployed to the live self-hosted backend), dead `CodePulsePoster` deleted + stale two-backend narrative swept in astridr-repo (commits on astridr `main`, merged into `feature/brain-swap`, prod + war-room rebuilt), one real calendar tick verified (pushed 75 / failed 0, events on /reminders); verification 10/10, code review 0 critical / 4 advisory warnings (102-REVIEW.md: orphaned `by_status` index, silent send_to failure counting, all-day strptime guard, snooze-after-done recurrence dupe — candidates for a future tech-debt phase). Prior: 2026-07-20 — **v12.0 Personal Productivity (Reminders & Calendar) — Phase 101 COMPLETE**: Plan 07 (gap closure, codepulse — UI-02/CAL-02) done, 7/7 plans; closed the sole `101-UAT.md` gap (test 8: undated reminders vanishing under a calendar day filter) via a RED-first regression test + one-line predicate fix. All v12.0 requirements complete. Live manual re-check (dev server, undated reminder stays visible under a day filter) recommended before milestone close. v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-19 — Plan 06 (Reminders command-center page, codepulse) done, 6/6 plans; all 9 v12.0 requirements complete. Earlier: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
 </content>

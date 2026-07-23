@@ -177,6 +177,39 @@
 
 **Key lesson:** when one consumer of a shared contract gets a fix (ApprovalBlock's ack gating in 96-03), grep for every sibling consumer (InboxCard) before closing — the UAT found the miss, but the sweep-all-instances rule would have caught it at build time.
 
+## Milestone: v12.0 — Personal Productivity: Reminders & Calendar
+
+**Shipped:** 2026-07-23
+**Phases:** 2 (101-102) | **Plans:** 10 | **Timeline:** 2026-07-19 → 2026-07-23 (5 days) | cross-repo (codepulse + astridr-repo)
+
+### What Was Built
+- Reminders command center (Phase 101): one Convex `reminders` store as source of truth, written by both the CodePulse UI and an Ástríðr `reminders` chat tool (origin-tagged); recurrence engine (`computeNextDueAt`, spawn-on-complete, bounded `until`); per-profile proactive nudge cron (once-only via `notifiedAt`, own-channel); read-only per-profile Google Calendar cache + overlay (no write-back); profile-segmented lazy `/reminders` page with optimistic quick actions.
+- Tech-debt close-out (Phase 102): removed the orphaned `dueSoon`/`overdue` queries + `by_dueAt` index (codepulse) and the dead `CodePulsePoster` class + stale two-backend narrative (astridr-repo), live-verified via a self-hosted index-drop deploy + one real calendar tick.
+
+### What Worked
+- **Live verification caught what tests couldn't — again.** The code-verified pass listed Phase 101 as `human_needed`; running it live against the real stack (Ástríðr container + Google OAuth ×3 + Telegram + cron) is what actually proved the bidirectional sync, the once-only nudge, and the 3-account calendar isolation. `101-RETEST-UAT` then found and fixed a stale Convex deployment and a broken NL chat path in astridr-repo that green suites never surfaced.
+- **The audit's own tech-debt list became the next phase.** The v12.0 milestone audit shipped `tech_debt` with 2 file:line-evidenced items instead of hand-waving; Phase 102 closed exactly those, cross-repo, and live-verified the result — the milestone closed genuinely clean rather than carrying debt forward silently.
+- **RED-first gap closure.** The sole UAT gap (undated reminders hidden by the day-filter) was closed by a failing regression test then a one-line predicate fix (101-07) — mutation-tested, not eyeballed.
+
+### What Was Inefficient
+- **Interleaving two live milestones complicated the close.** v12.0 ran as a side-quest inside an in-progress v11.0, so `REQUIREMENTS.md` held both milestones' requirements — the standard "archive + `git rm REQUIREMENTS.md`" close step would have deleted v11.0's live requirements. Close had to be done by hand (extract only the v12.0 section) rather than via `milestone.complete`.
+- **Stale status text drifted across artifacts.** `STATE.md` Session Continuity and PROJECT.md still described the `101-REVIEW` criticals as "outstanding" after the later audit recorded `101-REVIEW-FIX` as 8/8 fixed — a reminder that narrative lines go stale as fast as counters.
+
+### Patterns Established
+- **Extract-don't-delete for interleaved-milestone REQUIREMENTS.md** — when closing a side-quest milestone whose requirements share the live file with an in-progress milestone, extract the closing milestone's section to the archive and leave the rest live; never run the wholesale-delete close path.
+- **Producer-declares-coverage isn't the only cross-repo contract** — the reminders tool + calendar/nudge crons register through the *real* scheduler (`cron_builders.py`/`cron_dispatcher.py`), not `jobs.py`; verifying the registration surface (not just the handler) was necessary before trusting the cron would ever fire.
+- **Ship the audit as a real gate, then close its findings in a numbered phase** — audit → tech-debt phase → live re-verify, rather than deferring the debt into a backlog note.
+
+### Key Lessons
+- A read-only integration still needs an explicit no-write-path assertion — CAL-02 was proven by grepping for the absence of any Google write call, not by "we didn't add one."
+- When two milestones interleave, the milestone-close automation is the wrong tool; do the archival by hand and cross-check REQUIREMENTS.md against what's still live.
+- Do not trust `gsd-sdk milestone.complete`/`state.*` here — this file (v12.0) was closed manually and cross-checked against git ground truth, consistent with every prior close's SDK-undercount note.
+
+### Cost Observations
+- Model mix: orchestration + manual archival on Opus; Phase 101/102 execution largely inline (cross-repo + live-stack gates need interactive operator steps).
+- Sessions: Phase 101 build → UAT → RETEST-UAT → Phase 102 tech-debt → milestone close, over ~5 days interleaved with v11.0.
+- Notable: cross-repo work spanned codepulse + astridr-repo + the self-hosted Convex backend; live verification (real Google/Telegram/cron) was the load-bearing cost, not code volume (~10 changed files on the core surface).
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -186,6 +219,7 @@
 | v4.0 | 39 days | 8 | Wave-based parallel execution, formal verification gates, human UAT |
 | v5.0 | 10 days | 12 | Multi-provider gateway, external integrations, advanced viz; milestone bookkeeping deferred (context-exhaustion lesson) |
 | v9.0 | 7 days | 5 | Token-first theming, lazy-chunk build gates, operator manual-gates; live-integration gate lesson (cross-repo features must run live before "done") *(v7/v8 retros not recorded)* |
+| v12.0 | 5 days | 2 | Interleaved side-quest milestone (ran inside in-progress v11.0); extract-don't-delete REQUIREMENTS.md at close; audit shipped as a real gate then closed by a numbered tech-debt phase *(v11.0 in progress, retro pending)* |
 
 ### Cumulative Quality
 
@@ -194,6 +228,7 @@
 | v4.0 | 268+ | 99.6% (1 pre-existing failure) | 311 files, +43,759 lines |
 | v5.0 | 445+ | green at ship | 668 files, +76,219 / −3,401 |
 | v9.0 | 88: 47/47 · 92: 83/83 Nyquist; 91 verifier 10/10 | green at ship | 277 files, +33,655 / −3,495; ~86,100 LOC |
+| v12.0 | 101: Nyquist 17/17 tasks; 101-RETEST-UAT 7/7 Playwright vs live | green at ship | cross-repo; ~10 core-surface files; live-verified (Google ×3, Telegram, cron) |
 
 ### Top Lessons (Verified Across Milestones)
 
