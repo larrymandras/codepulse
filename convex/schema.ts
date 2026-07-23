@@ -1890,4 +1890,32 @@ export default defineSchema({
   })
     .index("by_profile", ["profileId", "start"])
     .index("by_googleEventId", ["googleEventId"]),
+
+  // ============================================================
+  // GOVERNOR INBOX (Phase 186 Plan 02, GOV-01, D-10) — sibling of reminders
+  // ============================================================
+
+  // The record-everything store the interrupt governor (Plan 04) writes to
+  // unconditionally, regardless of the interrupt decision (D-15 — "suppressed
+  // never means lost"). Written via /inbox-ingest (Ástríðr), read via
+  // /inbox-read (per-profile) and /inbox-read-all (D-12 aggregate, all three
+  // profiles) — both authed, never anonymous. `intentId` links a row back to
+  // its Supabase intents lifecycle row (D-10 success criterion 4), passed
+  // inline on raise only — there is NO setIntentId/update op (Blocker 3).
+  inbox: defineTable({
+    profileId: v.string(), // "personal" | "business" | "consulting"
+    emitter: v.string(),
+    priority: v.string(), // "money" | "high" | "normal" | "low" (D-06 enum, validated at the writer)
+    title: v.string(),
+    body: v.string(),
+    spoken: v.boolean(), // whether should_speak() fired for this event
+    itemType: v.string(), // "card" | "held" | "notification" | "alert" (Plan 07 UI union)
+    heldReason: v.optional(v.string()), // "focus" | "quiet-hours" (D-07, held items only)
+    intentId: v.optional(v.string()), // Supabase intents lifecycle row, set inline on raise only
+    source: v.optional(v.string()),
+    createdAt: v.float64(),
+    ackedAt: v.optional(v.float64()),
+  })
+    .index("by_profile", ["profileId", "createdAt"])
+    .index("by_createdAt", ["createdAt"]),
 });
