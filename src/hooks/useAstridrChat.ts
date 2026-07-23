@@ -93,6 +93,8 @@ export function useAstridrChat() {
          *  chat.send as `swap_handled` so the backend's own inbound fast-path (185-05)
          *  treats it as already handled and does not re-fire the swap a second time. */
         swapHandled?: boolean;
+        /** D-07/D-14a: scopes SecurityContext.profile_id server-side only — NOT a persona-voice switch. */
+        profile?: string;
       }
     ) => {
       if (!text.trim() || isStreamingRef.current || status !== "connected") return;
@@ -116,6 +118,7 @@ export function useAstridrChat() {
           ...(opts?.voice ? { voice: true } : {}),
           ...(opts?.frame ? { frame: opts.frame, frame_mime_type: opts.frameMimeType } : {}),
           ...(opts?.swapHandled ? { swap_handled: true } : {}),
+          ...(opts?.profile ? { profile: opts.profile } : {}),
         });
 
         if (ack.status !== "ok") {
