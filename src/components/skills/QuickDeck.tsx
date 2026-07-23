@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { MessageSquare, Star } from "lucide-react";
+import { Copy, Star } from "lucide-react";
 import { deckSkills, skillInvocation, type SkillLike } from "@/lib/skills";
+import { RunTargetChooser } from "./RunTargetChooser";
 
 export type DeckSkill = SkillLike & {
   displayName: string;
@@ -10,19 +11,17 @@ export type DeckSkill = SkillLike & {
 
 interface QuickDeckProps {
   skills: DeckSkill[];
-  /** Records the copy so useCount keeps ranking the deck. */
-  onUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
   limit?: number;
 }
 
 /**
  * The unified quick-access dock: favorites pinned, most-used fill (deckSkills).
- * Chip click copies the invocation (primary action); hover reveals open-in-Chat
- * and favorite-toggle. Replaces SkillPills + FavoriteSkills + FrequentSkills.
+ * Primary chip click opens the Run target chooser (D-03, Phase 99 Plan 05) —
+ * hover reveals clipboard-copy (secondary, non-recording, D-13) and
+ * favorite-toggle. Replaces SkillPills + FavoriteSkills + FrequentSkills.
  */
-export function QuickDeck({ skills, onUse, onOpenInChat, onToggleFavorite, limit = 10 }: QuickDeckProps) {
+export function QuickDeck({ skills, onToggleFavorite, limit = 10 }: QuickDeckProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const deck = deckSkills(skills, limit) as DeckSkill[];
@@ -41,7 +40,8 @@ export function QuickDeck({ skills, onUse, onOpenInChat, onToggleFavorite, limit
       setFailed(skill.name);
       setTimeout(() => setFailed((f) => (f === skill.name ? null : f)), 2500);
     }
-    onUse(skill.name);
+    // D-13: copy no longer records a launch — useCount now reflects real
+    // runs only. No onUse/recordSkillLaunch call here.
   };
 
   return (
@@ -67,31 +67,33 @@ export function QuickDeck({ skills, onUse, onOpenInChat, onToggleFavorite, limit
                     : "border-primary/25 bg-card hover:border-primary hover:shadow-[var(--glow-xs)]"
               }`}
             >
-              <button
-                data-testid="deck-chip"
-                onClick={() => handleCopy(skill)}
-                title={`${invocation} — click to copy${skill.useCount ? ` · used ${skill.useCount}×` : ""}`}
-                aria-label={`Copy invocation ${invocation}`}
-                className={`inline-flex items-center gap-2 pl-3 pr-2 py-1.5 font-mono text-xs transition-colors ${
-                  isFailed ? "text-destructive" : isCopied ? "text-primary" : "text-foreground group-hover:text-primary"
-                }`}
-              >
-                <span aria-hidden="true">{skill.categoryIcon}</span>
-                <span className="truncate max-w-[14rem]">{invocation}</span>
-                {skill.favorite && (
-                  <Star aria-hidden="true" className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
-                )}
-                <span className={`text-[10px] tabular-nums ${isCopied || isFailed ? "" : "text-muted-foreground"}`}>
-                  {isFailed ? "copy failed" : isCopied ? "copied" : (skill.useCount ?? 0)}
-                </span>
-              </button>
+              <RunTargetChooser skill={skill}>
+                <button
+                  data-testid="deck-chip"
+                  title={`Run ${invocation}${skill.useCount ? ` · used ${skill.useCount}×` : ""}`}
+                  aria-label={`Run ${skill.name}`}
+                  className={`inline-flex items-center gap-2 pl-3 pr-2 py-1.5 font-mono text-xs transition-colors ${
+                    isFailed ? "text-destructive" : isCopied ? "text-primary" : "text-foreground group-hover:text-primary"
+                  }`}
+                >
+                  <span aria-hidden="true">{skill.categoryIcon}</span>
+                  <span className="truncate max-w-[14rem]">{invocation}</span>
+                  {skill.favorite && (
+                    <Star aria-hidden="true" className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                  )}
+                  <span className={`text-[10px] tabular-nums ${isCopied || isFailed ? "" : "text-muted-foreground"}`}>
+                    {isFailed ? "copy failed" : isCopied ? "copied" : (skill.useCount ?? 0)}
+                  </span>
+                </button>
+              </RunTargetChooser>
               <div className="flex w-0 overflow-hidden items-center gap-0.5 transition-all group-hover:w-14 group-focus-within:w-14 group-hover:pr-2 group-focus-within:pr-2">
                 <button
-                  onClick={() => onOpenInChat(skill.name)}
-                  aria-label={`Open ${skill.name} in Chat`}
+                  onClick={() => handleCopy(skill)}
+                  title={`${invocation} — click to copy`}
+                  aria-label={`Copy invocation for ${skill.name}`}
                   className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
+                  <Copy className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => onToggleFavorite(skill.name)}
