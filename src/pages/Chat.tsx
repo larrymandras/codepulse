@@ -273,16 +273,31 @@ export default function Chat() {
 
     if (status === "connected") {
       firedRef.current = true;
-      void sendMessage(
-        handoff.text,
-        handoff.profile ? { profile: handoff.profile } : undefined
-      ).then(async () => {
-        // D-12: confirmed-execution-only recording point — fires exactly
-        // once, only after the real send resolves, for both the Chat and
-        // Ástríðr targets (both navigate here).
-        await recordSkillLaunch({ name: handoff.skillName });
-        navigate(location.pathname, { replace: true, state: {} });
-      });
+      void (async () => {
+        // CR-01 (99-07): "resolved" is not "succeeded" — sendMessage now
+        // reports true only on a confirmed ok ack. D-12: recordSkillLaunch
+        // fires exactly once, ONLY on that confirmed success, for both the
+        // Chat and Ástríðr targets (both navigate here). A dropped/rejected/
+        // errored send clears the router state honestly without recording.
+        try {
+          const sent = await sendMessage(
+            handoff.text,
+            handoff.profile ? { profile: handoff.profile } : undefined
+          );
+          if (sent) {
+            await recordSkillLaunch({ name: handoff.skillName });
+          } else {
+            toast.error("Couldn't run — Ástríðr rejected the send.");
+          }
+        } catch (err) {
+          // WR-02: a recordSkillLaunch rejection (network/Convex error) must
+          // not strand the consumed router state — surface it honestly and
+          // still clear it below.
+          console.warn("recordSkillLaunch failed", err);
+        } finally {
+          navigate(location.pathname, { replace: true, state: {} });
+        }
+      })();
     } else if (status === "disconnected") {
       firedRef.current = true;
       toast.error("Couldn't send — Ástríðr isn't connected. Try again.");

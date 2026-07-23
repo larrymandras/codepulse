@@ -96,8 +96,12 @@ export function useAstridrChat() {
         /** D-07/D-14a: scopes SecurityContext.profile_id server-side only — NOT a persona-voice switch. */
         profile?: string;
       }
-    ) => {
-      if (!text.trim() || isStreamingRef.current || status !== "connected") return;
+    ): Promise<boolean> => {
+      // CR-01 (99-07): callers (Chat.tsx auto-send) need a real success signal
+      // to gate recordSkillLaunch on — "the promise resolved" is NOT "the send
+      // succeeded". Every early-return/error path below resolves `false`;
+      // only the confirmed-ok path resolves `true`.
+      if (!text.trim() || isStreamingRef.current || status !== "connected") return false;
 
       setMessages((prev) => [
         ...prev,
@@ -132,7 +136,7 @@ export function useAstridrChat() {
               timestamp: Date.now(),
             },
           ]);
-          return;
+          return false;
         }
 
         const sessionId =
@@ -148,6 +152,7 @@ export function useAstridrChat() {
           { id: generateId(), role: "assistant", content: "", streaming: true, timestamp: Date.now(), sessionId },
         ]);
         setStreaming(true);
+        return true;
       } catch (err) {
         setMessages((prev) => [
           ...prev,
@@ -159,6 +164,7 @@ export function useAstridrChat() {
             timestamp: Date.now(),
           },
         ]);
+        return false;
       }
     },
     [status, sendCommand, setStreaming]
