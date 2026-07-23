@@ -15,10 +15,11 @@
  *     DORMANT copy: Restore disabled with the shadow tooltip, Delete offered.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   MoreVertical,
+  Play,
   Archive as ArchiveIcon,
   ArchiveRestore,
   FolderInput,
@@ -30,6 +31,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -49,6 +54,9 @@ import {
 import { RowStatusBadge } from "./IntakeStatusBadge";
 import { MoveToProjectDialog } from "./MoveToProjectDialog";
 import { DeleteSkillDialog } from "./DeleteSkillDialog";
+import { useRunLaunch, RunTargetItems } from "./RunTargetChooser";
+import RunChatPopover from "./RunChatPopover";
+import RunAstridrPopover from "./RunAstridrPopover";
 
 /** Mirrors IntakeModal's D-08 online-host threshold. */
 const ONLINE_THRESHOLD_MS = 30_000;
@@ -108,6 +116,11 @@ export function SkillLifecycleMenu({
 }: SkillLifecycleMenuProps) {
   const [moveOpen, setMoveOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Run submenu (D-02) — always rendered, above the scope-gated branch below.
+  // Anchors the Chat/Ástríðr follow-up popovers to the same ⋯ trigger node.
+  const run = useRunLaunch(skill);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   const hostsRaw = useForgeHostsRaw();
   const hostId = useMemo(
@@ -206,6 +219,7 @@ export function SkillLifecycleMenu({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
+              ref={triggerRef}
               type="button"
               aria-label={`Skill actions for ${skill.displayName}`}
               className="min-w-8 min-h-8 flex items-center justify-center rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
@@ -220,6 +234,15 @@ export function SkillLifecycleMenu({
             // dialog's own autofocus wins (standard Radix recipe).
             onCloseAutoFocus={(e) => e.preventDefault()}
           >
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Play /> Run
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <RunTargetItems lastTarget={run.lastTarget} onPick={run.pick} />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
             {dormant ? (
               <>
                 {shadowed ? (
@@ -303,6 +326,23 @@ export function SkillLifecycleMenu({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <RunChatPopover
+        open={run.chatOpen}
+        onOpenChange={run.setChatOpen}
+        displayName={skill.displayName}
+        invocation={run.invocation}
+        onSubmit={run.submitChat}
+        anchorRef={triggerRef}
+      />
+      <RunAstridrPopover
+        open={run.astridrOpen}
+        onOpenChange={run.setAstridrOpen}
+        displayName={skill.displayName}
+        invocation={run.invocation}
+        onSubmit={run.submitAstridr}
+        anchorRef={triggerRef}
+      />
 
       {moveOpen && activeOrigin && (
         <MoveToProjectDialog

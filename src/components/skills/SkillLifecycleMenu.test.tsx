@@ -22,6 +22,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), {
@@ -29,9 +30,35 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
   }),
 }));
+
+// react-router-dom's useNavigate is spied (actual module preserved for
+// MemoryRouter) — mirrors RunTargetChooser.test.tsx's convention. The Run
+// submenu (D-02) dispatches Chat/Ástríðr picks through useRunLaunch, which
+// navigates on submit; this suite never exercises submit, but useRunLaunch
+// still calls useNavigate() at render time.
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual =
+    await vi.importActual<typeof import("react-router-dom")>(
+      "react-router-dom"
+    );
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
+// ForgeLaunchModal is mocked to a lightweight stub — its own behavior is
+// covered by ForgeLaunchModal.test.tsx/SkillLaunchProvider.test.tsx; this
+// suite only needs SkillLaunchProvider to mount without pulling in
+// ForgeLaunchModal's own convex queries (mirrors RunTargetChooser.test.tsx).
+vi.mock("@/components/forge/ForgeLaunchModal", () => ({
+  ForgeLaunchModal: (props: { open: boolean }) => (
+    <div data-testid="forge-modal-stub" data-open={String(props.open)} />
+  ),
+}));
+
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { DORMANT_ORIGIN, isShadowing } from "@/lib/skills";
 import type { RowSkill } from "./SkillRow";
+import { SkillLaunchProvider } from "./SkillLaunchProvider";
 
 // isDormant(skill)/isShadowing(skill) are mutually exclusive by construction
 // (isDormant requires EVERY origin === DORMANT_ORIGIN; isShadowing requires
@@ -70,6 +97,9 @@ vi.mock("../../../convex/_generated/api", () => ({
       listLifecycleCommands: "mock-listLifecycleCommands",
       listWorkspaces: "mock-listWorkspaces",
       enqueueLifecycle: "mock-enqueueLifecycle",
+    },
+    registry: {
+      recordSkillLaunch: "mock-recordSkillLaunch",
     },
   },
 }));
@@ -131,11 +161,24 @@ beforeEach(() => {
   vi.mocked(isShadowing).mockReturnValue(false);
 });
 
+// useRunLaunch (Run submenu, D-02) requires SkillLaunchProvider + a router
+// context (useNavigate) — every render site needs both now, regardless of
+// whether the test exercises Run.
+function withProviders(ui: React.ReactElement) {
+  return (
+    <MemoryRouter>
+      <SkillLaunchProvider>{ui}</SkillLaunchProvider>
+    </MemoryRouter>
+  );
+}
+
 function renderMenu(skill: RowSkill, hostId = "desktop") {
   return render(
-    <TooltipProvider>
-      <SkillLifecycleMenu skill={skill} hostId={hostId} />
-    </TooltipProvider>
+    withProviders(
+      <TooltipProvider>
+        <SkillLifecycleMenu skill={skill} hostId={hostId} />
+      </TooltipProvider>
+    )
   );
 }
 
@@ -178,6 +221,36 @@ describe("SkillLifecycleMenu — always-visible trigger", () => {
     expect(
       screen.getByRole("button", { name: "Skill actions for Legal" })
     ).toBeInTheDocument();
+  });
+});
+
+describe("SkillLifecycleMenu — Run submenu (D-02, Phase 99 Plan 05)", () => {
+  it("Run subtrigger is present for a dormant fixture and never disables", () => {
+    renderMenu(dormant);
+    openMenu();
+    const runTrigger = screen.getByRole("menuitem", { name: /^Run$/ });
+    expect(runTrigger).toBeInTheDocument();
+    expect(runTrigger).not.toHaveAttribute("data-disabled");
+  });
+
+  it("Run subtrigger is present for an active fixture and expanding it shows the three targets", () => {
+    renderMenu(activeGlobal);
+    openMenu();
+    const runTrigger = screen.getByRole("menuitem", { name: /^Run$/ });
+    expect(runTrigger).not.toHaveAttribute("data-disabled");
+    fireEvent.click(runTrigger);
+    expect(screen.getByText("Send to Chat")).toBeInTheDocument();
+    expect(screen.getByText("Launch as Forge Agent")).toBeInTheDocument();
+    expect(screen.getByText("Dispatch to Ástríðr")).toBeInTheDocument();
+  });
+
+  it("Run subtrigger is present (and expands) for a multi-scope fixture too", () => {
+    renderMenu(multiScope);
+    openMenu();
+    const runTrigger = screen.getByRole("menuitem", { name: /^Run$/ });
+    expect(runTrigger).not.toHaveAttribute("data-disabled");
+    fireEvent.click(runTrigger);
+    expect(screen.getByText("Send to Chat")).toBeInTheDocument();
   });
 });
 
@@ -261,7 +334,7 @@ describe("SkillLifecycleMenu — self-contained TooltipProvider (98-REVIEW CR-02
   // "`Tooltip` must be used within `TooltipProvider`" and the page-level
   // ErrorBoundary blanks the whole Skills page.
   it("multi-scope menu opens with NO ancestor TooltipProvider", () => {
-    render(<SkillLifecycleMenu skill={multiScope} hostId="desktop" />);
+    render(withProviders(<SkillLifecycleMenu skill={multiScope} hostId="desktop" />));
     openMenu();
     expect(screen.getByRole("menuitem", { name: /Archive/i })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /Move/i })).toBeInTheDocument();
@@ -269,7 +342,7 @@ describe("SkillLifecycleMenu — self-contained TooltipProvider (98-REVIEW CR-02
 
   it("shadow-blocked dormant menu opens with NO ancestor TooltipProvider", () => {
     vi.mocked(isShadowing).mockReturnValue(true);
-    render(<SkillLifecycleMenu skill={dormant} hostId="desktop" />);
+    render(withProviders(<SkillLifecycleMenu skill={dormant} hostId="desktop" />));
     openMenu();
     expect(screen.getByRole("menuitem", { name: /Restore/i })).toBeInTheDocument();
   });
@@ -311,7 +384,7 @@ describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW W
 
   it('lane="cold" renders the dormant-branch menu: shadow-DISABLED Restore + Delete Permanently, no Archive/Move', async () => {
     await useRealIsShadowing();
-    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />);
+    render(withProviders(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />));
     openMenu();
     const restoreItem = screen.getByRole("menuitem", { name: /Restore/i });
     expect(restoreItem).toHaveAttribute("data-disabled");
@@ -324,7 +397,7 @@ describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW W
 
   it('lane="cold" clicking the shadow-disabled Restore never enqueues', async () => {
     await useRealIsShadowing();
-    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />);
+    render(withProviders(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" lane="cold" />));
     openMenu();
     fireEvent.click(screen.getByRole("menuitem", { name: /Restore/i }));
     expect(enqueueMock).not.toHaveBeenCalled();
@@ -332,7 +405,7 @@ describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW W
 
   it('lane="cold" for a purely dormant row keeps Restore ENABLED (unchanged behavior)', async () => {
     await useRealIsShadowing();
-    render(<SkillLifecycleMenu skill={dormant} hostId="desktop" lane="cold" />);
+    render(withProviders(<SkillLifecycleMenu skill={dormant} hostId="desktop" lane="cold" />));
     openMenu();
     expect(
       screen.getByRole("menuitem", { name: /Restore/i })
@@ -341,7 +414,7 @@ describe("SkillLifecycleMenu — cold lane acts on the dormant copy (98-REVIEW W
 
   it("default (active) lane still renders the active-branch menu for the same merged row", async () => {
     await useRealIsShadowing();
-    render(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" />);
+    render(withProviders(<SkillLifecycleMenu skill={shadowedMerged} hostId="desktop" />));
     openMenu();
     expect(screen.getByRole("menuitem", { name: /^Archive$/i })).toBeInTheDocument();
     expect(screen.queryByRole("menuitem", { name: /Delete Permanently/i })).not.toBeInTheDocument();
