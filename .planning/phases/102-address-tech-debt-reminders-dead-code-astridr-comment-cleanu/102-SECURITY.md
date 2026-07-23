@@ -47,7 +47,7 @@ created: 2026-07-23
 
 ## Unregistered Flags (informational, not phase-102 regressions)
 
-- **WR-02** — `ConvexHandler.send_to` (`astridr/automation/telemetry.py:315-341`) swallows push-side failures (unset URL/client, HTTP ≥400, and exceptions are logged-and-returned internally), so the calendar cron's `failed` list can never reflect a push-side auth/HTTP error — only fetch-side errors are observable. Pre-existing behavior explicitly left unchanged by 102-02's plan and already flagged out-of-scope in 102-VERIFICATION.md / 102-REVIEW.md. Follow-up candidate: make `send_to` return a success signal so push-side failures populate `failed`.
+- **WR-02** — `ConvexHandler.send_to` (`astridr/engine/telemetry.py`) swallowed push-side failures (unset URL/client, HTTP ≥400, and exceptions were logged-and-returned internally), so the calendar cron's `failed` list could never reflect a push-side auth/HTTP error — only fetch-side errors were observable. Pre-existing behavior, flagged out-of-scope in 102-VERIFICATION.md / 102-REVIEW.md. **RESOLVED 2026-07-23** — astridr-repo commit `988d5770` (branch `feature/brain-swap`): `send_to` now returns `bool` (False on skip / HTTP ≥400 / transport error) and `calendar_cache.refresh` marks a profile `failed` on a literal `False`. TDD-covered: 5 new tests (4 in `tests/unit/foundation/test_telemetry.py`, 1 in `tests/automation/test_calendar_cache.py`); full suite 7834 passed. Not yet deployed to the running containers — deploy rides with the `feature/brain-swap` branch.
 
 ---
 
