@@ -77,6 +77,10 @@ interface ForgeLaunchModalProps {
   onLaunched: (row: ForgeCommandRow) => void;
   /** ForgePage flips the matching local row to "failed" with the reason (D-11). */
   onLaunchFailed: (commandId: string, message: string) => void;
+  /** D-11 (Phase 99): prefills the editable prompt textarea when a skill Run
+   *  opens this modal with `/skill …` already composed. Omit for the
+   *  unchanged default (empty prompt). */
+  initialPrompt?: string;
 }
 
 export function ForgeLaunchModal({
@@ -84,6 +88,7 @@ export function ForgeLaunchModal({
   onClose,
   onLaunched,
   onLaunchFailed,
+  initialPrompt,
 }: ForgeLaunchModalProps) {
   // Form state
   const [hostId, setHostId] = useState<string>("");
@@ -115,14 +120,14 @@ export function ForgeLaunchModal({
       setAgent("codex");
       setWorkspaceId("");
       setMode("goal");
-      setPrompt("");
+      setPrompt(initialPrompt ?? "");
       setModel("gpt-5.5");
       setMaxTurns("50");
       setAdvancedOpen(false);
       setSubmitting(false);
       setHostId("");
     }
-  }, [open]);
+  }, [open, initialPrompt]);
 
   // Pre-select the most-recently-seen online host once the modal opens (D-08).
   useEffect(() => {
