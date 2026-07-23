@@ -19,6 +19,8 @@ import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "re
 import * as jsYaml from "js-yaml";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { Send, Mic, MicOff, WifiOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -263,6 +265,7 @@ export default function Chat() {
   const location = useLocation();
   const navigate = useNavigate();
   const handoff = location.state?.autoSend as AutoSendHandoff | undefined;
+  const recordSkillLaunch = useMutation(api.registry.recordSkillLaunch);
   const firedRef = useRef(false);
 
   useEffect(() => {
@@ -273,7 +276,11 @@ export default function Chat() {
       void sendMessage(
         handoff.text,
         handoff.profile ? { profile: handoff.profile } : undefined
-      ).then(() => {
+      ).then(async () => {
+        // D-12: confirmed-execution-only recording point — fires exactly
+        // once, only after the real send resolves, for both the Chat and
+        // Ástríðr targets (both navigate here).
+        await recordSkillLaunch({ name: handoff.skillName });
         navigate(location.pathname, { replace: true, state: {} });
       });
     } else if (status === "disconnected") {

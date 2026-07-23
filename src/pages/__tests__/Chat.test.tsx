@@ -42,6 +42,14 @@ vi.mock("@/hooks/useTtsPlayback", () => ({
   }),
 }));
 
+// Phase 99 Plan 02: Chat.tsx now calls useMutation(api.registry.recordSkillLaunch)
+// directly for the mount-triggered auto-send effect's recordSkillLaunch call
+// (D-12). This suite doesn't exercise router-state auto-send, so a no-op
+// mutation is sufficient — mirrors ForgeLaunchModal.test.tsx's convention.
+vi.mock("convex/react", () => ({
+  useMutation: vi.fn(() => vi.fn()),
+}));
+
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), {
     success: vi.fn(),
