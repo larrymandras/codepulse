@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v12.0
 milestone_name: Personal Productivity — Reminders & Calendar
-status: executing
-stopped_at: Completed 102-02-PLAN.md
-last_updated: "2026-07-22T17:08:13.151Z"
+status: milestone_complete
+stopped_at: Milestone complete (Phase 102 was final phase)
+last_updated: 2026-07-23T12:20:53.482Z
 last_activity: 2026-07-22
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 9
-  percent: 50
+  completed_plans: 10
+  percent: 100
 ---
 
-<!-- Counters hand-reconciled 2026-07-20 against git ground truth (gsd-sdk state.* verbs miscount;
-     phase.complete wrote completed_plans:26 — corrected to 7).
-     v12.0 scope = Phase 101 only (7 plans incl. 101-07 gap closure). v11.0 (Phases 97-100) is PAUSED mid-milestone:
+<!-- Counters hand-reconciled 2026-07-23 against git ground truth (gsd-sdk state.* verbs miscount;
+     phase.complete wrote completed_plans:34 on 102 close — corrected to 10; previously wrote 26 on 101 close — corrected to 7).
+     v12.0 scope = Phases 101 (7 plans incl. 101-07 gap closure) + 102 (3 plans, tech-debt close-out). v11.0 (Phases 97-100) is PAUSED mid-milestone:
      Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (5/5 incl. 98-05 gap closure, verified + UAT approved 2026-07-21, gap closed 2026-07-22); Phases 99/100 not started.
      NOTE 2026-07-22: this file's WORKING COPY was found reverted to an earlier "executing / Plan 1 of 5" snapshot at the
      start of Plan 98-05's execution (frontmatter status/stopped_at/Current Position all regressed vs. the committed
@@ -31,15 +31,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 102 — address-tech-debt-reminders-dead-code-astridr-comment-cleanu
+**Current focus:** Milestone complete
 
 ## Current Position
 
-Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-20 (formal close-out/archive pending)
-Phase: 102 (address-tech-debt-reminders-dead-code-astridr-comment-cleanu) — EXECUTING
-Plan: 3 of 3
-Status: Ready to execute
-Last activity: 2026-07-22
+Milestone: v12.0 (Personal Productivity — Reminders & Calendar) — ACTIVATED 2026-07-19, all phases COMPLETE 2026-07-23 (Phase 101 done 2026-07-20; Phase 102 tech-debt close-out done + live-verified 2026-07-23; formal close-out/archive pending)
+Phase: 102 (address-tech-debt) — COMPLETE, verification passed 10/10
+Plan: 3 of 3 complete
+Status: Milestone complete
+Last activity: 2026-07-23
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
