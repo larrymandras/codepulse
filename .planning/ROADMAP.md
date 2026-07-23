@@ -476,7 +476,7 @@ Plans:
 
 - [x] **Phase 97 — Real Skill Intake & Daemon Foundation** — execute today's dry-run install (upload / GitHub URL) to global/project/cold storage; Forge daemon executes intake + rescans the registry; advertises supported command types (completed 2026-07-19)
 - [x] **Phase 98 — Skill Lifecycle Mutations** — archive / restore / move / delete, archive-first, `isShadowing`-aware, honest when the daemon is offline (completed 2026-07-21)
-- [ ] **Phase 99 — Skill Launch / Dispatch** — real Run to Chat (auto-send) / Forge agent / Ástríðr, not just a prefilled composer
+- [x] **Phase 99 — Skill Launch / Dispatch** — real Run to Chat (auto-send) / Forge agent / Ástríðr, not just a prefilled composer (completed 2026-07-23)
 - [ ] **Phase 100 — Control-Surface UX** — per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore
 
 **Execution order:** 97 → 98 (98 reuses the daemon command-execution + registry-rescan plumbing 97 builds) · 99 is independent of 97/98 (rides existing chat/Forge/Ástríðr channels, no daemon dependency) and can run in parallel · 100 depends on **both** 98 (lifecycle mutations) and 99 (Run target picker) since the ⋯ menu and drag lanes wire against both, so it is sequenced last.
@@ -560,14 +560,14 @@ Plans:
   3. User dispatches a skill to Ástríðr / a chosen persona and it executes there.
   4. The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time, and each launch updates the skill's `useCount` / `lastUsedAt`.
 
-**Plans**: 6 plans (5 waves)
+**Plans**: 7 plans (5 waves + 99-07 gap closure) — all complete 2026-07-23; code review (99-REVIEW.md) found 2 blockers (phantom launch-recording on a failed Chat/Ástríðr send + on an optimistic Forge enqueue), both fixed in 99-07 with TDD; verified 10/10 must-haves (99-VERIFICATION.md).
 
-- [ ] 99-01-PLAN.md — Wave 1: launch contracts — `skillRun.ts` (RunTarget/AutoSendHandoff + last-pick localStorage), `profiles.ts` (hoisted PROFILES), `useAstridrChat` profile passthrough, `ForgeLaunchModal` initialPrompt (LAUNCH-01/02/03)
-- [ ] 99-02-PLAN.md — Wave 2: Chat auto-send receiver — mount-triggered StrictMode-safe effect + recordSkillLaunch on confirmed send (LAUNCH-01/03)
-- [ ] 99-03-PLAN.md — Wave 2: Run popovers — RunChatPopover + RunAstridrPopover (deliberate pre-send capture, persona picker, honest no-persona-claim) (LAUNCH-01/03)
-- [ ] 99-04-PLAN.md — Wave 3: launch orchestration — SkillLaunchProvider (page-level Forge modal + Forge recording) + RunTargetChooser/useRunLaunch (last-pick chooser) (LAUNCH-02/04)
-- [ ] 99-05-PLAN.md — Wave 4: Run entry points — SkillLifecycleMenu Run submenu + QuickDeck primary-click Run / copy-secondary / stop-recording (LAUNCH-04)
-- [ ] 99-06-PLAN.md — Wave 5: integration + honest-recording sweep — Skills.tsx provider wrap + retire copy-recording & the /chat?skill= dead-end across SkillRow/palette/containers (LAUNCH-04)
+- [x] 99-01-PLAN.md — Wave 1: launch contracts — `skillRun.ts` (RunTarget/AutoSendHandoff + last-pick localStorage), `profiles.ts` (hoisted PROFILES), `useAstridrChat` profile passthrough, `ForgeLaunchModal` initialPrompt (LAUNCH-01/02/03)
+- [x] 99-02-PLAN.md — Wave 2: Chat auto-send receiver — mount-triggered StrictMode-safe effect + recordSkillLaunch on confirmed send (LAUNCH-01/03)
+- [x] 99-03-PLAN.md — Wave 2: Run popovers — RunChatPopover + RunAstridrPopover (deliberate pre-send capture, persona picker, honest no-persona-claim) (LAUNCH-01/03)
+- [x] 99-04-PLAN.md — Wave 3: launch orchestration — SkillLaunchProvider (page-level Forge modal + Forge recording) + RunTargetChooser/useRunLaunch (last-pick chooser) (LAUNCH-02/04)
+- [x] 99-05-PLAN.md — Wave 4: Run entry points — SkillLifecycleMenu Run submenu + QuickDeck primary-click Run / copy-secondary / stop-recording (LAUNCH-04)
+- [x] 99-06-PLAN.md — Wave 5: integration + honest-recording sweep — Skills.tsx provider wrap + retire copy-recording & the /chat?skill= dead-end across SkillRow/palette/containers (LAUNCH-04)
 **UI hint**: yes
 **Cross-repo note (2026-07-20)**: astridr's planned Mission Control (astridr SEED-023) PAIRS WITH this phase — 99 launches skills; the mission jobs board (live stream-json telemetry, cost, confirm cards) is a separate surface seeded as `.planning/seeds/SEED-002-mission-control-jobs-board.md`. Keep launch plumbing (`chat.send` / `enqueueLaunch` / dispatch) reusable for mission briefs.
 
@@ -636,7 +636,7 @@ Plans:
 | 96. UI Deep-Dive Cleanup — IA restructure, palette drift, honesty, PageHeader | v10.0 | 13/13 | Complete | 2026-07-13 |
 | 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
 | 98. Skill Lifecycle Mutations | v11.0 | 5/5 | Complete   | 2026-07-22 |
-| 99. Skill Launch / Dispatch | v11.0 | 0/TBD | Not started | — |
+| 99. Skill Launch / Dispatch | v11.0 | 7/7 | Complete   | 2026-07-23 |
 | 100. Control-Surface UX | v11.0 | 0/TBD | Not started | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |

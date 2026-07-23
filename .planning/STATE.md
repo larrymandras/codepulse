@@ -3,19 +3,19 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: executing
-stopped_at: Phase 99 UI-SPEC approved
-last_updated: "2026-07-23T19:57:19.622Z"
-last_activity: 2026-07-23 -- Phase 99 planning complete
+stopped_at: Phase 99 complete
+last_updated: "2026-07-23T22:55:52.000Z"
+last_activity: 2026-07-23 -- Phase 99 (Skill Launch / Dispatch) complete + verified
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 17
-  completed_plans: 11
-  percent: 50
+  completed_phases: 3
+  total_plans: 18
+  completed_plans: 18
+  percent: 75
 ---
 
-<!-- Counters hand-reconciled 2026-07-23 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used at v12.0 close).
-     ACTIVE MILESTONE = v11.0 (Skills, Phases 97-100): 97 COMPLETE (6 plans), 98 COMPLETE (5 plans), 99/100 NOT started — completed_plans:11 = 97's 6 + 98's 5; percent by phase = 2/4 = 50.
+<!-- Counters hand-reconciled 2026-07-23 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 99 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete verbs run).
+     ACTIVE MILESTONE = v11.0 (Skills, Phases 97-100): 97 COMPLETE (6 plans), 98 COMPLETE (5 plans), 99 COMPLETE (7 plans = 6 build + 99-07 gap closure), 100 NOT started — completed_plans:18 = 97's 6 + 98's 5 + 99's 7; total_plans:18 (100 still TBD); percent by phase = 3/4 = 75.
      v12.0 (Reminders & Calendar, Phases 101-102) SHIPPED & ARCHIVED 2026-07-23 (10/10 plans, tagged v12.0) — closed by hand (extract-don't-delete: REQUIREMENTS.md kept live, only the v12.0 section extracted to milestones/v12.0-REQUIREMENTS.md; ROADMAP.md collapsed; audit moved to milestones/). v12.0 scope was Phases 101 (7 plans incl. 101-07 gap closure) + 102 (3 plans, tech-debt close-out).
      v11.0 (Phases 97-100) detail:
      Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (5/5 incl. 98-05 gap closure, verified + UAT approved 2026-07-21, gap closed 2026-07-22); Phases 99/100 not started.
@@ -32,12 +32,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v11.0 Skills Command Center — resume at Phase 99 (Skill Launch / Dispatch)
+**Current focus:** v11.0 Skills Command Center — Phase 99 (Skill Launch / Dispatch) COMPLETE; resume at Phase 100 (Control-Surface UX)
 
 ## Current Position
 
-Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98 COMPLETE; **resumes at Phase 99 (Skill Launch / Dispatch, independent of 97/98)**; Phase 100 (Control-Surface UX) depends on both 98 and 99, sequenced last.
-Status: Ready to execute
+Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **resumes at Phase 100 (Control-Surface UX)**, which depends on both 98 and 99 (now both done) and is the last phase of v11.0.
+Status: Ready to execute Phase 100
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-23 -- Phase 99 planning complete
@@ -83,7 +83,7 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 |-------|------|--------------|--------|
 | 97 | Real Skill Intake & Daemon Foundation | INTAKE-01..04, DAEMON-01, DAEMON-03, DAEMON-04 | Not started |
 | 98 | Skill Lifecycle Mutations | LIFE-01..06, DAEMON-02 | Not started |
-| 99 | Skill Launch / Dispatch | LAUNCH-01..04 | Not started |
+| 99 | Skill Launch / Dispatch | LAUNCH-01..04 | ✅ Complete (7/7 plans; verified 10/10 2026-07-23) |
 | 100 | Control-Surface UX | UX-01..04 | Not started |
 
 **Execution order:** 97 → 98 (98 reuses the daemon command-execution + registry-rescan plumbing 97 builds). 99 is independent of 97/98 (rides existing chat/Forge/Ástríðr channels, no daemon dependency) and can run in parallel. 100 depends on **both** 98 and 99 (the ⋯ menu and drag lanes wire against both) and is sequenced last.
@@ -130,6 +130,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 99 (Skill Launch / Dispatch) decisions (2026-07-23, executed 6 build plans + 1 gap closure, wave-based, worktrees disabled → sequential):**
+
+- **Three launch paths behind ONE shared layer (D-01/D-10/D-12).** `SkillLaunchProvider` hosts a single page-level `ForgeLaunchModal` + the Forge-path `recordSkillLaunch`; `useRunLaunch`/`RunTargetChooser`/`RunTargetItems` route Chat & Ástríðr targets by navigating to `/chat` with an `AutoSendHandoff` (router state) and Forge to the provider modal — so no launch logic is duplicated across the many rows/tiles that expose Run. Contracts (`src/lib/skillRun.ts`, `src/lib/profiles.ts`) were built first (Wave 1) so Waves 2–5 built against fixed types.
+- **Chat auto-send is a REAL send, not a prefilled composer (LAUNCH-01/03, D-05).** `Chat.tsx` fires `chat.send` on mount from the handoff (StrictMode-guarded single-fire via `firedRef`, honest disconnect toast, router state cleared after firing). The Ástríðr variant forwards the persona `profile` onto `chat.send` (D-07/D-14a) — profile scopes `SecurityContext.profile_id` server-side only, NOT a persona-voice switch; the popover makes no "answered as X" claim (D-09).
+- **HONESTY INVARIANT (D-12/D-13) was the phase's headline goal and its main risk.** Code review (99-REVIEW.md) found 2 blockers that both defeated it, both fixed in gap-closure **99-07** with TDD: (CR-01) `useAstridrChat.sendMessage` resolved even on a failed/rejected send, so `Chat.tsx` recorded a phantom launch — fixed by making `sendMessage` return `Promise<boolean>` (true only on `ack.status === "ok"`) and gating `recordSkillLaunch` on `if (sent)`; (CR-02) the Forge path recorded on the OPTIMISTIC `onLaunched` paint before the Convex mutation confirmed — fixed by adding `onLaunchConfirmed?` to `ForgeLaunchModal` (fired only after `await launch(...)` resolves) and moving the provider's record onto it. After the fix `useCount` reflects real runs only. `convex/forge.ts` Clerk fail-closed gate untouched throughout (T-99-10).
+- **Dead paths retired (D-13):** copy-to-clipboard no longer records a launch anywhere (SkillRow/QuickDeck/SkillCommandPalette), and the passive `/chat?skill=` open-in-chat affordance (a confirmed no-op) was removed entirely across the shared row/container/palette components; QuickDeck primary click now opens the Run chooser (Run = default gesture, D-02/D-03), copy demoted to a secondary non-recording hover icon.
+- **CR-03 deferred (pre-existing, NOT a phase-99 regression):** raw `setIsStreaming(false)` at `useAstridrChat.ts` L189 (introduced 2026-07-20, commit `1900944`) can desync `isStreamingRef` vs the sibling `run.completed` handler and block a subsequent send. Plausible but depends on live backend event ordering — per the 2026-07-20 voice-timing lesson, fixing blind risks a streaming regression; recommended follow-up is to instrument the event lifecycle and fix from a real trace. Candidate future tech-debt/quick task.
+- **Executed with worktrees DISABLED** (`workflow.use_worktrees=false`) so all 7 plans ran sequentially on `master`; **STATE.md/ROADMAP.md/REQUIREMENTS.md were updated BY HAND at close** (this entry + the counters + the roadmap/requirements checkboxes), NO `gsd-sdk state.*`/`roadmap.update-plan-progress`/`phase.complete` verbs were run, per this file's established anti-clobber workaround. Verifier independently confirmed 10/10 must-haves against live source (not SUMMARY claims), full suite 2447 tests / tsc clean.
 
 **v11.0 / Phase 98 Plan 05 decisions (2026-07-22, gap closure — stale-origin prune fix, cross-repo):**
 
@@ -285,9 +294,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v11.0 next action:** Phase 98 is now 5/5 code-complete (98-05 gap closure landed 2026-07-22, see `98-05-SUMMARY.md`). Its own two MANUAL verification steps (live G: workspace repro re-check + transient-unmount negative check, both require a live Forge daemon + live Google Drive mount) remain outstanding but are non-blocking. Proceed with Phase 99 (Skill Launch / Dispatch, independent of 97/98) via `/gsd-discuss-phase 99`, or run the manual UAT re-checks first if operating the live daemon is convenient right now.
-- **Phase 100 note:** depends on both Phase 98 (lifecycle mutations) and Phase 99 (launch/dispatch) — do not plan/execute 100 until both are complete.
-- **Phase 99 note:** independent of the daemon work in 97/98 — can be discussed/planned/executed in parallel if desired, since it rides existing `chat.send`/`enqueueLaunch`/Ástríðr channels with no daemon dependency.
+- **v11.0 next action:** Phases 97/98/99 all COMPLETE. Proceed to the LAST v11.0 phase — **Phase 100 (Control-Surface UX)** via `/gsd-discuss-phase 100` — its dependencies (98 lifecycle mutations + 99 launch/dispatch) are both satisfied.
+- **Phase 99 follow-up (non-blocking):** CR-03 pre-existing `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live event-lifecycle trace before fixing (do NOT blind-fix; see 2026-07-20 voice-timing lesson). Candidate quick task / tech-debt.
+- **Phase 98 follow-up (non-blocking):** its two MANUAL verification steps (live G: workspace repro re-check + transient-unmount negative check) remain outstanding — both require a live Forge daemon + live Google Drive mount.
 - **v10.0 (shipped, for reference):** ✅ COMPLETE — all 4 phases (93-96) done, milestone archived 2026-07-13.
 - **Operational note:** the `war-room` Docker profile (livekit + 5 workers) must be running for War Room to work — `docker compose --profile war-room up -d`. Rebuilding workers evicts agents from open rooms.
 - **Archive-name collision: ✅ RESOLVED/MOOT (2026-06-29)** — verified the feared stale `milestones/v9.0-*.md`/`v10/v11` adversarial-track archives are NOT present in this repo (milestones/ holds only v4/5/7/8; git never tracked milestones/v9.0-*). The only v9.0 file is CodePulse's own `.planning/v9.0-MILESTONE-AUDIT.md`. No rename needed.
@@ -312,10 +321,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-23T18:57:22.614Z
-Stopped at: Phase 99 UI-SPEC approved
-Next action: **`/clear` then `/gsd-plan-phase 99`** — Phase 99 (Skill Launch / Dispatch) context is captured in `99-CONTEXT.md` (12 decisions D-01..D-14). Key research directive for the planner (D-14): probe astridr's `chat.send`/`profileSwitches` for existing persona-routing (bounds the codepulse-only-v1 Ástríðr scope, D-09) and confirm which Forge agents resolve `/skill` slash-commands (D-10). Phase 100 (Control-Surface UX, UX-01..04) depends on both 98 and 99, sequenced last. Non-blocking carryovers: Phase 98's two MANUAL verification steps (live G: repro + transient-unmount negative check — need a live Forge daemon + Google Drive mount); `102-REVIEW.md`'s 4 advisory warnings (candidate future tech-debt phase).
-Resume file: .planning/phases/99-skill-launch-dispatch/99-UI-SPEC.md
+Last session: 2026-07-23T22:55:52.000Z
+Stopped at: Phase 99 complete (executed + code-reviewed + gap-closed + verified)
+Next action: **`/clear` then `/gsd-discuss-phase 100`** (or `/gsd-plan-phase 100` if you want to skip discuss) — Phase 100 (Control-Surface UX, UX-01..04) is the LAST phase of v11.0 and depends on both 98 and 99 (now both complete): per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore, wiring the control surface over both the lifecycle mutations (98) and the Run/launch chooser (99). Non-blocking carryovers: (1) Phase 99 CR-03 — pre-existing `isStreamingRef` desync at `useAstridrChat.ts` L189, needs a live event-lifecycle trace to fix safely (see 99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount negative check — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
+Resume file: .planning/phases/99-skill-launch-dispatch/99-VERIFICATION.md
 
 ## Operator Next Steps
 

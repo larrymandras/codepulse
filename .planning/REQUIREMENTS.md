@@ -26,10 +26,10 @@
 
 ### LAUNCH — Skill Launch / Dispatch
 
-- [ ] **LAUNCH-01**: User can run a skill directly in Chat — the invocation is sent via `chat.send` and executes (auto-send), not merely prefilled in the composer.
-- [ ] **LAUNCH-02**: User can launch a skill as a Forge agent run — choosing agent / workspace / mode, with the skill as the instruction (reuses `enqueueLaunch`).
-- [ ] **LAUNCH-03**: User can dispatch a skill to Ástríðr / a chosen persona to execute.
-- [ ] **LAUNCH-04**: The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time and records the launch (`useCount` / `lastUsedAt`).
+- [x] **LAUNCH-01**: User can run a skill directly in Chat — the invocation is sent via `chat.send` and executes (auto-send), not merely prefilled in the composer.
+- [x] **LAUNCH-02**: User can launch a skill as a Forge agent run — choosing agent / workspace / mode, with the skill as the instruction (reuses `enqueueLaunch`).
+- [x] **LAUNCH-03**: User can dispatch a skill to Ástríðr / a chosen persona to execute.
+- [x] **LAUNCH-04**: The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time and records the launch (`useCount` / `lastUsedAt`).
 
 ### UX — Control-Surface Interaction
 
@@ -79,10 +79,10 @@
 | LIFE-05 | Phase 98 | Complete |
 | LIFE-06 | Phase 98 | Complete |
 | DAEMON-02 | Phase 98 | Complete |
-| LAUNCH-01 | Phase 99 | Pending |
-| LAUNCH-02 | Phase 99 | Pending |
-| LAUNCH-03 | Phase 99 | Pending |
-| LAUNCH-04 | Phase 99 | Pending |
+| LAUNCH-01 | Phase 99 | Complete |
+| LAUNCH-02 | Phase 99 | Complete |
+| LAUNCH-03 | Phase 99 | Complete |
+| LAUNCH-04 | Phase 99 | Complete |
 | UX-01 | Phase 100 | Pending |
 | UX-02 | Phase 100 | Pending |
 | UX-03 | Phase 100 | Pending |
