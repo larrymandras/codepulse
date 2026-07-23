@@ -17,6 +17,8 @@
 
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent } from "react";
 import * as jsYaml from "js-yaml";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Send, Mic, MicOff, WifiOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
@@ -29,6 +31,7 @@ import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/u
 import { useScreenShare } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { runLostScreenAck, type VoiceState } from "@/components/voice/voiceState";
+import type { AutoSendHandoff } from "@/lib/skillRun";
 
 const LS_LISTENING = "codepulse-astridr-listening";
 const LS_STRICT = "codepulse-strict-mode";
@@ -247,6 +250,42 @@ export default function Chat() {
   });
 
   const voiceError = listening && voice.wakeWordStatus === "error-disabled";
+
+  // ── Skill launch auto-send (LAUNCH-01/03, D-05/D-06) ────────────────────
+  // A Run→Chat/Ástríðr handoff (Skills page → navigate('/chat', { state })
+  // per Plan 03) always produces an executed chat.send — never a
+  // prefilled-and-waiting composer (D-05). Guarded by firedRef so a
+  // StrictMode double-mount (mount→cleanup→remount, same fiber/refs) cannot
+  // double-fire (mirrors AstridrWSContext's guarded-connect precedent). When
+  // the WS settles to a terminal disconnected state before ever connecting,
+  // this surfaces an honest toast instead of silently dropping the launch
+  // (Pitfall 3) — never a silent no-op while still reconnecting.
+  const location = useLocation();
+  const navigate = useNavigate();
+  const handoff = location.state?.autoSend as AutoSendHandoff | undefined;
+  const firedRef = useRef(false);
+
+  useEffect(() => {
+    if (firedRef.current || !handoff) return;
+
+    if (status === "connected") {
+      firedRef.current = true;
+      void sendMessage(
+        handoff.text,
+        handoff.profile ? { profile: handoff.profile } : undefined
+      ).then(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+      });
+    } else if (status === "disconnected") {
+      firedRef.current = true;
+      toast.error("Couldn't send — Ástríðr isn't connected. Try again.");
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // "reconnecting" — wait for status to settle; deliberately scoped to
+    // [handoff, status] only (sendMessage/navigate/location are stable-enough
+    // for this one-shot guard, per the firedRef latch above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoff, status]);
 
   // ── Input / scroll ──────────────────────────────────────────────────────
   const [draft, setDraft] = useState("");
