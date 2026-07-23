@@ -21,19 +21,14 @@ import {
   calendarEventDayKey,
   type CalendarEventDoc,
 } from "@/components/reminders/CalendarOverlay";
+import { PROFILES, type ProfileId } from "@/lib/profiles";
 
-export type ProfileId = "personal" | "business" | "consulting";
-
-// Per-profile accent — reuses existing semantic status tokens (never a
-// hardcoded hex) so accents stay theme-aware across all 5 data-theme
-// variants (101-UI-SPEC.md "Non-negotiable house style"). Mirrors the
-// green/amber/blue triad already used for these three profiles in
-// ProfileCard.tsx's PROFILE_META, recast as CSS custom properties.
-export const PROFILES: { id: ProfileId; label: string; accentVar: string }[] = [
-  { id: "personal", label: "Personal", accentVar: "--status-ok" },
-  { id: "business", label: "Business", accentVar: "--status-warn" },
-  { id: "consulting", label: "Consulting", accentVar: "--status-info" },
-];
+// D-08 (Phase 99): PROFILES/ProfileId now live in src/lib/profiles.ts — this
+// is the ONE source, hoisted verbatim from this file. Re-exported here so
+// existing importers (e.g. src/components/reminders/QuickAdd.tsx) keep
+// resolving `from "@/pages/Reminders"` without a second drifting copy.
+export { PROFILES };
+export type { ProfileId };
 
 const STORAGE_KEY = "codepulse-reminders-profile";
 
