@@ -21,7 +21,7 @@ import { MemoryRouter } from "react-router-dom";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockSendMessage = vi.fn().mockResolvedValue(undefined);
+const mockSendMessage = vi.fn().mockResolvedValue(true);
 const mockRecordSkillLaunch = vi.fn().mockResolvedValue(undefined);
 
 /** Mutable status the mocked useAstridrChat() reads on each call. */
@@ -94,7 +94,7 @@ describe("Chat — mount-triggered auto-send (LAUNCH-01/03, D-05/D-06/D-12)", ()
   beforeEach(() => {
     vi.clearAllMocks();
     mockStatus = "connected";
-    mockSendMessage.mockResolvedValue(undefined);
+    mockSendMessage.mockResolvedValue(true);
     mockRecordSkillLaunch.mockResolvedValue(undefined);
   });
 
@@ -151,6 +151,19 @@ describe("Chat — mount-triggered auto-send (LAUNCH-01/03, D-05/D-06/D-12)", ()
       expect(toast.error).toHaveBeenCalled();
     });
     expect(mockSendMessage).not.toHaveBeenCalled();
+    expect(mockRecordSkillLaunch).not.toHaveBeenCalled();
+  });
+
+  // ─── CR-01 (99-07): a resolved-but-FAILED send must never record ──────────
+  it("does NOT record the launch when the underlying send resolves false (failed send)", async () => {
+    mockSendMessage.mockResolvedValue(false);
+    renderChat({ text: "/fail", skillName: "fail-skill" });
+
+    await waitFor(() => {
+      expect(mockSendMessage).toHaveBeenCalledTimes(1);
+    });
+    // Give the (would-be) recordSkillLaunch call a chance to land.
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(mockRecordSkillLaunch).not.toHaveBeenCalled();
   });
 });

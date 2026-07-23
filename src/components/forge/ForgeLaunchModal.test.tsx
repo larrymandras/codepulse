@@ -11,13 +11,15 @@
  * renders without a live backend (mirrors src/test/setup.ts conventions).
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock the Convex react bindings — useQuery returns workspaces, useMutation a no-op.
+// Mock the Convex react bindings — useQuery returns workspaces, useMutation a
+// controllable mock (mockLaunch) so CR-02 tests can resolve/reject it.
+const mockLaunch = vi.fn().mockResolvedValue(undefined);
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
-  useMutation: vi.fn(() => vi.fn()),
+  useMutation: vi.fn(() => mockLaunch),
 }));
 
 // Mock the host hook so the picker renders an online host (not the Skeleton).
@@ -150,5 +152,74 @@ describe("ForgeLaunchModal — initialPrompt (D-11)", () => {
       />
     );
     expect(screen.getByLabelText("Prompt")).toHaveValue("/gsd-discuss-phase 99");
+  });
+});
+
+// ─── CR-02 (99-07): onLaunchConfirmed fires only after `await launch()` resolves ──
+// onLaunched is the optimistic pre-await paint (fires immediately, before the
+// mutation is even called) — it must never be conflated with confirmation.
+// recordSkillLaunch (wired by the caller to onLaunchConfirmed) must never fire
+// on a rejected enqueue.
+
+describe("ForgeLaunchModal — onLaunchConfirmed (CR-02)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function renderAndSubmit(props: {
+    onLaunched?: (row: unknown) => void;
+    onLaunchFailed?: (commandId: string, message: string) => void;
+    onLaunchConfirmed?: () => void;
+  }) {
+    render(
+      <ForgeLaunchModal
+        open={true}
+        onClose={noop}
+        onLaunched={props.onLaunched ?? noop}
+        onLaunchFailed={props.onLaunchFailed ?? noop}
+        onLaunchConfirmed={props.onLaunchConfirmed}
+        initialPrompt="/x"
+      />
+    );
+    fireEvent.click(screen.getByText("Launch Job", { selector: "button" }));
+  }
+
+  it("calls onLaunched (optimistic) immediately, BEFORE the mutation resolves", async () => {
+    let resolveLaunch!: () => void;
+    mockLaunch.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveLaunch = resolve;
+      })
+    );
+    const onLaunched = vi.fn();
+    const onLaunchConfirmed = vi.fn();
+    renderAndSubmit({ onLaunched, onLaunchConfirmed });
+
+    await waitFor(() => expect(onLaunched).toHaveBeenCalledTimes(1));
+    // Mutation is still pending — confirmation must NOT have fired yet.
+    expect(onLaunchConfirmed).not.toHaveBeenCalled();
+
+    resolveLaunch();
+    await waitFor(() => expect(onLaunchConfirmed).toHaveBeenCalledTimes(1));
+  });
+
+  it("does NOT call onLaunchConfirmed when the mutation REJECTS — calls onLaunchFailed instead", async () => {
+    mockLaunch.mockRejectedValue(new Error("enqueue failed"));
+    const onLaunchFailed = vi.fn();
+    const onLaunchConfirmed = vi.fn();
+    renderAndSubmit({ onLaunchFailed, onLaunchConfirmed });
+
+    await waitFor(() => expect(onLaunchFailed).toHaveBeenCalledTimes(1));
+    expect(onLaunchConfirmed).not.toHaveBeenCalled();
+  });
+
+  it("calls onLaunchConfirmed exactly once when the mutation resolves", async () => {
+    mockLaunch.mockResolvedValue(undefined);
+    const onLaunchConfirmed = vi.fn();
+    const onLaunchFailed = vi.fn();
+    renderAndSubmit({ onLaunchConfirmed, onLaunchFailed });
+
+    await waitFor(() => expect(onLaunchConfirmed).toHaveBeenCalledTimes(1));
+    expect(onLaunchFailed).not.toHaveBeenCalled();
   });
 });

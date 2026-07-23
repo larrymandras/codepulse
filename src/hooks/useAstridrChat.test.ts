@@ -83,6 +83,58 @@ describe("useAstridrChat — sendMessage profile passthrough (D-14a)", () => {
   });
 });
 
+// ─── CR-01 (99-07): sendMessage's success/failure return contract ───────────
+// The caller (Chat.tsx auto-send) cannot tell "resolved" from "succeeded"
+// unless sendMessage itself reports it. recordSkillLaunch must never fire on
+// a dropped/rejected/errored send (D-12 honesty invariant).
+
+describe("useAstridrChat — sendMessage return contract (CR-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+  });
+
+  it("resolves true when the server ack is ok (real send)", async () => {
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-ok" });
+    const { result } = renderHook(() => useAstridrChat());
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage("hi");
+    });
+    expect(sent).toBe(true);
+  });
+
+  it("resolves false when the server ack is rejected (ack.status !== 'ok')", async () => {
+    mockSendCommand.mockResolvedValue({ status: "error", error: "nope" });
+    const { result } = renderHook(() => useAstridrChat());
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage("hi");
+    });
+    expect(sent).toBe(false);
+  });
+
+  it("resolves false on the early guard (blank text never reaches sendCommand)", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage("   ");
+    });
+    expect(sent).toBe(false);
+    expect(mockSendCommand).not.toHaveBeenCalled();
+  });
+
+  it("resolves false when sendCommand throws (network failure)", async () => {
+    mockSendCommand.mockRejectedValue(new Error("ws down"));
+    const { result } = renderHook(() => useAstridrChat());
+    let sent: boolean | undefined;
+    await act(async () => {
+      sent = await result.current.sendMessage("hi");
+    });
+    expect(sent).toBe(false);
+  });
+});
+
 describe("useAstridrChat — post-interrupt TTS suppression", () => {
   beforeEach(() => {
     vi.clearAllMocks();

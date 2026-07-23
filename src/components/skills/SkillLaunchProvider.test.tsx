@@ -23,6 +23,7 @@ vi.mock("@/components/forge/ForgeLaunchModal", () => ({
     initialPrompt?: string;
     onLaunched: (row: unknown) => void;
     onLaunchFailed: (commandId: string, message: string) => void;
+    onLaunchConfirmed?: () => void;
     onClose: () => void;
   }) => (
     <div
@@ -50,6 +51,9 @@ vi.mock("@/components/forge/ForgeLaunchModal", () => ({
       </button>
       <button onClick={() => props.onLaunchFailed("c1", "boom")}>
         stub-onLaunchFailed
+      </button>
+      <button onClick={() => props.onLaunchConfirmed?.()}>
+        stub-onLaunchConfirmed
       </button>
       <button onClick={() => props.onClose()}>stub-onClose</button>
     </div>
@@ -117,10 +121,23 @@ describe("SkillLaunchProvider", () => {
     expect(stub).toHaveAttribute("data-initial-prompt", "/x ");
   });
 
-  it("Test 3: the modal's onLaunched callback calls recordSkillLaunch({ name: 'x' }) exactly once", () => {
+  // CR-02 (99-07): onLaunched is the OPTIMISTIC pre-await paint callback — it
+  // must never record a launch on its own, or a rejected enqueue still
+  // inflates useCount (the mutation hasn't even been awaited yet).
+  it("Test 3: the modal's onLaunched (optimistic paint) callback does NOT call recordSkillLaunch", () => {
     renderWithProvider();
     fireEvent.click(screen.getByText("launch-forge"));
     fireEvent.click(screen.getByText("stub-onLaunched"));
+
+    expect(recordSkillLaunchMock).not.toHaveBeenCalled();
+  });
+
+  // CR-02: recordSkillLaunch fires on the NEW onLaunchConfirmed callback,
+  // which ForgeLaunchModal invokes only after `await launch(...)` resolves.
+  it("Test 3b: the modal's onLaunchConfirmed callback calls recordSkillLaunch({ name: 'x' }) exactly once", () => {
+    renderWithProvider();
+    fireEvent.click(screen.getByText("launch-forge"));
+    fireEvent.click(screen.getByText("stub-onLaunchConfirmed"));
 
     expect(recordSkillLaunchMock).toHaveBeenCalledTimes(1);
     expect(recordSkillLaunchMock).toHaveBeenCalledWith({ name: "x" });
