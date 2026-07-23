@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Search, Archive, Boxes } from "lucide-react";
@@ -10,6 +9,7 @@ import { AllSkillsOverview } from "@/components/skills/AllSkillsOverview";
 import { ColdStorageView } from "@/components/skills/ColdStorageView";
 import { QuickDeck } from "@/components/skills/QuickDeck";
 import { SkillCommandPalette } from "@/components/skills/SkillCommandPalette";
+import { SkillLaunchProvider } from "@/components/skills/SkillLaunchProvider";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
 import { SkillReviewDrawer } from "@/components/skills/SkillReviewDrawer";
 import { SkillEditPopover } from "@/components/skills/SkillEditPopover";
@@ -24,7 +24,6 @@ import { originOptions, hasDormantCopy } from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 export default function Skills() {
-  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [coldStorageView, setColdStorageView] = useState(false);
   const [vaultView, setVaultView] = useState(false);
@@ -43,7 +42,6 @@ export default function Skills() {
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
   const feed = useIntakeFeed();
 
-  const recordLaunch = useMutation(api.registry.recordSkillLaunch);
   const updateOverride = useMutation(api.skillCategories.updateSkillOverride);
   const updateCat = useMutation(api.skillCategories.updateCategory);
   const createCat = useMutation(api.skillCategories.createCategory);
@@ -128,15 +126,6 @@ export default function Skills() {
     if (!cat) return null;
     return { name: cat.name, displayName: cat.displayName, icon: cat.icon, color: cat.color };
   }, [selectedCategory, categories]);
-
-  const handleRecordUse = (skillName: string) => {
-    void recordLaunch({ name: skillName });
-  };
-
-  const handleOpenInChat = async (skillName: string) => {
-    await recordLaunch({ name: skillName });
-    navigate(`/chat?skill=${encodeURIComponent(skillName)}`);
-  };
 
   const handleReassignSkill = async (skillName: string, newCategoryName: string) => {
     await updateOverride({ skillName, categoryName: newCategoryName });
@@ -259,6 +248,7 @@ export default function Skills() {
         onOpen={() => setIntakeSheetOpen(true)}
       />
 
+      <SkillLaunchProvider>
       {vaultView ? (
         <SkillVaultView
           skills={enrichedSkills}
@@ -269,8 +259,6 @@ export default function Skills() {
       <>
       <QuickDeck
         skills={enrichedSkills}
-        onUse={handleRecordUse}
-        onOpenInChat={handleOpenInChat}
         onToggleFavorite={(name) => toggleFav({ skillName: name })}
       />
 
@@ -371,8 +359,6 @@ export default function Skills() {
             {coldStorageView && (
               <ColdStorageView
                 skills={coldStorageSkills}
-                onRecordUse={handleRecordUse}
-                onOpenInChat={handleOpenInChat}
                 onEdit={setEditingSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
               />
@@ -383,8 +369,6 @@ export default function Skills() {
                 skills={filteredSkills}
                 categories={categoryOptions}
                 onSelectCategory={handleSelectCategory}
-                onRecordUse={handleRecordUse}
-                onOpenInChat={handleOpenInChat}
                 onEdit={setEditingSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
               />
@@ -402,8 +386,6 @@ export default function Skills() {
                   setSelectedCategory(null);
                   setSearch("");
                 }}
-                onRecordUse={handleRecordUse}
-                onOpenInChat={handleOpenInChat}
                 onEditSkill={setEditingSkill}
                 onReassignSkill={handleReassignSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
@@ -420,9 +402,8 @@ export default function Skills() {
         onOpenChange={setPaletteOpen}
         skills={enrichedSkills}
         categories={categoryOptions}
-        onRecordUse={handleRecordUse}
-        onOpenInChat={handleOpenInChat}
       />
+      </SkillLaunchProvider>
 
       <IntakeSheet open={intakeSheetOpen} onOpenChange={setIntakeSheetOpen} feed={feed} />
 

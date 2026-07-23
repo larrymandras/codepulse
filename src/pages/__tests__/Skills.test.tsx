@@ -63,6 +63,16 @@ vi.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
+// Phase 99 Plan 06: Skills.tsx now mounts SkillLaunchProvider, which renders
+// the one page-level ForgeLaunchModal. Stub it to a lightweight marker (its
+// own behavior is covered by ForgeLaunchModal.test.tsx/SkillLaunchProvider.
+// test.tsx) so this suite doesn't pull in the modal's own forge queries.
+vi.mock("@/components/forge/ForgeLaunchModal", () => ({
+  ForgeLaunchModal: (props: { open: boolean }) => (
+    <div data-testid="forge-modal-stub" data-open={String(props.open)} />
+  ),
+}));
+
 // IntakeModal talks to api.forge.* internally; stub it — its behavior is
 // covered by IntakeModal.test.tsx. The feed hook is stubbed so this suite
 // stays isolated from api.forge queries.
@@ -312,18 +322,13 @@ describe("Skills page", () => {
     expect(screen.getByText("/gsd-plan-phase")).toBeInTheDocument();
   });
 
-  it("navigates to chat via the row's Open in Chat action", async () => {
+  it("has no inline Open in Chat row action (retired no-op, D-13/Pitfall 1-2) — Run lives on the row's ⋯ menu instead", () => {
     render(<Skills />);
     fireEvent.click(getCategoryNavItem("Legal"));
-    // legal-nda (useCount 5) also has a chip in the Command Deck above, so its
-    // "Open in Chat" label isn't unique — the drilled-in category row is the
-    // last match in DOM order.
-    const openInChatButtons = screen.getAllByLabelText("Open legal-nda in Chat");
-    fireEvent.click(openInChatButtons[openInChatButtons.length - 1]);
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/chat?skill=legal-nda");
-    });
-    expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
+    expect(screen.queryByLabelText("Open legal-nda in Chat")).toBeNull();
+    expect(
+      screen.getAllByRole("button", { name: /Skill actions for/i }).length
+    ).toBeGreaterThan(0);
   });
 
   it("filters skills by search in drill-in view", () => {
@@ -357,13 +362,14 @@ describe("Skills page", () => {
     expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument();
   });
 
-  it("copy is the primary action on a drilled-in skill row", async () => {
+  it("copy is the primary action on a drilled-in skill row, and does not record a launch (D-13)", async () => {
     render(<Skills />);
     fireEvent.click(getCategoryNavItem("Legal"));
     fireEvent.click(screen.getByRole("button", { name: /copy \/legal-nda/i }));
     await waitFor(() => {
-      expect(mockRecordLaunch).toHaveBeenCalledWith({ name: "legal-nda" });
+      expect(screen.getByText("Copied")).toBeInTheDocument();
     });
+    expect(mockRecordLaunch).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
