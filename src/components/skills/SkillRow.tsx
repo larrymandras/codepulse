@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GripVertical, MessageSquare, Pencil, Star } from "lucide-react";
+import { GripVertical, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
 import { SkillLifecycleMenu } from "./SkillLifecycleMenu";
 
@@ -12,9 +12,6 @@ export type RowSkill = SkillLike & {
 
 interface SkillRowProps {
   skill: RowSkill;
-  /** Records the copy so useCount keeps ranking. */
-  onRecordUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
   draggable?: boolean;
@@ -48,8 +45,6 @@ const COPY_LABEL: Record<CopyState, string> = {
  */
 export function SkillRow({
   skill,
-  onRecordUse,
-  onOpenInChat,
   onEdit,
   onToggleFavorite,
   draggable = true,
@@ -79,7 +74,6 @@ export function SkillRow({
     }
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setCopyState("idle"), 1800);
-    onRecordUse(skill.name);
   };
 
   return (
@@ -126,14 +120,6 @@ export function SkillRow({
         )}
 
         <div className="flex items-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity gap-1 pr-2 border-r border-primary/10">
-          <button
-            onClick={() => onOpenInChat(skill.name)}
-            aria-label={`Open ${skill.name} in Chat`}
-            title="Open in Chat"
-            className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-          </button>
           <button
             onClick={() => onToggleFavorite(skill.name)}
             aria-label={`Toggle favorite ${skill.name}`}

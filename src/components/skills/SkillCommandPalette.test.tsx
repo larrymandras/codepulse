@@ -38,19 +38,15 @@ const categories = [
 
 function renderPalette(open = true) {
   const onOpenChange = vi.fn();
-  const onRecordUse = vi.fn();
-  const onOpenInChat = vi.fn();
   render(
     <SkillCommandPalette
       open={open}
       onOpenChange={onOpenChange}
       skills={skills}
       categories={categories}
-      onRecordUse={onRecordUse}
-      onOpenInChat={onOpenInChat}
     />
   );
-  return { onOpenChange, onRecordUse, onOpenInChat };
+  return { onOpenChange };
 }
 
 describe("SkillCommandPalette", () => {
@@ -91,28 +87,27 @@ describe("SkillCommandPalette", () => {
     expect(screen.getByText("Plan Phase")).toBeInTheDocument();
   });
 
-  it("selecting an item copies its invocation, records use, shows feedback", async () => {
-    const { onRecordUse } = renderPalette();
+  it("selecting an item copies its invocation and shows feedback, without recording a launch (D-13)", async () => {
+    renderPalette();
     fireEvent.click(screen.getByText("Plan Phase"));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith("/gsd-plan-phase"));
-    expect(onRecordUse).toHaveBeenCalledWith("gsd-plan-phase");
     await waitFor(() => expect(screen.getByText(/\/gsd-plan-phase copied/)).toBeTruthy());
   });
 
-  it("Ctrl+Enter opens the highlighted skill in Chat and closes", () => {
-    const { onOpenInChat, onOpenChange } = renderPalette();
+  it("has no Ctrl+Enter open-in-chat affordance (retired no-op, D-13/Pitfall 1-2) and no Run item (D-02)", () => {
+    renderPalette();
     fireEvent.change(screen.getByPlaceholderText("Search skills..."), { target: { value: "plan" } });
     fireEvent.keyDown(screen.getByPlaceholderText("Search skills..."), { key: "Enter", ctrlKey: true });
-    expect(onOpenInChat).toHaveBeenCalledWith("gsd-plan-phase");
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // The footer hint no longer mentions Chat, and there's no Run menu item.
+    expect(screen.queryByText(/open in chat/i)).toBeNull();
+    expect(screen.queryByText(/run/i)).toBeNull();
   });
 
-  it("copy failure shows 'copy failed' in the footer and still records use", async () => {
+  it("copy failure shows 'copy failed' in the footer", async () => {
     writeText.mockRejectedValue(new Error("denied"));
-    const { onRecordUse } = renderPalette();
+    renderPalette();
     fireEvent.click(screen.getByText("Plan Phase"));
     await waitFor(() => expect(screen.getByText("copy failed")).toBeInTheDocument());
-    expect(onRecordUse).toHaveBeenCalledWith("gsd-plan-phase");
   });
 
   it("renders a dormant skill with the dormant marker and shows dormant copy feedback on select", async () => {
@@ -130,16 +125,12 @@ describe("SkillCommandPalette", () => {
       },
     ];
     const onOpenChange = vi.fn();
-    const onRecordUse = vi.fn();
-    const onOpenInChat = vi.fn();
     render(
       <SkillCommandPalette
         open
         onOpenChange={onOpenChange}
         skills={dormantSkills}
         categories={categories}
-        onRecordUse={onRecordUse}
-        onOpenInChat={onOpenInChat}
       />
     );
     expect(screen.getByText("dormant")).toBeInTheDocument();
@@ -147,6 +138,5 @@ describe("SkillCommandPalette", () => {
     await waitFor(() =>
       expect(screen.getByText(/\/dormant-skill copied — dormant, not loaded/)).toBeInTheDocument()
     );
-    expect(onRecordUse).toHaveBeenCalledWith("dormant-skill");
   });
 });

@@ -30,23 +30,20 @@ interface SkillCommandPaletteProps {
   onOpenChange: (open: boolean) => void;
   skills: PaletteSkill[];
   categories: { name: string; displayName: string }[];
-  onRecordUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
 }
 
 /**
  * Ctrl+Shift+K fuzzy finder over every non-hidden skill. Enter copies the
- * invocation (primary action, recorded); Ctrl+Enter opens the skill in Chat.
- * Composes Dialog + Command directly (not CommandDialog) because Ctrl+Enter
- * needs cmdk's controlled `value` to know the highlighted item.
+ * invocation (D-02: copy stays, no launch is recorded and no Run item is
+ * added here — the retired open-in-chat no-op was removed in Phase 99
+ * Plan 06, D-13).
+ * Composes Dialog + Command directly (not CommandDialog).
  */
 export function SkillCommandPalette({
   open,
   onOpenChange,
   skills,
   categories,
-  onRecordUse,
-  onOpenInChat,
 }: SkillCommandPaletteProps) {
   const [value, setValue] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -97,12 +94,6 @@ export function SkillCommandPalette({
     } catch {
       setFeedback("copy failed");
     }
-    onRecordUse(skill.name);
-  };
-
-  const handleOpenChat = (skill: PaletteSkill) => {
-    onOpenInChat(skill.name);
-    onOpenChange(false);
   };
 
   const renderItem = (skill: PaletteSkill) => {
@@ -136,19 +127,9 @@ export function SkillCommandPalette({
       <DialogContent className="overflow-hidden p-0" showCloseButton={false}>
         <DialogTitle className="sr-only">Skill palette</DialogTitle>
         <DialogDescription className="sr-only">
-          Search skills. Enter copies the invocation; Ctrl+Enter opens in Chat.
+          Search skills. Enter copies the invocation.
         </DialogDescription>
-        <Command
-          value={value}
-          onValueChange={setValue}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-              e.preventDefault();
-              const skill = visible.find((s) => s.name === value);
-              if (skill) handleOpenChat(skill);
-            }
-          }}
-        >
+        <Command value={value} onValueChange={setValue}>
           <CommandInput placeholder="Search skills..." />
           <CommandList>
             <CommandEmpty>No skills found.</CommandEmpty>
@@ -172,7 +153,7 @@ export function SkillCommandPalette({
             aria-live="polite"
             className="border-t border-border px-3 py-2 text-[11px] font-mono text-muted-foreground"
           >
-            {feedback ?? "↵ copy invocation · ctrl+↵ open in Chat"}
+            {feedback ?? "↵ copy invocation"}
           </div>
         </Command>
       </DialogContent>
