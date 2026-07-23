@@ -3,12 +3,12 @@ status: partial
 phase: 98-skill-lifecycle-mutations-archive-restore-move-delete
 source: [98-VERIFICATION.md]
 started: 2026-07-21T18:20:00Z
-updated: 2026-07-22T09:00:00Z
+updated: 2026-07-23T10:25:00Z
 ---
 
 ## Current Test
 
-[testing paused — 4 items outstanding: tests 6 & 7 (live-mount checks for the 98-05 prune fix, need deployed convex + rebuilt daemon), plus browser-visual halves of tests 4 & 5, blocked on a signed-in browser session]
+[testing paused — 2 items outstanding: browser-visual halves of tests 4 & 5, blocked on a signed-in browser session (Clerk). All server/mutation/daemon/registry logic is fully verified.]
 
 ## Tests
 
@@ -53,20 +53,32 @@ reason: "Server half PASSED: with active+cold copies staged, enqueueLifecycle th
 
 ### 6. Live re-repro of the stale-origin prune fix (98-05, phase gate — post-deploy)
 expected: After deploying the 98-05 convex changes and rebuilding/restarting the Forge daemon, delete the residual `uat-ws-placeholder` skill from `G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\`, trigger one rescan, and confirm the `claude-code:project:559ce8ebf812` row disappears from the Skills page and the previously-moved skill no longer renders multi-scope (Archive/Move re-enabled)
-result: pending
-notes: "Prerequisites: `npx convex deploy` of the 98-05+GC changes to the local self-hosted backend, forge `npx tsc` rebuild, daemon restarted pointing at http://127.0.0.1:3211 (forge\\.env still needs the manual local-URL edit per Session Notes)."
+result: pass
+notes: |
+  Executed 2026-07-23 (Claude-operated, Larry ran the two permission-gated enqueues + the convex deploy inline):
+  - Prereqs: HEAD deployed to local self-hosted backend (convex deploy — "No indexes deleted" confirmed a post-102 deploy had already landed, so 98-05 was live); forge npx tsc clean; daemon child killed → tray supervisor respawned it (PID 58236) on today's dist (scannedOrigins present in dist/emit/skill-rescan.js); forge\.env local-URL edit confirmed live (daemon polling 127.0.0.1:3211, ~384 claims/15min).
+  - Deleted uat-ws-placeholder from G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\ (workspace now empty).
+  - Rescan triggered via real lifecycle command (enqueueLifecycle archive of enhance-prompt, CLI --identity impersonation) since rescan only fires post-lifecycle/intake, not at boot; /scan POST 200 observed.
+  - VERIFIED: 0 registry rows carry claude-code:project:559ce8ebf812 (uat-ws-placeholder row fully pruned; declared-but-empty origin reconciled). No skill renders multi-scope from that workspace anymore.
+  - enhance-prompt archive→restore round-trip closed clean (back to single-scope claude-code, cold copy gone); throwaway uat-rescan-trigger dir+row both gone.
+  - Note: enqueueLifecycle validates sourceOrigin against an existing registry row, so an unregistered throwaway skill cannot be used as a rescan trigger (chicken-and-egg) — use an existing inert skill's archive/restore round-trip.
 
 ### 7. Transient-unmount negative check (T-98-10, 98-05 safety valve)
 expected: With a skill present in a G:\ workspace, PAUSE/disconnect the live Google Drive mount and trigger one rescan — the workspace's `claude-code:project:<key>` origin must NOT appear in scannedOrigins and its registry row must NOT be pruned (the unit test only covers a nonexistent path; a paused Drive mount can keep the G: letter mounted while reads misbehave — do not trust the unmount mitigation until observed on the real mount)
-result: pending
-notes: "GC-01 hardened this path (non-ENOENT read failures never declare an origin), but the plan's own verification section requires live observation."
+result: pass
+notes: |
+  Executed 2026-07-23 (Claude-operated; Larry ran permission-gated enqueues + Drive pause/resume). PASS WITH CAVEAT:
+  - Setup: seeded uat-t7-seed into the drive-sync-test workspace; rescan #1 (enhance-prompt archive) registered it under claude-code:project:559ce8ebf812.
+  - With Google Drive sync PAUSED: rescan #2 (restore) plus several periodic /scan posts (Ástríðr bridge skill-sync, bridge/native origins — orthogonal) all ran; the seed row SURVIVED every one. No false prune under a paused mount — the incident-relevant safety property is live-verified.
+  - CAVEAT: G: reads still succeeded during the pause (Drive cache), so the row likely survived via a successful walk, not via the GC-01 read-failure valve; scannedOrigins contents aren't observable (daemon logs errors only). The letter-mounted-but-reads-ERROR case couldn't be staged (suspend → hangs not errors; kill → unmount = the ENOENT path unit tests already cover). GC-01 valve remains unit-verified.
+  - Accepted as pass by Larry with the caveat documented.
 
 ## Summary
 
 total: 7
-passed: 2
+passed: 4
 issues: 1
-pending: 2
+pending: 0
 skipped: 0
 blocked: 2
 
