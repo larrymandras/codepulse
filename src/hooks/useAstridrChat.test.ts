@@ -50,6 +50,39 @@ function getHandler(eventType: string): ((event: Record<string, unknown>) => voi
   return null;
 }
 
+// ─── D-14a: profile passthrough on sendMessage → chat.send ──────────────────
+// Scopes SecurityContext.profile_id server-side only (Phase 99 Plan 01,
+// LAUNCH-03 groundwork) — never a persona-voice switch. astridr's
+// ChatSendCommand already declares `profile: str | None = None`.
+
+describe("useAstridrChat — sendMessage profile passthrough (D-14a)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-profile" });
+  });
+
+  it("sendMessage(text, { profile }) sends chat.send with profile set", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("hi", { profile: "business" });
+    });
+    expect(mockSendCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "chat.send", profile: "business" })
+    );
+  });
+
+  it("sendMessage(text) with no opts sends chat.send with NO profile key", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("hi");
+    });
+    const call = mockSendCommand.mock.calls[0][0] as Record<string, unknown>;
+    expect(call.type).toBe("chat.send");
+    expect("profile" in call).toBe(false);
+  });
+});
+
 describe("useAstridrChat — post-interrupt TTS suppression", () => {
   beforeEach(() => {
     vi.clearAllMocks();
