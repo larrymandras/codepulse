@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: in_progress
-stopped_at: Phase 99 context gathered
-last_updated: "2026-07-23T18:42:23.105Z"
+status: paused
+stopped_at: Phase 99 UI-SPEC approved
+last_updated: "2026-07-23T18:57:22.623Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 4
@@ -312,10 +312,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-23T18:42:23.095Z
-Stopped at: Phase 99 context gathered
+Last session: 2026-07-23T18:57:22.614Z
+Stopped at: Phase 99 UI-SPEC approved
 Next action: **`/clear` then `/gsd-plan-phase 99`** — Phase 99 (Skill Launch / Dispatch) context is captured in `99-CONTEXT.md` (12 decisions D-01..D-14). Key research directive for the planner (D-14): probe astridr's `chat.send`/`profileSwitches` for existing persona-routing (bounds the codepulse-only-v1 Ástríðr scope, D-09) and confirm which Forge agents resolve `/skill` slash-commands (D-10). Phase 100 (Control-Surface UX, UX-01..04) depends on both 98 and 99, sequenced last. Non-blocking carryovers: Phase 98's two MANUAL verification steps (live G: repro + transient-unmount negative check — need a live Forge daemon + Google Drive mount); `102-REVIEW.md`'s 4 advisory warnings (candidate future tech-debt phase).
-Resume file: .planning/phases/99-skill-launch-dispatch/99-CONTEXT.md
+Resume file: .planning/phases/99-skill-launch-dispatch/99-UI-SPEC.md
 
 ## Operator Next Steps
 
