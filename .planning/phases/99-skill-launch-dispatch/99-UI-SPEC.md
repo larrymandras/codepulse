@@ -149,11 +149,11 @@ No third-party registries declared or used. `components.json` has `"registries":
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: FLAG (non-blocking) — "Run"/"Send" CTAs are single-word without noun; consider "Run Skill" if tightening desired
+- [x] Dimension 2 Visuals: FLAG (non-blocking) — declare the primary visual anchor for the chooser and arg-input popover so the executor need not infer it
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-07-23 (4 PASS, 2 FLAG non-blocking)
