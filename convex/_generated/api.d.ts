@@ -76,6 +76,8 @@ import type * as hrIngest from "../hrIngest.js";
 import type * as http from "../http.js";
 import type * as ideation from "../ideation.js";
 import type * as ideationFindings from "../ideationFindings.js";
+import type * as inbox from "../inbox.js";
+import type * as inboxIngest from "../inboxIngest.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestAuth from "../ingestAuth.js";
 import type * as ingestSummary from "../ingestSummary.js";
@@ -224,6 +226,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   ideation: typeof ideation;
   ideationFindings: typeof ideationFindings;
+  inbox: typeof inbox;
+  inboxIngest: typeof inboxIngest;
   ingest: typeof ingest;
   ingestAuth: typeof ingestAuth;
   ingestSummary: typeof ingestSummary;

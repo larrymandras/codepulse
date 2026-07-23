@@ -27,6 +27,7 @@ import { forgeFileIngest } from "./forgeFileIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 import { remindersIngest, remindersRead } from "./remindersIngest";
 import { calendarIngest } from "./calendarEvents";
+import { inboxIngest, inboxRead, inboxReadAll } from "./inboxIngest";
 
 const http = httpRouter();
 
@@ -99,5 +100,16 @@ http.route({ path: "/reminders-read",   method: "POST",    handler: remindersRea
 http.route({ path: "/reminders-read",   method: "OPTIONS", handler: remindersRead });
 http.route({ path: "/calendar-ingest",  method: "POST",    handler: calendarIngest });
 http.route({ path: "/calendar-ingest",  method: "OPTIONS", handler: calendarIngest });
+
+// Phase 186: Governor Inbox — the record-everything store the interrupt
+// governor writes to (GOV-01, D-10). All fail-closed via validateIngestAuth
+// (T-186-02-01); /inbox-read-all is the D-12 aggregate all-profiles read
+// (T-186-02-03) — same bearer check, never a public GET.
+http.route({ path: "/inbox-ingest",   method: "POST",    handler: inboxIngest });
+http.route({ path: "/inbox-ingest",   method: "OPTIONS", handler: inboxIngest });
+http.route({ path: "/inbox-read",     method: "POST",    handler: inboxRead });
+http.route({ path: "/inbox-read",     method: "OPTIONS", handler: inboxRead });
+http.route({ path: "/inbox-read-all", method: "POST",    handler: inboxReadAll });
+http.route({ path: "/inbox-read-all", method: "OPTIONS", handler: inboxReadAll });
 
 export default http;
