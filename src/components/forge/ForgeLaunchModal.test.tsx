@@ -38,13 +38,14 @@ import { ForgeLaunchModal } from "./ForgeLaunchModal";
 
 const noop = () => {};
 
-function renderModal() {
+function renderModal(props?: { open?: boolean; initialPrompt?: string }) {
   return render(
     <ForgeLaunchModal
-      open={true}
+      open={props?.open ?? true}
       onClose={noop}
       onLaunched={noop}
       onLaunchFailed={noop}
+      initialPrompt={props?.initialPrompt}
     />
   );
 }
@@ -109,5 +110,45 @@ describe("ForgeLaunchModal", () => {
     expect(
       screen.getByText("No workspaces synced from this host yet.")
     ).toBeInTheDocument();
+  });
+});
+
+// ─── D-11: initialPrompt prop prefills the prompt textarea (Phase 99 Plan 01) ──
+
+describe("ForgeLaunchModal — initialPrompt (D-11)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("Test 1: renders with initialPrompt shows the prompt field prefilled", () => {
+    renderModal({ initialPrompt: "/gsd-plan-phase 99" });
+    expect(screen.getByLabelText("Prompt")).toHaveValue("/gsd-plan-phase 99");
+  });
+
+  it("Test 2: renders with open and NO initialPrompt shows an empty prompt field", () => {
+    renderModal();
+    expect(screen.getByLabelText("Prompt")).toHaveValue("");
+  });
+
+  it("Test 3: toggling open false→true re-applies initialPrompt", () => {
+    const { rerender } = render(
+      <ForgeLaunchModal
+        open={false}
+        onClose={noop}
+        onLaunched={noop}
+        onLaunchFailed={noop}
+        initialPrompt="/gsd-discuss-phase 99"
+      />
+    );
+    rerender(
+      <ForgeLaunchModal
+        open={true}
+        onClose={noop}
+        onLaunched={noop}
+        onLaunchFailed={noop}
+        initialPrompt="/gsd-discuss-phase 99"
+      />
+    );
+    expect(screen.getByLabelText("Prompt")).toHaveValue("/gsd-discuss-phase 99");
   });
 });
