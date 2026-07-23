@@ -81,5 +81,8 @@
     "vite": "^8.1.3",
     "vite-plugin-static-copy": "^4.1.1",
     "vitest": "^4.1.9"
+  },
+  "overrides": {
+    "@hono/node-server": "2.0.10"
   }
 }
