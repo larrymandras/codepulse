@@ -628,7 +628,7 @@ Plans:
 **Goal:** Close v12.0 milestone-audit tech-debt items 1-2 — remove the orphaned `dueSoon`/`overdue` dead code + `by_dueAt` index from codepulse, and delete the dead `CodePulsePoster` class plus sweep the stale two-backend narrative from astridr-repo — leaving zero references to either and both repos' suites green, verified against the running stack.
 **Requirements**: none formal — cleanup phase scoped by 102-CONTEXT.md decisions D-01..D-07 (audit items AUDIT-TD-01 reminders dead code, AUDIT-TD-02 astridr comment cleanup)
 **Depends on:** Phase 101
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 **Wave 1**
@@ -638,7 +638,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 102-03-PLAN.md — Wave 2 (operator, cross-repo): live self-hosted index-DROP deploy + one real calendar_cache tick (pushed>0/failed=0, events on /reminders) (D-02, D-07)
+- [x] 102-03-PLAN.md — Wave 2 (operator, cross-repo): live self-hosted index-DROP deploy + one real calendar_cache tick (pushed>0/failed=0, events on /reminders) (D-02, D-07)
 
 ---
 
