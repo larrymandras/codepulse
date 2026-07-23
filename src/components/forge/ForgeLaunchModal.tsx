@@ -15,6 +15,12 @@
  * defeating D-10. Instead the modal builds a pending ForgeCommandRow and reports it up via
  * onLaunched() (ForgePage appends it to local pendingLocal state) BEFORE awaiting the
  * mutation; on failure onLaunchFailed() flips that local row to "failed" (D-11).
+ *
+ * CR-02 (99-07): onLaunched() above is optimistic paint ONLY — it fires before
+ * the mutation is even called and must never be read as "the launch
+ * succeeded". onLaunchConfirmed() is the separate confirmed-enqueue signal,
+ * fired after `await launch(...)` resolves; callers that record usage
+ * (recordSkillLaunch, D-12) must wire that callback instead of onLaunched.
  */
 
 import { useState, useEffect } from "react";
@@ -77,6 +83,11 @@ interface ForgeLaunchModalProps {
   onLaunched: (row: ForgeCommandRow) => void;
   /** ForgePage flips the matching local row to "failed" with the reason (D-11). */
   onLaunchFailed: (commandId: string, message: string) => void;
+  /** CR-02 (99-07): fires ONLY after `await launch(...)` resolves successfully —
+   *  the confirmed-enqueue signal. `onLaunched` above is the optimistic
+   *  pre-await paint and must never be conflated with confirmation; callers
+   *  that record usage (recordSkillLaunch) MUST wire this callback instead. */
+  onLaunchConfirmed?: () => void;
   /** D-11 (Phase 99): prefills the editable prompt textarea when a skill Run
    *  opens this modal with `/skill …` already composed. Omit for the
    *  unchanged default (empty prompt). */
@@ -88,6 +99,7 @@ export function ForgeLaunchModal({
   onClose,
   onLaunched,
   onLaunchFailed,
+  onLaunchConfirmed,
   initialPrompt,
 }: ForgeLaunchModalProps) {
   // Form state
@@ -206,6 +218,10 @@ export function ForgeLaunchModal({
         model: trimmedModel,
         capabilities: capabilitiesStr,
       });
+      // CR-02 (99-07): confirmed-enqueue signal — fires only after the
+      // mutation resolves successfully, never on the optimistic paint above
+      // and never when the mutation rejects (handled in catch below).
+      onLaunchConfirmed?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       // D-11: flip the matching local pending row to "failed" with the reason.

@@ -77,15 +77,20 @@ export function SkillLaunchProvider({ children }: { children: ReactNode }) {
     setForgeOpen(true);
   }, []);
 
-  // D-12: record fires ONLY on confirmed enqueue (the modal's onLaunched
-  // callback), never on failure/cancel/close — this is the one Forge-path
-  // recording point every Run trigger on the page shares.
-  const handleLaunched = useCallback(
-    (_row: ForgeCommandRow) => {
-      void recordSkillLaunch({ name: forgeSkillName });
-    },
-    [recordSkillLaunch, forgeSkillName]
-  );
+  // CR-02 (99-07): onLaunched is the modal's OPTIMISTIC pre-await paint —
+  // it fires before the enqueue mutation is even called, so it must never
+  // record a launch on its own (a rejected enqueue would still inflate
+  // useCount). No row-paint state lives in this provider today, so there is
+  // nothing else to do here — recording moved to handleLaunchConfirmed below.
+  const handleLaunched = useCallback((_row: ForgeCommandRow) => {}, []);
+
+  // D-12: record fires ONLY on confirmed enqueue — the modal's
+  // onLaunchConfirmed callback, invoked after `await launch(...)` resolves —
+  // never on the optimistic paint above and never on failure/cancel/close.
+  // This is the one Forge-path recording point every Run trigger shares.
+  const handleLaunchConfirmed = useCallback(() => {
+    void recordSkillLaunch({ name: forgeSkillName });
+  }, [recordSkillLaunch, forgeSkillName]);
 
   const handleLaunchFailed = useCallback(() => {
     // No recordSkillLaunch here (D-12) — enqueueLaunch's own failed/expired
@@ -106,6 +111,7 @@ export function SkillLaunchProvider({ children }: { children: ReactNode }) {
         onClose={handleClose}
         onLaunched={handleLaunched}
         onLaunchFailed={handleLaunchFailed}
+        onLaunchConfirmed={handleLaunchConfirmed}
         initialPrompt={forgePrompt}
       />
     </SkillLaunchContext.Provider>
