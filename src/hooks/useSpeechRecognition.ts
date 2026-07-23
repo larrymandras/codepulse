@@ -24,6 +24,7 @@ export interface SpeechRecognitionInstance extends EventTarget {
   stop(): void;
   abort(): void;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onstart: (() => void) | null;
   onend: (() => void) | null;
   onerror: ((event: { error: string }) => void) | null;
 }
@@ -51,6 +52,14 @@ export interface UseSpeechRecognitionOptions {
   onFinalResult: (transcript: string, confidence?: number) => void;
   onInterimResult?: (transcript: string) => void;
   onEnd?: () => void;
+  /**
+   * Fires on the real Web Speech `onstart` event — i.e. the recognizer
+   * actually began listening, not merely that `start()` was called (a
+   * double-start guard can no-op the call entirely). 186-01 trace-first
+   * instrumentation: the caller correlates this against its own re-arm
+   * attempts to see whether a requested restart ever really happened.
+   */
+  onStart?: () => void;
 }
 
 export interface UseSpeechRecognitionReturn {
@@ -80,6 +89,7 @@ export function useSpeechRecognition(
   const onFinalResultRef = useRef(options.onFinalResult);
   const onInterimResultRef = useRef(options.onInterimResult);
   const onEndRef = useRef(options.onEnd);
+  const onStartRef = useRef(options.onStart);
 
   useEffect(() => {
     onFinalResultRef.current = options.onFinalResult;
@@ -92,6 +102,10 @@ export function useSpeechRecognition(
   useEffect(() => {
     onEndRef.current = options.onEnd;
   }, [options.onEnd]);
+
+  useEffect(() => {
+    onStartRef.current = options.onStart;
+  }, [options.onStart]);
 
   const speechAvailable =
     typeof window !== "undefined" && getSpeechRecognitionClass() !== null;
@@ -152,6 +166,10 @@ export function useSpeechRecognition(
       } else if (options.interimResults) {
         onInterimResultRef.current?.(transcript);
       }
+    };
+
+    recognition.onstart = () => {
+      onStartRef.current?.();
     };
 
     recognition.onend = () => {

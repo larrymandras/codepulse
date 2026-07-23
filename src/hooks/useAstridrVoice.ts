@@ -96,6 +96,17 @@ const ECHO_ANCHOR_MAX_MS = 5_000;
 // VOICE_DEBUG is on. Every voice-timing fix in this engine came from one of
 // these traces (2026-07-20 sessions) — when a new symptom appears, flip this
 // on, reproduce ONCE, and fix from the trace. Never reason blind.
+//
+// 186-01 (D-16): `useWakeWord.ts` also pushes into the SAME
+// `window.__astridrVoiceTrace` ring buffer (its own `wake.*`-prefixed events,
+// gated by a `debug` option passed from this one flag below) — it has no
+// import path back to this file, so it can't read VOICE_DEBUG directly. The
+// COPY TRACE chip in Chat.tsx reads the shared global buffer, so no widening
+// was needed there; flipping this single flag lights up both files' traces.
+// `useSpeechRecognition.ts` gained a real `onstart` callback (previously
+// unobservable — only whether we CALLED start(), not whether the browser's
+// recognizer actually began) so "recognizer.start" traces below reflect
+// ground truth, not merely an attempt.
 
 const VOICE_DEBUG = false;
 /** Chat page shows a COPY TRACE chip while instrumentation is on. */
@@ -484,6 +495,14 @@ export function useAstridrVoice({
     () => {}
   );
 
+  // 186-01 (D-16): which caller requested the CURRENT recognitionStart() —
+  // "wake" (fresh conversation) vs "keepalive-restart" (Chrome's routine
+  // recognizer death during a live conversation). Set immediately before each
+  // recognitionStart() call below; read (and cleared) in onStart so the trace
+  // shows whether a requested restart actually reached the browser's real
+  // onstart event, not just that we called start().
+  const recognizerStartTriggerRef = useRef<string>("unknown");
+
   const {
     start: recognitionStart,
     stop: recognitionStop,
@@ -494,6 +513,13 @@ export function useAstridrVoice({
     interimResults: true,
     onFinalResult: (t, c) => handleFinalResultRef.current(t, c),
     onInterimResult: (t) => handleInterimResultRef.current(t),
+    onStart: () => {
+      trace("recognizer.start", {
+        trigger: recognizerStartTriggerRef.current,
+        state: voiceStateRef.current,
+      });
+      recognizerStartTriggerRef.current = "unknown";
+    },
     onEnd: () => {
       const lifetimeMs = Date.now() - recognizerStartedAtRef.current;
       trace("recognizer.end", { state: voiceStateRef.current, lifetimeMs });
@@ -548,6 +574,7 @@ export function useAstridrVoice({
           trace("recognizer.restart");
           intentionalStopRef.current = false; // fresh session, fresh latch
           recognizerStartedAtRef.current = Date.now();
+          recognizerStartTriggerRef.current = "keepalive-restart";
           recognitionStart();
         }
       }, RESTART_DELAY_MS);
@@ -749,6 +776,10 @@ export function useAstridrVoice({
 
   handleInterimResultRef.current = (rawText: string) => {
     let text = rawText;
+    // Canonical onresult line (186-01 D-16) — fires on every call regardless
+    // of which branch below handles it, so the trace always has one entry
+    // per real Web Speech onresult event with isFinal + the raw transcript.
+    trace("onresult", { isFinal: false, text: rawText, state: voiceStateRef.current });
 
     // While she's speaking, the recognizer hears BOTH her TTS echo and you.
     // Explicit barge-in phrases act instantly; anything else is fingerprinted
@@ -808,6 +839,9 @@ export function useAstridrVoice({
 
   handleFinalResultRef.current = (rawText: string, confidence?: number) => {
     let text = rawText;
+    // Canonical onresult line (186-01 D-16) — see handleInterimResultRef's
+    // twin above; isFinal:true here, always fires before any branch below.
+    trace("onresult", { isFinal: true, text: rawText, confidence, state: voiceStateRef.current });
     trace("final", { text, confidence, state: voiceStateRef.current });
     // Capture the salvage buffer — the accept path rejoins it if Chrome reset
     // the utterance and finalized only the tail (19:09: "do I have any" was
@@ -1142,9 +1176,11 @@ export function useAstridrVoice({
       // the live trace showed exactly that killing the restart.
       intentionalStopRef.current = false;
       recognizerStartedAtRef.current = Date.now();
+      recognizerStartTriggerRef.current = "wake";
       recognitionStart();
       resetSilenceTimer();
     },
+    debug: VOICE_DEBUG,
   });
 
   // Gate the wake engine on `enabled` (VOX-04 — no mic unless explicitly on).

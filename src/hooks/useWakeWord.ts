@@ -30,6 +30,22 @@ export interface UseWakeWordOptions {
   baseUrl: string;
   /** Called on the main thread when wake word is detected */
   onWake: () => void;
+  /**
+   * 186-01 trace-first instrumentation (D-16): when true, pushes lifecycle
+   * events into the SAME `window.__astridrVoiceTrace` ring buffer used by
+   * useAstridrVoice.ts's `VOICE_DEBUG` flag (the caller passes its own flag
+   * through here — this hook has no import path back to useAstridrVoice.ts).
+   * Covers the candidate suspect explicitly named in the wake-rearm todo:
+   * "wake engine's own audio track lifecycle after mic.off-less teardown".
+   * No control-flow change — observation only.
+   */
+  debug?: boolean;
+}
+
+declare global {
+  interface Window {
+    __astridrVoiceTrace?: Array<{ t: string; ev: string; d?: unknown }>;
+  }
 }
 
 export interface UseWakeWordReturn {
@@ -41,13 +57,28 @@ export interface UseWakeWordReturn {
 
 const WORKER_INIT_TIMEOUT_MS = 10_000;
 
-export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWordReturn {
+/** Pushes to the shared trace ring buffer used by useAstridrVoice.ts's
+ *  VOICE_DEBUG / COPY TRACE affordance — no separate flag for Larry to
+ *  remember to flip. No-ops when `debug` is false (default). */
+function wakeTrace(debug: boolean | undefined, ev: string, d?: unknown): void {
+  if (!debug || typeof window === 'undefined') return;
+  const entry = { t: new Date().toISOString().slice(11, 23), ev: `wake.${ev}`, d };
+  // eslint-disable-next-line no-console
+  console.log(`[voice] ${entry.t} ${entry.ev}`, d ?? '');
+  const buf = (window.__astridrVoiceTrace ??= []);
+  buf.push(entry);
+  if (buf.length > 500) buf.shift();
+}
+
+export function useWakeWord({ baseUrl, onWake, debug }: UseWakeWordOptions): UseWakeWordReturn {
   const [status, setStatus] = useState<WakeWordStatus>('idle');
   const [errorReason, setErrorReason] = useState<string | null>(null);
 
   // Stable ref for onWake — same pattern as useAudioEvents.ts (enabledRef)
   const onWakeRef = useRef(onWake);
   onWakeRef.current = onWake;
+  const debugRef = useRef(debug);
+  debugRef.current = debug;
 
   // Resource refs — allow stop() to be called from any context without closures
   const workerRef = useRef<Worker | null>(null);
@@ -60,6 +91,11 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
 
   /** Stop all active resources and release the mic. Does NOT set status — caller does that. */
   const releaseResources = useCallback((): void => {
+    wakeTrace(debugRef.current, 'release-resources', {
+      hadWorker: !!workerRef.current,
+      hadAudioCtx: !!audioCtxRef.current,
+      hadMicStream: !!micStreamRef.current,
+    });
     // Remove the visibility keep-alive listener
     if (visibilityHandlerRef.current) {
       document.removeEventListener('visibilitychange', visibilityHandlerRef.current);
@@ -91,6 +127,7 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
   }, []);
 
   const stop = useCallback((): void => {
+    wakeTrace(debugRef.current, 'status', { to: 'idle', via: 'stop()' });
     releaseResources();
     setStatus('idle');
     setErrorReason(null);
@@ -102,9 +139,13 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
     // effect) both read the stale 'idle' status and spin up TWO workers + TWO
     // mic streams — the first pair is orphaned with a hot mic and fires
     // duplicate wake events. The ref guard is synchronous.
-    if (startingRef.current) return;
+    if (startingRef.current) {
+      wakeTrace(debugRef.current, 'start.reentry-blocked', { status });
+      return;
+    }
     if (status === 'loading' || status === 'ready') return;
     startingRef.current = true;
+    wakeTrace(debugRef.current, 'status', { to: 'loading' });
 
     setStatus('loading');
     setErrorReason(null);
@@ -127,6 +168,20 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
         });
       }
       micStreamRef.current = stream;
+      // Candidate suspect (voice-wake-rearm-intermittent.md): the wake mic
+      // track silently ending (device conflict with the recognizer's own
+      // getUserMedia stream, OS reclaiming the device, etc.) would leave the
+      // worklet fed zero frames — no future wake, no error anywhere. Observe
+      // it directly rather than inferring it.
+      for (const track of stream.getTracks()) {
+        track.onended = () => {
+          wakeTrace(debugRef.current, 'mic.track.ended', {
+            kind: track.kind,
+            label: track.label,
+            readyState: track.readyState,
+          });
+        };
+      }
 
       // ---[ Step 2: Spin up the Worker FIRST so we can get its MessagePort ]---
       const worker = new Worker(
@@ -139,6 +194,7 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       worker.onmessage = (e: MessageEvent) => {
         const data = e.data as { type: string; score?: number; message?: string };
         if (data.type === 'wake') {
+          wakeTrace(debugRef.current, 'worker.wake-detected', { score: data.score });
           onWakeRef.current();
         }
       };
@@ -194,6 +250,7 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       // unwanted suspension. A real stop() closes the context ('closed'), which
       // resume() cannot revive, so this only ever revives a 'suspended' context.
       audioCtx.onstatechange = () => {
+        wakeTrace(debugRef.current, 'audioctx.statechange', { state: audioCtx.state });
         if (audioCtx.state === 'suspended') {
           void audioCtx.resume().catch(() => {});
         }
@@ -205,6 +262,7 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
           document.visibilityState === 'visible' &&
           audioCtxRef.current?.state === 'suspended'
         ) {
+          wakeTrace(debugRef.current, 'audioctx.resume-on-visible', {});
           void audioCtxRef.current.resume().catch(() => {});
         }
       };
@@ -250,11 +308,13 @@ export function useWakeWord({ baseUrl, onWake }: UseWakeWordOptions): UseWakeWor
       // frames to the worker), so this connection is silent — there is no mic playback.
       workletNode.connect(audioCtx.destination);
 
+      wakeTrace(debugRef.current, 'status', { to: 'ready' });
       setStatus('ready');
     } catch (err) {
       // ---[ D-07: Graceful degradation — never throw, never leave hot mic ]---
       const message = err instanceof Error ? err.message : String(err);
       console.error('[useWakeWord] init failed:', message);
+      wakeTrace(debugRef.current, 'status', { to: 'error-disabled', message });
       // Release all resources including mic stream (VOX-04 — no silent hot mic)
       releaseResources();
       setStatus('error-disabled');
