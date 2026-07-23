@@ -116,3 +116,7 @@ None - no external service configuration required.
 ---
 *Phase: 99-skill-launch-dispatch*
 *Completed: 2026-07-23*
+
+## Self-Check: PASSED
+
+All created files verified present (`RunChatPopover.tsx`, `RunChatPopover.test.tsx`, `RunAstridrPopover.tsx`, `RunAstridrPopover.test.tsx`, this SUMMARY.md); all 3 commits (`8a2e2cd`, `400f598`, `51af947`) verified present in git log.
