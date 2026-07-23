@@ -108,7 +108,7 @@ const ECHO_ANCHOR_MAX_MS = 5_000;
 // recognizer actually began) so "recognizer.start" traces below reflect
 // ground truth, not merely an attempt.
 
-const VOICE_DEBUG = false;
+const VOICE_DEBUG = true;
 /** Chat page shows a COPY TRACE chip while instrumentation is on. */
 export const VOICE_DEBUG_ENABLED = VOICE_DEBUG;
 
