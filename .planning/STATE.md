@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: paused
+status: executing
 stopped_at: Phase 99 UI-SPEC approved
-last_updated: "2026-07-23T18:57:22.623Z"
-last_activity: 2026-07-23
+last_updated: "2026-07-23T19:57:19.622Z"
+last_activity: 2026-07-23 -- Phase 99 planning complete
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 11
+  total_plans: 17
   completed_plans: 11
   percent: 50
 ---
@@ -37,10 +37,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98 COMPLETE; **resumes at Phase 99 (Skill Launch / Dispatch, independent of 97/98)**; Phase 100 (Control-Surface UX) depends on both 98 and 99, sequenced last.
-Status: in_progress (v11.0 was paused during the v12.0 side-quest; now the sole active milestone)
+Status: Ready to execute
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-23
+Last activity: 2026-07-23 -- Phase 99 planning complete
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 

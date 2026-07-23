@@ -560,7 +560,14 @@ Plans:
   3. User dispatches a skill to Ástríðr / a chosen persona and it executes there.
   4. The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time, and each launch updates the skill's `useCount` / `lastUsedAt`.
 
-**Plans**: TBD
+**Plans**: 6 plans (5 waves)
+
+- [ ] 99-01-PLAN.md — Wave 1: launch contracts — `skillRun.ts` (RunTarget/AutoSendHandoff + last-pick localStorage), `profiles.ts` (hoisted PROFILES), `useAstridrChat` profile passthrough, `ForgeLaunchModal` initialPrompt (LAUNCH-01/02/03)
+- [ ] 99-02-PLAN.md — Wave 2: Chat auto-send receiver — mount-triggered StrictMode-safe effect + recordSkillLaunch on confirmed send (LAUNCH-01/03)
+- [ ] 99-03-PLAN.md — Wave 2: Run popovers — RunChatPopover + RunAstridrPopover (deliberate pre-send capture, persona picker, honest no-persona-claim) (LAUNCH-01/03)
+- [ ] 99-04-PLAN.md — Wave 3: launch orchestration — SkillLaunchProvider (page-level Forge modal + Forge recording) + RunTargetChooser/useRunLaunch (last-pick chooser) (LAUNCH-02/04)
+- [ ] 99-05-PLAN.md — Wave 4: Run entry points — SkillLifecycleMenu Run submenu + QuickDeck primary-click Run / copy-secondary / stop-recording (LAUNCH-04)
+- [ ] 99-06-PLAN.md — Wave 5: integration + honest-recording sweep — Skills.tsx provider wrap + retire copy-recording & the /chat?skill= dead-end across SkillRow/palette/containers (LAUNCH-04)
 **UI hint**: yes
 **Cross-repo note (2026-07-20)**: astridr's planned Mission Control (astridr SEED-023) PAIRS WITH this phase — 99 launches skills; the mission jobs board (live stream-json telemetry, cost, confirm cards) is a separate surface seeded as `.planning/seeds/SEED-002-mission-control-jobs-board.md`. Keep launch plumbing (`chat.send` / `enqueueLaunch` / dispatch) reusable for mission briefs.
 

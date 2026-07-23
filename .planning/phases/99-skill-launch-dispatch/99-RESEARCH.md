@@ -330,14 +330,16 @@ export const recordSkillLaunch = mutation({
 
 **If this table is empty:** N/A — see above; all three items are LOW-to-MEDIUM risk and none block planning, but A3 specifically should be double-checked with one grep at plan time (`grep -rn "useAstridrChat(" src/`) since it affects which handoff mechanism (router state vs. query param) is cleanest.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `handleOpenInChat`'s `recordLaunch` call stop firing, given its target is retired/rebuilt?**
+> Both questions were locked during planning — see 99-06-PLAN.md (`<objective>` "Locked resolutions") and 99-01/99-02 (router-state `AutoSendHandoff`). Retained here for audit trail.
+
+1. **RESOLVED (→ 99-06): Should `handleOpenInChat`'s `recordLaunch` call stop firing, given its target is retired/rebuilt?** — Resolution: `handleOpenInChat` + the `onOpenInChat` prop are deleted everywhere and the palette's copy-recording stops (Recommendation (b), extended); real Chat launch is reached only via the chooser's D-04 arg step.
    - What we know: D-13's decision text only names "QuickDeck copy" and "palette copy" as the scope for "stop counting as launch." `handleOpenInChat` is neither — it's the (currently non-functional) prefill-navigate path, still bound to `SkillCommandPalette`'s Ctrl+Enter after D-02 freezes that surface.
    - What's unclear: Whether the planner should (a) leave `handleOpenInChat` calling `recordLaunch` unchanged (technically outside D-13's stated scope), (b) stop it (consistent with LAUNCH-04's "real runs" spirit), or (c) rewire the palette's Ctrl+Enter to the new real Chat-send flow entirely (which would make recordLaunch legitimate again, but expands D-02's "palette left as-is" scope).
    - Recommendation: (b) is safest and smallest — stop recording on a navigate that (per Pitfall 1) doesn't even prefill successfully today. Flag for explicit lock at plan time rather than defaulting silently.
 
-2. **Router-state vs. query-param for the Chat auto-send handoff (D-06)?**
+2. **RESOLVED (→ 99-01/99-02): Router-state vs. query-param for the Chat auto-send handoff (D-06)?** — Resolution: router `state` (`AutoSendHandoff`), per Recommendation below.
    - What we know: Both are viable; router state is cleaner and matches the "one-shot action" semantics; query param matches the shape of the (nonfunctional) old convention and is trivially testable via direct URL navigation in an E2E test.
    - What's unclear: No existing codebase precedent for either pattern exists in this exact "navigate with a payload to auto-execute on arrival" shape (checked: no other page in `src/pages/` does this).
    - Recommendation: Router `state` (`navigate('/chat', { state: { autoSend: { text, profile? } } })`) — avoids the "clear the URL after firing" cleanup step query params need, and this is a fire-and-forget action, not a bookmarkable/shareable URL. Confirm no E2E test suite specifically needs URL-based triggering before locking this.
