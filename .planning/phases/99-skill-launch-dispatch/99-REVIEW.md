@@ -27,7 +27,8 @@ findings:
   warning: 2
   info: 1
   total: 5
-status: issues_found
+status: resolved
+resolution: "CR-01/CR-02 (both blockers) fixed in gap-closure 99-07 with TDD; CR-03 deferred (pre-existing, needs live trace); CR-04 folded into CR-01 fix; CR-05 accepted (mirrors existing convention)."
 ---
 
 # Phase 99: Code Review Report
@@ -35,7 +36,17 @@ status: issues_found
 **Reviewed:** 2026-07-23
 **Depth:** standard
 **Files Reviewed:** 19 (18 source + ForgeLaunchModal ordering cross-check)
-**Status:** issues_found
+**Status:** resolved (see Resolution below)
+
+## Resolution (2026-07-23, gap-closure 99-07)
+
+- **CR-01 (BLOCKER) — FIXED.** `useAstridrChat.sendMessage` now returns `Promise<boolean>` (`true` only on a confirmed `ack.status === "ok"`; `false` on the early guard, rejected ack, and network catch). `Chat.tsx` gates `recordSkillLaunch` on that boolean (`if (sent)`), so a failed/rejected send no longer records a phantom launch. Router-state clear moved to a `finally` (folds in CR-04). RED→GREEN commits `2f86f49`/`1cfb715`.
+- **CR-02 (BLOCKER) — FIXED.** Added `onLaunchConfirmed?` to `ForgeLaunchModal`, fired only after `await launch(...)` resolves; `SkillLaunchProvider` records on that instead of the optimistic `onLaunched`. A Forge enqueue that fails at the Convex layer no longer records. Commit `6d364ed`. `convex/forge.ts` Clerk gate untouched (T-99-10).
+- **CR-03 (WARNING) — DEFERRED, pre-existing.** The raw `setIsStreaming(false)` at `useAstridrChat.ts` L189 (introduced 2026-07-20, commit `19009444`, before this phase) can desync `isStreamingRef` vs the sibling `run.completed` handler. Plausible but depends on live backend event ordering (`run.text`-done vs `run.completed`); fixing blind risks a streaming regression. Recommended follow-up: instrument the event lifecycle and fix from a real trace. Out of the D-12 honesty-invariant scope of this phase.
+- **CR-04 (WARNING) — FIXED** as part of CR-01 (router-state now cleared in `finally`; a `recordSkillLaunch` rejection can no longer strand the handoff).
+- **CR-05 (INFO) — ACCEPTED.** `amber-400` favorite star in `QuickDeck` mirrors an existing convention; no change.
+
+Post-fix: `tsc --noEmit` clean; full suite 2447 passed / 0 failed.
 
 ## Summary
 
