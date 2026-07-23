@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { AllSkillsOverview } from "./AllSkillsOverview";
+import { SkillLaunchProvider } from "./SkillLaunchProvider";
 
 // Phase 98: SkillRow now always renders SkillLifecycleMenu, which calls
 // useQuery/useMutation (host list, lifecycle commands, enqueueLifecycle) —
@@ -10,6 +12,23 @@ vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
   useMutation: vi.fn(() => vi.fn()),
 }));
+
+// Phase 99: SkillLifecycleMenu's always-on Run submenu (D-02) resolves
+// useRunLaunch -> useSkillLaunch, which requires SkillLaunchProvider + a
+// router context — every render site needs both now.
+vi.mock("@/components/forge/ForgeLaunchModal", () => ({
+  ForgeLaunchModal: (props: { open: boolean }) => (
+    <div data-testid="forge-modal-stub" data-open={String(props.open)} />
+  ),
+}));
+
+function renderOverview(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter>
+      <SkillLaunchProvider>{ui}</SkillLaunchProvider>
+    </MemoryRouter>
+  );
+}
 
 beforeEach(() => {
   Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
@@ -33,8 +52,6 @@ const mk = (name: string, categoryName: string | null, extra: Record<string, unk
 
 const handlers = () => ({
   onSelectCategory: vi.fn(),
-  onRecordUse: vi.fn(),
-  onOpenInChat: vi.fn(),
   onEdit: vi.fn(),
   onToggleFavorite: vi.fn(),
 });
@@ -46,7 +63,7 @@ describe("AllSkillsOverview", () => {
       mk("l1", "legal"),
       mk("u1", null),
     ];
-    render(<AllSkillsOverview skills={skills} categories={categories} {...handlers()} />);
+    renderOverview(<AllSkillsOverview skills={skills} categories={categories} {...handlers()} />);
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(headings[0]).toContain("Project Management");
     expect(headings[1]).toContain("Legal");
@@ -56,14 +73,14 @@ describe("AllSkillsOverview", () => {
 
   it("clicking a group header drills into that category", () => {
     const h = handlers();
-    render(<AllSkillsOverview skills={[mk("l1", "legal")]} categories={categories} {...h} />);
+    renderOverview(<AllSkillsOverview skills={[mk("l1", "legal")]} categories={categories} {...h} />);
     fireEvent.click(screen.getByRole("button", { name: /open legal category/i }));
     expect(h.onSelectCategory).toHaveBeenCalledWith("legal");
   });
 
   it("collapses a group beyond 8 rows behind a Show all toggle", () => {
     const skills = Array.from({ length: 11 }, (_, i) => mk(`g${i}`, "gsd"));
-    render(<AllSkillsOverview skills={skills} categories={categories} {...handlers()} />);
+    renderOverview(<AllSkillsOverview skills={skills} categories={categories} {...handlers()} />);
     expect(screen.getAllByText(/desc$/)).toHaveLength(8);
     fireEvent.click(screen.getByRole("button", { name: /show all \(11\)/i }));
     expect(screen.getAllByText(/desc$/)).toHaveLength(11);
@@ -72,7 +89,7 @@ describe("AllSkillsOverview", () => {
   });
 
   it("renders the terminal empty state when no skills match", () => {
-    render(<AllSkillsOverview skills={[]} categories={categories} {...handlers()} />);
+    renderOverview(<AllSkillsOverview skills={[]} categories={categories} {...handlers()} />);
     expect(screen.getByText("[ NO SKILLS MATCH ]")).toBeInTheDocument();
   });
 });

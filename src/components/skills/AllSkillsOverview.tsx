@@ -17,8 +17,6 @@ interface AllSkillsOverviewProps {
   skills: OverviewSkill[];
   categories: OverviewCategory[];
   onSelectCategory: (name: string) => void;
-  onRecordUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
 }
@@ -30,8 +28,6 @@ export function AllSkillsOverview({
   skills,
   categories,
   onSelectCategory,
-  onRecordUse,
-  onOpenInChat,
   onEdit,
   onToggleFavorite,
 }: AllSkillsOverviewProps) {
@@ -79,8 +75,6 @@ export function AllSkillsOverview({
             <SkillRow
               key={skill.name}
               skill={skill}
-              onRecordUse={onRecordUse}
-              onOpenInChat={onOpenInChat}
               onEdit={onEdit}
               onToggleFavorite={onToggleFavorite}
             />

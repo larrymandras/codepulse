@@ -1,6 +1,8 @@
 import { describe, test, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { SkillsInCategory } from "../SkillsInCategory";
+import { SkillLaunchProvider } from "../SkillLaunchProvider";
 
 // Phase 98: SkillRow now always renders SkillLifecycleMenu, which calls
 // useQuery/useMutation (host list, lifecycle commands, enqueueLifecycle) —
@@ -10,6 +12,23 @@ vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
   useMutation: vi.fn(() => vi.fn()),
 }));
+
+// Phase 99: SkillLifecycleMenu's always-on Run submenu (D-02) resolves
+// useRunLaunch -> useSkillLaunch, which requires SkillLaunchProvider + a
+// router context — every render site needs both now.
+vi.mock("@/components/forge/ForgeLaunchModal", () => ({
+  ForgeLaunchModal: (props: { open: boolean }) => (
+    <div data-testid="forge-modal-stub" data-open={String(props.open)} />
+  ),
+}));
+
+function renderCategory(ui: React.ReactElement) {
+  return render(
+    <MemoryRouter>
+      <SkillLaunchProvider>{ui}</SkillLaunchProvider>
+    </MemoryRouter>
+  );
+}
 
 const mockSkills = [
   {
@@ -54,8 +73,6 @@ const defaultProps = {
   skills: mockSkills,
   categories: mockCategories,
   onBack: vi.fn(),
-  onRecordUse: vi.fn(),
-  onOpenInChat: vi.fn(),
   onEditSkill: vi.fn(),
   onReassignSkill: vi.fn(),
   onToggleFavorite: vi.fn(),
@@ -63,7 +80,7 @@ const defaultProps = {
 
 describe("SkillsInCategory", () => {
   test("renders category name and back button", () => {
-    render(<SkillsInCategory {...defaultProps} />);
+    renderCategory(<SkillsInCategory {...defaultProps} />);
 
     expect(screen.getByText("Project Management")).toBeInTheDocument();
     expect(screen.getByText("📋")).toBeInTheDocument();
@@ -72,7 +89,7 @@ describe("SkillsInCategory", () => {
   });
 
   test("renders all skills with display names", () => {
-    render(<SkillsInCategory {...defaultProps} />);
+    renderCategory(<SkillsInCategory {...defaultProps} />);
 
     expect(screen.getByText("Plan Phase")).toBeInTheDocument();
     expect(screen.getByText("Execute Phase")).toBeInTheDocument();
@@ -81,30 +98,28 @@ describe("SkillsInCategory", () => {
 
   test("calls onBack when back button is clicked", () => {
     const onBack = vi.fn();
-    render(<SkillsInCategory {...defaultProps} onBack={onBack} />);
+    renderCategory(<SkillsInCategory {...defaultProps} onBack={onBack} />);
 
     fireEvent.click(screen.getByLabelText("Back"));
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  test("calls onOpenInChat when a row's chat button is clicked", () => {
-    const onOpenInChat = vi.fn();
-    render(<SkillsInCategory {...defaultProps} onOpenInChat={onOpenInChat} />);
+  test("no inline chat button on a row (retired no-op, D-13/Pitfall 1-2)", () => {
+    renderCategory(<SkillsInCategory {...defaultProps} />);
 
-    fireEvent.click(screen.getByLabelText("Open gsd-plan-phase in Chat"));
-    expect(onOpenInChat).toHaveBeenCalledWith("gsd-plan-phase");
+    expect(screen.queryByLabelText("Open gsd-plan-phase in Chat")).toBeNull();
   });
 
   test("calls onEditSkill when a row's edit button is clicked", () => {
     const onEditSkill = vi.fn();
-    render(<SkillsInCategory {...defaultProps} onEditSkill={onEditSkill} />);
+    renderCategory(<SkillsInCategory {...defaultProps} onEditSkill={onEditSkill} />);
 
     fireEvent.click(screen.getByLabelText("Edit gsd-plan-phase"));
     expect(onEditSkill).toHaveBeenCalledWith("gsd-plan-phase");
   });
 
   test("shows drop targets for other categories", () => {
-    render(<SkillsInCategory {...defaultProps} />);
+    renderCategory(<SkillsInCategory {...defaultProps} />);
 
     const dropTargets = screen.getAllByTitle(/Drop to move to/);
     expect(dropTargets.length).toBe(1);
@@ -112,7 +127,7 @@ describe("SkillsInCategory", () => {
 
   test("calls onReassignSkill when skill is dropped on target", () => {
     const onReassignSkill = vi.fn();
-    render(<SkillsInCategory {...defaultProps} onReassignSkill={onReassignSkill} />);
+    renderCategory(<SkillsInCategory {...defaultProps} onReassignSkill={onReassignSkill} />);
 
     const dropTarget = screen.getByTitle("Drop to move to Legal");
     fireEvent.drop(dropTarget, {

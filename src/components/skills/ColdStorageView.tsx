@@ -8,8 +8,6 @@ interface ColdStorageViewProps {
    * 98-REVIEW WR-04) — their dormant copy must stay reachable here.
    */
   skills: RowSkill[];
-  onRecordUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
 }
@@ -23,8 +21,6 @@ interface ColdStorageViewProps {
  */
 export function ColdStorageView({
   skills,
-  onRecordUse,
-  onOpenInChat,
   onEdit,
   onToggleFavorite,
 }: ColdStorageViewProps) {
@@ -54,8 +50,6 @@ export function ColdStorageView({
             <SkillRow
               key={skill.name}
               skill={skill}
-              onRecordUse={onRecordUse}
-              onOpenInChat={onOpenInChat}
               onEdit={onEdit}
               onToggleFavorite={onToggleFavorite}
               lane="cold"

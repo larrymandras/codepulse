@@ -18,8 +18,6 @@ interface SkillsInCategoryProps {
   skills: RowSkill[];
   categories: CategoryOption[];
   onBack: () => void;
-  onRecordUse: (skillName: string) => void;
-  onOpenInChat: (skillName: string) => void;
   onEditSkill: (skillName: string) => void;
   onReassignSkill: (skillName: string, newCategoryName: string) => void;
   onToggleFavorite: (skillName: string) => void;
@@ -33,8 +31,6 @@ export function SkillsInCategory({
   skills,
   categories,
   onBack,
-  onRecordUse,
-  onOpenInChat,
   onEditSkill,
   onReassignSkill,
   onToggleFavorite,
@@ -123,8 +119,6 @@ export function SkillsInCategory({
           <SkillRow
             key={skill.name}
             skill={skill}
-            onRecordUse={onRecordUse}
-            onOpenInChat={onOpenInChat}
             onEdit={onEditSkill}
             onToggleFavorite={onToggleFavorite}
           />
