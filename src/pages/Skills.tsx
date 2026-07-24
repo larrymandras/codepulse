@@ -79,6 +79,22 @@ function SkillsBody() {
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
   const feed = useIntakeFeed();
 
+  // The Skills page manages Claude Code skills. Hide ONLY the Ástríðr `bridge`/
+  // `native` mirror (the cc_* duplicates whose every origin is bridge/native) so
+  // a skill never shows twice and those copies don't reject on drag as
+  // "multi-scope". Skills with claude-code, empty, or unknown origins are kept.
+  // VIEW filter only — it does not touch the bridge or Ástríðr's access.
+  const manageableSkills = useMemo(
+    () =>
+      enrichedSkills.filter((s) => {
+        const origins = s.origins ?? [];
+        const bridgeOnly =
+          origins.length > 0 && origins.every((o) => o === "bridge" || o === "native");
+        return !bridgeOnly;
+      }),
+    [enrichedSkills]
+  );
+
   const updateOverride = useMutation(api.skillCategories.updateSkillOverride);
   const updateCat = useMutation(api.skillCategories.updateCategory);
   const createCat = useMutation(api.skillCategories.createCategory);
@@ -89,8 +105,8 @@ function SkillsBody() {
   const enqueueLifecycle = useMutation(api.forge.enqueueLifecycle);
 
   const reviewSkills = useMemo(
-    () => enrichedSkills.filter((s) => s.isAutoAssigned && !s.hidden),
-    [enrichedSkills]
+    () => manageableSkills.filter((s) => s.isAutoAssigned && !s.hidden),
+    [manageableSkills]
   );
 
   const isProjectOrigin = (s: { origins?: string[] }) =>
@@ -99,7 +115,7 @@ function SkillsBody() {
   // The chip row (SkillFilterChips) drives the overview filter. "cold" is handled
   // by the Cold Storage view, so it falls through to the unfiltered base here.
   const visibleSkills = useMemo(() => {
-    const base = enrichedSkills.filter((s) => !s.hidden);
+    const base = manageableSkills.filter((s) => !s.hidden);
     switch (chip) {
       case "favorites":
         return base.filter((s) => s.favorite);
@@ -119,10 +135,10 @@ function SkillsBody() {
       default:
         return base;
     }
-  }, [enrichedSkills, chip]);
+  }, [manageableSkills, chip]);
 
   const chipCounts = useMemo((): Record<SkillChip, number> => {
-    const base = enrichedSkills.filter((s) => !s.hidden);
+    const base = manageableSkills.filter((s) => !s.hidden);
     return {
       all: base.length,
       favorites: base.filter((s) => s.favorite).length,
@@ -133,7 +149,7 @@ function SkillsBody() {
       project: base.filter(isProjectOrigin).length,
       cold: base.filter(hasDormantCopy).length,
     };
-  }, [enrichedSkills]);
+  }, [manageableSkills]);
 
   // One filter bar, both views: applies to the overview AND the drilled-in
   // category (the old rail input only pretended to search "all skills").
@@ -170,8 +186,8 @@ function SkillsBody() {
   // (98-REVIEW WR-04): the registry merges origins into one row, and filtering
   // by isDormant hid the cold copy of any name that was also active.
   const dormantCount = useMemo(
-    () => enrichedSkills.filter((s) => !s.hidden && hasDormantCopy(s)).length,
-    [enrichedSkills]
+    () => manageableSkills.filter((s) => !s.hidden && hasDormantCopy(s)).length,
+    [manageableSkills]
   );
 
   const coldStorageSkills = useMemo(
@@ -448,7 +464,7 @@ function SkillsBody() {
       <SkillLaunchProvider>
       {vaultView ? (
         <SkillVaultView
-          skills={enrichedSkills}
+          skills={manageableSkills}
           onClose={() => setVaultView(false)}
           initialQuery={search}
         />
@@ -608,7 +624,7 @@ function SkillsBody() {
           {/* Command Deck — right-rail favorites dashboard (xl+; stacks below on narrow) */}
           <div className="hidden xl:block xl:sticky xl:top-0 xl:self-start xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">
             <SkillCommandDeck
-              skills={enrichedSkills}
+              skills={manageableSkills}
               onToggleFavorite={(name) => toggleFav({ skillName: name })}
             />
           </div>
@@ -620,7 +636,7 @@ function SkillsBody() {
       <SkillCommandPalette
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
-        skills={enrichedSkills}
+        skills={manageableSkills}
         categories={categoryOptions}
       />
       </SkillLaunchProvider>

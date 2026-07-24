@@ -469,6 +469,17 @@ describe("Skills page", () => {
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
   });
 
+  it("hides Astridr bridge skills ([bridge, native]) from the page — view only, keeps the Claude Code twin", () => {
+    const base = MOCK_ENRICHED_SKILLS[0];
+    setupMocks([
+      { ...base, _id: "real1", name: "vercel-firewall", displayName: "Firewall Real", categoryName: null, origins: ["claude-code"] },
+      { ...base, _id: "bridge1", name: "cc_vercel-firewall", displayName: "Firewall Bridge", categoryName: null, origins: ["bridge", "native"] },
+    ]);
+    render(<Skills />);
+    expect(screen.getByText("Firewall Real")).toBeInTheDocument();
+    expect(screen.queryByText("Firewall Bridge")).not.toBeInTheDocument();
+  });
+
   it("the Unused smart-view chip shows only never-run, non-dormant skills", () => {
     render(<Skills />);
     fireEvent.click(screen.getByTestId("skill-chip-unused"));
