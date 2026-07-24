@@ -1,10 +1,17 @@
 /**
- * Inbox — unified feed of HITL approvals, alerts, and system notifications.
+ * Inbox — unified feed of HITL approvals, alerts, system notifications, and
+ * the governor's proactive pulse cards + held/suppressed record.
  *
  * Data sources:
  *   approvals     — WS approval_request events (accumulated in state)
  *   alerts        — Convex alerts.listActive query
  *   notifications — Convex notifications.bellAll query
+ *   cards/held    — Convex inbox.listAll aggregate ALL-PROFILES read (D-12,
+ *                   Plan 02/07, GOV-01/WATCH-01) — NOT a per-profile read.
+ *                   Inbox.tsx has no profileId state and none is added; each
+ *                   row carries its own profileId and renders a per-card
+ *                   profile badge (InboxCard), so business/consulting rows
+ *                   are never dropped and no profile switcher is needed.
  *
  * Approve/Reject sends approval.respond command via WS with request_id_target
  * (the HITL UUID, NOT the WS correlation request_id — T-56-08 mitigated).
@@ -15,9 +22,12 @@
  *   A                 — approve focused approval item
  *   R                 — start reject flow on focused approval item
  *   Escape            — clear keyboard focus
+ * card/held items have no approve/reject handlers (A/R keys no-op on them,
+ * matching existing alert/notification no-op behavior).
  *
  * Phase 56, Plan 03: CPCC-02.
  * Phase 03, Plan 04: IL-03 keyboard navigation.
+ * Phase 186, Plan 07: card/held merge from the aggregate inbox read (D-12).
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
@@ -30,6 +40,7 @@ import { InboxCard, type InboxItem, type InboxItemType } from "../components/Inb
 import { InboxFilterBar, type InboxFilter } from "../components/InboxFilterBar";
 import { useApprovalActions } from "@/components/ApprovalActions";
 import { PageHeader } from "@/components/PageHeader";
+import type { ProfileId } from "@/lib/profiles";
 
 // ─── Risk inference ────────────────────────────────────────────────────────────
 
@@ -88,6 +99,48 @@ function notificationToInboxItem(n: {
   };
 }
 
+// ─── Governor inbox aggregate row → InboxItem (D-12, Plan 02/07) ──────────────
+// Sourced from api.inbox.listAll — the ALL-profiles aggregate read, not a
+// per-profile query. Every row already carries its own profileId, so the
+// merged stream is self-labelling (InboxCard renders the per-card badge).
+
+function isProfileId(value: unknown): value is ProfileId {
+  return value === "personal" || value === "business" || value === "consulting";
+}
+
+interface InboxRowDoc {
+  _id: string;
+  profileId: string;
+  title: string;
+  body: string;
+  createdAt: number;
+  ackedAt?: number;
+  itemType: string;
+  heldReason?: string;
+  source?: string;
+}
+
+function inboxRowToInboxItem(row: InboxRowDoc): InboxItem {
+  const type: InboxItemType =
+    row.itemType === "card" || row.itemType === "held"
+      ? row.itemType
+      : ("notification" as InboxItemType);
+  return {
+    id: row._id,
+    type,
+    title: row.title,
+    message: row.body,
+    timestamp: row.createdAt * 1000,
+    read: row.ackedAt != null,
+    profileId: isProfileId(row.profileId) ? row.profileId : undefined,
+    heldReason:
+      row.heldReason === "focus" || row.heldReason === "quiet-hours"
+        ? row.heldReason
+        : undefined,
+    source: row.source === "calendar" ? "calendar" : "mail",
+  };
+}
+
 // ─── Sorting ──────────────────────────────────────────────────────────────────
 
 const RISK_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
@@ -127,6 +180,14 @@ export default function Inbox() {
   const alertRecords = useQuery(api.alerts.listActive) ?? [];
   const notificationRecords = useQuery(api.notifications.bellAll) ?? [];
   const markNotificationRead = useMutation(api.notifications.markRead);
+  // D-12: aggregate ALL-profiles read (Plan 02's listAll), not a per-profile
+  // inboxRead — this is the ONE merged stream cards/held come from.
+  // Cast per the Reminders.tsx precedent (listByProfile ctx is typed
+  // `{ db } | any` for convex-test-free unit testing, which widens the
+  // generated query's return type to `any` — explicit cast restores the
+  // known Doc shape at the call site rather than editing the shared module).
+  const inboxRecords = (useQuery(api.inbox.listAll, {}) ??
+    []) as unknown as InboxRowDoc[];
 
   // ─── WS: accumulate approval_request events ───────────────────────────────
   useEffect(() => {
@@ -237,11 +298,17 @@ export default function Inbox() {
   const notifItems = notificationRecords.map(notificationToInboxItem).map(
     (item) => (readIds.has(item.id) ? { ...item, read: true } : item)
   );
+  // D-12: aggregate all-profiles inbox rows — cards + held (+ any other
+  // itemType the governor writes) from personal, business, AND consulting
+  // in one merged stream. Each card/held item renders its own profile badge.
+  const inboxItems = inboxRecords.map(inboxRowToInboxItem);
+  const cardItems = inboxItems.filter((i) => i.type === "card");
+  const heldItems = inboxItems.filter((i) => i.type === "held");
 
   const allItems = useMemo(
-    () => sortItems([...approvalItems, ...alertItems, ...notifItems]),
+    () => sortItems([...approvalItems, ...alertItems, ...notifItems, ...inboxItems]),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [approvalItems, alertRecords, notificationRecords, readIds]
+    [approvalItems, alertRecords, notificationRecords, readIds, inboxRecords]
   );
 
   const filteredItems = useMemo(
@@ -252,6 +319,8 @@ export default function Inbox() {
             if (filter === "approvals") return item.type === "approval";
             if (filter === "alerts") return item.type === "alert";
             if (filter === "notifications") return item.type === "notification";
+            if (filter === "cards") return item.type === "card";
+            if (filter === "held") return item.type === "held";
             return true;
           }),
     [filter, allItems]
@@ -328,11 +397,15 @@ export default function Inbox() {
   const unreadApprovals = approvalItems.filter((i) => !i.read).length;
   const unreadAlerts = alertItems.filter((i) => !i.read).length;
   const unreadNotifs = notifItems.filter((i) => !i.read).length;
+  const unreadCards = cardItems.filter((i) => !i.read).length;
+  const unreadHeld = heldItems.filter((i) => !i.read).length;
   const counts: Record<InboxFilter, number> = {
-    all: unreadApprovals + unreadAlerts + unreadNotifs,
+    all: unreadApprovals + unreadAlerts + unreadNotifs + unreadCards + unreadHeld,
     approvals: unreadApprovals,
     alerts: unreadAlerts,
     notifications: unreadNotifs,
+    cards: unreadCards,
+    held: unreadHeld,
   };
 
   // ─── Empty state copy ─────────────────────────────────────────────────────
@@ -341,6 +414,8 @@ export default function Inbox() {
     approvals: "No pending approvals.",
     alerts: "No active alerts.",
     notifications: "No notifications.",
+    cards: "No cards yet — the hourly scan hasn't found anything that needs you.",
+    held: "Nothing held. Focus mode and quiet hours are both off, or nothing came in while they were on.",
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────

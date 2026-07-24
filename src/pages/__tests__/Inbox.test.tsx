@@ -1,5 +1,6 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
+import { useQuery } from "convex/react";
 import type { InboxItem } from "@/components/InboxCard";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -9,10 +10,28 @@ vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => vi.fn()),
 }));
 
-vi.mock("../../convex/_generated/api", () => ({
-  api: new Proxy({}, {
-    get: () => new Proxy({}, { get: () => "mock-fn-ref" }),
-  }),
+// Each module.function pair resolves to a distinct, stable string (e.g.
+// "inbox.listAll") rather than one shared "mock-fn-ref" — lets tests give
+// the mocked useQuery a per-query implementation (D-12 aggregate merge test
+// below needs to seed api.inbox.listAll specifically without perturbing
+// api.alerts.listActive / api.notifications.bellAll, which stay []).
+//
+// Rule 1 fix: this specifier is resolved relative to THIS file
+// (src/pages/__tests__/), so it must be "../../../convex/..." to reach the
+// repo-root convex/ dir — the pre-existing "../../convex/..." (one level
+// short) silently resolved to nothing and Vite fell through to importing
+// the REAL generated Convex api module unmocked. That was harmless while
+// no test depended on the mocked ref's identity, but it directly breaks the
+// D-12 per-query mock below (api.inbox.listAll never matched the seeded
+// mock because it was the real FunctionReference object, not our string).
+vi.mock("../../../convex/_generated/api", () => ({
+  api: new Proxy(
+    {},
+    {
+      get: (_t, mod) =>
+        new Proxy({}, { get: (_t2, fn) => `${String(mod)}.${String(fn)}` }),
+    }
+  ),
 }));
 
 const mockSendCommand = vi.fn().mockResolvedValue({ status: "ok" });
@@ -250,5 +269,105 @@ describe("Inbox — approval false-success gating (D-11)", () => {
 
     expect(screen.getByText("Approved")).toBeInTheDocument();
     expect(screen.queryByText("Approve")).toBeNull();
+  });
+});
+
+// ─── D-12: aggregate all-profiles inbox merge (Plan 07, GOV-01/WATCH-01) ──────
+// Seeds api.inbox.listAll (the ONE merged stream, NOT a per-profile read)
+// with card/held rows under personal, business, AND consulting, and asserts
+// none are dropped — the concrete proof that the Inbox needs no profile
+// switcher because every row is self-labelling via its own profileId.
+describe("Inbox — aggregate all-profiles card/held merge (D-12)", () => {
+  const seededRows = [
+    {
+      _id: "inbox-personal-card",
+      profileId: "personal",
+      title: "Personal card",
+      body: "Needs you: personal follow-up.",
+      createdAt: Date.now() / 1000,
+      itemType: "card",
+      source: "mail",
+    },
+    {
+      _id: "inbox-business-card",
+      profileId: "business",
+      title: "Business card",
+      body: "Needs you: business follow-up.",
+      createdAt: Date.now() / 1000,
+      itemType: "card",
+      source: "calendar",
+    },
+    {
+      _id: "inbox-consulting-held",
+      profileId: "consulting",
+      title: "Consulting held item",
+      body: "Client ping held during focus mode.",
+      createdAt: Date.now() / 1000,
+      itemType: "held",
+      heldReason: "focus",
+    },
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useQuery).mockImplementation(((...args: any[]) => {
+      if (args[0] === "inbox.listAll") return seededRows;
+      return [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any);
+  });
+
+  afterEach(() => {
+    vi.mocked(useQuery).mockReset();
+  });
+
+  test("cards/held from personal, business, AND consulting all render in the merged stream", () => {
+    renderInbox();
+    expect(screen.getByText("Personal card")).toBeInTheDocument();
+    expect(screen.getByText("Business card")).toBeInTheDocument();
+    expect(screen.getByText("Consulting held item")).toBeInTheDocument();
+  });
+
+  test("each row carries its own per-card profile badge — no profile switcher needed", () => {
+    renderInbox();
+    expect(screen.getByText("Personal")).toBeInTheDocument();
+    expect(screen.getByText("Business")).toBeInTheDocument();
+    expect(screen.getByText("Consulting")).toBeInTheDocument();
+  });
+
+  test("Cards tab shows only card items (business/consulting cards not dropped)", () => {
+    renderInbox();
+    fireEvent.click(screen.getByText("Cards"));
+    expect(screen.getByText("Personal card")).toBeInTheDocument();
+    expect(screen.getByText("Business card")).toBeInTheDocument();
+    expect(screen.queryByText("Consulting held item")).toBeNull();
+  });
+
+  test("Held tab shows only held items", () => {
+    renderInbox();
+    fireEvent.click(screen.getByText("Held"));
+    expect(screen.getByText("Consulting held item")).toBeInTheDocument();
+    expect(screen.queryByText("Personal card")).toBeNull();
+    expect(screen.queryByText("Business card")).toBeNull();
+  });
+
+  test("Cards/Held empty-state copy matches 186-UI-SPEC exactly when a tab is empty", () => {
+    vi.mocked(useQuery).mockImplementation(() => []);
+    renderInbox();
+    fireEvent.click(screen.getByText("Cards"));
+    expect(
+      screen.getByText(
+        "No cards yet — the hourly scan hasn't found anything that needs you."
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Held"));
+    expect(
+      screen.getByText(
+        "Nothing held. Focus mode and quiet hours are both off, or nothing came in while they were on."
+      )
+    ).toBeInTheDocument();
   });
 });

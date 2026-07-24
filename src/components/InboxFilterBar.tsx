@@ -6,11 +6,18 @@
  * Each tab shows unread count in parentheses when > 0.
  *
  * Phase 56, Plan 03: CPCC-02 Inbox panel.
+ * Phase 186, Plan 07: Cards + Held tabs (D-14/D-15, GOV-01/WATCH-01).
  */
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type InboxFilter = "all" | "approvals" | "alerts" | "notifications";
+export type InboxFilter =
+  | "all"
+  | "approvals"
+  | "alerts"
+  | "notifications"
+  | "cards"
+  | "held";
 
 interface InboxFilterBarProps {
   filter: InboxFilter;
@@ -25,6 +32,8 @@ const TABS: Array<{ id: InboxFilter; label: string }> = [
   { id: "approvals", label: "Approvals" },
   { id: "alerts", label: "Alerts" },
   { id: "notifications", label: "Notifications" },
+  { id: "cards", label: "Cards" },
+  { id: "held", label: "Held" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
