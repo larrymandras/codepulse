@@ -12,11 +12,13 @@ const mockSeedAll = vi.fn().mockResolvedValue(undefined);
 // MoveToProjectDialog stub both resolve api.forge.enqueueLifecycle to this
 // one spy, so the integration drop tests below can assert call args/absence.
 const mockEnqueueLifecycle = vi.fn().mockResolvedValue(undefined);
+const mockToggleFav = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
   useMutation: vi.fn((ref: string) => {
     if (ref === "mock-recordSkillLaunch") return mockRecordLaunch;
+    if (ref === "mock-toggleFavorite") return mockToggleFav;
     if (ref === "mock-updateSkillOverride") return mockUpdateOverride;
     if (ref === "mock-updateCategory") return mockUpdateCat;
     if (ref === "mock-createCategory") return mockCreateCat;
@@ -475,6 +477,37 @@ describe("Skills page", () => {
     expect(screen.getByText("Contract Review")).toBeInTheDocument();
     expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument(); // useCount 5
     expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument(); // useCount 10
+  });
+
+  describe("bulk select (increment 3)", () => {
+    it("selecting a row reveals the bulk bar and bulk-favorites the selection", () => {
+      render(<Skills />);
+      expect(screen.queryByRole("toolbar", { name: /bulk actions/i })).toBeNull();
+      fireEvent.click(screen.getByRole("checkbox", { name: /select legal-nda/i }));
+      expect(screen.getByText("1 selected")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /^favorite$/i }));
+      expect(mockToggleFav).toHaveBeenCalledWith({ skillName: "legal-nda" });
+    });
+
+    it("bulk Archive requires a confirm before enqueuing archive commands", () => {
+      const mocked = MOCK_ENRICHED_SKILLS.map((s) => ({ ...s, origins: ["claude-code"] }));
+      setupMocks(mocked);
+      render(<Skills />);
+      fireEvent.click(screen.getByRole("checkbox", { name: /select legal-nda/i }));
+      fireEvent.click(screen.getByRole("button", { name: /^archive$/i }));
+      // Confirm dialog appears; nothing enqueued yet.
+      expect(screen.getByText(/archive 1 skill to cold storage/i)).toBeInTheDocument();
+      expect(mockEnqueueLifecycle).not.toHaveBeenCalled();
+      // Confirm → the archive command fires for the selected skill only.
+      fireEvent.click(screen.getByRole("button", { name: /^archive 1$/i }));
+      expect(mockEnqueueLifecycle).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skillName: "legal-nda",
+          action: "archive",
+          destination: "cold",
+        })
+      );
+    });
   });
 
   it("copy is the primary action on a drilled-in skill row, and does not record a launch (D-13)", async () => {

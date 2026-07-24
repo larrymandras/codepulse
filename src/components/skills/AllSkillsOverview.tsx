@@ -19,6 +19,8 @@ interface AllSkillsOverviewProps {
   onSelectCategory: (name: string) => void;
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
+  selectedNames?: Set<string>;
+  onToggleSelect?: (skillName: string) => void;
 }
 
 const PREVIEW_COUNT = 8;
@@ -30,6 +32,8 @@ export function AllSkillsOverview({
   onSelectCategory,
   onEdit,
   onToggleFavorite,
+  selectedNames,
+  onToggleSelect,
 }: AllSkillsOverviewProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -77,6 +81,8 @@ export function AllSkillsOverview({
               skill={skill}
               onEdit={onEdit}
               onToggleFavorite={onToggleFavorite}
+              selected={selectedNames?.has(skill.name)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>

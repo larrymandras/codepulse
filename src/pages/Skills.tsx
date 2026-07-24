@@ -37,6 +37,15 @@ import {
   resolveLifecycleActions,
 } from "@/lib/skills";
 import { SkillFilterChips, type SkillChip } from "@/components/skills/SkillFilterChips";
+import { SkillBulkBar } from "@/components/skills/SkillBulkBar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 function SkillsBody() {
@@ -55,6 +64,8 @@ function SkillsBody() {
   } | null>(null);
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState<SkillChip>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkArchiveOpen, setBulkArchiveOpen] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
   const [intakeSheetOpen, setIntakeSheetOpen] = useState(false);
@@ -189,6 +200,67 @@ function SkillsBody() {
     setChip(next);
     setSelectedCategory(null);
     setColdStorageView(false);
+  };
+
+  // ---- Bulk selection (increment 3) -------------------------------------
+  const toggleSelect = (name: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  const clearSelection = () => setSelected(new Set());
+
+  const selectedSkills = useMemo(
+    () => enrichedSkills.filter((s) => selected.has(s.name)),
+    [enrichedSkills, selected]
+  );
+
+  const handleBulkFavorite = () => {
+    for (const s of selectedSkills) if (!s.favorite) void toggleFav({ skillName: s.name });
+    clearSelection();
+  };
+
+  const handleBulkMoveToCategory = (categoryName: string) => {
+    for (const s of selectedSkills) void updateOverride({ skillName: s.name, categoryName });
+    clearSelection();
+  };
+
+  // Only skills whose scope-drop to Cold resolves to an archive enqueue are
+  // archivable (dormant / already-cold / multi-scope are skipped) — the same
+  // shared predicate the drag path uses (D-02), so bulk can never do more than
+  // a per-row drag would.
+  const bulkArchivable = useMemo(
+    () =>
+      selectedSkills.filter((s) => {
+        const r = resolveScopeDrop(s, "cold");
+        return r.kind === "enqueue" && r.action === "archive";
+      }),
+    [selectedSkills]
+  );
+
+  const confirmBulkArchive = () => {
+    for (const s of bulkArchivable) {
+      const r = resolveScopeDrop(s, "cold");
+      if (r.kind !== "enqueue" || r.action !== "archive") continue;
+      const commandId = crypto.randomUUID();
+      beginPending(s.name, { commandId, action: "archive", destination: "cold" });
+      enqueueLifecycle({
+        hostId: host,
+        commandId,
+        skillName: s.name,
+        workspaceId: null,
+        action: "archive",
+        sourceOrigin: r.sourceOrigin,
+        destination: "cold",
+      }).catch((err: unknown) => {
+        clearPending(s.name, commandId);
+        toast.error(lifecycleRefusalMessage(err));
+      });
+    }
+    clearSelection();
+    setBulkArchiveOpen(false);
   };
 
   const selectedCategoryData = useMemo(() => {
@@ -486,6 +558,8 @@ function SkillsBody() {
                 skills={coldStorageSkills}
                 onEdit={setEditingSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
+                selectedNames={selected}
+                onToggleSelect={toggleSelect}
               />
             )}
 
@@ -496,6 +570,8 @@ function SkillsBody() {
                 onSelectCategory={handleSelectCategory}
                 onEdit={setEditingSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
+                selectedNames={selected}
+                onToggleSelect={toggleSelect}
               />
             )}
 
@@ -514,8 +590,19 @@ function SkillsBody() {
                 onEditSkill={setEditingSkill}
                 onReassignSkill={handleReassignSkill}
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
+                selectedNames={selected}
+                onToggleSelect={toggleSelect}
               />
             )}
+
+            <SkillBulkBar
+              count={selected.size}
+              categories={categoryOptions}
+              onFavorite={handleBulkFavorite}
+              onMoveToCategory={handleBulkMoveToCategory}
+              onArchive={() => setBulkArchiveOpen(true)}
+              onClear={clearSelection}
+            />
           </div>
 
           {/* Command Deck — right-rail favorites dashboard (xl+; stacks below on narrow) */}
@@ -557,6 +644,44 @@ function SkillsBody() {
           }
         }}
       />
+
+      <Dialog open={bulkArchiveOpen} onOpenChange={setBulkArchiveOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Archive {bulkArchivable.length} skill{bulkArchivable.length === 1 ? "" : "s"} to Cold Storage?
+            </DialogTitle>
+            <DialogDescription>
+              {bulkArchivable.length === 0
+                ? "None of the selected skills can be archived (already cold, dormant, or active in multiple scopes)."
+                : `Their active copy is archived — restore any time from Cold Storage.${
+                    selected.size - bulkArchivable.length > 0
+                      ? ` ${selected.size - bulkArchivable.length} of ${selected.size} selected will be skipped.`
+                      : ""
+                  }`}
+            </DialogDescription>
+          </DialogHeader>
+          {bulkArchivable.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded border border-border bg-background/50 p-2 text-xs font-mono text-muted-foreground flex flex-col gap-0.5">
+              {bulkArchivable.map((s) => (
+                <span key={s.name}>{s.name}</span>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkArchiveOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={bulkArchivable.length === 0}
+              onClick={confirmBulkArchive}
+            >
+              Archive {bulkArchivable.length}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <IntakeSheet open={intakeSheetOpen} onOpenChange={setIntakeSheetOpen} feed={feed} />
 

@@ -175,4 +175,31 @@ describe("SkillRow", () => {
     });
     expect(setDraggingSkill).toHaveBeenCalledWith(skill, "cold");
   });
+
+  it("shows no selection checkbox unless onToggleSelect is provided", () => {
+    const h = handlers();
+    renderRow(<SkillRow skill={skill} {...h} />);
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("renders a checkbox and toggles selection without starting a drag (bulk-select)", () => {
+    const h = handlers();
+    const onToggleSelect = vi.fn();
+    renderRow(<SkillRow skill={skill} {...h} onToggleSelect={onToggleSelect} />);
+    const box = screen.getByRole("checkbox", { name: /select legal-nda/i });
+    expect(box).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(box);
+    expect(onToggleSelect).toHaveBeenCalledWith("legal-nda");
+    // Clicking the checkbox must not fire a drag-start on the row.
+    expect(setDraggingSkill).not.toHaveBeenCalled();
+  });
+
+  it("reflects the selected state on the checkbox", () => {
+    const h = handlers();
+    renderRow(<SkillRow skill={skill} {...h} selected onToggleSelect={vi.fn()} />);
+    expect(screen.getByRole("checkbox", { name: /select legal-nda/i })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
 });

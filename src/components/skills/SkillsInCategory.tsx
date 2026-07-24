@@ -21,6 +21,8 @@ interface SkillsInCategoryProps {
   onEditSkill: (skillName: string) => void;
   onReassignSkill: (skillName: string, newCategoryName: string) => void;
   onToggleFavorite: (skillName: string) => void;
+  selectedNames?: Set<string>;
+  onToggleSelect?: (skillName: string) => void;
 }
 
 export function SkillsInCategory({
@@ -34,6 +36,8 @@ export function SkillsInCategory({
   onEditSkill,
   onReassignSkill,
   onToggleFavorite,
+  selectedNames,
+  onToggleSelect,
 }: SkillsInCategoryProps) {
   const hex = categoryHex(categoryColor);
   const otherCategories = categories.filter((c) => c.name !== categoryName);
@@ -121,6 +125,8 @@ export function SkillsInCategory({
             skill={skill}
             onEdit={onEditSkill}
             onToggleFavorite={onToggleFavorite}
+            selected={selectedNames?.has(skill.name)}
+            onToggleSelect={onToggleSelect}
           />
         ))}
       </div>

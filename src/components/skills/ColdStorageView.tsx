@@ -10,6 +10,8 @@ interface ColdStorageViewProps {
   skills: RowSkill[];
   onEdit: (skillName: string) => void;
   onToggleFavorite: (skillName: string) => void;
+  selectedNames?: Set<string>;
+  onToggleSelect?: (skillName: string) => void;
 }
 
 /**
@@ -23,6 +25,8 @@ export function ColdStorageView({
   skills,
   onEdit,
   onToggleFavorite,
+  selectedNames,
+  onToggleSelect,
 }: ColdStorageViewProps) {
   return (
     <section className="flex flex-col gap-2">
@@ -53,6 +57,8 @@ export function ColdStorageView({
               onEdit={onEdit}
               onToggleFavorite={onToggleFavorite}
               lane="cold"
+              selected={selectedNames?.has(skill.name)}
+              onToggleSelect={onToggleSelect}
             />
           ))}
         </div>

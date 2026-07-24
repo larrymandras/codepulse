@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { GripVertical, Pencil, Star } from "lucide-react";
+import { Check, GripVertical, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
 import { SkillLifecycleMenu } from "./SkillLifecycleMenu";
 import { usePendingMove, useDraggingSkill } from "@/hooks/usePendingLifecycleMoves";
@@ -29,6 +29,13 @@ interface SkillRowProps {
    * the dormant-copy menu. Optional; defaults to "active".
    */
   lane?: "active" | "cold";
+  /**
+   * Bulk-select wiring. When onToggleSelect is provided the row shows a
+   * checkbox; `selected` drives its checked/highlight state. Both optional so
+   * every existing call site (no bulk select) keeps compiling untouched.
+   */
+  selected?: boolean;
+  onToggleSelect?: (skillName: string) => void;
 }
 
 type CopyState = "idle" | "copied" | "dormant" | "failed";
@@ -51,6 +58,8 @@ export function SkillRow({
   draggable = true,
   hostId,
   lane,
+  selected = false,
+  onToggleSelect,
 }: SkillRowProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const dormant = isDormant(skill);
@@ -91,15 +100,37 @@ export function SkillRow({
         setDraggingSkill(skill, lane ?? "active");
       }}
       onDragEnd={() => setDraggingSkill(null)}
-      className={`group relative flex items-center gap-3 px-3 py-2 hover:bg-primary/10 transition-colors ${
-        dormant ? "opacity-50" : ""
-      } ${pending ? "opacity-70" : ""}`}
+      className={`group relative flex items-center gap-3 px-3 py-2 transition-colors ${
+        selected ? "bg-primary/15" : "hover:bg-primary/10"
+      } ${dormant ? "opacity-50" : ""} ${pending ? "opacity-70" : ""}`}
     >
       {pending && (
         <div
           data-testid="pending-indicator"
           className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--status-info)] shadow-[var(--glow-sm)] animate-pulse"
         />
+      )}
+
+      {onToggleSelect && (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={`Select ${skill.name}`}
+          draggable={false}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSelect(skill.name);
+          }}
+          onDragStart={(e) => e.stopPropagation()}
+          className={`w-4 h-4 rounded-[4px] border flex-shrink-0 grid place-items-center transition-colors ${
+            selected
+              ? "bg-primary border-primary text-primary-foreground"
+              : "border-border group-hover:border-primary/50"
+          }`}
+        >
+          {selected && <Check className="w-3 h-3" aria-hidden="true" />}
+        </button>
       )}
 
       <GripVertical className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary cursor-grab flex-shrink-0" />
