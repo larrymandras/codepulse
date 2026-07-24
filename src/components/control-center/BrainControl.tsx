@@ -24,9 +24,15 @@
  * "Deviations" for the full record): the live OpenRouter catalogue is
  * ~300+ entries, so (a) the popover widened (`w-64` -> `w-96`) and rows
  * switched from a fixed-height `Button` to a wrapping `<button>` so model
- * names NEVER truncate, and (b) a type-to-filter `Input` was added — the
- * backend already sorts the raw catalogue (`ws_commands.py`), but at this
- * scale a filter is the primary navigation aid, not scrolling.
+ * names NEVER truncate, and (b) a type-to-filter `Input` was added.
+ *
+ * CHECKPOINT ROUND 3: rows are now grouped under a provider section header
+ * ("ANTHROPIC" first — the native Claude tier rows — then one header per
+ * OpenRouter vendor prefix). The backend already returns entries pre-sorted
+ * by `(vendor, name)` with Claude tiers first (`ws_commands.py`), so
+ * grouping here is a pure client-side partition of already-contiguous runs
+ * — no extra fetch/sort. Filtering happens BEFORE grouping, so an emptied
+ * group simply disappears rather than rendering an empty header.
  *
  * @see 186-UI-SPEC.md "Control Center (D-17)" — BrainControl row
  * @see codepulse/src/components/reminders/ReminderList.tsx (SnoozeMenu/
@@ -52,6 +58,67 @@ export interface BrainControlProps {
   override?: string | null;
   /** The resolved model of the last completed turn — shown when no override is active. */
   lastTurnModel?: string | null;
+}
+
+/** Vendor slug (OpenRouter's leading id segment, or "anthropic" for the
+ * pinned Claude tiers) -> human-readable provider section header. Falls
+ * back to a titleized version of the raw slug for vendors not explicitly
+ * named — the live catalogue has dozens of vendor prefixes and new ones
+ * appear over time (D-17: no hardcoded catalogue, so no exhaustive list
+ * either). */
+const VENDOR_LABELS: Record<string, string> = {
+  anthropic: "Anthropic",
+  "x-ai": "xAI",
+  openai: "OpenAI",
+  google: "Google",
+  moonshotai: "Moonshot",
+  "meta-llama": "Meta",
+  meta: "Meta",
+  mistralai: "Mistral AI",
+  deepseek: "DeepSeek",
+  qwen: "Qwen",
+  perplexity: "Perplexity",
+  cohere: "Cohere",
+  amazon: "Amazon",
+  microsoft: "Microsoft",
+  nvidia: "NVIDIA",
+};
+
+export function formatVendorLabel(vendor: string): string {
+  const known = VENDOR_LABELS[vendor.toLowerCase()];
+  if (known) return known;
+  return vendor
+    .split(/[-.]/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+export interface CatalogueGroup {
+  vendor: string;
+  label: string;
+  entries: CatalogueEntry[];
+}
+
+/** Partition an already `(vendor, name)`-sorted entry list into contiguous
+ * provider groups. Entries with no `vendor` fall into a single trailing
+ * "Other" group rather than one group per entry. */
+export function groupByVendor(entries: CatalogueEntry[]): CatalogueGroup[] {
+  const groups: CatalogueGroup[] = [];
+  for (const entry of entries) {
+    const vendor = entry.vendor ?? "";
+    const last = groups[groups.length - 1];
+    if (last && last.vendor === vendor) {
+      last.entries.push(entry);
+    } else {
+      groups.push({
+        vendor,
+        label: vendor ? formatVendorLabel(vendor) : "Other",
+        entries: [entry],
+      });
+    }
+  }
+  return groups;
 }
 
 export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
@@ -116,6 +183,8 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
       (e) => e.name.toLowerCase().includes(needle) || e.vendor?.toLowerCase().includes(needle)
     );
   }, [entries, filter]);
+
+  const groups = useMemo(() => (filtered ? groupByVendor(filtered) : null), [filtered]);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -190,21 +259,23 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
                 No brains match "{filter}".
               </p>
             )}
-            {filtered?.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                disabled={pending}
-                onClick={() => void dispatchSelection(entry.id)}
-                className="flex w-full flex-col items-start gap-0.5 whitespace-normal break-words rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
-              >
-                <span className="font-mono">{entry.name}</span>
-                {entry.vendor && (
-                  <span className="font-mono text-[10px] uppercase text-muted-foreground">
-                    {entry.vendor}
-                  </span>
-                )}
-              </button>
+            {groups?.map((group) => (
+              <div key={group.vendor || "other"} className="flex flex-col">
+                <div className="px-2 pt-2 pb-1 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                  {group.label}
+                </div>
+                {group.entries.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => void dispatchSelection(entry.id)}
+                    className="flex w-full flex-col items-start whitespace-normal break-words rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    <span className="font-mono">{entry.name}</span>
+                  </button>
+                ))}
+              </div>
             ))}
           </div>
         </div>

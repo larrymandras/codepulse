@@ -13,7 +13,49 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
   })),
 }));
 
-import { BrainControl } from "./BrainControl";
+import { BrainControl, formatVendorLabel, groupByVendor, type CatalogueEntry } from "./BrainControl";
+
+describe("formatVendorLabel", () => {
+  it("maps known vendor slugs to their human-readable label", () => {
+    expect(formatVendorLabel("anthropic")).toBe("Anthropic");
+    expect(formatVendorLabel("x-ai")).toBe("xAI");
+    expect(formatVendorLabel("moonshotai")).toBe("Moonshot");
+    expect(formatVendorLabel("google")).toBe("Google");
+  });
+
+  it("titleizes an unknown vendor slug rather than showing it raw", () => {
+    expect(formatVendorLabel("poolside")).toBe("Poolside");
+    expect(formatVendorLabel("thinkingmachines")).toBe("Thinkingmachines");
+    expect(formatVendorLabel("inclusion-ai")).toBe("Inclusion Ai");
+  });
+});
+
+describe("groupByVendor", () => {
+  it("partitions an already-sorted list into contiguous vendor groups", () => {
+    const entries: CatalogueEntry[] = [
+      { id: "claude-opus-4-8", name: "Claude Opus 4.8", vendor: "anthropic" },
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic" },
+      { id: "google/gemini-3.6-flash", name: "Gemini 3.6 Flash", vendor: "google" },
+      { id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" },
+    ];
+    const groups = groupByVendor(entries);
+    expect(groups.map((g) => g.label)).toEqual(["Anthropic", "Google", "xAI"]);
+    expect(groups[0].entries).toHaveLength(2);
+    expect(groups[1].entries).toHaveLength(1);
+    expect(groups[2].entries).toHaveLength(1);
+  });
+
+  it("groups entries with no vendor into a single trailing Other group", () => {
+    const entries: CatalogueEntry[] = [
+      { id: "a", name: "A" },
+      { id: "b", name: "B" },
+    ];
+    const groups = groupByVendor(entries);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].label).toBe("Other");
+    expect(groups[0].entries).toHaveLength(2);
+  });
+});
 
 describe("BrainControl", () => {
   beforeEach(() => {
@@ -253,5 +295,57 @@ describe("BrainControl", () => {
       );
       expect(catalogueCalls.length).toBe(2);
     });
+  });
+
+  // ── Checkpoint round 3 (Larry): provider grouping ────────────────────────
+
+  it("renders a provider section header per vendor, Anthropic first", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [
+        { id: "claude-opus-4-8", name: "Claude Opus 4.8", vendor: "anthropic" },
+        { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic" },
+        { id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" },
+      ],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    await screen.findByText("Claude Opus 4.8");
+    const headers = screen.getAllByText(/^(Anthropic|xAI)$/);
+    expect(headers.map((h) => h.textContent)).toEqual(["Anthropic", "xAI"]);
+    // Anthropic header appears before the xAI header in document order.
+    expect(headers[0].compareDocumentPosition(headers[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("hides a group's header entirely once filtering empties it", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [
+        { id: "claude-opus-4-8", name: "Claude Opus 4.8", vendor: "anthropic" },
+        { id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" },
+      ],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    await screen.findByText("Claude Opus 4.8");
+    expect(screen.getByText("Anthropic")).toBeInTheDocument();
+    expect(screen.getByText("xAI")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Filter brain catalogue"), {
+      target: { value: "grok" },
+    });
+
+    expect(screen.queryByText("Anthropic")).not.toBeInTheDocument();
+    expect(screen.getByText("xAI")).toBeInTheDocument();
   });
 });
