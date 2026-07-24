@@ -358,8 +358,11 @@ function SkillsBody() {
 
       {!needsSeed && (
         <div className="flex flex-col lg:flex-row gap-6 items-start">
-          {/* Left rail: categories navigation */}
-          <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+          {/* Left rail: categories navigation. Sticky + viewport-bounded so the
+              Scope drop lanes + nav stay visible during a drag (Chrome does not
+              reliably auto-scroll nested overflow containers mid-DnD); the long
+              category list scrolls internally instead of pushing them off-screen. */}
+          <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-hidden">
             <select
               value={originFilter}
               onChange={(e) => setOriginFilter(e.target.value)}
@@ -374,33 +377,38 @@ function SkillsBody() {
               ))}
             </select>
 
-            <div className="flex flex-col gap-2">
-              <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2">
+            <div className="flex flex-col gap-2 lg:flex-1 lg:min-h-0">
+              <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2 flex-shrink-0">
                 <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
                 Categories
               </h2>
-              <CategoryGrid
-                categories={categories}
-                skillCounts={skillCounts}
-                onSelectCategory={handleSelectCategory}
-                onEditCategory={setEditingCategory}
-                onAddCategory={() => setCreatingCategory(true)}
-                dropTargetCategory={dropTarget}
-                onDragOverCategory={(name) => setDropTarget(name)}
-                onDragLeaveCategory={() => setDropTarget(null)}
-                onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
-                selectedCategory={selectedCategory}
+              {/* Only the category list scrolls — Scope lanes + nav below stay pinned/visible. */}
+              <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                <CategoryGrid
+                  categories={categories}
+                  skillCounts={skillCounts}
+                  onSelectCategory={handleSelectCategory}
+                  onEditCategory={setEditingCategory}
+                  onAddCategory={() => setCreatingCategory(true)}
+                  dropTargetCategory={dropTarget}
+                  onDragOverCategory={(name) => setDropTarget(name)}
+                  onDragLeaveCategory={() => setDropTarget(null)}
+                  onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
+                  selectedCategory={selectedCategory}
+                />
+              </div>
+            </div>
+
+            <div className="flex-shrink-0">
+              <ScopeRail
+                dropTargetScope={dropTargetScope}
+                onDragOverScope={setDropTargetScope}
+                onDragLeaveScope={() => setDropTargetScope(null)}
+                onDropOnScope={handleDropOnScope}
               />
             </div>
 
-            <ScopeRail
-              dropTargetScope={dropTargetScope}
-              onDragOverScope={setDropTargetScope}
-              onDragLeaveScope={() => setDropTargetScope(null)}
-              onDropOnScope={handleDropOnScope}
-            />
-
-            <div className="mt-4 pt-4 border-t border-primary/20 flex flex-col gap-2">
+            <div className="mt-4 pt-4 border-t border-primary/20 flex flex-col gap-2 flex-shrink-0">
               <button
                 onClick={() => handleSelectCategory(null)}
                 className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
