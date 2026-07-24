@@ -542,12 +542,26 @@ export function useAstridrVoice({
 
       // Salvage an abandoned utterance BEFORE restarting: mid-transcription
       // death with a substantive interim → synthesize the final ourselves.
+      // 186-01 (D-16) live trace: a SHORT-but-meaningful interim ("goodbye")
+      // died here with the ≥3-word floor unmet — never salvaged, never
+      // finalized. The state machine then sat stuck in "transcribing"
+      // indefinitely (that state only exits on FINAL_RESULT/END/TTS_START),
+      // which (a) silently swallowed the end-phrase and (b) made the NEXT
+      // real wake-word detection look "dead" — onWake ignores any wake while
+      // state !== "idle" (wake.ignored), so the trace showed a genuine "hey
+      // Astridr" transcribed as ordinary conversation content instead of
+      // re-arming. An end-phrase is meaningful regardless of word count, so
+      // it salvages even at 1 word — this does NOT lower the general noise
+      // floor for arbitrary short fragments (those still fail the ≥3-word
+      // check and fall through to the keep-alive restart untouched).
       const salvage = longestInterimRef.current.trim();
+      const salvageWordCount = salvage.split(/\s+/).filter(Boolean).length;
       if (
         voiceStateRef.current === "transcribing" &&
-        salvage.split(/\s+/).filter(Boolean).length >= 3
+        salvage &&
+        (salvageWordCount >= 3 || isEndPhrase(salvage))
       ) {
-        trace("final.synthesized-from-interim", { text: salvage });
+        trace("final.synthesized-from-interim", { text: salvage, wordCount: salvageWordCount });
         longestInterimRef.current = "";
         handleFinalResultRef.current(salvage, undefined);
       }

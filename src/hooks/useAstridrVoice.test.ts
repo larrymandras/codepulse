@@ -928,6 +928,69 @@ describe("useAstridrVoice", () => {
     });
   });
 
+  // ─── 12:32 live-trace regression (186-01, D-16) ────────────────────────────
+  // "she does not recognize goodbye anymore" — a SHORT end-phrase interim
+  // ("goodbye") died with a periodic recognizer death (Chrome's ~60s
+  // recognizer lifetime cap in the live trace) before ever finalizing. The
+  // old ≥3-word salvage floor never fired for it (1 word), leaving the
+  // reducer stuck in "transcribing" — which both ate the end-phrase AND made
+  // the wake path look dead (a real wake detection while stuck there is
+  // silently ignored via wake.ignored). This test reproduces that same
+  // shape (interim dies mid-transcribing, non-storm lifetime) and asserts
+  // the wake path re-arms once her (now-sent) goodbye reply finishes.
+  it("wake rearm survives a keepalive-restart death mid-'goodbye' — the interim salvages as an end-phrase, not silently dropped", async () => {
+    let chat = makeChat();
+    const { result, rerender } = renderVoice(chat);
+    wake();
+
+    act(() => {
+      onInterimResultCallback?.(" good");
+      onInterimResultCallback?.(" goodbye"); // never finalizes before the death below
+    });
+    expect(result.current.voiceState).toBe("transcribing");
+
+    // Same "healthy" (non-storm) lifetime window as the existing longest-
+    // interim salvage test above — comfortably clear of both
+    // RECOGNIZER_MIN_HEALTHY_MS (2s, storm-guard floor) and the 30s silence
+    // timeout the interim just reset, so nothing else fires prematurely.
+    act(() => {
+      vi.advanceTimersByTime(15_000); // Chrome's periodic recognizer death (live trace: ~60s cap)
+      onRecognitionEndCallback?.(); // dies mid-utterance, no final ever arrives
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(50); // synthesized end-phrase sends immediately, no debounce
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("goodbye", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+    // Conversation stays live so her warm close can play — NOT wedged in
+    // "transcribing" (the bug's actual mechanism).
+    expect(result.current.voiceState).not.toBe("idle");
+
+    // …and re-arms once her goodbye TTS finishes, same as the plain-final
+    // "goodbye" case above — proving the wake path is never left stuck.
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+    expect(result.current.voiceState).toBe("idle");
+    expect(mockRecognitionStop).toHaveBeenCalled();
+    expect(result.current.conversationActive).toBe(false);
+  });
+
+  it("a short NON-end-phrase interim lost to a recognizer death is still NOT salvaged (noise floor unchanged)", () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" the"); // 1 word, not an end-phrase — pure noise
+    });
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+      onRecognitionEndCallback?.();
+    });
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
   // ─── 16:41 live-trace regressions ─────────────────────────────────────────
 
   it("her own closing line ('all right…') never fires a false barge-in", () => {
