@@ -36,8 +36,8 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **resumes at Phase 100 (Control-Surface UX)**, which depends on both 98 and 99 (now both done) and is the last phase of v11.0.
-Status: Ready to execute Phase 100
+Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **at Phase 100 (Control-Surface UX)**, the last phase of v11.0, which depends on both 98 and 99 (now both done).
+Status: Phase 100 CONTEXT gathered (2026-07-23) — ready to plan (`/gsd-plan-phase 100`)
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-23 -- Phase 99 planning complete
@@ -294,7 +294,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v11.0 next action:** Phases 97/98/99 all COMPLETE. Proceed to the LAST v11.0 phase — **Phase 100 (Control-Surface UX)** via `/gsd-discuss-phase 100` — its dependencies (98 lifecycle mutations + 99 launch/dispatch) are both satisfied.
+- **v11.0 next action:** Phase 100 (Control-Surface UX) CONTEXT gathered 2026-07-23 (commit 83733af) — next is **`/gsd-plan-phase 100`**. Its dependencies (98 lifecycle mutations + 99 launch/dispatch) are both satisfied; it's the LAST v11.0 phase.
 - **Phase 99 follow-up (non-blocking):** CR-03 pre-existing `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live event-lifecycle trace before fixing (do NOT blind-fix; see 2026-07-20 voice-timing lesson). Candidate quick task / tech-debt.
 - **Phase 98 follow-up (non-blocking):** its two MANUAL verification steps (live G: workspace repro re-check + transient-unmount negative check) remain outstanding — both require a live Forge daemon + live Google Drive mount.
 - **v10.0 (shipped, for reference):** ✅ COMPLETE — all 4 phases (93-96) done, milestone archived 2026-07-13.
@@ -321,10 +321,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-23T22:55:52.000Z
-Stopped at: Phase 99 complete (executed + code-reviewed + gap-closed + verified)
-Next action: **`/clear` then `/gsd-discuss-phase 100`** (or `/gsd-plan-phase 100` if you want to skip discuss) — Phase 100 (Control-Surface UX, UX-01..04) is the LAST phase of v11.0 and depends on both 98 and 99 (now both complete): per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore, wiring the control surface over both the lifecycle mutations (98) and the Run/launch chooser (99). Non-blocking carryovers: (1) Phase 99 CR-03 — pre-existing `isStreamingRef` desync at `useAstridrChat.ts` L189, needs a live event-lifecycle trace to fix safely (see 99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount negative check — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
-Resume file: .planning/phases/99-skill-launch-dispatch/99-VERIFICATION.md
+Last session: 2026-07-24T01:05:48.000Z
+Stopped at: Phase 100 CONTEXT gathered (discuss-phase complete, committed 83733af) — 6 decisions locked (D-01..D-07), armory/tool-receipts deferred
+Next action: **`/clear` then `/gsd-plan-phase 100`** — Phase 100 (Control-Surface UX, UX-01..04) is the LAST phase of v11.0. Locked decisions: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly, cold→Project rejected since restore is global-only (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes — permanent delete stays menu-only behind type-to-confirm (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
+Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-CONTEXT.md
 
 ## Operator Next Steps
 
