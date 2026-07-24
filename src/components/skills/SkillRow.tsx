@@ -135,7 +135,7 @@ export function SkillRow({
 
       <GripVertical className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary cursor-grab flex-shrink-0" />
 
-      <div className="flex items-center w-64 flex-shrink-0 gap-2 pr-4 border-r border-primary/10">
+      <div className="flex items-center w-44 flex-shrink-0 gap-2 pr-3 border-r border-primary/10">
         <span className="text-foreground font-mono font-bold text-sm tracking-wide truncate">
           {skill.displayName}
         </span>
@@ -149,7 +149,7 @@ export function SkillRow({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 pr-4">
+      <div className="flex-1 min-w-0 pr-2">
         {desc ? (
           <div className="text-muted-foreground text-xs truncate">{desc}</div>
         ) : (

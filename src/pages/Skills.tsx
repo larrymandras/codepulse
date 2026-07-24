@@ -321,7 +321,20 @@ function SkillsBody() {
       draggingLane
     );
 
-    if (result.kind === "noop" || result.kind === "reject") return;
+    const scopeLabel =
+      scope === "cold" ? "Cold Storage" : scope === "global" ? "Global" : "Project";
+
+    // Honest feedback instead of a silent no-op: tell the user why nothing
+    // happened (dropping onto a scope the skill is already in, or a rejected
+    // move) rather than leaving them guessing.
+    if (result.kind === "reject") {
+      toast.error(result.hint);
+      return;
+    }
+    if (result.kind === "noop") {
+      toast(`"${skill.displayName}" is already in ${scopeLabel} — nothing to move.`);
+      return;
+    }
 
     if (result.kind === "dialog") {
       const activeOrigin = resolveLifecycleActions(skill).activeOrigin!;
@@ -485,7 +498,7 @@ function SkillsBody() {
       )}
 
       {!needsSeed && (
-        <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_20rem] gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[15rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)_18rem] gap-5 items-start">
           {/* Left rail. Sticky + viewport-bounded so the Scope drop lanes + nav
               (now pinned at the TOP) stay visible during a drag — Chrome does not
               reliably auto-scroll nested overflow containers mid-DnD; the long
