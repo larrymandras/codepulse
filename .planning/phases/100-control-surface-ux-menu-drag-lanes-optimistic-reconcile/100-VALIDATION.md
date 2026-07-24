@@ -1,8 +1,8 @@
 ---
 phase: 100
 slug: control-surface-ux-menu-drag-lanes-optimistic-reconcile
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-24
 ---
@@ -80,11 +80,12 @@ created: 2026-07-24
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (usePendingLifecycleMoves, ScopeRail, skills.test.ts extension)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (plan-checker confirmed 8a)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (plan-checker confirmed 8c)
+- [x] Wave 0 covers all MISSING references (usePendingLifecycleMoves, ScopeRail, skills.test.ts extension)
+- [x] No watch-mode flags (plan-checker confirmed 8b)
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
+- [ ] `wave_0_complete: true` — deferred to execution (Wave 0 test files are authored during execute-phase, not planning)
 
-**Approval:** pending
+**Approval:** approved 2026-07-24 (plan-level Nyquist compliance; Wave 0 authored at execution)
