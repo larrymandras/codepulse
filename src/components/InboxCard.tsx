@@ -1,31 +1,41 @@
 /**
  * InboxCard — single inbox item card with approve/reject/mark-read actions.
  *
- * Supports three item types:
+ * Supports five item types:
  *   approval     — HITL approval request; Approve + inline-textarea Reject
  *   alert        — system alert; click-to-read
  *   notification — system notification; click-to-read
+ *   card         — pulse-scan output (D-14, GOV-01/WATCH-01); ambient, silent,
+ *                  no approve/reject; renders PulseCardBody (profile badge +
+ *                  needs-you summary + Mail/Calendar source icon)
+ *   held         — focus/quiet-hours-suppressed record (D-07/D-15); dimmest
+ *                  stripe by design — never upgraded even for an underlying
+ *                  high-priority event; shows what was held + why + profile badge
  *
  * Left stripe color per UI-SPEC:
  *   approval pending  → border-l-(--status-warn)
  *   alert unread      → border-l-(--status-error)
  *   notification unread → border-l-(--primary)
+ *   card unread       → border-l-(--status-info)      (calm/ambient, Plan 07)
+ *   held unread       → border-l-(--muted-foreground)  (dimmest, Plan 07)
  *   read items        → no left stripe
  *
  * Phase 56, Plan 03: CPCC-02 Inbox panel.
+ * Phase 186, Plan 07: card + held item types, per-card profile badge (D-12).
  */
 
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, Calendar } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
 import { MuteDurationPicker } from "./MuteDurationPicker";
+import { PROFILES, type ProfileId } from "@/lib/profiles";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type InboxItemType = "approval" | "alert" | "notification";
+export type InboxItemType = "approval" | "alert" | "notification" | "card" | "held";
 
 export interface InboxItem {
   id: string;
@@ -41,6 +51,14 @@ export interface InboxItem {
   requestId?: string; // HITL UUID sent in approval.respond
   // Alert-specific
   alertId?: Id<"alerts">;
+  // Card/held-specific (Plan 07, D-12) — every merged-stream row carries its
+  // own profileId so a card/held item is self-labelling with no profile
+  // switcher needed.
+  profileId?: ProfileId;
+  // Held-specific (D-07) — why the event was suppressed.
+  heldReason?: "focus" | "quiet-hours";
+  // Card-specific (D-14) — source icon hint for the pulse-scan summary.
+  source?: "mail" | "calendar";
 }
 
 interface InboxCardProps {
@@ -98,7 +116,70 @@ function stripeClass(item: InboxItem): string {
   if (item.read) return "";
   if (item.type === "approval") return "border-l-2 border-l-(--status-warn)";
   if (item.type === "alert") return "border-l-2 border-l-(--status-error)";
+  if (item.type === "card") return "border-l-2 border-l-(--status-info)";
+  // held: deliberately the dimmest stripe available — never upgraded to a
+  // louder color even if the underlying event would have been high-priority
+  // had it not been suppressed. The muted stripe IS the "intentionally
+  // quiet" signal (D-15).
+  if (item.type === "held") return "border-l-2 border-l-(--muted-foreground)";
   return "border-l-2 border-l-(--primary)";
+}
+
+// ─── Per-card profile badge (D-12) ─────────────────────────────────────────────
+// Reuses Reminders.tsx's exact PROFILES accent-var mapping so a card's
+// profile origin reads consistently with the Reminders page a user already
+// knows. Every card/held row in the merged all-profiles stream carries its
+// own profileId — there is no profile switcher.
+
+function ProfileBadge({ profileId }: { profileId?: ProfileId }) {
+  if (!profileId) return null;
+  const profile = PROFILES.find((p) => p.id === profileId);
+  if (!profile) return null;
+  return (
+    <span
+      className="inline-block text-sm font-medium px-1.5 py-0.5 rounded bg-(--muted)"
+      style={{ color: `var(${profile.accentVar})` }}
+    >
+      {profile.label}
+    </span>
+  );
+}
+
+// ─── Pulse card body (D-14) ────────────────────────────────────────────────────
+// Rendered only for type:"card" — ambient, silent-by-default pulse-scan
+// output. No approve/reject; the profile badge + needs-you summary + a
+// Mail/Calendar source icon are the entire "why did this appear" surface.
+
+function PulseCardBody({ item }: { item: InboxItem }) {
+  const SourceIcon = item.source === "calendar" ? Calendar : Mail;
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <SourceIcon className="h-4 w-4 text-(--muted-foreground) shrink-0" />
+      <ProfileBadge profileId={item.profileId} />
+    </div>
+  );
+}
+
+// ─── Held item body (D-07/D-15) ────────────────────────────────────────────────
+// Rendered only for type:"held" — the concrete "suppressed never means
+// lost" record. Shows what was held, when, and why (focus vs quiet hours),
+// plus the same per-card profile badge as a pulse card (D-12).
+
+function heldReasonCopy(reason?: "focus" | "quiet-hours"): string {
+  if (reason === "quiet-hours") return "held during quiet hours";
+  if (reason === "focus") return "held during focus mode";
+  return "held";
+}
+
+function HeldItemBody({ item }: { item: InboxItem }) {
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <span className="text-sm text-(--muted-foreground) italic">
+        {heldReasonCopy(item.heldReason)}
+      </span>
+      <ProfileBadge profileId={item.profileId} />
+    </div>
+  );
 }
 
 // ─── Alert inline actions ─────────────────────────────────────────────────────
@@ -221,6 +302,12 @@ export function InboxCard({
       <p className="text-base text-(--muted-foreground) mb-3 line-clamp-2">
         {item.message}
       </p>
+
+      {/* Pulse card body (D-14) — needs-you summary + source icon + profile badge */}
+      {item.type === "card" && <PulseCardBody item={item} />}
+
+      {/* Held item body (D-07/D-15) — what was held, why, + profile badge */}
+      {item.type === "held" && <HeldItemBody item={item} />}
 
       {/* Alert inline actions */}
       {item.type === "alert" && item.alertId && (
