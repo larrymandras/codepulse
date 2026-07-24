@@ -161,4 +161,97 @@ describe("BrainControl", () => {
     expect(screen.getByText("grok-4.5")).toBeInTheDocument();
     expect(screen.queryByText("claude-sonnet-5")).not.toBeInTheDocument();
   });
+
+  // ── Checkpoint round 1 (Larry): truncation + missing-models fixes ───────
+
+  it("never truncates a catalogue entry's name (no truncate class on the row)", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [{ id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" }],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    const nameEl = await screen.findByText("Grok 4.5");
+    // The row wraps rather than truncates -- assert the wrapping classes
+    // are present and the old single-line "truncate" utility is gone.
+    const row = nameEl.closest("button")!;
+    expect(row.className).toContain("whitespace-normal");
+    expect(row.className).toContain("break-words");
+    expect(row.className).not.toContain("truncate");
+  });
+
+  it("filters the catalogue by name as the user types", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [
+        { id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" },
+        { id: "moonshotai/kimi-k3", name: "Kimi K3", vendor: "moonshotai" },
+      ],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    await screen.findByText("Grok 4.5");
+    expect(screen.getByText("Kimi K3")).toBeInTheDocument();
+
+    const filterInput = screen.getByLabelText("Filter brain catalogue");
+    fireEvent.change(filterInput, { target: { value: "kimi" } });
+
+    expect(screen.queryByText("Grok 4.5")).not.toBeInTheDocument();
+    expect(screen.getByText("Kimi K3")).toBeInTheDocument();
+  });
+
+  it("shows a no-match message when the filter matches nothing", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [{ id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" }],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    await screen.findByText("Grok 4.5");
+    fireEvent.change(screen.getByLabelText("Filter brain catalogue"), {
+      target: { value: "nonexistent-vendor" },
+    });
+
+    expect(await screen.findByText('No brains match "nonexistent-vendor".')).toBeInTheDocument();
+  });
+
+  it("re-fetches the catalogue on every open rather than caching client-side", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "r1",
+      status: "ok",
+      target: "brain",
+      entries: [{ id: "x-ai/grok-4.5", name: "Grok 4.5", vendor: "x-ai" }],
+    });
+
+    render(<BrainControl override={null} lastTurnModel={null} />);
+    const trigger = screen.getByRole("button", { name: "Choose brain" });
+
+    fireEvent.click(trigger); // open
+    await screen.findByText("Grok 4.5");
+    fireEvent.click(trigger); // close
+    fireEvent.click(trigger); // re-open
+
+    await waitFor(() => {
+      const catalogueCalls = mockSendCommand.mock.calls.filter(
+        ([cmd]) => (cmd as Record<string, unknown>).type === "swap.catalogue"
+      );
+      expect(catalogueCalls.length).toBe(2);
+    });
+  });
 });

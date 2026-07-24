@@ -20,14 +20,23 @@
  * updates `override`/`lastTurnModel` upstream in `Chat.tsx` once the swap
  * lands — this component does not locally guess the new state.
  *
+ * CHECKPOINT ROUND 1 (Larry, live screenshots — see 186-09-SUMMARY.md
+ * "Deviations" for the full record): the live OpenRouter catalogue is
+ * ~300+ entries, so (a) the popover widened (`w-64` -> `w-96`) and rows
+ * switched from a fixed-height `Button` to a wrapping `<button>` so model
+ * names NEVER truncate, and (b) a type-to-filter `Input` was added — the
+ * backend already sorts the raw catalogue (`ws_commands.py`), but at this
+ * scale a filter is the primary navigation aid, not scrolling.
+ *
  * @see 186-UI-SPEC.md "Control Center (D-17)" — BrainControl row
  * @see codepulse/src/components/reminders/ReminderList.tsx (SnoozeMenu/
  *   EditPopover Popover idiom this component follows)
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Brain, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
@@ -51,13 +60,18 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
   const [entries, setEntries] = useState<CatalogueEntry[] | null>(null);
   const [fetchError, setFetchError] = useState(false);
   const [pending, setPending] = useState(false);
+  const [filter, setFilter] = useState("");
 
   const label = override ?? lastTurnModel ?? "Auto";
 
   const fetchCatalogue = useCallback(async () => {
     setFetchError(false);
     setEntries(null);
+    setFilter("");
     try {
+      // Never client-cached across opens -- every open re-fetches, so a
+      // new model surfaces without a deploy as soon as the backend's own
+      // ~1h TTL (OpenRouterProvider.get_models()) rolls over.
       const ack = await sendCommand({ type: "swap.catalogue", target: "brain" });
       if (ack.status === "ok" && Array.isArray(ack.entries)) {
         setEntries(ack.entries as CatalogueEntry[]);
@@ -94,6 +108,15 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
     [sendCommand]
   );
 
+  const filtered = useMemo(() => {
+    if (!entries) return entries;
+    const needle = filter.trim().toLowerCase();
+    if (!needle) return entries;
+    return entries.filter(
+      (e) => e.name.toLowerCase().includes(needle) || e.vendor?.toLowerCase().includes(needle)
+    );
+  }, [entries, filter]);
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
@@ -120,8 +143,8 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
           </span>
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-64 p-2">
-        <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+      <PopoverContent align="end" className="w-96 p-2">
+        <div className="flex flex-col gap-2">
           {override && (
             <Button
               variant="ghost"
@@ -133,40 +156,57 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
               Restore usual brain
             </Button>
           )}
-          {entries === null && !fetchError && (
-            <div className="flex flex-col gap-1.5 p-1" aria-label="Loading brain catalogue">
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
-              <Skeleton className="h-6 w-full" />
-            </div>
+
+          {entries !== null && !fetchError && entries.length > 0 && (
+            <Input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter brains…"
+              aria-label="Filter brain catalogue"
+              className="h-8 text-sm"
+            />
           )}
-          {fetchError && (
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">
-              Couldn't load the brain catalogue — try again in a moment.
-            </p>
-          )}
-          {entries !== null && entries.length === 0 && !fetchError && (
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">
-              No brains available right now.
-            </p>
-          )}
-          {entries?.map((entry) => (
-            <Button
-              key={entry.id}
-              variant="ghost"
-              size="sm"
-              className="justify-between"
-              disabled={pending}
-              onClick={() => void dispatchSelection(entry.id)}
-            >
-              <span className="truncate">{entry.name}</span>
-              {entry.vendor && (
-                <span className="ml-2 shrink-0 font-mono text-[10px] uppercase text-muted-foreground">
-                  {entry.vendor}
-                </span>
-              )}
-            </Button>
-          ))}
+
+          <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+            {entries === null && !fetchError && (
+              <div className="flex flex-col gap-1.5 p-1" aria-label="Loading brain catalogue">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+            )}
+            {fetchError && (
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                Couldn't load the brain catalogue — try again in a moment.
+              </p>
+            )}
+            {entries !== null && entries.length === 0 && !fetchError && (
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                No brains available right now.
+              </p>
+            )}
+            {entries !== null && entries.length > 0 && filtered?.length === 0 && (
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">
+                No brains match "{filter}".
+              </p>
+            )}
+            {filtered?.map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                disabled={pending}
+                onClick={() => void dispatchSelection(entry.id)}
+                className="flex w-full flex-col items-start gap-0.5 whitespace-normal break-words rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
+              >
+                <span className="font-mono">{entry.name}</span>
+                {entry.vendor && (
+                  <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                    {entry.vendor}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       </PopoverContent>
     </Popover>
