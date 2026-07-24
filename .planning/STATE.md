@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: executing
-stopped_at: Phase 100 Plan 02 executed — usePendingLifecycleMoves + SkillControlSurfaceProvider
-last_updated: "2026-07-24T13:04:48.000Z"
-last_activity: 2026-07-24 -- Phase 100 Plan 03 (ScopeRail component) complete
+stopped_at: Phase 100 Plan 05 executed — SkillRow pending overlay + drag reporting + UX-01/UX-04 audit
+last_updated: "2026-07-24T13:10:00.000Z"
+last_activity: 2026-07-24 -- Phase 100 Plan 05 (SkillRow pending overlay + menu/manage-skills audit) complete
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 75
 ---
 
@@ -37,12 +37,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — EXECUTING
-Plan: 3 of 5 EXECUTED (see 100-03-SUMMARY.md); next is Plan 4 of 5 (100-04, Wave 3) or Plan 5 (100-05, Wave 2, independent of 100-04)
+Plan: 4 of 5 EXECUTED (100-01, 100-02, 100-03, 100-05; see 100-05-SUMMARY.md); only Plan 4 of 5 (100-04, Wave 3) remains
 Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **at Phase 100 (Control-Surface UX)**, the last phase of v11.0, which depends on both 98 and 99 (now both done).
 Status: Executing Phase 100
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-24 -- Phase 100 Plan 03 (ScopeRail component) complete
+Last activity: 2026-07-24 -- Phase 100 Plan 05 (SkillRow pending overlay + menu/manage-skills audit) complete
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
@@ -132,6 +132,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 100 Plan 05 decisions (2026-07-24, SkillRow pending overlay + drag reporting + UX-01/UX-04 audit):**
+
+- **Pending overlay reads `usePendingMove(skill.name)` from context, never a new prop** — every existing `SkillRow` call site (`AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView`) keeps compiling unchanged; matches Plan 02's context-not-prop-drilling design.
+- **Pending bar mirrors `CategoryGrid`'s active glow-bar geometry** (`absolute left-0 top-0 bottom-0 w-1`) but in `bg-[var(--status-info)]` with `animate-pulse`, never `--primary` — the D-05 honesty rule that "pending, unconfirmed" can never read as "active/selected." Distinct opacity values (dormant 50%, pending 70%) keep the two states from ever visually overlapping.
+- **`onDragStart` calls `setDraggingSkill(skill)`; new `onDragEnd` calls `setDraggingSkill(null)`** — closes the wiring gap `ScopeRail` (100-03) needed to compute per-entry drop validity from `useDraggingSkill()`.
+- **Task 2 audit found NO production-code gap** — `SkillRow` has always-rendered `SkillLifecycleMenu` since Phase 98, so the ⋯ menu is identical across all three row surfaces by construction; only test-coverage gaps existed (`AllSkillsOverview` had no menu-render assertion; `SkillsInCategory` had no test file at all — created new). `grep -rn manage-skills src/components/skills/` confirmed the string survives only in `ColdStorageView.test.tsx`'s preserved negative assertion, nowhere in source. QuickDeck's Run-default click gesture (Phase 99 D-02/D-03) accepted as "reconciled" with the row menu's own Run submenu, not a menu-identity requirement.
+- **Logged one out-of-scope finding to `deferred-items.md`** (4 pre-existing `TS7006` errors in `src/pages/Inbox.tsx` from a concurrent unrelated session's in-progress `InboxFilterBar.tsx` edit) — left untouched per scope-boundary rule, not staged/committed.
+- **Executed sequentially on `master`** (worktrees disabled per `config.json`); STATE.md/ROADMAP.md updated by hand per this file's established anti-clobber workaround — no `gsd-sdk state.*`/`roadmap.update-plan-progress` verbs run.
 
 **v11.0 / Phase 100 Plan 03 decisions (2026-07-24, ScopeRail — 3 always-visible scope drop targets):**
 
@@ -324,7 +333,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ### Pending Todos
 
-- **v11.0 next action:** Phase 100 (Control-Surface UX) is now 3/5 plans complete (100-01, 100-02, 100-03 done 2026-07-24). Next: execute Plan 100-04 (Skills.tsx integration, Wave 3 — depends on 100-01/02/03) and/or Plan 100-05 (SkillRow pending overlay, Wave 2 — depends on 100-01/02, can run independently of 100-04). It's the LAST v11.0 phase.
+- **v11.0 next action:** Phase 100 (Control-Surface UX) is now 4/5 plans complete (100-01, 100-02, 100-03, 100-05 done 2026-07-24). Next: execute Plan 100-04 (Skills.tsx integration, Wave 3 — depends on 100-01/02/03; also benefits from 100-05's SkillRow pending overlay + drag reporting). It's the LAST plan of the LAST v11.0 phase.
 - **Phase 99 follow-up (non-blocking):** CR-03 pre-existing `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live event-lifecycle trace before fixing (do NOT blind-fix; see 2026-07-20 voice-timing lesson). Candidate quick task / tech-debt.
 - **Phase 98 follow-up (non-blocking):** its two MANUAL verification steps (live G: workspace repro re-check + transient-unmount negative check) remain outstanding — both require a live Forge daemon + live Google Drive mount.
 - **v10.0 (shipped, for reference):** ✅ COMPLETE — all 4 phases (93-96) done, milestone archived 2026-07-13.
@@ -351,9 +360,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-24T13:04:48.000Z
-Stopped at: Phase 100 Plan 03 EXECUTED (ScopeRail component, see 100-03-SUMMARY.md) — commits 9126c6fa (RED test), d6534e91 (GREEN impl), d39934e (summary), 451fb6e (self-check)
-Next action: Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03) and/or Plan 100-05 (SkillRow pending overlay — Wave 2, depends on 100-01/02, independent of 100-04). Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02 requirement NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery across Plans 03-04, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent session committed unrelated `useAstridrVoice.ts`/`.test.ts` changes (commits 8788630/932b97f/798639e, phase 186-01) to this same branch during Plan 100-02's execution — not touched by any Phase 100 plan, noted per the shared-branch-concurrency lesson.
+Last session: 2026-07-24T13:10:00.000Z
+Stopped at: Phase 100 Plan 05 EXECUTED (SkillRow pending overlay + drag reporting + UX-01/UX-04 audit, see 100-05-SUMMARY.md) — commits 0651ceb (Task 1 feat), 6fbc569 (Task 2 test), 65d78eb (summary)
+Next action: Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This is the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
 Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-04-PLAN.md
 
 ## Operator Next Steps

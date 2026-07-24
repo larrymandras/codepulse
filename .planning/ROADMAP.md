@@ -591,7 +591,7 @@ Plans:
   - [x] 100-02-PLAN.md — Wave 1: `usePendingLifecycleMoves` commandId-correlated optimistic hook + status-aware reconcile + `SkillControlSurfaceProvider` context (UX-03) — completed 2026-07-24, see 100-02-SUMMARY.md
   - [x] 100-03-PLAN.md — Wave 2: `ScopeRail` component — 3 always-visible Global/Project/Cold drop targets, valid/invalid/idle states + inline reject hint (UX-02) — completed 2026-07-24, see 100-03-SUMMARY.md
   - [ ] 100-04-PLAN.md — Wave 3: Skills.tsx integration — `handleDropOnScope` dispatch, paint-before-await + LAYER-1 `.catch()` rollback, page-level Project dialog wiring, `MoveToProjectDialog.onMoved(commandId)` (UX-02, UX-03)
-  - [ ] 100-05-PLAN.md — Wave 2: SkillRow pending overlay (70% + info-bar) + dragging-skill reporting + UX-01/UX-04 menu-consistency & no-`/manage-skills` completeness audit (UX-01, UX-03, UX-04)
+  - [x] 100-05-PLAN.md — Wave 2: SkillRow pending overlay (70% + info-bar) + dragging-skill reporting + UX-01/UX-04 menu-consistency & no-`/manage-skills` completeness audit (UX-01, UX-03, UX-04) — completed 2026-07-24, see 100-05-SUMMARY.md
 
 **UI hint**: yes
 **Cross-repo note (2026-07-20)**: armory tiles + tool-receipts display (tools_used/tool_errors under chat answers) from the JARVIS v5/TARS analysis were **deferred out of this phase** (D-07 — different surface, scope creep for a Skills control-surface phase) — see `.planning/seeds/SEED-002-mission-control-jobs-board.md` and astridr SEED-024; route to backlog / its own phase.
@@ -644,7 +644,7 @@ Plans:
 | 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
 | 98. Skill Lifecycle Mutations | v11.0 | 5/5 | Complete   | 2026-07-22 |
 | 99. Skill Launch / Dispatch | v11.0 | 7/7 | Complete   | 2026-07-23 |
-| 100. Control-Surface UX | v11.0 | 3/5 | Executing (Plan 03 done) | — |
+| 100. Control-Surface UX | v11.0 | 4/5 | Executing (Plan 05 done; only 04 remains) | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 
