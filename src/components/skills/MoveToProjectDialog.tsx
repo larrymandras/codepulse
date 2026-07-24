@@ -40,8 +40,8 @@ interface MoveToProjectDialogProps {
   hostId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Fired after enqueueLifecycle resolves successfully. */
-  onMoved?: () => void;
+  /** Fired after enqueueLifecycle resolves successfully, carrying the commandId. */
+  onMoved?: (commandId: string) => void;
 }
 
 export function MoveToProjectDialog({
@@ -90,7 +90,7 @@ export function MoveToProjectDialog({
         destination: "project",
         workspaceId,
       });
-      onMoved?.();
+      onMoved?.(commandId);
       // Close ONLY on success (98-REVIEW CR-03): a LAYER-1 preflight refusal
       // rejects before any row is inserted, so closing here would silently
       // swallow it — keep the dialog open with the error toasted instead.
