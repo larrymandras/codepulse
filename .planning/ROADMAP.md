@@ -588,7 +588,7 @@ Plans:
 **Plans**: 5 plans (3 waves) — planned 2026-07-24
 
   - [x] 100-01-PLAN.md — Wave 1: extract shared `resolveLifecycleActions` + `resolveScopeDrop` pure helpers (drag matrix = source of truth) + behavior-preserving SkillLifecycleMenu refactor (UX-01, UX-02) — completed 2026-07-24, see 100-01-SUMMARY.md
-  - [ ] 100-02-PLAN.md — Wave 1: `usePendingLifecycleMoves` commandId-correlated optimistic hook + status-aware reconcile + `SkillControlSurfaceProvider` context (UX-03)
+  - [x] 100-02-PLAN.md — Wave 1: `usePendingLifecycleMoves` commandId-correlated optimistic hook + status-aware reconcile + `SkillControlSurfaceProvider` context (UX-03) — completed 2026-07-24, see 100-02-SUMMARY.md
   - [ ] 100-03-PLAN.md — Wave 2: `ScopeRail` component — 3 always-visible Global/Project/Cold drop targets, valid/invalid/idle states + inline reject hint (UX-02)
   - [ ] 100-04-PLAN.md — Wave 3: Skills.tsx integration — `handleDropOnScope` dispatch, paint-before-await + LAYER-1 `.catch()` rollback, page-level Project dialog wiring, `MoveToProjectDialog.onMoved(commandId)` (UX-02, UX-03)
   - [ ] 100-05-PLAN.md — Wave 2: SkillRow pending overlay (70% + info-bar) + dragging-skill reporting + UX-01/UX-04 menu-consistency & no-`/manage-skills` completeness audit (UX-01, UX-03, UX-04)

@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: executing
-stopped_at: Phase 100 Plan 01 executed — shared scope predicate + drag matrix
-last_updated: "2026-07-24T12:50:06.000Z"
-last_activity: 2026-07-24 -- Phase 100 Plan 01 (resolveLifecycleActions/resolveScopeDrop) complete
+stopped_at: Phase 100 Plan 02 executed — usePendingLifecycleMoves + SkillControlSurfaceProvider
+last_updated: "2026-07-24T12:58:47.000Z"
+last_activity: 2026-07-24 -- Phase 100 Plan 02 (usePendingLifecycleMoves + SkillControlSurfaceProvider) complete
 progress:
   total_phases: 4
   completed_phases: 3
@@ -37,12 +37,12 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — EXECUTING
-Plan: 1 of 5 EXECUTED (see 100-01-SUMMARY.md); next is Plan 2 of 5
+Plan: 2 of 5 EXECUTED (see 100-02-SUMMARY.md); next is Plan 3 of 5
 Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **at Phase 100 (Control-Surface UX)**, the last phase of v11.0, which depends on both 98 and 99 (now both done).
 Status: Executing Phase 100
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-24 -- Phase 100 Plan 01 (resolveLifecycleActions/resolveScopeDrop shared predicate) complete
+Last activity: 2026-07-24 -- Phase 100 Plan 02 (usePendingLifecycleMoves + SkillControlSurfaceProvider) complete
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
@@ -132,6 +132,16 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 100 Plan 02 decisions (2026-07-24, commandId-correlated pending map + control-surface context):**
+
+- **`usePendingLifecycleMoves()` correlates by `commandId` via `.find()`, never by skillName alone** — ports the `useIntakeFeed.ts:95-100` dedupe precedent, made status-aware: `done` clears silently, `failed`/`expired` clear + `toast.error` (real `lifecycleRefusalMessage`-stripped reason / the reused literal `"Expired — no daemon claimed this command."` copy), `queued`/`executing` left untouched. A row with a different `commandId` for the same skillName never reconciles the entry (Pitfall 1, unit-tested).
+- **`clearPending` is the LAYER-1 `.catch()` escape hatch (Pitfall 3)** — a synchronous `enqueueLifecycle` rejection never produces a `forgeCommands` row, so the reconcile effect alone could never clear that entry; Plan 04's caller must call `clearPending` directly from its `.catch()`.
+- **Both tasks (pending-map hook + `SkillControlSurfaceProvider`/reader hooks) landed in one GREEN commit** — they share the identical file by design (plan explicitly keeps client-surface state colocated) and the single RED test commit already covered both tasks' acceptance criteria together; splitting would have required an artificial partial-file checkpoint with no independently-verifiable intermediate state.
+- **`React.createElement` instead of JSX** in both the implementation and test files, so `usePendingLifecycleMoves.ts`/`.test.ts` could stay plain `.ts` (matching the plan's literal file list) rather than needing a `.tsx` extension solely for the Provider component and one test-harness consumer component.
+- **UX-03 NOT marked complete in REQUIREMENTS.md** — this plan ships the client-only optimistic-state machine + context, but nothing enqueues a real `enqueueLifecycle` call yet (Plan 04) and no drop target exists yet (Plan 03); matches the established Phase 98/99 precedent of deferring requirement completion to full end-to-end delivery, not per-plan code-completion.
+- **A concurrent session committed unrelated `useAstridrVoice.ts`/`.test.ts` changes to this same `master` branch during this plan's execution** (commits `8788630`/`932b97f`/`798639e`, phase 186-01 voice-debug instrumentation — unrelated to v11.0/Phase 100) — confirmed via `git show --stat` that neither of this plan's own commits (`0506693`, `40768d0`) touched those files; noted per the 2026-07-09 shared-branch-concurrency lesson, no action needed.
+- **Executed sequentially on `master`** (worktrees disabled per `config.json`); STATE.md/ROADMAP.md updated by hand per this file's established anti-clobber workaround — no `gsd-sdk state.*`/`roadmap.update-plan-progress` verbs run.
 
 **v11.0 / Phase 100 Plan 01 decisions (2026-07-24, shared scope predicate + drag matrix):**
 
@@ -332,10 +342,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-24T12:50:06.000Z
-Stopped at: Phase 100 Plan 01 EXECUTED (resolveLifecycleActions + resolveScopeDrop shared predicate, see 100-01-SUMMARY.md) — commits f2845cf (Task 1), 4399533 (Task 2), 3377e4f (summary)
-Next action: Execute Plan 100-02. Plan 100-01 shipped the shared predicate `resolveLifecycleActions`/`resolveScopeDrop` (`src/lib/skills.ts`) that Plan 100-02+ (scope-rail drop handler, pending-state reconciliation) must import and call directly — no duplication. Locked decisions carried forward: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly, cold→Project rejected since restore is global-only (D-02, now structurally guaranteed by the shared predicate); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04, `resolveScopeDrop`'s return type makes delete unrepresentable); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
-Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-02-PLAN.md
+Last session: 2026-07-24T12:58:47.000Z
+Stopped at: Phase 100 Plan 02 EXECUTED (usePendingLifecycleMoves + SkillControlSurfaceProvider, see 100-02-SUMMARY.md) — commits 0506693 (RED test), 40768d0 (GREEN impl, both tasks), 0570f7b (summary)
+Next action: Execute Plan 100-03 (ScopeRail component — 3 always-visible Global/Project/Cold drop targets, valid/invalid/idle states + inline reject hint, UX-02). Plan 100-02 shipped `usePendingLifecycleMoves()` (commandId-correlated pending map, status-aware reconcile: done clears silently, failed/expired clear+toast, queued/executing left alone) and `SkillControlSurfaceProvider`/`usePendingMove`/`useDraggingSkill`/`useSkillControlSurface` (`src/hooks/usePendingLifecycleMoves.ts`) — Plan 03+ must import and call these directly (beginPending/clearPending, useDraggingSkill for drop-target validity), no duplication. Locked decisions carried forward from 100-01: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, now implemented by 100-02); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-03 requirement NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery across Plans 02-04, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent session committed unrelated `useAstridrVoice.ts`/`.test.ts` changes (commits 8788630/932b97f/798639e, phase 186-01) to this same branch during this plan's execution — not touched by this plan, noted per the shared-branch-concurrency lesson.
+Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-03-PLAN.md
 
 ## Operator Next Steps
 
