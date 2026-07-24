@@ -86,7 +86,9 @@ export function SkillRow({
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", skill.name);
         e.dataTransfer.effectAllowed = "move";
-        setDraggingSkill(skill);
+        // Carry the origin lane so a shadowed Cold-Storage row resolves as
+        // dormant, not as its active copy (CR-02).
+        setDraggingSkill(skill, lane ?? "active");
       }}
       onDragEnd={() => setDraggingSkill(null)}
       className={`group relative flex items-center gap-3 px-3 py-2 hover:bg-primary/10 transition-colors ${

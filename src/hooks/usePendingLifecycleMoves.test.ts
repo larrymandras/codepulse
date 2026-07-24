@@ -151,6 +151,24 @@ describe("usePendingLifecycleMoves", () => {
     act(() => result.current.clearPending("foo"));
     expect(result.current.pending.foo).toBeUndefined();
   });
+
+  it("clearPending(name, staleCommandId) is a no-op when a newer command owns the slot (CR-01)", () => {
+    const { result } = renderHook(() => usePendingLifecycleMoves());
+    // First drag paints (cmd-1); a rapid second drag (cmd-2) overwrites the slot.
+    act(() => result.current.beginPending("foo", move({ commandId: "cmd-1" })));
+    act(() => result.current.beginPending("foo", move({ commandId: "cmd-2" })));
+    // The stale cmd-1 now rejects at LAYER-1 and tries to clear — it must NOT
+    // wipe cmd-2's still-in-flight optimistic paint.
+    act(() => result.current.clearPending("foo", "cmd-1"));
+    expect(result.current.pending.foo).toEqual(move({ commandId: "cmd-2" }));
+  });
+
+  it("clearPending(name, commandId) clears when the commandId matches the current entry (CR-01)", () => {
+    const { result } = renderHook(() => usePendingLifecycleMoves());
+    act(() => result.current.beginPending("foo", move({ commandId: "cmd-2" })));
+    act(() => result.current.clearPending("foo", "cmd-2"));
+    expect(result.current.pending.foo).toBeUndefined();
+  });
 });
 
 describe("SkillControlSurfaceProvider + reader hooks", () => {
@@ -208,5 +226,38 @@ describe("SkillControlSurfaceProvider + reader hooks", () => {
     expect(() => render(createElement(Consumer))).not.toThrow();
     expect(screen.getByTestId("move").textContent).toBe("none");
     expect(screen.getByTestId("dragging").textContent).toBe("none");
+  });
+
+  it("setDraggingSkill threads the origin lane; default is active (CR-02)", () => {
+    function LaneConsumer() {
+      const { draggingLane, setDraggingSkill } = useDraggingSkill();
+      return createElement(
+        "div",
+        null,
+        createElement("span", { "data-testid": "lane" }, draggingLane),
+        createElement(
+          "button",
+          { "data-testid": "drag-cold", onClick: () => setDraggingSkill({ name: "bar" }, "cold") },
+          "cold"
+        ),
+        createElement(
+          "button",
+          { "data-testid": "drag-active", onClick: () => setDraggingSkill({ name: "bar" }) },
+          "active"
+        )
+      );
+    }
+
+    render(createElement(SkillControlSurfaceProvider, null, createElement(LaneConsumer)));
+
+    // No drag yet → safe default.
+    expect(screen.getByTestId("lane").textContent).toBe("active");
+    // A Cold-Storage row reports its lane, so resolveScopeDrop treats a shadowed
+    // row as dormant (not its active copy) — the CR-02 fix.
+    fireEvent.click(screen.getByTestId("drag-cold"));
+    expect(screen.getByTestId("lane").textContent).toBe("cold");
+    // An active-lane drag (no lane arg) defaults back to "active".
+    fireEvent.click(screen.getByTestId("drag-active"));
+    expect(screen.getByTestId("lane").textContent).toBe("active");
   });
 });

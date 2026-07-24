@@ -42,7 +42,7 @@ export type PendingMove = {
 export interface PendingLifecycleMoves {
   pending: Record<string, PendingMove>;
   beginPending: (skillName: string, move: PendingMove) => void;
-  clearPending: (skillName: string) => void;
+  clearPending: (skillName: string, commandId?: string) => void;
 }
 
 /** The literal expiry copy from IntakeSheet.tsx:135-139 (first line only) — never paraphrase. */
@@ -60,9 +60,15 @@ export function usePendingLifecycleMoves(): PendingLifecycleMoves {
     setPending((prev) => ({ ...prev, [skillName]: move }));
   }, []);
 
-  const clearPending = useCallback((skillName: string) => {
+  const clearPending = useCallback((skillName: string, commandId?: string) => {
     setPending((prev) => {
-      if (!(skillName in prev)) return prev;
+      const entry = prev[skillName];
+      if (!entry) return prev;
+      // Match-gated: a newer drag may already own this slot (its beginPending
+      // overwrote the entry). Only the command that painted it may clear it, so
+      // a stale command's LAYER-1 rejection never wipes a second, still-in-flight
+      // move's optimistic paint (CR-01 — honors "never reconcile the wrong drag").
+      if (commandId !== undefined && entry.commandId !== commandId) return prev;
       const next = { ...prev };
       delete next[skillName];
       return next;
@@ -112,7 +118,14 @@ function noop(): void {
 
 export interface SkillControlSurfaceValue extends PendingLifecycleMoves {
   draggingSkill: SkillLike | null;
-  setDraggingSkill: (skill: SkillLike | null) => void;
+  /**
+   * Which lane the active drag started from. Threaded into resolveScopeDrop so
+   * a SHADOWED row (dormant + active copies) dragged out of Cold Storage is
+   * treated as dormant — not silently archived via the active-global branch
+   * (CR-02). Defaults "active" (no drag, or a drag from an active-lane row).
+   */
+  draggingLane: "active" | "cold";
+  setDraggingSkill: (skill: SkillLike | null, lane?: "active" | "cold") => void;
 }
 
 const DEFAULT_VALUE: SkillControlSurfaceValue = {
@@ -120,6 +133,7 @@ const DEFAULT_VALUE: SkillControlSurfaceValue = {
   beginPending: noop,
   clearPending: noop,
   draggingSkill: null,
+  draggingLane: "active",
   setDraggingSkill: noop,
 };
 
@@ -127,11 +141,20 @@ const SkillControlSurfaceContext = createContext<SkillControlSurfaceValue>(DEFAU
 
 export function SkillControlSurfaceProvider({ children }: { children: ReactNode }) {
   const { pending, beginPending, clearPending } = usePendingLifecycleMoves();
-  const [draggingSkill, setDraggingSkill] = useState<SkillLike | null>(null);
+  const [draggingSkill, setDraggingSkillState] = useState<SkillLike | null>(null);
+  const [draggingLane, setDraggingLane] = useState<"active" | "cold">("active");
+
+  const setDraggingSkill = useCallback(
+    (skill: SkillLike | null, lane: "active" | "cold" = "active") => {
+      setDraggingSkillState(skill);
+      setDraggingLane(lane);
+    },
+    []
+  );
 
   const value = useMemo<SkillControlSurfaceValue>(
-    () => ({ pending, beginPending, clearPending, draggingSkill, setDraggingSkill }),
-    [pending, beginPending, clearPending, draggingSkill]
+    () => ({ pending, beginPending, clearPending, draggingSkill, draggingLane, setDraggingSkill }),
+    [pending, beginPending, clearPending, draggingSkill, draggingLane, setDraggingSkill]
   );
 
   return createElement(SkillControlSurfaceContext.Provider, { value }, children);
@@ -148,11 +171,12 @@ export function usePendingMove(skillName: string): PendingMove | undefined {
   return pending[skillName];
 }
 
-/** The transient dragging-skill identity + setter. Safe (null + no-op) outside a provider. */
+/** The transient dragging-skill identity + lane + setter. Safe (null + no-op) outside a provider. */
 export function useDraggingSkill(): {
   draggingSkill: SkillLike | null;
-  setDraggingSkill: (skill: SkillLike | null) => void;
+  draggingLane: "active" | "cold";
+  setDraggingSkill: (skill: SkillLike | null, lane?: "active" | "cold") => void;
 } {
-  const { draggingSkill, setDraggingSkill } = useSkillControlSurface();
-  return { draggingSkill, setDraggingSkill };
+  const { draggingSkill, draggingLane, setDraggingSkill } = useSkillControlSurface();
+  return { draggingSkill, draggingLane, setDraggingSkill };
 }

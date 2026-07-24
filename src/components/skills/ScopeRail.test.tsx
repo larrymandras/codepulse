@@ -41,11 +41,18 @@ function renderRail(overrides: Partial<React.ComponentProps<typeof ScopeRail>> =
 
 const activeGlobalSkill: SkillLike = { name: "legal-nda", origins: ["claude-code"] };
 const dormantSkill: SkillLike = { name: "old-skill", origins: ["claude-code:available"] };
+// Shadowed = dormant copy + a live active copy. Dragged from the Cold Storage
+// lane it must resolve as dormant (CR-02).
+const shadowedSkill: SkillLike = {
+  name: "legal",
+  origins: ["claude-code:available", "claude-code"],
+};
 
 describe("ScopeRail", () => {
   beforeEach(() => {
     mockUseDraggingSkill.mockReturnValue({
       draggingSkill: null,
+      draggingLane: "active",
       setDraggingSkill: mockSetDraggingSkill,
     });
   });
@@ -60,6 +67,7 @@ describe("ScopeRail", () => {
   it("shows the valid primary highlight when an active-global skill drags over Cold Storage", () => {
     mockUseDraggingSkill.mockReturnValue({
       draggingSkill: activeGlobalSkill,
+      draggingLane: "active",
       setDraggingSkill: mockSetDraggingSkill,
     });
     const { container } = renderRail({ dropTargetScope: "cold" });
@@ -72,6 +80,7 @@ describe("ScopeRail", () => {
   it("shows the destructive not-allowed highlight + inline hint when a dormant skill drags over Project", () => {
     mockUseDraggingSkill.mockReturnValue({
       draggingSkill: dormantSkill,
+      draggingLane: "active",
       setDraggingSkill: mockSetDraggingSkill,
     });
     const { container } = renderRail({ dropTargetScope: "project" });
@@ -84,6 +93,7 @@ describe("ScopeRail", () => {
   it("shows NO highlight for a no-op (own-scope) drag-over — honest, no fake feedback", () => {
     mockUseDraggingSkill.mockReturnValue({
       draggingSkill: activeGlobalSkill,
+      draggingLane: "active",
       setDraggingSkill: mockSetDraggingSkill,
     });
     const { container } = renderRail({ dropTargetScope: "global" });
@@ -91,6 +101,21 @@ describe("ScopeRail", () => {
     expect(globalEntry.className).not.toContain("border-primary");
     expect(globalEntry.className).not.toContain("border-destructive");
     expect(globalEntry.className).toContain("border-transparent");
+  });
+
+  it("threads the origin lane: a shadowed row dragged from Cold Storage over Cold Storage shows NO valid highlight — resolves as a no-op, not a destructive archive (CR-02)", () => {
+    mockUseDraggingSkill.mockReturnValue({
+      draggingSkill: shadowedSkill,
+      draggingLane: "cold",
+      setDraggingSkill: mockSetDraggingSkill,
+    });
+    const { container } = renderRail({ dropTargetScope: "cold" });
+    const coldEntry = container.querySelector('[data-scope="cold"]')!;
+    // lane="cold" → resolveScopeDrop returns { kind: "noop" }. Under the old
+    // default-"active" lane it would resolve to an ARCHIVE of the live active
+    // copy and paint the valid highlight — the exact CR-02 regression.
+    expect(coldEntry.className).not.toContain("bg-primary/30");
+    expect(coldEntry.className).toContain("border-transparent");
   });
 
   it("forwards dragOver and drop to the parent, calling preventDefault", () => {

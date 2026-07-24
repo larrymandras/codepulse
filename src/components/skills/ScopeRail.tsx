@@ -44,7 +44,7 @@ export function ScopeRail({
   onDragLeaveScope,
   onDropOnScope,
 }: ScopeRailProps) {
-  const { draggingSkill } = useDraggingSkill();
+  const { draggingSkill, draggingLane } = useDraggingSkill();
 
   return (
     <div className="flex flex-col gap-2">
@@ -57,7 +57,9 @@ export function ScopeRail({
         {SCOPE_ENTRIES.map(({ scope, label, Icon }) => {
           const isDropTarget = dropTargetScope === scope;
           const dropResult =
-            isDropTarget && draggingSkill ? resolveScopeDrop(draggingSkill, scope) : null;
+            isDropTarget && draggingSkill
+              ? resolveScopeDrop(draggingSkill, scope, draggingLane)
+              : null;
           const isValid = dropResult?.kind === "enqueue" || dropResult?.kind === "dialog";
           const isInvalid = dropResult?.kind === "reject";
           const hint = dropResult?.kind === "reject" ? dropResult.hint : null;

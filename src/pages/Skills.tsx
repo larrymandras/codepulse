@@ -59,7 +59,7 @@ function SkillsBody() {
   const [intakeSheetOpen, setIntakeSheetOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  const { beginPending, clearPending } = useSkillControlSurface();
+  const { beginPending, clearPending, draggingLane } = useSkillControlSurface();
   const hostsRaw = useForgeHostsRaw();
   const host = resolveHostId(hostsRaw ?? [], undefined);
 
@@ -178,7 +178,15 @@ function SkillsBody() {
     const skill = enrichedSkills.find((s) => s.name === skillName);
     if (!skill) return; // Tampering guard — an unrecognized name no-ops.
 
-    const result = resolveScopeDrop(skill, scope as "global" | "project" | "cold");
+    // draggingLane (set by SkillRow.onDragStart) decides shadowed-row semantics:
+    // a shadowed row dragged from Cold Storage must resolve as dormant, not as
+    // its active copy — otherwise dropping it back on Cold Storage would archive
+    // the live active copy (CR-02). Defaults "active" for active-lane drags.
+    const result = resolveScopeDrop(
+      skill,
+      scope as "global" | "project" | "cold",
+      draggingLane
+    );
 
     if (result.kind === "noop" || result.kind === "reject") return;
 
@@ -203,7 +211,9 @@ function SkillsBody() {
       sourceOrigin: result.sourceOrigin,
       destination: result.destination,
     }).catch((err: unknown) => {
-      clearPending(skillName);
+      // Match-gated by commandId: if the user already re-dragged this skill
+      // (a newer commandId now owns the pending slot), don't wipe its paint (CR-01).
+      clearPending(skillName, commandId);
       toast.error(lifecycleRefusalMessage(err));
     });
   };

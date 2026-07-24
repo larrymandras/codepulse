@@ -49,7 +49,11 @@ beforeEach(() => {
   Object.assign(navigator, { clipboard: { writeText } });
   setDraggingSkill.mockReset();
   vi.mocked(usePendingMove).mockReturnValue(undefined);
-  vi.mocked(useDraggingSkill).mockReturnValue({ draggingSkill: null, setDraggingSkill });
+  vi.mocked(useDraggingSkill).mockReturnValue({
+    draggingSkill: null,
+    draggingLane: "active",
+    setDraggingSkill,
+  });
 });
 
 const skill = {
@@ -149,15 +153,26 @@ describe("SkillRow", () => {
     expect(row.className).not.toContain("opacity-70");
   });
 
-  it("reports the dragged skill on dragStart and clears it on dragEnd", () => {
+  it("reports the dragged skill + default active lane on dragStart, clears on dragEnd", () => {
     const h = handlers();
     const { container } = renderRow(<SkillRow skill={skill} {...h} />);
     const row = container.querySelector('[data-skill="legal-nda"]')!;
     fireEvent.dragStart(row, {
       dataTransfer: { setData: vi.fn(), effectAllowed: "" },
     });
-    expect(setDraggingSkill).toHaveBeenCalledWith(skill);
+    // No lane prop → defaults "active" so resolveScopeDrop stays correct (CR-02).
+    expect(setDraggingSkill).toHaveBeenCalledWith(skill, "active");
     fireEvent.dragEnd(row);
     expect(setDraggingSkill).toHaveBeenCalledWith(null);
+  });
+
+  it("threads lane=\"cold\" through dragStart so a Cold-Storage row resolves as dormant (CR-02)", () => {
+    const h = handlers();
+    const { container } = renderRow(<SkillRow skill={skill} lane="cold" {...h} />);
+    const row = container.querySelector('[data-skill="legal-nda"]')!;
+    fireEvent.dragStart(row, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: "" },
+    });
+    expect(setDraggingSkill).toHaveBeenCalledWith(skill, "cold");
   });
 });

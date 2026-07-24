@@ -139,7 +139,8 @@ export function resolveScopeDrop(
     return { kind: "enqueue", action: "archive", sourceOrigin: activeOrigin, destination: "cold" };
   }
 
-  // Defensive fallback — should be unreachable given the shapes above.
+  // Fallback for an origin-less or unrecognized-origin skill (activeOrigin
+  // neither "claude-code" nor a project origin) — a safe no-op, not unreachable.
   return { kind: "noop" };
 }
 
