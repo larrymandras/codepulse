@@ -587,7 +587,7 @@ Plans:
 
 **Plans**: 5 plans (3 waves) — planned 2026-07-24
 
-  - [ ] 100-01-PLAN.md — Wave 1: extract shared `resolveLifecycleActions` + `resolveScopeDrop` pure helpers (drag matrix = source of truth) + behavior-preserving SkillLifecycleMenu refactor (UX-01, UX-02)
+  - [x] 100-01-PLAN.md — Wave 1: extract shared `resolveLifecycleActions` + `resolveScopeDrop` pure helpers (drag matrix = source of truth) + behavior-preserving SkillLifecycleMenu refactor (UX-01, UX-02) — completed 2026-07-24, see 100-01-SUMMARY.md
   - [ ] 100-02-PLAN.md — Wave 1: `usePendingLifecycleMoves` commandId-correlated optimistic hook + status-aware reconcile + `SkillControlSurfaceProvider` context (UX-03)
   - [ ] 100-03-PLAN.md — Wave 2: `ScopeRail` component — 3 always-visible Global/Project/Cold drop targets, valid/invalid/idle states + inline reject hint (UX-02)
   - [ ] 100-04-PLAN.md — Wave 3: Skills.tsx integration — `handleDropOnScope` dispatch, paint-before-await + LAYER-1 `.catch()` rollback, page-level Project dialog wiring, `MoveToProjectDialog.onMoved(commandId)` (UX-02, UX-03)
@@ -644,7 +644,7 @@ Plans:
 | 97. Real Skill Intake & Daemon Foundation | v11.0 | 6/6 | Complete   | 2026-07-19 |
 | 98. Skill Lifecycle Mutations | v11.0 | 5/5 | Complete   | 2026-07-22 |
 | 99. Skill Launch / Dispatch | v11.0 | 7/7 | Complete   | 2026-07-23 |
-| 100. Control-Surface UX | v11.0 | 0/5 | Planned (5 plans, 3 waves) | — |
+| 100. Control-Surface UX | v11.0 | 1/5 | Executing (Plan 01 done) | — |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 

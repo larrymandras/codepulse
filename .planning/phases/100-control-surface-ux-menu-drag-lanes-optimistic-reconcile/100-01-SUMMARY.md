@@ -108,6 +108,15 @@ None - no external service configuration required.
 - `resolveScopeDrop`'s `lane` parameter is ready for the Cold Storage rail's drag caller in a later plan.
 - No blockers.
 
+## Self-Check: PASSED
+
+- FOUND: src/lib/skills.ts
+- FOUND: src/components/skills/SkillLifecycleMenu.tsx
+- FOUND: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-01-SUMMARY.md
+- FOUND: f2845cf (Task 1 commit)
+- FOUND: 4399533 (Task 2 commit)
+- FOUND: 3377e4f (Summary commit)
+
 ---
 *Phase: 100-control-surface-ux-menu-drag-lanes-optimistic-reconcile*
 *Completed: 2026-07-24*

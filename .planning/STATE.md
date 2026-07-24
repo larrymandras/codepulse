@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: executing
-stopped_at: Phase 100 planned — 5 plans, ready to execute
-last_updated: "2026-07-24T12:37:21.931Z"
-last_activity: 2026-07-24 -- Phase 100 planning complete
+stopped_at: Phase 100 Plan 01 executed — shared scope predicate + drag matrix
+last_updated: "2026-07-24T12:50:06.000Z"
+last_activity: 2026-07-24 -- Phase 100 Plan 01 (resolveLifecycleActions/resolveScopeDrop) complete
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 23
-  completed_plans: 18
+  total_plans: 22
+  completed_plans: 19
   percent: 75
 ---
 
@@ -32,15 +32,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** v11.0 Skills Command Center — Phase 99 (Skill Launch / Dispatch) COMPLETE; resume at Phase 100 (Control-Surface UX)
+**Current focus:** Phase 100 — control-surface-ux-menu-drag-lanes-optimistic-reconcile
 
 ## Current Position
 
+Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — EXECUTING
+Plan: 1 of 5 EXECUTED (see 100-01-SUMMARY.md); next is Plan 2 of 5
 Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **at Phase 100 (Control-Surface UX)**, the last phase of v11.0, which depends on both 98 and 99 (now both done).
-Status: Ready to execute
+Status: Executing Phase 100
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-24 -- Phase 100 planning complete
+Last activity: 2026-07-24 -- Phase 100 Plan 01 (resolveLifecycleActions/resolveScopeDrop shared predicate) complete
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
@@ -130,6 +132,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 100 Plan 01 decisions (2026-07-24, shared scope predicate + drag matrix):**
+
+- **`resolveLifecycleActions` extracted verbatim** from `SkillLifecycleMenu.tsx`'s former inline block (`src/lib/skills.ts`), and `resolveScopeDrop` added alongside it as the complete drag matrix (D-02) — both pure, unit-tested (24 new tests: 6 parity + 18 matrix cells), no React/Convex imports.
+- **`resolveScopeDrop` takes an optional `lane` param** (default `"active"`, mirroring `resolveLifecycleActions`) so a future Cold Storage drag caller can pass `lane="cold"` — the only way the "dormant && shadowed" matrix cell is reachable, since `isDormant`/`isShadowing` are mutually exclusive on real origins data (same WR-04 convention `SkillLifecycleMenu.tsx` already uses for its own dormant-branch override).
+- **Cold-target drops always noop regardless of shadow status** (already cold, nowhere shorter to go) — the shadow-block only gates the global/project targets.
+- **Rule 1 auto-fix:** `SkillLifecycleMenu.test.tsx`'s `isShadowing` mock factory needed updating (not its assertions) after the refactor — ESM same-module calls (`resolveLifecycleActions` → `isShadowing`, both defined in `skills.ts`) are not intercepted by mocking only the module's `isShadowing` export, so the mock factory was extended to also re-derive `resolveLifecycleActions().shadowed` through the same spy. 30/30 existing tests pass with byte-identical assertions.
+- Full suite verified green post-refactor: 2470 tests passed, 0 failed; `tsc --noEmit` clean.
+- **Executed sequentially on `master`** (worktrees disabled per `config.json`); STATE.md updated by hand per this file's established anti-clobber workaround (see the HTML comment below the frontmatter) — no `gsd-sdk state.*` verbs run.
 
 **v11.0 / Phase 99 (Skill Launch / Dispatch) decisions (2026-07-23, executed 6 build plans + 1 gap closure, wave-based, worktrees disabled → sequential):**
 
@@ -321,10 +332,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-24T01:13:29.955Z
-Stopped at: Phase 100 planned — 5 plans / 3 waves, plan-checker PASSED (iteration 2)
-Next action: **`/clear` then `/gsd-execute-phase 100`** — plans ready (5 plans, 3 waves; RESEARCH/PATTERNS/VALIDATION all done, Nyquist compliant). Phase 100 (Control-Surface UX, UX-01..04) is the LAST phase of v11.0. Locked decisions: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly, cold→Project rejected since restore is global-only (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes — permanent delete stays menu-only behind type-to-confirm (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
-Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-01-PLAN.md
+Last session: 2026-07-24T12:50:06.000Z
+Stopped at: Phase 100 Plan 01 EXECUTED (resolveLifecycleActions + resolveScopeDrop shared predicate, see 100-01-SUMMARY.md) — commits f2845cf (Task 1), 4399533 (Task 2), 3377e4f (summary)
+Next action: Execute Plan 100-02. Plan 100-01 shipped the shared predicate `resolveLifecycleActions`/`resolveScopeDrop` (`src/lib/skills.ts`) that Plan 100-02+ (scope-rail drop handler, pending-state reconciliation) must import and call directly — no duplication. Locked decisions carried forward: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly, cold→Project rejected since restore is global-only (D-02, now structurally guaranteed by the shared predicate); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04, `resolveScopeDrop`'s return type makes delete unrepresentable); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings.
+Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-02-PLAN.md
 
 ## Operator Next Steps
 
