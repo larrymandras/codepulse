@@ -92,4 +92,9 @@ describe("AllSkillsOverview", () => {
     renderOverview(<AllSkillsOverview skills={[]} categories={categories} {...handlers()} />);
     expect(screen.getByText("[ NO SKILLS MATCH ]")).toBeInTheDocument();
   });
+
+  it("UX-01 audit: each row hosts the scope-gated ⋯ lifecycle menu", () => {
+    renderOverview(<AllSkillsOverview skills={[mk("l1", "legal")]} categories={categories} {...handlers()} />);
+    expect(screen.getByRole("button", { name: "Skill actions for l1" })).toBeInTheDocument();
+  });
 });
