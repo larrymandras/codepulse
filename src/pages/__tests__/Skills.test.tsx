@@ -8,6 +8,10 @@ const mockCreateCat = vi.fn().mockResolvedValue(undefined);
 const mockDeleteCat = vi.fn().mockResolvedValue(undefined);
 const mockBulkAccept = vi.fn().mockResolvedValue(undefined);
 const mockSeedAll = vi.fn().mockResolvedValue(undefined);
+// Plan 100-04: handleDropOnScope's direct-enqueue branch and the page-level
+// MoveToProjectDialog stub both resolve api.forge.enqueueLifecycle to this
+// one spy, so the integration drop tests below can assert call args/absence.
+const mockEnqueueLifecycle = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(),
@@ -19,6 +23,7 @@ vi.mock("convex/react", () => ({
     if (ref === "mock-deleteCategory") return mockDeleteCat;
     if (ref === "mock-bulkAcceptAutoAssigned") return mockBulkAccept;
     if (ref === "mock-seedExistingSkills") return mockSeedAll;
+    if (ref === "mock-enqueueLifecycle") return mockEnqueueLifecycle;
     return vi.fn().mockResolvedValue(undefined);
   }),
 }));
@@ -78,6 +83,26 @@ vi.mock("@/components/forge/ForgeLaunchModal", () => ({
 // stays isolated from api.forge queries.
 vi.mock("@/components/skills/IntakeModal", () => ({
   IntakeModal: () => null,
+}));
+
+// The page-level MoveToProjectDialog (Plan 100-04) is stubbed to a marker div
+// — its own workspace-picker behavior is covered by MoveToProjectDialog.test.
+// tsx. This suite only needs to assert Skills.tsx opened it (or didn't) and
+// with which skillName/sourceOrigin, without pulling in its own Convex
+// listWorkspaces query / Radix Select internals.
+vi.mock("@/components/skills/MoveToProjectDialog", () => ({
+  MoveToProjectDialog: (props: {
+    open: boolean;
+    skillName: string;
+    sourceOrigin: string;
+  }) => (
+    <div
+      data-testid="move-to-project-dialog-stub"
+      data-open={String(props.open)}
+      data-skill={props.skillName}
+      data-source={props.sourceOrigin}
+    />
+  ),
 }));
 vi.mock("@/hooks/useIntakeFeed", () => ({
   useIntakeFeed: () => ({
@@ -210,6 +235,80 @@ const MOCK_WITH_DORMANT = [
     useCount: 0,
     discoveredAt: 1004,
     origins: [DORMANT_ORIGIN],
+  },
+];
+
+// Plan 100-04 integration drop-matrix fixtures — one skill per resolveScopeDrop
+// branch under test. `categoryName: "legal"` so needsSeed never trips (MOCK_
+// CATEGORIES already declares that category).
+const DROP_TEST_SKILLS = [
+  {
+    _id: "d1",
+    name: "active-global-skill",
+    displayName: "Active Global Skill",
+    description: "",
+    categoryName: "legal",
+    categoryDisplayName: "Legal",
+    categoryIcon: "⚖️",
+    categoryColor: "red",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: false,
+    favorite: false,
+    useCount: 0,
+    discoveredAt: 2001,
+    origins: ["claude-code"],
+  },
+  {
+    _id: "d2",
+    name: "active-project-skill",
+    displayName: "Active Project Skill",
+    description: "",
+    categoryName: "legal",
+    categoryDisplayName: "Legal",
+    categoryIcon: "⚖️",
+    categoryColor: "red",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: false,
+    favorite: false,
+    useCount: 0,
+    discoveredAt: 2002,
+    origins: ["claude-code:project:abc1234"],
+  },
+  {
+    _id: "d3",
+    name: "dormant-skill",
+    displayName: "Dormant Skill",
+    description: "",
+    categoryName: null as string | null,
+    categoryDisplayName: null as string | null,
+    categoryIcon: "⚡",
+    categoryColor: "gray",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: false,
+    favorite: false,
+    useCount: 0,
+    discoveredAt: 2003,
+    origins: [DORMANT_ORIGIN],
+  },
+  {
+    _id: "d4",
+    name: "multi-scope-skill",
+    displayName: "Multi Scope Skill",
+    description: "",
+    categoryName: "legal",
+    categoryDisplayName: "Legal",
+    categoryIcon: "⚖️",
+    categoryColor: "red",
+    overrideDescription: null,
+    hidden: false,
+    isAutoAssigned: false,
+    favorite: false,
+    useCount: 0,
+    discoveredAt: 2004,
+    origins: ["claude-code", "claude-code:project:abc1234"],
   },
 ];
 
@@ -442,6 +541,94 @@ describe("Skills page", () => {
       expect(within(coldStorageButton).getByText("1")).toBeInTheDocument();
       fireEvent.click(coldStorageButton);
       expect(screen.getByText("Shadowed Tool")).toBeInTheDocument();
+    });
+  });
+
+  // Plan 100-04: integration drop tests over the ScopeRail wiring —
+  // handleDropOnScope dispatching through resolveScopeDrop (D-02). Fires a
+  // native drop event directly on a `[data-scope]` entry with a plain-object
+  // dataTransfer (mirrors ScopeRail.test.tsx's own `fireEvent.drop` convention)
+  // — no drag-start simulation needed, since handleDropOnScope resolves the
+  // skill from `dataTransfer.getData` alone, not from the dragging-skill
+  // context (that context only drives ScopeRail's own hover highlight).
+  describe("Scope drag matrix (Plan 100-04)", () => {
+    function getScopeEntry(container: HTMLElement, scope: string) {
+      const el = container.querySelector(`[data-testid="scope-rail-entry"][data-scope="${scope}"]`);
+      if (!el) throw new Error(`Scope entry "${scope}" not found`);
+      return el;
+    }
+
+    function dropSkillOnScope(container: HTMLElement, scope: string, skillName: string) {
+      const entry = getScopeEntry(container, scope);
+      fireEvent.drop(entry, { dataTransfer: { getData: () => skillName } });
+    }
+
+    beforeEach(() => {
+      setupMocks(DROP_TEST_SKILLS as any);
+    });
+
+    it("drop active-global skill onto Cold -> enqueueLifecycle(archive, claude-code, cold); no dialog", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "cold", "active-global-skill");
+
+      expect(mockEnqueueLifecycle).toHaveBeenCalledTimes(1);
+      expect(mockEnqueueLifecycle.mock.calls[0][0]).toMatchObject({
+        action: "archive",
+        sourceOrigin: "claude-code",
+        destination: "cold",
+        skillName: "active-global-skill",
+      });
+      expect(
+        screen.getByTestId("move-to-project-dialog-stub")
+      ).toHaveAttribute("data-open", "false");
+    });
+
+    it("drop active-project skill onto Global -> enqueueLifecycle(move, project origin, global)", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "global", "active-project-skill");
+
+      expect(mockEnqueueLifecycle).toHaveBeenCalledTimes(1);
+      expect(mockEnqueueLifecycle.mock.calls[0][0]).toMatchObject({
+        action: "move",
+        sourceOrigin: "claude-code:project:abc1234",
+        destination: "global",
+        skillName: "active-project-skill",
+      });
+    });
+
+    it("drop active-global skill onto Project -> opens MoveToProjectDialog, no enqueue at drop time (Pitfall 2)", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "project", "active-global-skill");
+
+      expect(mockEnqueueLifecycle).not.toHaveBeenCalled();
+      const dialogStub = screen.getByTestId("move-to-project-dialog-stub");
+      expect(dialogStub).toHaveAttribute("data-open", "true");
+      expect(dialogStub).toHaveAttribute("data-skill", "active-global-skill");
+      expect(dialogStub).toHaveAttribute("data-source", "claude-code");
+    });
+
+    it("drop dormant skill onto Project -> invalid, no enqueue, no dialog", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "project", "dormant-skill");
+
+      expect(mockEnqueueLifecycle).not.toHaveBeenCalled();
+      expect(
+        screen.getByTestId("move-to-project-dialog-stub")
+      ).toHaveAttribute("data-open", "false");
+    });
+
+    it("drop multi-scope skill onto any lane -> invalid, no enqueue", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "cold", "multi-scope-skill");
+
+      expect(mockEnqueueLifecycle).not.toHaveBeenCalled();
+    });
+
+    it("drop active-global skill onto Global (own scope) -> noop, no enqueue", () => {
+      const { container } = render(<Skills />);
+      dropSkillOnScope(container, "global", "active-global-skill");
+
+      expect(mockEnqueueLifecycle).not.toHaveBeenCalled();
     });
   });
 });
