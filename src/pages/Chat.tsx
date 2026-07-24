@@ -21,13 +21,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Send, Mic, MicOff, WifiOff, AlertCircle, Eye } from "lucide-react";
+import { Send, Mic, MicOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
-import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
-import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
-import { SwapBadge } from "@/components/voice/SwapBadge";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
 import { useScreenShare } from "@/hooks/useScreenShare";
@@ -364,20 +361,6 @@ export default function Chat() {
           ? "Thinking…"
           : "Say “Hey Ástríðr”";
 
-  const pill = disconnected
-    ? { text: "OFFLINE", cls: "text-muted-foreground bg-muted border-border", dot: false }
-    : !listening
-      ? { text: "LISTENING OFF", cls: "text-muted-foreground bg-muted border-border", dot: false }
-      : voiceError
-        ? { text: "VOICE ERROR", cls: "text-(--status-warn) bg-(--status-warn)/10 border-(--status-warn)/30", dot: false }
-        : voice.conversationActive
-          ? voice.voiceState === "speaking"
-            ? { text: "SPEAKING", cls: "text-primary bg-primary/10 border-primary/30", dot: true }
-            : voice.voiceState === "processing" || isStreaming
-              ? { text: "THINKING", cls: "text-primary bg-primary/10 border-primary/30", dot: true }
-              : { text: "LIVE", cls: "text-primary bg-primary/10 border-primary/30", dot: true }
-          : { text: "ARMED", cls: "text-primary/80 bg-primary/5 border-primary/20", dot: true };
-
   const showBars =
     listening &&
     voice.conversationActive &&
@@ -414,14 +397,6 @@ export default function Chat() {
               COPY TRACE
             </button>
           )}
-          <TooltipProvider delayDuration={300}>
-            <StrictModeToggle enabled={strictMode} onToggle={handleStrictModeChange} />
-            <ShareScreenToggle
-              state={screenShare.state}
-              onStart={screenShare.start}
-              onStop={screenShare.stop}
-            />
-          </TooltipProvider>
           {/* Listening on/off — full off = text-only */}
           <button
             type="button"
@@ -454,33 +429,20 @@ export default function Chat() {
             <AvatarAura state={avatarState} ttsAnalyser={null} />
           </div>
 
-          {/* Vital Signs — read-only status indicators, grouped beside the avatar */}
-          <div className="rounded-xl border border-border p-3 flex flex-col gap-2">
-            <span className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
-              VITAL SIGNS
-            </span>
-            {disconnected ? (
-              <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-wide text-muted-foreground px-2.5 py-1 rounded-full bg-muted border border-border">
-                <WifiOff className="w-3 h-3" /> OFFLINE
-              </span>
-            ) : (
-              <span
-                className={`flex items-center gap-1.5 font-mono text-[10px] tracking-wide px-2.5 py-1 rounded-full border ${pill.cls}`}
-              >
-                {pill.dot && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_var(--primary)] animate-pulse" />
-                )}
-                {pill.text}
-              </span>
-            )}
-            <TooltipProvider delayDuration={300}>
-              <SwapBadge
-                modelOverride={swapState.modelOverride}
-                voiceOverride={swapState.voiceOverride}
-                lastModel={lastTurnModel}
-              />
-            </TooltipProvider>
-          </div>
+          {/* Control Center (D-17) — relocated header cluster + focus/DND/readiness,
+              right of the aura ("plenty of real estate on the right side of her aura") */}
+          <ControlCenterPanel
+            disconnected={disconnected}
+            voiceState={avatarState}
+            strictMode={strictMode}
+            onStrictModeChange={handleStrictModeChange}
+            screenShareState={screenShare.state}
+            onScreenShareStart={screenShare.start}
+            onScreenShareStop={screenShare.stop}
+            swapModelOverride={swapState.modelOverride}
+            swapVoiceOverride={swapState.voiceOverride}
+            lastTurnModel={lastTurnModel}
+          />
         </div>
 
         <div className="mt-2 flex items-center gap-2 text-sm text-foreground/90">
