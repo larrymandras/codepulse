@@ -11,9 +11,20 @@ import {
   hasKnownUpstream,
   topSkills,
   deckSkills,
+  resolveLifecycleActions,
+  resolveScopeDrop,
 } from "./skills";
 
 const proj = (h: string) => `claude-code:project:${h}`;
+
+// Mirrors SkillLifecycleMenu.test.tsx's 5 canonical fixtures exactly (same
+// origins shapes) so resolveLifecycleActions/resolveScopeDrop are proven to
+// reproduce the menu's real inline predicate, not just an idealized case.
+const activeGlobal = { name: "legal", origins: ["claude-code"] };
+const activeProject = { name: "legal", origins: [proj("abc1234")] };
+const dormantFixture = { name: "legal", origins: [DORMANT_ORIGIN] };
+const multiScopeFixture = { name: "legal", origins: ["claude-code", proj("abc1234")] };
+const shadowedMerged = { name: "legal", origins: [DORMANT_ORIGIN, "claude-code"] };
 
 describe("isDormant / isShadowing", () => {
   it("dormant when every origin is cold storage", () => {
@@ -169,6 +180,166 @@ describe("topSkills", () => {
   it("respects the limit", () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ name: `s${i}`, origins: ["claude-code"], useCount: i + 1 }));
     expect(topSkills(many, 8)).toHaveLength(8);
+  });
+});
+
+describe("resolveLifecycleActions (100-01: parity with SkillLifecycleMenu's former inline block)", () => {
+  it("activeGlobal: single global origin, not dormant/shadowed/multiScope, move destination is Project", () => {
+    expect(resolveLifecycleActions(activeGlobal)).toEqual({
+      dormant: false,
+      shadowed: false,
+      multiScope: false,
+      activeOrigin: "claude-code",
+      moveDestinationIsProject: true,
+    });
+  });
+
+  it("activeProject: single project origin, move destination is Global", () => {
+    expect(resolveLifecycleActions(activeProject)).toEqual({
+      dormant: false,
+      shadowed: false,
+      multiScope: false,
+      activeOrigin: proj("abc1234"),
+      moveDestinationIsProject: false,
+    });
+  });
+
+  it("dormant: every origin is cold storage, no activeOrigin", () => {
+    expect(resolveLifecycleActions(dormantFixture)).toEqual({
+      dormant: true,
+      shadowed: false,
+      multiScope: false,
+      activeOrigin: undefined,
+      moveDestinationIsProject: false,
+    });
+  });
+
+  it("multiScope: two non-dormant origins, no single activeOrigin", () => {
+    expect(resolveLifecycleActions(multiScopeFixture)).toEqual({
+      dormant: false,
+      shadowed: false,
+      multiScope: true,
+      activeOrigin: undefined,
+      moveDestinationIsProject: false,
+    });
+  });
+
+  it("shadowedMerged: dormant copy + active global copy — shadowed true, dormant false (not EVERY origin is dormant)", () => {
+    expect(resolveLifecycleActions(shadowedMerged)).toEqual({
+      dormant: false,
+      shadowed: true,
+      multiScope: false,
+      activeOrigin: "claude-code",
+      moveDestinationIsProject: true,
+    });
+  });
+
+  it("lane=\"cold\" forces dormant=true regardless of origins (WR-04 cold-lane override)", () => {
+    expect(resolveLifecycleActions(shadowedMerged, "cold").dormant).toBe(true);
+    expect(resolveLifecycleActions(dormantFixture, "cold").dormant).toBe(true);
+  });
+});
+
+describe("resolveScopeDrop (100-01: the complete drag matrix, D-02/D-04)", () => {
+  describe("active-global source", () => {
+    it("→global is a same-scope noop", () => {
+      expect(resolveScopeDrop(activeGlobal, "global")).toEqual({ kind: "noop" });
+    });
+    it("→project opens the MoveToProjectDialog", () => {
+      expect(resolveScopeDrop(activeGlobal, "project")).toEqual({ kind: "dialog" });
+    });
+    it("→cold enqueues archive", () => {
+      expect(resolveScopeDrop(activeGlobal, "cold")).toEqual({
+        kind: "enqueue",
+        action: "archive",
+        sourceOrigin: "claude-code",
+        destination: "cold",
+      });
+    });
+  });
+
+  describe("active-project source", () => {
+    it("→global enqueues move", () => {
+      expect(resolveScopeDrop(activeProject, "global")).toEqual({
+        kind: "enqueue",
+        action: "move",
+        sourceOrigin: proj("abc1234"),
+        destination: "global",
+      });
+    });
+    it("→project is a same-scope noop", () => {
+      expect(resolveScopeDrop(activeProject, "project")).toEqual({ kind: "noop" });
+    });
+    it("→cold enqueues archive", () => {
+      expect(resolveScopeDrop(activeProject, "cold")).toEqual({
+        kind: "enqueue",
+        action: "archive",
+        sourceOrigin: proj("abc1234"),
+        destination: "cold",
+      });
+    });
+  });
+
+  describe("dormant (not shadowed) source", () => {
+    it("→global enqueues restore", () => {
+      expect(resolveScopeDrop(dormantFixture, "global")).toEqual({
+        kind: "enqueue",
+        action: "restore",
+        sourceOrigin: DORMANT_ORIGIN,
+        destination: "global",
+      });
+    });
+    it("→project rejects with the restore-first hint", () => {
+      expect(resolveScopeDrop(dormantFixture, "project")).toEqual({
+        kind: "reject",
+        hint: "Restore to Global first, then move.",
+      });
+    });
+    it("→cold is a same-scope noop (already cold)", () => {
+      expect(resolveScopeDrop(dormantFixture, "cold")).toEqual({ kind: "noop" });
+    });
+  });
+
+  describe("dormant AND shadowed source (WR-04: a shadowed-merged row dragged from the Cold Storage lane)", () => {
+    // shadowedMerged (origins [DORMANT_ORIGIN, "claude-code"]) is dormant=false
+    // under the DEFAULT "active" lane (isDormant requires EVERY origin to be
+    // dormant) — it only becomes dormant+shadowed via lane="cold", exactly as
+    // SkillLifecycleMenu forces dormant=true for rows rendered in Cold Storage
+    // (98-REVIEW WR-04). Drag from that lane must pass lane="cold" through.
+    it("→global rejects (shadow-blocked)", () => {
+      expect(resolveScopeDrop(shadowedMerged, "global", "cold")).toEqual({
+        kind: "reject",
+        hint: "Shadowed by an active skill — archive it first.",
+      });
+    });
+    it("→project rejects", () => {
+      const result = resolveScopeDrop(shadowedMerged, "project", "cold");
+      expect(result.kind).toBe("reject");
+    });
+    it("→cold is a noop (already cold)", () => {
+      expect(resolveScopeDrop(shadowedMerged, "cold", "cold")).toEqual({ kind: "noop" });
+    });
+  });
+
+  describe("multi-scope source rejects every lane", () => {
+    it("→global rejects with the disambiguation hint", () => {
+      expect(resolveScopeDrop(multiScopeFixture, "global")).toEqual({
+        kind: "reject",
+        hint: "Active in multiple scopes — disambiguation ships in a later release.",
+      });
+    });
+    it("→project rejects with the disambiguation hint", () => {
+      expect(resolveScopeDrop(multiScopeFixture, "project")).toEqual({
+        kind: "reject",
+        hint: "Active in multiple scopes — disambiguation ships in a later release.",
+      });
+    });
+    it("→cold rejects with the disambiguation hint", () => {
+      expect(resolveScopeDrop(multiScopeFixture, "cold")).toEqual({
+        kind: "reject",
+        hint: "Active in multiple scopes — disambiguation ships in a later release.",
+      });
+    });
   });
 });
 

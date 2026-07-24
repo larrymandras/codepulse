@@ -38,6 +38,111 @@ export function hasDormantCopy(skill: SkillLike): boolean {
   return (skill.origins ?? []).includes(DORMANT_ORIGIN);
 }
 
+/** Result of {@link resolveLifecycleActions} — the shared scope-state predicate. */
+export type LifecycleActionState = {
+  dormant: boolean;
+  shadowed: boolean;
+  multiScope: boolean;
+  activeOrigin?: string;
+  moveDestinationIsProject: boolean;
+};
+
+/**
+ * The ⋯ menu's per-row scope predicate, extracted so the drag matrix
+ * (resolveScopeDrop) can never diverge from what the menu offers (D-02).
+ * Reproduces SkillLifecycleMenu.tsx's former inline block byte-for-behavior.
+ */
+export function resolveLifecycleActions(
+  skill: SkillLike,
+  lane: "active" | "cold" = "active"
+): LifecycleActionState {
+  const dormant = isDormant(skill) || lane === "cold";
+  const shadowed = isShadowing(skill);
+  const nonDormantOrigins = (skill.origins ?? []).filter((o) => o !== DORMANT_ORIGIN);
+  const multiScope = nonDormantOrigins.length > 1;
+  const activeOrigin = nonDormantOrigins.length === 1 ? nonDormantOrigins[0] : undefined;
+  return {
+    dormant,
+    shadowed,
+    multiScope,
+    activeOrigin,
+    moveDestinationIsProject: activeOrigin === "claude-code",
+  };
+}
+
+/** Result of {@link resolveScopeDrop} — a discriminated drag-matrix decision. */
+export type ScopeDropResult =
+  | { kind: "noop" }
+  | { kind: "reject"; hint: string }
+  | { kind: "dialog" }
+  | {
+      kind: "enqueue";
+      action: "archive" | "restore" | "move";
+      sourceOrigin: string;
+      destination: "global" | "project" | "cold";
+    };
+
+/**
+ * The complete drag matrix (D-02/D-04), encoded as a pure, testable decision.
+ * Mirrors resolveLifecycleActions exactly — the ⋯ menu and the drag path
+ * derive their allowed actions from this ONE shared predicate, so they can
+ * never drift out of sync. Delete is NEVER a possible result — drag never
+ * deletes (D-04); permanent delete stays menu-only behind type-to-confirm.
+ *
+ * `lane` mirrors resolveLifecycleActions' own param (default "active") — a
+ * drag originating from the Cold Storage rail passes lane="cold" so a
+ * shadowed-merged row (WR-04) is treated as dormant+shadowed here exactly as
+ * the menu treats it, instead of falling through to the active-global branch.
+ */
+export function resolveScopeDrop(
+  skill: SkillLike,
+  targetScope: "global" | "project" | "cold",
+  lane: "active" | "cold" = "active"
+): ScopeDropResult {
+  const { dormant, shadowed, multiScope, activeOrigin } = resolveLifecycleActions(skill, lane);
+
+  if (multiScope) {
+    return {
+      kind: "reject",
+      hint: "Active in multiple scopes — disambiguation ships in a later release.",
+    };
+  }
+
+  if (dormant) {
+    if (targetScope === "cold") {
+      // Already cold regardless of shadow status — same-scope noop.
+      return { kind: "noop" };
+    }
+    if (shadowed) {
+      return { kind: "reject", hint: "Shadowed by an active skill — archive it first." };
+    }
+    if (targetScope === "global") {
+      return { kind: "enqueue", action: "restore", sourceOrigin: DORMANT_ORIGIN, destination: "global" };
+    }
+    return { kind: "reject", hint: "Restore to Global first, then move." };
+  }
+
+  const isActiveGlobal = activeOrigin === "claude-code";
+  const isActiveProject = activeOrigin?.startsWith(PROJECT_PREFIX) ?? false;
+
+  if (isActiveGlobal) {
+    if (targetScope === "global") return { kind: "noop" };
+    if (targetScope === "project") return { kind: "dialog" };
+    return { kind: "enqueue", action: "archive", sourceOrigin: "claude-code", destination: "cold" };
+  }
+
+  if (isActiveProject && activeOrigin) {
+    if (targetScope === "global") {
+      return { kind: "enqueue", action: "move", sourceOrigin: activeOrigin, destination: "global" };
+    }
+    if (targetScope === "project") return { kind: "noop" };
+    return { kind: "enqueue", action: "archive", sourceOrigin: activeOrigin, destination: "cold" };
+  }
+
+  // Defensive fallback — should be unreachable given the shapes above.
+  return { kind: "noop" };
+}
+
 /**
  * Recover the repo directory name from a project skill's SKILL.md path, so five
  * `claude-code:project:<hash>` origins don't all render as an identical "Project".
