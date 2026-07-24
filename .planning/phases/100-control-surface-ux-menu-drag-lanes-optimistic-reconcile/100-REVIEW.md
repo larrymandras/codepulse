@@ -16,8 +16,27 @@ findings:
   warning: 1
   info: 1
   total: 4
-status: issues_found
+resolved:
+  - CR-01
+  - CR-02
+  - IN-01
+accepted:
+  - WR-01
+status: resolved
+resolution_commit: 5f68801
 ---
+
+# Phase 100: Code Review Report
+
+> **Resolution (2026-07-24, commit `5f68801`):** CR-01, CR-02, and IN-01 fixed
+> and covered by new regression tests (111 affected tests green, tsc clean).
+> CR-02 mechanism, reachability (`ColdStorageView` renders draggable shadowed
+> rows with `lane="cold"`), and destructiveness were verified against live code
+> before fixing. WR-01 accepted as-is: the just-enqueued command is `queued`
+> (never terminal) when `onMoved`→`beginPending` runs, so the reactive
+> `lifecycleCommands` update reconciles it normally; the proposed fix (adding
+> `pending` to the reconcile effect deps) would reintroduce the render loop the
+> code deliberately avoids. See below for the original findings.
 
 # Phase 100: Code Review Report
 
