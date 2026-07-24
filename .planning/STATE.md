@@ -2,23 +2,22 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: executing
-stopped_at: Phase 100 Plan 05 executed — SkillRow pending overlay + drag reporting + UX-01/UX-04 audit
-last_updated: "2026-07-24T13:10:00.000Z"
-last_activity: 2026-07-24 -- Phase 100 Plan 05 (SkillRow pending overlay + menu/manage-skills audit) complete
+status: verifying
+stopped_at: Phase 100 Plan 04 executed — Skills.tsx integration, ScopeRail wired, MoveToProjectDialog.onMoved widened, integration drop tests (5/5 Phase 100 plans code-complete)
+last_updated: "2026-07-24T13:27:00.000Z"
+last_activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring) complete — Phase 100 and v11.0 milestone now code-complete; live-Forge-daemon UAT outstanding
 progress:
   total_phases: 4
-  completed_phases: 3
-  total_plans: 22
-  completed_plans: 21
-  percent: 75
+  completed_phases: 4
+  total_plans: 23
+  completed_plans: 23
+  percent: 100
 ---
 
-<!-- Counters hand-reconciled 2026-07-23 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 99 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete verbs run).
-     ACTIVE MILESTONE = v11.0 (Skills, Phases 97-100): 97 COMPLETE (6 plans), 98 COMPLETE (5 plans), 99 COMPLETE (7 plans = 6 build + 99-07 gap closure), 100 NOT started — completed_plans:18 = 97's 6 + 98's 5 + 99's 7; total_plans:18 (100 still TBD); percent by phase = 3/4 = 75.
+<!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
+     ACTIVE MILESTONE = v11.0 (Skills, Phases 97-100): 97 COMPLETE (6 plans), 98 COMPLETE (5 plans), 99 COMPLETE (7 plans = 6 build + 99-07 gap closure), 100 COMPLETE (5 plans: 100-01/02/03/05/04) — completed_plans:23 = 6+5+7+5; total_plans:23; percent by phase = 4/4 = 100.
+     v11.0 is now CODE-COMPLETE across all 4 phases. NOT yet formally milestone-closed (no MILESTONE-AUDIT.md, no git tag, no /gsd-new-milestone handoff) — that closing ceremony is a separate step from this plan's execution scope. Phase 97's own INTAKE-01..04/DAEMON-01/DAEMON-04 requirements remain "Pending" in REQUIREMENTS.md's traceability table despite Phase 97 shipping live-verified 2026-07-19 (a pre-existing gap from that phase's own close, not touched by Phase 100's execution). Phase 100's own manual live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) remains outstanding, same category as Phase 98/99's own deferred manual checks.
      v12.0 (Reminders & Calendar, Phases 101-102) SHIPPED & ARCHIVED 2026-07-23 (10/10 plans, tagged v12.0) — closed by hand (extract-don't-delete: REQUIREMENTS.md kept live, only the v12.0 section extracted to milestones/v12.0-REQUIREMENTS.md; ROADMAP.md collapsed; audit moved to milestones/). v12.0 scope was Phases 101 (7 plans incl. 101-07 gap closure) + 102 (3 plans, tech-debt close-out).
-     v11.0 (Phases 97-100) detail:
-     Phase 97 COMPLETE (6/6, verified 495946f); Phase 98 COMPLETE (5/5 incl. 98-05 gap closure, verified + UAT approved 2026-07-21, gap closed 2026-07-22); Phases 99/100 not started.
      NOTE 2026-07-22: this file's WORKING COPY was found reverted to an earlier "executing / Plan 1 of 5" snapshot at the
      start of Plan 98-05's execution (frontmatter status/stopped_at/Current Position all regressed vs. the committed
      HEAD, which correctly showed Phase 98 as milestone_complete/4-4-done) — the same gsd-sdk state.* full-frontmatter-
@@ -36,13 +35,13 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — EXECUTING
-Plan: 4 of 5 EXECUTED (100-01, 100-02, 100-03, 100-05; see 100-05-SUMMARY.md); only Plan 4 of 5 (100-04, Wave 3) remains
-Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99 COMPLETE; **at Phase 100 (Control-Surface UX)**, the last phase of v11.0, which depends on both 98 and 99 (now both done).
-Status: Executing Phase 100
+Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — CODE-COMPLETE (5/5 plans)
+Plan: 5 of 5 EXECUTED (100-01, 100-02, 100-03, 100-05, 100-04; see 100-04-SUMMARY.md) — Phase 100 is now fully code-complete. Manual live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) is the only outstanding item, same category as the Phase 98/99 deferred manual checks.
+Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99/100 all now CODE-COMPLETE (4/4). Not yet formally milestone-closed (no MILESTONE-AUDIT.md/tag/handoff yet — separate step).
+Status: Verifying (Phase 100 code-complete; live UAT + formal milestone close outstanding)
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-24 -- Phase 100 Plan 05 (SkillRow pending overlay + menu/manage-skills audit) complete
+Last activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring: Skills.tsx + MoveToProjectDialog + integration drop tests) complete
 
 **v11.0 resumed:** Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch), 100 (Control-Surface UX) NOT started.
 
@@ -132,6 +131,18 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v11.0 / Phase 100 Plan 04 decisions (2026-07-24, final control-surface wiring — Skills.tsx + MoveToProjectDialog + integration drop tests, closes out Phase 100):**
+
+- **`dropTargetScope` is fully independent from the category rail's `dropTarget`** — `handleDropOnCategory` and its state are byte-unchanged; `ScopeRail` is mounted as a sibling section immediately below the `CategoryGrid` block (Pitfall 5).
+- **`handleDropOnScope` never enqueues on a `dialog` result** — it only calls `setScopeMoveDialog`, opening the page-level `MoveToProjectDialog`; the pending paint (`beginPending`) begins exclusively in the dialog's own `onMoved` callback (fired after a successful `enqueueLifecycle` inside the dialog's `handleConfirm`), never at drop time (D-03, Pitfall 2/4).
+- **The enqueue branch calls `beginPending` synchronously before `enqueueLifecycle`**, with a `.catch()` that calls `clearPending` + `toast.error(lifecycleRefusalMessage(err))` — the only rollback path for a LAYER-1 synchronous preflight refusal, since no `forgeCommands` row is ever created for that case and the async reconcile effect (Plan 02) alone could never clear it (Pitfall 3).
+- **Host resolved via the existing `resolveHostId(useForgeHostsRaw() ?? [], undefined)` export** from `SkillLifecycleMenu.tsx` — no new host-resolution mechanism invented, matching every other lifecycle call site.
+- **Rule 1 auto-fix:** mounting `ScopeRail` made 5 pre-existing `Skills.test.tsx` selectors ambiguous — `ScopeRail`'s own always-visible "Cold Storage" scope entry (Plan 03's fixed 3-entry rail) collided with the pre-existing left-rail Cold-Storage nav-toggle button (both `role="button"`, both containing the text "Cold Storage"). Added `data-testid="cold-storage-nav-toggle"` to the pre-existing button and re-scoped the 5 affected tests to that testid rather than changing either component's visible copy.
+- **TDD gate closed per the 100-03 precedent** for a plan where the dedicated test task (Task 3) necessarily follows its own implementation (Tasks 1-2): `handleDropOnScope` was temporarily neutered (early `return`) to confirm a genuine RED (3/3 mutation-affected cases failed with the expected assertion errors: `enqueueLifecycle` called 0 times instead of 1, dialog stub `data-open="false"` instead of `"true"`), then restored byte-identical (diffed against a pre-mutation backup — confirmed identical) and reconfirmed GREEN (27/27).
+- **Phase 100 is now 5/5 plans code-complete** (100-01, 100-02, 100-03, 100-05, 100-04) — v11.0's last phase. UX-01..04 marked Complete in REQUIREMENTS.md at this phase-close, matching the LIFE-01..06/LAUNCH-01..04 precedent from Phases 98/99 (requirements marked Complete once all planned code plans land, with the phase's own manual/live-daemon verification tracked as deferred/accepted tech debt, not a blocker to marking). This plan's own `<verification>` section still lists a live-Forge-daemon drag round-trip (archive/move/restore + honest rollback) as outstanding manual verification.
+- **Full suite verified green post-wiring:** 215 test files / 2515 tests passed, 0 failures; `tsc --noEmit` clean (excluding pre-existing `TS7006` errors in `src/pages/Inbox.tsx` from a concurrent unrelated session, per this plan's own scope boundary — untouched, not staged).
+- **Executed sequentially on `master`** (worktrees disabled per `config.json`); STATE.md/ROADMAP.md/REQUIREMENTS.md updated by hand per this file's established anti-clobber workaround — no `gsd-sdk state.*`/`roadmap.update-plan-progress`/`requirements.mark-complete` verbs run.
 
 **v11.0 / Phase 100 Plan 05 decisions (2026-07-24, SkillRow pending overlay + drag reporting + UX-01/UX-04 audit):**
 

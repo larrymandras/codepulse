@@ -33,10 +33,10 @@
 
 ### UX — Control-Surface Interaction
 
-- [ ] **UX-01**: Every skill row exposes an overflow menu (⋯) with the applicable lifecycle + run actions (Move, Restore, Archive, Delete, Run), each gated by the skill's current scope.
-- [ ] **UX-02**: The Skills page presents Global / Project / Cold Storage as drag targets; dragging a skill across scopes fires the corresponding move / archive / restore command (extends today's drag-to-category).
-- [ ] **UX-03**: Mutating actions paint an optimistic/pending state and reconcile against the server command row (reuses the intake optimistic-row pattern), with clear success / failure / expiry feedback.
-- [ ] **UX-04**: The Cold Storage view offers in-app restore — the "run `/manage-skills` in a terminal" dead-end is removed.
+- [x] **UX-01**: Every skill row exposes an overflow menu (⋯) with the applicable lifecycle + run actions (Move, Restore, Archive, Delete, Run), each gated by the skill's current scope.
+- [x] **UX-02**: The Skills page presents Global / Project / Cold Storage as drag targets; dragging a skill across scopes fires the corresponding move / archive / restore command (extends today's drag-to-category).
+- [x] **UX-03**: Mutating actions paint an optimistic/pending state and reconcile against the server command row (reuses the intake optimistic-row pattern), with clear success / failure / expiry feedback.
+- [x] **UX-04**: The Cold Storage view offers in-app restore — the "run `/manage-skills` in a terminal" dead-end is removed.
 
 ### DAEMON — Host Executor & Registry Rescan (cross-repo)
 
@@ -83,9 +83,11 @@
 | LAUNCH-02 | Phase 99 | Complete |
 | LAUNCH-03 | Phase 99 | Complete |
 | LAUNCH-04 | Phase 99 | Complete |
-| UX-01 | Phase 100 | Pending |
-| UX-02 | Phase 100 | Pending |
-| UX-03 | Phase 100 | Pending |
-| UX-04 | Phase 100 | Pending |
+| UX-01 | Phase 100 | Complete |
+| UX-02 | Phase 100 | Complete |
+| UX-03 | Phase 100 | Complete |
+| UX-04 | Phase 100 | Complete |
 
 **Coverage:** 22/22 v1 requirements mapped — no orphans, no duplicates.
+
+**Note (2026-07-24, Phase 100 close):** Marked Complete at phase-close (5/5 plans code-complete), matching the Phase 98/99 precedent — the phase's own manual, live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) remains outstanding and is tracked as deferred/accepted-tech-debt verification, not a gap in delivered code (see 100-04-SUMMARY.md "Next Phase Readiness").

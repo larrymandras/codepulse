@@ -477,7 +477,7 @@ Plans:
 - [x] **Phase 97 — Real Skill Intake & Daemon Foundation** — execute today's dry-run install (upload / GitHub URL) to global/project/cold storage; Forge daemon executes intake + rescans the registry; advertises supported command types (completed 2026-07-19)
 - [x] **Phase 98 — Skill Lifecycle Mutations** — archive / restore / move / delete, archive-first, `isShadowing`-aware, honest when the daemon is offline (completed 2026-07-21)
 - [x] **Phase 99 — Skill Launch / Dispatch** — real Run to Chat (auto-send) / Forge agent / Ástríðr, not just a prefilled composer (completed 2026-07-23)
-- [ ] **Phase 100 — Control-Surface UX** — per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore
+- [x] **Phase 100 — Control-Surface UX** — per-row ⋯ menu + drag across scope lanes + optimistic reconcile + in-app Cold Storage restore (5/5 plans code-complete 2026-07-24; manual live-Forge-daemon UAT outstanding)
 
 **Execution order:** 97 → 98 (98 reuses the daemon command-execution + registry-rescan plumbing 97 builds) · 99 is independent of 97/98 (rides existing chat/Forge/Ástríðr channels, no daemon dependency) and can run in parallel · 100 depends on **both** 98 (lifecycle mutations) and 99 (Run target picker) since the ⋯ menu and drag lanes wire against both, so it is sequenced last.
 
@@ -590,7 +590,7 @@ Plans:
   - [x] 100-01-PLAN.md — Wave 1: extract shared `resolveLifecycleActions` + `resolveScopeDrop` pure helpers (drag matrix = source of truth) + behavior-preserving SkillLifecycleMenu refactor (UX-01, UX-02) — completed 2026-07-24, see 100-01-SUMMARY.md
   - [x] 100-02-PLAN.md — Wave 1: `usePendingLifecycleMoves` commandId-correlated optimistic hook + status-aware reconcile + `SkillControlSurfaceProvider` context (UX-03) — completed 2026-07-24, see 100-02-SUMMARY.md
   - [x] 100-03-PLAN.md — Wave 2: `ScopeRail` component — 3 always-visible Global/Project/Cold drop targets, valid/invalid/idle states + inline reject hint (UX-02) — completed 2026-07-24, see 100-03-SUMMARY.md
-  - [ ] 100-04-PLAN.md — Wave 3: Skills.tsx integration — `handleDropOnScope` dispatch, paint-before-await + LAYER-1 `.catch()` rollback, page-level Project dialog wiring, `MoveToProjectDialog.onMoved(commandId)` (UX-02, UX-03)
+  - [x] 100-04-PLAN.md — Wave 3: Skills.tsx integration — `handleDropOnScope` dispatch, paint-before-await + LAYER-1 `.catch()` rollback, page-level Project dialog wiring, `MoveToProjectDialog.onMoved(commandId)` (UX-02, UX-03) — completed 2026-07-24, see 100-04-SUMMARY.md
   - [x] 100-05-PLAN.md — Wave 2: SkillRow pending overlay (70% + info-bar) + dragging-skill reporting + UX-01/UX-04 menu-consistency & no-`/manage-skills` completeness audit (UX-01, UX-03, UX-04) — completed 2026-07-24, see 100-05-SUMMARY.md
 
 **UI hint**: yes
