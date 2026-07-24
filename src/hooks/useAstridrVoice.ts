@@ -450,6 +450,18 @@ export function useAstridrVoice({
   // dies mid-transcription, synthesize a final from it so the user's speech
   // is never simply lost.
   const longestInterimRef = useRef("");
+  // 186-01 follow-up (fresh live trace, 186-09 swap testing, Defect B):
+  // whether the CURRENTLY-tracked longestInterimRef value was captured while
+  // voiceStateRef.current === "speaking" (i.e. it's whatever the talk-over/
+  // echo classifier decided about audio heard DURING her TTS — inherently
+  // the least trustworthy source, since that's exactly the fuzzy boundary
+  // where echo-vs-real-speech can be misclassified, as Defect A's live trace
+  // proved). A speaking-era interim can persist as "longest" across an
+  // entire silent gap and later poison a completely unrelated NEW utterance
+  // via the lost-interim rejoin below — it must never be used as a rejoin
+  // source, regardless of how it compares by length/distance to the new
+  // final. Reset alongside every longestInterimRef reset.
+  const longestInterimFromSpeakingRef = useRef(false);
 
   // Continuation merge: the last voice message sent + when. A mid-sentence
   // pause slightly over the debounce chops the sentence — the fragment then
@@ -556,14 +568,22 @@ export function useAstridrVoice({
       // check and fall through to the keep-alive restart untouched).
       const salvage = longestInterimRef.current.trim();
       const salvageWordCount = salvage.split(/\s+/).filter(Boolean).length;
+      // 186-01 follow-up (Defect B principle applied here too — same
+      // underlying data source, same integrity risk): never synthesize a
+      // final from a speaking-era (echo/talk-over classified) interim.
+      const salvageFromSpeaking = longestInterimFromSpeakingRef.current;
       if (
         voiceStateRef.current === "transcribing" &&
         salvage &&
+        !salvageFromSpeaking &&
         (salvageWordCount >= 3 || isEndPhrase(salvage))
       ) {
         trace("final.synthesized-from-interim", { text: salvage, wordCount: salvageWordCount });
         longestInterimRef.current = "";
+        longestInterimFromSpeakingRef.current = false;
         handleFinalResultRef.current(salvage, undefined);
+      } else if (salvage && salvageFromSpeaking) {
+        trace("final.synthesize-skipped-speaking-era", { text: salvage });
       }
 
       if (lifetimeMs < RECOGNIZER_MIN_HEALTHY_MS) {
@@ -621,6 +641,7 @@ export function useAstridrVoice({
       echoAnchorDeadlineRef.current = 0;
       closePendingRef.current = false;
       longestInterimRef.current = "";
+      longestInterimFromSpeakingRef.current = false;
       lastSentRef.current = { text: "", at: 0 };
       setInterimText("");
       setFinalText("");
@@ -711,6 +732,7 @@ export function useAstridrVoice({
     if (!message) return;
     accumulatedRef.current = "";
     longestInterimRef.current = "";
+    longestInterimFromSpeakingRef.current = false;
     setFinalText("");
     dispatch({ type: "FINAL_RESULT" });
 
@@ -839,9 +861,22 @@ export function useAstridrVoice({
     // Track the longest user interim since the last final (salvage source if
     // Chrome abandons the utterance — a later, shorter interim must not
     // replace the good one; the live trace showed "do I have any entries on"
-    // collapsing to " today").
+    // collapsing to " today"). 186-01 follow-up (Defect B): STICKY taint —
+    // OR-accumulate rather than recompute fresh each time. The live trace
+    // showed WHY it must be sticky: the barge-triggering interim (" I
+    // couldn't") is captured while state is still "speaking" (dispatch()
+    // only QUEUES the BARGE_IN transition — voiceStateRef.current doesn't
+    // flip until the next render), but the very NEXT, LONGER interim in the
+    // same orphaned utterance (" I couldn't find") arrives after React has
+    // already re-rendered into "transcribing". A fresh-per-update check
+    // would (wrongly) call that second interim trustworthy even though it's
+    // still the SAME misclassified utterance — once tainted, stays tainted
+    // until one of the standard resets (final/teardown/wake/salvage) clears
+    // both refs together.
     if (text.trim().length > longestInterimRef.current.trim().length) {
       longestInterimRef.current = text;
+      longestInterimFromSpeakingRef.current =
+        longestInterimFromSpeakingRef.current || voiceStateRef.current === "speaking";
     }
 
     setInterimText(text);
@@ -861,7 +896,13 @@ export function useAstridrVoice({
     // the utterance and finalized only the tail (19:09: "do I have any" was
     // interim-only, the final carried just "on my personal account").
     const lostInterim = longestInterimRef.current.trim();
+    // 186-01 follow-up (Defect B) — see longestInterimFromSpeakingRef's doc
+    // comment: a speaking-era (echo/talk-over classified) interim must never
+    // be used as a rejoin source, no matter how it compares by length/
+    // distance to this final.
+    const lostInterimFromSpeaking = longestInterimFromSpeakingRef.current;
     longestInterimRef.current = "";
+    longestInterimFromSpeakingRef.current = false;
 
     // Echo guard + talk-over (see interim handler above).
     if (voiceStateRef.current === "speaking") {
@@ -1042,13 +1083,32 @@ export function useAstridrVoice({
     // Rejoin a lost interim: Chrome sometimes resets mid-utterance and the
     // final carries only the tail. If a substantive interim (≥3 words) is not
     // contained in this final, the user said BOTH parts — prepend it.
-    if (lostInterim && lostInterim.split(/\s+/).filter(Boolean).length >= 3) {
+    // 186-01 follow-up (Defect B, fresh live trace): a lost interim that was
+    // captured while she was SPEAKING (the echo/talk-over fuzzy boundary —
+    // Defect A's own live trace proved that classification can be wrong) is
+    // categorically excluded — it can persist as "longest" across an entire
+    // silent gap and otherwise poison a completely unrelated later utterance
+    // (the trace: her own misheard refusal fragment "I couldn't find" got
+    // prepended onto "Tryon Rock", sending "I couldn't find Tryon Rock").
+    // Defense in depth: even for a NON-speaking-era lostInterim, skip the
+    // rejoin if it still fuzzy-matches whatever reply text is currently known
+    // (isEchoOfReply) — cheap, and only meaningfully live now that Defect A's
+    // run.blocks backfill (useAstridrChat.ts) keeps that text populated for
+    // control-verb replies too.
+    if (
+      lostInterim &&
+      !lostInterimFromSpeaking &&
+      lostInterim.split(/\s+/).filter(Boolean).length >= 3 &&
+      !isEchoOfReply(lostInterim, currentReply())
+    ) {
       const needle = squash(lostInterim);
       const dist = approxSubstringDistance(needle, squash(text));
       if (dist > Math.max(1, Math.floor(needle.length * 0.2))) {
         trace("final.rejoined-lost-interim", { lostInterim, final: text });
         text = `${lostInterim} ${text.trim()}`;
       }
+    } else if (lostInterim && lostInterimFromSpeaking) {
+      trace("final.lost-interim-discarded-speaking-era", { lostInterim });
     }
 
     // Resume-intent normalization: right after a barge-in (an interrupted
@@ -1185,6 +1245,7 @@ export function useAstridrVoice({
       setFinalText("");
       restartTimesRef.current = [];
       longestInterimRef.current = "";
+      longestInterimFromSpeakingRef.current = false;
       // A stale intentional-stop latch (set when teardown ran with NO live
       // recognizer to consume it) must never eat this session's keep-alive —
       // the live trace showed exactly that killing the restart.

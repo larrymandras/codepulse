@@ -206,6 +206,30 @@ export function useAstridrChat() {
       const blocks = payload?.blocks;
       if (!blocks || blocks.length === 0) return;
 
+      // 186-01 follow-up (fresh live trace, 186-09 swap testing): the
+      // control-verb fast-path short-circuit (ws_commands.py::_handle_chat_
+      // send — swap refusals/confirmations, focus/quiet-hours toggles,
+      // catalogue answers) NEVER emits run.text, only run.blocks with a
+      // single TextBlockData. Without this backfill, streamingReplyRef stays
+      // "" for the whole reply, and useAstridrVoice's isEchoOfReply falls
+      // through its `if (!reply) return false` branch — treating ANY
+      // substantive interim heard during her TTS as "not echo", a
+      // guaranteed self-barge on her own voice (live trace: her deterministic
+      // refusal "I couldn't find..." barged itself 0.9s after tts.start). A
+      // normal LLM turn ALSO emits run.blocks with the identical final text,
+      // but only AFTER its own run.text has already populated the ref
+      // (post_turn_pipeline.py emits run.text then run.blocks, in that
+      // order, over the same ordered WS connection) — so only backfill when
+      // NOTHING has streamed yet this turn, never double-append onto an
+      // already-populated ref.
+      if (!streamingTextRef.current) {
+        for (const block of blocks) {
+          if (block.type === "text") {
+            streamingTextRef.current += block.text;
+          }
+        }
+      }
+
       setMessages((prev) => {
         const seenRequestIds = new Set<string>();
         for (const msg of prev) {

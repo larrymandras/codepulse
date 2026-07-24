@@ -207,6 +207,99 @@ describe("useAstridrChat — post-interrupt TTS suppression", () => {
   });
 });
 
+// ─── 186-01 follow-up (Defect A, fresh live trace, 186-09 swap testing) ──────
+// ws_commands.py::_handle_chat_send's control-verb fast-path short-circuit
+// (swap refusals/confirmations, focus/quiet-hours toggles, catalogue
+// answers) NEVER emits run.text — only run.blocks with a single TextBlockData
+// (confirmed by reading the actual backend source, not assumed). Without a
+// backfill, streamingReplyRef stays "" for the whole reply, and useAstridrVoice's
+// echo fingerprint has nothing to compare against — the live trace: her own
+// deterministic refusal ("I couldn't find...") barged itself 0.9s after
+// tts.start, because isEchoOfReply's `if (!reply) return false` treated the
+// growing interim as "definitely not echo".
+
+describe("useAstridrChat — run.blocks text backfill for streamingReplyRef (186-01 Defect A)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+  });
+
+  it("a control-verb fast-path reply (run.blocks only, no run.text) populates streamingReplyRef", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("change your brain to Kimmy K3");
+    });
+
+    // No run.text at all for this reply shape — only run.blocks, mirroring
+    // ws_commands.py's exact fast-path payload shape.
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "I couldn't find a 'Kimmy K3' brain." }],
+          round_num: 0,
+        },
+      });
+    });
+
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("I couldn't find a 'Kimmy K3' brain.");
+  });
+
+  it("a normal turn's run.blocks (arriving AFTER run.text already populated it) does NOT double-append", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    act(() => {
+      getHandler("run.text")?.({ data: { session_id: "sess-1", text_chunk: "Tomorrow brings rain" } });
+      // post_turn_pipeline.py emits run.text THEN run.blocks with the
+      // identical final text, in that order, over the same turn.
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "Tomorrow brings rain" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("Tomorrow brings rain"); // NOT "Tomorrow brings rainTomorrow brings rain"
+  });
+
+  it("run.blocks with a non-text block (e.g. tool_use) does not populate streamingReplyRef", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("do something");
+    });
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "tool_use", name: "some_tool", arguments: {} }],
+          round_num: 0,
+        },
+      });
+    });
+
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("");
+  });
+});
+
 // ─── VISION-01: vision.frame_request round-trip (backend-initiated see_screen) ──
 // Closes the backend-initiated loop: the server pushes vision.frame_request
 // (T-184-17/18) when the model calls see_screen for a phrasing the client

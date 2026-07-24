@@ -51,13 +51,27 @@ export type VoiceAction =
  * Lowercase, strip punctuation (keep apostrophes so "that's" stays intact), collapse
  * whitespace, trim. Speech-to-text returns punctuated, capitalized transcripts
  * ("Stop.", "Wait, wait —"), so every phrase matcher in this file normalizes first.
+ *
+ * 186-01 follow-up (Defect C, fresh live trace, 186-09 swap testing): Chrome's
+ * STT sometimes renders "try on" as one joined word ("Tryon grok" / "Tryon
+ * Rock") — plausibly reading it as a proper noun. That defeats
+ * SWAP_MODEL_VERB's "try on X" prefix match entirely (no client fast-path
+ * dispatch fires, the utterance falls through to a full LLM turn instead).
+ * Un-join it here so every matcher benefits — "tryon" is not an otherwise
+ * meaningful word/phrase in ANY of this file's grammars, so a blanket
+ * word-boundary substitution carries no collision risk. Deliberately narrow:
+ * this ONLY repairs the grammar join ("tryon" → "try on"); it must NOT alias
+ * mis-heard TARGET names (e.g. "rock" → "grok") — the backend's fuzzy
+ * resolver + honest refusal already own that (D-08), and doing it client-side
+ * would risk silently "correcting" a genuinely different, valid target name.
  */
 function normalize(text: string): string {
   return text
     .toLowerCase()
     .replace(/[^\w\s']/g, " ")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
+    .replace(/\btryon\b/g, "try on");
 }
 
 // ─── End-phrase detection (mirrors voice.py:136-138) ─────────────────────────

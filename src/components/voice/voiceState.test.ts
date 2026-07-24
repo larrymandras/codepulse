@@ -467,6 +467,20 @@ describe("SWAP_MODEL_VERB (SWAP-01 client target extraction)", () => {
     expect(SWAP_MODEL_VERB.match("please try on grok")).toEqual({ target: "grok" });
   });
 
+  // 186-01 follow-up (Defect C, fresh live trace, 186-09 swap testing): STT
+  // joined "try on" into one word ("Tryon"), defeating the prefix match
+  // entirely — no client fast-path dispatch fired for a real "try on grok"
+  // utterance. normalize()'s grammar-join fix un-joins it; the mis-heard
+  // TARGET name itself ("Rock" for "grok") is deliberately left un-aliased —
+  // the backend's fuzzy resolver + honest refusal own that (D-08).
+  it('"Tryon grok" (STT join) → { target: "grok" }', () => {
+    expect(SWAP_MODEL_VERB.match("Tryon grok")).toEqual({ target: "grok" });
+  });
+
+  it('"Tryon Rock" (STT join + misheard target) → { target: "rock" } — target NOT aliased to "grok" client-side', () => {
+    expect(SWAP_MODEL_VERB.match("Tryon Rock")).toEqual({ target: "rock" });
+  });
+
   it('"what\'s the weather" → null', () => {
     expect(SWAP_MODEL_VERB.match("what's the weather")).toBe(null);
   });

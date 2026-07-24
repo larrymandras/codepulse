@@ -761,6 +761,108 @@ describe("useAstridrVoice", () => {
     );
   });
 
+  // ─── 22:07 live-trace regression (186-01 follow-up, Defect B) ─────────────
+  // A talk-over interim misclassified during active TTS ("I couldn't find"
+  // — Defect A's own failure mode, same live trace) never finalized and sat
+  // as the tracked "longest interim" across a silent gap. A LATER, completely
+  // unrelated utterance ("try on grok", heard by STT as "Tryon Rock") then
+  // got the stale fragment prepended: "I couldn't find Tryon Rock" was sent
+  // instead of "Tryon Rock". The fix must be STICKY: the trace shows the
+  // barge-triggering interim (" I couldn't") captured while voiceStateRef
+  // is still literally "speaking" (dispatch() only queues the transition),
+  // but the very NEXT, LONGER interim in the SAME orphaned utterance
+  // (" I couldn't find") lands after React has already re-rendered into
+  // "transcribing" — a naive per-update check would wrongly call THAT one
+  // trustworthy even though it's still the same misclassified utterance.
+
+  it("a stale speaking-era (talk-over-misclassified) interim is never rejoined into a later unrelated final", async () => {
+    let chat = makeChat({ interrupt: vi.fn(() => "") });
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    expect(result.current.voiceState).toBe("speaking");
+
+    // Misclassified talk-over during her TTS (Defect A's own mechanism: with
+    // no known reply text, isEchoOfReply's `!reply` branch treats this as
+    // real user speech, not echo) — never finalizes.
+    act(() => {
+      onInterimResultCallback?.(" I couldn't");
+    });
+    expect(result.current.voiceState).toBe("transcribing");
+
+    chat = setTtsPlaying(rerender, chat, false); // she stops; the fragment is orphaned
+    act(() => {
+      vi.advanceTimersByTime(2000); // clear the (unrelated) post-TTS echo-tail window
+      // The SAME orphaned utterance grows past the barge boundary — still
+      // captured while the taint must remain sticky (state is "transcribing"
+      // here, matching the live trace's 22:06:52.110 line exactly).
+      onInterimResultCallback?.(" I couldn't find");
+    });
+
+    // Deliberately NOT the exact live-trace phrase ("Tryon Rock") — Defect
+    // C's fix makes THAT phrase dispatch as a swap fast-path before ever
+    // reaching the rejoin logic (see the dedicated end-to-end test below).
+    // This test isolates the rejoin guard itself with an ordinary utterance.
+    (chat.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+    act(() => {
+      onFinalResultCallback?.("what's on my calendar today"); // a real, unrelated later utterance
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith("what's on my calendar today", {
+      interruptedReply: undefined,
+      voice: true,
+    });
+  });
+
+  it("end-to-end 22:07 trace shape: the stale 'I couldn't find' fragment does not leak into the swap-dispatched 'Tryon Rock' turn (Defects B+C together)", async () => {
+    let chat = makeChat({ interrupt: vi.fn(() => "") });
+    const { rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    act(() => {
+      onInterimResultCallback?.(" I couldn't"); // misclassified talk-over, never finalizes
+    });
+    chat = setTtsPlaying(rerender, chat, false);
+    act(() => {
+      vi.advanceTimersByTime(2000); // clear the post-TTS echo-tail window
+      onInterimResultCallback?.(" I couldn't find"); // same orphaned utterance, now post-barge
+    });
+
+    (chat.sendMessage as ReturnType<typeof vi.fn>).mockClear();
+    act(() => {
+      // STT's exact live-trace rendering of "try on grok".
+      onFinalResultCallback?.("Tryon Rock");
+    });
+    // Defect C: the grammar-join fix makes this dispatch as a swap fast-path
+    // immediately (no debounce) — it never even reaches the rejoin logic.
+    expect(chat.sendMessage).toHaveBeenCalledWith("Tryon Rock", {
+      voice: true,
+      swapHandled: true,
+    });
+  });
+
+  it("a NON-speaking-era lost interim still rejoins normally (the fix does not widen)", async () => {
+    // Same shape as the pre-existing "mid-utterance Chrome reset" regression
+    // above, confirming the speaking-era guard doesn't over-reach: this
+    // interim is captured entirely in "listening"/"transcribing" state.
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" do I have any");
+      onFinalResultCallback?.(" on my personal account");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "do I have any on my personal account",
+      { interruptedReply: undefined, voice: true }
+    );
+  });
+
   // ─── 19:05 live-trace regression ──────────────────────────────────────────
 
   it("post-barge, a garbled short 'continue' utterance normalizes to a clean resume", async () => {
