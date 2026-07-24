@@ -81,6 +81,8 @@ Second semantic token — `var(--status-info)` (existing token, not new) reserve
 
 `var(--destructive)` also reserved for the new **invalid-drop (not-allowed) highlight** on the Project scope-rail entry when a cold/dormant row is dragged over it (D-02's reject case) — `border-dashed border-destructive/40 bg-destructive/5`, distinct from both the valid-drop primary highlight and the plain hover state, and paired with `cursor-not-allowed`.
 
+**Visual hierarchy — concurrent row states (resolves checker FLAG, Dimension 2):** when a pending (info) row and an active/selected (primary) row render in the same list simultaneously, the **active/selected `--primary` state takes eye-order precedence** — `--primary` is fully saturated on a solid glow bar (`shadow-[var(--glow-xs)]`, no animation), while the pending `--status-info` state reads as *lower-weight motion* (reduced-opacity row at 70% + a **pulsing** `animate-pulse` bar). Steady-state saturation out-ranks animated-but-dimmed, so "this is where you are" always wins the first glance over "this is settling." The two are never confusable in either direction: primary is never animated, info is never steady, and the pending row's 70% opacity further recedes it. There is no state in which both colors claim the same row.
+
 ---
 
 ## Copywriting Contract
