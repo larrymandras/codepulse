@@ -14,6 +14,14 @@
  * @see 186-UI-SPEC.md "ReadinessPill" (Component Inventory + Color +
  *      Accessibility Contract — "fire once per state transition, not per
  *      render")
+ *
+ * DEVIATION (186-08, post-checkpoint live feedback): UI-SPEC pins this
+ * mono-label role to 10-11px. Larry's live review found the whole panel
+ * too small to read comfortably alongside the enlarged AvatarAura — this
+ * pill (and the rest of ControlCenterPanel's labels) now render at the
+ * existing "Caption" scale step (14px/`text-sm`) instead of introducing a
+ * new pixel value. Still exactly one pinned size within this panel — the
+ * step is reassigned, not a 5th size added to the app-wide type scale.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -84,11 +92,11 @@ export function ReadinessPill({ ready, voiceState }: ReadinessPillProps) {
   return (
     <>
       <span
-        className={`flex items-center gap-1.5 font-mono text-[10px] tracking-[0.15em] px-2.5 py-1 rounded-full border ${meta.cls}`}
+        className={`flex items-center gap-2 font-mono text-sm tracking-[0.1em] px-3 py-1.5 rounded-full border ${meta.cls}`}
       >
         {meta.pulsing && (
           <span
-            className={`w-1.5 h-1.5 rounded-full bg-current ${
+            className={`w-2 h-2 rounded-full bg-current ${
               reducedMotion ? "" : "animate-pulse"
             }`}
             aria-hidden="true"

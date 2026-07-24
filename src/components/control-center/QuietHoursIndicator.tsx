@@ -8,6 +8,10 @@
  * pill), matching Phase 92's quiet-degradation precedent.
  *
  * @see 186-UI-SPEC.md "QuietHoursIndicator" (Component Inventory + Color)
+ *
+ * DEVIATION (186-08, post-checkpoint live feedback): rendered at the
+ * existing "Caption" scale step (14px/`text-sm`) instead of the UI-SPEC's
+ * pinned 10-11px mono-label value — see ReadinessPill.tsx's matching note.
  */
 
 import { Moon } from "lucide-react";
@@ -22,10 +26,10 @@ export function QuietHoursIndicator({ active }: QuietHoursIndicatorProps) {
 
   return (
     <span
-      className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.15em] px-2.5 py-1 rounded-full border border-border bg-muted text-muted-foreground"
+      className="flex items-center gap-2 font-mono text-sm tracking-[0.1em] px-3 py-1.5 rounded-full border border-border bg-muted text-muted-foreground"
       title="Quiet hours — only money/high-priority events interrupt you"
     >
-      <Moon className="w-3 h-3" aria-hidden="true" />
+      <Moon className="w-4 h-4" aria-hidden="true" />
       QUIET HOURS
     </span>
   );

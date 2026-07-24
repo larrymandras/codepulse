@@ -136,6 +136,42 @@ describe("ControlCenterPanel", () => {
     render(<ControlCenterPanel {...baseProps()} disconnected />);
     expect(screen.getByText("OFFLINE")).toBeInTheDocument();
   });
+
+  it("shows a labeled BRAIN row falling back to Auto before any turn completes", () => {
+    render(<ControlCenterPanel {...baseProps()} />);
+    expect(screen.getByText("BRAIN")).toBeInTheDocument();
+    expect(screen.getByText("Auto")).toBeInTheDocument();
+  });
+
+  it("shows the last completed turn's model in the BRAIN row when no override is active", () => {
+    render(<ControlCenterPanel {...baseProps()} lastTurnModel="claude-sonnet-5" />);
+    expect(screen.getByText("BRAIN")).toBeInTheDocument();
+    expect(screen.getByText("claude-sonnet-5")).toBeInTheDocument();
+  });
+
+  it("prefers an active swap override over the last completed turn's model", () => {
+    render(
+      <ControlCenterPanel {...baseProps()} swapModelOverride="grok-4.5" lastTurnModel="claude-sonnet-5" />
+    );
+    expect(screen.getByText("grok-4.5")).toBeInTheDocument();
+    expect(screen.queryByText("claude-sonnet-5")).not.toBeInTheDocument();
+  });
+
+  it("shows a VOICE row only when a voice override is active", () => {
+    const { rerender } = render(<ControlCenterPanel {...baseProps()} />);
+    expect(screen.queryByText("VOICE")).not.toBeInTheDocument();
+
+    rerender(<ControlCenterPanel {...baseProps()} swapVoiceOverride="Rachel" />);
+    expect(screen.getByText("VOICE")).toBeInTheDocument();
+    expect(screen.getByText("Rachel")).toBeInTheDocument();
+  });
+
+  it("renders visible text labels for the strict mode, focus mode, and screen toggles", () => {
+    render(<ControlCenterPanel {...baseProps()} />);
+    expect(screen.getByText("STRICT MODE")).toBeInTheDocument();
+    expect(screen.getByText("FOCUS MODE")).toBeInTheDocument();
+    expect(screen.getByText("SCREEN")).toBeInTheDocument();
+  });
 });
 
 describe("isWithinQuietHours", () => {

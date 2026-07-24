@@ -422,7 +422,7 @@ export default function Chat() {
       <div className="flex flex-col items-center pt-5 pb-2 shrink-0">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
           <div
-            className={`w-[248px] transition-[opacity,filter] duration-300 ${
+            className={`w-[336px] transition-[opacity,filter] duration-300 ${
               listening ? "" : "opacity-45 saturate-50"
             }`}
           >

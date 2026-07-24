@@ -9,11 +9,12 @@
  * stays the page's primary visual anchor; this panel is a supporting
  * side-column, not a competing focal point (186-UI-SPEC checker flag 2).
  *
- * Stacks (top to bottom): ReadinessPill, SwapBadge (brain/voice — Plan 09
- * will wrap these in interactive dropdowns; this plan keeps the existing
- * read-only display as the placeholder), StrictModeToggle (relocated),
- * FocusModeToggle (new, D-04), QuietHoursIndicator (new, D-05),
- * ShareScreenToggle (relocated).
+ * Stacks (top to bottom): ReadinessPill, BRAIN (+ VOICE when overridden) —
+ * a prominent, clearly-labeled read-only box showing the live effective
+ * model (Plan 09 will wrap these in interactive dropdowns; this plan is
+ * display-only, no selection UI), labeled StrictModeToggle (relocated),
+ * labeled FocusModeToggle (new, D-04), QuietHoursIndicator (new, D-05),
+ * labeled ShareScreenToggle (relocated).
  *
  * Owns focus_mode + quiet-hours state: hydrates from `config.get`
  * section:"proactive-prefs" on mount (mirrors `Chat.tsx`'s `strictMode`
@@ -22,16 +23,36 @@
  * night"/"I'm up" spoken verbs (186-03) via the `proactive_prefs.state`
  * live push the backend's chat.send fast-path now emits (D-04 WS-synced).
  *
+ * DEVIATIONS (186-08, post-checkpoint live feedback from Larry's first
+ * visual pass — see 186-08-SUMMARY.md "Deviations" for the full record):
+ *  1. The BRAIN row was a tiny `SwapBadge` chip that read "Brain: Auto"
+ *     before any turn had completed — correct per spec, but Larry couldn't
+ *     find it / couldn't read it. Replaced with a bigger, bordered,
+ *     explicitly-labeled box (still `swapModelOverride ?? lastTurnModel ??
+ *     "Auto"`, same live wiring — no behavior change, just legibility).
+ *  2. Every row gained a persistent text label (STRICT MODE / FOCUS MODE /
+ *     SCREEN) — the toggles previously relied on icon+hover-tooltip only,
+ *     which read as unlabeled bare switches once pulled out of the header's
+ *     tight icon row into a labeled panel.
+ *  3. All panel typography bumped from the UI-SPEC's pinned 10-11px
+ *     mono-label value to the existing 14px "Caption" scale step (see
+ *     ReadinessPill.tsx/QuietHoursIndicator.tsx notes) — still one pinned
+ *     size within this panel, reassigned rather than a new 5th size added.
+ *
  * @see 186-UI-SPEC.md "Control Center (D-17)" + "Copywriting Contract"
  */
 
 import { useState, useEffect, useCallback } from "react";
 import * as jsYaml from "js-yaml";
-import { WifiOff } from "lucide-react";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { WifiOff, Brain, AudioLines } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
-import { SwapBadge } from "@/components/voice/SwapBadge";
 import { FocusModeToggle } from "./FocusModeToggle";
 import { QuietHoursIndicator } from "./QuietHoursIndicator";
 import { ReadinessPill } from "./ReadinessPill";
@@ -224,38 +245,93 @@ export function ControlCenterPanel({
     return () => clearInterval(id);
   }, [prefs]);
 
+  const brainLabel = swapModelOverride ?? lastTurnModel ?? "Auto";
+
   return (
     <div
-      className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-4 flex flex-col gap-2"
+      className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px]"
       data-testid="control-center-panel"
     >
-      <span className="font-mono text-[10px] tracking-[0.15em] text-muted-foreground">
+      <span className="font-mono text-sm tracking-[0.1em] text-muted-foreground">
         CONTROL CENTER
       </span>
 
       {disconnected ? (
-        <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.15em] text-muted-foreground px-2.5 py-1 rounded-full bg-muted border border-border">
-          <WifiOff className="w-3 h-3" aria-hidden="true" /> OFFLINE
+        <span className="flex items-center gap-2 font-mono text-sm tracking-[0.1em] text-muted-foreground px-3 py-1.5 rounded-full bg-muted border border-border">
+          <WifiOff className="w-4 h-4" aria-hidden="true" /> OFFLINE
         </span>
       ) : (
         <ReadinessPill ready={ready} voiceState={voiceState} />
       )}
 
       <TooltipProvider delayDuration={300}>
-        <SwapBadge
-          modelOverride={swapModelOverride}
-          voiceOverride={swapVoiceOverride}
-          lastModel={lastTurnModel}
-        />
+        {/* Brain — live effective model, a prominent labeled box (not a tiny
+            badge). Read-only this plan; Plan 09 adds selection dropdowns. */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+                swapModelOverride
+                  ? "border-primary/30 bg-primary/10"
+                  : "border-border/60 bg-muted/30"
+              }`}
+            >
+              <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
+                <Brain className="w-4 h-4" aria-hidden="true" />
+                BRAIN
+              </span>
+              <span
+                className={`font-mono text-sm ${
+                  swapModelOverride ? "text-primary font-semibold" : "text-foreground/90"
+                }`}
+              >
+                {brainLabel}
+              </span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" sideOffset={8}>
+            <p className="text-xs">
+              {swapModelOverride
+                ? `Running on ${swapModelOverride} instead of her usual brain — say "switch back to your usual brain" to restore.`
+                : lastTurnModel
+                  ? `Last reply ran on ${lastTurnModel}, picked by adaptive routing. Say "try on grok" (or another model) to pin one.`
+                  : 'Adaptive routing — her brain is picked per task. Say "try on grok" (or another model) to pin one.'}
+            </p>
+          </TooltipContent>
+        </Tooltip>
 
-        <StrictModeToggle enabled={strictMode} onToggle={onStrictModeChange} />
-        <FocusModeToggle enabled={prefs.focus_mode} onToggle={handleFocusModeChange} />
+        {swapVoiceOverride && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
+            <span className="flex items-center gap-1.5 font-mono text-sm text-primary">
+              <AudioLines className="w-4 h-4" aria-hidden="true" />
+              VOICE
+            </span>
+            <span className="font-mono text-sm text-primary font-semibold">
+              {swapVoiceOverride}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-sm text-muted-foreground">STRICT MODE</span>
+          <StrictModeToggle enabled={strictMode} onToggle={onStrictModeChange} />
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-sm text-muted-foreground">FOCUS MODE</span>
+          <FocusModeToggle enabled={prefs.focus_mode} onToggle={handleFocusModeChange} />
+        </div>
+
         <QuietHoursIndicator active={quietHoursActive} />
-        <ShareScreenToggle
-          state={screenShareState}
-          onStart={onScreenShareStart}
-          onStop={onScreenShareStop}
-        />
+
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-sm text-muted-foreground">SCREEN</span>
+          <ShareScreenToggle
+            state={screenShareState}
+            onStart={onScreenShareStart}
+            onStop={onScreenShareStop}
+          />
+        </div>
       </TooltipProvider>
     </div>
   );

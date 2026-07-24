@@ -304,7 +304,7 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative mx-auto aspect-[4/5] w-full max-w-[260px] select-none ${className ?? ""}`}
+      className={`relative mx-auto aspect-[4/5] w-full max-w-[340px] select-none ${className ?? ""}`}
       aria-hidden="true"
     >
       {/* Probe: resolves --primary to a normalized rgb() we can read. */}
