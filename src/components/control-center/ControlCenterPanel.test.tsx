@@ -140,7 +140,9 @@ describe("ControlCenterPanel", () => {
   it("shows a labeled BRAIN row falling back to Auto before any turn completes", () => {
     render(<ControlCenterPanel {...baseProps()} />);
     expect(screen.getByText("BRAIN")).toBeInTheDocument();
-    expect(screen.getByText("Auto")).toBeInTheDocument();
+    // BrainControl AND VoiceControl (Plan 09: VOICE is now always visible)
+    // both default to "Auto" -- assert at least one Auto label renders.
+    expect(screen.getAllByText("Auto").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows the last completed turn's model in the BRAIN row when no override is active", () => {
@@ -157,9 +159,10 @@ describe("ControlCenterPanel", () => {
     expect(screen.queryByText("claude-sonnet-5")).not.toBeInTheDocument();
   });
 
-  it("shows a VOICE row only when a voice override is active", () => {
+  it("VOICE row is always visible (Plan 09: browsable even at default), reflecting the active override", () => {
     const { rerender } = render(<ControlCenterPanel {...baseProps()} />);
-    expect(screen.queryByText("VOICE")).not.toBeInTheDocument();
+    // Always visible now (D-17: "see what voices exist" without an active swap).
+    expect(screen.getByText("VOICE")).toBeInTheDocument();
 
     rerender(<ControlCenterPanel {...baseProps()} swapVoiceOverride="Rachel" />);
     expect(screen.getByText("VOICE")).toBeInTheDocument();

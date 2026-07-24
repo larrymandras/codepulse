@@ -16,7 +16,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor, screen, act } from "@testing-library/react";
+import { render, waitFor, screen, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -206,10 +206,18 @@ describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () =>
     mockStatus = "connected";
   });
 
+  // Plan 09 (186-09) wrapped the BRAIN/VOICE boxes in BrainControl/
+  // VoiceControl, both of which default-label "Auto" — scope queries to
+  // the BRAIN trigger specifically ("Choose brain" aria-label) so these
+  // assertions aren't ambiguous now that VOICE is always visible too.
+  function brainBox() {
+    return screen.getByRole("button", { name: "Choose brain" });
+  }
+
   it("shows Auto before any turn completes", () => {
     renderChat();
-    expect(screen.getByText("BRAIN")).toBeInTheDocument();
-    expect(screen.getByText("Auto")).toBeInTheDocument();
+    expect(within(brainBox()).getByText("BRAIN")).toBeInTheDocument();
+    expect(within(brainBox()).getByText("Auto")).toBeInTheDocument();
   });
 
   it("updates the rendered BRAIN box when a run.completed event carries a model", async () => {
@@ -226,9 +234,9 @@ describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () =>
     });
 
     await waitFor(() => {
-      expect(screen.getByText("claude-sonnet-5")).toBeInTheDocument();
+      expect(within(brainBox()).getByText("claude-sonnet-5")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Auto")).not.toBeInTheDocument();
+    expect(within(brainBox()).queryByText("Auto")).not.toBeInTheDocument();
   });
 
   it("does NOT update the BRAIN box when run.completed carries an empty model (the exact live bug shape)", async () => {
@@ -246,6 +254,6 @@ describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () =>
 
     // Falsy model must NOT clobber the "Auto" fallback — reproduces the
     // exact live payload shape before the backend fix.
-    expect(screen.getByText("Auto")).toBeInTheDocument();
+    expect(within(brainBox()).getByText("Auto")).toBeInTheDocument();
   });
 });

@@ -44,18 +44,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import * as jsYaml from "js-yaml";
-import { WifiOff, Brain, AudioLines } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { WifiOff } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
 import { FocusModeToggle } from "./FocusModeToggle";
 import { QuietHoursIndicator } from "./QuietHoursIndicator";
 import { ReadinessPill } from "./ReadinessPill";
+import { BrainControl } from "./BrainControl";
+import { VoiceControl } from "./VoiceControl";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import type { VoiceState } from "@/components/voice/voiceState";
 import type { ScreenShareState } from "@/hooks/useScreenShare";
@@ -245,8 +242,6 @@ export function ControlCenterPanel({
     return () => clearInterval(id);
   }, [prefs]);
 
-  const brainLabel = swapModelOverride ?? lastTurnModel ?? "Auto";
-
   return (
     <div
       className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px]"
@@ -265,52 +260,15 @@ export function ControlCenterPanel({
       )}
 
       <TooltipProvider delayDuration={300}>
-        {/* Brain — live effective model, a prominent labeled box (not a tiny
-            badge). Read-only this plan; Plan 09 adds selection dropdowns. */}
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
-                swapModelOverride
-                  ? "border-primary/30 bg-primary/10"
-                  : "border-border/60 bg-muted/30"
-              }`}
-            >
-              <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
-                <Brain className="w-4 h-4" aria-hidden="true" />
-                BRAIN
-              </span>
-              <span
-                className={`font-mono text-sm ${
-                  swapModelOverride ? "text-primary font-semibold" : "text-foreground/90"
-                }`}
-              >
-                {brainLabel}
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="bottom" sideOffset={8}>
-            <p className="text-xs">
-              {swapModelOverride
-                ? `Running on ${swapModelOverride} instead of her usual brain — say "switch back to your usual brain" to restore.`
-                : lastTurnModel
-                  ? `Last reply ran on ${lastTurnModel}, picked by adaptive routing. Say "try on grok" (or another model) to pin one.`
-                  : 'Adaptive routing — her brain is picked per task. Say "try on grok" (or another model) to pin one.'}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-
-        {swapVoiceOverride && (
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2">
-            <span className="flex items-center gap-1.5 font-mono text-sm text-primary">
-              <AudioLines className="w-4 h-4" aria-hidden="true" />
-              VOICE
-            </span>
-            <span className="font-mono text-sm text-primary font-semibold">
-              {swapVoiceOverride}
-            </span>
-          </div>
-        )}
+        {/* Brain/Voice — live effective model/voice in a prominent labeled
+            box, now read + write (Plan 09, D-17): each wraps a Popover
+            listing the live catalogue (swap.catalogue) and dispatches a
+            selection through swap.set — the same swap_model/swap_voice
+            executor a spoken swap uses. VoiceControl is always visible
+            (unlike the prior swapVoiceOverride-gated box) so the live
+            catalogue is browsable even with no active override. */}
+        <BrainControl override={swapModelOverride} lastTurnModel={lastTurnModel} />
+        <VoiceControl override={swapVoiceOverride} />
 
         <div className="flex items-center justify-between gap-3">
           <span className="font-mono text-sm text-muted-foreground">STRICT MODE</span>
