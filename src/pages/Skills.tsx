@@ -2,8 +2,10 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Search, Archive, Boxes } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { CategoryGrid } from "@/components/skills/CategoryGrid";
+import { ScopeRail } from "@/components/skills/ScopeRail";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
 import { AllSkillsOverview } from "@/components/skills/AllSkillsOverview";
 import { ColdStorageView } from "@/components/skills/ColdStorageView";
@@ -18,12 +20,25 @@ import { IntakeModal } from "@/components/skills/IntakeModal";
 import { IntakeStrip } from "@/components/skills/IntakeStrip";
 import { IntakeSheet } from "@/components/skills/IntakeSheet";
 import { SkillVaultView } from "@/components/skills/vault/SkillVaultView";
+import { MoveToProjectDialog } from "@/components/skills/MoveToProjectDialog";
+import { resolveHostId } from "@/components/skills/SkillLifecycleMenu";
+import { useForgeHostsRaw } from "@/hooks/useForge";
+import { lifecycleRefusalMessage } from "@/hooks/useLifecycle";
+import {
+  SkillControlSurfaceProvider,
+  useSkillControlSurface,
+} from "@/hooks/usePendingLifecycleMoves";
 import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
-import { originOptions, hasDormantCopy } from "@/lib/skills";
+import {
+  originOptions,
+  hasDormantCopy,
+  resolveScopeDrop,
+  resolveLifecycleActions,
+} from "@/lib/skills";
 import type { Doc } from "../../convex/_generated/dataModel";
 
-export default function Skills() {
+function SkillsBody() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [coldStorageView, setColdStorageView] = useState(false);
   const [vaultView, setVaultView] = useState(false);
@@ -31,12 +46,22 @@ export default function Skills() {
   const [editingCategory, setEditingCategory] = useState<Doc<"skillCategories"> | null>(null);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // Independent from `dropTarget` (category rail) — never shared (Pitfall 5).
+  const [dropTargetScope, setDropTargetScope] = useState<string | null>(null);
+  const [scopeMoveDialog, setScopeMoveDialog] = useState<{
+    skillName: string;
+    sourceOrigin: string;
+  } | null>(null);
   const [search, setSearch] = useState("");
   const [originFilter, setOriginFilter] = useState<string>("all");
   const [reviewing, setReviewing] = useState(false);
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
   const [intakeSheetOpen, setIntakeSheetOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const { beginPending, clearPending } = useSkillControlSurface();
+  const hostsRaw = useForgeHostsRaw();
+  const host = resolveHostId(hostsRaw ?? [], undefined);
 
   const enrichedSkills = useQuery(api.skillCategories.getSkillsWithOverrides) ?? [];
   const categories = useQuery(api.skillCategories.listCategories) ?? [];
@@ -49,6 +74,7 @@ export default function Skills() {
   const toggleFav = useMutation(api.skillCategories.toggleFavorite);
   const bulkAccept = useMutation(api.skillCategories.bulkAcceptAutoAssigned);
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
+  const enqueueLifecycle = useMutation(api.forge.enqueueLifecycle);
 
   // Distinct, distinguishable labels — five repos must not all render as "Project".
   const originChoices = useMemo(() => originOptions(enrichedSkills), [enrichedSkills]);
@@ -136,6 +162,50 @@ export default function Skills() {
     if (!skillName) return;
     await updateOverride({ skillName, categoryName });
     setDropTarget(null);
+  };
+
+  // Independent scope-lane drop surface (Global/Project/Cold) — dispatches
+  // through the shared resolveScopeDrop matrix (Plan 01): no-op / visible
+  // reject (ScopeRail already painted the invalid state during dragover) /
+  // open MoveToProjectDialog for a Project target (no enqueue at drop time,
+  // Pitfall 2/4) / direct enqueueLifecycle with paint-before-await + a
+  // .catch() that clears the pending entry for a LAYER-1 synchronous refusal
+  // (Pitfall 3 — no forgeCommands row is ever created for that case).
+  const handleDropOnScope = (scope: string, e: React.DragEvent) => {
+    const skillName = e.dataTransfer.getData("text/plain");
+    setDropTargetScope(null);
+    if (!skillName) return;
+    const skill = enrichedSkills.find((s) => s.name === skillName);
+    if (!skill) return; // Tampering guard — an unrecognized name no-ops.
+
+    const result = resolveScopeDrop(skill, scope as "global" | "project" | "cold");
+
+    if (result.kind === "noop" || result.kind === "reject") return;
+
+    if (result.kind === "dialog") {
+      const activeOrigin = resolveLifecycleActions(skill).activeOrigin!;
+      setScopeMoveDialog({ skillName, sourceOrigin: activeOrigin });
+      return;
+    }
+
+    const commandId = crypto.randomUUID();
+    beginPending(skillName, {
+      commandId,
+      action: result.action,
+      destination: result.destination,
+    });
+    enqueueLifecycle({
+      hostId: host,
+      commandId,
+      skillName,
+      workspaceId: null,
+      action: result.action,
+      sourceOrigin: result.sourceOrigin,
+      destination: result.destination,
+    }).catch((err: unknown) => {
+      clearPending(skillName);
+      toast.error(lifecycleRefusalMessage(err));
+    });
   };
 
   const handleSaveSkillOverride = async (updates: {
@@ -313,6 +383,13 @@ export default function Skills() {
               />
             </div>
 
+            <ScopeRail
+              dropTargetScope={dropTargetScope}
+              onDragOverScope={setDropTargetScope}
+              onDragLeaveScope={() => setDropTargetScope(null)}
+              onDropOnScope={handleDropOnScope}
+            />
+
             <div className="mt-4 pt-4 border-t border-primary/20 flex flex-col gap-2">
               <button
                 onClick={() => handleSelectCategory(null)}
@@ -327,6 +404,7 @@ export default function Skills() {
 
               {dormantCount > 0 && (
                 <button
+                  data-testid="cold-storage-nav-toggle"
                   onClick={handleSelectColdStorage}
                   className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all flex items-center justify-between gap-2 ${
                     coldStorageView
@@ -404,6 +482,26 @@ export default function Skills() {
         categories={categoryOptions}
       />
       </SkillLaunchProvider>
+
+      <MoveToProjectDialog
+        open={!!scopeMoveDialog}
+        skillName={scopeMoveDialog?.skillName ?? ""}
+        sourceOrigin={scopeMoveDialog?.sourceOrigin ?? ""}
+        hostId={host}
+        onOpenChange={(o) => !o && setScopeMoveDialog(null)}
+        onMoved={(commandId) => {
+          // The pending paint begins HERE (dialog confirm), never at drop
+          // time — the Project lane never enqueues until the workspace is
+          // chosen and confirmed (D-03, Pitfall 2/4).
+          if (scopeMoveDialog) {
+            beginPending(scopeMoveDialog.skillName, {
+              commandId,
+              action: "move",
+              destination: "project",
+            });
+          }
+        }}
+      />
 
       <IntakeSheet open={intakeSheetOpen} onOpenChange={setIntakeSheetOpen} feed={feed} />
 
@@ -498,5 +596,13 @@ export default function Skills() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Skills() {
+  return (
+    <SkillControlSurfaceProvider>
+      <SkillsBody />
+    </SkillControlSurfaceProvider>
   );
 }

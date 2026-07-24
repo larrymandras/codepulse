@@ -374,22 +374,26 @@ describe("Skills page", () => {
   });
 
   describe("Cold Storage rail entry", () => {
+    // Scoped to the nav-toggle testid, not bare text/role — Plan 100-03's
+    // ScopeRail also renders a "Cold Storage" scope entry (always visible,
+    // fixed 3-entry rail) immediately below Categories, so a bare
+    // getByRole("button", { name: /cold storage/i }) is now ambiguous.
     it("is absent when no dormant skills exist", () => {
       render(<Skills />);
-      expect(screen.queryByText("Cold Storage")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("cold-storage-nav-toggle")).not.toBeInTheDocument();
     });
 
     it("appears with the dormant skill count when a dormant skill exists", () => {
       setupMocks(MOCK_WITH_DORMANT as any);
       render(<Skills />);
-      const coldStorageButton = screen.getByRole("button", { name: /cold storage/i });
+      const coldStorageButton = screen.getByTestId("cold-storage-nav-toggle");
       expect(within(coldStorageButton).getByText("1")).toBeInTheDocument();
     });
 
     it("shows the dormant skill row and explainer, and hides overview content, when clicked", () => {
       setupMocks(MOCK_WITH_DORMANT as any);
       render(<Skills />);
-      fireEvent.click(screen.getByRole("button", { name: /cold storage/i }));
+      fireEvent.click(screen.getByTestId("cold-storage-nav-toggle"));
       expect(screen.getByText("Cold Tool")).toBeInTheDocument();
       expect(
         screen.getByText(/Dormant skills live on disk but are not loaded/i)
@@ -400,7 +404,7 @@ describe("Skills page", () => {
     it("leaves cold storage view when a rail category is clicked", () => {
       setupMocks(MOCK_WITH_DORMANT as any);
       render(<Skills />);
-      fireEvent.click(screen.getByRole("button", { name: /cold storage/i }));
+      fireEvent.click(screen.getByTestId("cold-storage-nav-toggle"));
       expect(screen.getByText("Cold Tool")).toBeInTheDocument();
       fireEvent.click(getCategoryNavItem("Legal"));
       expect(screen.getByText("NDA Generator")).toBeInTheDocument();
@@ -434,7 +438,7 @@ describe("Skills page", () => {
       ];
       setupMocks(MOCK_WITH_SHADOWED as any);
       render(<Skills />);
-      const coldStorageButton = screen.getByRole("button", { name: /cold storage/i });
+      const coldStorageButton = screen.getByTestId("cold-storage-nav-toggle");
       expect(within(coldStorageButton).getByText("1")).toBeInTheDocument();
       fireEvent.click(coldStorageButton);
       expect(screen.getByText("Shadowed Tool")).toBeInTheDocument();
