@@ -9,7 +9,7 @@ import { ScopeRail } from "@/components/skills/ScopeRail";
 import { SkillsInCategory } from "@/components/skills/SkillsInCategory";
 import { AllSkillsOverview } from "@/components/skills/AllSkillsOverview";
 import { ColdStorageView } from "@/components/skills/ColdStorageView";
-import { QuickDeck } from "@/components/skills/QuickDeck";
+import { SkillCommandDeck } from "@/components/skills/SkillCommandDeck";
 import { SkillCommandPalette } from "@/components/skills/SkillCommandPalette";
 import { SkillLaunchProvider } from "@/components/skills/SkillLaunchProvider";
 import { NewSkillsBanner } from "@/components/skills/NewSkillsBanner";
@@ -337,11 +337,6 @@ function SkillsBody() {
         />
       ) : (
       <>
-      <QuickDeck
-        skills={enrichedSkills}
-        onToggleFavorite={(name) => toggleFav({ skillName: name })}
-      />
-
       {needsSeed && (
         <div className="bg-card border border-border rounded-lg p-6 text-center">
           <p className="text-muted-foreground mb-3">
@@ -357,16 +352,16 @@ function SkillsBody() {
       )}
 
       {!needsSeed && (
-        <div className="flex flex-col lg:flex-row gap-6 items-start">
-          {/* Left rail: categories navigation. Sticky + viewport-bounded so the
-              Scope drop lanes + nav stay visible during a drag (Chrome does not
-              reliably auto-scroll nested overflow containers mid-DnD); the long
-              category list scrolls internally instead of pushing them off-screen. */}
-          <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[16rem_minmax(0,1fr)] xl:grid-cols-[16rem_minmax(0,1fr)_20rem] gap-6 items-start">
+          {/* Left rail. Sticky + viewport-bounded so the Scope drop lanes + nav
+              (now pinned at the TOP) stay visible during a drag — Chrome does not
+              reliably auto-scroll nested overflow containers mid-DnD; the long
+              category list scrolls internally below instead. */}
+          <div className="w-full flex-shrink-0 flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-hidden">
             <select
               value={originFilter}
               onChange={(e) => setOriginFilter(e.target.value)}
-              className="bg-card border border-border rounded-lg px-2 py-1.5 text-base text-foreground"
+              className="bg-card border border-border rounded-lg px-2 py-1.5 text-base text-foreground flex-shrink-0"
               aria-label="Filter by origin"
             >
               <option value="all">All origins</option>
@@ -377,28 +372,7 @@ function SkillsBody() {
               ))}
             </select>
 
-            <div className="flex flex-col gap-2 lg:flex-1 lg:min-h-0">
-              <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2 flex-shrink-0">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
-                Categories
-              </h2>
-              {/* Only the category list scrolls — Scope lanes + nav below stay pinned/visible. */}
-              <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
-                <CategoryGrid
-                  categories={categories}
-                  skillCounts={skillCounts}
-                  onSelectCategory={handleSelectCategory}
-                  onEditCategory={setEditingCategory}
-                  onAddCategory={() => setCreatingCategory(true)}
-                  dropTargetCategory={dropTarget}
-                  onDragOverCategory={(name) => setDropTarget(name)}
-                  onDragLeaveCategory={() => setDropTarget(null)}
-                  onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
-                  selectedCategory={selectedCategory}
-                />
-              </div>
-            </div>
-
+            {/* Scope drop lanes — pinned at the top so a drag never chases them. */}
             <div className="flex-shrink-0">
               <ScopeRail
                 dropTargetScope={dropTargetScope}
@@ -408,7 +382,7 @@ function SkillsBody() {
               />
             </div>
 
-            <div className="mt-4 pt-4 border-t border-primary/20 flex flex-col gap-2 flex-shrink-0">
+            <div className="flex flex-col gap-2 flex-shrink-0">
               <button
                 onClick={() => handleSelectCategory(null)}
                 className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
@@ -440,10 +414,32 @@ function SkillsBody() {
                 </button>
               )}
             </div>
+
+            {/* Categories — the long list; scrolls internally so Scope/nav above stay pinned. */}
+            <div className="flex flex-col gap-2 lg:flex-1 lg:min-h-0 border-t border-primary/20 pt-3">
+              <h2 className="text-xs font-mono font-bold text-primary/70 uppercase tracking-[0.2em] flex items-center gap-2 pl-2 flex-shrink-0">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse shadow-[var(--glow-xs)]" />
+                Categories
+              </h2>
+              <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+                <CategoryGrid
+                  categories={categories}
+                  skillCounts={skillCounts}
+                  onSelectCategory={handleSelectCategory}
+                  onEditCategory={setEditingCategory}
+                  onAddCategory={() => setCreatingCategory(true)}
+                  dropTargetCategory={dropTarget}
+                  onDragOverCategory={(name) => setDropTarget(name)}
+                  onDragLeaveCategory={() => setDropTarget(null)}
+                  onDropOnCategory={(name, e) => handleDropOnCategory(name, e)}
+                  selectedCategory={selectedCategory}
+                />
+              </div>
+            </div>
           </div>
 
           {/* Main content */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4">
+          <div className="min-w-0 flex flex-col gap-4">
             <input
               type="text"
               placeholder="Filter skills..."
@@ -487,6 +483,14 @@ function SkillsBody() {
                 onToggleFavorite={(name) => toggleFav({ skillName: name })}
               />
             )}
+          </div>
+
+          {/* Command Deck — right-rail favorites dashboard (xl+; stacks below on narrow) */}
+          <div className="hidden xl:block xl:sticky xl:top-0 xl:self-start xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:pr-1">
+            <SkillCommandDeck
+              skills={enrichedSkills}
+              onToggleFavorite={(name) => toggleFav({ skillName: name })}
+            />
           </div>
         </div>
       )}
