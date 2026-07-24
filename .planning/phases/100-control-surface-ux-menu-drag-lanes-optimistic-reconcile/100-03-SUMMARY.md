@@ -97,3 +97,12 @@ None - no external service configuration required.
 ---
 *Phase: 100-control-surface-ux-menu-drag-lanes-optimistic-reconcile*
 *Completed: 2026-07-24*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/skills/ScopeRail.tsx
+- FOUND: src/components/skills/ScopeRail.test.tsx
+- FOUND: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-03-SUMMARY.md
+- FOUND: 9126c6fa (test commit)
+- FOUND: d6534e91 (feat commit)
+- FOUND: d39934e (summary commit)
