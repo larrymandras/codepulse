@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { SkillRow } from "./SkillRow";
 import { SkillLaunchProvider } from "./SkillLaunchProvider";
 import { DORMANT_ORIGIN } from "@/lib/skills";
+import { usePendingMove, useDraggingSkill } from "@/hooks/usePendingLifecycleMoves";
 
 // Phase 98: SkillRow now always renders SkillLifecycleMenu, which calls
 // useQuery/useMutation (host list, lifecycle commands, enqueueLifecycle) —
@@ -12,6 +13,14 @@ import { DORMANT_ORIGIN } from "@/lib/skills";
 vi.mock("convex/react", () => ({
   useQuery: vi.fn(() => []),
   useMutation: vi.fn(() => vi.fn()),
+}));
+
+// Plan 100-05: SkillRow reads the pending overlay + dragging-skill setter
+// from context via these two hooks — mocked directly so tests don't need a
+// real SkillControlSurfaceProvider.
+vi.mock("@/hooks/usePendingLifecycleMoves", () => ({
+  usePendingMove: vi.fn(),
+  useDraggingSkill: vi.fn(),
 }));
 
 // Phase 99: SkillLifecycleMenu's always-on Run submenu (D-02) resolves
@@ -33,10 +42,14 @@ function renderRow(ui: React.ReactElement) {
 }
 
 const writeText = vi.fn();
+const setDraggingSkill = vi.fn();
 
 beforeEach(() => {
   writeText.mockReset().mockResolvedValue(undefined);
   Object.assign(navigator, { clipboard: { writeText } });
+  setDraggingSkill.mockReset();
+  vi.mocked(usePendingMove).mockReturnValue(undefined);
+  vi.mocked(useDraggingSkill).mockReturnValue({ draggingSkill: null, setDraggingSkill });
 });
 
 const skill = {
@@ -99,5 +112,52 @@ describe("SkillRow", () => {
     const setData = vi.fn();
     fireEvent.dragStart(row, { dataTransfer: { setData, effectAllowed: "" } });
     expect(setData).toHaveBeenCalledWith("text/plain", "legal-nda");
+  });
+
+  it("pending move (D-05): row gets opacity-70 and a pulsing --status-info indicator", () => {
+    vi.mocked(usePendingMove).mockReturnValue({
+      commandId: "cmd-1",
+      action: "archive",
+      destination: "cold",
+    });
+    const h = handlers();
+    const { container } = renderRow(<SkillRow skill={skill} {...h} />);
+    const row = container.querySelector('[data-skill="legal-nda"]')!;
+    expect(row.className).toContain("opacity-70");
+    const indicator = screen.getByTestId("pending-indicator");
+    expect(indicator.className).toContain("bg-[var(--status-info)]");
+    expect(indicator.className).toContain("animate-pulse");
+  });
+
+  it("no pending move: neither opacity-70 nor the pending indicator renders", () => {
+    vi.mocked(usePendingMove).mockReturnValue(undefined);
+    const h = handlers();
+    const { container } = renderRow(<SkillRow skill={skill} {...h} />);
+    const row = container.querySelector('[data-skill="legal-nda"]')!;
+    expect(row.className).not.toContain("opacity-70");
+    expect(screen.queryByTestId("pending-indicator")).toBeNull();
+  });
+
+  it("dormant (no pending) keeps opacity-50 distinct from the pending opacity-70", () => {
+    vi.mocked(usePendingMove).mockReturnValue(undefined);
+    const h = handlers();
+    const { container } = renderRow(
+      <SkillRow skill={{ ...skill, origins: [DORMANT_ORIGIN] }} {...h} />
+    );
+    const row = container.querySelector('[data-skill="legal-nda"]')!;
+    expect(row.className).toContain("opacity-50");
+    expect(row.className).not.toContain("opacity-70");
+  });
+
+  it("reports the dragged skill on dragStart and clears it on dragEnd", () => {
+    const h = handlers();
+    const { container } = renderRow(<SkillRow skill={skill} {...h} />);
+    const row = container.querySelector('[data-skill="legal-nda"]')!;
+    fireEvent.dragStart(row, {
+      dataTransfer: { setData: vi.fn(), effectAllowed: "" },
+    });
+    expect(setDraggingSkill).toHaveBeenCalledWith(skill);
+    fireEvent.dragEnd(row);
+    expect(setDraggingSkill).toHaveBeenCalledWith(null);
   });
 });

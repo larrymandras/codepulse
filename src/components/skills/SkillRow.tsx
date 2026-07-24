@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { GripVertical, Pencil, Star } from "lucide-react";
 import { isDormant, skillInvocation, type SkillLike } from "@/lib/skills";
 import { SkillLifecycleMenu } from "./SkillLifecycleMenu";
+import { usePendingMove, useDraggingSkill } from "@/hooks/usePendingLifecycleMoves";
 
 export type RowSkill = SkillLike & {
   displayName: string;
@@ -53,6 +54,8 @@ export function SkillRow({
 }: SkillRowProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
   const dormant = isDormant(skill);
+  const pending = usePendingMove(skill.name);
+  const { setDraggingSkill } = useDraggingSkill();
   const invocation = skillInvocation(skill);
   const desc = skill.overrideDescription ?? skill.description ?? "";
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,11 +86,20 @@ export function SkillRow({
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", skill.name);
         e.dataTransfer.effectAllowed = "move";
+        setDraggingSkill(skill);
       }}
+      onDragEnd={() => setDraggingSkill(null)}
       className={`group relative flex items-center gap-3 px-3 py-2 hover:bg-primary/10 transition-colors ${
         dormant ? "opacity-50" : ""
-      }`}
+      } ${pending ? "opacity-70" : ""}`}
     >
+      {pending && (
+        <div
+          data-testid="pending-indicator"
+          className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--status-info)] shadow-[var(--glow-sm)] animate-pulse"
+        />
+      )}
+
       <GripVertical className="w-3.5 h-3.5 text-primary/30 group-hover:text-primary cursor-grab flex-shrink-0" />
 
       <div className="flex items-center w-64 flex-shrink-0 gap-2 pr-4 border-r border-primary/10">
