@@ -69,9 +69,31 @@ import { SkillLaunchProvider } from "./SkillLaunchProvider";
 // below, which restores the real isShadowing) — the spy remains only so the
 // older shadow tests can exercise the branch in isolation for a plain
 // dormant fixture.
+//
+// 100-01 refactor note: SkillLifecycleMenu now derives its scope-state from
+// resolveLifecycleActions() (src/lib/skills.ts) instead of calling
+// isShadowing() directly. resolveLifecycleActions computes `shadowed`
+// internally via a same-module reference to the real isShadowing, which a
+// mocked EXPORT binding on this module cannot intercept (ESM same-module
+// calls are not routed through the external mock namespace). The
+// resolveLifecycleActions override below re-derives `shadowed` from the
+// (mockable) isShadowing spy so the existing shadow-blocked-Restore tests'
+// assertions keep working unchanged — every other field still comes from the
+// real implementation.
 vi.mock("@/lib/skills", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/skills")>();
-  return { ...actual, isShadowing: vi.fn(actual.isShadowing) };
+  const isShadowingSpy = vi.fn(actual.isShadowing);
+  return {
+    ...actual,
+    isShadowing: isShadowingSpy,
+    resolveLifecycleActions: (
+      skill: Parameters<typeof actual.resolveLifecycleActions>[0],
+      lane?: Parameters<typeof actual.resolveLifecycleActions>[1]
+    ) => ({
+      ...actual.resolveLifecycleActions(skill, lane),
+      shadowed: isShadowingSpy(skill),
+    }),
+  };
 });
 
 // Radix DropdownMenu/Tooltip use Popper internally — jsdom has no ResizeObserver.

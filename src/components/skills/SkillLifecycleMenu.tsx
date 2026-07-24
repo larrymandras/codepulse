@@ -43,7 +43,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { isDormant, isShadowing, DORMANT_ORIGIN } from "@/lib/skills";
+import { resolveLifecycleActions, DORMANT_ORIGIN } from "@/lib/skills";
 import type { RowSkill } from "./SkillRow";
 import { useForgeHostsRaw } from "@/hooks/useForge";
 import {
@@ -138,14 +138,8 @@ export function SkillLifecycleMenu({
   // (active + dormant copies) has isDormant === false, but in Cold Storage the
   // menu acts on the DORMANT copy (98-REVIEW WR-04 — this is what makes the
   // shadow-blocked Restore branch reachable against live merged-row data).
-  const dormant = isDormant(skill) || lane === "cold";
-  const shadowed = isShadowing(skill);
-  const nonDormantOrigins = (skill.origins ?? []).filter(
-    (o) => o !== DORMANT_ORIGIN
-  );
-  const multiScope = nonDormantOrigins.length > 1;
-  const activeOrigin = nonDormantOrigins.length === 1 ? nonDormantOrigins[0] : undefined;
-  const moveDestinationIsProject = activeOrigin === "claude-code";
+  const { dormant, shadowed, multiScope, activeOrigin, moveDestinationIsProject } =
+    resolveLifecycleActions(skill, lane);
 
   const enqueue = (overrides: {
     action: "archive" | "restore" | "move" | "delete";
