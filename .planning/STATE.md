@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: verifying
-stopped_at: Phase 100 Plan 04 executed — Skills.tsx integration, ScopeRail wired, MoveToProjectDialog.onMoved widened, integration drop tests (5/5 Phase 100 plans code-complete)
-last_updated: "2026-07-24T13:27:00.000Z"
-last_activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring) complete — Phase 100 and v11.0 milestone now code-complete; live-Forge-daemon UAT outstanding
+status: phase_complete
+stopped_at: Phase 100 COMPLETE (5/5 plans) — code review 2 Critical + 1 Info fixed w/ regression tests (5f68801), verification 8/9 truths code-verified (tsc clean, 2528 tests pass); live-Forge-daemon UAT tracked in 100-HUMAN-UAT.md
+last_updated: "2026-07-24T14:30:00.000Z"
+last_activity: 2026-07-24 -- Phase 100 executed + verified + closed BY HAND (approved by Larry). All 4 v11.0 phases now code-complete. Live-Forge-daemon drag UAT + CR-02 no-op gesture outstanding (100-HUMAN-UAT.md). v11.0 not yet formally milestone-closed (separate ceremony).
 progress:
   total_phases: 4
   completed_phases: 4
@@ -38,7 +38,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — CODE-COMPLETE (5/5 plans)
 Plan: 5 of 5 EXECUTED (100-01, 100-02, 100-03, 100-05, 100-04; see 100-04-SUMMARY.md) — Phase 100 is now fully code-complete. Manual live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) is the only outstanding item, same category as the Phase 98/99 deferred manual checks.
 Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99/100 all now CODE-COMPLETE (4/4). Not yet formally milestone-closed (no MILESTONE-AUDIT.md/tag/handoff yet — separate step).
-Status: Verifying (Phase 100 code-complete; live UAT + formal milestone close outstanding)
+Status: Phase 100 COMPLETE (verified 8/9, code review criticals fixed); live-daemon UAT + formal v11.0 milestone close outstanding
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring: Skills.tsx + MoveToProjectDialog + integration drop tests) complete
