@@ -447,18 +447,34 @@ describe("Skills page", () => {
     expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
   });
 
-  it("origin filter narrows the overview to skills from the selected origin", () => {
+  it("scope chips narrow the overview by origin (replaces the origin dropdown)", () => {
     const mockWithOrigins = MOCK_ENRICHED_SKILLS.map((s) => ({
       ...s,
-      origins: s.name === "legal-review" ? ["cc"] : ["claude-code"],
+      origins: s.name === "legal-review" ? ["claude-code:project:abc"] : ["claude-code"],
     }));
     setupMocks(mockWithOrigins);
     render(<Skills />);
-    const originSelect = screen.getByLabelText("Filter by origin");
-    fireEvent.change(originSelect, { target: { value: "cc" } });
+
+    // Project chip → only the project-origin skill remains in the overview.
+    fireEvent.click(screen.getByTestId("skill-chip-project"));
     expect(screen.getByText("Contract Review")).toBeInTheDocument();
     expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument();
     expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument();
+
+    // Global chip → the project skill drops out, global skills return.
+    fireEvent.click(screen.getByTestId("skill-chip-global"));
+    expect(screen.queryByText("Contract Review")).not.toBeInTheDocument();
+    expect(screen.getByText("NDA Generator")).toBeInTheDocument();
+  });
+
+  it("the Unused smart-view chip shows only never-run, non-dormant skills", () => {
+    render(<Skills />);
+    fireEvent.click(screen.getByTestId("skill-chip-unused"));
+    expect(screen.getByTestId("skill-chip-unused")).toHaveAttribute("aria-pressed", "true");
+    // Contract Review (useCount 0, not dormant) stays; used skills are filtered out.
+    expect(screen.getByText("Contract Review")).toBeInTheDocument();
+    expect(screen.queryByText("NDA Generator")).not.toBeInTheDocument(); // useCount 5
+    expect(screen.queryByText("Plan Phase")).not.toBeInTheDocument(); // useCount 10
   });
 
   it("copy is the primary action on a drilled-in skill row, and does not record a launch (D-13)", async () => {

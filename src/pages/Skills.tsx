@@ -31,11 +31,12 @@ import {
 import { useIntakeFeed } from "@/hooks/useIntakeFeed";
 import { Button } from "@/components/ui/button";
 import {
-  originOptions,
+  isDormant,
   hasDormantCopy,
   resolveScopeDrop,
   resolveLifecycleActions,
 } from "@/lib/skills";
+import { SkillFilterChips, type SkillChip } from "@/components/skills/SkillFilterChips";
 import type { Doc } from "../../convex/_generated/dataModel";
 
 function SkillsBody() {
@@ -53,7 +54,7 @@ function SkillsBody() {
     sourceOrigin: string;
   } | null>(null);
   const [search, setSearch] = useState("");
-  const [originFilter, setOriginFilter] = useState<string>("all");
+  const [chip, setChip] = useState<SkillChip>("all");
   const [reviewing, setReviewing] = useState(false);
   const [intakeModalOpen, setIntakeModalOpen] = useState(false);
   const [intakeSheetOpen, setIntakeSheetOpen] = useState(false);
@@ -76,21 +77,52 @@ function SkillsBody() {
   const seedAll = useMutation(api.skillCategories.seedExistingSkills);
   const enqueueLifecycle = useMutation(api.forge.enqueueLifecycle);
 
-  // Distinct, distinguishable labels — five repos must not all render as "Project".
-  const originChoices = useMemo(() => originOptions(enrichedSkills), [enrichedSkills]);
-
   const reviewSkills = useMemo(
     () => enrichedSkills.filter((s) => s.isAutoAssigned && !s.hidden),
     [enrichedSkills]
   );
 
+  const isProjectOrigin = (s: { origins?: string[] }) =>
+    (s.origins ?? []).some((o) => o.startsWith("claude-code:project:"));
+
+  // The chip row (SkillFilterChips) drives the overview filter. "cold" is handled
+  // by the Cold Storage view, so it falls through to the unfiltered base here.
   const visibleSkills = useMemo(() => {
-    return enrichedSkills.filter(
-      (s) =>
-        !s.hidden &&
-        (originFilter === "all" || (s.origins ?? []).includes(originFilter))
-    );
-  }, [enrichedSkills, originFilter]);
+    const base = enrichedSkills.filter((s) => !s.hidden);
+    switch (chip) {
+      case "favorites":
+        return base.filter((s) => s.favorite);
+      case "mostused":
+        return base.filter((s) => (s.useCount ?? 0) > 0);
+      case "unused":
+        return base.filter((s) => (s.useCount ?? 0) === 0 && !isDormant(s));
+      case "recent":
+        return [...base]
+          .filter((s) => (s.discoveredAt ?? 0) > 0)
+          .sort((a, b) => (b.discoveredAt ?? 0) - (a.discoveredAt ?? 0))
+          .slice(0, 30);
+      case "global":
+        return base.filter((s) => (s.origins ?? []).includes("claude-code"));
+      case "project":
+        return base.filter(isProjectOrigin);
+      default:
+        return base;
+    }
+  }, [enrichedSkills, chip]);
+
+  const chipCounts = useMemo((): Record<SkillChip, number> => {
+    const base = enrichedSkills.filter((s) => !s.hidden);
+    return {
+      all: base.length,
+      favorites: base.filter((s) => s.favorite).length,
+      mostused: base.filter((s) => (s.useCount ?? 0) > 0).length,
+      unused: base.filter((s) => (s.useCount ?? 0) === 0 && !isDormant(s)).length,
+      recent: Math.min(30, base.filter((s) => (s.discoveredAt ?? 0) > 0).length),
+      global: base.filter((s) => (s.origins ?? []).includes("claude-code")).length,
+      project: base.filter(isProjectOrigin).length,
+      cold: base.filter(hasDormantCopy).length,
+    };
+  }, [enrichedSkills]);
 
   // One filter bar, both views: applies to the overview AND the drilled-in
   // category (the old rail input only pretended to search "all skills").
@@ -144,6 +176,19 @@ function SkillsBody() {
   const handleSelectColdStorage = () => {
     setColdStorageView(true);
     setSelectedCategory(null);
+    setChip("cold");
+  };
+
+  // Chip row is the top-level overview filter: it clears any category drill-in
+  // and routes the "cold" chip to the Cold Storage view (shared with the nav).
+  const handleSelectChip = (next: SkillChip) => {
+    if (next === "cold") {
+      handleSelectColdStorage();
+      return;
+    }
+    setChip(next);
+    setSelectedCategory(null);
+    setColdStorageView(false);
   };
 
   const selectedCategoryData = useMemo(() => {
@@ -358,20 +403,6 @@ function SkillsBody() {
               reliably auto-scroll nested overflow containers mid-DnD; the long
               category list scrolls internally below instead. */}
           <div className="w-full flex-shrink-0 flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-hidden">
-            <select
-              value={originFilter}
-              onChange={(e) => setOriginFilter(e.target.value)}
-              className="bg-card border border-border rounded-lg px-2 py-1.5 text-base text-foreground flex-shrink-0"
-              aria-label="Filter by origin"
-            >
-              <option value="all">All origins</option>
-              {originChoices.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-
             {/* Scope drop lanes — pinned at the top so a drag never chases them. */}
             <div className="flex-shrink-0">
               <ScopeRail
@@ -384,7 +415,7 @@ function SkillsBody() {
 
             <div className="flex flex-col gap-2 flex-shrink-0">
               <button
-                onClick={() => handleSelectCategory(null)}
+                onClick={() => handleSelectChip("all")}
                 className={`w-full text-left px-3 py-2 text-sm font-mono font-bold uppercase tracking-widest rounded transition-all ${
                   !selectedCategory && !coldStorageView
                     ? "bg-primary/20 text-primary border border-primary/50"
@@ -447,6 +478,8 @@ function SkillsBody() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-background border border-primary/20 rounded px-4 py-2 text-sm font-mono text-primary placeholder:text-primary/40 focus:border-primary focus:ring-1 focus:ring-primary/50 focus:outline-none transition-all shadow-[var(--glow-xs)]"
             />
+
+            <SkillFilterChips active={chip} counts={chipCounts} onSelect={handleSelectChip} />
 
             {coldStorageView && (
               <ColdStorageView
