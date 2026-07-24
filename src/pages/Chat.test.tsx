@@ -16,7 +16,7 @@
  */
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, screen, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -27,11 +27,23 @@ const mockRecordSkillLaunch = vi.fn().mockResolvedValue(undefined);
 /** Mutable status the mocked useAstridrChat() reads on each call. */
 let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
 
+/**
+ * Registered (eventType -> callback) pairs across every subscribeEvent()
+ * caller in the tree (Chat.tsx's own run.completed/swap.state listeners AND
+ * ControlCenterPanel's proactive_prefs.state listener all share this one
+ * mocked context) — 186-08 regression coverage dispatches directly into the
+ * REAL registered callback rather than asserting state was merely set.
+ */
+const registeredEventHandlers = new Map<string, (event: Record<string, unknown>) => void>();
+
 vi.mock("@/contexts/AstridrWSContext", () => ({
   useAstridrWS: () => ({
     status: mockStatus,
     sendCommand: vi.fn().mockResolvedValue({ status: "ok" }),
-    subscribeEvent: vi.fn(() => () => {}),
+    subscribeEvent: vi.fn((eventType: string, cb: (event: Record<string, unknown>) => void) => {
+      registeredEventHandlers.set(eventType, cb);
+      return () => registeredEventHandlers.delete(eventType);
+    }),
   }),
 }));
 
@@ -93,6 +105,7 @@ function renderChat(
 describe("Chat — mount-triggered auto-send (LAUNCH-01/03, D-05/D-06/D-12)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    registeredEventHandlers.clear();
     mockStatus = "connected";
     mockSendMessage.mockResolvedValue(true);
     mockRecordSkillLaunch.mockResolvedValue(undefined);
@@ -165,5 +178,74 @@ describe("Chat — mount-triggered auto-send (LAUNCH-01/03, D-05/D-06/D-12)", ()
     // Give the (would-be) recordSkillLaunch call a chance to land.
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(mockRecordSkillLaunch).not.toHaveBeenCalled();
+  });
+});
+
+// ─── 186-08 regression: BRAIN pill reflects a live run.completed model ──────
+//
+// Root cause (confirmed live via a Playwright probe against the real running
+// astridr-agent, not just source reading): every CodePulse chat.send turn
+// runs through bootstrap/wiring.py's `_ws_agent_launcher`, which explicitly
+// sets `sub_loop.complexity_assessor = None` for `_source == "codepulse_chat"`
+// (a deliberate chat-speed optimization) — so `post_turn_pipeline.py`'s old
+// `elif run_state.last_complexity: ...` fallback never fired for a single
+// CodePulse-originated turn, and `provider.get_current_model` doesn't exist
+// anywhere in the codebase (dead hasattr check). The live run.completed WS
+// frame carried `"model": ""` (falsy), so Chat.tsx's `if (model)` guard
+// correctly never called setLastTurnModel — the wiring was NOT the bug; the
+// backend was never actually emitting a real value. Fixed in
+// post_turn_pipeline.py to prefer `response.model` (always populated by
+// every provider). This test asserts the value reaches the RENDERED BRAIN
+// box from a simulated run.completed WS event, not just that React state
+// was set — dispatching directly into the REAL callback Chat.tsx registered
+// via subscribeEvent (not a re-implemented copy).
+describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+  });
+
+  it("shows Auto before any turn completes", () => {
+    renderChat();
+    expect(screen.getByText("BRAIN")).toBeInTheDocument();
+    expect(screen.getByText("Auto")).toBeInTheDocument();
+  });
+
+  it("updates the rendered BRAIN box when a run.completed event carries a model", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("run.completed")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("run.completed")!({
+        data: { session_id: "s1", model: "claude-sonnet-5", rounds: 1 },
+      });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("claude-sonnet-5")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Auto")).not.toBeInTheDocument();
+  });
+
+  it("does NOT update the BRAIN box when run.completed carries an empty model (the exact live bug shape)", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("run.completed")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("run.completed")!({
+        data: { session_id: "s1", model: "", rounds: 1 },
+      });
+    });
+
+    // Falsy model must NOT clobber the "Auto" fallback — reproduces the
+    // exact live payload shape before the backend fix.
+    expect(screen.getByText("Auto")).toBeInTheDocument();
   });
 });
