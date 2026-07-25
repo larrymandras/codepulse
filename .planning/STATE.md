@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25. Next: work the 3 queued post-v11.0 follow-ups (or /gsd-new-milestone).
+**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25. Next: work the 3 queued post-v11.0 follow-ups → **full technical detail in `.planning/HANDOFF-post-v11.0.md`** (display-name fix, Ástríðr bridge coverage w/ verified root causes, Chat command-center mockup). Or /gsd-new-milestone.
 
 ## Current Position
 
