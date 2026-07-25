@@ -9,7 +9,7 @@
 - ✅ **v8.0 Graph/KG Consolidation** — Phases 83-87 (**shipped 2026-06-23**) — unified Graphs hub + KG depth features — [archive](milestones/v8.0-ROADMAP.md)
 - ✅ **v9.0 Readability & Experience** — Phases 88-92 (**shipped 2026-06-29**) — durable analytics rollup, readable theme system + editorial skin, Agent Room, 3D Memory Galaxy, voice command palette — [archive](milestones/v9.0-ROADMAP.md)
 - ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
-- 🚧 **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**in progress**, started 2026-07-17) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor is the critical path
+- ✅ **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**shipped 2026-07-25**, 22/22 requirements; tagged `v11.0`) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor — [archive](milestones/v11.0-ROADMAP.md) · [audit](milestones/v11.0-MILESTONE-AUDIT.md)
 - ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phases 101-102 (**shipped 2026-07-23**, 10/10 plans; tagged `v12.0`) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo) — [archive](milestones/v12.0-ROADMAP.md)
 
 ## Phases
@@ -466,7 +466,9 @@ Plans:
 
 ---
 
-## v11.0 Skills Command Center — Full Lifecycle & Launch
+## v11.0 Skills Command Center — Full Lifecycle & Launch — ✅ SHIPPED (2026-07-25)
+
+> Shipped 2026-07-25, tagged `v11.0`. 4 phases (97–100), 23 plans, 22/22 requirements. Full requirements archived in [milestones/v11.0-REQUIREMENTS.md](milestones/v11.0-REQUIREMENTS.md); this section in [milestones/v11.0-ROADMAP.md](milestones/v11.0-ROADMAP.md); audit (`tech_debt`, 0 blockers, 3 queued follow-ups) in [milestones/v11.0-MILESTONE-AUDIT.md](milestones/v11.0-MILESTONE-AUDIT.md). Phase dirs archived under `milestones/v11.0-phases/`.
 
 > **Started 2026-07-17** via `/gsd-new-milestone`. Continues phase numbering from 96. Phase 97 was already promoted from backlog 999.1 (2026-07-17) as **"Skill Lifecycle Management"** (archive/restore/delete via Forge daemon); that scope is folded into **Phase 98** below now that the daemon-executor + real-intake foundation is sequenced first per the dependency analysis (nothing mutates the host without the daemon executor existing — Phase 97 is re-themed, its context carried forward, nothing dropped or duplicated).
 

@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: phase_complete
-stopped_at: Phase 100 COMPLETE (5/5 plans) — code review 2 Critical + 1 Info fixed w/ regression tests (5f68801), verification 8/9 truths code-verified (tsc clean, 2528 tests pass); live-Forge-daemon UAT tracked in 100-HUMAN-UAT.md
-last_updated: "2026-07-24T14:30:00.000Z"
-last_activity: 2026-07-24 -- Phase 100 executed + verified + closed BY HAND (approved by Larry). All 4 v11.0 phases now code-complete. Live-Forge-daemon drag UAT + CR-02 no-op gesture outstanding (100-HUMAN-UAT.md). v11.0 not yet formally milestone-closed (separate ceremony).
+status: milestone_shipped
+stopped_at: v11.0 SHIPPED & CLOSED BY HAND 2026-07-25 (tagged v11.0) — Phases 97-100, 22/22 requirements; Phase 100 UAT round-trip PASSED live, CR-02 unit-verified. Archived to milestones/v11.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md + milestones/v11.0-phases/. No active milestone.
+last_updated: "2026-07-25T19:40:00.000Z"
+last_activity: 2026-07-25 -- v11.0 milestone closed by hand (audit + archive + tag). 3 queued post-v11.0 follow-ups (display-name fix → Ástríðr bridge coverage → Chat command-center mockup). No active milestone; run /gsd-new-milestone for the next.
 progress:
   total_phases: 4
   completed_phases: 4
@@ -31,14 +31,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 100 — control-surface-ux-menu-drag-lanes-optimistic-reconcile
+**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25. Next: work the 3 queued post-v11.0 follow-ups (or /gsd-new-milestone).
 
 ## Current Position
 
-Phase: 100 (control-surface-ux-menu-drag-lanes-optimistic-reconcile) — CODE-COMPLETE (5/5 plans)
-Plan: 5 of 5 EXECUTED (100-01, 100-02, 100-03, 100-05, 100-04; see 100-04-SUMMARY.md) — Phase 100 is now fully code-complete. Manual live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) is the only outstanding item, same category as the Phase 98/99 deferred manual checks.
-Active milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch)** — Phases 97/98/99/100 all now CODE-COMPLETE (4/4). Not yet formally milestone-closed (no MILESTONE-AUDIT.md/tag/handoff yet — separate step).
-Status: Phase 100 COMPLETE (verified 8/9, code review criticals fixed); live-daemon UAT + formal v11.0 milestone close outstanding
+Milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch) — ✅ SHIPPED & CLOSED 2026-07-25**, tagged `v11.0`. Phases 97-100 (23 plans), 22/22 requirements. Audit `tech_debt` (0 blockers). Archived to `milestones/v11.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v11.0-phases/`.
+Phase 100 UAT (operator, 2026-07-25): drag archive→restore round-trip PASSED live; honest-failure path confirmed; CR-02 unit-verified + live dormant→cold no-op observed.
+This session also folded a large Skills-page redesign into Phase 100 (3-column command-center layout, right-hand Command Deck, filter chips, bulk-select, bridge-mirror filter, no-op feedback) — all tested, full suite green.
+Queued post-v11.0 (operator-confirmed order): **① fix mangled skill display names → ② Ástríðr bridge coverage (10 unbridged skills, cross-repo) → ③ Chat command-center + telemetry mockup**.
+Status: No active milestone. v11.0 closed.
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring: Skills.tsx + MoveToProjectDialog + integration drop tests) complete

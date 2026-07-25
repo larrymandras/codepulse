@@ -1,5 +1,24 @@
 # Milestones
 
+## v11.0 Skills Command Center — Full Lifecycle & Launch (Shipped: 2026-07-25)
+
+**Phases completed:** 4 phases (97-100), 23 plans, cross-repo (codepulse + forge daemon)
+**Timeline:** 2026-07-17 → 2026-07-25 | ~40 commits (incl. a large post-verification Skills-page redesign folded into Phase 100)
+**Requirements:** 22/22 (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04)
+**Verification:** Phase 100 `100-VERIFICATION.md` 8/9 truths code-verified (tsc clean, full suite green); code review 2 Critical + 1 Info fixed with regression tests. Live operator UAT 2026-07-25: drag archive→restore round-trip PASSED; honest-failure path confirmed ("nothing changed on disk"); CR-02 unit-verified + live dormant→cold no-op observed. Phases 97-99 verified via their SUMMARY/VERIFICATION at their own closes (97 operator-verified live 2026-07-19).
+**Milestone audit:** `tech_debt` — 0 blockers; 3 queued follow-ups + Phase-97 stale-traceability reconciled at close. See `milestones/v11.0-MILESTONE-AUDIT.md`.
+**Known deferred / queued at close (operator-confirmed order):** ① fix mangled skill display names (`generateDisplayName` prefix-strip → stored overrides); ② Ástríðr bridge coverage — 10 Claude Code skills unbridged (`frontend-design`/`skill-creator` .claude-alt plugins + 5 vault junctions + 3 unmounted-repo project skills), root-caused this session, cross-repo fix in astridr-repo; ③ Chat command-center + telemetry redesign (mockup approved).
+
+**Key accomplishments:**
+
+- **Real skill intake + daemon foundation (Phase 97):** install from uploaded SKILL.md or GitHub URL to global/project/cold scope, written to the host by the Forge daemon (not dry-run); daemon rescans + re-syncs the registry so the Skills page auto-reflects; advertises supported command types. Operator-verified live 2026-07-19.
+- **Full lifecycle mutations (Phase 98):** archive / restore / move-scope / delete (archive-first) executed atomically on the host by the daemon, with `isShadowing` guard and offline graceful-degrade (queue + expire, no false success).
+- **Skill launch / dispatch (Phase 99):** run a skill in Chat (auto-send), as a Forge agent run, or dispatch to Ástríðr — via a Run-target chooser that records `useCount`/`lastUsedAt`.
+- **Control-surface UX (Phase 100):** per-row scope-gated ⋯ menu, Global/Project/Cold drag lanes wired through one shared `resolveScopeDrop` matrix (so drag mirrors the menu by construction), commandId-reconciled optimistic pending state with honest success/failure/expiry, and in-app Cold-Storage restore (no `/manage-skills` dead-end). Code review found and fixed CR-02 (drag-lane threading — a shadowed row could archive its live copy) and CR-01 (match-gated `clearPending`).
+- **Post-verification redesign (folded into Phase 100, 2026-07-25):** 3-column command-center layout (Scope pinned top-left, right-hand Command Deck favorites dashboard: pinned/most-used/recently-used/recently-added), single-select filter-chip row (smart views + scope) replacing the origin dropdown, bulk-select with batch favorite/move/archive-with-confirm, Ástríðr `bridge`-mirror skills hidden from the page (view-only, doesn't affect access), no-op/reject drop feedback, wider description column, search-clear-on-chip; QuickDeck retired. Full suite green (2564+).
+
+---
+
 ## v12.0 Personal Productivity — Reminders & Calendar (Shipped: 2026-07-23)
 
 **Phases completed:** 2 phases (101-102), 10 plans (~22 tasks), cross-repo (codepulse + astridr-repo)

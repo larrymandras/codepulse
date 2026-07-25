@@ -1,93 +1,13 @@
-# Requirements: v11.0 Skills Command Center — Full Lifecycle & Launch
+# Requirements
 
-**Milestone goal:** Turn the Skills page from a read-only catalog into a real control surface — add, move, archive, restore, delete, and *launch* skills live, executed on the host by the Forge daemon.
+**No active milestone.** v11.0 (Skills Command Center — Full Lifecycle & Launch) shipped 2026-07-25 and is archived at [milestones/v11.0-REQUIREMENTS.md](milestones/v11.0-REQUIREMENTS.md) (22/22 requirements complete across Phases 97–100).
 
-**Defined:** 2026-07-17 (via `/gsd-new-milestone`, research skipped — internal surfaces already mapped)
+Run `/gsd-new-milestone` to define the next milestone's requirements here.
 
----
+## Post-v11.0 queued follow-ups (not yet a milestone)
 
-## Milestone v11.0 Requirements
+Operator-confirmed order (2026-07-25):
 
-### INTAKE — Real Skill Intake (execute today's dry-run)
-
-- [ ] **INTAKE-01**: User can install a skill from an uploaded SKILL.md to a chosen scope (global / project / cold storage) and the file actually lands on the host disk — not the current "validation only, nothing written" dry-run.
-- [ ] **INTAKE-02**: User can install a skill from a GitHub URL (with optional `subpath` fan-out) to a chosen scope, with the existing URL-shape and path-traversal guards enforced.
-- [ ] **INTAKE-03**: After a successful install the skill appears in the Skills page automatically with correct origin/scope (daemon-driven registry rescan) — no manual refresh.
-- [ ] **INTAKE-04**: The intake outcome surfaces the daemon's real execution/validation report; a failed install reports an actionable error and leaves no partial state on disk.
-
-### LIFE — Skill Lifecycle Mutations
-
-- [x] **LIFE-01**: User can archive an active skill to cold storage from the UI (host moves it to `.claude/skills-available/` / dormant origin); it stays tracked as dormant, removing its context/token load.
-- [x] **LIFE-02**: User can restore a dormant/cold skill back to active (global or project) from the UI.
-- [x] **LIFE-03**: User can move a skill between global and project scope from the UI.
-- [x] **LIFE-04**: User can delete a skill — *archive-first*: the default destructive action archives to cold storage; true file deletion is a separate action requiring an explicit confirmation.
-- [x] **LIFE-05**: Lifecycle actions respect `isShadowing` — activating/restoring a dormant skill shadowed by an active same-name skill is surfaced and guarded (no silent conflicting activation).
-- [x] **LIFE-06**: When the Forge daemon is offline, lifecycle actions degrade gracefully — the command queues, the UI shows it will expire, and no false-success is shown (mirrors the intake expired path).
-
-### LAUNCH — Skill Launch / Dispatch
-
-- [x] **LAUNCH-01**: User can run a skill directly in Chat — the invocation is sent via `chat.send` and executes (auto-send), not merely prefilled in the composer.
-- [x] **LAUNCH-02**: User can launch a skill as a Forge agent run — choosing agent / workspace / mode, with the skill as the instruction (reuses `enqueueLaunch`).
-- [x] **LAUNCH-03**: User can dispatch a skill to Ástríðr / a chosen persona to execute.
-- [x] **LAUNCH-04**: The Run affordance lets the user pick the target (Chat / Forge agent / Ástríðr) at launch time and records the launch (`useCount` / `lastUsedAt`).
-
-### UX — Control-Surface Interaction
-
-- [x] **UX-01**: Every skill row exposes an overflow menu (⋯) with the applicable lifecycle + run actions (Move, Restore, Archive, Delete, Run), each gated by the skill's current scope.
-- [x] **UX-02**: The Skills page presents Global / Project / Cold Storage as drag targets; dragging a skill across scopes fires the corresponding move / archive / restore command (extends today's drag-to-category).
-- [x] **UX-03**: Mutating actions paint an optimistic/pending state and reconcile against the server command row (reuses the intake optimistic-row pattern), with clear success / failure / expiry feedback.
-- [x] **UX-04**: The Cold Storage view offers in-app restore — the "run `/manage-skills` in a terminal" dead-end is removed.
-
-### DAEMON — Host Executor & Registry Rescan (cross-repo)
-
-- [ ] **DAEMON-01**: The Forge daemon executes `intake` commands — validates then writes SKILL.md to the destination scope (global / project / cold) on the host filesystem.
-- [x] **DAEMON-02**: The Forge daemon executes lifecycle commands — archive (→ cold), restore, move-scope, and delete — atomically on the host, archive-first for delete.
-- [x] **DAEMON-03**: After any successful mutation the daemon rescans and re-syncs the skills registry (`syncInventory`) so CodePulse origins/scope reflect host truth.
-- [ ] **DAEMON-04**: The daemon advertises its new supported command types so older daemons never receive commands they cannot run (extends `supportedTypes` / `resolveClaimTypes`).
-
----
-
-## Future Requirements (deferred)
-
-- Skill **versioning / update** (pull a newer SKILL.md over an installed one, diff before overwrite) — intake covers first-install; in-place update is a later concern.
-- **Bulk multi-select** lifecycle actions (checkbox-select many skills, act at once) — considered as a UI option, deferred in favor of per-row ⋯ + drag for this milestone.
-- Skill **authoring / editing of SKILL.md body** in-app — this milestone manages placement and invocation, not content editing (metadata overrides already exist).
-- **`importSkills` catalog bulk-import** UI entry point — the mutation exists but wiring a catalog browser is out of this milestone's scope.
-
-## Out of Scope
-
-- **Editing skill file *contents*** from the browser — the browser/Convex app cannot touch the filesystem; even via the daemon, body-editing is a separate authoring concern, not lifecycle/launch.
-- **A skill marketplace / registry service** — intake is upload-or-GitHub-URL; no hosted discovery catalog.
-- **Non-Forge execution transports** — launch rides existing channels (`chat.send`, `enqueueLaunch`, Ástríðr); no new transport protocol.
-- **Retroactive migration of legacy skill origins** — already handled by the one-time `normalizeLegacySkillOrigins` backfill; not re-litigated here.
-
-## Traceability
-
-| REQ-ID | Phase | Status |
-|--------|-------|--------|
-| INTAKE-01 | Phase 97 | Pending |
-| INTAKE-02 | Phase 97 | Pending |
-| INTAKE-03 | Phase 97 | Pending |
-| INTAKE-04 | Phase 97 | Pending |
-| DAEMON-01 | Phase 97 | Pending |
-| DAEMON-03 | Phase 97 | Complete |
-| DAEMON-04 | Phase 97 | Pending |
-| LIFE-01 | Phase 98 | Complete |
-| LIFE-02 | Phase 98 | Complete |
-| LIFE-03 | Phase 98 | Complete |
-| LIFE-04 | Phase 98 | Complete |
-| LIFE-05 | Phase 98 | Complete |
-| LIFE-06 | Phase 98 | Complete |
-| DAEMON-02 | Phase 98 | Complete |
-| LAUNCH-01 | Phase 99 | Complete |
-| LAUNCH-02 | Phase 99 | Complete |
-| LAUNCH-03 | Phase 99 | Complete |
-| LAUNCH-04 | Phase 99 | Complete |
-| UX-01 | Phase 100 | Complete |
-| UX-02 | Phase 100 | Complete |
-| UX-03 | Phase 100 | Complete |
-| UX-04 | Phase 100 | Complete |
-
-**Coverage:** 22/22 v1 requirements mapped — no orphans, no duplicates.
-
-**Note (2026-07-24, Phase 100 close):** Marked Complete at phase-close (5/5 plans code-complete), matching the Phase 98/99 precedent — the phase's own manual, live-Forge-daemon drag verification (archive/move/restore round-trip + honest rollback) remains outstanding and is tracked as deferred/accepted-tech-debt verification, not a gap in delivered code (see 100-04-SUMMARY.md "Next Phase Readiness").
+1. **Fix mangled skill display names** — `generateDisplayName()` strips a category-style prefix at seed time (agent-browser → "Browser"), stored as overrides; regenerate full names + migrate stored overrides.
+2. **Ástríðr bridge coverage** — bridge the 10 Claude Code skills currently missing from Ástríðr (`frontend-design`, `skill-creator` + 8 project/vault); cross-repo (astridr-repo bridge config + docker-compose + `claude_code_bridge.py`). Root cause verified 2026-07-25 (see `milestones/v11.0-MILESTONE-AUDIT.md`).
+3. **Chat command-center + telemetry redesign** — 2-column HUD with system-vitals gauges / LLM meters / reactive aura (mockup approved).

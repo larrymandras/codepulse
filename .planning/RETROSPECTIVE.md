@@ -210,6 +210,41 @@
 - Sessions: Phase 101 build → UAT → RETEST-UAT → Phase 102 tech-debt → milestone close, over ~5 days interleaved with v11.0.
 - Notable: cross-repo work spanned codepulse + astridr-repo + the self-hosted Convex backend; live verification (real Google/Telegram/cron) was the load-bearing cost, not code volume (~10 changed files on the core surface).
 
+## Milestone: v11.0 — Skills Command Center: Full Lifecycle & Launch
+
+**Shipped:** 2026-07-25
+**Phases:** 4 (97-100) | **Plans:** 23 | **Timeline:** 2026-07-17 → 2026-07-25 | cross-repo (codepulse + Forge daemon)
+
+### What Was Built
+- Real skill intake to the host (Phase 97), full lifecycle mutations archive/restore/move/delete via the daemon (Phase 98), skill launch to Chat/Forge-agent/Ástríðr (Phase 99), and the control-surface UX — ⋯ menu + drag lanes + optimistic reconcile (Phase 100).
+- A post-verification operator-driven Skills-page redesign folded into Phase 100: 3-column command-center layout, right-hand Command Deck favorites dashboard, filter-chip smart views, bulk-select (favorite/move/archive-with-confirm), bridge-mirror filtering, no-op/reject drop feedback.
+
+### What Worked
+- **One shared predicate made drag/menu parity structural.** `resolveScopeDrop`/`resolveLifecycleActions` are the single source both the ⋯ menu and the drag path consume, so they can't drift — and the code review's worst find (CR-02: a shadowed row could archive its *live* copy) was a wiring gap where the lane wasn't threaded into that predicate, caught and regression-tested before ship.
+- **Live operator UAT surfaced what green suites never could.** 2564 passing tests said nothing about the two things that actually blocked the operator: 195 `cc_*` bridge duplicates rejecting on drag ("multi-scope"), and skill names mangled to "Browser"/"Research" by a seed-time prefix strip. Both were found by watching a real person try to use it.
+- **Query the data before calling it a bug.** The "can't drop onto Cold Storage" symptom looked like a drag regression; a direct Convex query proved it was the drag matrix *correctly* rejecting bridge-origin duplicates — two overlapping catalogs, not a UI defect. A DB query also answered the operator's real goal ("does Ástríðr have all my skills?") with evidence: 10 unbridged.
+- **Verify subagent findings against live files before relaying.** The bridge-gap investigation returned file:line root causes; spot-checking the marker string, the `extra_skill_dirs`, and an actual junction confirmed all three mechanisms before they went into the audit.
+
+### What Was Inefficient
+- **A milestone's worth of latent Skills-page data/display debt only surfaced under live use** (bridge duplicates, mangled display names, no-op silence), forcing an in-session redesign after the phase was already "code-complete." The read-only dashboard had never been operated at scale by a human before this session.
+- **CR-02 couldn't be reproduced live** — the live catalog has 0 shadowed-merged skills, so the exact destructive gesture stayed unit-verified only; fabricating one was deferred.
+
+### Patterns Established
+- **DB-query to separate "by design" from "data bug"** before touching code, when a symptom could be either.
+- **Instrument → one operator repro → fix from the trace** for live drag/timing behavior (added temporary `[scope-drop]` logging; the screenshot answered it before the log was even needed).
+- **Fold operator-driven redesign into the shipping phase** when it's direct polish on that phase's surface, and note it in the audit — rather than spawning a new milestone mid-flow.
+- **A view-filter is not an access change** — reassure (and verify: 0 bridge-only skills) before hiding a whole class of rows the operator depends on elsewhere.
+
+### Key Lessons
+- When a guard fires on a large fraction of your data (195/474 "multi-scope"), suspect the data source (two catalogs), not the guard.
+- Honest feedback is the difference between "broken" and "working" in operator perception — a silent no-op reads as a bug; the same no-op with an "already in Cold Storage" toast reads as correct.
+- Chip/badge counts must reflect the same filters the list applies, or a stale search makes the count lie.
+- Milestone close done by hand (per this project's standing convention) — audit + archive + tag, counters cross-checked against git; no `gsd-sdk milestone.complete`.
+
+### Cost Observations
+- Almost the entire spend was one long interactive session: execute phase → code review → fix → verify → live UAT → in-session redesign (5 increments) → bridge investigation → milestone close. The redesign + operator-loop dwarfed the original phase execution.
+- Bridge-gap investigation delegated to a background agent (cross-repo, huge astridr-repo); findings verified before use.
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -219,7 +254,8 @@
 | v4.0 | 39 days | 8 | Wave-based parallel execution, formal verification gates, human UAT |
 | v5.0 | 10 days | 12 | Multi-provider gateway, external integrations, advanced viz; milestone bookkeeping deferred (context-exhaustion lesson) |
 | v9.0 | 7 days | 5 | Token-first theming, lazy-chunk build gates, operator manual-gates; live-integration gate lesson (cross-repo features must run live before "done") *(v7/v8 retros not recorded)* |
-| v12.0 | 5 days | 2 | Interleaved side-quest milestone (ran inside in-progress v11.0); extract-don't-delete REQUIREMENTS.md at close; audit shipped as a real gate then closed by a numbered tech-debt phase *(v11.0 in progress, retro pending)* |
+| v12.0 | 5 days | 2 | Interleaved side-quest milestone (ran inside in-progress v11.0); extract-don't-delete REQUIREMENTS.md at close; audit shipped as a real gate then closed by a numbered tech-debt phase |
+| v11.0 | ~8 days | 4 | Live operator UAT as the load-bearing gate — a green suite (2564) shipped, but operating it revealed two-catalog data debt + mangled names + no-op silence, driving an in-session redesign folded into the phase; DB-query-to-diagnose and instrument-then-repro for live drag bugs |
 
 ### Cumulative Quality
 
@@ -229,6 +265,7 @@
 | v5.0 | 445+ | green at ship | 668 files, +76,219 / −3,401 |
 | v9.0 | 88: 47/47 · 92: 83/83 Nyquist; 91 verifier 10/10 | green at ship | 277 files, +33,655 / −3,495; ~86,100 LOC |
 | v12.0 | 101: Nyquist 17/17 tasks; 101-RETEST-UAT 7/7 Playwright vs live | green at ship | cross-repo; ~10 core-surface files; live-verified (Google ×3, Telegram, cron) |
+| v11.0 | full suite 2564 green at ship; Phase 100 code review 2 Critical + 1 Info fixed w/ regression tests | green at ship | operator UAT round-trip PASSED live (archive→restore); cross-repo (Forge daemon) |
 
 ### Top Lessons (Verified Across Milestones)
 
