@@ -208,7 +208,10 @@ function SkillsBody() {
 
   // Chip row is the top-level overview filter: it clears any category drill-in
   // and routes the "cold" chip to the Cold Storage view (shared with the nav).
+  // Clearing the search is important — a chip means "show this whole bucket", so
+  // a stale text filter must not leave the pill counting rows the list hides.
   const handleSelectChip = (next: SkillChip) => {
+    setSearch("");
     if (next === "cold") {
       handleSelectColdStorage();
       return;

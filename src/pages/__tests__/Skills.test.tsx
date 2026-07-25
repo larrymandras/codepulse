@@ -469,6 +469,15 @@ describe("Skills page", () => {
     expect(screen.getByText("NDA Generator")).toBeInTheDocument();
   });
 
+  it("selecting a filter chip clears a stale search so the bucket count and list agree", () => {
+    render(<Skills />);
+    const searchBox = screen.getByPlaceholderText(/filter skills/i) as HTMLInputElement;
+    fireEvent.change(searchBox, { target: { value: "zzz-no-match" } });
+    expect(searchBox.value).toBe("zzz-no-match");
+    fireEvent.click(screen.getByTestId("skill-chip-global"));
+    expect(searchBox.value).toBe("");
+  });
+
   it("hides Astridr bridge skills ([bridge, native]) from the page — view only, keeps the Claude Code twin", () => {
     const base = MOCK_ENRICHED_SKILLS[0];
     setupMocks([
