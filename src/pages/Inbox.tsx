@@ -18,7 +18,8 @@
  *
  * Keyboard navigation (D-13):
  *   ArrowDown/ArrowUp — move focus between cards
- *   Enter             — expand/collapse focused card
+ *   Enter             — mark focused card read (mirrors a click; cards have no
+ *                       expand state, so there is nothing to expand)
  *   A                 — approve focused approval item
  *   R                 — start reject flow on focused approval item
  *   Escape            — clear keyboard focus
@@ -355,7 +356,8 @@ export default function Inbox() {
       if (e.key === "Enter" && focusedIndex !== null) {
         e.preventDefault();
         const item = items[focusedIndex];
-        setExpandedId((prev) => (prev === item.id ? null : item.id));
+        // Cards carry no expand state — Enter mirrors a click: mark it read.
+        if (item.type !== "approval" && !item.read) handleMarkRead(item.id);
       }
       if (e.key === "Escape") {
         setFocusedIndex(null);
@@ -379,7 +381,7 @@ export default function Inbox() {
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [focusedIndex, filteredItems, handleApprove, handleReject]);
+  }, [focusedIndex, filteredItems, handleApprove, handleReject, handleMarkRead]);
 
   // Scroll focused card into view
   useEffect(() => {
@@ -440,7 +442,7 @@ export default function Inbox() {
 
       {/* Keyboard hints caption */}
       <p className="text-sm text-(--muted-foreground) px-4 mt-1">
-        ↑↓ navigate · Enter expand · A approve · R reject
+        ↑↓ navigate · Enter mark read · A approve · R reject
       </p>
 
       {/* Card list */}

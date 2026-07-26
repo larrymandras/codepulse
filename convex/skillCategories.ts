@@ -49,20 +49,76 @@ function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function generateDisplayName(
-  skillName: string,
-  prefix: string
-): string {
-  const normalized = skillName.replace(/^cc_/, "");
-  if (prefix === "uncategorized") {
-    return normalized.split(/[-_]/).map(titleCase).join(" ");
-  }
-  const withoutPrefix = normalized.replace(new RegExp(`^${prefix}[-_]?`), "");
-  if (!withoutPrefix) return titleCase(prefix);
-  return withoutPrefix
-    .split(/[-_]/)
+function titleizeSegments(s: string): string {
+  return s
+    .split(/[-_:]+/)
+    .filter(Boolean)
     .map(titleCase)
     .join(" ");
+}
+
+/** Minimum distinct members for a hyphen prefix to count as a real family. */
+export const FAMILY_MIN_MEMBERS = 3;
+
+/**
+ * Which hyphen prefixes are real "families" (gsd, geo, superpowers, …) whose
+ * shared prefix is worth stripping from the display name.
+ *
+ * Two corrections over a naive count:
+ * 1. **cc_ bridge twins are deduped** — `deep-research` and its bridge mirror
+ *    `cc_deep-research` are the SAME logical skill, so they count once. Without
+ *    this every bridged standalone skill looks like a 2-member family.
+ * 2. **Threshold is ≥3 distinct members** — a coincidental first-word overlap
+ *    (agent-browser + agent-development) is not a curated namespace and would
+ *    mangle both names if stripped. Real families (geo≈9, gsd, n8n) clear 3
+ *    comfortably.
+ *
+ * Colon namespaces (`plugin:skill`) are handled directly in generateDisplayName
+ * and never rely on this set.
+ */
+export function computeFamilyPrefixes(skillNames: string[]): Set<string> {
+  const membersByPrefix = new Map<string, Set<string>>();
+  for (const name of skillNames) {
+    const base = name.replace(/^cc_/, ""); // collapse bridge twin onto native
+    const prefix = extractPrefix(base);
+    if (prefix === "uncategorized") continue;
+    if (!membersByPrefix.has(prefix)) membersByPrefix.set(prefix, new Set());
+    membersByPrefix.get(prefix)!.add(base);
+  }
+  return new Set(
+    [...membersByPrefix.entries()]
+      .filter(([, members]) => members.size >= FAMILY_MIN_MEMBERS)
+      .map(([p]) => p)
+  );
+}
+
+/**
+ * Human-readable display name for a skill.
+ *
+ * - Explicit `plugin:skill` namespace → strip everything up to the first colon
+ *   (`vercel:deploy` → "Deploy", `code-review:code-review` → "Code Review").
+ * - Real hyphen family (isFamily) → strip the shared prefix
+ *   (`gsd-plan-phase` → "Plan Phase").
+ * - Otherwise → full title-cased name so it never reads as a fragment
+ *   (`agent-browser` → "Agent Browser", `deploy-to-vercel` → "Deploy To Vercel").
+ */
+export function generateDisplayName(
+  skillName: string,
+  prefix: string,
+  isFamily = false
+): string {
+  const normalized = skillName.replace(/^cc_/, "");
+  const colonIdx = normalized.indexOf(":");
+  if (colonIdx !== -1) {
+    const skillPart = normalized.slice(colonIdx + 1);
+    return titleizeSegments(skillPart || normalized);
+  }
+  if (isFamily && prefix !== "uncategorized") {
+    const withoutPrefix = normalized.replace(new RegExp(`^${prefix}[-_]?`), "");
+    if (!withoutPrefix) return titleCase(prefix);
+    return titleizeSegments(withoutPrefix);
+  }
+  return titleizeSegments(normalized);
 }
 
 export const listCategories = query({
@@ -111,6 +167,31 @@ export const getSkillsWithOverrides = query({
         favorite: override?.favorite ?? false,
       };
     });
+  },
+});
+
+/**
+ * The N most-recently-launched skills (by `lastUsedAt`, stamped by
+ * recordSkillLaunch). Server-side sort + slice returns only N rows, so the Chat
+ * command center's "Recent Launches" widget never ships the whole registry.
+ */
+export const getRecentlyUsedSkills = query({
+  args: { limit: v.optional(v.float64()) },
+  handler: async (ctx, { limit }) => {
+    const rows = await ctx.db.query("skills").collect();
+    const grouped = groupSkillRowsByName(rows);
+    const overrides = await ctx.db.query("skillOverrides").collect();
+    const overrideMap = new Map(overrides.map((o) => [o.skillName, o]));
+    return grouped
+      .filter((s) => (s.lastUsedAt ?? 0) > 0)
+      .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+      .slice(0, limit ?? 6)
+      .map((s) => ({
+        name: s.name,
+        displayName: overrideMap.get(s.name)?.displayName ?? s.name,
+        useCount: s.useCount ?? 0,
+        lastUsedAt: s.lastUsedAt ?? 0,
+      }));
   },
 });
 
@@ -224,6 +305,11 @@ export const autoSeedSkill = mutation({
     if (existingOverride) return;
 
     const prefix = extractPrefix(skillName);
+    const allNames = groupSkillRowsByName(
+      await ctx.db.query("skills").collect()
+    ).map((s) => s.name);
+    if (!allNames.includes(skillName)) allNames.push(skillName);
+    const isFamily = computeFamilyPrefixes(allNames).has(prefix);
 
     let category = await ctx.db
       .query("skillCategories")
@@ -244,7 +330,7 @@ export const autoSeedSkill = mutation({
 
     await ctx.db.insert("skillOverrides", {
       skillName,
-      displayName: generateDisplayName(skillName, prefix),
+      displayName: generateDisplayName(skillName, prefix, isFamily),
       categoryName: prefix,
       description: undefined,
       hidden: false,
@@ -257,6 +343,9 @@ export const seedExistingSkills = mutation({
   args: {},
   handler: async (ctx) => {
     const skills = await ctx.db.query("skills").collect();
+    const families = computeFamilyPrefixes(
+      groupSkillRowsByName(skills).map((s) => s.name)
+    );
     let seeded = 0;
     for (const skill of skills) {
       const existing = await ctx.db
@@ -286,7 +375,7 @@ export const seedExistingSkills = mutation({
 
       await ctx.db.insert("skillOverrides", {
         skillName: skill.name,
-        displayName: generateDisplayName(skill.name, prefix),
+        displayName: generateDisplayName(skill.name, prefix, families.has(prefix)),
         categoryName: prefix,
         description: undefined,
         hidden: false,
@@ -295,6 +384,69 @@ export const seedExistingSkills = mutation({
       seeded++;
     }
     return seeded;
+  },
+});
+
+/**
+ * One-shot migration: rewrite auto-generated `displayName`s to the new
+ * family-aware form. Only rewrites overrides whose stored displayName STILL
+ * equals what the OLD (always-strip) generator produced — i.e. a name no human
+ * ever edited. Manual renames (and bulk-accepted names that happen to differ)
+ * are left untouched. Bounded per-row patches — safe on the live self-hosted
+ * instance (never a bulk delete / replace-all).
+ */
+export const migrateDisplayNames = mutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, { dryRun }) => {
+    // Replicates the pre-family generator exactly, so we can detect names that
+    // are still the untouched machine value.
+    const oldGenerate = (skillName: string, prefix: string): string => {
+      const normalized = skillName.replace(/^cc_/, "");
+      if (prefix === "uncategorized") {
+        return normalized.split(/[-_]/).map(titleCase).join(" ");
+      }
+      const withoutPrefix = normalized.replace(
+        new RegExp(`^${prefix}[-_]?`),
+        ""
+      );
+      if (!withoutPrefix) return titleCase(prefix);
+      return withoutPrefix.split(/[-_]/).map(titleCase).join(" ");
+    };
+
+    const skills = await ctx.db.query("skills").collect();
+    const families = computeFamilyPrefixes(
+      groupSkillRowsByName(skills).map((s) => s.name)
+    );
+    const overrides = await ctx.db.query("skillOverrides").collect();
+
+    const changes: Array<{ skillName: string; from: string; to: string }> = [];
+    let skippedManual = 0;
+    for (const ov of overrides) {
+      const prefix = extractPrefix(ov.skillName);
+      const oldName = oldGenerate(ov.skillName, prefix);
+      const newName = generateDisplayName(
+        ov.skillName,
+        prefix,
+        families.has(prefix)
+      );
+      if (oldName === newName) continue; // family cases unchanged
+      if (ov.displayName !== oldName) {
+        skippedManual++; // human-edited — leave it
+        continue;
+      }
+      if (!newName) continue;
+      changes.push({ skillName: ov.skillName, from: ov.displayName, to: newName });
+      if (!dryRun) {
+        await ctx.db.patch(ov._id, { displayName: newName });
+      }
+    }
+    return {
+      dryRun: dryRun ?? false,
+      rewritten: changes.length,
+      skippedManual,
+      totalOverrides: overrides.length,
+      changes,
+    };
   },
 });
 

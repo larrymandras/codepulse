@@ -253,7 +253,7 @@ export function ControlCenterPanel({
 
       {disconnected ? (
         <span className="flex items-center gap-2 font-mono text-sm tracking-[0.1em] text-muted-foreground px-3 py-1.5 rounded-full bg-muted border border-border">
-          <WifiOff className="w-4 h-4" aria-hidden="true" /> OFFLINE
+          <WifiOff className="w-4 h-4" aria-hidden="true" /> DISCONNECTED
         </span>
       ) : (
         <ReadinessPill ready={ready} voiceState={voiceState} />

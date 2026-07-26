@@ -4,6 +4,7 @@ import {
   DEFAULT_COLORS,
   extractPrefix,
   generateDisplayName,
+  computeFamilyPrefixes,
 } from "../skillCategories";
 
 describe("extractPrefix", () => {
@@ -40,13 +41,74 @@ describe("extractPrefix", () => {
   });
 });
 
-describe("generateDisplayName", () => {
-  it("strips prefix and titlecases segments", () => {
-    expect(generateDisplayName("gsd-plan-phase", "gsd")).toBe("Plan Phase");
+describe("computeFamilyPrefixes", () => {
+  it("flags a prefix shared by >=3 distinct skills as a family", () => {
+    const families = computeFamilyPrefixes([
+      "gsd-plan-phase",
+      "gsd-new-project",
+      "gsd-execute-phase",
+      "deep-research",
+    ]);
+    expect(families.has("gsd")).toBe(true);
+    expect(families.has("deep")).toBe(false);
   });
 
-  it("handles single segment after prefix", () => {
-    expect(generateDisplayName("legal-nda", "legal")).toBe("Nda");
+  it("does not treat a coincidental 2-word overlap as a family", () => {
+    const families = computeFamilyPrefixes([
+      "agent-browser",
+      "agent-development",
+    ]);
+    expect(families.has("agent")).toBe(false);
+  });
+
+  it("dedupes cc_ bridge twins so a standalone skill is not a family", () => {
+    // native + bridge twin of the SAME skill must count once
+    const families = computeFamilyPrefixes([
+      "deep-research",
+      "cc_deep-research",
+    ]);
+    expect(families.has("deep")).toBe(false);
+  });
+
+  it("ignores uncategorized names", () => {
+    const families = computeFamilyPrefixes(["123-x", "456-y"]);
+    expect(families.has("uncategorized")).toBe(false);
+    expect(families.size).toBe(0);
+  });
+});
+
+describe("generateDisplayName", () => {
+  it("strips the prefix for a real family", () => {
+    expect(generateDisplayName("gsd-plan-phase", "gsd", true)).toBe("Plan Phase");
+  });
+
+  it("handles single segment after a family prefix", () => {
+    expect(generateDisplayName("legal-nda", "legal", true)).toBe("Nda");
+  });
+
+  it("keeps the full name for a standalone (non-family) skill", () => {
+    expect(generateDisplayName("agent-browser", "agent", false)).toBe(
+      "Agent Browser"
+    );
+    expect(generateDisplayName("deploy-to-vercel", "deploy", false)).toBe(
+      "Deploy To Vercel"
+    );
+  });
+
+  it("strips the plugin namespace for colon skills (regardless of isFamily)", () => {
+    expect(generateDisplayName("vercel:deploy", "vercel", false)).toBe("Deploy");
+    expect(
+      generateDisplayName("superpowers:brainstorming", "superpowers", false)
+    ).toBe("Brainstorming");
+  });
+
+  it("strips only the first colon segment for hyphenated plugin names", () => {
+    expect(
+      generateDisplayName("code-review:code-review", "code", false)
+    ).toBe("Code Review");
+    expect(
+      generateDisplayName("feature-dev:code-reviewer", "feature", false)
+    ).toBe("Code Reviewer");
   });
 
   it("titlecases the full name for uncategorized skills", () => {
@@ -54,15 +116,19 @@ describe("generateDisplayName", () => {
   });
 
   it("strips cc_ namespace before generating display name", () => {
-    expect(generateDisplayName("cc_article-writer", "article")).toBe("Writer");
+    expect(generateDisplayName("cc_gsd-plan-phase", "gsd", true)).toBe(
+      "Plan Phase"
+    );
   });
 
-  it("strips cc_ and prefix for gsd skills", () => {
-    expect(generateDisplayName("cc_gsd-plan-phase", "gsd")).toBe("Plan Phase");
+  it("keeps cc_ standalone names full", () => {
+    expect(generateDisplayName("cc_agent-browser", "agent", false)).toBe(
+      "Agent Browser"
+    );
   });
 
-  it("handles multi-word segments", () => {
-    expect(generateDisplayName("gsd-code-review-fix", "gsd")).toBe(
+  it("handles multi-word segments in a family", () => {
+    expect(generateDisplayName("gsd-code-review-fix", "gsd", true)).toBe(
       "Code Review Fix"
     );
   });
