@@ -264,23 +264,30 @@ describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () =>
   });
 });
 
-// ─── Phase 186 checkpoint round 4: proactive_alert observability fix (D-09) ─
+// ─── Phase 186 checkpoint round 4/5: proactive_alert observability fix (D-09) ─
 //
-// Root cause this guards against: the governor's WS-tier presence-cascade
-// delivery previously had no registered backend channel sender at all
-// (astridr/automation/proactive.py's make_codepulse_channel_sender fixes
-// this), so a money/high pulse card's intent reached status=complete while
-// Larry saw nothing — no toast, no chat message, nothing in Telegram. This
-// dispatches directly into the REAL registered "proactive_alert" callback
-// (not a re-implemented copy) and asserts BOTH observable channels fire.
-describe("Chat — proactive_alert renders toast + chat message (186-06 checkpoint round 4, D-09)", () => {
+// Root cause round 4 guarded against: the governor's WS-tier presence-
+// cascade delivery previously had no registered backend channel sender at
+// all (astridr/automation/proactive.py's make_codepulse_channel_sender
+// fixes this), so a money/high pulse card's intent reached status=complete
+// while Larry saw nothing — no toast, no chat message, nothing in Telegram.
+//
+// Root cause round 5 (page-scoping fix): the round-4 toast was wired here,
+// in Chat.tsx, so it only ever fired while /chat happened to be mounted —
+// Larry was on /inbox and never saw it. The toast now fires from an
+// APP-LEVEL mount (ProactiveAlertListener.tsx, App.tsx — see its own test
+// file) regardless of which page is active; THIS Chat-scoped subscription
+// now ONLY appends the visible assistant chat-timeline message (dispatches
+// directly into the REAL registered "proactive_alert" callback, not a
+// re-implemented copy).
+describe("Chat — proactive_alert appends a chat message (186-06 checkpoint round 5, D-09)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     registeredEventHandlers.clear();
     mockStatus = "connected";
   });
 
-  it("fires a toast AND appends a visible assistant chat message on a real proactive_alert event", async () => {
+  it("appends a visible assistant chat message on a real proactive_alert event (toast now fires app-level, not here)", async () => {
     renderChat();
 
     await waitFor(() => {
@@ -293,14 +300,12 @@ describe("Chat — proactive_alert renders toast + chat message (186-06 checkpoi
       });
     });
 
-    expect(toast).toHaveBeenCalledWith(
-      "Invoice needs payment",
-      expect.objectContaining({ duration: expect.any(Number) })
-    );
     expect(mockAppendLocalAssistantMessage).toHaveBeenCalledWith("Invoice needs payment");
+    // Chat.tsx no longer owns the toast channel — that's ProactiveAlertListener's job now.
+    expect(toast).not.toHaveBeenCalled();
   });
 
-  it("never toasts or appends a chat message for a malformed (bodyless) event", async () => {
+  it("never appends a chat message for a malformed (bodyless) event", async () => {
     renderChat();
 
     await waitFor(() => {
@@ -311,7 +316,7 @@ describe("Chat — proactive_alert renders toast + chat message (186-06 checkpoi
       registeredEventHandlers.get("proactive_alert")!({ data: { profileId: "personal" } });
     });
 
-    expect(toast).not.toHaveBeenCalled();
     expect(mockAppendLocalAssistantMessage).not.toHaveBeenCalled();
+    expect(toast).not.toHaveBeenCalled();
   });
 });

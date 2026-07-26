@@ -25,13 +25,12 @@ import { Send, Mic, MicOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
-import { FocusExitDigest } from "@/components/inbox/FocusExitDigest";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
 import { useScreenShare } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { runLostScreenAck, type VoiceState } from "@/components/voice/voiceState";
-import { renderProactiveAlert, PROACTIVE_ALERT_TOAST_DURATION_MS } from "@/lib/proactiveAlert";
+import { extractProactiveAlertBody } from "@/lib/proactiveAlert";
 import type { AutoSendHandoff } from "@/lib/skillRun";
 
 const LS_LISTENING = "codepulse-astridr-listening";
@@ -232,20 +231,24 @@ export default function Chat() {
   // governor.py's _resolve_presence_target -> channel_id "codepulse") now
   // pushes an observable "proactive_alert" event instead of silently
   // no-op'ing (root cause of Larry seeing zero alerting for money/high pulse
-  // cards despite their intents reaching status=complete). Renders as BOTH a
-  // sonner toast AND a visible assistant chat-timeline message — mirrors the
-  // runLostScreenAck (speak + appendLocalAssistantMessage) pattern below.
+  // cards despite their intents reaching status=complete).
+  //
+  // Checkpoint round 5 (page-scoping fix): the sonner TOAST now fires from
+  // an APP-LEVEL mount (ProactiveAlertListener.tsx, App.tsx) so it's visible
+  // on ANY page — the round-4 version wired it here only, so it only ever
+  // fired while /chat happened to be mounted (Larry was on /inbox and never
+  // saw it). This Chat-scoped subscription now ONLY appends the visible
+  // assistant chat-timeline message (can only append to a message list that
+  // exists, which requires Chat to be mounted) — mirrors the
+  // runLostScreenAck (speak + appendLocalAssistantMessage) split pattern
+  // below, one channel each.
   useEffect(() => {
     const unsubProactiveAlert = subscribeEvent("proactive_alert", (event) => {
       const data = (event as { data?: Record<string, unknown> }).data;
       if (!data) return;
-      renderProactiveAlert(
-        {
-          toast: (text) => toast(text, { duration: PROACTIVE_ALERT_TOAST_DURATION_MS }),
-          appendLocalAssistantMessage: chat.appendLocalAssistantMessage,
-        },
-        data
-      );
+      const body = extractProactiveAlertBody(data);
+      if (!body) return;
+      chat.appendLocalAssistantMessage(body);
     });
     return unsubProactiveAlert;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -394,9 +397,9 @@ export default function Chat() {
 
   return (
     <div className="presence-ambient flex flex-col h-full">
-      {/* Phase 186-13 (D-07): headless "you're back" toast on a focus-exit
-          digest row — fires once per real exit, never a burst. */}
-      <FocusExitDigest />
+      {/* Phase 186-13 (D-07) "you're back" focus-exit digest toast now
+          mounts app-level (App.tsx, checkpoint round 5 page-scoping fix)
+          -- previously only fired while /chat happened to be mounted. */}
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>

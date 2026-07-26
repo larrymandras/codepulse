@@ -18,6 +18,8 @@ import Automation from "./pages/Automation";
 import Executions from "./pages/Executions";
 import Ideation from "./pages/Ideation";
 import { AstridrWSProvider } from "./contexts/AstridrWSContext";
+import { ProactiveAlertListener } from "./components/ProactiveAlertListener";
+import { FocusExitDigest } from "./components/inbox/FocusExitDigest";
 
 // Lazy-load heavy pages
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -83,6 +85,13 @@ export default function App() {
   return (
     <BrowserRouter>
       <AstridrWSProvider>
+        {/* Phase 186 checkpoint round 5 (D-09 page-scoping fix): both
+            headless listeners are mounted ONCE here, app-wide, so a toast
+            fires regardless of which page is active -- moved out of
+            Chat.tsx, which previously meant they only ever fired while
+            /chat happened to be mounted. */}
+        <ProactiveAlertListener />
+        <FocusExitDigest />
         <AuthGuard>
           <Routes>
             <Route element={<DashboardLayout />}>
