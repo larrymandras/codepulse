@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: milestone_shipped
-stopped_at: v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0). No active milestone. The 3 queued post-v11.0 follow-ups are ALL DONE as of 2026-07-26 (ad-hoc/quick, not GSD phases): ① skill display-name family-aware fix + 198-row live Convex migration ✅; ② Ástríðr bridge coverage — "safe-7" (2 plugins + 5 vault skills) shipped & live-verified (7 cc_ twins), the DEFERRED 3 project-repo skills still open pending a trust-boundary call; ③ Chat 3-column command center + VitalsRail ✅ (+ Inbox Enter-key phantom-expand fixed). Commits: codepulse 565cef36 (master, pushed), astridr 82ead1fe (feature/brain-swap, pushed). Next: /gsd-new-milestone, or the two small carry-overs (deferred-3 bridge, Inbox R-key).
-last_updated: "2026-07-26T22:35:00.000Z"
-last_activity: 2026-07-26 -- cleared the 3 queued post-v11.0 follow-ups (display-name fix, bridge safe-7 verified, Chat command center) + Inbox Enter fix; codepulse 565cef36 / astridr 82ead1fe pushed. OPEN: ② deferred-3 bridge skills (trust call). No active milestone; run /gsd-new-milestone for the next.
+stopped_at: v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0). No active milestone. The 3 queued post-v11.0 follow-ups are ALL DONE + FULLY CLOSED 2026-07-26 (ad-hoc/quick, not GSD phases): ① skill display-name family-aware fix + 198-row live Convex migration ✅; ② Ástríðr bridge coverage FULLY DONE — safe-7 (2 plugins + 5 vault) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, mounted read-only + bridge.yaml) — all 10 previously-unbridged skills now have cc_ twins (202 total, live-verified astridr→Convex) ✅; ③ Chat 3-column command center + VitalsRail ✅ (+ Inbox Enter-key AND R-key phantom-expand both fixed). Commits: codepulse 565cef36/0ecf7b7/2fac593 (master, pushed), astridr 82ead1fe/46873c84 (feature/brain-swap, pushed). Post-v11.0 backlog FULLY CLEAR. Next: /gsd-new-milestone.
+last_updated: "2026-07-26T23:05:00.000Z"
+last_activity: 2026-07-26 -- cleared ALL post-v11.0 work: ① display-name fix, ② bridge coverage FULL (all 10 skills bridged, 202 cc_ twins), ③ Chat command center; + Inbox Enter & R-key fixes. codepulse 2fac593 / astridr 46873c84 pushed. Backlog clear; run /gsd-new-milestone for the next.
 progress:
   total_phases: 4
   completed_phases: 4
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25; the 3 queued post-v11.0 follow-ups are ALL DONE 2026-07-26 (see Current Position). Next: **/gsd-new-milestone**, or the two small carry-overs (② deferred-3 bridge skills, Inbox R-key phantom-expand fix).
+**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25; ALL post-v11.0 work is DONE & pushed 2026-07-26 (3 follow-ups + both Inbox key fixes + full bridge coverage; see Current Position). Backlog FULLY CLEAR. Next: **/gsd-new-milestone**.
 
 ## Current Position
 
@@ -40,9 +40,9 @@ Phase 100 UAT (operator, 2026-07-25): drag archive→restore round-trip PASSED l
 This session also folded a large Skills-page redesign into Phase 100 (3-column command-center layout, right-hand Command Deck, filter chips, bulk-select, bridge-mirror filter, no-op feedback) — all tested, full suite green.
 Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc/quick, not GSD phases; codepulse 565cef36 + astridr 82ead1fe, both pushed):
 - **① fix mangled skill display names** ✅ — family-aware `generateDisplayName` (cc_-twin dedup + ≥3-member family + colon-namespace); `migrateDisplayNames` rewrote 198 auto-names on the live self-hosted Convex (0 human-edited touched); 23 unit tests.
-- **② Ástríðr bridge coverage** ⚠️ PARTIAL — **safe-7 DONE & live-verified** (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets → 7 cc_ twins confirmed in Convex, 199 total). The **DEFERRED 3** project-repo skills (spike-findings-forge→forge, add-migration→claudeclaw-os, home-assistant-manager→homeassistant) remain OPEN — need mounting those repos into the astridr container + a `skill_auto_approve` trust-boundary decision. Detail: HANDOFF-post-v11.0.md item ②.
-- **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key phantom-expand fixed (now marks-read); Inbox R-key has the same latent bug (still open).
-Status: No active milestone. v11.0 closed; post-v11.0 backlog cleared except the deferred-3 bridge item.
+- **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
+- **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
+Status: No active milestone. v11.0 closed; **post-v11.0 backlog FULLY CLEAR.** Next: /gsd-new-milestone.
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-24 -- Phase 100 Plan 04 (final control-surface wiring: Skills.tsx + MoveToProjectDialog + integration drop tests) complete
