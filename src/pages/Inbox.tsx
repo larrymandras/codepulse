@@ -174,7 +174,10 @@ export default function Inbox() {
 
   // ─── Keyboard navigation state ────────────────────────────────────────────
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Keyboard-`R` reject target: a monotonic nonce + the item it targets, so the
+  // matching InboxCard opens its reject input (and re-opens on a repeat press).
+  const [rejectNonce, setRejectNonce] = useState(0);
+  const [rejectForId, setRejectForId] = useState<string | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // ─── Convex data ──────────────────────────────────────────────────────────
@@ -373,9 +376,10 @@ export default function Inbox() {
         const item = items[focusedIndex];
         if (item.type === "approval" && item.requestId) {
           e.preventDefault();
-          // Expand the card so the user can fill in a reason and confirm,
-          // rather than submitting an immediate rejection with no reason.
-          setExpandedId(item.id);
+          // Signal the focused card to open its reject-reason input (so the
+          // user confirms with a reason rather than an immediate blind reject).
+          setRejectNonce((n) => n + 1);
+          setRejectForId(item.id);
         }
       }
     };
@@ -467,6 +471,7 @@ export default function Inbox() {
                   onApprove={item.type === "approval" ? handleApprove : undefined}
                   onReject={item.type === "approval" ? handleReject : undefined}
                   onMarkRead={handleMarkRead}
+                  rejectSignal={rejectForId === item.id ? rejectNonce : undefined}
                 />
               </div>
             ))}

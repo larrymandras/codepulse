@@ -24,7 +24,7 @@
  * Phase 186, Plan 07: card + held item types, per-card profile badge (D-12).
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Mail, Calendar } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -72,6 +72,12 @@ interface InboxCardProps {
   onApprove?: (requestId: string) => Promise<boolean>;
   onReject?: (requestId: string, note?: string) => Promise<boolean>;
   onMarkRead?: (id: string) => void;
+  /**
+   * Bumped by the parent each time the keyboard `R` shortcut targets this card
+   * — opens the reject-reason input (approvals only). A monotonic nonce so a
+   * repeated `R` re-opens after a cancel; `undefined` for non-targeted cards.
+   */
+  rejectSignal?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -223,6 +229,7 @@ export function InboxCard({
   onApprove,
   onReject,
   onMarkRead,
+  rejectSignal,
 }: InboxCardProps) {
   const { status } = useAstridrWS();
   const wsConnected = status === "connected";
@@ -233,6 +240,13 @@ export function InboxCard({
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [rejectPending, setRejectPending] = useState(false);
+
+  // Keyboard `R` (from the Inbox page) opens the reject input on approvals.
+  useEffect(() => {
+    if (rejectSignal !== undefined && item.type === "approval") {
+      setShowRejectInput(true);
+    }
+  }, [rejectSignal, item.type]);
 
   const handleApprove = async () => {
     if (!item.requestId || !onApprove) return;
