@@ -29,15 +29,33 @@
  * lives in exactly one place. :func:`renderProactiveAlert` (both channels
  * together) is kept for callers that legitimately want both from a single
  * mount point (and its existing test coverage).
+ *
+ * Checkpoint round 5 cosmetic nit (Larry: "add some color... a bit more
+ * noticeable"): the WS event now also carries the governor's validated
+ * `priority`. :func:`extractProactiveAlertPriority` + `PRIORITY_TOAST_STYLE`
+ * give ProactiveAlertListener.tsx a priority-tinted left border + icon,
+ * reusing the SAME `--status-warn`/`--status-info` design tokens
+ * InboxCard.tsx's stripeClass() already uses (no hardcoded hex, per repo
+ * convention) -- money gets the amber/warn accent, high gets the
+ * info/cyan accent, normal/low get no special tint (they're quiet cards,
+ * Phase 186 checkpoint round 5's own "normal = quiet card" decision --
+ * this toast is never shown for them in the first place, since
+ * should_speak() only ever delivers money/high through the cascade, but
+ * the style map stays total for safety).
  */
 
 // Mirrors FocusExitDigest.tsx's TOAST_DURATION_MS (186-UI-SPEC: 5-8s
 // auto-dismiss, matching existing toast usage elsewhere).
 export const PROACTIVE_ALERT_TOAST_DURATION_MS = 7000;
 
+export type ProactiveAlertPriority = "money" | "high" | "normal" | "low";
+
+const VALID_PRIORITIES: ReadonlySet<string> = new Set(["money", "high", "normal", "low"]);
+
 export interface ProactiveAlertEventData {
   profileId?: unknown;
   body?: unknown;
+  priority?: unknown;
 }
 
 export interface ProactiveAlertCallbacks {
@@ -54,6 +72,39 @@ export function extractProactiveAlertBody(data: ProactiveAlertEventData): string
   const body = typeof data.body === "string" ? data.body.trim() : "";
   return body || null;
 }
+
+/**
+ * Validates + extracts the priority from a "proactive_alert" WS event's
+ * `data` payload. Returns `null` for a missing/unrecognized value (an
+ * out-of-enum string, e.g. a future backend change) -- never trusted
+ * as-is, mirrors the backend's own governor._normalize_priority posture.
+ */
+export function extractProactiveAlertPriority(
+  data: ProactiveAlertEventData
+): ProactiveAlertPriority | null {
+  return typeof data.priority === "string" && VALID_PRIORITIES.has(data.priority)
+    ? (data.priority as ProactiveAlertPriority)
+    : null;
+}
+
+/** One toast's visual treatment: a left-border accent color (CSS var
+ * reference, never a hardcoded hex) + an inline style object ready to
+ * spread onto sonner's `style` option. `null` means "no special styling"
+ * (sonner's own default). */
+export interface ProactiveAlertToastStyle {
+  borderColorVar: string;
+  style: { borderLeft: string };
+}
+
+export const PRIORITY_TOAST_STYLE: Record<ProactiveAlertPriority, ProactiveAlertToastStyle | null> = {
+  // Matches InboxCard.tsx's stripeClass() token choices exactly (D-14 "card"
+  // stripe uses --status-info; approval-pending uses --status-warn) so the
+  // toast and the Cards-tab stripe read as the same visual language.
+  money: { borderColorVar: "--status-warn", style: { borderLeft: "4px solid var(--status-warn)" } },
+  high: { borderColorVar: "--status-info", style: { borderLeft: "4px solid var(--status-info)" } },
+  normal: null,
+  low: null,
+};
 
 /**
  * Renders one "proactive_alert" WS event through BOTH channels (toast +

@@ -74,4 +74,76 @@ describe("ProactiveAlertListener", () => {
     unmount();
     expect(registeredHandlers.has("proactive_alert")).toBe(false);
   });
+
+  // ── Checkpoint round 5 cosmetic nit: priority-tinted toast ────────────────
+
+  it("styles a money-priority toast with the --status-warn left border + an icon", () => {
+    render(<ProactiveAlertListener />);
+
+    act(() => {
+      registeredHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "Invoice needs payment", priority: "money" },
+      });
+    });
+
+    const [, options] = toastMock.mock.calls[0];
+    expect(options.style.borderLeft).toContain("var(--status-warn)");
+    expect(options.icon).toBeTruthy();
+  });
+
+  it("styles a high-priority toast with the --status-info left border + an icon", () => {
+    render(<ProactiveAlertListener />);
+
+    act(() => {
+      registeredHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "Board meeting starting", priority: "high" },
+      });
+    });
+
+    const [, options] = toastMock.mock.calls[0];
+    expect(options.style.borderLeft).toContain("var(--status-info)");
+    expect(options.icon).toBeTruthy();
+  });
+
+  it("applies no special style/icon for normal priority (plain sonner default)", () => {
+    render(<ProactiveAlertListener />);
+
+    act(() => {
+      registeredHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "FYI meeting reminder", priority: "normal" },
+      });
+    });
+
+    const [, options] = toastMock.mock.calls[0];
+    expect(options.style).toBeUndefined();
+    expect(options.icon).toBeUndefined();
+  });
+
+  it("applies no special style/icon when priority is missing entirely (backward compatible)", () => {
+    render(<ProactiveAlertListener />);
+
+    act(() => {
+      registeredHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "No priority field" },
+      });
+    });
+
+    const [, options] = toastMock.mock.calls[0];
+    expect(options.style).toBeUndefined();
+    expect(options.icon).toBeUndefined();
+  });
+
+  it("applies no special style/icon for an out-of-enum priority value", () => {
+    render(<ProactiveAlertListener />);
+
+    act(() => {
+      registeredHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "Weird value", priority: "URGENT!!!" },
+      });
+    });
+
+    const [, options] = toastMock.mock.calls[0];
+    expect(options.style).toBeUndefined();
+    expect(options.icon).toBeUndefined();
+  });
 });

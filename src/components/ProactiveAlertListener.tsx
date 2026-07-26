@@ -20,12 +20,33 @@
  * chat line appears too whenever Chat happens to be open (a bonus, not a
  * requirement) — the inbox row itself (record-everything, D-15) is the
  * durable record regardless of either UI channel.
+ *
+ * Checkpoint round 5 cosmetic nit (Larry: "add some color... a bit more
+ * noticeable"): priority-tinted — a colored left border + icon reusing the
+ * SAME `--status-warn`/`--status-info` design tokens InboxCard.tsx's
+ * stripeClass() already uses (no hardcoded hex). Money gets the amber/warn
+ * accent + DollarSign icon; high gets the info/cyan accent + AlertCircle
+ * icon (already the established "needs attention" icon elsewhere in
+ * Chat.tsx); normal/low get sonner's plain default styling.
  */
 import { useEffect } from "react";
 import { toast } from "sonner";
+import { DollarSign, AlertCircle } from "lucide-react";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
-import { extractProactiveAlertBody } from "@/lib/proactiveAlert";
-import { PROACTIVE_ALERT_TOAST_DURATION_MS } from "@/lib/proactiveAlert";
+import {
+  extractProactiveAlertBody,
+  extractProactiveAlertPriority,
+  PRIORITY_TOAST_STYLE,
+  PROACTIVE_ALERT_TOAST_DURATION_MS,
+  type ProactiveAlertPriority,
+} from "@/lib/proactiveAlert";
+
+const PRIORITY_TOAST_ICON: Record<ProactiveAlertPriority, React.ReactNode> = {
+  money: <DollarSign className="w-4 h-4 text-(--status-warn)" />,
+  high: <AlertCircle className="w-4 h-4 text-(--status-info)" />,
+  normal: null,
+  low: null,
+};
 
 export function ProactiveAlertListener() {
   const { subscribeEvent } = useAstridrWS();
@@ -36,7 +57,13 @@ export function ProactiveAlertListener() {
       if (!data) return;
       const body = extractProactiveAlertBody(data);
       if (!body) return;
-      toast(body, { duration: PROACTIVE_ALERT_TOAST_DURATION_MS });
+      const priority = extractProactiveAlertPriority(data);
+      const visual = priority ? PRIORITY_TOAST_STYLE[priority] : null;
+      toast(body, {
+        duration: PROACTIVE_ALERT_TOAST_DURATION_MS,
+        ...(visual ? { style: visual.style } : {}),
+        ...(priority && PRIORITY_TOAST_ICON[priority] ? { icon: PRIORITY_TOAST_ICON[priority] } : {}),
+      });
     });
     return unsubscribe;
   }, [subscribeEvent]);
