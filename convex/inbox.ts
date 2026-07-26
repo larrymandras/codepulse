@@ -169,3 +169,33 @@ export const listAll = query({
   args: { limit: v.optional(v.float64()) },
   handler: async (ctx, { limit }) => listAllHandler(ctx, limit),
 });
+
+/**
+ * dismissAllCards() (Phase 186 checkpoint round 4 backlog cleanup): bulk-
+ * stamps ackedAt on every currently-unacked itemType="card" row across ALL
+ * profiles in one call. Held rows (and any other itemType) are NEVER
+ * touched -- scoped narrowly to clearing the pre-dedup card flood (198
+ * accumulated cards from before watch_pulse's dedup fix landed, D-06/D-12).
+ * Idempotent: re-running finds nothing left to dismiss (ackedAt already
+ * set) and returns 0. Kept as a permanent admin affordance -- a bulk-clear
+ * mutation is legitimately useful beyond this one-time cleanup.
+ */
+export async function dismissAllCardsHandler(
+  ctx: { db: InboxDb } | any,
+  now: number
+): Promise<number> {
+  const rows = await ctx.db.query("inbox").withIndex("by_createdAt").collect();
+  let dismissed = 0;
+  for (const row of rows) {
+    if (row.itemType === "card" && row.ackedAt === undefined) {
+      await ctx.db.patch(row._id, { ackedAt: now });
+      dismissed++;
+    }
+  }
+  return dismissed;
+}
+
+export const dismissAllCards = mutation({
+  args: {},
+  handler: async (ctx) => dismissAllCardsHandler(ctx, Date.now() / 1000),
+});

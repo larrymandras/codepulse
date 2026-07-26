@@ -19,6 +19,7 @@ import {
   dismissHandler,
   listByProfileHandler,
   listAllHandler,
+  dismissAllCardsHandler,
 } from "./inbox";
 
 function makeCtx(overrides: Partial<{ runMutation: any; runQuery: any }> = {}) {
@@ -618,5 +619,73 @@ describe("inbox.ts ackHandler / dismissHandler", () => {
     const db = makeFakeDb();
     await expect(ackHandler({ db }, "missing-id", 100)).resolves.toBeUndefined();
     await expect(dismissHandler({ db }, "missing-id", 100)).resolves.toBeUndefined();
+  });
+});
+
+describe("inbox.ts dismissAllCardsHandler (Phase 186 checkpoint round 4 backlog cleanup)", () => {
+  it("dismisses every unacked itemType=card row across all profiles", async () => {
+    const db = makeFakeDb();
+    await raiseHandler(
+      { db },
+      { profileId: "personal", emitter: "x", priority: "normal", title: "P card", body: "b", spoken: false, itemType: "card" },
+      100
+    );
+    await raiseHandler(
+      { db },
+      { profileId: "business", emitter: "x", priority: "high", title: "B card", body: "b", spoken: true, itemType: "card" },
+      200
+    );
+    await raiseHandler(
+      { db },
+      { profileId: "consulting", emitter: "x", priority: "normal", title: "C card", body: "b", spoken: false, itemType: "card" },
+      300
+    );
+
+    const count = await dismissAllCardsHandler({ db }, 9999);
+    expect(count).toBe(3);
+
+    const rows = await listAllHandler({ db });
+    expect(rows.every((r: any) => r.ackedAt === 9999)).toBe(true);
+  });
+
+  it("never touches held rows", async () => {
+    const db = makeFakeDb();
+    await raiseHandler(
+      { db },
+      { profileId: "personal", emitter: "x", priority: "normal", title: "Card", body: "b", spoken: false, itemType: "card" },
+      100
+    );
+    await raiseHandler(
+      { db },
+      { profileId: "personal", emitter: "x", priority: "high", title: "Held", body: "b", spoken: false, itemType: "held", heldReason: "focus" },
+      200
+    );
+
+    const count = await dismissAllCardsHandler({ db }, 9999);
+    expect(count).toBe(1);
+
+    const rows = await listAllHandler({ db });
+    const held = rows.find((r: any) => r.itemType === "held");
+    expect(held.ackedAt).toBeUndefined();
+  });
+
+  it("is idempotent -- a second run finds nothing left to dismiss", async () => {
+    const db = makeFakeDb();
+    await raiseHandler(
+      { db },
+      { profileId: "personal", emitter: "x", priority: "normal", title: "Card", body: "b", spoken: false, itemType: "card" },
+      100
+    );
+
+    const first = await dismissAllCardsHandler({ db }, 9999);
+    expect(first).toBe(1);
+    const second = await dismissAllCardsHandler({ db }, 9999);
+    expect(second).toBe(0);
+  });
+
+  it("returns 0 against an empty inbox", async () => {
+    const db = makeFakeDb();
+    const count = await dismissAllCardsHandler({ db }, 9999);
+    expect(count).toBe(0);
   });
 });
