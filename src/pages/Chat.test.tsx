@@ -68,8 +68,13 @@ vi.mock("@/hooks/useAstridrChat", () => ({
   }),
 }));
 
+// Phase 186-13: Chat.tsx now also mounts <FocusExitDigest /> (D-07), which
+// calls useQuery(api.inbox.listAll) -- an empty array is sufficient, this
+// suite doesn't exercise the focus-exit toast itself (see
+// FocusExitDigest.test.tsx for that coverage).
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => mockRecordSkillLaunch),
+  useQuery: vi.fn(() => []),
 }));
 
 vi.mock("sonner", () => ({

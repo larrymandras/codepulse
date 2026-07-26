@@ -25,6 +25,7 @@ import { Send, Mic, MicOff, AlertCircle, Eye } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
+import { FocusExitDigest } from "@/components/inbox/FocusExitDigest";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
 import { useScreenShare } from "@/hooks/useScreenShare";
@@ -368,6 +369,9 @@ export default function Chat() {
 
   return (
     <div className="presence-ambient flex flex-col h-full">
+      {/* Phase 186-13 (D-07): headless "you're back" toast on a focus-exit
+          digest row — fires once per real exit, never a burst. */}
+      <FocusExitDigest />
       {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-border">
         <div>

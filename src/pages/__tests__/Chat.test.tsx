@@ -46,8 +46,13 @@ vi.mock("@/hooks/useTtsPlayback", () => ({
 // directly for the mount-triggered auto-send effect's recordSkillLaunch call
 // (D-12). This suite doesn't exercise router-state auto-send, so a no-op
 // mutation is sufficient — mirrors ForgeLaunchModal.test.tsx's convention.
+// Phase 186-13: Chat.tsx now also mounts <FocusExitDigest /> (D-07), which
+// calls useQuery(api.inbox.listAll) -- an empty array is sufficient, this
+// suite doesn't exercise the focus-exit toast itself (see
+// FocusExitDigest.test.tsx for that coverage).
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => vi.fn()),
+  useQuery: vi.fn(() => []),
 }));
 
 vi.mock("sonner", () => ({
