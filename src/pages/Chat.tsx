@@ -31,6 +31,7 @@ import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/u
 import { useScreenShare } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { runLostScreenAck, type VoiceState } from "@/components/voice/voiceState";
+import { renderProactiveAlert, PROACTIVE_ALERT_TOAST_DURATION_MS } from "@/lib/proactiveAlert";
 import type { AutoSendHandoff } from "@/lib/skillRun";
 
 const LS_LISTENING = "codepulse-astridr-listening";
@@ -224,6 +225,30 @@ export default function Chat() {
       if (model) setLastTurnModel(model);
     });
     return unsubCompleted;
+  }, [subscribeEvent]);
+
+  // ── Proactive governor delivery (Phase 186 checkpoint round 4, D-09 fix) ──
+  // The governor's WS-tier presence-cascade delivery (astridr/automation/
+  // governor.py's _resolve_presence_target -> channel_id "codepulse") now
+  // pushes an observable "proactive_alert" event instead of silently
+  // no-op'ing (root cause of Larry seeing zero alerting for money/high pulse
+  // cards despite their intents reaching status=complete). Renders as BOTH a
+  // sonner toast AND a visible assistant chat-timeline message — mirrors the
+  // runLostScreenAck (speak + appendLocalAssistantMessage) pattern below.
+  useEffect(() => {
+    const unsubProactiveAlert = subscribeEvent("proactive_alert", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      if (!data) return;
+      renderProactiveAlert(
+        {
+          toast: (text) => toast(text, { duration: PROACTIVE_ALERT_TOAST_DURATION_MS }),
+          appendLocalAssistantMessage: chat.appendLocalAssistantMessage,
+        },
+        data
+      );
+    });
+    return unsubProactiveAlert;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscribeEvent]);
 
   // ── Screen share (VISION-01) — sole caller of getDisplayMedia (D-09) ─────

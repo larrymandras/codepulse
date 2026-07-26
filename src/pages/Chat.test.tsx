@@ -23,6 +23,7 @@ import { MemoryRouter } from "react-router-dom";
 
 const mockSendMessage = vi.fn().mockResolvedValue(true);
 const mockRecordSkillLaunch = vi.fn().mockResolvedValue(undefined);
+const mockAppendLocalAssistantMessage = vi.fn();
 
 /** Mutable status the mocked useAstridrChat() reads on each call. */
 let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
@@ -59,7 +60,7 @@ vi.mock("@/hooks/useAstridrChat", () => ({
     stopAudio: vi.fn(),
     ttsIsPlaying: false,
     interrupt: vi.fn(() => ""),
-    appendLocalAssistantMessage: vi.fn(),
+    appendLocalAssistantMessage: mockAppendLocalAssistantMessage,
     handleApprove: vi.fn(),
     handleReject: vi.fn(),
     registerScreenShare: vi.fn(),
@@ -260,5 +261,57 @@ describe("Chat — BRAIN pill reflects live run.completed model (186-08)", () =>
     // Falsy model must NOT clobber the "Auto" fallback — reproduces the
     // exact live payload shape before the backend fix.
     expect(within(brainBox()).getByText("Auto")).toBeInTheDocument();
+  });
+});
+
+// ─── Phase 186 checkpoint round 4: proactive_alert observability fix (D-09) ─
+//
+// Root cause this guards against: the governor's WS-tier presence-cascade
+// delivery previously had no registered backend channel sender at all
+// (astridr/automation/proactive.py's make_codepulse_channel_sender fixes
+// this), so a money/high pulse card's intent reached status=complete while
+// Larry saw nothing — no toast, no chat message, nothing in Telegram. This
+// dispatches directly into the REAL registered "proactive_alert" callback
+// (not a re-implemented copy) and asserts BOTH observable channels fire.
+describe("Chat — proactive_alert renders toast + chat message (186-06 checkpoint round 4, D-09)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+  });
+
+  it("fires a toast AND appends a visible assistant chat message on a real proactive_alert event", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("proactive_alert")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("proactive_alert")!({
+        data: { profileId: "personal", body: "Invoice needs payment" },
+      });
+    });
+
+    expect(toast).toHaveBeenCalledWith(
+      "Invoice needs payment",
+      expect.objectContaining({ duration: expect.any(Number) })
+    );
+    expect(mockAppendLocalAssistantMessage).toHaveBeenCalledWith("Invoice needs payment");
+  });
+
+  it("never toasts or appends a chat message for a malformed (bodyless) event", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("proactive_alert")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("proactive_alert")!({ data: { profileId: "personal" } });
+    });
+
+    expect(toast).not.toHaveBeenCalled();
+    expect(mockAppendLocalAssistantMessage).not.toHaveBeenCalled();
   });
 });
