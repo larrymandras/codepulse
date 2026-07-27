@@ -14,7 +14,7 @@
  */
 
 import { internalMutation, mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 
 // ---------------------------------------------------------------------------
@@ -646,19 +646,19 @@ export function validateLifecyclePreflight(
 
   if (args.action === "restore" && args.destination === "global") {
     if (originsForName.includes(GLOBAL_ORIGIN)) {
-      throw new Error("lifecycle-refused:shadow:already active in global");
+      throw new ConvexError("lifecycle-refused:shadow:already active in global");
     }
   }
 
   if (args.action === "archive") {
     if (originsForName.includes(DORMANT_ORIGIN)) {
-      throw new Error("lifecycle-refused:collision:a dormant copy already exists in cold storage");
+      throw new ConvexError("lifecycle-refused:collision:a dormant copy already exists in cold storage");
     }
   }
 
   if (args.action === "move" && args.destination === "global") {
     if (originsForName.includes(GLOBAL_ORIGIN)) {
-      throw new Error("lifecycle-refused:collision:already active in global");
+      throw new ConvexError("lifecycle-refused:collision:already active in global");
     }
   }
 
@@ -667,7 +667,7 @@ export function validateLifecyclePreflight(
     // Deleting it is safe regardless of what else exists for this name — the
     // active copy is untouched — so co-existing active origins do not refuse.
     if (args.sourceOrigin !== DORMANT_ORIGIN) {
-      throw new Error("lifecycle-refused:not-cold:permanent delete may only target the Cold Storage copy");
+      throw new ConvexError("lifecycle-refused:not-cold:permanent delete may only target the Cold Storage copy");
     }
   }
 }

@@ -31,6 +31,17 @@ describe("lifecycleRefusalMessage", () => {
     ).toBe("a dormant copy already exists in cold storage");
   });
 
+  it("reads the token from ConvexError.data (redaction-proof) over a 'Server Error' message", () => {
+    // A Layer-1 refusal is thrown as ConvexError so its data survives Convex's
+    // message redaction; the message the client sees is the redacted string.
+    const convexError = Object.assign(new Error("[CONVEX] Server Error"), {
+      data: "lifecycle-refused:collision:a dormant copy already exists in cold storage",
+    });
+    expect(lifecycleRefusalMessage(convexError)).toBe(
+      "a dormant copy already exists in cold storage"
+    );
+  });
+
   it("finds the token even when Convex wraps the message in its own prefix", () => {
     expect(
       lifecycleRefusalMessage(

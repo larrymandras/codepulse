@@ -83,7 +83,17 @@ export function adaptLifecycleCommand(doc: any): LifecycleCommandRow {
 // ---------------------------------------------------------------------------
 
 export function lifecycleRefusalMessage(err: unknown): string {
-  const raw = err instanceof Error ? err.message : String(err);
+  // A Layer-1 refusal is thrown server-side as a ConvexError, whose `.data`
+  // carries the token verbatim — plain-Error messages are redacted to "Server
+  // Error" by Convex, so `.data` must be checked first. Fall back to `.message`
+  // for daemon-emitted / non-ConvexError errors.
+  const data = (err as { data?: unknown } | null)?.data;
+  const raw =
+    typeof data === "string"
+      ? data
+      : err instanceof Error
+        ? err.message
+        : String(err);
   const match = /lifecycle-refused:[^:]+:([\s\S]+)/.exec(raw);
   const message = (match ? match[1] : raw).split("\n")[0].trim();
   return message || "Lifecycle command failed";
