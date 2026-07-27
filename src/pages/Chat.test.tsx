@@ -24,6 +24,7 @@ import { MemoryRouter } from "react-router-dom";
 const mockSendMessage = vi.fn().mockResolvedValue(true);
 const mockRecordSkillLaunch = vi.fn().mockResolvedValue(undefined);
 const mockAppendLocalAssistantMessage = vi.fn();
+const mockCorrectAssistantMessage = vi.fn();
 
 /** Mutable status the mocked useAstridrChat() reads on each call. */
 let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
@@ -61,6 +62,7 @@ vi.mock("@/hooks/useAstridrChat", () => ({
     ttsIsPlaying: false,
     interrupt: vi.fn(() => ""),
     appendLocalAssistantMessage: mockAppendLocalAssistantMessage,
+    correctAssistantMessage: mockCorrectAssistantMessage,
     handleApprove: vi.fn(),
     handleReject: vi.fn(),
     registerScreenShare: vi.fn(),
@@ -318,5 +320,51 @@ describe("Chat — proactive_alert appends a chat message (186-06 checkpoint rou
 
     expect(mockAppendLocalAssistantMessage).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalled();
+  });
+});
+
+describe("Chat — chat.correction patches the already-rendered bubble (186-09 deferred item)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+  });
+
+  it("calls correctAssistantMessage with session_id + corrected_text on a real chat.correction event", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("chat.correction")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("chat.correction")!({
+        data: { session_id: "sess-abc", corrected_text: "Swapped to Claude Sonnet 5." },
+      });
+    });
+
+    expect(mockCorrectAssistantMessage).toHaveBeenCalledWith(
+      "sess-abc",
+      "Swapped to Claude Sonnet 5."
+    );
+  });
+
+  it("never patches on a malformed (missing session_id or corrected_text) event", async () => {
+    renderChat();
+
+    await waitFor(() => {
+      expect(registeredEventHandlers.has("chat.correction")).toBe(true);
+    });
+
+    act(() => {
+      registeredEventHandlers.get("chat.correction")!({ data: { session_id: "sess-abc" } });
+    });
+    act(() => {
+      registeredEventHandlers.get("chat.correction")!({
+        data: { corrected_text: "no session here" },
+      });
+    });
+
+    expect(mockCorrectAssistantMessage).not.toHaveBeenCalled();
   });
 });

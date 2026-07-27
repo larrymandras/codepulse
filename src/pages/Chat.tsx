@@ -200,6 +200,21 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 186-09 deferred item option (b): a genuinely tag-triggered swap corrects
+  // the already-rendered bubble in place (backend push from wiring.py's
+  // _generate_chat_tts, chat.correction event). Never appends a new bubble.
+  useEffect(() => {
+    const unsubChatCorrection = subscribeEvent("chat.correction", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      const sessionId = data?.session_id as string | undefined;
+      const correctedText = data?.corrected_text as string | undefined;
+      if (!sessionId || !correctedText) return;
+      chat.correctAssistantMessage(sessionId, correctedText);
+    });
+    return unsubChatCorrection;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscribeEvent]);
+
   useEffect(() => {
     const unsubSwapState = subscribeEvent("swap.state", (event) => {
       const data = (event as { data?: Record<string, unknown> }).data;

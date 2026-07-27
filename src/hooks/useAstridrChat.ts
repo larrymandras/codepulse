@@ -457,6 +457,28 @@ export function useAstridrChat() {
     ]);
   }, []);
 
+  // 186-09 deferred item option (b), pairs with the backend's chat.correction
+  // WS event (wiring.py's _generate_chat_tts sink): patches the matching
+  // ALREADY-RENDERED assistant bubble's displayed text IN PLACE, never
+  // appending a new/duplicate bubble (that caused the 185-08 regression).
+  // The DISPLAYED chat transcript is a pure parse_and_strip_tags emission
+  // with no dispatch, so it can render the model's own (possibly fabricated)
+  // prose about a swap before the tag ever resolves -- this replaces that
+  // prose with the verb's real deterministic confirmation once the backend
+  // sink learns it. Matches by sessionId; clears any generative blocks so
+  // the corrected plain text is what renders (ChatBubble prefers blocks over
+  // content when both are present). No-op if no message with that sessionId
+  // is currently rendered (e.g. the page wasn't mounted at receipt time).
+  const correctAssistantMessage = useCallback((sessionId: string, correctedText: string) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.role === "assistant" && msg.sessionId === sessionId
+          ? { ...msg, content: correctedText, blocks: undefined }
+          : msg
+      )
+    );
+  }, []);
+
   const handleApprove = useCallback((requestId: string) => approve(requestId), [approve]);
   const handleReject = useCallback(
     (requestId: string, reason?: string) => reject(requestId, reason),
@@ -475,6 +497,7 @@ export function useAstridrChat() {
     ttsIsPlaying,
     interrupt,
     appendLocalAssistantMessage,
+    correctAssistantMessage,
     handleApprove,
     handleReject,
     /** VISION-01: hands the page's SOLE useScreenShare instance to the

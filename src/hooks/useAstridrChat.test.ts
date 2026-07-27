@@ -300,6 +300,98 @@ describe("useAstridrChat — run.blocks text backfill for streamingReplyRef (186
   });
 });
 
+// ─── 186-09 deferred item option (b): correctAssistantMessage ───────────────
+// Pairs with the backend's chat.correction WS event (wiring.py's
+// _generate_chat_tts sink) -- Chat.tsx's subscription (Chat.test.tsx covers
+// the wiring) calls this to patch the matching assistant bubble in place.
+
+describe("useAstridrChat — correctAssistantMessage (186-09 deferred item)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+  });
+
+  it("replaces the matching assistant message's content by sessionId", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("swap to sonnet 5");
+    });
+
+    // sendMessage appends BOTH the user message (index 0, no sessionId) and
+    // the streaming assistant placeholder (index 1, carries sessionId).
+    expect(result.current.messages).toHaveLength(2);
+    const assistantMsg = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistantMsg?.sessionId).toBe("sess-1");
+
+    act(() => {
+      result.current.correctAssistantMessage("sess-1", "Swapped to Claude Sonnet 5.");
+    });
+
+    expect(result.current.messages).toHaveLength(2);
+    const corrected = result.current.messages.find((m) => m.role === "assistant");
+    expect(corrected?.content).toBe("Swapped to Claude Sonnet 5.");
+  });
+
+  it("clears any generative blocks so the corrected plain text renders", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("swap to sonnet 5");
+    });
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "stale fabricated model name" }],
+          round_num: 0,
+        },
+      });
+    });
+    const beforeCorrection = result.current.messages.find((m) => m.role === "assistant");
+    expect(beforeCorrection?.blocks).toBeDefined();
+
+    act(() => {
+      result.current.correctAssistantMessage("sess-1", "Swapped to Claude Sonnet 5.");
+    });
+
+    const afterCorrection = result.current.messages.find((m) => m.role === "assistant");
+    expect(afterCorrection?.blocks).toBeUndefined();
+    expect(afterCorrection?.content).toBe("Swapped to Claude Sonnet 5.");
+  });
+
+  it("is a no-op when no message matches the sessionId", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("swap to sonnet 5");
+    });
+
+    act(() => {
+      result.current.correctAssistantMessage("some-other-session", "Should not apply.");
+    });
+
+    const assistantMsg = result.current.messages.find((m) => m.role === "assistant");
+    expect(assistantMsg?.content).toBe("");
+  });
+
+  it("never touches the user's own message, only the assistant reply", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("swap to sonnet 5");
+    });
+
+    const userMsgBefore = result.current.messages.find((m) => m.role === "user");
+    expect(userMsgBefore?.content).toBe("swap to sonnet 5");
+
+    act(() => {
+      result.current.correctAssistantMessage("sess-1", "Corrected.");
+    });
+
+    const userMsgAfter = result.current.messages.find((m) => m.role === "user");
+    expect(userMsgAfter?.content).toBe("swap to sonnet 5"); // unchanged
+  });
+});
+
 // ─── VISION-01: vision.frame_request round-trip (backend-initiated see_screen) ──
 // Closes the backend-initiated loop: the server pushes vision.frame_request
 // (T-184-17/18) when the model calls see_screen for a phrasing the client
