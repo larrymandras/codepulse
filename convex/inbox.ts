@@ -171,6 +171,32 @@ export const listAll = query({
 });
 
 /**
+ * listHeldUnacked() (WR-01 fix, pairs with focus_digest.py's
+ * _gather_unacked_held_focus_rows): a DEDICATED held-only read, indexed on
+ * itemType (by_itemType) so it is NOT bounded by listAll()'s generic
+ * DEFAULT_LIST_ALL_LIMIT across ALL itemTypes/profiles. Returns every
+ * itemType="held" row that has not yet been acked (ackedAt undefined),
+ * across all profiles -- the caller (focus_digest.py) further filters to
+ * heldReason="focus" + the requested profiles, mirroring listAll()'s
+ * existing division of labor (DB-side scoping by index, application-side
+ * business-rule filtering).
+ */
+export async function listHeldUnackedHandler(ctx: { db: InboxDb } | any) {
+  const rows = await ctx.db
+    .query("inbox")
+    .withIndex("by_itemType", (q: { eq: (field: string, value: any) => any }) =>
+      q.eq("itemType", "held")
+    )
+    .collect();
+  return rows.filter((row: any) => row.ackedAt === undefined);
+}
+
+export const listHeldUnacked = query({
+  args: {},
+  handler: async (ctx) => listHeldUnackedHandler(ctx),
+});
+
+/**
  * dismissAllCards() (Phase 186 checkpoint round 4 backlog cleanup): bulk-
  * stamps ackedAt on every currently-unacked itemType="card" row across ALL
  * profiles in one call. Held rows (and any other itemType) are NEVER

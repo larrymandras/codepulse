@@ -12,13 +12,14 @@
  * actual handler logic, not a hand-duplicated re-implementation.
  */
 import { describe, it, expect, vi } from "vitest";
-import { inboxIngest, inboxRead, inboxReadAll } from "./inboxIngest";
+import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 import {
   raiseHandler,
   ackHandler,
   dismissHandler,
   listByProfileHandler,
   listAllHandler,
+  listHeldUnackedHandler,
   dismissAllCardsHandler,
 } from "./inbox";
 
@@ -336,6 +337,66 @@ describe("inboxReadAll httpAction (D-12, T-186-02-03)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// /inbox-read-held-unacked (WR-01 fix — dedicated held-only read)
+// ---------------------------------------------------------------------------
+
+describe("inboxReadHeldUnacked httpAction (WR-01)", () => {
+  it("returns 204 for OPTIONS", async () => {
+    const req = new Request("http://localhost/inbox-read-held-unacked", { method: "OPTIONS" });
+    const res = await (inboxReadHeldUnacked as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(204);
+  });
+
+  it("returns 401 without auth — same fail-closed check as /inbox-read-all", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "inbox-key-abc");
+    const req = jsonRequest("http://localhost/inbox-read-held-unacked", {});
+    const res = await (inboxReadHeldUnacked as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(401);
+    vi.unstubAllEnvs();
+  });
+
+  it("fails CLOSED when ASTRIDR_INGEST_API_KEY is unset", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "");
+    const req = jsonRequest("http://localhost/inbox-read-held-unacked", {});
+    const res = await (inboxReadHeldUnacked as any)._handler(makeCtx(), req);
+    expect(res.status).toBe(401);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 200 with NO profileId/limit required and forwards inbox.listHeldUnacked", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const runQuery = vi.fn().mockResolvedValue([
+      { _id: "i1", profileId: "personal", itemType: "held" },
+      { _id: "i2", profileId: "business", itemType: "held" },
+    ]);
+    const req = jsonRequest(
+      "http://localhost/inbox-read-held-unacked",
+      {},
+      { Authorization: "Bearer k" }
+    );
+    const res = await (inboxReadHeldUnacked as any)._handler(makeCtx({ runQuery }), req);
+    expect(res.status).toBe(200);
+    const body = await readJson(res);
+    expect(body.ok).toBe(true);
+    expect(body.items).toHaveLength(2);
+    vi.unstubAllEnvs();
+  });
+
+  it("returns 400 (not 500) when the query throws", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "k");
+    const runQuery = vi.fn().mockRejectedValue(new Error("boom"));
+    const req = jsonRequest(
+      "http://localhost/inbox-read-held-unacked",
+      {},
+      { Authorization: "Bearer k" }
+    );
+    const res = await (inboxReadHeldUnacked as any)._handler(makeCtx({ runQuery }), req);
+    expect(res.status).toBe(400);
+    vi.unstubAllEnvs();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // inbox.ts handlers — raise/ack/dismiss/listByProfile/listAll persistence
 // (D-10/D-12). In-memory fake ctx.db mirroring convex/reminders.test.ts's
 // makeFakeDb pattern, extended with order()/take() to back the by_createdAt
@@ -571,6 +632,67 @@ describe("inbox.ts listAllHandler — aggregate all-profiles read (D-12)", () =>
     // Newest two only.
     expect(rows[0].createdAt).toBe(400);
     expect(rows[1].createdAt).toBe(300);
+  });
+});
+
+describe("inbox.ts listHeldUnackedHandler — dedicated held-only read (WR-01)", () => {
+  it("returns only itemType=held rows that are unacked, across all profiles", async () => {
+    const db = makeFakeDb();
+    await raiseHandler(
+      { db },
+      { profileId: "personal", emitter: "x", priority: "normal", title: "Card", body: "b", spoken: false, itemType: "card" },
+      100
+    );
+    const heldId = await raiseHandler(
+      { db },
+      { profileId: "business", emitter: "x", priority: "high", title: "Held business", body: "b", spoken: false, itemType: "held", heldReason: "focus" },
+      200
+    );
+    await raiseHandler(
+      { db },
+      { profileId: "consulting", emitter: "x", priority: "normal", title: "Held consulting", body: "b", spoken: false, itemType: "held", heldReason: "focus" },
+      300
+    );
+
+    const rows = await listHeldUnackedHandler({ db });
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r: any) => r.itemType === "held")).toBe(true);
+    expect(rows.every((r: any) => r.ackedAt === undefined)).toBe(true);
+
+    // Acked held rows are excluded.
+    await ackHandler({ db }, heldId, 9999);
+    const afterAck = await listHeldUnackedHandler({ db });
+    expect(afterAck).toHaveLength(1);
+    expect(afterAck[0].title).toBe("Held consulting");
+  });
+
+  it("is NOT bounded by DEFAULT_LIST_ALL_LIMIT (200) — returns every unacked held row", async () => {
+    const db = makeFakeDb();
+    for (let i = 0; i < 250; i++) {
+      await raiseHandler(
+        { db },
+        { profileId: "personal", emitter: "x", priority: "high", title: `Held ${i}`, body: "b", spoken: false, itemType: "held", heldReason: "focus" },
+        i
+      );
+    }
+    // Push 250 non-held rows on top, which would crowd held rows out of a
+    // 200-row all-itemTypes cutoff (the WR-01 bug this dedicated read fixes).
+    for (let i = 0; i < 250; i++) {
+      await raiseHandler(
+        { db },
+        { profileId: "personal", emitter: "x", priority: "low", title: `Card ${i}`, body: "b", spoken: false, itemType: "card" },
+        1000 + i
+      );
+    }
+
+    const rows = await listHeldUnackedHandler({ db });
+    expect(rows).toHaveLength(250);
+  });
+
+  it("returns an empty array when there are no held rows", async () => {
+    const db = makeFakeDb();
+    const rows = await listHeldUnackedHandler({ db });
+    expect(rows).toEqual([]);
   });
 });
 

@@ -27,7 +27,7 @@ import { forgeFileIngest } from "./forgeFileIngest";
 import { forgeCommandsClaim, forgeCommandsAck } from "./forgeCommands";
 import { remindersIngest, remindersRead } from "./remindersIngest";
 import { calendarIngest } from "./calendarEvents";
-import { inboxIngest, inboxRead, inboxReadAll } from "./inboxIngest";
+import { inboxIngest, inboxRead, inboxReadAll, inboxReadHeldUnacked } from "./inboxIngest";
 
 const http = httpRouter();
 
@@ -111,5 +111,7 @@ http.route({ path: "/inbox-read",     method: "POST",    handler: inboxRead });
 http.route({ path: "/inbox-read",     method: "OPTIONS", handler: inboxRead });
 http.route({ path: "/inbox-read-all", method: "POST",    handler: inboxReadAll });
 http.route({ path: "/inbox-read-all", method: "OPTIONS", handler: inboxReadAll });
+http.route({ path: "/inbox-read-held-unacked", method: "POST",    handler: inboxReadHeldUnacked });
+http.route({ path: "/inbox-read-held-unacked", method: "OPTIONS", handler: inboxReadHeldUnacked });
 
 export default http;

@@ -145,3 +145,30 @@ export const inboxReadAll = httpAction(async (ctx, request) => {
     return jsonResponse(request, 400, { error: e.message });
   }
 });
+
+/**
+ * POST /inbox-read-held-unacked (WR-01 fix — dedicated held-only read)
+ * Mirrors /inbox-read-all's auth/validation exactly (same fail-closed
+ * bearer check, no anonymous access, no new field exposure) but forwards to
+ * inbox.listHeldUnacked instead of inbox.listAll -- so focus_digest.py's
+ * held-focus row count/ack loop is no longer bounded by listAll()'s generic
+ * 200-row DEFAULT_LIST_ALL_LIMIT across ALL itemTypes. No body fields
+ * required.
+ */
+export const inboxReadHeldUnacked = httpAction(async (ctx, request) => {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+  }
+
+  if (!validateIngestAuth(request)) {
+    return unauthorizedResponse();
+  }
+
+  try {
+    const items = await ctx.runQuery(api.inbox.listHeldUnacked, {});
+
+    return jsonResponse(request, 200, { ok: true, items });
+  } catch (e: any) {
+    return jsonResponse(request, 400, { error: e.message });
+  }
+});

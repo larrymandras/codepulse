@@ -1917,5 +1917,11 @@ export default defineSchema({
     ackedAt: v.optional(v.float64()),
   })
     .index("by_profile", ["profileId", "createdAt"])
-    .index("by_createdAt", ["createdAt"]),
+    .index("by_createdAt", ["createdAt"])
+    // WR-01 fix: backs listHeldUnacked() — a dedicated held-only read no
+    // longer bounded by listAll()'s generic 200-row DEFAULT_LIST_ALL_LIMIT
+    // across ALL itemTypes (focus_digest.py was silently dropping/never
+    // acking older held-focus rows once other traffic pushed them past the
+    // cutoff).
+    .index("by_itemType", ["itemType", "createdAt"]),
 });
