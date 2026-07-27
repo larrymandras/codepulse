@@ -36,6 +36,50 @@ import {
   type KgLink,
 } from "../lib/kg-graph";
 
+// ── 3D color/size ladder — pure, exported for unit testing (Phase 187 Plan 04,
+// GLXY-01; extraction precedent: Plan 03's kg.ts handler extraction). The
+// component wraps these in useCallback below, closing over live state; Task 3's
+// tests call them directly with synthetic inputs so litNodeIds/focusSet
+// permutations don't require mounting the whole page.
+//
+// Priority order (UI-SPEC Node State Encoding): selected(1) > hovered(2) >
+// lit(3) > dimmed(4) > normal(5). A lit node NEVER falls into the dimmed
+// branch — priority 3 is checked before priority 4 — so a grounded source
+// node always renders at full opacity even under an active ego-lens filter
+// (D-08 dim-exemption, protects SC#1's "always rendered" guarantee).
+export function computeColorFn3D(params: {
+  node: { id: string; color: string };
+  selectedNodeId: string | null;
+  hoveredNodeId: string | null;
+  litNodeIds: Set<string>;
+  focusSet: Set<string> | null;
+}): string {
+  const { node, selectedNodeId, hoveredNodeId, litNodeIds, focusSet } = params;
+  if (node.id === selectedNodeId) return "#ffffff"; // priority 1: selected
+  if (node.id === hoveredNodeId) return "#ffffff"; // priority 2: hovered
+  // priority 3: lit (dim-exempt) — Plan 05 populates litNodeIds from the
+  // kg_answer_sync subscription; empty here (dormant).
+  if (litNodeIds.has(node.id)) return "#10b981";
+  // priority 4: dimmed — non-focus-set node while an ego-lens filter/selection
+  // is active (#27272a zinc-800 hex, NOT rgba — Three.js Color drops alpha).
+  if (focusSet && !focusSet.has(node.id)) return "#27272a";
+  return node.color; // priority 5: normal — the node's precomputed entity color
+}
+
+export function computeNodeValFn3D(params: {
+  node: { id: string; val?: number };
+  selectedNodeId: string | null;
+  litNodeIds: Set<string>;
+  litSizeMultiplier: number;
+}): number {
+  const { node, selectedNodeId, litNodeIds, litSizeMultiplier } = params;
+  if (node.id === selectedNodeId) return (node.val ?? 1) * 3; // priority 1 wins outright
+  // Lit nodes render at the steady resting size (UI-SPEC D-08); Plan 05 drives
+  // litSizeMultiplier through the 1→2.4→1.8 arrival-bloom animation on arrival.
+  if (litNodeIds.has(node.id)) return (node.val ?? 1) * litSizeMultiplier;
+  return node.val ?? 1;
+}
+
 // ── Lazy-load 3D render surface so three.js stays in a separate chunk ───────
 // Module-level declaration (avoids "lazy inside component" React warning). This
 // dynamic-import boundary is distinct from CodeVaultGraph.tsx's own lazy() call
@@ -148,6 +192,14 @@ export default function KnowledgeGraph() {
   // handles 2D hover via ForceGraphCanvas's own opts.hovered).
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
+  // litNodeIds: the current kg_answer_sync source-node set. Plan 05 populates
+  // this via useQuery(api.kg.latestAnswerSync) + setLitNodeIds; this plan wires
+  // the ladder only — stays empty (dormant) here. litSizeMultiplier defaults to
+  // the resting 1.8x (UI-SPEC D-08) so Plan 05 can animate it through the
+  // 1→2.4→1.8 arrival bloom without changing this state's shape.
+  const [litNodeIds, setLitNodeIds] = useState<Set<string>>(() => new Set());
+  const [litSizeMultiplier, setLitSizeMultiplier] = useState(1.8);
+
   useEffect(() => {
     let cancelled = false;
     try {
@@ -183,34 +235,40 @@ export default function KnowledgeGraph() {
       : "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
 
   // ── 3D color/size callbacks (Pitfall 1: hex-only, Three.js Color drops rgba)
-  // 4-state priority (selected → hovered → dimmed-non-focus → normal), mirroring
-  // CodeVaultGraph.tsx's colorFn3D. Plan 187-05 extends this to a 5th "lit" state.
+  // 5-state priority ladder (selected → hovered → lit → dimmed → normal) —
+  // delegates to the pure computeColorFn3D/computeNodeValFn3D above so Task 3's
+  // tests can exercise every priority branch without mounting the page.
   const colorFn3D = useCallback(
-    (node: any): string => {
-      if (node.id === selectedNodeId) return "#ffffff"; // selection: bright white
-      if (node.id === hoveredNodeId) return "#ffffff"; // hover: bright white
-      // Dim all non-focus-set nodes when an ego-lens filter/selection is active
-      // (#27272a zinc-800 hex, NOT rgba — Three.js Color silently drops alpha).
-      if (focusSet && !focusSet.has(node.id)) return "#27272a";
-      return (node as KgNode).color; // KG page uses the precomputed entity color
-    },
-    [selectedNodeId, hoveredNodeId, focusSet],
+    (node: any): string =>
+      computeColorFn3D({
+        node: node as KgNode,
+        selectedNodeId,
+        hoveredNodeId,
+        litNodeIds,
+        focusSet,
+      }),
+    [selectedNodeId, hoveredNodeId, litNodeIds, focusSet],
   );
 
-  // Selected node sphere is 3x the normal size (UI-SPEC Node State Encoding).
   const nodeValFn3D = useCallback(
     (node: any): number =>
-      node.id === selectedNodeId ? (node.val ?? 1) * 3 : (node.val ?? 1),
-    [selectedNodeId],
+      computeNodeValFn3D({
+        node,
+        selectedNodeId,
+        litNodeIds,
+        litSizeMultiplier,
+      }),
+    [selectedNodeId, litNodeIds, litSizeMultiplier],
   );
 
   // Post-state-change 3D redraw (RESEARCH Pattern 4) — refresh() re-applies
-  // nodeColor/nodeVal to already-cached Three.js materials when selection or
-  // hover changes, since react-force-graph-3d doesn't auto-redraw on prop change.
+  // nodeColor/nodeVal to already-cached Three.js materials when selection,
+  // hover, or the lit set changes, since react-force-graph-3d doesn't
+  // auto-redraw on prop change.
   useEffect(() => {
     if (renderMode !== "3d") return;
     fgRef3d.current?.refresh();
-  }, [selectedNodeId, hoveredNodeId, renderMode]);
+  }, [selectedNodeId, hoveredNodeId, litNodeIds, litSizeMultiplier, renderMode]);
 
   // Shared Suspense fallback for the lazy 3D surface — sized identically to the
   // default ForceGraphCanvas/ForceGraph3D canvasClass so toggling doesn't shift
