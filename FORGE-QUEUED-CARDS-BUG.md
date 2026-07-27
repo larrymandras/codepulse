@@ -3,6 +3,8 @@
 **Found:** 2026-07-26 · **Severity:** cosmetic/UX (no data loss, daemon healthy) · **Confidence:** high
 **Repo:** codepulse (frontend) — NOT forge, NOT the daemon.
 
+**✅ FIXED 2026-07-27** — `useForgeCommands` (`src/hooks/useForge.ts`) now filters to `commandType === "launch"`, so lifecycle/intake `done` commands no longer leak into the job list. Regression test: `src/hooks/useForge.test.ts` (a `done` lifecycle/intake command produces no row). tsc clean, full suite green, build clean. The `mapCommandStatus` `done→pending` mapping is left as-is — it's correct for launch (reconciled once the forgeJob appears).
+
 ## Symptom
 The Forge page (`/forge`) shows a growing stack of blue **"Queued…"** cards (each with a `<>` icon, host `LMOFFICE…`, "—", "Just now") that never clear, plus a red "Archive failed: …" card. Looks like a flooded/stuck queue.
 

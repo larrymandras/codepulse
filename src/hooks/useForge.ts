@@ -211,7 +211,18 @@ export function useForgeCommands(hostId: string | null): {
   // ForgePage's reconcile effect, deps [jobs, serverCommands]) would otherwise
   // see a new identity each render and loop into "Maximum update depth exceeded".
   const commands = useMemo(
-    () => (raw === undefined ? [] : raw.map(adaptCommand)),
+    () =>
+      raw === undefined
+        ? []
+        : // FORGE-QUEUED-CARDS bug: the job list reconciles a command away only
+          // when its resolvedForgeJobId matches a real forgeJobs row (see
+          // ForgeJobList.visiblePendingRows), and `done` maps to "pending"
+          // (reconciled once the job appears). Only `launch` commands ever
+          // create a forgeJob — lifecycle/intake commands never do, so a `done`
+          // lifecycle/intake command would render as a permanent "Queued…"
+          // card. They have dedicated surfaces (listLifecycleCommands /
+          // listIntakeCommands), so the job list must surface launch only.
+          raw.map(adaptCommand).filter((c) => c.commandType === "launch"),
     [raw]
   );
   return { commands };
