@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body>
+<title>Chat — Command Center (3-column mockup)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #09090b;
+    --panel: #141416;
+    --panel-2: #18181b;
+    --panel-3: #1b1b1f;
+    --border: #27272a;
+    --border-soft: #1f1f22;
+    --fg: #e4e4e7;
+    --fg-dim: #a1a1aa;
+    --muted: #71717a;
+    --primary: #06b6d4;
+    --primary-dim: #0e7490;
+    --primary-soft: rgba(6, 182, 212, 0.14);
+    --primary-line: rgba(6, 182, 212, 0.35);
+    --ok: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --radius: 0.5rem;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --glow-sm: 0 0 12px -2px rgba(6, 182, 212, 0.5);
+    --glow-md: 0 0 22px -4px rgba(6, 182, 212, 0.55);
+    --glow-lg: 0 0 80px -10px rgba(6, 182, 212, 0.5);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1100px 560px at 50% -10%, rgba(6,182,212,0.06), transparent 62%),
+      var(--bg);
+    color: var(--fg); font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--primary-soft); }
+  h1,h2,h3 { margin: 0; }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  .mono { font-family: var(--mono); }
+  .tnum { font-variant-numeric: tabular-nums; }
+  .shell { max-width: 1560px; margin: 0 auto; padding: 14px 20px 34px; }
+
+  .tag { font-family: var(--mono); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing:.12em; border-radius: 5px; padding: 2px 6px; white-space: nowrap; }
+  .tag.keep { color: var(--fg-dim); border: 1px solid var(--border); }
+  .tag.add  { color: var(--primary); border: 1px solid var(--primary-line); background: var(--primary-soft); }
+
+  .note {
+    border: 1px dashed var(--primary-line); background: linear-gradient(180deg, var(--primary-soft), transparent);
+    border-radius: var(--radius); padding: 11px 15px; margin-bottom: 14px;
+    display: flex; gap: 13px; align-items: flex-start; font-size: 12.5px; color: var(--fg-dim);
+  }
+  .note b { color: var(--fg); }
+
+  /* slim top bar — preserves Copy Trace / OFF */
+  .topbar { display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px; padding: 0 2px; }
+  .eyebrow { font-family: var(--mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--primary); box-shadow: 0 0 8px 0 rgba(6,182,212,0.7); }
+  .topbar .right { display:flex; align-items:center; gap: 10px; }
+  .btn { border: 1px solid var(--border); background: var(--panel-2); color: var(--fg-dim); border-radius: var(--radius); padding: 6px 11px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .btn.mono { font-family: var(--mono); text-transform: uppercase; letter-spacing:.1em; font-size:10px; }
+  .btn:hover { border-color: var(--primary-line); color: var(--fg); }
+
+  /* ============ 3-COLUMN GRID ============ */
+  .cols { display: grid; grid-template-columns: 1.35fr 320px 1fr; gap: 14px; align-items: stretch; min-height: 600px; }
+  @media (max-width: 1180px) { .cols { grid-template-columns: 1fr; } }
+  .col { position: relative; display:flex; flex-direction: column; gap: 14px; }
+  .col > .coltag { position:absolute; top:-8px; left: 12px; z-index: 4; }
+
+  .card { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius); }
+  .card > .hd { display:flex; align-items:center; justify-content:space-between; padding: 9px 14px; border-bottom: 1px solid var(--border-soft); background: linear-gradient(180deg, var(--panel-2), transparent); }
+  .card > .hd .title { font-size: 12px; font-weight: 700; letter-spacing:.02em; display:flex; align-items:center; gap:9px; }
+  .card > .hd .src { font-family: var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color: var(--muted); border:1px solid var(--border); border-radius:5px; padding:2px 6px; }
+
+  /* ---- COLUMN 1: chat + history ---- */
+  .chat { flex:1; display:flex; flex-direction:column; }
+  .msgs { flex:1; overflow-y:auto; padding: 16px; display:flex; flex-direction:column; gap: 13px; }
+  .daydiv { text-align:center; font-family: var(--mono); font-size:9px; letter-spacing:.16em; text-transform:uppercase; color: var(--muted); margin: 2px 0; }
+  .msg { display:flex; gap: 10px; max-width: 88%; }
+  .msg .av { width:26px; height:26px; border-radius:999px; flex:0 0 26px; display:grid; place-items:center; font-size:12px; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg .bub { border-radius: 12px; padding: 9px 13px; font-size: 13.5px; }
+  .msg.astridr .av { background: var(--primary-soft); color: var(--primary); border:1px solid var(--primary-line); }
+  .msg.astridr .bub { background: var(--panel-3); border:1px solid var(--border-soft); }
+  .msg.user .av { background: var(--panel-2); color: var(--fg-dim); border:1px solid var(--border); }
+  .msg.user .bub { background: rgba(6,182,212,0.10); border:1px solid var(--primary-line); color: var(--fg); }
+  .msg .meta { font-family: var(--mono); font-size:9px; color: var(--muted); margin-top:5px; letter-spacing:.08em; }
+  .composer { display:flex; gap:9px; padding: 12px 14px; border-top:1px solid var(--border-soft); background: var(--panel-2); }
+  .composer .field { flex:1; display:flex; align-items:center; gap:10px; border:1px solid var(--border); background: var(--panel); border-radius: var(--radius); padding: 9px 13px; }
+  .composer .field:focus-within { border-color: var(--primary-line); box-shadow: var(--glow-sm); }
+  .composer .field input { flex:1; background:transparent; border:0; outline:none; color: var(--fg); font-size: 13.5px; }
+  .composer .field input::placeholder { color: var(--muted); }
+  .mic { width:40px; height:40px; border-radius: var(--radius); border:1px solid var(--border); background: var(--panel-2); color: var(--fg-dim); display:grid; place-items:center; font-size:16px; }
+
+  /* ---- COLUMN 2: real AvatarAura + Control Center (unchanged) ---- */
+  .aurawrap { border: 1px solid var(--border); border-radius: var(--radius); background: radial-gradient(300px 300px at 50% 38%, rgba(6,182,212,0.08), transparent 70%); padding: 20px 16px 14px; text-align:center; }
+  .aura { position: relative; width: 100%; aspect-ratio: 1/1; max-width: 286px; margin: 0 auto; display:grid; place-items:center; }
+  .aura .glow { position:absolute; width:74%; height:74%; border-radius:999px; background: radial-gradient(circle, rgba(6,182,212,0.28), transparent 62%); filter: blur(6px); animation: breathe 4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100%{ transform:scale(1); opacity:.85 } 50%{ transform:scale(1.06); opacity:1 } }
+  .aura .ring { position:absolute; border:1px solid var(--primary-line); border-radius:999px; }
+  .aura .ring.r1 { inset: 4%; border-top-color: var(--primary); animation: spin 14s linear infinite; }
+  .aura .ring.r2 { inset: 12%; border-bottom-color: var(--primary); opacity:.6; animation: spin 20s linear infinite reverse; }
+  .aura .ring .sat { position:absolute; top:-4px; left:50%; width:7px; height:7px; margin-left:-3.5px; border-radius:999px; background: var(--primary); box-shadow: var(--glow-md); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .aura img { position: relative; width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 18px rgba(6,182,212,0.35)); }
+  .aura-cap { margin-top: 12px; }
+  .aura-cap .nm { font-weight:700; font-size:16px; }
+  .aura-cap .st { font-family: var(--mono); font-size:10px; letter-spacing:.16em; text-transform:uppercase; color: var(--muted); margin-top:3px; }
+  .aura-status { text-align:center; font-size:12.5px; color: var(--fg-dim); margin-top:10px; }
+  .aura-status .accent { color: var(--primary); }
+
+  /* Control Center — preserved exactly */
+  .cc { border:1px solid var(--border); border-radius: var(--radius); background: var(--panel); padding: 13px; }
+  .cc .cc-hd { font-family: var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase; color: var(--muted); margin-bottom:11px; }
+  .cc .pill { width:100%; display:flex; align-items:center; gap:8px; justify-content:center; border:1px solid var(--border); background: var(--panel-2); color: var(--fg-dim); border-radius: var(--radius); padding: 8px; font-family: var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; margin-bottom:9px; }
+  .cc .row { display:flex; align-items:center; justify-content:space-between; border:1px solid var(--border); background: var(--panel-2); border-radius: var(--radius); padding: 8px 11px; margin-bottom:9px; }
+  .cc .row .l { font-family: var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color: var(--fg-dim); display:flex; align-items:center; gap:8px; }
+  .cc .row .drop { font-size:12px; font-weight:700; color: var(--fg); display:flex; align-items:center; gap:5px; }
+  .cc .toggle { display:flex; align-items:center; justify-content:space-between; padding: 5px 3px; margin-bottom:6px; }
+  .cc .toggle .l { font-family: var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color: var(--fg-dim); }
+  .sw { width:34px; height:18px; border-radius:999px; background: var(--panel-3); border:1px solid var(--border); position:relative; }
+  .sw i { position:absolute; top:1.5px; left:1.5px; width:13px; height:13px; border-radius:999px; background: var(--fg-dim); transition:.2s; }
+  .sw.on { background: var(--primary-soft); border-color: var(--primary-line); }
+  .sw.on i { left:17px; background: var(--primary); }
+  .cc .screen { display:flex; align-items:center; justify-content:space-between; padding: 5px 3px 0; }
+  .cc .screen .l { font-family: var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color: var(--fg-dim); }
+
+  /* ---- COLUMN 3: vitals ---- */
+  .b { width:8px; height:8px; border-radius:999px; display:inline-block; }
+  .b.ok { background: var(--ok); box-shadow: 0 0 8px 0 rgba(16,185,129,.7); }
+  .b.warn { background: var(--warn); box-shadow: 0 0 8px 0 rgba(245,158,11,.6); }
+  .serving { padding: 12px 14px; display:grid; grid-template-columns: 1fr 1fr; gap: 11px 12px; }
+  .serving .kv .k { font-family: var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color: var(--muted); }
+  .serving .kv .v { font-size:13px; font-weight:600; color: var(--fg); margin-top:2px; }
+  .serving .kv .v .accent { color: var(--primary); }
+  .serving .conn { grid-column: 1 / -1; display:flex; gap: 14px; padding-top:2px; border-top:1px solid var(--border-soft); margin-top:1px; }
+  .serving .conn .led { display:flex; align-items:center; gap:6px; font-family: var(--mono); font-size:10.5px; color: var(--fg-dim); }
+
+  .gauges { display:grid; grid-template-columns: repeat(3,1fr); gap: 6px; padding: 14px; }
+  .gauge { display:flex; flex-direction:column; align-items:center; }
+  .gauge svg { width: 72px; height: 72px; transform: rotate(-90deg); }
+  .gauge .ring-bg { fill:none; stroke: var(--panel-3); stroke-width: 7; }
+  .gauge .ring-fg { fill:none; stroke: var(--primary); stroke-width: 7; stroke-linecap: round; filter: drop-shadow(0 0 4px rgba(6,182,212,.6)); }
+  .gauge.warn .ring-fg { stroke: var(--warn); filter: drop-shadow(0 0 4px rgba(245,158,11,.6)); }
+  .gauge .val { margin-top: -47px; font-family: var(--mono); font-weight:700; font-size:15px; }
+  .gauge .val small { font-size:9px; color:var(--muted); }
+  .gauge .lab { font-family: var(--mono); font-size:9px; letter-spacing:.14em; text-transform:uppercase; color: var(--muted); margin-top: 29px; }
+  .meters { display:grid; grid-template-columns: repeat(3,1fr); gap:1px; background: var(--border-soft); border-top:1px solid var(--border-soft); }
+  .meter { background: var(--panel); padding: 10px 6px; text-align:center; }
+  .meter .m-v { font-family: var(--mono); font-weight:700; font-size:14px; }
+  .meter .m-v small { font-size:9px; color: var(--muted); font-weight:500; }
+  .meter .m-k { font-family: var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color: var(--muted); margin-top:3px; }
+
+  .fuel { padding: 14px; }
+  .fuel .top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:9px; }
+  .fuel .big { font-family: var(--mono); font-size:14px; font-weight:700; }
+  .fuel .big small { color: var(--muted); font-weight:500; font-size:11px; }
+  .fuel .pct { font-family: var(--mono); font-size:12px; color: var(--primary); }
+  .segbar { display:flex; gap:3px; }
+  .segbar i { height: 13px; flex:1; border-radius: 2px; background: var(--panel-3); }
+  .segbar i.on { background: var(--primary); box-shadow: 0 0 6px -1px rgba(6,182,212,.6); }
+
+  .ekg svg { width:100%; height: 50px; display:block; }
+  .ekg path { fill:none; stroke: var(--primary); stroke-width: 1.6; filter: drop-shadow(0 0 3px rgba(6,182,212,.7)); stroke-dasharray: 1200; stroke-dashoffset: 1200; animation: draw 3.2s linear infinite; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  .ekg .cap { display:flex; justify-content:space-between; padding: 4px 14px 12px; font-family: var(--mono); font-size:10px; color: var(--muted); }
+  .ekg .cap b { color: var(--fg); }
+  .health { display:grid; grid-template-columns: 1fr 1fr; gap:1px; background: var(--border-soft); }
+  .hitem { background: var(--panel); padding: 9px 12px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .hitem .n { font-family: var(--mono); font-size:11px; color: var(--fg-dim); display:flex; align-items:center; gap:8px; }
+  .hitem .s { font-family: var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.1em; color: var(--muted); }
+
+  .legend { margin-top: 14px; font-size:12px; color: var(--muted); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  .legend .grp { display:flex; align-items:center; gap:7px; }
+</style>
+
+<div class="shell">
+
+  <div class="note">
+    <span class="tag add">3-column</span>
+    <div><b>Command Center layout.</b> <b>①</b> chat &amp; history · <b>②</b> your real AvatarAura (the actual portrait, unchanged) + the Control Center · <b>③</b> live vitals. Everything from today's page is <span class="tag keep">PRESERVED</span>; the vitals column is <span class="tag add">ADDED</span> from existing Convex tables. <i>The avatar shown is the real asset (<span class="mono">assets/avatar/astridr-avatar.png</span>).</i></div>
+  </div>
+
+  <div class="topbar">
+    <div class="eyebrow"><span class="dot"></span> Ástríðr // Command Center</div>
+    <div class="right">
+      <span class="mono" style="font-size:11px;color:var(--muted)" >09:41:22</span>
+      <button class="btn mono">▤ Copy Trace</button>
+      <button class="btn mono">⤫ OFF</button>
+    </div>
+  </div>
+
+  <div class="cols">
+
+    <!-- ========== COLUMN 1 — CHAT + HISTORY ========== -->
+    <div class="col">
+      <span class="coltag tag keep">① PRESERVED · chat + history</span>
+      <div class="card chat" style="margin-top:6px">
+        <div class="hd"><div class="title"><span class="b ok"></span> Conversation</div><div class="src">agentMessages</div></div>
+        <div class="msgs">
+          <div class="daydiv">— Today —</div>
+          <div class="msg astridr"><div class="av">◈</div><div><div class="bub">Morning, Larry. War Room is warm — 4 of 5 agents green, Hervor is mid-restart after the image bump. Want the overnight digest?</div><div class="meta">ÁSTRÍÐR · 09:38:04</div></div></div>
+          <div class="msg user"><div class="av">L</div><div><div class="bub">Yeah, and how's the self-hosted Convex holding up?</div><div class="meta">YOU · 09:38:22</div></div></div>
+          <div class="msg astridr"><div class="av">◈</div><div><div class="bub">Steady. Backend RSS 1.9 GB, no reconnect loop since the 07-22 force-recreate. Index reads nominal. Digest: 3 ecosystem releases overnight, 1 flagged (LangGraph 0.4 breaking change).</div><div class="meta">ÁSTRÍÐR · 09:38:29 · 41 tok/s</div></div></div>
+          <div class="msg user"><div class="av">L</div><div><div class="bub">Pin the LangGraph one for later.</div><div class="meta">YOU · 09:40:55</div></div></div>
+          <div class="msg astridr"><div class="av">◈</div><div><div class="bub">Pinned to the backlog. I'll surface it when you open the ecosystem thread.</div><div class="meta">ÁSTRÍÐR · 09:41:01</div></div></div>
+        </div>
+        <div class="composer">
+          <div class="field"><input placeholder="Type below to talk to Ástríðr…  (⌘↵ to send)"><span class="mono" style="font-size:10px;color:var(--muted)">⌘↵</span></div>
+          <button class="mic" title="Voice">◉</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== COLUMN 2 — REAL AURA + CONTROL CENTER ========== -->
+    <div class="col">
+      <span class="coltag tag keep">② PRESERVED · aura + control center</span>
+      <div class="aurawrap" style="margin-top:6px">
+        <div class="aura">
+          <div class="glow"></div>
+          <div class="ring r1"><span class="sat"></span></div>
+          <div class="ring r2"><span class="sat"></span></div>
+          <img src="astridr-avatar.png" alt="Ástríðr">
+        </div>
+        <div class="aura-cap"><div class="nm">Ástríðr</div><div class="st">Offline · typing only</div></div>
+        <div class="aura-status"><span class="accent">Listening</span> off — <span class="accent">typing only</span></div>
+      </div>
+
+      <div class="cc">
+        <div class="cc-hd">Control Center</div>
+        <div class="pill">⤫ Offline</div>
+        <div class="row"><span class="l">◐ Brain</span><span class="drop">Auto ▾</span></div>
+        <div class="row"><span class="l">≋ Voice</span><span class="drop">Auto ▾</span></div>
+        <div class="toggle"><span class="l">🔒 Strict Mode</span><span class="sw"><i></i></span></div>
+        <div class="toggle"><span class="l">◎ Focus Mode</span><span class="sw on"><i></i></span></div>
+        <div class="screen"><span class="l">▤ Screen</span><button class="btn mono">Share</button></div>
+      </div>
+    </div>
+
+    <!-- ========== COLUMN 3 — VITALS ========== -->
+    <div class="col">
+      <span class="coltag tag add">③ ADDED · vitals</span>
+
+      <div class="card" style="margin-top:6px">
+        <div class="hd"><div class="title">Now Serving</div><div class="src">profiles · mcpServers</div></div>
+        <div class="serving">
+          <div class="kv"><div class="k">Profile</div><div class="v"><span class="accent">war-room</span></div></div>
+          <div class="kv"><div class="k">Model</div><div class="v">opus-4.8 <span style="color:var(--muted)">1m</span></div></div>
+          <div class="kv"><div class="k">MCP servers</div><div class="v">6 <span style="color:var(--muted)">live</span></div></div>
+          <div class="kv"><div class="k">Tools</div><div class="v">248 <span style="color:var(--muted)">discovered</span></div></div>
+          <div class="conn">
+            <div class="led"><span class="b ok"></span> Convex</div>
+            <div class="led"><span class="b ok"></span> :8181</div>
+            <div class="led"><span class="b warn"></span> war-room</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><div class="title">System Vitals</div><div class="src">systemResources</div></div>
+        <div class="gauges">
+          <div class="gauge"><svg viewBox="0 0 72 72"><circle class="ring-bg" cx="36" cy="36" r="29"/><circle class="ring-fg" cx="36" cy="36" r="29" stroke-dasharray="182" stroke-dashoffset="68"/></svg><div class="val">63<small>%</small></div><div class="lab">CPU</div></div>
+          <div class="gauge warn"><svg viewBox="0 0 72 72"><circle class="ring-bg" cx="36" cy="36" r="29"/><circle class="ring-fg" cx="36" cy="36" r="29" stroke-dasharray="182" stroke-dashoffset="31"/></svg><div class="val">83<small>%</small></div><div class="lab">RAM</div></div>
+          <div class="gauge"><svg viewBox="0 0 72 72"><circle class="ring-bg" cx="36" cy="36" r="29"/><circle class="ring-fg" cx="36" cy="36" r="29" stroke-dasharray="182" stroke-dashoffset="114"/></svg><div class="val">37<small>%</small></div><div class="lab">GPU</div></div>
+        </div>
+        <div class="meters">
+          <div class="meter"><div class="m-v">41<small> t/s</small></div><div class="m-k">Tok/s</div></div>
+          <div class="meter"><div class="m-v">0.48<small>s</small></div><div class="m-k">TTFT</div></div>
+          <div class="meter"><div class="m-v">$0.21</div><div class="m-k">Session</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><div class="title">Context Fuel</div><div class="src">llmMetrics</div></div>
+        <div class="fuel">
+          <div class="top"><div class="big">148.2k <small>/ 1.0M</small></div><div class="pct">15%</div></div>
+          <div class="segbar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><div class="title">Throughput · 60s</div><div class="src">llmMetrics</div></div>
+        <div class="ekg">
+          <svg viewBox="0 0 600 50" preserveAspectRatio="none"><path d="M0,35 L60,35 L74,35 L88,9 L100,45 L112,35 L180,35 L210,35 L224,16 L236,42 L248,35 L340,35 L360,35 L374,6 L386,47 L398,35 L470,35 L500,35 L514,20 L526,40 L538,35 L600,35"/></svg>
+          <div class="cap"><span>tok/s <b>41</b></span><span>peak <b>92</b></span><span>calls <b>1,204</b></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><div class="title">Agent &amp; Container Health</div><div class="src">dockerContainers</div></div>
+        <div class="health">
+          <div class="hitem"><span class="n"><span class="b ok"></span>astridr</span><span class="s">up 3d</span></div>
+          <div class="hitem"><span class="n"><span class="b ok"></span>convex</span><span class="s">healthy</span></div>
+          <div class="hitem"><span class="n"><span class="b ok"></span>freya</span><span class="s">up 2d</span></div>
+          <div class="hitem"><span class="n"><span class="b warn"></span>hervor</span><span class="s">restart</span></div>
+          <div class="hitem"><span class="n"><span class="b ok"></span>gondul</span><span class="s">up 2d</span></div>
+          <div class="hitem"><span class="n"><span class="b ok"></span>ragnhildr</span><span class="s">up 2d</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="grp"><span class="tag keep">PRESERVED</span> columns ① &amp; ② — today's Chat page, untouched</div>
+    <div class="grp"><span class="tag add">ADDED</span> column ③ vitals — all from existing Convex tables (systemResources · llmMetrics · dockerContainers · profiles · mcpServers)</div>
+  </div>
+
+</div>
+</body>
+</html>

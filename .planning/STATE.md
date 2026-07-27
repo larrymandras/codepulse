@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v11.0
 milestone_name: Skills Command Center — Full Lifecycle & Launch
 status: milestone_shipped
-stopped_at: v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0). No active milestone. The 3 queued post-v11.0 follow-ups are ALL DONE + FULLY CLOSED 2026-07-26 (ad-hoc/quick, not GSD phases): ① skill display-name family-aware fix + 198-row live Convex migration ✅; ② Ástríðr bridge coverage FULLY DONE — safe-7 (2 plugins + 5 vault) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, mounted read-only + bridge.yaml) — all 10 previously-unbridged skills now have cc_ twins (202 total, live-verified astridr→Convex) ✅; ③ Chat 3-column command center + VitalsRail ✅ (+ Inbox Enter-key AND R-key phantom-expand both fixed). Commits: codepulse 565cef36/0ecf7b7/2fac593 (master, pushed), astridr 82ead1fe/46873c84 (feature/brain-swap, pushed). Post-v11.0 backlog FULLY CLEAR. Next: /gsd-new-milestone.
-last_updated: "2026-07-26T23:05:00.000Z"
-last_activity: 2026-07-26 -- cleared ALL post-v11.0 work: ① display-name fix, ② bridge coverage FULL (all 10 skills bridged, 202 cc_ twins), ③ Chat command center; + Inbox Enter & R-key fixes. codepulse 2fac593 / astridr 46873c84 pushed. Backlog clear; run /gsd-new-milestone for the next.
+stopped_at: v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0). No active milestone. Post-v11.0 follow-ups DONE 2026-07-26; Phase-98 UAT tests 5 + 4-shadowed VERIFIED LIVE 2026-07-27. Backlog FULLY CLEAR. Next: /gsd-new-milestone.
+last_updated: "2026-07-27T19:20:00.000Z"
+last_activity: 2026-07-27 -- Phase-98 UAT tests 5 (refusal toast shows the real reason, not "Server Error" — CR-03/ConvexError fix) + 4-shadowed (Restore disabled + tooltip + no page-blank, CR-02) VERIFIED LIVE in a Clerk-signed-in session; voice round-trip re-verified (STT→native weather tool→TTS). Also shipped astridr <invoke>-leak detector (feature/brain-swap b7e4a534).
 progress:
   total_phases: 4
   completed_phases: 4
@@ -33,15 +33,25 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
 **Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25; ALL post-v11.0 work is DONE & pushed 2026-07-26 (3 follow-ups + both Inbox key fixes + full bridge coverage; see Current Position). Backlog FULLY CLEAR. Next: **/gsd-new-milestone**.
 
+**LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
+
+1. **Phase-98 Test 5** — ✅ **VERIFIED LIVE 2026-07-27.** Archive on a skill with a dormant cold copy → toast shows "a dormant copy already exists in cold storage", NOT "Server Error" (CR-03/ConvexError fix `1899d891` confirmed end-to-end; being signed in was load-bearing — `enqueueLifecycle`'s auth guard throws a plain Error that redacts to "Server Error").
+2. **Phase-98 Test 4 (shadowed)** — ✅ **VERIFIED LIVE 2026-07-27.** Cold Storage ⋯ menu on a staged shadowed skill (active `claude-code` + dormant `claude-code:available` under one name) showed **Restore disabled** + the shadow tooltip, page did NOT blank (CR-02 holds). Staging cleaned to zero residue.
+3. **Chat voice round-trip** — basic STT→native tool→TTS re-verified 2026-07-27 (weather query, clean). The full "Hey Ástríðr" wake → "stop" barge-in → "goodbye" re-arm sequence was NOT re-run this session.
+
+(NOTE 2026-07-27: STATE.md frontmatter was regressed AGAIN by the gsd-sdk resync clobber [v11→v8, counters zeroed to 1/1/13/13]; hand-restored from the committed-HEAD v11.0 values this session per the established workaround.)
+
 ## Current Position
 
 Milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch) — ✅ SHIPPED & CLOSED 2026-07-25**, tagged `v11.0`. Phases 97-100 (23 plans), 22/22 requirements. Audit `tech_debt` (0 blockers). Archived to `milestones/v11.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v11.0-phases/`.
 Phase 100 UAT (operator, 2026-07-25): drag archive→restore round-trip PASSED live; honest-failure path confirmed; CR-02 unit-verified + live dormant→cold no-op observed.
 This session also folded a large Skills-page redesign into Phase 100 (3-column command-center layout, right-hand Command Deck, filter chips, bulk-select, bridge-mirror filter, no-op feedback) — all tested, full suite green.
 Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc/quick, not GSD phases; codepulse 565cef36 + astridr 82ead1fe, both pushed):
+
 - **① fix mangled skill display names** ✅ — family-aware `generateDisplayName` (cc_-twin dedup + ≥3-member family + colon-namespace); `migrateDisplayNames` rewrote 198 auto-names on the live self-hosted Convex (0 human-edited touched); 23 unit tests.
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
+
 Status: No active milestone. v11.0 closed; **post-v11.0 backlog FULLY CLEAR.** Next: /gsd-new-milestone.
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
@@ -375,10 +385,10 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-24T13:10:00.000Z
-Stopped at: Phase 100 Plan 05 EXECUTED (SkillRow pending overlay + drag reporting + UX-01/UX-04 audit, see 100-05-SUMMARY.md) — commits 0651ceb (Task 1 feat), 6fbc569 (Task 2 test), 65d78eb (summary)
+Last session: 2026-07-27T15:09:01.764Z
+Stopped at: auto-checkpoint at 90% (2026-07-27)
 Next action: Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This is the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/100-control-surface-ux-menu-drag-lanes-optimistic-reconcile/100-04-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 

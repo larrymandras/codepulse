@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body>
+<title>Skills — Command Center Redesign (mockup)</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #09090b;
+    --panel: #141416;
+    --panel-2: #18181b;
+    --border: #27272a;
+    --border-soft: #1f1f22;
+    --fg: #e4e4e7;
+    --fg-dim: #a1a1aa;
+    --muted: #71717a;
+    --primary: #06b6d4;
+    --primary-dim: #0e7490;
+    --primary-soft: rgba(6, 182, 212, 0.14);
+    --primary-line: rgba(6, 182, 212, 0.35);
+    --info: #38bdf8;
+    --danger: #ef4444;
+    --danger-soft: rgba(239, 68, 68, 0.10);
+    --amber: #f59e0b;
+    --radius: 0.5rem;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --glow-sm: 0 0 12px -2px rgba(6, 182, 212, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(6,182,212,0.06), transparent 60%),
+      var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--primary-soft); }
+  h1, h2, h3 { margin: 0; text-wrap: balance; }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  .mono { font-family: var(--mono); }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--primary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 999px; background: var(--primary);
+    box-shadow: 0 0 8px 0 rgba(6,182,212,0.7);
+  }
+  .eyebrow.mutedlabel { color: var(--muted); }
+  .eyebrow.mutedlabel .dot { background: var(--muted); box-shadow: none; }
+
+  .shell { max-width: 1400px; margin: 0 auto; padding: 20px 24px 48px; }
+
+  /* ---- annotation banner ---- */
+  .note {
+    border: 1px dashed var(--primary-line);
+    background: linear-gradient(180deg, var(--primary-soft), transparent);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 18px;
+    display: flex; gap: 14px; align-items: flex-start;
+    font-size: 12.5px; color: var(--fg-dim);
+  }
+  .note b { color: var(--fg); }
+  .note .tag {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.12em; color: var(--primary); border: 1px solid var(--primary-line);
+    border-radius: 6px; padding: 3px 7px; white-space: nowrap;
+  }
+
+  /* ---- header ---- */
+  .pagehead {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; margin-bottom: 16px;
+  }
+  .pagehead h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+  .pagehead .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .headactions { display: flex; gap: 8px; }
+  .btn {
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--fg-dim);
+    border-radius: var(--radius); padding: 7px 12px; font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 7px; transition: .15s;
+  }
+  .btn:hover { border-color: var(--primary-line); color: var(--fg); }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #001417; }
+  .btn.primary:hover { filter: brightness(1.08); }
+
+  /* ---- search + chips ---- */
+  .controlbar { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+  .search {
+    position: relative; display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius);
+    padding: 10px 14px;
+  }
+  .search:focus-within { border-color: var(--primary-line); box-shadow: var(--glow-sm); }
+  .search input {
+    flex: 1; background: transparent; border: 0; outline: none; color: var(--fg);
+    font-family: var(--mono); font-size: 13px;
+  }
+  .search input::placeholder { color: var(--muted); }
+  .search .kbd {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .chip {
+    border: 1px solid var(--border); background: var(--panel-2); color: var(--fg-dim);
+    border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 7px; transition: .15s;
+  }
+  .chip:hover { border-color: var(--primary-line); color: var(--fg); }
+  .chip.active { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+  .chip .c { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .chip.active .c { color: var(--primary); }
+
+  /* ---- 3 column grid ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 1120px) { .grid { grid-template-columns: 240px minmax(0,1fr); } .deck-col { display: none; } }
+  @media (max-width: 820px) { .grid { grid-template-columns: 1fr; } .rail-col { order: -1; } }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  }
+  .panel-pad { padding: 14px; }
+  .stacktitle { margin-bottom: 10px; }
+
+  /* ---- LEFT RAIL ---- */
+  .rail { display: flex; flex-direction: column; gap: 16px; }
+
+  .scope { display: flex; flex-direction: column; gap: 6px; }
+  .lane {
+    display: flex; align-items: center; gap: 11px; padding: 10px 12px;
+    border: 1px solid transparent; border-radius: var(--radius); transition: .15s;
+    color: var(--fg-dim);
+  }
+  .lane:hover { background: var(--panel-2); border-color: var(--border); color: var(--fg); }
+  .lane .ic { width: 16px; height: 16px; color: var(--fg-dim); flex: 0 0 auto; }
+  .lane:hover .ic { color: var(--primary); }
+  .lane .lbl { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+  /* valid drop target demo */
+  .lane.valid {
+    background: var(--primary-soft); border-style: dashed; border-color: var(--primary);
+    color: var(--primary); box-shadow: var(--glow-sm);
+  }
+  .lane.valid .ic { color: var(--primary); }
+  .lane.invalid {
+    background: var(--danger-soft); border-style: dashed; border-color: rgba(239,68,68,0.4);
+    color: #fca5a5;
+  }
+  .lane .drophint { margin-left: auto; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; opacity: .8; }
+
+  .navrow {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 12px; border-radius: var(--radius); border: 1px solid transparent;
+    color: var(--fg-dim); font-family: var(--mono); font-size: 12px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em; transition: .15s;
+  }
+  .navrow:hover { background: var(--panel-2); color: var(--fg); }
+  .navrow.active { background: var(--primary-soft); border-color: var(--primary-line); color: var(--primary); }
+  .navrow .count { font-size: 10px; border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; color: var(--muted); }
+
+  .rail-divider { height: 1px; background: var(--border-soft); margin: 2px 0; }
+
+  /* categories accordion */
+  .cats { display: flex; flex-direction: column; gap: 3px; max-height: 300px; overflow-y: auto; padding-right: 2px; }
+  .cats::-webkit-scrollbar { width: 8px; }
+  .cats::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+  .cat {
+    display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px;
+    color: var(--fg-dim); font-size: 12.5px; transition: .12s; border: 1px solid transparent;
+  }
+  .cat:hover { background: var(--panel-2); color: var(--fg); }
+  .cat .emoji { width: 16px; text-align: center; filter: grayscale(0.2); }
+  .cat .nm { flex: 1; }
+  .cat .n { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  /* ---- CENTER LIST ---- */
+  .listwrap { min-width: 0; }
+  .listhead {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 4px 2px 12px;
+  }
+  .listhead .left { display: flex; align-items: center; gap: 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button { background: var(--panel-2); border: 0; padding: 5px 10px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .seg button.on { background: var(--primary-soft); color: var(--primary); }
+  .selhint { font-size: 11.5px; color: var(--muted); }
+
+  .rows { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .row {
+    display: grid; grid-template-columns: 22px 18px 1fr auto; align-items: center; gap: 12px;
+    padding: 9px 12px; background: var(--panel);
+    border-bottom: 1px solid var(--border-soft); transition: .12s; position: relative;
+  }
+  .row:last-child { border-bottom: 0; }
+  .row:hover { background: var(--panel-2); }
+  .row .grip { color: #3f3f46; cursor: grab; }
+  .row:hover .grip { color: var(--primary); }
+  .chkbox { width: 14px; height: 14px; border: 1.5px solid var(--border); border-radius: 4px; background: transparent; }
+  .row:hover .chkbox { border-color: var(--primary-line); }
+  .row.sel .chkbox { background: var(--primary); border-color: var(--primary); }
+  .meta { min-width: 0; }
+  .meta .nm { font-family: var(--mono); font-weight: 700; font-size: 13px; color: var(--fg); }
+  .meta .ds { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .right { display: flex; align-items: center; gap: 8px; }
+  .badge {
+    font-family: var(--mono); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+    border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; color: var(--muted);
+  }
+  .badge.global { color: var(--primary); border-color: var(--primary-line); }
+  .badge.project { color: #a78bfa; border-color: rgba(167,139,250,.35); }
+  .use { font-family: var(--mono); font-size: 11px; color: var(--primary); opacity: .75; }
+  .dots { color: var(--muted); padding: 0 4px; border: 0; background: transparent; font-size: 16px; line-height: 1; }
+  .row:hover .dots { color: var(--fg); }
+  .copy {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--primary); border: 1px solid var(--primary-line); border-radius: 6px; padding: 4px 10px; background: transparent;
+  }
+  .copy:hover { background: var(--primary); color: #001417; }
+  /* pending state demo */
+  .row.pending { opacity: .75; }
+  .row.pending::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--info); box-shadow: 0 0 10px 0 var(--info); animation: pulse 1.4s ease-in-out infinite;
+  }
+  .row.dormant { opacity: .55; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* bulk action bar */
+  .bulkbar {
+    display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 9px 12px;
+    border: 1px solid var(--primary-line); background: var(--primary-soft); border-radius: var(--radius);
+    font-size: 12px;
+  }
+  .bulkbar .n { font-family: var(--mono); font-weight: 700; color: var(--primary); }
+  .bulkbar .acts { margin-left: auto; display: flex; gap: 6px; }
+  .bulkbar .acts .btn { padding: 5px 10px; }
+
+  /* ---- RIGHT COMMAND DECK ---- */
+  .deck { display: flex; flex-direction: column; gap: 14px; }
+  .deckcard { }
+  .deckcard .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .deckcard .hd .cnt { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  .favgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .fav {
+    border: 1px solid var(--border); background: var(--panel-2); border-radius: 7px; padding: 9px 10px;
+    display: flex; flex-direction: column; gap: 4px; transition: .12s;
+  }
+  .fav:hover { border-color: var(--primary-line); background: var(--panel); }
+  .fav .t { font-family: var(--mono); font-size: 11.5px; font-weight: 700; color: var(--fg); display: flex; align-items: center; gap: 5px; }
+  .fav .t .star { color: var(--amber); font-size: 10px; }
+  .fav .u { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+
+  .barlist { display: flex; flex-direction: column; gap: 8px; }
+  .barrow { display: grid; grid-template-columns: 1fr 34px; align-items: center; gap: 10px; }
+  .barrow .lbl { font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barrow:hover .lbl { color: var(--fg); }
+  .barrow .val { font-family: var(--mono); font-size: 11px; color: var(--primary); text-align: right; }
+  .track { grid-column: 1 / -1; height: 4px; border-radius: 3px; background: var(--panel-2); overflow: hidden; margin-top: -3px; }
+  .track > i { display: block; height: 100%; background: linear-gradient(90deg, var(--primary-dim), var(--primary)); border-radius: 3px; }
+
+  .miniList { display: flex; flex-direction: column; gap: 2px; }
+  .mini { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; transition: .12s; }
+  .mini:hover { background: var(--panel-2); }
+  .mini .nm { font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim); flex: 1; }
+  .mini:hover .nm { color: var(--fg); }
+  .mini .ago { font-family: var(--mono); font-size: 9.5px; color: var(--muted); }
+  .mini .new { font-family: var(--mono); font-size: 8.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--primary); border: 1px solid var(--primary-line); border-radius: 4px; padding: 1px 5px; }
+
+  .legend { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 8px 20px; padding-top: 16px; border-top: 1px solid var(--border-soft); font-size: 11.5px; color: var(--muted); }
+  .legend b { color: var(--fg-dim); font-weight: 600; }
+  a.plain { color: var(--primary); text-decoration: none; }
+</style>
+
+<div class="shell">
+
+  <div class="note">
+    <span class="tag">Mockup</span>
+    <div>
+      <b>What changed vs. today.</b> ① <b>Scope</b> (Global / Project / Cold Storage) + Overview / Cold-Storage now sit at the <b>top</b> of the left rail — always visible, so a drag never chases an off-screen lane. ② The <b>Command Deck</b> moved to the <b>right</b> as a real favorites dashboard (pinned · most-used · recently used · recently added). ③ A <b>filter-chip row</b> + search-first center replace the origin dropdown; ④ rows gain <b>bulk-select</b> and a scannable "Unused" smart view for managing 474 skills. Nothing here is wired — it's a layout sketch to react to.
+    </div>
+  </div>
+
+  <div class="pagehead">
+    <div>
+      <h1>Skills</h1>
+      <div class="sub mono">474 skills · 80 in cold storage · 40 categories</div>
+    </div>
+    <div class="headactions">
+      <button class="btn">⌘ Palette</button>
+      <button class="btn">Review 12</button>
+      <button class="btn primary">+ Intake</button>
+    </div>
+  </div>
+
+  <div class="controlbar">
+    <div class="search">
+      <span class="mono" style="color:var(--muted)">⌕</span>
+      <input placeholder="Search or run a skill…  try 'geo', '/deploy', 'unused'" />
+      <span class="kbd">Ctrl K</span>
+    </div>
+    <div class="chips" id="chips">
+      <button class="chip active">All <span class="c tnum">474</span></button>
+      <button class="chip">★ Favorites <span class="c tnum">18</span></button>
+      <button class="chip">Most used <span class="c tnum">40</span></button>
+      <button class="chip">Unused <span class="c tnum">213</span></button>
+      <button class="chip">Recently added <span class="c tnum">9</span></button>
+      <button class="chip">Global <span class="c tnum">180</span></button>
+      <button class="chip">Project <span class="c tnum">22</span></button>
+      <button class="chip">Cold <span class="c tnum">80</span></button>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- ================= LEFT RAIL ================= -->
+    <div class="rail-col rail">
+      <div>
+        <div class="eyebrow stacktitle"><span class="dot"></span>Scope</div>
+        <div class="scope">
+          <div class="lane"><span class="ic">🌐</span><span class="lbl">Global</span></div>
+          <div class="lane valid"><span class="ic">🗂</span><span class="lbl">Project</span><span class="drophint">drop → move</span></div>
+          <div class="lane"><span class="ic">🗄</span><span class="lbl">Cold Storage</span></div>
+        </div>
+      </div>
+
+      <div class="scope">
+        <div class="navrow active">Overview / All</div>
+        <div class="navrow">🗄 Cold Storage <span class="count tnum">80</span></div>
+      </div>
+
+      <div class="rail-divider"></div>
+
+      <div>
+        <div class="eyebrow mutedlabel stacktitle"><span class="dot"></span>Categories</div>
+        <div class="cats">
+          <div class="cat"><span class="emoji">📝</span><span class="nm">Article</span><span class="n tnum">6</span></div>
+          <div class="cat"><span class="emoji">📣</span><span class="nm">Marketing</span><span class="n tnum">31</span></div>
+          <div class="cat"><span class="emoji">🎬</span><span class="nm">Video</span><span class="n tnum">18</span></div>
+          <div class="cat"><span class="emoji">🧩</span><span class="nm">GSD Workflow</span><span class="n tnum">54</span></div>
+          <div class="cat"><span class="emoji">🔒</span><span class="nm">Security</span><span class="n tnum">9</span></div>
+          <div class="cat"><span class="emoji">🌐</span><span class="nm">Vercel</span><span class="n tnum">27</span></div>
+          <div class="cat"><span class="emoji">📊</span><span class="nm">Data & Docs</span><span class="n tnum">14</span></div>
+          <div class="cat"><span class="emoji">🤖</span><span class="nm">Automation</span><span class="n tnum">22</span></div>
+          <div class="cat"><span class="emoji">🔎</span><span class="nm">Research</span><span class="n tnum">11</span></div>
+          <div class="cat"><span class="emoji">🎨</span><span class="nm">Higgsfield Media</span><span class="n tnum">16</span></div>
+          <div class="cat"><span class="emoji">🧪</span><span class="nm">Testing</span><span class="n tnum">8</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= CENTER LIST ================= -->
+    <div class="listwrap listcol">
+      <div class="listhead">
+        <div class="left">
+          <div class="eyebrow"><span class="dot"></span>Overview / All</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="selhint">Drag a row to a scope lane, or ⋯ → move</span>
+          <div class="seg"><button class="on">Compact</button><button>Comfort</button></div>
+        </div>
+      </div>
+
+      <div class="rows" id="rows">
+        <div class="row sel">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">deploy-to-vercel</div><div class="ds">Deploy apps and sites to Vercel with preview links</div></div>
+          <div class="right"><span class="badge global">Global</span><span class="use tnum">31×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">deep-research</div><div class="ds">Autonomous multi-step research via Gemini Deep Research</div></div>
+          <div class="right"><span class="badge global">Global</span><span class="use tnum">22×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row pending">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">design-review</div><div class="ds">Moving to Project… · optimistic pending</div></div>
+          <div class="right"><span class="badge project">Project</span><span class="use tnum">7×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">agent-browser</div><div class="ds">Browser automation CLI for agents — navigate, fill, scrape</div></div>
+          <div class="right"><span class="badge global">Global</span><span class="use tnum">14×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row sel">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">changelog-generator</div><div class="ds">Turn git history into user-facing release notes</div></div>
+          <div class="right"><span class="badge global">Global</span><span class="use tnum">4×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row dormant">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">geo-brand-mentions <span class="badge">dormant</span></div><div class="ds">Cold storage · not loaded — drag to Global to restore</div></div>
+          <div class="right"><span class="use tnum">0×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+        <div class="row">
+          <span class="chkbox"></span><span class="grip">⠿</span>
+          <div class="meta"><div class="nm">article-extractor</div><div class="ds">Extract clean article content from a URL to markdown</div></div>
+          <div class="right"><span class="badge global">Global</span><span class="use tnum">3×</span><button class="dots">⋯</button><button class="copy">Copy</button></div>
+        </div>
+      </div>
+
+      <div class="bulkbar">
+        <span class="n">2 selected</span>
+        <span style="color:var(--fg-dim)">Bulk act on many at once</span>
+        <div class="acts">
+          <button class="btn">★ Favorite</button>
+          <button class="btn">Move…</button>
+          <button class="btn">Archive</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= RIGHT COMMAND DECK ================= -->
+    <div class="deck-col deck">
+      <div class="eyebrow stacktitle"><span class="dot"></span>Command Deck</div>
+
+      <div class="panel panel-pad deckcard">
+        <div class="hd"><div class="eyebrow mutedlabel"><span class="dot"></span>Pinned favorites</div><span class="cnt tnum">18</span></div>
+        <div class="favgrid">
+          <div class="fav"><div class="t"><span class="star">★</span>/gsd-code-review</div><div class="u">used 56×</div></div>
+          <div class="fav"><div class="t"><span class="star">★</span>/brainstorming</div><div class="u">used 8×</div></div>
+          <div class="fav"><div class="t"><span class="star">★</span>/systematic-debug</div><div class="u">used 14×</div></div>
+          <div class="fav"><div class="t"><span class="star">★</span>/deploy-to-vercel</div><div class="u">used 31×</div></div>
+        </div>
+      </div>
+
+      <div class="panel panel-pad deckcard">
+        <div class="hd"><div class="eyebrow mutedlabel"><span class="dot"></span>Most used</div><span class="cnt">30d</span></div>
+        <div class="barlist">
+          <div class="barrow"><span class="lbl">/gsd-code-review</span><span class="val tnum">56</span><span class="track"><i style="width:100%"></i></span></div>
+          <div class="barrow"><span class="lbl">/gsd-quick</span><span class="val tnum">16</span><span class="track"><i style="width:29%"></i></span></div>
+          <div class="barrow"><span class="lbl">/systematic-debugging</span><span class="val tnum">14</span><span class="track"><i style="width:25%"></i></span></div>
+          <div class="barrow"><span class="lbl">/gsd-discuss-phase</span><span class="val tnum">10</span><span class="track"><i style="width:18%"></i></span></div>
+          <div class="barrow"><span class="lbl">/gsd-plan-phase</span><span class="val tnum">9</span><span class="track"><i style="width:16%"></i></span></div>
+          <div class="barrow"><span class="lbl">/playwright-browser</span><span class="val tnum">7</span><span class="track"><i style="width:13%"></i></span></div>
+        </div>
+      </div>
+
+      <div class="panel panel-pad deckcard">
+        <div class="hd"><div class="eyebrow mutedlabel"><span class="dot"></span>Recently used</div></div>
+        <div class="miniList">
+          <div class="mini"><span class="nm">/gsd-execute-phase</span><span class="ago">2m ago</span></div>
+          <div class="mini"><span class="nm">/design-review</span><span class="ago">18m ago</span></div>
+          <div class="mini"><span class="nm">/webapp-testing</span><span class="ago">1h ago</span></div>
+          <div class="mini"><span class="nm">/deep-research</span><span class="ago">3h ago</span></div>
+        </div>
+      </div>
+
+      <div class="panel panel-pad deckcard">
+        <div class="hd"><div class="eyebrow mutedlabel"><span class="dot"></span>Recently added</div></div>
+        <div class="miniList">
+          <div class="mini"><span class="nm">artifact-capabilities</span><span class="new">new</span></div>
+          <div class="mini"><span class="nm">skill-search</span><span class="ago">yesterday</span></div>
+          <div class="mini"><span class="nm">migrate-surface</span><span class="ago">2d ago</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <span><b>Legend —</b></span>
+    <span><span style="color:var(--info)">▎</span> optimistic pending (mid-move)</span>
+    <span><span style="color:var(--primary)">▢</span> valid drop lane</span>
+    <span><span style="color:#fca5a5">▢</span> invalid drop (rejected)</span>
+    <span>dimmed = dormant / cold</span>
+    <span>chips = smart views (no dropdown)</span>
+  </div>
+
+</div>
+
+<script>
+  // Chip single-select (visual only — this is a static sketch)
+  const chipRow = document.getElementById('chips');
+  chipRow.addEventListener('click', function (e) {
+    const b = e.target.closest('.chip'); if (!b) return;
+    chipRow.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    b.classList.add('active');
+  });
+  // Row select toggle to show bulk-bar interaction
+  document.getElementById('rows').addEventListener('click', function (e) {
+    if (e.target.closest('.copy') || e.target.closest('.dots')) return;
+    const r = e.target.closest('.row'); if (!r) return;
+    r.classList.toggle('sel');
+    const n = document.querySelectorAll('.row.sel').length;
+    const bar = document.querySelector('.bulkbar');
+    bar.style.display = n ? 'flex' : 'none';
+    if (n) bar.querySelector('.n').textContent = n + ' selected';
+  });
+</script>
+</body>
+</html>
