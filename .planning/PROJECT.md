@@ -8,7 +8,24 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## Current Milestone: v11.0 Skills Command Center — Full Lifecycle & Launch
+## Current Milestone: v13.0 Brain-Swap Control, Cost Intelligence & Consolidation
+
+**Goal:** Give operators live control over Ástríðr's reasoning engine, deeper cost + tool/trace observability, and close out accumulated tech-debt. Formalized 2026-07-27 via `/gsd-new-milestone`.
+
+**Phases (103–106):**
+- **103 — Brain-Swap Control Surface** — CodePulse UI to switch Ástríðr's engine (keyed API models + subscription CLIs) on the fly: live per-agent/global current-engine status, scoped swap with confirm, server-confirmed result. The CodePulse half of the astridr brain-swap thread (astridr Phase 184.1, which scopes "+ CodePulse controls"). ⚠️ **BSC-05 integration gate**: verify astridr's brain-swap endpoints live end-to-end *before* building the UI (Phase-90 "endpoint exists ≠ integration works" lesson).
+- **104 — Cost Intelligence** — per-model/provider cost breakdown over time + configurable budget thresholds + anomaly/budget alerts through the existing routing layer.
+- **105 — Tool & Trace Observability** — per-tool usage analytics, surfacing the astridr `tool_call_leaked_as_text` / tool-filter signals (detector shipped astridr `b7e4a534`), and a deeper trace waterfall (nested spans, tool timings, cache-hit per turn).
+- **106 — Consolidation & Hardening** — typed-api sweep (kill `anyApi`), retire cloud Convex `tidy-whale-981` (export→cancel), build/chunk code-splitting, laptop Tailscale, finish deferred manual UAT.
+
+**Key context / constraints:**
+- **Cross-repo for Phase 103** — consumes astridr's brain-swap *backend* (owned by astridr Phase 184.1); BSC-05 closes the integration gate *during* execution, not after.
+- **No mass mutation of the live self-hosted Convex** — DEBT-02 exports/cancels the retired *cloud* instance (`tidy-whale-981`) only.
+- Continues phase numbering from v12.0 (101–102) → **Phases 103–106**.
+
+> **Formalized 2026-07-27 via `/gsd-new-milestone`.** Requirements + roadmap in REQUIREMENTS.md + ROADMAP.md. Next: `/gsd-plan-phase 103` (after discuss/ui-spec prerequisites).
+
+## Prior Milestone (shipped 2026-07-25, tagged `v11.0`): v11.0 Skills Command Center — Full Lifecycle & Launch
 
 **Goal:** Turn the Skills page from a read-only catalog into a real control surface — add, move, archive, restore, delete, and *launch* skills live, executed on the host by the Forge daemon.
 

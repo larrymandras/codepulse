@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v11.0
-milestone_name: Skills Command Center — Full Lifecycle & Launch
-status: milestone_shipped
-stopped_at: v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0). No active milestone. Post-v11.0 follow-ups DONE 2026-07-26; Phase-98 UAT tests 5 + 4-shadowed VERIFIED LIVE 2026-07-27. Backlog FULLY CLEAR. Next: /gsd-new-milestone.
-last_updated: "2026-07-27T19:20:00.000Z"
-last_activity: 2026-07-27 -- Phase-98 UAT tests 5 (refusal toast shows the real reason, not "Server Error" — CR-03/ConvexError fix) + 4-shadowed (Restore disabled + tooltip + no page-blank, CR-02) VERIFIED LIVE in a Clerk-signed-in session; voice round-trip re-verified (STT→native weather tool→TTS). Also shipped astridr <invoke>-leak detector (feature/brain-swap b7e4a534).
+milestone: v13.0
+milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
+status: milestone_planning
+stopped_at: "v13.0 OPENED 2026-07-27 via /gsd-new-milestone (Phases 103-106: Brain-Swap Control Surface, Cost Intelligence, Tool & Trace Observability, Consolidation & Hardening). REQUIREMENTS.md + ROADMAP.md + PROJECT.md written; STATE reset by hand (no gsd-sdk verbs). No phases planned yet. Next: /gsd-plan-phase 103 (after discuss/ui-spec prerequisites). Prior — v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0); v12.0 shipped 2026-07-23 (tag v12.0)."
+last_updated: "2026-07-27T20:55:00.000Z"
+last_activity: "2026-07-27 -- v13.0 milestone created (requirements BSC/COST/OBS/DEBT; roadmap phases 103-106; PROJECT.md current-milestone). Earlier same day - Phase-98 UAT tests 5 + 4-shadowed verified live; Forge queued-cards bug fixed (0a1b377); astridr invoke-leak detector shipped (b7e4a534))."
 progress:
   total_phases: 4
-  completed_phases: 4
-  total_plans: 23
-  completed_plans: 23
-  percent: 100
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** No active milestone — v11.0 SHIPPED 2026-07-25; ALL post-v11.0 work is DONE & pushed 2026-07-26 (3 follow-ups + both Inbox key fixes + full bridge coverage; see Current Position). Backlog FULLY CLEAR. Next: **/gsd-new-milestone**.
+**Current focus:** **v13.0 (Brain-Swap Control, Cost Intelligence & Consolidation) OPENED 2026-07-27** — requirements + roadmap written (Phases 103-106: Brain-Swap Control Surface · Cost Intelligence · Tool & Trace Observability · Consolidation & Hardening); no phases planned yet. Next: **/gsd-plan-phase 103** (after discuss/ui-spec prerequisites — 103 is a frontend surface + the BSC-05 cross-repo integration gate). Prior v11.0 (Skills) & v12.0 (Reminders) shipped.
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,7 +43,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch) — ✅ SHIPPED & CLOSED 2026-07-25**, tagged `v11.0`. Phases 97-100 (23 plans), 22/22 requirements. Audit `tech_debt` (0 blockers). Archived to `milestones/v11.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v11.0-phases/`.
+**ACTIVE: v13.0 (Phases 103-106) — OPENED 2026-07-27, planning stage.** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. 0/4 phases planned. Sequencing: 106 (tech-debt) independent + low-risk; 103 gates on astridr's brain-swap backend being live end-to-end (BSC-05); 104/105 additive. Next: `/gsd-plan-phase 103`.
+
+---
+
+**Prior milestone —** Milestone: **v11.0 (Skills Command Center — Full Lifecycle & Launch) — ✅ SHIPPED & CLOSED 2026-07-25**, tagged `v11.0`. Phases 97-100 (23 plans), 22/22 requirements. Audit `tech_debt` (0 blockers). Archived to `milestones/v11.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md` + `milestones/v11.0-phases/`.
 Phase 100 UAT (operator, 2026-07-25): drag archive→restore round-trip PASSED live; honest-failure path confirmed; CR-02 unit-verified + live dormant→cold no-op observed.
 This session also folded a large Skills-page redesign into Phase 100 (3-column command-center layout, right-hand Command Deck, filter chips, bulk-select, bridge-mirror filter, no-op feedback) — all tested, full suite green.
 Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc/quick, not GSD phases; codepulse 565cef36 + astridr 82ead1fe, both pushed):
@@ -385,8 +389,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-27T15:09:01.764Z
-Stopped at: auto-checkpoint at 90% (2026-07-27)
+Last session: 2026-07-27T20:51:24.948Z
+Stopped at: context exhaustion at 78% (2026-07-27)
 Next action: Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This is the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
 Resume file: None
 
