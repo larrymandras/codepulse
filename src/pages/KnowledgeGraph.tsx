@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -8,6 +8,8 @@ import {
   ForceGraphCanvas,
   type ForceGraphHandle,
 } from "../components/graph/ForceGraphCanvas";
+import { type ForceGraph3DHandle } from "../components/graph/ForceGraph3D";
+import { get as idbGet, set as idbSet } from "idb-keyval";
 import KGSummaryCards from "../components/kg/KGSummaryCards";
 import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
@@ -33,6 +35,16 @@ import {
   type KgNode,
   type KgLink,
 } from "../lib/kg-graph";
+
+// ── Lazy-load 3D render surface so three.js stays in a separate chunk ───────
+// Module-level declaration (avoids "lazy inside component" React warning). This
+// dynamic-import boundary is distinct from CodeVaultGraph.tsx's own lazy() call
+// (each page owns its own Suspense boundary) but resolves the same ForceGraph3D
+// module — Three.js stays out of the main bundle until either page toggles 3D
+// (Phase 187 Plan 04, GLXY-01, T-187-12).
+const LazyForceGraph3D = lazy(() =>
+  import("../components/graph/ForceGraph3D").then((m) => ({ default: m.ForceGraph3D }))
+);
 
 // ── Edge styling (KG-07): current solid / superseded dashed+dim / contradiction red.
 // COLOR_CURRENT is resolved from useThemeColors().primaryAlpha55 inside the component
@@ -124,6 +136,94 @@ export default function KnowledgeGraph() {
     predicates,
     entityTypes,
   } = kg;
+
+  // ── 3D render-mode toggle (Phase 187 Plan 04, GLXY-01) ────────────────────
+  // Mirrors CodeVaultGraph.tsx's toggle scaffold exactly, with one deliberate
+  // deviation: the idb key below is "codepulse:kg-render-mode", DISTINCT from
+  // CodeVaultGraph's "codepulse:render-mode" (T-187-11 — sharing it would
+  // cross-clobber /graphs' and /knowledge-graph's independent toggle state).
+  const fgRef3d = useRef<ForceGraph3DHandle>(null);
+  const [renderMode, setRenderMode] = useState<"2d" | "3d">("2d");
+  // hoveredNodeId for 3D colorFn3D hover/dim logic (no 2D analog — paintNode
+  // handles 2D hover via ForceGraphCanvas's own opts.hovered).
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    try {
+      idbGet("codepulse:kg-render-mode")
+        .then((saved) => {
+          if (!cancelled && saved === "3d") setRenderMode("3d");
+        })
+        .catch(() => {
+          /* private browsing / IDB unavailable — stay on 2d */
+        });
+    } catch {
+      /* synchronous IDB-open failure (jsdom/SSR/private browsing) — stay on 2d */
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleModeToggle = (mode: "2d" | "3d") => {
+    setRenderMode(mode);
+    try {
+      idbSet("codepulse:kg-render-mode", mode).catch(() => {
+        /* best effort — silent failure in private browsing */
+      });
+    } catch {
+      /* synchronous IDB-open failure — best effort, ignore */
+    }
+  };
+
+  const renderModeChipClass = (mode: "2d" | "3d") =>
+    renderMode === mode
+      ? "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-primary/10 text-primary border border-primary/40"
+      : "text-sm font-mono px-3 py-1 rounded-[var(--radius-sm)] cursor-pointer bg-transparent text-muted-foreground border border-border";
+
+  // ── 3D color/size callbacks (Pitfall 1: hex-only, Three.js Color drops rgba)
+  // 4-state priority (selected → hovered → dimmed-non-focus → normal), mirroring
+  // CodeVaultGraph.tsx's colorFn3D. Plan 187-05 extends this to a 5th "lit" state.
+  const colorFn3D = useCallback(
+    (node: any): string => {
+      if (node.id === selectedNodeId) return "#ffffff"; // selection: bright white
+      if (node.id === hoveredNodeId) return "#ffffff"; // hover: bright white
+      // Dim all non-focus-set nodes when an ego-lens filter/selection is active
+      // (#27272a zinc-800 hex, NOT rgba — Three.js Color silently drops alpha).
+      if (focusSet && !focusSet.has(node.id)) return "#27272a";
+      return (node as KgNode).color; // KG page uses the precomputed entity color
+    },
+    [selectedNodeId, hoveredNodeId, focusSet],
+  );
+
+  // Selected node sphere is 3x the normal size (UI-SPEC Node State Encoding).
+  const nodeValFn3D = useCallback(
+    (node: any): number =>
+      node.id === selectedNodeId ? (node.val ?? 1) * 3 : (node.val ?? 1),
+    [selectedNodeId],
+  );
+
+  // Post-state-change 3D redraw (RESEARCH Pattern 4) — refresh() re-applies
+  // nodeColor/nodeVal to already-cached Three.js materials when selection or
+  // hover changes, since react-force-graph-3d doesn't auto-redraw on prop change.
+  useEffect(() => {
+    if (renderMode !== "3d") return;
+    fgRef3d.current?.refresh();
+  }, [selectedNodeId, hoveredNodeId, renderMode]);
+
+  // Shared Suspense fallback for the lazy 3D surface — sized identically to the
+  // default ForceGraphCanvas/ForceGraph3D canvasClass so toggling doesn't shift
+  // layout while the react-force-graph-3d/three.js chunk is fetched.
+  const loading3dFallback = (
+    <div className="relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]">
+      <div className="flex h-full items-center justify-center">
+        <p className="text-primary/70 font-mono text-base animate-pulse">
+          Loading 3D render…
+        </p>
+      </div>
+    </div>
+  );
 
   // ── Temporal sub-mode state (KG-11, Plan 03) ─────────────────────────────────
   // Defaults to "point" which preserves the existing single-as-of behavior (SC — no regression).
@@ -612,6 +712,27 @@ export default function KnowledgeGraph() {
             entities · knowledge_triples — fetched on demand from /api/kg
           </p>
         </div>
+
+        {/* 2D | 3D render-mode toggle (Phase 187 Plan 04, GLXY-01) — copied
+            verbatim from CodeVaultGraph.tsx's chip pair, KG-distinct idb key
+            (T-187-11). Neutral active treatment — never recolored emerald
+            (UI-SPEC Color: that would fake a "something is lit" signal). */}
+        <div role="group" aria-label="Render mode" className="flex items-center gap-1">
+          <button
+            className={renderModeChipClass("2d")}
+            aria-pressed={renderMode === "2d"}
+            onClick={() => handleModeToggle("2d")}
+          >
+            2D
+          </button>
+          <button
+            className={renderModeChipClass("3d")}
+            aria-pressed={renderMode === "3d"}
+            onClick={() => handleModeToggle("3d")}
+          >
+            3D
+          </button>
+        </div>
       </div>
 
       {/* KG-01: always-on summary cards (Convex kgSummary) */}
@@ -881,7 +1002,7 @@ export default function KnowledgeGraph() {
                             Animating…
                           </p>
                         </div>
-                      ) : (
+                      ) : renderMode === "2d" ? (
                         <ForceGraphCanvas
                           ref={fgRef}
                           data={anim.currentGraph}
@@ -903,6 +1024,23 @@ export default function KnowledgeGraph() {
                             selectEdge(null);
                           }}
                         />
+                      ) : (
+                        <Suspense fallback={loading3dFallback}>
+                          <LazyForceGraph3D
+                            ref={fgRef3d}
+                            data={anim.currentGraph}
+                            colorFn={colorFn3D}
+                            nodeValFn={nodeValFn3D}
+                            labelFn={labelFn}
+                            onNodeClick={(n: any) => selectNode(n.id)}
+                            onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
+                            onBackgroundClick={() => {
+                              selectNode(null);
+                              selectEdge(null);
+                            }}
+                            onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                          />
+                        </Suspense>
                       )
                     )}
                   </>
@@ -936,50 +1074,88 @@ export default function KnowledgeGraph() {
                   </div>
                 ) : isDiffActive ? (
                   /* Diff mode: render graphB with diff paint functions */
-                  <ForceGraphCanvas
-                    ref={fgRef}
-                    data={activeGraph}
-                    colorFn={(n: any) => (n as KgNode).color}
-                    labelFn={labelFn}
-                    paintNode={paintNodeDiff}
-                    linkColorFn={linkColorDiffFn}
-                    linkWidthFn={linkWidthFn}
-                    linkLineDashFn={linkLineDashDiffFn}
-                    linkDirectionalArrow
-                    focusSet={focusSet}
-                    clusterForce={true}
-                    communityColorFn={(n: any) =>
-                      communityColor((n as KgNode).community)
-                    }
-                    onNodeClick={(n: any) => selectNode(n.id)}
-                    onBackgroundClick={() => {
-                      selectNode(null);
-                      selectEdge(null);
-                    }}
-                  />
+                  renderMode === "2d" ? (
+                    <ForceGraphCanvas
+                      ref={fgRef}
+                      data={activeGraph}
+                      colorFn={(n: any) => (n as KgNode).color}
+                      labelFn={labelFn}
+                      paintNode={paintNodeDiff}
+                      linkColorFn={linkColorDiffFn}
+                      linkWidthFn={linkWidthFn}
+                      linkLineDashFn={linkLineDashDiffFn}
+                      linkDirectionalArrow
+                      focusSet={focusSet}
+                      clusterForce={true}
+                      communityColorFn={(n: any) =>
+                        communityColor((n as KgNode).community)
+                      }
+                      onNodeClick={(n: any) => selectNode(n.id)}
+                      onBackgroundClick={() => {
+                        selectNode(null);
+                        selectEdge(null);
+                      }}
+                    />
+                  ) : (
+                    <Suspense fallback={loading3dFallback}>
+                      <LazyForceGraph3D
+                        ref={fgRef3d}
+                        data={activeGraph}
+                        colorFn={colorFn3D}
+                        nodeValFn={nodeValFn3D}
+                        labelFn={labelFn}
+                        onNodeClick={(n: any) => selectNode(n.id)}
+                        onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
+                        onBackgroundClick={() => {
+                          selectNode(null);
+                          selectEdge(null);
+                        }}
+                        onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                      />
+                    </Suspense>
+                  )
                 ) : (
                   /* Point mode (and other lenses): original paintNode/linkColorFn — NO REGRESSION */
-                  <ForceGraphCanvas
-                    ref={fgRef}
-                    data={graph}
-                    colorFn={(n: any) => (n as KgNode).color}
-                    labelFn={labelFn}
-                    paintNode={paintNode}
-                    linkColorFn={linkColorFn}
-                    linkWidthFn={linkWidthFn}
-                    linkLineDashFn={linkLineDashFn}
-                    linkDirectionalArrow
-                    focusSet={focusSet}
-                    clusterForce={true}
-                    communityColorFn={(n: any) =>
-                      communityColor((n as KgNode).community)
-                    }
-                    onNodeClick={(n: any) => selectNode(n.id)}
-                    onBackgroundClick={() => {
-                      selectNode(null);
-                      selectEdge(null);
-                    }}
-                  />
+                  renderMode === "2d" ? (
+                    <ForceGraphCanvas
+                      ref={fgRef}
+                      data={graph}
+                      colorFn={(n: any) => (n as KgNode).color}
+                      labelFn={labelFn}
+                      paintNode={paintNode}
+                      linkColorFn={linkColorFn}
+                      linkWidthFn={linkWidthFn}
+                      linkLineDashFn={linkLineDashFn}
+                      linkDirectionalArrow
+                      focusSet={focusSet}
+                      clusterForce={true}
+                      communityColorFn={(n: any) =>
+                        communityColor((n as KgNode).community)
+                      }
+                      onNodeClick={(n: any) => selectNode(n.id)}
+                      onBackgroundClick={() => {
+                        selectNode(null);
+                        selectEdge(null);
+                      }}
+                    />
+                  ) : (
+                    <Suspense fallback={loading3dFallback}>
+                      <LazyForceGraph3D
+                        ref={fgRef3d}
+                        data={graph}
+                        colorFn={colorFn3D}
+                        nodeValFn={nodeValFn3D}
+                        labelFn={labelFn}
+                        onNodeClick={(n: any) => selectNode(n.id)}
+                        onNodeHover={(n: any) => setHoveredNodeId(n?.id ?? null)}
+                        onBackgroundClick={() => {
+                          selectNode(null);
+                          selectEdge(null);
+                        }}
+                        onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                      />
+                    </Suspense>
+                  )
                 )
               )}
             </div>
