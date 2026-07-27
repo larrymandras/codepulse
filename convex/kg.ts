@@ -114,7 +114,13 @@ export const upsertAnswerSync = mutation({
     primaryEntityName: v.optional(v.string()),
     updatedAt: v.float64(),
   },
-  handler: upsertAnswerSyncHandler,
+  // Inline arrow (not `handler: upsertAnswerSyncHandler` directly) — passing
+  // the extracted handler by reference breaks `mutation()`'s public
+  // FunctionReference args-type inference (collapses to `never` at every
+  // ctx.runMutation call site). Delegating from an inline arrow keeps the
+  // handler logic unit-testable while letting `mutation()` infer args from
+  // the validators above, as designed.
+  handler: async (ctx, args) => upsertAnswerSyncHandler(ctx, args),
 });
 
 /**
@@ -130,5 +136,7 @@ export async function latestAnswerSyncHandler(
 /** Latest answer-sync source-node set, or null before any telemetry has arrived. */
 export const latestAnswerSync = query({
   args: {},
-  handler: latestAnswerSyncHandler,
+  // Inline arrow for the same reason as upsertAnswerSync above — avoids the
+  // by-reference handler args-type inference collapse.
+  handler: async (ctx) => latestAnswerSyncHandler(ctx),
 });

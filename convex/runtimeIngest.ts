@@ -802,6 +802,22 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "kg_answer_sync": {
+          // Phase 187 emitter (GLXY-01) → /knowledge-graph 3D galaxy camera
+          // fly + source-node lighting (docs/astridr-contract.md §2.41).
+          // Latest-wins upsert (single row, mirrors kg_summary's discipline
+          // exactly). Unknown/extra payload fields are dropped — only the
+          // four declared args below reach the validated mutation (V5).
+          const d = data as any;
+          await ctx.runMutation(api.kg.upsertAnswerSync, {
+            turnId: d.turnId ?? "",
+            sourceNodeIds: d.sourceNodeIds ?? d.source_node_ids ?? [],
+            primaryEntityName:
+              d.primaryEntityName ?? d.primary_entity_name ?? undefined,
+            updatedAt: d.timestamp ?? timestamp,
+          });
+          break;
+        }
         case "channel_health": {
           const d = data as any;
           await ctx.runMutation(api.channelHealth.upsert, {

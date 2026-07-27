@@ -207,3 +207,81 @@ describe("kgAnswerSync — answer sync single-row upsert (Phase 187 GLXY-01)", (
     expect(db.rows[0].primaryEntityName).toBeUndefined();
   });
 });
+
+// Mirrors the `case "kg_answer_sync"` branch in runtimeIngest.ts (Phase 187 GLXY-01).
+const mapKgAnswerSyncEvent = (d: any, fallbackTs: number) => ({
+  turnId: d.turnId ?? "",
+  sourceNodeIds: d.sourceNodeIds ?? d.source_node_ids ?? [],
+  primaryEntityName: d.primaryEntityName ?? d.primary_entity_name ?? undefined,
+  updatedAt: d.timestamp ?? fallbackTs,
+});
+
+describe("kg_answer_sync event -> upsertAnswerSync mapping (Phase 187 GLXY-01)", () => {
+  it("maps the LIVE emitter shape (camelCase)", () => {
+    const args = mapKgAnswerSyncEvent(
+      {
+        turnId: "sess-1:4",
+        sourceNodeIds: ["uuid-a", "uuid-b"],
+        primaryEntityName: "Larry",
+        timestamp: 1700,
+      },
+      9999,
+    );
+    expect(args).toEqual({
+      turnId: "sess-1:4",
+      sourceNodeIds: ["uuid-a", "uuid-b"],
+      primaryEntityName: "Larry",
+      updatedAt: 1700,
+    });
+  });
+
+  it("accepts the snake_case source_node_ids/primary_entity_name fallback", () => {
+    const args = mapKgAnswerSyncEvent(
+      {
+        turnId: "sess-2:1",
+        source_node_ids: ["uuid-c"],
+        primary_entity_name: "Ástríðr",
+      },
+      555,
+    );
+    expect(args.sourceNodeIds).toEqual(["uuid-c"]);
+    expect(args.primaryEntityName).toBe("Ástríðr");
+    expect(args.updatedAt).toBe(555);
+  });
+
+  it("defaults turnId to empty string and sourceNodeIds to [] when absent (unknown/malformed payload dropped, V5)", () => {
+    const args = mapKgAnswerSyncEvent({}, 100);
+    expect(args.turnId).toBe("");
+    expect(args.sourceNodeIds).toEqual([]);
+    expect(args.primaryEntityName).toBeUndefined();
+    expect(args.updatedAt).toBe(100);
+  });
+
+  it("stamps updatedAt from the event timestamp, falling back to now", () => {
+    expect(mapKgAnswerSyncEvent({ timestamp: 42 }, 9999).updatedAt).toBe(42);
+    expect(mapKgAnswerSyncEvent({}, 9999).updatedAt).toBe(9999);
+  });
+
+  it("ingest mapping -> upsertAnswerSyncHandler produces a single kgAnswerSync row with mapped values", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    const args = mapKgAnswerSyncEvent(
+      {
+        turnId: "sess-9:3",
+        source_node_ids: ["uuid-x", "uuid-y"],
+        primary_entity_name: "Project Ástríðr",
+        timestamp: 4242,
+        unexpectedExtraField: "should be dropped by the validated mutation",
+      },
+      9999,
+    );
+    await upsertAnswerSyncHandler({ db }, args);
+    expect(db.rows.length).toBe(1);
+    expect(db.rows[0]).toMatchObject({
+      turnId: "sess-9:3",
+      sourceNodeIds: ["uuid-x", "uuid-y"],
+      primaryEntityName: "Project Ástríðr",
+      updatedAt: 4242,
+    });
+    expect(db.rows[0].unexpectedExtraField).toBeUndefined();
+  });
+});
