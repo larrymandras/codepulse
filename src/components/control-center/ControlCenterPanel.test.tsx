@@ -132,9 +132,13 @@ describe("ControlCenterPanel", () => {
     expect(screen.queryByText("QUIET HOURS")).not.toBeInTheDocument();
   });
 
-  it("shows OFFLINE instead of the readiness pill when disconnected", () => {
+  it("shows DISCONNECTED instead of the readiness pill when disconnected", () => {
+    // The Phase 186 3-column redesign (commit 565cef36) changed the
+    // disconnected-state pill text from "OFFLINE" to "DISCONNECTED" --
+    // "OFFLINE" now only appears in a code comment, never in rendered JSX.
+    // This assertion was stale against the actual current markup.
     render(<ControlCenterPanel {...baseProps()} disconnected />);
-    expect(screen.getByText("OFFLINE")).toBeInTheDocument();
+    expect(screen.getByText("DISCONNECTED")).toBeInTheDocument();
   });
 
   it("shows a labeled BRAIN row falling back to Auto before any turn completes", () => {
