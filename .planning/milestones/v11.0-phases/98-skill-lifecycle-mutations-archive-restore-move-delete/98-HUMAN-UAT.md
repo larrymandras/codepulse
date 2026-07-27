@@ -3,12 +3,12 @@ status: partial
 phase: 98-skill-lifecycle-mutations-archive-restore-move-delete
 source: [98-VERIFICATION.md]
 started: 2026-07-21T18:20:00Z
-updated: 2026-07-23T10:25:00Z
+updated: 2026-07-27T00:00:00Z
 ---
 
 ## Current Test
 
-[testing paused — 2 items outstanding: browser-visual halves of tests 4 & 5, blocked on a signed-in browser session (Clerk). All server/mutation/daemon/registry logic is fully verified.]
+[2026-07-27: Test 5 fully verified in-browser (refusal toast shows the real reason, not "Server Error" — CR-03/ConvexError fix confirmed live). Test 4's SHADOWED sub-case verified in-browser (Restore disabled + shadow tooltip + no page-blank — CR-02 guard holds). Remaining browser-pending: test 4's active-single-scope, dormant-non-shadowed, and multi-scope menu sub-cases. Done via a Clerk-signed-in session (Larry) with Claude-guided steps; claude-in-chrome extension would not pair with this session.]
 
 ## Tests
 
@@ -41,15 +41,17 @@ notes: |
 
 ### 4. Menu scope-gating and shadow/multi-scope tooltips live in the browser
 expected: Active single-scope row shows Archive + one Move item; dormant row shows Restore + Delete Permanently; shadowed dormant row shows Restore disabled with the shadow tooltip (and does NOT blank the Skills page — CR-02 regression); multi-scope row shows Archive/Move disabled with the honest reason
-result: blocked
-blocked_by: third-party
-reason: "CodePulse gates the entire app behind Clerk sign-in; Claude cannot authenticate (credential entry prohibited) and the claude-in-chrome extension is not connected, so no signed-in browser session was available. Headless Playwright reached only the sign-in screen. Data-side staging for every menu state was verified in the registry (single-scope, dormant-only, shadowed active+cold, multi-scope rows all exist)."
+result: partial
+verified: shadowed sub-case (the CR-02 regression guard)
+reason: "SHADOWED SUB-CASE VERIFIED IN THE BROWSER 2026-07-27 (Larry signed in, Claude-guided): staged a throwaway shadowed skill (uat-shadow-test, active claude-code + dormant claude-code:available). In Cold Storage its ⋯ menu showed Restore DISABLED/greyed with the exact tooltip 'Shadowed by an active global skill named \"uat-shadow-test\" — archive it first.', and the Skills page stayed fully intact (no blank — CR-02's local TooltipProvider holds). The active-single-scope, dormant-non-shadowed, and multi-scope menu sub-cases were NOT re-exercised in the browser this pass (data-side staging for them was verified earlier in the registry)."
+notes: |
+  Staging technique (reusable): DB-only skills rows get pruned by the daemon's post-command rescan (reconciles registry against disk). Durable stage = create the skill on disk in BOTH ~/.claude/skills/<name>/ (active → claude-code) and ~/.claude/skills-available/<name>/ (dormant → claude-code:available), then a rescan registers both origins as a merged shadowed row. Disk-backed rows survive rescans. Cleaned up after: disk dirs removed, skills rows pruned, zero residue.
 
 ### 5. LAYER-1 refusal toast surfaces correctly in the browser (CR-03 fix)
 expected: Clicking Archive on a skill that already has a dormant cold copy shows a toast with the house-copy refusal reason instead of doing nothing
-result: blocked
-blocked_by: third-party
-reason: "Server half PASSED: with active+cold copies staged, enqueueLifecycle threw 'lifecycle-refused:collision:a dormant copy already exists in cold storage' BEFORE inserting any row (verified no new command queued). The visual toast render requires a signed-in browser — same Clerk blocker as test 4."
+result: pass
+notes: |
+  VERIFIED IN THE BROWSER 2026-07-27 (Larry signed in, Claude-guided). Clicking Archive on the active copy of the staged shadowed skill (uat-shadow-test) surfaced a toast reading exactly "a dormant copy already exists in cold storage" — NOT "Server Error", not a silent no-op. This confirms the CR-03 / ConvexError fix (codepulse 1899d891) end-to-end: the LAYER-1 refusal is thrown as a ConvexError whose `.data` carries the token verbatim (plain Error would be redacted to "Server Error"), and lifecycleRefusalMessage reads `.data` first to extract the human-readable reason. Being signed in was load-bearing: enqueueLifecycle's auth guard throws a plain Error ("Authentication required...") that redacts to "Server Error", so an unauthenticated click would have tested the auth gate, not the collision refusal.
 
 ### 6. Live re-repro of the stale-origin prune fix (98-05, phase gate — post-deploy)
 expected: After deploying the 98-05 convex changes and rebuilding/restarting the Forge daemon, delete the residual `uat-ws-placeholder` skill from `G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\`, trigger one rescan, and confirm the `claude-code:project:559ce8ebf812` row disappears from the Skills page and the previously-moved skill no longer renders multi-scope (Archive/Move re-enabled)
@@ -76,11 +78,11 @@ notes: |
 ## Summary
 
 total: 7
-passed: 4
+passed: 5
 issues: 1
 pending: 0
 skipped: 0
-blocked: 2
+blocked: 1  # test 4 — only its shadowed sub-case verified in-browser (2026-07-27); active-single/dormant/multi-scope menu sub-cases still browser-pending
 
 ## Session Notes (2026-07-21 evening, automated UAT run)
 
