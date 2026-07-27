@@ -597,6 +597,7 @@ export default function Chat() {
           {/* Control Center (D-17) — now stacked under the aura in column ② */}
           <ControlCenterPanel
             disconnected={disconnected}
+            micOff={!listening}
             voiceState={avatarState}
             strictMode={strictMode}
             onStrictModeChange={handleStrictModeChange}

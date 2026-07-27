@@ -44,7 +44,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import * as jsYaml from "js-yaml";
-import { WifiOff } from "lucide-react";
+import { WifiOff, MicOff } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
 import { ShareScreenToggle } from "@/components/voice/ShareScreenToggle";
@@ -104,8 +104,11 @@ export function isWithinQuietHours(
 }
 
 export interface ControlCenterPanelProps {
-  /** WS status is disconnected — shows an OFFLINE pill instead of ReadinessPill. */
+  /** WS status is disconnected — shows a DISCONNECTED pill instead of ReadinessPill. */
   disconnected: boolean;
+  /** Mic/listening toggled off (text-only) — shows a MIC OFF pill, since an
+   * idle voiceState otherwise reads as "LISTENING" even with the mic off. */
+  micOff?: boolean;
   /** The current avatar/voice state (Chat.tsx's `avatarState`). */
   voiceState: VoiceState;
   strictMode: boolean;
@@ -120,6 +123,7 @@ export interface ControlCenterPanelProps {
 
 export function ControlCenterPanel({
   disconnected,
+  micOff = false,
   voiceState,
   strictMode,
   onStrictModeChange,
@@ -254,6 +258,10 @@ export function ControlCenterPanel({
       {disconnected ? (
         <span className="flex items-center gap-2 font-mono text-sm tracking-[0.1em] text-muted-foreground px-3 py-1.5 rounded-full bg-muted border border-border">
           <WifiOff className="w-4 h-4" aria-hidden="true" /> DISCONNECTED
+        </span>
+      ) : micOff ? (
+        <span className="flex items-center gap-2 font-mono text-sm tracking-[0.1em] text-muted-foreground px-3 py-1.5 rounded-full bg-muted border border-border">
+          <MicOff className="w-4 h-4" aria-hidden="true" /> MIC OFF
         </span>
       ) : (
         <ReadinessPill ready={ready} voiceState={voiceState} />

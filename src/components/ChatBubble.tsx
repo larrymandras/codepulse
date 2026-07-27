@@ -27,6 +27,27 @@ import type { Components } from "react-markdown";
 import { BlockRenderer } from "@/components/BlockRenderer";
 import type { GenerativeBlock } from "@/types/generative-blocks";
 
+/**
+ * Defensively strip tool-call SYNTAX that Ástríðr sometimes leaks into her
+ * reply text (a `<function_calls>`/`<invoke name="…"><parameter>…` block the
+ * model wrote as prose instead of executing silently). It is never meant for
+ * display. Handles complete blocks, orphan/partial tags, and an unclosed block
+ * still arriving mid-stream (drop from the opening tag to the end).
+ * Root cause is astridr-side; this keeps the chat readable regardless.
+ */
+export function stripToolCallSyntax(s: string): string {
+  if (!s || s.indexOf("<") === -1) return s;
+  return s
+    .replace(/<function_calls>[\s\S]*?<\/function_calls>/g, "")
+    .replace(/<invoke\b[\s\S]*?<\/invoke>/g, "")
+    .replace(/<parameter\b[\s\S]*?<\/parameter>/g, "")
+    // mid-stream: an unclosed tool-call block still being streamed
+    .replace(/<(?:function_calls|invoke|parameter)\b[\s\S]*$/g, "")
+    // any leftover orphan close tags
+    .replace(/<\/(?:function_calls|invoke|parameter)>/g, "")
+    .replace(/^\s+/, "");
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface ChatBubbleProps {
@@ -231,7 +252,7 @@ export function ChatBubble({
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
             >
-              {content ?? ""}
+              {stripToolCallSyntax(content ?? "")}
             </ReactMarkdown>
             {streaming && <span className="stream-cursor" aria-hidden="true" />}
           </div>
