@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { anyApi } from "convex/server";
 import { toast } from "sonner";
 import MetricCard from "../components/MetricCard";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
@@ -32,7 +31,7 @@ export default function Ideation() {
 
   const findings = useQuery(api.ideation.listFindings, { dismissed: false }) ?? [];
   const stats = useQuery(api.ideation.findingStats);
-  const createTask = useMutation(anyApi.tasks.create);
+  const createTask = useMutation(api.tasks.create);
   const updateStatus = useMutation(api.ideation.updateFindingStatus);
   const linkTask = useMutation(api.ideation.linkTask);
 

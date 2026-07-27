@@ -16,22 +16,17 @@
  * Approve/Reject sends approval.respond command via WS with request_id_target
  * (the HITL UUID, NOT the WS correlation request_id — T-56-08 mitigated).
  *
- * Keyboard navigation (D-13):
- *   ArrowDown/ArrowUp — move focus between cards
- *   Enter             — mark focused card read (mirrors a click; cards have no
- *                       expand state, so there is nothing to expand)
- *   A                 — approve focused approval item
- *   R                 — start reject flow on focused approval item
- *   Escape            — clear keyboard focus
- * card/held items have no approve/reject handlers (A/R keys no-op on them,
- * matching existing alert/notification no-op behavior).
+ * Actions are click-driven, one per card: approvals show Approve/Reject, alerts
+ * show acknowledge/mute (AlertInlineActions), and notifications/cards/held show
+ * a Dismiss button (routes to inbox.dismiss or notifications.markRead). The old
+ * keyboard-nav layer (arrow-focus + Enter/A/R shortcuts) was removed 2026-07-27
+ * — it advertised actions that no-op'd on this content and read as broken.
  *
  * Phase 56, Plan 03: CPCC-02.
- * Phase 03, Plan 04: IL-03 keyboard navigation.
  * Phase 186, Plan 07: card/held merge from the aggregate inbox read (D-12).
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
@@ -174,14 +169,6 @@ export default function Inbox() {
   // Optimistically hidden on Dismiss (the persistent mutation fires too, but
   // bellAll keeps read notifications, so we hide locally for instant feedback).
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-
-  // ─── Keyboard navigation state ────────────────────────────────────────────
-  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
-  // Keyboard-`R` reject target: a monotonic nonce + the item it targets, so the
-  // matching InboxCard opens its reject input (and re-opens on a repeat press).
-  const [rejectNonce, setRejectNonce] = useState(0);
-  const [rejectForId, setRejectForId] = useState<string | null>(null);
-  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // ─── Convex data ──────────────────────────────────────────────────────────
   const alertRecords = useQuery(api.alerts.listActive) ?? [];
@@ -360,75 +347,6 @@ export default function Inbox() {
     [filter, allItems]
   );
 
-  // ─── Clamp focus index and prune stale cardRefs when list shrinks ────────
-  useEffect(() => {
-    cardRefs.current = cardRefs.current.slice(0, filteredItems.length);
-    setFocusedIndex((prev) => {
-      if (prev === null) return null;
-      return prev >= filteredItems.length ? Math.max(0, filteredItems.length - 1) : prev;
-    });
-  }, [filteredItems.length]);
-
-  // ─── Keyboard navigation ──────────────────────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // Guard: skip if user is typing in an input or textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      const items = filteredItems;
-      if (!items.length) return;
-
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setFocusedIndex((prev) => (prev === null ? 0 : Math.min(prev + 1, items.length - 1)));
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setFocusedIndex((prev) => (prev === null ? 0 : Math.max(prev - 1, 0)));
-      }
-      if (e.key === "Enter" && focusedIndex !== null) {
-        e.preventDefault();
-        const item = items[focusedIndex];
-        // Cards carry no expand state — Enter mirrors a click: mark it read.
-        if (item.type !== "approval" && !item.read) handleMarkRead(item.id);
-      }
-      if (e.key === "Escape") {
-        setFocusedIndex(null);
-      }
-      if (e.key === "a" && focusedIndex !== null) {
-        const item = items[focusedIndex];
-        if (item.type === "approval" && item.requestId) {
-          e.preventDefault();
-          void handleApprove(item.requestId);
-        }
-      }
-      if (e.key === "r" && focusedIndex !== null) {
-        const item = items[focusedIndex];
-        if (item.type === "approval" && item.requestId) {
-          e.preventDefault();
-          // Signal the focused card to open its reject-reason input (so the
-          // user confirms with a reason rather than an immediate blind reject).
-          setRejectNonce((n) => n + 1);
-          setRejectForId(item.id);
-        }
-      }
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [focusedIndex, filteredItems, handleApprove, handleReject, handleMarkRead]);
-
-  // Scroll focused card into view
-  useEffect(() => {
-    const el = focusedIndex !== null ? cardRefs.current[focusedIndex] : null;
-    if (!el) return;
-    if (typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ block: "nearest" });
-    }
-    if (typeof el.focus === "function") {
-      el.focus();
-    }
-  }, [focusedIndex]);
-
   // ─── Unread counts for filter badges ─────────────────────────────────────
   const unreadApprovals = approvalItems.filter((i) => !i.read).length;
   const unreadAlerts = alertItems.filter((i) => !i.read).length;
@@ -484,22 +402,15 @@ export default function Inbox() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredItems.map((item, idx) => (
-              <div
+            {filteredItems.map((item) => (
+              <InboxCard
                 key={item.id}
-                ref={(el) => { cardRefs.current[idx] = el; }}
-                tabIndex={0}
-                className={focusedIndex === idx ? "ring-2 ring-ring ring-offset-1" : ""}
-              >
-                <InboxCard
-                  item={item}
-                  onApprove={item.type === "approval" ? handleApprove : undefined}
-                  onReject={item.type === "approval" ? handleReject : undefined}
-                  onMarkRead={handleMarkRead}
-                  onDismiss={handleDismiss}
-                  rejectSignal={rejectForId === item.id ? rejectNonce : undefined}
-                />
-              </div>
+                item={item}
+                onApprove={item.type === "approval" ? handleApprove : undefined}
+                onReject={item.type === "approval" ? handleReject : undefined}
+                onMarkRead={handleMarkRead}
+                onDismiss={handleDismiss}
+              />
             ))}
           </div>
         )}

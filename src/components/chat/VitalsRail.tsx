@@ -160,9 +160,17 @@ function relTime(t: number | undefined): string {
   return `${Math.floor(s / 86400)}d`;
 }
 
+function humanize(s: string): string {
+  return s
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2") // camelCase → spaced
+    .replace(/[_-]+/g, " ") // snake/kebab → spaced
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
 function eventLabel(e: { eventType?: string; toolName?: string; hookType?: string }): string {
-  if (e.toolName) return e.toolName;
-  return e.eventType ?? e.hookType ?? "event";
+  if (e.toolName) return e.toolName; // tool names read fine as-is (Bash, Edit…)
+  return humanize(e.eventType ?? e.hookType ?? "event");
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
@@ -184,7 +192,6 @@ export default function VitalsRail({
   const recentSkills = useQuery(api.skillCategories.getRecentlyUsedSkills, { limit: 6 }) ?? [];
 
   const ramPct = sys?.ram ? (sys.ram.used / sys.ram.total) * 100 : undefined;
-  const diskPct = sys?.disk ? (sys.disk.used / sys.disk.total) * 100 : undefined;
 
   const llm = useMemo(() => {
     const recent = calls.slice(0, 25);
@@ -310,10 +317,9 @@ export default function VitalsRail({
 
       {/* System Vitals */}
       <Card title="System Vitals" source="systemResources">
-        <div className="grid grid-cols-3 gap-1 px-3 py-3.5">
+        <div className="grid grid-cols-2 gap-1 px-3 py-3.5">
           <RadialGauge value={sys?.cpu} label="CPU" warnAt={85} />
           <RadialGauge value={ramPct} label="RAM" warnAt={80} />
-          <RadialGauge value={diskPct} label="Disk" warnAt={85} />
         </div>
         <div className="grid grid-cols-3 divide-x divide-border/40 border-t border-border/40">
           <Meter
