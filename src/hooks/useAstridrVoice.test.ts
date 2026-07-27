@@ -442,6 +442,35 @@ describe("useAstridrVoice", () => {
     expect(mockRecognitionStop).toHaveBeenCalled();
   });
 
+  // ─── 186-01 voice timer guard: post-teardown interim straggler ────────────
+
+  it("a post-teardown interim straggler while idle cannot arm a phantom silence timer", () => {
+    const { result } = renderVoice(makeChat());
+    wake();
+    act(() => {
+      vi.advanceTimersByTime(30_000); // real silence timeout -- conversation tears down
+    });
+    expect(result.current.voiceState).toBe("idle");
+    expect(mockRecognitionStop).toHaveBeenCalled();
+    mockRecognitionStop.mockClear();
+
+    // A Web Speech recognizer straggler fires AFTER teardown (async stop) --
+    // voiceState is already idle. Without the fix this unconditionally called
+    // resetSilenceTimer(), arming a brand-new 30s timeout that would later
+    // fire endConversation() -> teardownConversation() (recognitionStop())
+    // into whatever conversation happens to be live 30s later.
+    act(() => {
+      onInterimResultCallback?.("stray interim after teardown");
+    });
+    expect(result.current.voiceState).toBe("idle"); // no state churn while idle
+
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    // The phantom timer must never have been armed -- no second teardown fires.
+    expect(mockRecognitionStop).not.toHaveBeenCalled();
+  });
+
   // ─── 10. Follow-up window ──────────────────────────────────────────────────
 
   it("TTS end (strict off) opens the follow-up window; short reply accepted; expiry re-arms", async () => {

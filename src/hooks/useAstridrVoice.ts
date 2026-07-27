@@ -879,9 +879,19 @@ export function useAstridrVoice({
         longestInterimFromSpeakingRef.current || voiceStateRef.current === "speaking";
     }
 
-    setInterimText(text);
-    dispatch({ type: "INTERIM_RESULT" });
-    resetSilenceTimer();
+    // 186-01 voice timer guard: a post-teardown Web Speech interim straggler
+    // can fire AFTER the conversation has already torn down and voiceState
+    // has flipped back to "idle" (the recognizer's stop is async and Chrome
+    // sometimes emits one more onresult in flight). A legitimate interim only
+    // ever arrives from an active recognizer tied to a live conversation —
+    // when idle, skip the state-mutating tail entirely so a straggler can no
+    // longer arm a phantom 30s silence timer (which would then fire into a
+    // conversation that no longer exists).
+    if (voiceStateRef.current !== "idle") {
+      setInterimText(text);
+      dispatch({ type: "INTERIM_RESULT" });
+      resetSilenceTimer();
+    }
     clearSendTimer(); // still talking — defer the end-of-turn send
     clearFollowUpWindow(); // CONV-02: a new interim consumes the window
   };
