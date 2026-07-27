@@ -181,6 +181,10 @@ export default function Chat() {
   }>({ modelOverride: null, voiceOverride: null });
 
   useEffect(() => {
+    // Re-hydrate on every (re)connect, not just mount — a swap made while this
+    // tab's socket was down (or from another surface) would otherwise leave the
+    // badge stale until a full reload (WR-07). Skip while the socket is down.
+    if (status !== "connected") return;
     (async () => {
       try {
         const ack = await sendCommand({ type: "swap.get_state" });
@@ -196,9 +200,9 @@ export default function Chat() {
         console.warn("Failed to hydrate swap state from server:", err);
       }
     })();
-    // Mount-only hydration — sendCommand identity is stable per AstridrWSContext.
+    // sendCommand identity is stable per AstridrWSContext.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [status]);
 
   // 186-09 deferred item option (b): a genuinely tag-triggered swap corrects
   // the already-rendered bubble in place (backend push from wiring.py's

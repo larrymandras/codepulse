@@ -25,6 +25,8 @@ const mockSendMessage = vi.fn().mockResolvedValue(true);
 const mockRecordSkillLaunch = vi.fn().mockResolvedValue(undefined);
 const mockAppendLocalAssistantMessage = vi.fn();
 const mockCorrectAssistantMessage = vi.fn();
+/** Stable across renders so tests can assert swap.get_state re-pull counts. */
+const mockSendCommand = vi.fn().mockResolvedValue({ status: "ok" });
 
 /** Mutable status the mocked useAstridrChat() reads on each call. */
 let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
@@ -41,7 +43,7 @@ const registeredEventHandlers = new Map<string, (event: Record<string, unknown>)
 vi.mock("@/contexts/AstridrWSContext", () => ({
   useAstridrWS: () => ({
     status: mockStatus,
-    sendCommand: vi.fn().mockResolvedValue({ status: "ok" }),
+    sendCommand: mockSendCommand,
     subscribeEvent: vi.fn((eventType: string, cb: (event: Record<string, unknown>) => void) => {
       registeredEventHandlers.set(eventType, cb);
       return () => registeredEventHandlers.delete(eventType);
@@ -366,5 +368,47 @@ describe("Chat — chat.correction patches the already-rendered bubble (186-09 d
     });
 
     expect(mockCorrectAssistantMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("Chat — swap badge reconnect re-pull (WR-07)", () => {
+  const swapPulls = () =>
+    mockSendCommand.mock.calls.filter(
+      (c) => (c[0] as { type?: string })?.type === "swap.get_state"
+    ).length;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+  });
+
+  it("re-pulls swap.get_state each time the socket (re)connects", async () => {
+    // A fresh element each time — reusing one reference lets React bail out of
+    // re-rendering, so the mocked status would never update.
+    const makeTree = () => (
+      <MemoryRouter initialEntries={[{ pathname: "/chat" }]}>
+        <Chat />
+      </MemoryRouter>
+    );
+
+    mockStatus = "connected";
+    const view = render(makeTree());
+    await waitFor(() => expect(swapPulls()).toBe(1)); // initial connect pull
+
+    // Socket drops — no re-pull while down.
+    await act(async () => {
+      mockStatus = "reconnecting";
+      view.rerender(makeTree());
+    });
+    expect(swapPulls()).toBe(1);
+
+    // Socket reconnects — the badge must re-hydrate from the server.
+    await act(async () => {
+      mockStatus = "connected";
+      view.rerender(makeTree());
+    });
+    await waitFor(() => expect(swapPulls()).toBe(2));
   });
 });
