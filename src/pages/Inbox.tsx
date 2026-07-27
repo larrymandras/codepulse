@@ -171,6 +171,9 @@ export default function Inbox() {
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [approvalItems, setApprovalItems] = useState<InboxItem[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  // Optimistically hidden on Dismiss (the persistent mutation fires too, but
+  // bellAll keeps read notifications, so we hide locally for instant feedback).
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   // ─── Keyboard navigation state ────────────────────────────────────────────
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -184,6 +187,7 @@ export default function Inbox() {
   const alertRecords = useQuery(api.alerts.listActive) ?? [];
   const notificationRecords = useQuery(api.notifications.bellAll) ?? [];
   const markNotificationRead = useMutation(api.notifications.markRead);
+  const dismissInboxRow = useMutation(api.inbox.dismiss);
   // D-12: aggregate ALL-profiles read (Plan 02's listAll), not a per-profile
   // inboxRead — this is the ONE merged stream cards/held come from.
   // Cast per the Reminders.tsx precedent (listByProfile ctx is typed
@@ -297,6 +301,27 @@ export default function Inbox() {
     [markNotificationRead]
   );
 
+  // ─── Dismiss handler — clear an item from the inbox ──────────────────────
+  // Routes to the persistent mutation by type (cards/held -> inbox.dismiss
+  // stamps ackedAt; notifications -> markRead) and hides it optimistically.
+  const handleDismiss = useCallback(
+    (item: InboxItem) => {
+      setDismissedIds((prev) => new Set([...prev, item.id]));
+      try {
+        if (item.type === "card" || item.type === "held") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          void dismissInboxRow({ id: item.id as any });
+        } else if (item.type === "notification") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          void markNotificationRead({ id: item.id as any });
+        }
+      } catch {
+        // Non-Convex id or transient error — the optimistic hide still holds.
+      }
+    },
+    [dismissInboxRow, markNotificationRead]
+  );
+
   // ─── Build item lists ─────────────────────────────────────────────────────
   const alertItems = alertRecords.map(alertToInboxItem);
   const notifItems = notificationRecords.map(notificationToInboxItem).map(
@@ -310,9 +335,14 @@ export default function Inbox() {
   const heldItems = inboxItems.filter((i) => i.type === "held");
 
   const allItems = useMemo(
-    () => sortItems([...approvalItems, ...alertItems, ...notifItems, ...inboxItems]),
+    () =>
+      sortItems(
+        [...approvalItems, ...alertItems, ...notifItems, ...inboxItems].filter(
+          (i) => !dismissedIds.has(i.id)
+        )
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [approvalItems, alertRecords, notificationRecords, readIds, inboxRecords]
+    [approvalItems, alertRecords, notificationRecords, readIds, inboxRecords, dismissedIds]
   );
 
   const filteredItems = useMemo(
@@ -444,11 +474,6 @@ export default function Inbox() {
       {/* Filter tabs */}
       <InboxFilterBar filter={filter} counts={counts} onChange={setFilter} />
 
-      {/* Keyboard hints caption */}
-      <p className="text-sm text-(--muted-foreground) px-4 mt-1">
-        ↑↓ navigate · Enter mark read · A approve · R reject
-      </p>
-
       {/* Card list */}
       <div ref={flashRef} className="flex-1 overflow-y-auto p-4">
         {filteredItems.length === 0 ? (
@@ -471,6 +496,7 @@ export default function Inbox() {
                   onApprove={item.type === "approval" ? handleApprove : undefined}
                   onReject={item.type === "approval" ? handleReject : undefined}
                   onMarkRead={handleMarkRead}
+                  onDismiss={handleDismiss}
                   rejectSignal={rejectForId === item.id ? rejectNonce : undefined}
                 />
               </div>

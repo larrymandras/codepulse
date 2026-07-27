@@ -25,7 +25,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Loader2, Mail, Calendar } from "lucide-react";
+import { Loader2, Mail, Calendar, X } from "lucide-react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { type Id } from "../../convex/_generated/dataModel";
@@ -72,6 +72,8 @@ interface InboxCardProps {
   onApprove?: (requestId: string) => Promise<boolean>;
   onReject?: (requestId: string, note?: string) => Promise<boolean>;
   onMarkRead?: (id: string) => void;
+  /** Clear this item from the inbox (notifications / cards / held). */
+  onDismiss?: (item: InboxItem) => void;
   /**
    * Bumped by the parent each time the keyboard `R` shortcut targets this card
    * — opens the reject-reason input (approvals only). A monotonic nonce so a
@@ -229,6 +231,7 @@ export function InboxCard({
   onApprove,
   onReject,
   onMarkRead,
+  onDismiss,
   rejectSignal,
 }: InboxCardProps) {
   const { status } = useAstridrWS();
@@ -327,6 +330,23 @@ export function InboxCard({
       {item.type === "alert" && item.alertId && (
         <AlertInlineActions alertId={item.alertId} />
       )}
+
+      {/* Dismiss — visible clear action for items with no other action */}
+      {(item.type === "notification" || item.type === "card" || item.type === "held") &&
+        onDismiss && (
+          <div className="flex justify-end mt-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDismiss(item);
+              }}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 border border-(--border) text-(--muted-foreground) rounded hover:text-(--foreground) hover:border-(--primary) transition-colors"
+            >
+              <X className="h-3.5 w-3.5" /> Dismiss
+            </button>
+          </div>
+        )}
 
       {/* Approval action buttons */}
       {item.type === "approval" && !isActioned && (
