@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { upsertAnswerSyncHandler, latestAnswerSyncHandler } from "./kg";
 
 /**
  * Pure-logic mirrors of the `kg_summary` ingest dispatch + the upsertSummary
@@ -92,4 +93,117 @@ describe("upsertSummary — totalEntities derivation", () => {
 
   it.todo("should patch the single existing row on re-ingest (DB round-trip)");
   it.todo("should insert when no kgSummary row exists yet (DB round-trip)");
+});
+
+// ============================================================
+// kgAnswerSync — single-row upsert (Phase 187 GLXY-01)
+// ============================================================
+//
+// Unlike kgSummary above, these ARE DB round-trip tests — against a minimal
+// fake `ctx.db` (mirrors convex/evalScores.ts's storeEvalScoreHandler
+// precedent; convex-test is not installed in this repo, see
+// convex/runtimeIngest.test.ts:9). upsertAnswerSyncHandler/latestAnswerSyncHandler
+// are exported from convex/kg.ts specifically so they're testable this way.
+
+function makeFakeKgAnswerSyncDb() {
+  const rows: any[] = [];
+  let nextId = 1;
+  return {
+    rows,
+    query(_table: string) {
+      return { first: async () => rows[0] ?? null };
+    },
+    patch: async (id: any, doc: any) => {
+      const idx = rows.findIndex((r) => r._id === id);
+      if (idx >= 0) rows[idx] = { ...rows[idx], ...doc };
+    },
+    insert: async (_table: string, doc: any) => {
+      const id = `fake-id-${nextId++}`;
+      rows.push({ _id: id, ...doc });
+      return id;
+    },
+  };
+}
+
+describe("kgAnswerSync — answer sync single-row upsert (Phase 187 GLXY-01)", () => {
+  it("inserts a new row when none exists (answer sync first upsert)", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    await upsertAnswerSyncHandler(
+      { db },
+      {
+        turnId: "sess-1:1",
+        sourceNodeIds: ["uuid-a"],
+        primaryEntityName: "Larry",
+        updatedAt: 1000,
+      },
+    );
+    expect(db.rows.length).toBe(1);
+    expect(db.rows[0].turnId).toBe("sess-1:1");
+    expect(db.rows[0].sourceNodeIds).toEqual(["uuid-a"]);
+    expect(db.rows[0].primaryEntityName).toBe("Larry");
+    expect(db.rows[0].updatedAt).toBe(1000);
+  });
+
+  it("patches the SAME single row on a second upsert (answer sync latest-wins, no second row)", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    await upsertAnswerSyncHandler(
+      { db },
+      {
+        turnId: "sess-1:1",
+        sourceNodeIds: ["uuid-a"],
+        primaryEntityName: "Larry",
+        updatedAt: 1000,
+      },
+    );
+    await upsertAnswerSyncHandler(
+      { db },
+      {
+        turnId: "sess-1:2",
+        sourceNodeIds: ["uuid-b", "uuid-c"],
+        primaryEntityName: "Ástríðr",
+        updatedAt: 2000,
+      },
+    );
+    expect(db.rows.length).toBe(1); // still exactly one row — never accumulates
+    expect(db.rows[0].turnId).toBe("sess-1:2");
+    expect(db.rows[0].sourceNodeIds).toEqual(["uuid-b", "uuid-c"]);
+    expect(db.rows[0].primaryEntityName).toBe("Ástríðr");
+    expect(db.rows[0].updatedAt).toBe(2000);
+  });
+
+  it("latestAnswerSync returns null before any upsert (answer sync no-event state)", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    const latest = await latestAnswerSyncHandler({ db });
+    expect(latest).toBeNull();
+  });
+
+  it("latestAnswerSync returns the latest doc after upserts (answer sync replay on open)", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    await upsertAnswerSyncHandler(
+      { db },
+      { turnId: "sess-1:1", sourceNodeIds: ["uuid-a"], updatedAt: 1000 },
+    );
+    await upsertAnswerSyncHandler(
+      { db },
+      {
+        turnId: "sess-1:2",
+        sourceNodeIds: ["uuid-b"],
+        primaryEntityName: "Larry",
+        updatedAt: 2000,
+      },
+    );
+    const latest = await latestAnswerSyncHandler({ db });
+    expect(latest.turnId).toBe("sess-1:2");
+    expect(latest.sourceNodeIds).toEqual(["uuid-b"]);
+    expect(latest.primaryEntityName).toBe("Larry");
+  });
+
+  it("primaryEntityName stays undefined when not provided (SC#2/name-lookup-degraded case)", async () => {
+    const db = makeFakeKgAnswerSyncDb();
+    await upsertAnswerSyncHandler(
+      { db },
+      { turnId: "sess-3:1", sourceNodeIds: ["uuid-z"], updatedAt: 3000 },
+    );
+    expect(db.rows[0].primaryEntityName).toBeUndefined();
+  });
 });

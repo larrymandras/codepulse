@@ -1093,6 +1093,19 @@ export default defineSchema({
     updatedAt: v.float64(),                    // epoch seconds — when CodePulse received it
   }),
 
+  // Galaxy answer-sync latest source-node set — pushed by Ástríðr's
+  // `kg_answer_sync` telemetry event (Phase 187 GLXY-01 emitter,
+  // docs/astridr-contract.md §2.41). Single-row, latest-wins semantics —
+  // mirrors kgSummary exactly: one row, upserted on every event, with no
+  // per-session scoping, so /knowledge-graph's 3D galaxy can subscribe with
+  // useQuery and replay the last sync on open (D-04/D-05).
+  kgAnswerSync: defineTable({
+    turnId: v.string(),
+    sourceNodeIds: v.array(v.string()),
+    primaryEntityName: v.optional(v.string()),
+    updatedAt: v.float64(),
+  }),
+
   // KG-10: Named saved views for the KG Explorer. Global scope (D-02) — no owner
   // field. Each view captures lens + filters (minus searchQuery, D-06) + focus
   // entityName + hops (D-05). Share links use the opaque shareToken (D-03).

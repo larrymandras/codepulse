@@ -56,3 +56,79 @@ export const latestSummary = query({
     return await ctx.db.query("kgSummary").first();
   },
 });
+
+// ============================================================
+// KG ANSWER SYNC — galaxy answer-sync latest source-node set (Phase 187, GLXY-01)
+// ============================================================
+//
+// Fed by the `kg_answer_sync` runtime telemetry event emitted by Ástríðr's
+// agent loop success-path return (Phase 187 Plan 02, docs/astridr-contract.md
+// §2.41). Single-row, latest-wins semantics — mirrors kgSummary/upsertSummary
+// exactly: the table holds exactly one row, upserted on every event, so
+// /knowledge-graph's 3D galaxy can subscribe with useQuery and replay the
+// last sync on open (D-04/D-05), with no per-session scoping.
+
+export interface UpsertAnswerSyncArgs {
+  turnId: string;
+  sourceNodeIds: string[];
+  primaryEntityName?: string;
+  updatedAt: number;
+}
+
+interface KgAnswerSyncDb {
+  query: (table: string) => { first: () => Promise<any> };
+  patch: (id: any, doc: any) => Promise<void>;
+  insert: (table: string, doc: any) => Promise<any>;
+}
+
+/**
+ * Core upsert logic, extracted so it can be unit-tested against a minimal
+ * fake `ctx.db` without convex-test (not installed in this repo — see
+ * convex/evalScores.ts's storeEvalScoreHandler for the precedent). Single-row
+ * upsert: patches the existing row if present, else inserts — mirrors
+ * upsertSummary's `.first()` + patch/insert shape exactly (never per-session
+ * scoped, latest-writer-wins, D-04/D-05).
+ */
+export async function upsertAnswerSyncHandler(
+  ctx: { db: KgAnswerSyncDb } | any,
+  args: UpsertAnswerSyncArgs,
+): Promise<void> {
+  const existing = await ctx.db.query("kgAnswerSync").first();
+  const doc = {
+    turnId: args.turnId,
+    sourceNodeIds: args.sourceNodeIds,
+    primaryEntityName: args.primaryEntityName,
+    updatedAt: args.updatedAt,
+  };
+  if (existing) {
+    await ctx.db.patch(existing._id, doc);
+  } else {
+    await ctx.db.insert("kgAnswerSync", doc);
+  }
+}
+
+export const upsertAnswerSync = mutation({
+  args: {
+    turnId: v.string(),
+    sourceNodeIds: v.array(v.string()),
+    primaryEntityName: v.optional(v.string()),
+    updatedAt: v.float64(),
+  },
+  handler: upsertAnswerSyncHandler,
+});
+
+/**
+ * Core read logic for latestAnswerSync, extracted for the same fake-db
+ * testability as upsertAnswerSyncHandler.
+ */
+export async function latestAnswerSyncHandler(
+  ctx: { db: KgAnswerSyncDb } | any,
+): Promise<any> {
+  return await ctx.db.query("kgAnswerSync").first();
+}
+
+/** Latest answer-sync source-node set, or null before any telemetry has arrived. */
+export const latestAnswerSync = query({
+  args: {},
+  handler: latestAnswerSyncHandler,
+});
