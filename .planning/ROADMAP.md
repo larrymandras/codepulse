@@ -660,7 +660,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 103-03-PLAN.md — useActiveEngine reactive hook + BrainPickerRow with tokenized health/quota — complete 2026-07-28, see [103-03-SUMMARY.md](phases/103-brain-swap-control-surface/103-03-SUMMARY.md)
-- [ ] 103-04-PLAN.md — GlobalSwapModal: confirm-to-result, snapshot, fan-out, revert
+- [x] 103-04-PLAN.md — GlobalSwapModal: confirm-to-result, snapshot, fan-out, revert — complete 2026-07-28, see [103-04-SUMMARY.md](phases/103-brain-swap-control-surface/103-04-SUMMARY.md)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -739,7 +739,7 @@ Plans:
 | 100. Control-Surface UX | v11.0 | 5/5 | Complete   | 2026-07-24 |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
-| 103. Brain-Swap Control Surface | v13.0 | 3/8 | 🚧 Executing | — |
+| 103. Brain-Swap Control Surface | v13.0 | 4/8 | 🚧 Executing | — |
 | 104. Cost Intelligence | v13.0 | — | Planned | — |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
