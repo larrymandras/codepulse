@@ -204,14 +204,20 @@ export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
                 className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
               />
             )}
-            <span>{baseLabel}</span>
+            <span data-testid="brain-picker-base-label">{baseLabel}</span>
             {pendingTarget && (
-              <span className="text-xs text-muted-foreground">
+              <span
+                data-testid="brain-picker-pending-suffix"
+                className="text-xs text-muted-foreground"
+              >
                 · switching to {pendingTarget.name}…
               </span>
             )}
             {BRAINS_STUB_ACTIVE && (
-              <span className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground">
+              <span
+                data-testid="brain-picker-trigger-stub-chip"
+                className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
+              >
                 STUB
               </span>
             )}
