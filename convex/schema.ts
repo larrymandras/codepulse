@@ -1937,4 +1937,29 @@ export default defineSchema({
     // acking older held-focus rows once other traffic pushed them past the
     // cutoff).
     .index("by_itemType", ["itemType", "createdAt"]),
+
+  // ============================================================
+  // ACTIVE ENGINE SNAPSHOTS (Phase 103, BSC-01/D-14) — per-profile
+  // live-resolved brain-swap telemetry, append-only.
+  // ============================================================
+
+  // Latest-per-profile reactive readback for the per-profile brain-swap axis
+  // (103-CONTRACT.md §4, model_routing event). This is the LIVE resolved
+  // engine only — the persisted default stays Ástríðr-owned (D-03) and is
+  // never written here; that lives in profileConfigs.modelPreferences.
+  // Modeled field-for-field on gatewayQuotaSnapshots above. mode carries the
+  // contract's "session" | "pinned" | "inherited" vocabulary but is kept
+  // v.string() (not a Literal union) to match this schema's defensive-
+  // boundary convention — validated at the ingest edge (convex/activeEngine.ts),
+  // not the schema.
+  activeEngineSnapshots: defineTable({
+    profileId: v.string(),
+    model: v.string(),
+    mode: v.string(), // "session" | "pinned" | "inherited"
+    selectionPath: v.optional(v.string()),
+    expiresAt: v.optional(v.float64()), // epoch seconds, set only when mode === "session"
+    timestamp: v.float64(),
+  })
+    .index("by_profileId", ["profileId", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 });
