@@ -344,7 +344,34 @@ export function deduplicateByProvider<T extends { provider: string; timestamp: n
 
 **If this table is empty:** N/A — see entries above.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> All three resolved during `/gsd-plan-phase 103` on 2026-07-28. Original text retained below each
+> question; the resolution is stated inline first.
+
+**OQ1 — RESOLVED (operator, 2026-07-28): accept the shadowing, do not render it.** Phase 103's UI
+surfaces the per-profile default and does **not** attempt to show that a live global override is
+shadowing it. Rationale: the per-profile axis is stub-backed this phase, so the conflict cannot
+manifest for real until astridr Phase 184.1 ships a live per-profile mechanism. The interaction is
+recorded in `103-CONTRACT.md` (item 9) so 184.1 does not rediscover it. **Carry-forward risk,
+stated plainly:** once 184.1 is live, showing a per-profile default as though it were the running
+engine while a global override is in force is the v9.0 VitalsRail stale-config trap in a new
+costume — the exact failure BSC-01 exists to kill. Revisit at that gate, not before.
+
+**OQ2 — RESOLVED (operator, 2026-07-28): the composer pill goes on `src/pages/Chat.tsx`.**
+`ChatInput.tsx` was the wrong host (imported solely by the unrelated `InsightsChat.tsx`).
+Carried into `103-07-PLAN.md` `<host_correction>`; `ChatInput.tsx` / `InsightsChat.tsx` are
+explicitly off-limits. Profile scope for the pill comes from `default_profile_id` on the catalogue
+ack (`103-CONTRACT.md` §3) — no CodePulse-side active-profile mechanism was invented.
+
+**OQ3 — RESOLVED (planner): one command with a `mode` discriminator.** `103-01-PLAN.md:118-119`
+specifies a single `gateway.model.set` carrying `mode`, matching the real shipped precedent
+(`SwapSetCommand`'s `restore` flag) rather than the design spec's two literal command types.
+Flagged in the contract as a recommendation, since Phase 184.1 is out of this phase's control.
+
+---
+
+*Original open questions, retained for the record:*
 
 1. **How should Phase 103's UI represent an active Phase-185/186 global voice/text override shadowing a profile's own default?**
    - What we know: `_resolve_model()`'s resolution order places the global override (rung 1b) ahead of the profile default (rung 3) — a profile's Phase-103-set default can be silently inactive whenever a global override is in force.

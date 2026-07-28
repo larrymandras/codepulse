@@ -571,6 +571,7 @@ Plans:
 - [x] 99-04-PLAN.md — Wave 3: launch orchestration — SkillLaunchProvider (page-level Forge modal + Forge recording) + RunTargetChooser/useRunLaunch (last-pick chooser) (LAUNCH-02/04)
 - [x] 99-05-PLAN.md — Wave 4: Run entry points — SkillLifecycleMenu Run submenu + QuickDeck primary-click Run / copy-secondary / stop-recording (LAUNCH-04)
 - [x] 99-06-PLAN.md — Wave 5: integration + honest-recording sweep — Skills.tsx provider wrap + retire copy-recording & the /chat?skill= dead-end across SkillRow/palette/containers (LAUNCH-04)
+
 **UI hint**: yes
 **Cross-repo note (2026-07-20)**: astridr's planned Mission Control (astridr SEED-023) PAIRS WITH this phase — 99 launches skills; the mission jobs board (live stream-json telemetry, cost, confirm cards) is a separate surface seeded as `.planning/seeds/SEED-002-mission-control-jobs-board.md`. Keep launch plumbing (`chat.send` / `enqueueLaunch` / dispatch) reusable for mission briefs.
 
@@ -651,13 +652,27 @@ Plans:
 **Plans:** 8 plans (5 waves)
 
 Plans:
+**Wave 1**
+
 - [ ] 103-01-PLAN.md — 103-CONTRACT.md (D-17) + the brainsApi adapter seam and the five mandatory fixtures
 - [ ] 103-02-PLAN.md — Convex reactive substrate: activeEngineSnapshots table, activeEngine.ts, model_routing ingest case, [BLOCKING] schema push
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 103-03-PLAN.md — useActiveEngine reactive hook + BrainPickerRow with tokenized health/quota
 - [ ] 103-04-PLAN.md — GlobalSwapModal: confirm-to-result, snapshot, fan-out, revert
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 103-05-PLAN.md — BrainPicker: popover + cmdk groups, scope selector, dual-branch dispatch
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 103-06-PLAN.md — BrainHeaderBadge with Mixed-brains state + DashboardLayout mount
 - [ ] 103-07-PLAN.md — Chat composer pill, in-place Settings stale-row replacement, CLI-to-API fallback notice
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 103-08-PLAN.md — Playwright stub round trip, live global-axis verification, VALIDATION sign-off
 
 ---
