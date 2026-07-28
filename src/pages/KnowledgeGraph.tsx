@@ -109,9 +109,34 @@ const BLOOM_GROW_MS = 400;
 const BLOOM_SETTLE_MS = 400;
 const CLEAR_MS = 200;
 const CLEAR_TO_BLOOM_STAGGER_MS = 100;
-// D-09 layout-readiness poll budget — same maxFrames as centerNode3DWhenReady
+// D-07 layout-readiness poll budget — same maxFrames as centerNode3DWhenReady
 // (graph-center.ts), reused rather than invented (RESEARCH "Don't Hand-Roll").
+// Scope: D-07's in-memory-only wait (nodes already loaded, only force-layout
+// needs to settle) — a ~1.5s frame budget is appropriate there. Do NOT reuse
+// this for D-09's fetch-dependent wait (see D09_FETCH_POLL_MAX_MS below);
+// 187-05 live-checkpoint fix #1 found the D-09 fly never completing because
+// it shared this same tight budget despite also waiting on a network fetch
+// (setFilter("entityName", ...) triggers /api/kg/entity via the astridr API)
+// that routinely outlasts 90 frames.
 const D09_POLL_MAX_FRAMES = 90;
+// D-09 fetch-dependent poll budget — a WALL-CLOCK deadline (ms), not a frame
+// count. A frame count is a poor proxy for network+render latency: rAF frame
+// delivery itself throttles in backgrounded tabs (making a frame-based budget
+// take far longer in wall time than a foregrounded tab), and the fetch time
+// is independent of frame rate anyway. 8s comfortably covers a local astridr
+// API round-trip + the neighborhood's subsequent force-layout settle while
+// staying clearly bounded (T-187-14: no unbounded fetch/poll loop) — on
+// expiry flyToLitSources still degrades to "fly to whatever resolved,
+// silently skip the rest", exactly like the frame-bounded path.
+export const D09_FETCH_POLL_MAX_MS = 8000;
+// Camera-park distance for a lit source with no loaded 1-hop neighbors (187-05
+// live-checkpoint fix #2). zoomToFit has nothing to widen the frame to for a
+// truly isolated node, so it zooms in until the single sphere fills the
+// viewport (Larry: "3D does not focus very well in the window"). Matches the
+// existing `centerNode3DWhenReady` (graph-center.ts) z-offset convention for
+// parking the camera a fixed distance back from a single node instead of
+// hand-rolling new distance math.
+export const ISOLATED_NODE_CAMERA_DISTANCE = 150;
 
 function nowMs(): number {
   return typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -229,28 +254,52 @@ export function runClearThenBloom(params: {
  * resolves asynchronously; a sync `fgRef3d.current?.zoomToFit(...)` call
  * right when the effect fires would silently no-op and — since the turnId is
  * already marked applied — never retry, permanently dropping that turn's
- * fly-to). Bounded by `maxFrames`; on expiry, flies to whatever DID resolve
- * (skipping unresolved ids and/or a still-null handle) — never throws, never
- * retries beyond the budget.
+ * fly-to).
  *
- * 187-05 live-checkpoint fix: a lone lit source with no other nodes in frame
- * fills zoomToFit's viewport with a single giant sphere and no context (Larry:
- * "3D does not focus very well in the window"). `getFramingIds`, when
+ * Bounded by EITHER `maxFrames` (default, frame-count budget — appropriate
+ * for D-07's in-memory-only wait) OR `maxWaitMs` (wall-clock budget —
+ * appropriate for D-09's fetch-dependent wait, see D09_FETCH_POLL_MAX_MS;
+ * 187-05 live-checkpoint fix #1). When `maxWaitMs` is supplied it takes over
+ * expiry entirely (frames are not counted against `maxFrames` in that mode).
+ * On expiry, flies to whatever DID resolve (skipping unresolved ids and/or a
+ * still-null handle) — never throws, never retries beyond the budget.
+ *
+ * 187-05 live-checkpoint fix #2: a lone lit source with no other nodes in
+ * frame fills zoomToFit's viewport with a single giant sphere and no context
+ * (Larry: "3D does not focus very well in the window"). `getFramingIds`, when
  * supplied, widens the zoomToFit filterFn to the resolved sources PLUS their
  * 1-hop neighbors — CAMERA FRAMING ONLY. `onFlown`'s resolvedIds (which drives
  * `litNodeIds`/coloring upstream) is untouched — only the real sources are
  * "lit"; neighbors never light up. Defaults to identity (no widening) so
- * callers that don't pass it keep the original single-set framing.
+ * callers that don't pass it keep the original single-set framing. When the
+ * (possibly-widened) framing set still resolves to exactly one node — no
+ * neighbors were loaded to widen to — `zoomToFit` is skipped in favor of
+ * `cameraPosition` parked `ISOLATED_NODE_CAMERA_DISTANCE` back from that node
+ * (the same "look at one node" primitive `centerNode3DWhenReady` uses for the
+ * `?focus=` deep link), so an isolated source sits in context instead of
+ * filling the screen. Falls back to `zoomToFit` if that node's coordinates are
+ * unexpectedly missing.
  */
 export function flyToLitSources(params: {
   litIds: Set<string>;
   getNodes: () => Array<{ id: string; x?: number; y?: number; z?: number }>;
-  getHandle: () => { zoomToFit: (ms: number, px: number, filterFn: (n: any) => boolean) => void } | null;
+  getHandle: () => {
+    zoomToFit: (ms: number, px: number, filterFn: (n: any) => boolean) => void;
+    cameraPosition: (
+      position: { x: number; y: number; z: number },
+      lookAt?: { x: number; y: number; z: number } | null,
+      ms?: number,
+    ) => void;
+  } | null;
   /** Stale-response guard (T-187-15) — checked every frame; a newer sync
    *  superseding this one aborts the poll without ever calling zoomToFit. */
   isStale: () => boolean;
   onFlown: (resolvedIds: Set<string>) => void;
   maxFrames?: number;
+  /** Wall-clock deadline (ms) — when supplied, overrides `maxFrames` for
+   *  expiry purposes. Use for fetch-dependent waits (D-09) where a frame
+   *  count is a poor proxy for network+render latency. */
+  maxWaitMs?: number;
   /** Widens the zoomToFit FRAMING filter beyond the resolved lit-source ids
    *  (see doc comment above). Does not affect `onFlown`'s resolvedIds. */
   getFramingIds?: (resolvedIds: Set<string>) => Set<string>;
@@ -262,10 +311,12 @@ export function flyToLitSources(params: {
     isStale,
     onFlown,
     maxFrames = D09_POLL_MAX_FRAMES,
+    maxWaitMs,
     getFramingIds = (ids) => ids,
   } = params;
   let cancelled = false;
   let frames = 0;
+  const startedAt = nowMs();
 
   const resolvedNow = (): Set<string> => {
     const nodes = getNodes();
@@ -277,26 +328,52 @@ export function flyToLitSources(params: {
     return resolved;
   };
 
+  const flyCamera = (
+    handle: NonNullable<ReturnType<typeof getHandle>>,
+    resolved: Set<string>,
+  ) => {
+    const framingIds = getFramingIds(resolved);
+    if (framingIds.size === 1) {
+      const [onlyId] = framingIds;
+      const node = getNodes().find((n) => n.id === onlyId);
+      if (node && node.x != null && node.y != null) {
+        handle.cameraPosition(
+          { x: node.x, y: node.y, z: (node.z ?? 0) + ISOLATED_NODE_CAMERA_DISTANCE },
+          { x: node.x, y: node.y, z: node.z ?? 0 },
+          800,
+        );
+        return;
+      }
+      // Coordinates unexpectedly missing — fall through to zoomToFit rather
+      // than silently doing nothing.
+    }
+    handle.zoomToFit(800, 60, (n: any) => framingIds.has(n.id));
+  };
+
   const tick = () => {
     if (cancelled || isStale()) return;
     const handle = getHandle();
     const resolved = resolvedNow();
 
     if (handle && resolved.size === litIds.size) {
-      const framingIds = getFramingIds(resolved);
-      handle.zoomToFit(800, 60, (n: any) => framingIds.has(n.id));
+      flyCamera(handle, resolved);
       onFlown(resolved);
       return;
     }
-    if (frames++ < maxFrames) {
+
+    const withinBudget =
+      typeof maxWaitMs === "number"
+        ? nowMs() - startedAt < maxWaitMs
+        : frames++ < maxFrames;
+
+    if (withinBudget) {
       scheduleFrame(tick);
       return;
     }
     // T-187-14 budget expiry: fly to whichever resolved (if the handle ever
     // mounted), silently skip the rest — never retries beyond this.
     if (handle && resolved.size > 0) {
-      const framingIds = getFramingIds(resolved);
-      handle.zoomToFit(800, 60, (n: any) => framingIds.has(n.id));
+      flyCamera(handle, resolved);
     }
     onFlown(resolved);
   };
@@ -633,8 +710,17 @@ export default function KnowledgeGraph() {
       getNodes: () => graphNodesRef.current,
       getHandle: () => fgRef3d.current,
       isStale: () => appliedSyncTurnRef.current !== turnId,
+      // 187-05 live-checkpoint fix #1: this path is fetch-dependent
+      // (setFilter above triggers a /api/kg/entity round-trip before any
+      // node can lay out), so it gets a wall-clock budget instead of D-07's
+      // in-memory-only frame budget — see D09_FETCH_POLL_MAX_MS.
+      maxWaitMs: D09_FETCH_POLL_MAX_MS,
       onFlown: (resolvedIds) => {
-        if (resolvedIds.size === 0) return; // nothing resolved — silent skip
+        // 187-05 live-checkpoint fix #1: total non-resolution after a
+        // genuine (bounded) wait is surfaced too, not silently dropped —
+        // reuses the existing "showing {N} of {M}" banner with honest
+        // numbers (N may be 0) rather than inventing new copy. litNodeIds
+        // still reflects reality: nothing resolved -> nothing lights up.
         setLitNodeIds(resolvedIds);
         if (resolvedIds.size < litIds.size) {
           setStaleSourceBanner({ resolved: resolvedIds.size, requested: litIds.size });

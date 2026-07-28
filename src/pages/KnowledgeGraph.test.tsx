@@ -240,6 +240,26 @@ const ONSCREEN_NEIGHBOR_OF_A = {
   z: 0,
 };
 
+// On-screen node matching UUID_B — used alongside ONSCREEN_NODE_A to build a
+// genuinely multi-node (>1 resolved, no shared links) lit-source fly, so the
+// zoomToFit path (not the 187-05 defect-2 isolated-node cameraPosition path)
+// is what's under test in the filterFn-contract tests below.
+const ONSCREEN_NODE_B = {
+  id: UUID_B,
+  name: "Beta Corp",
+  entityType: "organization",
+  agentId: "agent-1",
+  val: 2,
+  degree: 0,
+  color: "#3b82f6",
+  attributes: [],
+  synthetic: false,
+  community: null,
+  x: 70,
+  y: 80,
+  z: 0,
+};
+
 let mockKgReturn: any;
 
 vi.mock("../hooks/useKnowledgeGraph", () => ({
@@ -287,7 +307,12 @@ vi.mock("../hooks/useKgAnimation", () => ({
 // Import after mocks
 // ---------------------------------------------------------------------------
 
-import KnowledgeGraph, { computeColorFn3D, computeNodeValFn3D } from "./KnowledgeGraph";
+import KnowledgeGraph, {
+  computeColorFn3D,
+  computeNodeValFn3D,
+  D09_FETCH_POLL_MAX_MS,
+  ISOLATED_NODE_CAMERA_DISTANCE,
+} from "./KnowledgeGraph";
 import { get as idbGet, set as idbSet } from "idb-keyval";
 
 const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
@@ -606,15 +631,19 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
   }
 
   it("SC#1: a new sync with all source ids on-screen calls zoomToFit(800, 60, filterFn) matching exactly the lit ids", async () => {
+    // Two on-screen, unlinked sources (not one) — a lone isolated source now
+    // takes the defect-2 cameraPosition path (see the dedicated "isolated
+    // single source" test below), so this filterFn-contract test needs a
+    // genuinely multi-node resolved set to stay on the zoomToFit path.
     mockLatestAnswerSync.mockReturnValue({
       turnId: "sess-1:1",
-      sourceNodeIds: [UUID_A],
+      sourceNodeIds: [UUID_A, UUID_B],
       primaryEntityName: "Acme Corp",
       updatedAt: 1,
     });
 
     await renderIn3D({
-      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
     });
 
     // The D-07 poll's first synchronous attempt can find fgRef3d.current
@@ -630,7 +659,44 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(ms).toBe(800);
     expect(px).toBe(60);
     expect(filterFn({ id: UUID_A })).toBe(true);
-    expect(filterFn({ id: UUID_B })).toBe(false);
+    expect(filterFn({ id: UUID_B })).toBe(true);
+    expect(filterFn({ id: DISTRACTOR_NODE.id })).toBe(false);
+    // Multi-node fly — the isolated-node cameraPosition path never engages.
+    expect(mockFgRef3dHandle.cameraPosition).not.toHaveBeenCalled();
+  });
+
+  it("187-05 defect-2: an isolated lit source with no loaded neighbors parks the camera via cameraPosition instead of filling the frame with zoomToFit", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-isolated:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // A single lit source with NO other nodes/links loaded at all — the
+    // real-world case for obsidian/memory_search sources, whose only edges
+    // are incoming and which the ego lens therefore renders as isolated.
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.cameraPosition).toHaveBeenCalledTimes(1);
+    });
+
+    // zoomToFit — which zooms in until a single sphere fills the viewport
+    // with no context — must NOT be the call used for a truly isolated node.
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+
+    const [position, lookAt, ms] = mockFgRef3dHandle.cameraPosition.mock.calls[0];
+    expect(position).toEqual({
+      x: ONSCREEN_NODE_A.x,
+      y: ONSCREEN_NODE_A.y,
+      z: ONSCREEN_NODE_A.z + ISOLATED_NODE_CAMERA_DISTANCE,
+    });
+    expect(lookAt).toEqual({ x: ONSCREEN_NODE_A.x, y: ONSCREEN_NODE_A.y, z: ONSCREEN_NODE_A.z });
+    expect(ms).toBe(800);
   });
 
   it("187-05 neighbor framing: a single-source fly widens zoomToFit's filter to include the source's 1-hop neighbor, while litNodeIds/coloring stays scoped to the source only", async () => {
@@ -679,15 +745,17 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
   });
 
   it("SC#2: re-rendering with the SAME turnId never calls zoomToFit a second time (zero-motion no-op)", async () => {
+    // Two on-screen, unlinked sources — see the SC#1 comment above on why a
+    // lone isolated source no longer exercises zoomToFit.
     mockLatestAnswerSync.mockReturnValue({
       turnId: "sess-1:1",
-      sourceNodeIds: [UUID_A],
+      sourceNodeIds: [UUID_A, UUID_B],
       primaryEntityName: "Acme Corp",
       updatedAt: 1,
     });
 
     const { rerender } = await renderIn3D({
-      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
     });
 
     await waitFor(() => {
@@ -717,16 +785,19 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
   });
 
-  it("UUID-validation: a non-UUID id is dropped — the filter fn matches only the valid id", async () => {
+  it("UUID-validation: a non-UUID id is dropped — the filter fn matches only the valid ids", async () => {
+    // Two valid sources (+ one invalid) — a lone valid source would engage
+    // the defect-2 isolated-node cameraPosition path instead of zoomToFit;
+    // see the SC#1 comment above.
     mockLatestAnswerSync.mockReturnValue({
       turnId: "sess-1:2",
-      sourceNodeIds: [UUID_A, NOT_A_UUID],
+      sourceNodeIds: [UUID_A, UUID_B, NOT_A_UUID],
       primaryEntityName: "Acme Corp",
       updatedAt: 1,
     });
 
     await renderIn3D({
-      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+      graph: { nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B], links: [], stats: EMPTY_STATS },
     });
 
     await waitFor(() => {
@@ -735,6 +806,7 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     });
     const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
     expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: UUID_B })).toBe(true);
     expect(filterFn({ id: NOT_A_UUID })).toBe(false);
   });
 
@@ -782,7 +854,8 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
   });
 
-  it("stale-source degrade: partial resolution renders the amber banner and still flies to the resolved subset", async () => {
+  it("stale-source degrade: partial resolution renders the amber banner and still flies to the resolved subset (187-05 wall-clock D-09 budget)", async () => {
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(0);
     mockLatestAnswerSync.mockReturnValue({
       turnId: "sess-3:1",
       sourceNodeIds: [UUID_A, UUID_B],
@@ -790,20 +863,38 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
       updatedAt: 1,
     });
 
-    // UUID_A resolves (on-screen with x/y); UUID_B never lays out.
+    // UUID_A resolves (on-screen with x/y, plus a loaded neighbor so the
+    // resolved framing set has >1 node — keeps this test on the zoomToFit
+    // path, distinct from the dedicated isolated-node cameraPosition test
+    // above); UUID_B never lays out.
     await renderIn3D({
-      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+      graph: {
+        nodes: [ONSCREEN_NODE_A, ONSCREEN_NEIGHBOR_OF_A],
+        links: [{ id: "l1", source: UUID_A, target: ONSCREEN_NEIGHBOR_OF_A.id, current: true }],
+        stats: EMPTY_STATS,
+      } as any,
     });
 
-    // Not all-on-screen (UUID_B missing) -> D-09 fallback -> poll runs until
-    // its maxFrames=90 budget expires, then flies to the resolved subset.
+    // A few ticks with the wall clock held at 0 — UUID_A is already resolved
+    // but UUID_B never lays out, so the poll must still be waiting (not all
+    // resolved, budget not yet expired).
     await act(async () => {
-      for (let i = 0; i < 90; i++) flushRaf();
+      for (let i = 0; i < 5; i++) flushRaf();
+    });
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+
+    // Advance the wall clock past D09_FETCH_POLL_MAX_MS — well beyond the
+    // OLD 90-frame/~1.5s budget too, proving this expiry is genuinely
+    // time-based, not a frame-count coincidence.
+    nowSpy.mockReturnValue(D09_FETCH_POLL_MAX_MS + 1);
+    await act(async () => {
+      flushRaf();
     });
 
     expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
     const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
     expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: ONSCREEN_NEIGHBOR_OF_A.id })).toBe(true);
     expect(filterFn({ id: UUID_B })).toBe(false);
 
     expect(
@@ -811,5 +902,104 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
         /Some grounded sources are no longer in the graph — showing 1 of 2\./,
       ),
     ).toBeDefined();
+
+    nowSpy.mockRestore();
+  });
+
+  it("187-05 defect-1: total non-resolution after the D-09 wall-clock deadline still surfaces the degrade banner with honest zero-resolved numbers", async () => {
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(0);
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-zero:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // Off-screen at mount, and NEITHER source ever lays out (simulates a
+    // stale/deleted entity the ego-lens fetch can't resolve at all).
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+    });
+
+    await act(async () => {
+      flushRaf();
+    });
+
+    nowSpy.mockReturnValue(D09_FETCH_POLL_MAX_MS + 1);
+    await act(async () => {
+      flushRaf();
+    });
+
+    // Nothing resolved -> no camera motion of any kind (T-187-14: never a
+    // no-op fly to an unrendered node) — but the banner still surfaces the
+    // total-non-resolution case honestly (previously silently dropped)
+    // instead of inventing new copy.
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+    expect(mockFgRef3dHandle.cameraPosition).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        /Some grounded sources are no longer in the graph — showing 0 of 2\./,
+      ),
+    ).toBeDefined();
+
+    nowSpy.mockRestore();
+  });
+
+  it("187-05 defect-1: the D-09 fetch-dependent poll survives well past the OLD 90-frame budget and still resolves once the neighborhood streams in", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-late:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // Neither source present at mount -> fully off-screen -> D-09 fallback.
+    const { rerender } = await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setLens).toHaveBeenCalledWith("entity");
+    });
+
+    // Flush WELL past the old D-07/D-09-shared 90-frame budget (~1.5s at
+    // 60fps) with no fake wall-clock advance — real elapsed time during this
+    // synchronous loop is a few ms at most, nowhere near D09_FETCH_POLL_MAX_MS,
+    // so the new wall-clock-bound poll must still be alive here. Against the
+    // OLD frame-bounded code this loop alone would already have hit frame 90,
+    // permanently given up, and the assertion below (zoomToFit eventually
+    // firing once the neighborhood streams in) would fail.
+    await act(async () => {
+      for (let i = 0; i < 150; i++) flushRaf();
+    });
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+
+    // Simulate the ego-lens fetch completing and the neighborhood's force
+    // layout settling — both sources now have x/y. graphNodesRef refreshes
+    // via the effect on graph.nodes/links, which needs a fresh render to
+    // observe the new mockKgReturn (mirrors the SC#2 no-op test's rerender
+    // pattern above).
+    mockKgReturn = makeMockKg({
+      graph: {
+        nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B],
+        links: [],
+        stats: EMPTY_STATS,
+      },
+      setLens,
+      setFilter,
+    });
+    rerender(<KnowledgeGraph />);
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: UUID_B })).toBe(true);
   });
 });
