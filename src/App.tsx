@@ -20,6 +20,7 @@ import Ideation from "./pages/Ideation";
 import { AstridrWSProvider } from "./contexts/AstridrWSContext";
 import { ProactiveAlertListener } from "./components/ProactiveAlertListener";
 import { FocusExitDigest } from "./components/inbox/FocusExitDigest";
+import { BrainsWsRegistrar } from "./components/brains/BrainsWsRegistrar";
 
 // Lazy-load heavy pages
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -92,6 +93,9 @@ export default function App() {
             /chat happened to be mounted. */}
         <ProactiveAlertListener />
         <FocusExitDigest />
+        {/* 103-08 scope addition: wires brainsApi's live adapter to the shared WS connection --
+            see BrainsWsRegistrar.tsx docstring for the dangling-wire bug this closes. */}
+        <BrainsWsRegistrar />
         <AuthGuard>
           <Routes>
             <Route element={<DashboardLayout />}>
