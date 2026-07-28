@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
 status: milestone_planning
-stopped_at: "v13.0 OPENED 2026-07-27 via /gsd-new-milestone (Phases 103-106: Brain-Swap Control Surface, Cost Intelligence, Tool & Trace Observability, Consolidation & Hardening). REQUIREMENTS.md + ROADMAP.md + PROJECT.md written; STATE reset by hand (no gsd-sdk verbs). No phases planned yet. Next: /gsd-plan-phase 103 (after discuss/ui-spec prerequisites). Prior — v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0); v12.0 shipped 2026-07-23 (tag v12.0)."
-last_updated: "2026-07-27T20:55:00.000Z"
-last_activity: "2026-07-27 -- v13.0 milestone created (requirements BSC/COST/OBS/DEBT; roadmap phases 103-106; PROJECT.md current-milestone). Earlier same day - Phase-98 UAT tests 5 + 4-shadowed verified live; Forge queued-cards bug fixed (0a1b377); astridr invoke-leak detector shipped (b7e4a534))."
+stopped_at: "Phase 103 context gathered (103-CONTEXT.md + 103-DISCUSSION-LOG.md, commit b42b1e4). BLOCKER SURFACED: astridr's brain-swap backend (Phase 184.1) was never built — verified absent on feature/brain-swap. Operator chose CONTRACT-FIRST, STUB-BACKED; BSC-05 reframed in CONTEXT.md from 'verify endpoints live' to 'publish 103-CONTRACT.md + stub conforms', live verification deferred to a follow-on gate. ROADMAP Phase Details sections for 103-106 also added (commit 5b2fada). Next: /gsd-ui-phase 103 (UI hint: yes), then /gsd-plan-phase 103. Prior — v11.0 SHIPPED & CLOSED 2026-07-25 (tag v11.0); v12.0 shipped 2026-07-23 (tag v12.0)."
+last_updated: "2026-07-28T11:56:00.000Z"
+last_activity: "2026-07-28 -- Phase 103 discuss complete: 17 decisions locked (D-01..D-17) across swap-scope unit (persona/profile; both session-swap + pinned default; astridr owns persistence), control placement (chat composer pill + header badge; fix the stale Settings.tsx:663 p.model row in place), global-swap ritual (what-changes modal, snapshot+revert, overwrite-but-record pins, honest partial failure), and status/stub seam (WS gateway.model.set, Convex-reactive readback, no optimistic switching, one adapter + VITE_ flag). Prior 2026-07-27 -- v13.0 milestone created (requirements BSC/COST/OBS/DEBT; roadmap phases 103-106; PROJECT.md current-milestone)."
 progress:
   total_phases: 4
   completed_phases: 0
@@ -43,7 +43,13 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-**ACTIVE: v13.0 (Phases 103-106) — OPENED 2026-07-27, planning stage.** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. 0/4 phases planned. Sequencing: 106 (tech-debt) independent + low-risk; 103 gates on astridr's brain-swap backend being live end-to-end (BSC-05); 104/105 additive. Next: `/gsd-plan-phase 103`.
+**ACTIVE: v13.0 (Phases 103-106) — OPENED 2026-07-27, planning stage.** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. 0/4 phases planned. **Phase 103 context gathered 2026-07-28** (`.planning/phases/103-brain-swap-control-surface/103-CONTEXT.md`). Sequencing: 106 (tech-debt) independent + low-risk; 104/105 additive.
+
+⚠ **Phase 103 dependency is NOT met and will not be met by this phase.** ROADMAP says 103 gates on astridr Phase 184.1 (brain-swap backend) being live end-to-end. Verified 2026-07-27 against `astridr-repo` @ `feature/brain-swap`: `providers/gateway_provider.py` absent, `engine/model_registry.py` absent, `model_defaults.py:50` still the static `ALLOWED_MODELS` gate with no gateway affinity, zero matches for `/api/models` or `gateway.model.set`, and Phase 184.1 / `BRAINS-01..06` never registered in astridr's ROADMAP or REQUIREMENTS. The approved design spec (`astridr-repo/docs/superpowers/specs/2026-07-17-astridr-brain-swap-design.md`) exists but §12's roadmap-registration step was never executed.
+
+**Operator decision (2026-07-27): contract-first, stub-backed.** 103 proceeds as scoped against a stub behind one adapter seam and ships `103-CONTRACT.md` as a deliverable. **BSC-05 is reframed** — see `103-CONTEXT.md` `<blocker_reframing>`. A green stub is NOT live verification; the Phase-90 War Room lesson is consciously deferred here, not satisfied. **Blocking follow-on (astridr-repo):** register + build Phase 184.1 against `103-CONTRACT.md`, then close the live BSC-05 gate.
+
+Next: `/gsd-ui-phase 103` (ROADMAP flags `UI hint: yes`), then `/gsd-plan-phase 103`.
 
 ---
 
