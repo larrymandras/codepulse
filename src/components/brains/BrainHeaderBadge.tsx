@@ -34,6 +34,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock, Pin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useActiveEngine, deriveMixedState } from "@/hooks/useActiveEngine";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
@@ -47,10 +48,53 @@ function formatTtl(expiresAt?: number): string {
   return `${minutes}m`;
 }
 
+/**
+ * useGlobalEngineFallback — 103-08 scope addition. Reads the LIVE global engine
+ * (Ástríðr's process-wide `swap.set` override, Phase 185/186 — already shipped)
+ * via the exact `subscribeEvent("swap.state", ...)` + returned-unsubscribe idiom
+ * `Chat.tsx:341-351` already uses. This is a READ-ONLY display source — it never
+ * calls `sendCommand`/dispatches a swap, so it cannot alter live swap behavior,
+ * and it shares the app's single WebSocket connection rather than opening a
+ * second one.
+ *
+ * `useAstridrWS()` throws when rendered outside `AstridrWSProvider`
+ * (`AstridrWSContext.tsx:105`). In production, `DashboardLayout` — where this
+ * badge mounts on every page — is always inside the provider (`App.tsx:87-166`),
+ * but this component's own tests are not, and any future out-of-provider render
+ * must degrade to "no global reading" rather than crash (a throw here would
+ * blank the badge dashboard-wide via `SectionErrorBoundary`). The try/catch
+ * below is safe with respect to the rules of hooks: `useAstridrWS()` either
+ * succeeds (its one `useContext` call already completed) or throws a *plain* JS
+ * error from application code that runs *after* that hook call finished — the
+ * number and order of hooks invoked per render never changes between branches.
+ */
+function useGlobalEngineFallback(): string | null {
+  const [globalModel, setGlobalModel] = useState<string | null>(null);
+
+  let subscribeEvent: ReturnType<typeof useAstridrWS>["subscribeEvent"] | null;
+  try {
+    ({ subscribeEvent } = useAstridrWS());
+  } catch {
+    subscribeEvent = null;
+  }
+
+  useEffect(() => {
+    if (!subscribeEvent) return;
+    const unsubscribe = subscribeEvent("swap.state", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      setGlobalModel((data?.model_override as string | null | undefined) ?? null);
+    });
+    return unsubscribe;
+  }, [subscribeEvent]);
+
+  return globalModel;
+}
+
 export function BrainHeaderBadge() {
   const activeEngines = useActiveEngine();
   const mixedState = useMemo(() => deriveMixedState(activeEngines), [activeEngines]);
   const profiles = useProfileConfigs();
+  const globalModel = useGlobalEngineFallback();
 
   const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
   const [defaultProfileId, setDefaultProfileId] = useState("");
@@ -93,8 +137,27 @@ export function BrainHeaderBadge() {
   const isMixed = mixedState.mixed;
   const engine = mixedState.single;
 
-  const baseLabel = isMixed ? "Mixed brains" : (engine?.model ?? "No brain reported");
-  const ariaLabel = `Active brain: ${baseLabel}`;
+  // 103-08 scope addition: per-profile telemetry (`useActiveEngine`, fed by the
+  // not-yet-shipped `model_routing` ingest) is the primary, preferred source and
+  // is never overridden — including the honest "Mixed brains" reading. Only when
+  // NO profile has reported anything at all does the badge fall back to the
+  // live global engine from `swap.state`. Never fabricate a per-profile reading
+  // from the global value: `engine`/`isMixed` stay exactly as derived above.
+  const hasPerProfileData = mixedState.distinctModels.length > 0;
+  const usingGlobalFallback = !hasPerProfileData && !!globalModel;
+
+  const baseLabel = isMixed
+    ? "Mixed brains"
+    : engine
+      ? engine.model
+      : usingGlobalFallback
+        ? (globalModel as string)
+        : "No brain reported";
+  // The global fallback must never present itself as an honest per-profile
+  // reading — the "(global)" qualifier is folded into the accessible name
+  // itself (not just a visible chip) since an explicit `aria-label` on the
+  // button replaces all descendant text for assistive tech.
+  const ariaLabel = `Active brain: ${baseLabel}${usingGlobalFallback ? " (global)" : ""}`;
 
   // Confirmed-live pulse (UI-SPEC "Accent" table item 4): only when a single, server-reported
   // engine is showing, and it is neither an in-flight guess nor stub-sourced data.
@@ -132,18 +195,32 @@ export function BrainHeaderBadge() {
                     />
                   ))}
                 </span>
+              ) : engine ? (
+                <span
+                  aria-hidden="true"
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: dotColor(engine.model) }}
+                />
               ) : (
-                engine && (
+                usingGlobalFallback && (
                   <span
                     aria-hidden="true"
                     className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: dotColor(engine.model) }}
+                    style={{ backgroundColor: dotColor(globalModel as string) }}
                   />
                 )
               )}
               <span data-testid="brain-header-badge-label" className="hidden sm:inline">
                 {baseLabel}
               </span>
+              {usingGlobalFallback && (
+                <span
+                  data-testid="brain-header-badge-global-chip"
+                  className="hidden rounded border border-border px-1 text-xs uppercase text-muted-foreground sm:inline"
+                >
+                  Global
+                </span>
+              )}
               {pendingLabel && (
                 <span
                   data-testid="brain-header-badge-pending"

@@ -1,5 +1,6 @@
 /**
  * BrainHeaderBadge.test.tsx — 103-06-T1, rewritten under 103-06 for the composition-API rewrite.
+ * Extended under 103-08 (user-authorized scope addition) to cover the live-global-engine fallback.
  *
  * `@/components/brains/BrainPicker` is mocked entirely — this file tests BrainHeaderBadge's OWN
  * rendering/composition logic (mixed-state honesty, aria-label, pulse dot, session/pinned line,
@@ -14,13 +15,61 @@
  * `@/hooks/useActiveEngine`/`@/hooks/useProfileConfigs`) so the REAL `useActiveEngine` hook and
  * REAL `deriveMixedState` pure function run — this is the same idiom `useActiveEngine.test.ts`
  * already establishes for hook-level tests.
+ *
+ * `@/contexts/AstridrWSContext` is also mocked directly (not the real `AstridrWSProvider`, which
+ * this file never renders) so tests can (a) fire a controlled `swap.state` event through the exact
+ * `subscribeEvent` callback contract the real provider uses, and (b) simulate the real provider's
+ * out-of-provider throw (`useAstridrWS must be used within AstridrWSProvider`) via
+ * `mockAstridrWSThrows`, proving `BrainHeaderBadge`'s own try/catch degrades gracefully rather than
+ * relying on a real provider ever wrapping this test.
  */
 
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, act } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrainHeaderBadge } from "./BrainHeaderBadge";
+
+// ─── Astridr WS mock (103-08) ──────────────────────────────────────────────
+
+type WSEventCallback = (event: Record<string, unknown>) => void;
+
+let mockAstridrWSThrows = false;
+let capturedSwapStateCallback: WSEventCallback | undefined;
+const mockUnsubscribe = vi.fn();
+const mockSubscribeEvent = vi.fn((eventType: string, callback: WSEventCallback) => {
+  if (eventType === "swap.state") {
+    capturedSwapStateCallback = callback;
+  }
+  return mockUnsubscribe;
+});
+
+vi.mock("@/contexts/AstridrWSContext", () => ({
+  useAstridrWS: () => {
+    if (mockAstridrWSThrows) {
+      throw new Error("useAstridrWS must be used within AstridrWSProvider");
+    }
+    return {
+      status: "connected",
+      sendCommand: vi.fn(),
+      subscribe: vi.fn(),
+      subscribeEvent: mockSubscribeEvent,
+      reconnect: vi.fn(),
+    };
+  },
+}));
+
+/** Fires the real `swap.state` event shape (`{ event_type, data: { model_override } }`) through
+ * whichever callback the component last subscribed with — mirrors what `AstridrWSProvider`'s own
+ * `ws.onmessage` fan-out delivers to `subscribeEvent` listeners. */
+function emitSwapState(modelOverride: string | null) {
+  act(() => {
+    capturedSwapStateCallback?.({
+      event_type: "swap.state",
+      data: { model_override: modelOverride },
+    });
+  });
+}
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -105,6 +154,10 @@ beforeEach(() => {
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue(undefined);
   stubActive = false;
+  mockAstridrWSThrows = false;
+  capturedSwapStateCallback = undefined;
+  mockUnsubscribe.mockReset();
+  mockSubscribeEvent.mockClear();
 });
 
 type StubEngine = {
@@ -365,6 +418,93 @@ describe("BrainHeaderBadge — pending never lies (D-15)", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("brain-header-badge-pending")).not.toBeInTheDocument()
     );
+  });
+});
+
+describe("BrainHeaderBadge — global engine fallback (103-08)", () => {
+  it("keeps showing the per-profile reading and never uses the global fallback when per-profile data is present", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+
+    emitSwapState("claude-cli-sonnet5");
+
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("anthropic-sonnet-5");
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Active brain: anthropic-sonnet-5" })
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to the live global engine, labelled as global, when no profile has reported telemetry", async () => {
+    seedEngines([], []);
+    renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("No brain reported");
+
+    emitSwapState("anthropic-opus-4-8");
+
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("anthropic-opus-4-8");
+    expect(screen.getByTestId("brain-header-badge-global-chip")).toHaveTextContent("Global");
+    expect(
+      screen.getByRole("button", { name: "Active brain: anthropic-opus-4-8 (global)" })
+    ).toBeInTheDocument();
+  });
+
+  it('keeps "No brain reported" when both per-profile telemetry and the global engine are empty', async () => {
+    seedEngines([], []);
+    renderBadge();
+
+    expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
+      "No brain reported"
+    );
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+
+    // An explicit null override (no global override active either) must not manufacture a reading.
+    emitSwapState(null);
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("No brain reported");
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+  });
+
+  it("never lets the global fallback replace a real Mixed-brains reading", async () => {
+    seedEngines(
+      [
+        makeEngine("assistant-default", "anthropic-sonnet-5"),
+        makeEngine("consulting", "claude-cli-sonnet5"),
+      ],
+      ["assistant-default", "consulting"]
+    );
+    renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+
+    emitSwapState("fable-5");
+
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("Mixed brains");
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Active brain: Mixed brains" })).toBeInTheDocument();
+  });
+
+  it("degrades to no global reading, without throwing, when rendered as if outside AstridrWSProvider", async () => {
+    mockAstridrWSThrows = true;
+    seedEngines([], []);
+
+    expect(() => renderBadge()).not.toThrow();
+    expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
+      "No brain reported"
+    );
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+  });
+
+  it("unsubscribes from swap.state on unmount", async () => {
+    seedEngines([], []);
+    const { unmount } = renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+
+    expect(mockSubscribeEvent).toHaveBeenCalledWith("swap.state", expect.any(Function));
+    expect(mockUnsubscribe).not.toHaveBeenCalled();
+
+    unmount();
+    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
   });
 });
 
