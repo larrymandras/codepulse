@@ -669,7 +669,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 103-06-PLAN.md — BrainHeaderBadge with Mixed-brains state + DashboardLayout mount — complete 2026-07-28, see [103-06-SUMMARY.md](phases/103-brain-swap-control-surface/103-06-SUMMARY.md)
-- [ ] 103-07-PLAN.md — Chat composer pill, in-place Settings stale-row replacement, CLI-to-API fallback notice
+- [x] 103-07-PLAN.md — Chat composer pill, in-place Settings stale-row replacement, CLI-to-API fallback notice — complete 2026-07-28, see [103-07-SUMMARY.md](phases/103-brain-swap-control-surface/103-07-SUMMARY.md)
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
