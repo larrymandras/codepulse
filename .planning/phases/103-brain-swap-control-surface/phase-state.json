@@ -1,0 +1,80 @@
+{
+  "phase": 103,
+  "phaseName": "brain-swap-control-surface",
+  "created": "2026-07-28T22:02:52.768Z",
+  "history": [
+    {
+      "timestamp": "2026-07-28T22:02:52.768Z",
+      "command": "code-review",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-07-28T22:02:52.768Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "103-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "103-DISCUSSION-LOG.md"
+      ]
+    },
+    "UI-SPEC.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "103-UI-SPEC.md"
+      ]
+    },
+    "RESEARCH.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "103-RESEARCH.md"
+      ]
+    },
+    "PLAN-*.md": {
+      "status": "complete",
+      "count": 8,
+      "files": [
+        "103-01-PLAN.md",
+        "103-02-PLAN.md",
+        "103-03-PLAN.md",
+        "103-04-PLAN.md",
+        "103-05-PLAN.md",
+        "103-06-PLAN.md",
+        "103-07-PLAN.md",
+        "103-08-PLAN.md"
+      ]
+    },
+    "SUMMARY-*.md": {
+      "status": "complete",
+      "count": 8,
+      "files": [
+        "103-01-SUMMARY.md",
+        "103-02-SUMMARY.md",
+        "103-03-SUMMARY.md",
+        "103-04-SUMMARY.md",
+        "103-05-SUMMARY.md",
+        "103-06-SUMMARY.md",
+        "103-07-SUMMARY.md",
+        "103-08-SUMMARY.md"
+      ]
+    },
+    "VALIDATION.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "103-VALIDATION.md"
+      ]
+    }
+  }
+}
