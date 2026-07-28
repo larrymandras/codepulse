@@ -27,6 +27,14 @@
  * nothing to roll back because the UI never claimed the swap had landed. The real success toast
  * fires from a separate effect that watches the reactive engine query for confirmation, never
  * from the dispatch ack alone (D-14).
+ *
+ * Composition API (103-06): optional `trigger` / `open` / `onOpenChange` / `onPendingChange` props
+ * let a consumer (`BrainHeaderBadge`) supply its own accessible trigger element and read pending
+ * state via a callback, instead of mounting a second, invisibly-hidden `BrainPicker` instance and
+ * relaying clicks/DOM-scraping pending state into it (the pre-103-06 shape, which left a real,
+ * focusable trigger button sitting inside `aria-hidden="true"` — an axe `aria-hidden-focus`
+ * violation). All four props are optional and independent of each other; every existing consumer
+ * that omits them keeps the exact prior self-managed-Popover, own-default-trigger behavior.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -66,6 +74,36 @@ export interface BrainPickerProps {
   profileId: string;
   /** D-08's one-time contextual default. Omit for the normal reset-every-open behavior. */
   entryScope?: PickerEntryScope;
+  /**
+   * Custom trigger content, rendered via `PopoverTrigger asChild` in place of this component's own
+   * default trigger button. Same `trigger: React.ReactNode` render-prop shape
+   * `MuteDurationPicker.tsx` already establishes in this codebase (`<PopoverTrigger
+   * asChild>{trigger}</PopoverTrigger>`) — chosen over a `renderTrigger` function because the
+   * consumer's element (`BrainHeaderBadge`'s own visible, accessible button) needs no picker
+   * internals passed into it, just Radix's own onClick/ref cloned onto it via `asChild`. Omit for
+   * the default trigger (base label + pending suffix + STUB chip), which every existing consumer
+   * (Chat composer, Settings row, 103-07) keeps using unchanged.
+   */
+  trigger?: React.ReactNode;
+  /**
+   * Controlled open state, mirroring the `open`/`onOpenChange` contract every other controlled
+   * Popover in this codebase already exposes (`BrainControl.tsx`, `VoiceControl.tsx`,
+   * `MuteDurationPicker.tsx`). Optional and independent of `trigger` — supplying a custom `trigger`
+   * is already enough for a consumer's own button to open this popover (Radix's `asChild` clones
+   * the real onClick handler onto it), so `BrainHeaderBadge` doesn't need to pass these. They exist
+   * for any future consumer that needs to open/close the picker programmatically. Omit both for the
+   * default self-managed open state.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * Fires whenever the picker's own in-flight pending-swap suffix (D-15) changes, formatted
+   * exactly as the default trigger renders it (`"· switching to {name}…"`, or `null` when idle).
+   * Lets a consumer supplying a custom `trigger` mirror the real pending state into its own visible
+   * label via a plain callback — never by scraping the DOM for `data-testid="brain-picker-pending-
+   * suffix"`, which is the bug this API replaces.
+   */
+  onPendingChange?: (pendingLabel: string | null) => void;
 }
 
 type PickerScope = "profile" | "global";
@@ -76,8 +114,21 @@ const GROUP_ORDER: { group: CatalogueEntry["group"]; label: string }[] = [
   { group: "local", label: "Local" },
 ];
 
-export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
-  const [open, setOpen] = useState(false);
+export function BrainPicker({
+  profileId,
+  entryScope,
+  trigger,
+  open: openProp,
+  onOpenChange,
+  onPendingChange,
+}: BrainPickerProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  // Controlled iff the consumer supplies `open` — checked once per render via `!== undefined`
+  // rather than tracked in a ref, matching the plain-prop-comparison controlled/uncontrolled idiom
+  // React itself uses (e.g. <input value>). No existing consumer passes `open`, so this is always
+  // `false` today and every call below falls through to the original uncontrolled behavior.
+  const isOpenControlled = openProp !== undefined;
+  const open = isOpenControlled ? openProp : uncontrolledOpen;
   const [scope, setScope] = useState<PickerScope>("profile");
   const [entries, setEntries] = useState<CatalogueEntry[] | null>(null);
   const [fetchError, setFetchError] = useState(false);
@@ -105,7 +156,8 @@ export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
   }, []);
 
   const handleOpenChange = (next: boolean) => {
-    setOpen(next);
+    if (!isOpenControlled) setUncontrolledOpen(next);
+    onOpenChange?.(next);
     if (next) {
       if (entryScope === "global" && !consumedEntryScope.current) {
         setScope("global");
@@ -130,10 +182,18 @@ export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeEngine?.model]);
 
+  // Mirrors the pending suffix out to a custom-trigger consumer (see BrainPickerProps.onPendingChange
+  // doc) — formatted identically to the string the default trigger's own DOM renders below, so a
+  // consumer's display never disagrees with what the default trigger would have shown.
+  useEffect(() => {
+    onPendingChange?.(pendingTarget ? `· switching to ${pendingTarget.name}…` : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingTarget]);
+
   const handleProfileDispatch = useCallback(
     async (entry: CatalogueEntry) => {
       setPendingTarget(entry);
-      setOpen(false);
+      handleOpenChange(false);
       const ack = await brainsApi.dispatchSwap({
         type: "gateway.model.set",
         request_id: "",
@@ -157,7 +217,7 @@ export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
     (entry: CatalogueEntry) => {
       if (scope === "global") {
         setGlobalTarget(entry);
-        setOpen(false);
+        handleOpenChange(false);
         return;
       }
       void handleProfileDispatch(entry);
@@ -193,35 +253,37 @@ export function BrainPicker({ profileId, entryScope }: BrainPickerProps) {
     <>
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={`Active brain: ${baseLabel}`}
-            className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
-          >
-            {pendingTarget && (
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
-              />
-            )}
-            <span data-testid="brain-picker-base-label">{baseLabel}</span>
-            {pendingTarget && (
-              <span
-                data-testid="brain-picker-pending-suffix"
-                className="text-xs text-muted-foreground"
-              >
-                · switching to {pendingTarget.name}…
-              </span>
-            )}
-            {BRAINS_STUB_ACTIVE && (
-              <span
-                data-testid="brain-picker-trigger-stub-chip"
-                className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
-              >
-                STUB
-              </span>
-            )}
-          </button>
+          {trigger ?? (
+            <button
+              type="button"
+              aria-label={`Active brain: ${baseLabel}`}
+              className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
+            >
+              {pendingTarget && (
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                />
+              )}
+              <span data-testid="brain-picker-base-label">{baseLabel}</span>
+              {pendingTarget && (
+                <span
+                  data-testid="brain-picker-pending-suffix"
+                  className="text-xs text-muted-foreground"
+                >
+                  · switching to {pendingTarget.name}…
+                </span>
+              )}
+              {BRAINS_STUB_ACTIVE && (
+                <span
+                  data-testid="brain-picker-trigger-stub-chip"
+                  className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
+                >
+                  STUB
+                </span>
+              )}
+            </button>
+          )}
         </PopoverTrigger>
         <PopoverContent align="start" className="w-96 p-2">
           <Command>

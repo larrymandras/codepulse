@@ -14,6 +14,7 @@
  * established for this exact reason.
  */
 
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -373,6 +374,108 @@ describe("BrainPicker — stub indicator (D-16)", () => {
       stubChipCountBefore
     );
     expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
+});
+
+describe("BrainPicker — composition API (103-06)", () => {
+  it("renders a custom `trigger` in place of its own default trigger, and clicking it opens the popover", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    render(
+      <TooltipProvider>
+        <BrainPicker
+          profileId="assistant-default"
+          trigger={<button type="button">custom trigger</button>}
+        />
+      </TooltipProvider>
+    );
+
+    // The picker's own default trigger button (base label, pending suffix, STUB chip) never
+    // renders at all when a custom `trigger` is supplied -- there is exactly one trigger element.
+    expect(screen.queryByTestId("brain-picker-base-label")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "custom trigger" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "custom trigger" }));
+    await screen.findByText("Codex CLI");
+  });
+
+  it("fires onPendingChange with the same formatted switching-to label the default trigger renders", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    let resolveDispatch: (value: unknown) => void = () => {};
+    mockDispatchSwap.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveDispatch = resolve;
+        })
+    );
+    const onPendingChange = vi.fn();
+    render(
+      <TooltipProvider>
+        <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+      </TooltipProvider>
+    );
+
+    // Idle on mount -- matches the default trigger, which renders no pending suffix at all yet.
+    expect(onPendingChange).toHaveBeenCalledWith(null);
+
+    openPicker();
+    fireEvent.click(await screen.findByText("Codex CLI"));
+
+    await waitFor(() =>
+      expect(onPendingChange).toHaveBeenCalledWith("· switching to Codex CLI…")
+    );
+
+    resolveDispatch({ type: "ack", request_id: "", status: "ok" });
+    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
+  });
+
+  it("drops the pending callback to null on a failed dispatch, matching the default trigger's own drop-suffix behavior", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockDispatchSwap.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "error",
+      error: "No credentials configured",
+    });
+    const onPendingChange = vi.fn();
+    render(
+      <TooltipProvider>
+        <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+      </TooltipProvider>
+    );
+
+    openPicker();
+    fireEvent.click(await screen.findByText("Codex CLI"));
+
+    await waitFor(() => expect(onPendingChange).toHaveBeenLastCalledWith(null));
+  });
+
+  it("supports controlled open/onOpenChange while every other test in this file (which omits both) proves the default uncontrolled behavior is unchanged", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    const onOpenChange = vi.fn();
+
+    function Controlled() {
+      const [open, setOpen] = useState(false);
+      return (
+        <BrainPicker
+          profileId="assistant-default"
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            onOpenChange(next);
+          }}
+        />
+      );
+    }
+
+    render(
+      <TooltipProvider>
+        <Controlled />
+      </TooltipProvider>
+    );
+
+    openPicker();
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+    await screen.findByText("Codex CLI");
   });
 });
 
