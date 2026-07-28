@@ -649,7 +649,7 @@ Plans:
   5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution). **Split by axis 2026-07-28** — the GLOBAL axis (`swap.set` / `swap.catalogue` / `swap.state`, astridr Phase 185/186) is live. The PER-PROFILE axis is contract-first / stub-backed; its live verification is deferred to astridr Phase 184.1. **Plan 103-08's live checkpoint (2026-07-28) found the global axis's read path (catalogue, 331 live engines) and D-15 confirm gate genuinely work end-to-end, but the dispatch → readback → revert leg does NOT — two open defects (`GlobalSwapModal.tsx` discards the real `swap.set` result; `BrainHeaderBadge.tsx` never requests `swap.get_state` on load) block it. BSC-05 is NOT satisfied; a gap-closure cycle is recommended before it can be.**
 
 **UI hint**: yes
-**Plans:** 8 plans (5 waves)
+**Plans:** 13 plans (5 waves + 3 gap-closure waves)
 
 Plans:
 **Wave 1**
@@ -674,6 +674,22 @@ Plans:
 **Wave 5** *(blocked on Wave 4 completion)*
 
 - [x] 103-08-PLAN.md — Playwright stub round trip, live global-axis verification, VALIDATION sign-off — complete 2026-07-28 (BSC-05 NOT satisfied — 2 open defects found live, gap-closure recommended), see [103-08-SUMMARY.md](phases/103-brain-swap-control-surface/103-08-SUMMARY.md)
+
+**Gap closure** *(planned 2026-07-28 from `103-VERIFICATION.md`, 1/5 truths — 6 defects, all masked from the green 2,813-test suite by `VITE_BRAINS_STUB`)*
+
+**Gap wave 1** *(parallel; no file overlap)*
+
+- [ ] 103-09-PLAN.md — One shared "what brain is actually running" resolution order (`swap.get_state` snapshot + `swap.state` subscribe), consumed by badge, composer pill and BrainControl — closes defects 6a/6b (BSC-01)
+- [ ] 103-10-PLAN.md — `recordRouting` → `internalMutation` via `internal.activeEngine.recordRouting`, closing the forgeable "server-confirmed" write path — closes CR-01 (BSC-01, BSC-04)
+- [ ] 103-11-PLAN.md — `CommandItem.onSelect` wired through a shared activation branch so keyboard search→arrow→Enter works without bypassing the cost-confirm or global-confirm gates; + WR-03, WR-01 — closes CR-02 (BSC-02, BSC-03)
+
+**Gap wave 2** *(blocked on gap wave 1 — shares `BrainPicker.tsx` with 103-11, needs 103-09's readback hook)*
+
+- [ ] 103-12-PLAN.md — GlobalSwapModal reports the real `swap.set` outcome, stops the contract-§8-violating per-profile fan-out, and survives "Done" so Revert renders; + WR-02 — closes defect #5 + CR-03 (BSC-04, BSC-03, BSC-01)
+
+**Gap wave 3** *(blocked on gap wave 2 — operator-attended, `autonomous: false`)*
+
+- [ ] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — closes BSC-05
 
 ---
 
