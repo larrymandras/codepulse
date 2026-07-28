@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { useQuery } from "convex/react";
 import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import InfoTooltip from "../components/InfoTooltip";
@@ -10,6 +11,7 @@ import {
 } from "../components/graph/ForceGraphCanvas";
 import { type ForceGraph3DHandle } from "../components/graph/ForceGraph3D";
 import { get as idbGet, set as idbSet } from "idb-keyval";
+import { api } from "../../convex/_generated/api";
 import KGSummaryCards from "../components/kg/KGSummaryCards";
 import KGControls from "../components/kg/KGControls";
 import KGDetailsPanel from "../components/kg/KGDetailsPanel";
@@ -78,6 +80,208 @@ export function computeNodeValFn3D(params: {
   // litSizeMultiplier through the 1→2.4→1.8 arrival-bloom animation on arrival.
   if (litNodeIds.has(node.id)) return (node.val ?? 1) * litSizeMultiplier;
   return node.val ?? 1;
+}
+
+// ── Answer-sync reaction — pure helpers, exported for unit testing (Phase 187
+// Plan 05, GLXY-01). These are deliberately framework-free (no refs/state) so
+// Task 1/2's tests can drive them with synthetic timers/inputs without
+// mounting the page. The in-component effect below composes them.
+
+// V5/T-187-13: sourceNodeIds must be UUID-shaped before driving
+// nodeFilterFn/setFilter — a forged/garbage id degrades to a no-op rather
+// than reaching the camera or the ego-lens fetch.
+const SOURCE_NODE_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export function isValidSourceNodeId(id: unknown): id is string {
+  return typeof id === "string" && SOURCE_NODE_ID_RE.test(id);
+}
+export function filterValidSourceNodeIds(ids: unknown[]): string[] {
+  return (ids ?? []).filter(isValidSourceNodeId);
+}
+
+// D-08 bloom/clear timing constants (UI-SPEC Camera & Lighting Contract).
+// Reused as named constants (not magic numbers) so a future spec tweak is a
+// one-line change.
+export const LIT_RESTING_MULTIPLIER = 1.8;
+const BLOOM_PEAK_MULTIPLIER = 2.4;
+const BLOOM_GROW_MS = 400;
+const BLOOM_SETTLE_MS = 400;
+const CLEAR_MS = 200;
+const CLEAR_TO_BLOOM_STAGGER_MS = 100;
+// D-09 layout-readiness poll budget — same maxFrames as centerNode3DWhenReady
+// (graph-center.ts), reused rather than invented (RESEARCH "Don't Hand-Roll").
+const D09_POLL_MAX_FRAMES = 90;
+
+function nowMs(): number {
+  return typeof performance !== "undefined" ? performance.now() : Date.now();
+}
+
+function scheduleFrame(cb: () => void): void {
+  if (typeof requestAnimationFrame === "function") {
+    requestAnimationFrame(() => cb());
+  } else {
+    setTimeout(cb, 16);
+  }
+}
+
+/**
+ * D-08 arrival bloom — one grow-then-settle size pulse, timestamp-driven (not
+ * frame-counted) so total duration is independent of frame rate: ×1 -> ×2.4
+ * over 400ms (ease-out), then ×2.4 -> ×1.8 (resting) over 400ms. A single
+ * bloom, never a multi-pulse loop. Returns a cancel fn.
+ */
+export function runArrivalBloom(setMultiplier: (v: number) => void): () => void {
+  let cancelled = false;
+  const start = nowMs();
+
+  const tick = () => {
+    if (cancelled) return;
+    const elapsed = nowMs() - start;
+    if (elapsed < BLOOM_GROW_MS) {
+      const t = elapsed / BLOOM_GROW_MS;
+      const eased = 1 - Math.pow(1 - t, 2); // ease-out
+      setMultiplier(1 + eased * (BLOOM_PEAK_MULTIPLIER - 1));
+      scheduleFrame(tick);
+    } else if (elapsed < BLOOM_GROW_MS + BLOOM_SETTLE_MS) {
+      const t = (elapsed - BLOOM_GROW_MS) / BLOOM_SETTLE_MS;
+      setMultiplier(
+        BLOOM_PEAK_MULTIPLIER - t * (BLOOM_PEAK_MULTIPLIER - LIT_RESTING_MULTIPLIER),
+      );
+      scheduleFrame(tick);
+    } else {
+      setMultiplier(LIT_RESTING_MULTIPLIER);
+    }
+  };
+  scheduleFrame(tick);
+  return () => {
+    cancelled = true;
+  };
+}
+
+/**
+ * D-08 "a superseded set clears" — a single continuous timeline (no two
+ * concurrently-scheduled tickers fighting over the same state): the OLD set
+ * fades ×1.8 -> ×1 over 200ms; the new set swaps in ~100ms after clearing
+ * starts (slight stagger, avoids an instant "pop"); once the clear window
+ * ends the SAME loop continues straight into the arrival bloom on the new
+ * set. Returns a cancel fn.
+ */
+export function runClearThenBloom(params: {
+  setLitNodeIds: (ids: Set<string>) => void;
+  setLitSizeMultiplier: (v: number) => void;
+  newLitIds: Set<string>;
+}): () => void {
+  const { setLitNodeIds, setLitSizeMultiplier, newLitIds } = params;
+  let cancelled = false;
+  let swapped = false;
+  const start = nowMs();
+
+  const tick = () => {
+    if (cancelled) return;
+    const elapsed = nowMs() - start;
+
+    if (!swapped && elapsed >= CLEAR_TO_BLOOM_STAGGER_MS) {
+      setLitNodeIds(newLitIds);
+      swapped = true;
+    }
+
+    if (elapsed < CLEAR_MS) {
+      const t = elapsed / CLEAR_MS;
+      setLitSizeMultiplier(LIT_RESTING_MULTIPLIER - t * (LIT_RESTING_MULTIPLIER - 1));
+      scheduleFrame(tick);
+    } else if (elapsed < CLEAR_MS + BLOOM_GROW_MS) {
+      const t = (elapsed - CLEAR_MS) / BLOOM_GROW_MS;
+      const eased = 1 - Math.pow(1 - t, 2);
+      setLitSizeMultiplier(1 + eased * (BLOOM_PEAK_MULTIPLIER - 1));
+      scheduleFrame(tick);
+    } else if (elapsed < CLEAR_MS + BLOOM_GROW_MS + BLOOM_SETTLE_MS) {
+      const t = (elapsed - CLEAR_MS - BLOOM_GROW_MS) / BLOOM_SETTLE_MS;
+      setLitSizeMultiplier(
+        BLOOM_PEAK_MULTIPLIER - t * (BLOOM_PEAK_MULTIPLIER - LIT_RESTING_MULTIPLIER),
+      );
+      scheduleFrame(tick);
+    } else {
+      setLitSizeMultiplier(LIT_RESTING_MULTIPLIER);
+    }
+  };
+
+  if (!swapped && CLEAR_TO_BLOOM_STAGGER_MS <= 0) {
+    setLitNodeIds(newLitIds);
+    swapped = true;
+  }
+  scheduleFrame(tick);
+  return () => {
+    cancelled = true;
+  };
+}
+
+/**
+ * D-07/D-09 fly-to poll — adapted from graph-center.ts's centerNode3DWhenReady
+ * rAF-bounded-poll SHAPE to a Set of ids (RESEARCH "Don't Hand-Roll": reuse
+ * the idiom, don't invent a new one). Polls `getNodes()` fresh every frame
+ * (not a captured array) so it sees nodes that stream in asynchronously via
+ * the ego-lens fetch.
+ *
+ * Also waits for `getHandle()` to be non-null — immediately after toggling
+ * into 3D mode, `fgRef3d.current` can still be null for one or more frames
+ * (the lazy-loaded ForceGraph3D sits behind its own Suspense boundary, which
+ * resolves asynchronously; a sync `fgRef3d.current?.zoomToFit(...)` call
+ * right when the effect fires would silently no-op and — since the turnId is
+ * already marked applied — never retry, permanently dropping that turn's
+ * fly-to). Bounded by `maxFrames`; on expiry, flies to whatever DID resolve
+ * (skipping unresolved ids and/or a still-null handle) — never throws, never
+ * retries beyond the budget.
+ */
+export function flyToLitSources(params: {
+  litIds: Set<string>;
+  getNodes: () => Array<{ id: string; x?: number; y?: number; z?: number }>;
+  getHandle: () => { zoomToFit: (ms: number, px: number, filterFn: (n: any) => boolean) => void } | null;
+  /** Stale-response guard (T-187-15) — checked every frame; a newer sync
+   *  superseding this one aborts the poll without ever calling zoomToFit. */
+  isStale: () => boolean;
+  onFlown: (resolvedIds: Set<string>) => void;
+  maxFrames?: number;
+}): () => void {
+  const { litIds, getNodes, getHandle, isStale, onFlown, maxFrames = D09_POLL_MAX_FRAMES } = params;
+  let cancelled = false;
+  let frames = 0;
+
+  const resolvedNow = (): Set<string> => {
+    const nodes = getNodes();
+    const resolved = new Set<string>();
+    for (const id of litIds) {
+      const n = nodes.find((x) => x.id === id);
+      if (n && n.x != null && n.y != null) resolved.add(id);
+    }
+    return resolved;
+  };
+
+  const tick = () => {
+    if (cancelled || isStale()) return;
+    const handle = getHandle();
+    const resolved = resolvedNow();
+
+    if (handle && resolved.size === litIds.size) {
+      handle.zoomToFit(800, 60, (n: any) => resolved.has(n.id));
+      onFlown(resolved);
+      return;
+    }
+    if (frames++ < maxFrames) {
+      scheduleFrame(tick);
+      return;
+    }
+    // T-187-14 budget expiry: fly to whichever resolved (if the handle ever
+    // mounted), silently skip the rest — never retries beyond this.
+    if (handle && resolved.size > 0) {
+      handle.zoomToFit(800, 60, (n: any) => resolved.has(n.id));
+    }
+    onFlown(resolved);
+  };
+  tick();
+
+  return () => {
+    cancelled = true;
+  };
 }
 
 // ── Lazy-load 3D render surface so three.js stays in a separate chunk ───────
@@ -269,6 +473,139 @@ export default function KnowledgeGraph() {
     if (renderMode !== "3d") return;
     fgRef3d.current?.refresh();
   }, [selectedNodeId, hoveredNodeId, litNodeIds, litSizeMultiplier, renderMode]);
+
+  // ── Answer-sync reaction (Phase 187 Plan 05, GLXY-01) ─────────────────────
+  // Subscribes to the latest kg_answer_sync row and drives D-07 (frame all
+  // sources), D-09 (ego-lens fallback for off-screen sources), and D-08
+  // (arrival bloom / clear / replay-resting) — with SC#2 (no new row / not in
+  // 3D mode) guaranteed silent: zero camera motion, zero color/size change.
+  const answerSync = useQuery(api.kg.latestAnswerSync);
+  // Guards which turnId has already been applied — also doubles as the
+  // monotonic stale-response token the D-09 async poll checks against (T-187-15).
+  const appliedSyncTurnRef = useRef<string | null>(null);
+  // First-ever apply (page-open replay of a persisted row) shows resting
+  // state, no bloom (D-08) — every subsequent apply is a genuinely new
+  // arrival and blooms.
+  const hasAppliedSyncOnceRef = useRef(false);
+  // Live mirror of graph.nodes for the D-09 poll, which runs across many rAF
+  // frames outside the React effect lifecycle and must see nodes that stream
+  // in asynchronously from the ego-lens fetch, not a stale closure snapshot.
+  const graphNodesRef = useRef(graph.nodes);
+  const bloomCancelRef = useRef<() => void>(() => {});
+  const fallbackPollCancelRef = useRef<() => void>(() => {});
+  // D-09 partial-resolution degrade banner (amber, non-blocking).
+  const [staleSourceBanner, setStaleSourceBanner] = useState<{
+    resolved: number;
+    requested: number;
+  } | null>(null);
+
+  useEffect(() => {
+    graphNodesRef.current = graph.nodes;
+  }, [graph.nodes]);
+
+  // Cancel any in-flight tween/poll on unmount — the rAF loops above are
+  // self-contained and would otherwise keep calling setState after unmount.
+  useEffect(() => {
+    return () => {
+      bloomCancelRef.current();
+      fallbackPollCancelRef.current();
+    };
+  }, []);
+
+  useEffect(() => {
+    // SC#2: no sync row yet, or not mounted in 3D — completely silent.
+    if (!answerSync || renderMode !== "3d") return;
+    // SC#2: same turnId already applied — no-op (zero motion/color/toast).
+    if (appliedSyncTurnRef.current === answerSync.turnId) return;
+
+    const turnId = answerSync.turnId;
+    const isReplay = !hasAppliedSyncOnceRef.current;
+    appliedSyncTurnRef.current = turnId;
+    hasAppliedSyncOnceRef.current = true;
+
+    // V5/T-187-13: UUID-validate before any nodeFilterFn/setFilter use —
+    // malformed/empty sourceNodeIds degrades to a graceful no-op.
+    const validIds = filterValidSourceNodeIds(answerSync.sourceNodeIds ?? []);
+    if (validIds.length === 0) return;
+
+    const litIds = new Set(validIds);
+
+    // A newer sync always wins over any in-flight animation/poll from a
+    // superseded one.
+    bloomCancelRef.current();
+    fallbackPollCancelRef.current();
+    setStaleSourceBanner(null);
+
+    const hadPriorLitSet = litNodeIds.size > 0;
+    if (isReplay) {
+      // D-08: page-open replay — resting state, no bloom.
+      setLitNodeIds(litIds);
+      setLitSizeMultiplier(LIT_RESTING_MULTIPLIER);
+    } else if (hadPriorLitSet) {
+      // D-08: a superseded set clears (~200ms) while the new set's bloom
+      // begins ~100ms after clearing starts (slight stagger).
+      bloomCancelRef.current = runClearThenBloom({
+        setLitNodeIds,
+        setLitSizeMultiplier,
+        newLitIds: litIds,
+      });
+    } else {
+      // D-08: first-ever arrival this session — straight into the bloom.
+      setLitNodeIds(litIds);
+      bloomCancelRef.current = runArrivalBloom(setLitSizeMultiplier);
+    }
+
+    const nodes = graphNodesRef.current;
+    const allOnScreen = [...litIds].every((id) => nodes.some((n) => n.id === id));
+
+    if (allOnScreen) {
+      // D-07 primary path — frame every source directly. Routed through
+      // flyToLitSources (not a bare sync zoomToFit call) because fgRef3d.current
+      // can still be null immediately after toggling into 3D mode — the lazy
+      // ForceGraph3D hasn't mounted through its Suspense boundary yet.
+      fallbackPollCancelRef.current = flyToLitSources({
+        litIds,
+        getNodes: () => graphNodesRef.current,
+        getHandle: () => fgRef3d.current,
+        isStale: () => appliedSyncTurnRef.current !== turnId,
+        onFlown: () => {},
+      });
+      return;
+    }
+
+    if (!answerSync.primaryEntityName) {
+      // Off-screen with no primary entity to lens onto — litNodeIds is
+      // already set so the sources light up if/when they scroll on-screen;
+      // nothing more we can safely do (never a no-op fly to an unrendered node).
+      return;
+    }
+
+    // D-09 fallback — reuse the exact ?focus= ego-lens mechanism, then poll
+    // for layout readiness (and ref-mount readiness), then the SAME
+    // zoomToFit call as D-07.
+    setLens("entity");
+    setFilter("entityName", answerSync.primaryEntityName);
+    setFilter("hops", 1);
+
+    fallbackPollCancelRef.current = flyToLitSources({
+      litIds,
+      getNodes: () => graphNodesRef.current,
+      getHandle: () => fgRef3d.current,
+      isStale: () => appliedSyncTurnRef.current !== turnId,
+      onFlown: (resolvedIds) => {
+        if (resolvedIds.size === 0) return; // nothing resolved — silent skip
+        setLitNodeIds(resolvedIds);
+        if (resolvedIds.size < litIds.size) {
+          setStaleSourceBanner({ resolved: resolvedIds.size, requested: litIds.size });
+        }
+      },
+    });
+    // NOTE: graph.nodes and litNodeIds are intentionally excluded — this
+    // effect must fire exactly once per new turnId (guarded by
+    // appliedSyncTurnRef above); reactivity to graph.nodes streaming in later
+    // is handled by the graphNodesRef-driven poll, not by re-running this
+    // effect.
+  }, [answerSync, renderMode]);
 
   // Shared Suspense fallback for the lazy 3D surface — sized identically to the
   // default ForceGraphCanvas/ForceGraph3D canvasClass so toggling doesn't shift
@@ -882,6 +1219,19 @@ export default function KnowledgeGraph() {
             <span className="text-muted-foreground">
               Showing {graph.stats.nodeCount} of {truncated.total} entities
               (bounded). Narrow by type/agent or raise the limit to see more.
+            </span>
+          </div>
+        )}
+
+        {/* D-09 partial-resolution degrade banner (Phase 187 Plan 05, GLXY-01) —
+            some grounded sources didn't lay out within the poll budget; the
+            resolved subset still flew/lit normally, this is non-blocking. */}
+        {staleSourceBanner && (
+          <div className="flex items-start gap-3 rounded-[var(--radius)] border border-amber-500/30 bg-amber-500/5 px-4 py-2 text-sm font-mono">
+            <Info className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+            <span className="text-muted-foreground">
+              Some grounded sources are no longer in the graph — showing{" "}
+              {staleSourceBanner.resolved} of {staleSourceBanner.requested}.
             </span>
           </div>
         )}

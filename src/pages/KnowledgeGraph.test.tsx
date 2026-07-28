@@ -23,8 +23,9 @@
  */
 
 import { describe, it, vi, beforeEach, expect, afterEach } from "vitest";
-import { render as rtlRender, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render as rtlRender, screen, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { forwardRef, useImperativeHandle } from "react";
 import type { ReactElement } from "react";
 
 // ---------------------------------------------------------------------------
@@ -59,14 +60,32 @@ vi.mock("idb-keyval", () => ({
 }));
 
 // ForceGraph3D — stub the lazy 3D surface (no WebGL in jsdom). Captures props
-// so the toggle test can assert the 3D surface actually mounted.
+// so the toggle test can assert the 3D surface actually mounted. Wrapped in
+// forwardRef (mirrors the real component's ref API) so the answer-sync tests
+// can inspect zoomToFit/cameraPosition/refresh calls via the shared handle
+// mock below — a plain function component would silently drop `ref`.
+export const mockFgRef3dHandle = {
+  cameraPosition: vi.fn(),
+  zoomToFit: vi.fn(),
+  refresh: vi.fn(),
+  scene: vi.fn(),
+  renderer: vi.fn(),
+  d3Force: vi.fn(),
+  d3ReheatSimulation: vi.fn(),
+  pauseAnimation: vi.fn(),
+  resumeAnimation: vi.fn(),
+};
+
 vi.mock("../components/graph/ForceGraph3D", () => ({
-  ForceGraph3D: (props: Record<string, any>) => (
-    <div
-      data-testid="force-graph-3d"
-      data-node-count={props.data?.nodes?.length ?? 0}
-    />
-  ),
+  ForceGraph3D: forwardRef((props: Record<string, any>, ref: any) => {
+    useImperativeHandle(ref, () => mockFgRef3dHandle);
+    return (
+      <div
+        data-testid="force-graph-3d"
+        data-node-count={props.data?.nodes?.length ?? 0}
+      />
+    );
+  }),
 }));
 
 // ForceGraphCanvas — heavy canvas dep not available in jsdom.
@@ -99,6 +118,24 @@ vi.mock("sonner", () => ({
 }));
 
 // ---------------------------------------------------------------------------
+// convex/react + generated api — the answer-sync effect's only live Convex
+// call (every other hook touching Convex is mocked wholesale above/below).
+// mockLatestAnswerSync is Vitest's "mock"-prefix hoisting escape hatch (see
+// docs: only const/function bindings prefixed "mock" may be referenced inside
+// a vi.mock factory, since vi.mock calls are hoisted above module init).
+// ---------------------------------------------------------------------------
+
+export const mockLatestAnswerSync = vi.fn();
+
+vi.mock("convex/react", () => ({
+  useQuery: (...args: unknown[]) => mockLatestAnswerSync(...args),
+}));
+
+vi.mock("../../convex/_generated/api", () => ({
+  api: { kg: { latestAnswerSync: "kg:latestAnswerSync" } },
+}));
+
+// ---------------------------------------------------------------------------
 // useKnowledgeGraph — mocked so tests control graph/selection state directly
 // without touching a real /api/kg fetch or idb persistence.
 // ---------------------------------------------------------------------------
@@ -126,6 +163,52 @@ const FIXTURE_NODE = {
   attributes: [],
   synthetic: false,
   community: null,
+};
+
+// ---------------------------------------------------------------------------
+// Answer-sync fixtures (Phase 187 Plan 05, GLXY-01) — sourceNodeIds must be
+// UUID-shaped (V5/T-187-13), so these are canonical 8-4-4-4-12 hex strings,
+// distinct from FIXTURE_NODE's non-UUID "org-1" id used by the color-ladder
+// tests above.
+const UUID_A = "11111111-1111-4111-8111-111111111111";
+const UUID_B = "22222222-2222-4222-8222-222222222222";
+const NOT_A_UUID = "not-a-uuid";
+
+// On-screen node (x/y already laid out) matching UUID_A — used for the D-07
+// "all sources on-screen" primary path.
+const ONSCREEN_NODE_A = {
+  id: UUID_A,
+  name: "Acme Corp",
+  entityType: "organization",
+  agentId: "agent-1",
+  val: 2,
+  degree: 0,
+  color: "#3b82f6",
+  attributes: [],
+  synthetic: false,
+  community: null,
+  x: 10,
+  y: 20,
+  z: 0,
+};
+
+// A node NOT matching any lit id — used so graph.nodes is non-empty (the
+// page renders its "No entities" placeholder instead of ForceGraph3D when
+// graph.nodes is truly empty) while the lit source id is still off-screen.
+const DISTRACTOR_NODE = {
+  id: "33333333-3333-4333-8333-333333333333",
+  name: "Unrelated Widget Co",
+  entityType: "organization",
+  agentId: "agent-1",
+  val: 2,
+  degree: 0,
+  color: "#3b82f6",
+  attributes: [],
+  synthetic: false,
+  community: null,
+  x: 100,
+  y: 200,
+  z: 0,
 };
 
 let mockKgReturn: any;
@@ -222,6 +305,9 @@ describe("KnowledgeGraph — 2D<->3D render-mode toggle idb-key isolation (T-187
     vi.mocked(idbGet).mockResolvedValue(undefined);
     vi.mocked(idbSet).mockResolvedValue(undefined);
     mockKgReturn = makeMockKg();
+    // No sync row (loading) — keeps the answer-sync effect a no-op for these
+    // toggle-focused tests (SC#2 default).
+    mockLatestAnswerSync.mockReturnValue(undefined);
   });
 
   afterEach(() => cleanup());
@@ -439,9 +525,217 @@ describe("KnowledgeGraph — colorFn3D/nodeValFn3D 5-state priority ladder (D-08
 });
 
 // ---------------------------------------------------------------------------
-// Plan 05 extends this file with answer-sync reaction cases:
-//   describe("answer sync", () => { ... litNodeIds population from
-//   useQuery(api.kg.latestAnswerSync), D-07 zoomToFit camera fly, D-09
-//   ego-lens fallback ... })
-// Not implemented by this plan (187-04) — litNodeIds stays dormant/empty.
+// Answer-sync reaction tests (Phase 187 Plan 05, GLXY-01)
+//
+// requestAnimationFrame is stubbed deterministically (mirrors
+// graph-center.test.ts's established precedent) — callbacks queue into
+// `rafCbs` and are advanced manually via flushRaf(), so the D-09 poll's
+// maxFrames=90 budget-expiry path is exercised without any real wall-clock
+// wait.
 // ---------------------------------------------------------------------------
+
+describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)", () => {
+  let rafCbs: Array<() => void>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(idbGet).mockResolvedValue(undefined);
+    vi.mocked(idbSet).mockResolvedValue(undefined);
+    mockLatestAnswerSync.mockReturnValue(undefined);
+
+    rafCbs = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      rafCbs.push(cb);
+      return rafCbs.length;
+    });
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.unstubAllGlobals();
+  });
+
+  const flushRaf = () => {
+    const batch = rafCbs;
+    rafCbs = [];
+    batch.forEach((cb) => cb());
+  };
+
+  /** Mounts KnowledgeGraph already hydrated into 3D mode (idb key pre-seeded). */
+  async function renderIn3D(overrides: Partial<ReturnType<typeof makeMockKg>> = {}) {
+    mockKgReturn = makeMockKg(overrides);
+    vi.mocked(idbGet).mockImplementation((key: unknown) =>
+      key === "codepulse:kg-render-mode"
+        ? Promise.resolve("3d")
+        : Promise.resolve(undefined),
+    );
+    const result = render(<KnowledgeGraph />);
+    await waitFor(() => {
+      expect(screen.getByTestId("force-graph-3d")).toBeDefined();
+    });
+    return result;
+  }
+
+  it("SC#1: a new sync with all source ids on-screen calls zoomToFit(800, 60, filterFn) matching exactly the lit ids", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-1:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    // The D-07 poll's first synchronous attempt can find fgRef3d.current
+    // still null (the lazy ForceGraph3D hasn't mounted through its Suspense
+    // boundary on this render yet) and queue a retry — flush the
+    // deterministic rAF queue on every waitFor poll so that retry runs once
+    // the ref (confirmed attached by renderIn3D's own waitFor) is noticed.
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    const [ms, px, filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(ms).toBe(800);
+    expect(px).toBe(60);
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: UUID_B })).toBe(false);
+  });
+
+  it("SC#2: re-rendering with the SAME turnId never calls zoomToFit a second time (zero-motion no-op)", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-1:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    const { rerender } = await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+
+    rerender(<KnowledgeGraph />);
+    expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+  });
+
+  it("SC#2: a sync row present but renderMode is 2D calls zoomToFit zero times", () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-1:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+    mockKgReturn = makeMockKg({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+    // idbGet default resolves undefined -> stays 2D (no hydration override).
+    render(<KnowledgeGraph />);
+
+    expect(screen.getByTestId("force-graph-canvas")).toBeDefined();
+    expect(screen.queryByTestId("force-graph-3d")).toBeNull();
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+  });
+
+  it("UUID-validation: a non-UUID id is dropped — the filter fn matches only the valid id", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-1:2",
+      sourceNodeIds: [UUID_A, NOT_A_UUID],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: NOT_A_UUID })).toBe(false);
+  });
+
+  it("UUID-validation: a payload with only invalid ids no-ops (zoomToFit never called)", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-1:3",
+      sourceNodeIds: [NOT_A_UUID],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+  });
+
+  it("D-09 ego-lens fallback: an off-screen source triggers setLens('entity') + setFilter('entityName', ...) without an immediate zoomToFit", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-2:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // UUID_A is NOT present in graph.nodes (only a distractor is) -> off-screen
+    // -> D-09 fallback. graph.nodes must stay non-empty or the page renders
+    // its "No entities" placeholder instead of ForceGraph3D.
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setLens).toHaveBeenCalledWith("entity");
+    });
+    expect(setFilter).toHaveBeenCalledWith("entityName", "Acme Corp");
+    expect(setFilter).toHaveBeenCalledWith("hops", 1);
+    // The poll hasn't resolved (the node never lays out in this test) — no
+    // no-op fly to an unrendered node (SC#1 guarantee).
+    expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+  });
+
+  it("stale-source degrade: partial resolution renders the amber banner and still flies to the resolved subset", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-3:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // UUID_A resolves (on-screen with x/y); UUID_B never lays out.
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A], links: [], stats: EMPTY_STATS },
+    });
+
+    // Not all-on-screen (UUID_B missing) -> D-09 fallback -> poll runs until
+    // its maxFrames=90 budget expires, then flies to the resolved subset.
+    await act(async () => {
+      for (let i = 0; i < 90; i++) flushRaf();
+    });
+
+    expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    const [, , filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: UUID_B })).toBe(false);
+
+    expect(
+      screen.getByText(
+        /Some grounded sources are no longer in the graph — showing 1 of 2\./,
+      ),
+    ).toBeDefined();
+  });
+});
