@@ -88,7 +88,20 @@ export interface KgOverviewResponse {
 
 /** `/api/kg/entity` */
 export interface KgEntityResponse {
-  entity: { id: string; name: string } | null;
+  entity: {
+    id: string;
+    name: string;
+    /**
+     * The focused entity's real type (187 post-verify fix, GLXY-01). Optional
+     * because older astridr deployments predate this field — `undefined` and
+     * `null` both mean "unknown", never "person". Previously ABSENT entirely,
+     * which forced `kg-graph.ts` `normalizeEntity` to hardcode
+     * `entityType: "person"` for every ego-lens focus node — byte-identical
+     * to the lit-node fill color (`#10b981`), so the color channel carried
+     * zero information for a lit source arriving via the D-09 ego-lens path.
+     */
+    entityType?: string | null;
+  } | null;
   triples: KgTriple[];
   hops: number;
   asOf: string | null;

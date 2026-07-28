@@ -269,6 +269,34 @@ describe("normalizeEntity", () => {
     expect(p.entities).toHaveLength(0);
     expect(p.triples).toHaveLength(0);
   });
+
+  it("187 post-verify fix (GLXY-01): uses the API-provided entityType instead of hardcoding 'person'", () => {
+    const resp: KgEntityResponse = {
+      entity: { id: "a", name: "obsidian", entityType: "tool" },
+      triples: [],
+      hops: 1,
+      asOf: null,
+    };
+    const p = normalizeEntity(resp);
+    expect(p.entities[0].entityType).toBe("tool");
+    // The regression this guards: "tool" must never silently become "person"
+    // (byte-identical to the lit color #10b981 — see ENTITY_TYPE_COLORS).
+    expect(p.entities[0].entityType).not.toBe("person");
+  });
+
+  it("187 post-verify fix (GLXY-01): falls back to null (never 'person') when entityType is absent", () => {
+    // Older astridr deployments predate the entityType field entirely — the
+    // response shape here has no entityType key at all.
+    const resp = {
+      entity: { id: "a", name: "memory_search" },
+      triples: [],
+      hops: 1,
+      asOf: null,
+    } as KgEntityResponse;
+    const p = normalizeEntity(resp);
+    expect(p.entities[0].entityType).not.toBe("person");
+    expect(p.entities[0].entityType).toBeNull();
+  });
 });
 
 describe("normalizeContradictions", () => {
