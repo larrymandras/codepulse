@@ -28,6 +28,7 @@ import { ControlCenterPanel } from "@/components/control-center/ControlCenterPan
 import VitalsRail from "@/components/chat/VitalsRail";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { BrainPicker } from "@/components/brains/BrainPicker";
+import { useBrainFallbackNotice } from "@/components/brains/BrainFallbackNotice";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
@@ -207,6 +208,12 @@ export default function Chat() {
     handleReject,
   } = chat;
   const { sendCommand, subscribeEvent } = useAstridrWS();
+
+  // ── CLI-to-API text-mode fallback notice (103-07-T3, D-04) ──────────────
+  // Mounted once, alongside the composer pill — surfaces a silent CLI-brain
+  // tool-needing-turn fallback as an honest warn-toned toast instead of a
+  // silent degrade.
+  useBrainFallbackNotice();
 
   // ── Mic toggle (persisted) ──────────────────────────────────────────────
   const [listening, setListening] = useState<boolean>(() => {
