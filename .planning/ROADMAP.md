@@ -645,9 +645,20 @@ Plans:
   2. An operator picks a different engine from the available set — keyed API models and subscription CLIs — and the swap is dispatched to astridr's brain-swap endpoint over authenticated `/api/*`.
   3. Swap scope is explicit: per-agent swaps apply only to that agent; a global swap requires a separate deliberate confirmation before it fires.
   4. Swap status is honest end-to-end — in-flight → success/failure → the *resulting* active engine read back from astridr; a failed swap never leaves an optimistic "switched" state on screen.
-  5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution).
+  5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution). **Split by axis 2026-07-28** — the GLOBAL axis (`swap.set` / `swap.catalogue` / `swap.state`, astridr Phase 185/186) is live and this wording is genuinely satisfied against the running stack in Plan 103-08. The PER-PROFILE axis is contract-first / stub-backed; its live verification is deferred to astridr Phase 184.1.
 
 **UI hint**: yes
+**Plans:** 8 plans (5 waves)
+
+Plans:
+- [ ] 103-01-PLAN.md — 103-CONTRACT.md (D-17) + the brainsApi adapter seam and the five mandatory fixtures
+- [ ] 103-02-PLAN.md — Convex reactive substrate: activeEngineSnapshots table, activeEngine.ts, model_routing ingest case, [BLOCKING] schema push
+- [ ] 103-03-PLAN.md — useActiveEngine reactive hook + BrainPickerRow with tokenized health/quota
+- [ ] 103-04-PLAN.md — GlobalSwapModal: confirm-to-result, snapshot, fan-out, revert
+- [ ] 103-05-PLAN.md — BrainPicker: popover + cmdk groups, scope selector, dual-branch dispatch
+- [ ] 103-06-PLAN.md — BrainHeaderBadge with Mixed-brains state + DashboardLayout mount
+- [ ] 103-07-PLAN.md — Chat composer pill, in-place Settings stale-row replacement, CLI-to-API fallback notice
+- [ ] 103-08-PLAN.md — Playwright stub round trip, live global-axis verification, VALIDATION sign-off
 
 ---
 

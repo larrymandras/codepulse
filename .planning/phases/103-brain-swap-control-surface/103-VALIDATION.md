@@ -61,23 +61,44 @@ This phase is **stub-backed on the per-profile axis and live on the global axis*
 
 ## Per-Task Verification Map
 
-> Task IDs are filled by `gsd-planner`. The requirement→test mapping below is fixed by research;
-> the planner MUST bind each row to a real task ID and MUST NOT drop a row.
+> Task IDs bound by `gsd-planner` 2026-07-28. No row was dropped and no thirteenth mapping was
+> invented. **Two automated commands were re-pointed** at planning time to the file that genuinely
+> contains the assertion — flagged inline as `[cmd corrected]`. Research had written both under a
+> "same file as above" shorthand that pointed at the wrong test file:
+> row 7 (scope-selector reset) lives in the picker, not the modal; row 9 (partial-failure result
+> rows) lives in the modal, not the picker. A command pointing at a file that does not hold the
+> assertion is a false verification, so the file was corrected rather than the row dropped.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| _TBD_ | _TBD_ | 0 | BSC-05 | — | Stub adapter rejects malformed shapes in dev (contract-drift canary, ASVS V5) | unit | `npx vitest run src/lib/brainsApi.test.ts` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-01 | — | N/A | unit | `npx vitest run src/components/brains/BrainHeaderBadge.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-01 | — | N/A | unit (Convex) | `npx vitest run convex/activeEngine.test.ts` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-02 | — | Command follows the same non-admin auth tier as `swap.set` | unit | `npx vitest run src/lib/brainsApi.test.ts` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-02 | — | N/A | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-03 | — | N/A | unit | `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-03 | — | N/A | unit | `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-04 | — | N/A | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-04 | — | N/A | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-05 | — | Stub build cannot masquerade as live (persistent STUB indicators) | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-05 | — | N/A | contract + typecheck | `npx vitest run src/lib/brainsApi.test.ts && npx tsc --noEmit` | ❌ W0 | ⬜ pending |
-| _TBD_ | _TBD_ | _TBD_ | BSC-02, BSC-04 | — | N/A | e2e | `npm run test:e2e -- brain-swap.spec.ts` | ❌ W0 | ⬜ pending |
+| 103-01-T3 | 103-01 | 1 | BSC-05 | T-103-01 | Stub adapter rejects malformed shapes in dev (contract-drift canary, ASVS V5) | unit | `npx vitest run src/lib/brainsApi.test.ts` | ❌ W0 | ⬜ pending |
+| 103-06-T1 | 103-06 | 4 | BSC-01 | T-103-23 | Mixed state never presents one profile's value as the engine | unit | `npx vitest run src/components/brains/BrainHeaderBadge.test.tsx` | ❌ W0 | ⬜ pending |
+| 103-02-T3 | 103-02 | 1 | BSC-01 | T-103-05 | Ingest coalesces snake/camelCase defensively; bounded read | unit (Convex) | `npx vitest run convex/activeEngine.test.ts` | ❌ W0 | ⬜ pending |
+| 103-01-T3 | 103-01 | 1 | BSC-02 | T-103-02 | Command follows the same non-admin auth tier as `swap.set` | unit | `npx vitest run src/lib/brainsApi.test.ts` | ❌ W0 | ⬜ pending |
+| 103-05-T2 | 103-05 | 3 | BSC-02 | T-103-17 | Dispatch validated client-side before leaving the browser | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
+| 103-04-T2 | 103-04 | 2 | BSC-03 | T-103-12 | Global swap enumerates every affected profile before firing | unit | `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` | ❌ W0 | ⬜ pending |
+| 103-05-T2 | 103-05 | 3 | BSC-03 | T-103-21 | Scope resets to "This profile" every open, so global requires a deliberate move | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` `[cmd corrected]` | ❌ W0 | ⬜ pending |
+| 103-05-T2 | 103-05 | 3 | BSC-04 | T-103-18 | Pending never flips the base label; failure drops the suffix, claims nothing | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
+| 103-04-T2 | 103-04 | 2 | BSC-04 | T-103-14 | Failed rows keep their real unchanged engine; target name absent | unit | `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` `[cmd corrected]` | ❌ W0 | ⬜ pending |
+| 103-05-T2 | 103-05 | 3 | BSC-05 | T-103-19 | Stub build cannot masquerade as live (persistent STUB indicators) | unit | `npx vitest run src/components/brains/BrainPicker.test.tsx` | ❌ W0 | ⬜ pending |
+| 103-01-T3 | 103-01 | 1 | BSC-05 | T-103-01 | Stub return shapes match the `103-CONTRACT.md` interface | contract + typecheck | `npx vitest run src/lib/brainsApi.test.ts && npx tsc --noEmit` | ❌ W0 | ⬜ pending |
+| 103-08-T1 | 103-08 | 5 | BSC-02, BSC-04 | T-103-30 | A green stub run is explicitly not live per-profile verification | e2e | `npm run test:e2e -- brain-swap.spec.ts` | ❌ W0 | ⬜ pending |
+
+**Fixture ownership:** all five mandatory fixtures below are built as real work in **103-01-T2**
+(`src/lib/brainsFixtures.ts`), not inline inside a test task.
+
+**Additional plan-level gates not in the map above:**
+
+| Task ID | Plan | Wave | Gate |
+|---------|------|------|------|
+| 103-02-T2 | 103-02 | 1 | **[BLOCKING]** Convex schema push — must land before any reactive-path claim |
+| 103-03-T1 | 103-03 | 2 | `useActiveEngine` never returns `undefined`; no fallback to `modelPreferences` |
+| 103-03-T2 | 103-03 | 2 | Health/quota thresholds re-tokenized to `--status-*`; rows never truncate |
+| 103-06-T2 | 103-06 | 4 | Badge wrapped in `SectionErrorBoundary` inside `DashboardLayout` |
+| 103-07-T1 | 103-07 | 4 | `p.model` stale read deleted from `Settings.tsx`, live value wins when they differ |
+| 103-07-T3 | 103-07 | 4 | CLI-to-API fallback surfaced as a warn-toned toast (D-04 honesty) |
+| 103-08-T2 | 103-08 | 5 | **Live global-axis verification against the running stack** — BSC-05's satisfiable half |
+| 103-08-T3 | 103-08 | 5 | Validation sign-off records what remains unproven |
 
 **Behavior covered per row (research § Phase Requirements → Test Map):**
 1. BSC-05/W0 — stub adapter shape validation.
