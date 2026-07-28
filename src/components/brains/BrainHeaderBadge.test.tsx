@@ -1,13 +1,14 @@
 /**
- * BrainHeaderBadge.test.tsx — 103-06-T1.
+ * BrainHeaderBadge.test.tsx — 103-06-T1, rewritten under 103-06 for the composition-API rewrite.
  *
  * `@/components/brains/BrainPicker` is mocked entirely — this file tests BrainHeaderBadge's OWN
- * rendering/relay logic (mixed-state honesty, aria-label, pulse dot, session/pinned line, click
- * relay, pending mirroring), not BrainPicker's own internals (already covered by
- * BrainPicker.test.tsx). The mock exposes a `mock-toggle-pending` button that flips a local
- * `data-testid="brain-picker-pending-suffix"` node in and out of its own DOM, letting these tests
- * exercise the REAL MutationObserver-based mirroring in BrainHeaderBadge.tsx against a real DOM
- * mutation rather than a re-rendered prop.
+ * rendering/composition logic (mixed-state honesty, aria-label, pulse dot, session/pinned line,
+ * trigger composition, pending mirroring), not BrainPicker's own internals (already covered by
+ * BrainPicker.test.tsx, including the real `trigger`/`onPendingChange` API this mock stands in
+ * for). The mock renders `props.trigger` verbatim (exactly what the real `BrainPicker` does via
+ * `PopoverTrigger asChild`) and exposes a `mock-toggle-pending` button that calls
+ * `props.onPendingChange` directly — the real callback contract — rather than mutating any DOM
+ * node a consumer would have to scrape.
  *
  * `convex/react` + the generated Convex API module are mocked directly (not
  * `@/hooks/useActiveEngine`/`@/hooks/useProfileConfigs`) so the REAL `useActiveEngine` hook and
@@ -15,7 +16,7 @@
  * already establishes for hook-level tests.
  */
 
-import { useState as useMockState } from "react";
+import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,26 +24,36 @@ import { BrainHeaderBadge } from "./BrainHeaderBadge";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
-const mockPickerTriggerClick = vi.fn();
+let mockOnPendingChange: ((label: string | null) => void) | undefined;
 
 vi.mock("@/components/brains/BrainPicker", () => ({
-  BrainPicker: (props: { profileId: string; entryScope?: string }) => {
-    const [pending, setPending] = useMockState(false);
+  BrainPicker: (props: {
+    profileId: string;
+    entryScope?: string;
+    trigger?: ReactNode;
+    onPendingChange?: (label: string | null) => void;
+  }) => {
+    mockOnPendingChange = props.onPendingChange;
     return (
       <div
         data-testid="mock-brain-picker"
         data-profile-id={props.profileId}
         data-entry-scope={props.entryScope ?? ""}
       >
-        <button type="button" aria-label="Active brain: mock-engine" onClick={mockPickerTriggerClick}>
-          mock trigger
-        </button>
-        <button type="button" data-testid="mock-toggle-pending" onClick={() => setPending((p) => !p)}>
+        {props.trigger}
+        <button
+          type="button"
+          data-testid="mock-toggle-pending"
+          data-pending="false"
+          onClick={(e) => {
+            const btn = e.currentTarget;
+            const nextPending = btn.dataset.pending !== "true";
+            btn.dataset.pending = String(nextPending);
+            props.onPendingChange?.(nextPending ? "· switching to Codex CLI…" : null);
+          }}
+        >
           toggle pending
         </button>
-        {pending && (
-          <span data-testid="brain-picker-pending-suffix">· switching to Codex CLI…</span>
-        )}
       </div>
     );
   },
@@ -86,7 +97,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  mockPickerTriggerClick.mockReset();
+  mockOnPendingChange = undefined;
   mockGetCatalogue.mockReset();
   mockGetDefaultProfileId.mockReset();
   mockGetCatalogue.mockResolvedValue([]);
@@ -279,17 +290,32 @@ describe("BrainHeaderBadge — session override vs pinned default (D-02)", () =>
   });
 });
 
-describe("BrainHeaderBadge — click relay into the real BrainPicker", () => {
-  it("relays a click on the visible badge into BrainPicker's own trigger", async () => {
+describe("BrainHeaderBadge — trigger composition (103-06)", () => {
+  it("passes its own visible, accessible button as BrainPicker's `trigger` prop instead of mounting a second, hidden picker", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     renderBadge();
 
-    const badgeButton = await screen.findByRole("button", {
-      name: "Active brain: anthropic-sonnet-5",
-    });
-    fireEvent.click(badgeButton);
+    const picker = await screen.findByTestId("mock-brain-picker");
+    // The real "Active brain" button renders INSIDE the (mocked) BrainPicker, because it IS the
+    // `trigger` prop BrainPicker renders via `PopoverTrigger asChild` — not a separate element a
+    // click has to be relayed into.
+    expect(
+      within(picker).getByRole("button", { name: "Active brain: anthropic-sonnet-5" })
+    ).toBeInTheDocument();
+    // Exactly one "Active brain" control exists in the whole accessibility tree — no second,
+    // invisibly-mounted instance anywhere in the document.
+    expect(screen.getAllByRole("button", { name: /Active brain:/ })).toHaveLength(1);
+  });
 
-    expect(mockPickerTriggerClick).toHaveBeenCalledTimes(1);
+  it("passes the effective profileId through to BrainPicker unchanged", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    expect(screen.getByTestId("mock-brain-picker")).toHaveAttribute(
+      "data-profile-id",
+      "assistant-default"
+    );
   });
 });
 
@@ -309,7 +335,7 @@ describe("BrainHeaderBadge — pending never lies (D-15)", () => {
     expect(screen.getByTestId("brain-header-badge-label").textContent).toBe(labelBefore);
   });
 
-  it("drops the pending suffix once the mirrored BrainPicker state clears", async () => {
+  it("drops the pending suffix once BrainPicker's onPendingChange reports it cleared", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     renderBadge();
 
@@ -318,6 +344,24 @@ describe("BrainHeaderBadge — pending never lies (D-15)", () => {
     await screen.findByTestId("brain-header-badge-pending");
 
     fireEvent.click(screen.getByTestId("mock-toggle-pending"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("brain-header-badge-pending")).not.toBeInTheDocument()
+    );
+  });
+
+  it("exposes onPendingChange as a real callback prop, invocable directly, not sourced from any DOM node", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    renderBadge();
+
+    await screen.findByTestId("brain-header-badge-label");
+    expect(mockOnPendingChange).toBeInstanceOf(Function);
+
+    mockOnPendingChange?.("· switching to Fable 5…");
+    expect(await screen.findByTestId("brain-header-badge-pending")).toHaveTextContent(
+      "switching to Fable 5"
+    );
+
+    mockOnPendingChange?.(null);
     await waitFor(() =>
       expect(screen.queryByTestId("brain-header-badge-pending")).not.toBeInTheDocument()
     );
@@ -333,5 +377,23 @@ describe("BrainHeaderBadge — accessibility", () => {
     expect(button).toHaveAttribute("aria-label", "Active brain: anthropic-sonnet-5");
     // Text label is viewport-hidden below sm:, but aria-label carries the same content regardless.
     expect(within(button).getByTestId("brain-header-badge-label").className).toContain("sm:inline");
+  });
+
+  it("never places a focusable element inside an aria-hidden container (axe aria-hidden-focus regression, 103-06)", async () => {
+    seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
+    const { container } = renderBadge();
+    await screen.findByTestId("brain-header-badge-label");
+
+    // This is the exact defect the pre-103-06 shape had: a whole second BrainPicker instance
+    // mounted inside a `aria-hidden="true"` wrapper for its real trigger `<button>` to be
+    // DOM-relay-clicked into. `opacity-0`/`pointer-events-none` do not remove an element from the
+    // tab order, so that trigger stayed keyboard-focusable while assistive tech was told to ignore
+    // it — WCAG 4.1.2 / axe-core `aria-hidden-focus`. There must be zero focusable descendants of
+    // any `aria-hidden="true"` element anywhere in this component's render.
+    const FOCUSABLE_SELECTOR = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+    const hiddenContainers = Array.from(container.querySelectorAll('[aria-hidden="true"]'));
+    for (const hidden of hiddenContainers) {
+      expect(hidden.querySelectorAll(FOCUSABLE_SELECTOR)).toHaveLength(0);
+    }
   });
 });
