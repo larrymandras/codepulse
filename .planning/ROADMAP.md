@@ -654,7 +654,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 103-01-PLAN.md — 103-CONTRACT.md (D-17) + the brainsApi adapter seam and the five mandatory fixtures
+- [x] 103-01-PLAN.md — 103-CONTRACT.md (D-17) + the brainsApi adapter seam and the five mandatory fixtures — complete 2026-07-28, see [103-01-SUMMARY.md](phases/103-brain-swap-control-surface/103-01-SUMMARY.md)
 - [ ] 103-02-PLAN.md — Convex reactive substrate: activeEngineSnapshots table, activeEngine.ts, model_routing ingest case, [BLOCKING] schema push
 
 **Wave 2** *(blocked on Wave 1 completion)*
