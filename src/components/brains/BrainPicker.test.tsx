@@ -1,5 +1,5 @@
 /**
- * BrainPicker.test.tsx — 103-05-T2.
+ * BrainPicker.test.tsx — 103-05-T2, extended 103-08 for the scope-aware catalogue fix.
  *
  * Structured after `BrainControl.test.tsx` (module-level `vi.mock`, exact
  * `toHaveBeenCalledWith` command-shape assertions, the never-truncates and
@@ -12,6 +12,12 @@
  * `BrainPickerRow` (reused verbatim, per plan) transitively calls the real
  * `useProviderHealth()` hook — same mocking idiom `BrainPickerRow.test.tsx` already
  * established for this exact reason.
+ *
+ * `@/contexts/AstridrWSContext` is mocked (103-08) the same way `BrainControl.test.tsx`
+ * mocks it, because the picker's "global" scope branch now reads the live catalogue via
+ * `useAstridrWS().sendCommand` exactly as `BrainControl.tsx` does — every "profile"-scope
+ * test in this file supplies a `mockSendCommand` that is never asserted against, proving
+ * those tests stay entirely on the `brainsApi.getCatalogue()` seam.
  */
 
 import { useState } from "react";
@@ -37,6 +43,17 @@ vi.mock("@/lib/brainsApi", () => ({
   get BRAINS_STUB_ACTIVE() {
     return stubActive;
   },
+}));
+
+const mockSendCommand = vi.fn();
+vi.mock("@/contexts/AstridrWSContext", () => ({
+  useAstridrWS: () => ({
+    status: "connected",
+    sendCommand: (...args: unknown[]) => mockSendCommand(...args),
+    subscribe: vi.fn(() => vi.fn()),
+    subscribeEvent: vi.fn(() => vi.fn()),
+    reconnect: vi.fn(),
+  }),
 }));
 
 const mockActiveEngines: Record<
@@ -103,6 +120,17 @@ beforeEach(() => {
   mockToastError.mockReset();
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
+  mockSendCommand.mockReset();
+  // Default so any incidental swap.catalogue call in a "profile"-scope test (there shouldn't be
+  // one) resolves harmlessly instead of hanging the test on an unresolved promise. Named to line
+  // up with STUB_CATALOGUE's "Codex CLI" entry so tests that toggle to "All profiles" without
+  // caring about the catalogue's actual contents can keep asserting on the same familiar text.
+  mockSendCommand.mockResolvedValue({
+    type: "ack",
+    request_id: "",
+    status: "ok",
+    entries: [{ id: "codex-cli", name: "Codex CLI", vendor: "codex" }],
+  });
   stubActive = false;
 });
 
@@ -224,6 +252,9 @@ describe("BrainPicker — dispatch branch separation", () => {
     openPicker();
     await screen.findByText("Codex CLI");
     fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    // Switching scope re-fetches (103-08: the catalogue is scope-sourced now), so the row
+    // momentarily disappears behind the loading skeleton before the global fetch resolves.
+    await screen.findByText("Codex CLI");
 
     fireEvent.click(screen.getByText("Codex CLI"));
 
@@ -365,6 +396,8 @@ describe("BrainPicker — stub indicator (D-16)", () => {
     openPicker();
     await screen.findByText("Codex CLI");
     fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    // Switching scope re-fetches (103-08), so wait for the global-sourced row before clicking it.
+    await screen.findByText("Codex CLI");
     fireEvent.click(screen.getByText("Codex CLI"));
 
     await screen.findByTestId("global-swap-modal");
@@ -493,5 +526,92 @@ describe("BrainPicker — never-truncates regression guard", () => {
     expect(row.className).toContain("whitespace-normal");
     expect(row.className).toContain("break-words");
     expect(row.className).not.toContain("truncate");
+  });
+});
+
+// ── 103-08: scope-aware catalogue source ──────────────────────────────────────
+//
+// Before this fix, BOTH scopes rendered the SAME single fetch from `brainsApi.getCatalogue()`
+// (the stub-backed, deferred per-profile seam) — the "All profiles" branch never touched the
+// live, shipped `swap.catalogue` command at all, so the flagship picker could not initiate even
+// the global swap that already works. These tests prove each scope reads from its own correct
+// source and that a live failure never quietly degrades into stub data.
+
+describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
+  it('scope "profile" sources the catalogue from brainsApi.getCatalogue() only, never sendCommand', async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
+    expect(mockSendCommand).not.toHaveBeenCalled();
+  });
+
+  it('scope "global" sources the catalogue from the live swap.catalogue command, not brainsApi', async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "ok",
+      entries: [{ id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" }],
+    });
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI"); // initial open, default "This profile" scope
+
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+
+    await waitFor(() =>
+      expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.catalogue", target: "brain" })
+    );
+    expect(await screen.findByText("Grok Live")).toBeInTheDocument();
+    // The stub-backed per-profile catalogue never bleeds into the global branch's rendered list.
+    expect(screen.queryByText("Codex CLI")).not.toBeInTheDocument();
+    // Only the initial "This profile" open touched brainsApi -- the scope switch to "global"
+    // did not fall back to it.
+    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the error state, never a stub fallback, when the global swap.catalogue ack is non-ok", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "error",
+      error: "backend unreachable",
+    });
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+
+    expect(
+      await screen.findByText("Couldn't load the brain catalogue — try again in a moment.")
+    ).toBeInTheDocument();
+    // Honesty check (constraint from 103-08): an errored live request must never silently
+    // degrade into presenting stub data as though it were a successful (if empty) live result.
+    expect(screen.queryByText("Codex CLI")).not.toBeInTheDocument();
+    expect(mockGetCatalogue).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads from swap.catalogue immediately when entryScope="global" is the initial scope', async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "ok",
+      entries: [{ id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" }],
+    });
+    renderPicker({ entryScope: "global" });
+
+    openPicker();
+    await screen.findByText("Grok Live");
+
+    expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.catalogue", target: "brain" });
+    expect(mockGetCatalogue).not.toHaveBeenCalled();
   });
 });

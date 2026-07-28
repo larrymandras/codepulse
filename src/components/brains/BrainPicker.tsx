@@ -59,8 +59,47 @@ import { BrainPickerRow } from "@/components/brains/BrainPickerRow";
 import { GlobalSwapModal, type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
+import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
 import { cn } from "@/lib/utils";
+
+/** Raw entry shape `swap.catalogue` actually returns (`ws_commands.py::_handle_swap_catalogue`,
+ * mirrored by `BrainControl.tsx`'s own `CatalogueEntry`) — id/name/vendor only, none of the
+ * per-profile `CatalogueEntry`'s D-07 fields (group/billing/costTier/...), because the live global
+ * axis has never carried that data. */
+interface GlobalCatalogueEntry {
+  id: string;
+  name: string;
+  vendor?: string;
+}
+
+/**
+ * Adapts a live `swap.catalogue` entry into this picker's `CatalogueEntry` shape so it can render
+ * through the SAME D-07 grouped rows the per-profile branch uses — no second render path. Every
+ * global-axis entry is billed per-token through the gateway, so `group`/`billing: "api"` is an
+ * accurate description, not an invented one.
+ *
+ * `costTier: "normal"` rather than `"unknown"` is a deliberate choice, not a guess dressed up as
+ * data: `BrainPickerRow`'s `needsConfirm` gate (`entry.costTier === "expensive" || "unknown"`) is
+ * scope-blind — it fires the inline expand-to-confirm step for ANY row regardless of "This
+ * profile" vs. "All profiles" scope. 103-UI-SPEC.md §3 is explicit that the two frictions must
+ * never stack for the global branch ("the row still dispatches into the global-swap modal...
+ * instead of a second confirmation surface") — `GlobalSwapModal` already owns cost-tier warning
+ * copy of its own (`needsCostWarning`). Tagging every live entry `"unknown"` here would silently
+ * re-introduce the double-confirm UI-SPEC forbids and change this task's explicitly out-of-scope
+ * dispatch semantics as a side effect of a labeling choice. `quotaRemainingPct`/`health` stay
+ * omitted (both optional) — `swap.catalogue` has never reported either.
+ */
+function normalizeGlobalCatalogueEntry(entry: GlobalCatalogueEntry): CatalogueEntry {
+  return {
+    id: entry.id,
+    name: entry.name,
+    vendor: entry.vendor ?? "",
+    group: "api",
+    billing: "api",
+    costTier: "normal",
+  };
+}
 
 /** D-08's contextual, one-time exception to the reset-on-open rule: the mixed-state header badge
  * (a later plan's caller) may request the picker open on "All profiles" scope exactly once. Every
@@ -143,30 +182,55 @@ export function BrainPicker({
   const activeEngines = useActiveEngine();
   const activeEngine = activeEngines[profileId] ?? null;
   const allProfiles = useProfileConfigs();
+  const { sendCommand } = useAstridrWS();
 
-  const fetchCatalogue = useCallback(async () => {
-    setFetchError(false);
-    setEntries(null);
-    try {
-      const list = await brainsApi.getCatalogue();
-      setEntries(list);
-    } catch {
-      setFetchError(true);
-    }
-  }, []);
+  /**
+   * Scope-aware catalogue source (fix for the scope-blind picker bug): "profile" keeps using
+   * `brainsApi.getCatalogue()` exactly as before — that seam is still the stub-backed, deferred
+   * per-profile axis (103-CONTRACT.md §1, Ástríðr Phase 184.1) and must never be told otherwise.
+   * "global" instead reads the LIVE `swap.catalogue` command the same way `BrainControl.tsx:142`
+   * already does — same request shape, same `ack.status === "ok" && Array.isArray(ack.entries)`
+   * success check, same "anything else is an error, never a silent empty success" handling — so a
+   * real backend failure surfaces the existing error state instead of quietly rendering as an
+   * empty catalogue or falling back to stub data.
+   */
+  const fetchCatalogue = useCallback(
+    async (targetScope: PickerScope) => {
+      setFetchError(false);
+      setEntries(null);
+      try {
+        if (targetScope === "global") {
+          const ack = await sendCommand({ type: "swap.catalogue", target: "brain" });
+          if (ack.status === "ok" && Array.isArray(ack.entries)) {
+            setEntries(
+              (ack.entries as GlobalCatalogueEntry[]).map(normalizeGlobalCatalogueEntry)
+            );
+          } else {
+            setFetchError(true);
+          }
+          return;
+        }
+        const list = await brainsApi.getCatalogue();
+        setEntries(list);
+      } catch {
+        setFetchError(true);
+      }
+    },
+    [sendCommand]
+  );
 
   const handleOpenChange = (next: boolean) => {
     if (!isOpenControlled) setUncontrolledOpen(next);
     onOpenChange?.(next);
     if (next) {
+      let nextScope: PickerScope = "profile";
       if (entryScope === "global" && !consumedEntryScope.current) {
-        setScope("global");
+        nextScope = "global";
         consumedEntryScope.current = true;
-      } else {
-        setScope("profile");
       }
+      setScope(nextScope);
       setExpandedId(null);
-      void fetchCatalogue();
+      void fetchCatalogue(nextScope);
     }
   };
 
@@ -298,7 +362,14 @@ export function BrainPicker({
                 type="single"
                 value={scope}
                 onValueChange={(next) => {
-                  if (next) setScope(next as PickerScope);
+                  if (!next) return;
+                  const nextScope = next as PickerScope;
+                  // The catalogue is scope-sourced now (profile -> brainsApi.getCatalogue(),
+                  // global -> live swap.catalogue) -- switching scope mid-open must re-fetch, or
+                  // this would keep rendering the OLD scope's list under the NEW scope's dispatch
+                  // branch, recreating the scope-blind bug this fix closes.
+                  setScope(nextScope);
+                  void fetchCatalogue(nextScope);
                 }}
                 variant="outline"
                 className="w-full"
