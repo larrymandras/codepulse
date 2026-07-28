@@ -1,10 +1,11 @@
 ---
 phase: 103
 slug: brain-swap-control-surface
-status: draft
+status: approved
 shadcn_initialized: true
 preset: official (no third-party registries)
 created: 2026-07-28
+reviewed_at: 2026-07-28
 ---
 
 # Phase 103 — UI Design Contract
@@ -206,11 +207,22 @@ Accent reserved for: primary CTA buttons, the picker's selected-row highlight, f
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS — revision 1 resolved a BLOCK (billing chip `text-[10px]` → `text-xs`)
+- [x] Dimension 5 Spacing: PASS — revision 1 resolved a BLOCK (composer pill `px-2.5` → `px-2`)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-07-28 (gsd-ui-checker, 1 revision iteration — 2 BLOCKs + 4 FLAGs raised, all 6 fixed)
+
+### Additional checks verified
+- Decision compliance D-01..D-17 — no violations, no regressions after revision.
+- Honesty-of-state (BSC-01/BSC-04) — pending overlay never mutates the base label; failed rows keep their real engine; stub indicator persistent and two-layer; session-override vs pinned-default never both shown as current.
+- Theme portability — all four dark themes plus light `:root`; no glow-only signal; the sole hex exception (`PROVIDER_COLORS`) is scoped as brand identity, not a theme surface color.
+- Color-channel separation — `--primary` reserved to 4 named uses; pending locked to `--status-info`, never `--primary`.
+- Non-color redundancy — health dot carries a Tooltip with the status word; billing chip and STUB tag are text-based; quota bar carries information in fill length.
+
+### Carried forward (non-blocking)
+- Health/provider dot is 6px, off the declared 4px spacing grid. Accepted as a documented exception matching existing `ProviderHealthPanel` / `GatewayQuotaPanel` geometry. Normalize to 4px or 8px only if those source components are revisited.
+- Composer pill sits below the 44px mobile touch-target guideline by design (desktop-first, mouse-driven control, matching `EStopButton` / `NotificationBell` / `ThemeSwitcher` heights in the same cluster). Recorded as a reasoned exception, not a compliance claim.
