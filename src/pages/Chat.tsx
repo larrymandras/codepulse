@@ -21,12 +21,16 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Send, Mic, MicOff, AlertCircle, Eye } from "lucide-react";
+import { Send, Mic, MicOff, AlertCircle, Eye, ChevronDown, Clock, Pin } from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
 import VitalsRail from "@/components/chat/VitalsRail";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
+import { BrainPicker } from "@/components/brains/BrainPicker";
+import { useActiveEngine } from "@/hooks/useActiveEngine";
+import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
+import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
 import { useScreenShare } from "@/hooks/useScreenShare";
@@ -78,6 +82,114 @@ function FollowUpCountdownBar({ active, durationMs }: { active: boolean; duratio
         />
       </div>
     </div>
+  );
+}
+
+// ─── Brain composer pill (103-07-T2, D-05 corrected host) ────────────────────
+//
+// D-05's host correction (103-CONTEXT.md, 2026-07-28): the pill lives HERE, on Chat.tsx's own
+// inline composer — not on ChatInput.tsx (imported only by the unrelated InsightsChat.tsx). This
+// page is single-persona and carries no profile switcher, so the pill scopes to the contract's
+// `default_profile_id` (103-CONTRACT.md §3) via brainsApi.getDefaultProfileId() — never an
+// invented CodePulse-side active-profile mechanism.
+//
+// This page already renders BrainControl (the LIVE global runtime axis, seeded via
+// swap.get_state / swap.state at lines ~171-232 above) inside ControlCenterPanel. The two
+// surfaces can legitimately disagree — this pill's tooltip/aria-label says it reflects the
+// per-profile default, and it deliberately never reuses BrainControl's `Brain` icon (T-103-29),
+// using a provider-color dot instead so the two are never visually conflated.
+function formatBrainTtl(expiresAt?: number): string {
+  if (!expiresAt) return "soon";
+  const remainingMs = expiresAt * 1000 - Date.now();
+  const minutes = Math.max(0, Math.round(remainingMs / 60000));
+  return `${minutes}m`;
+}
+
+function BrainComposerPill({ profileId }: { profileId: string }) {
+  const activeEngines = useActiveEngine();
+  const engine = activeEngines[profileId] ?? null;
+  const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+
+  // Display-metadata resolution only (provider-identity dot color) — never the engine truth
+  // itself, which comes exclusively from useActiveEngine above (D-14).
+  useEffect(() => {
+    let cancelled = false;
+    brainsApi
+      .getCatalogue()
+      .then((list) => {
+        if (!cancelled) setCatalogue(list);
+      })
+      .catch(() => {
+        /* honest degrade: the dot falls back to a neutral color below */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const vendor = catalogue?.find((e) => e.id === engine?.model)?.vendor;
+  const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
+  const baseLabel = engine?.model ?? "Auto";
+
+  return (
+    <BrainPicker
+      profileId={profileId}
+      onPendingChange={setPendingLabel}
+      trigger={
+        <button
+          type="button"
+          aria-label={`Active brain: ${baseLabel} — opens the brain picker`}
+          title="This surface reflects the per-profile default, distinct from any active global override"
+          className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
+        >
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 shrink-0 rounded-full"
+            style={{ backgroundColor: dotColor ?? "var(--muted-foreground)" }}
+          />
+          <span data-testid="chat-brain-pill-label">{baseLabel}</span>
+          {pendingLabel ? (
+            <>
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+              />
+              <span data-testid="chat-brain-pill-pending" className="text-xs text-muted-foreground">
+                {pendingLabel}
+              </span>
+            </>
+          ) : (
+            <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+          )}
+          {!pendingLabel && engine?.mode === "session" && (
+            <span
+              data-testid="chat-brain-pill-session"
+              className="flex items-center gap-0.5 text-xs text-(--status-info)"
+            >
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {formatBrainTtl(engine.expiresAt)}
+            </span>
+          )}
+          {!pendingLabel && engine?.mode === "pinned" && (
+            <span
+              data-testid="chat-brain-pill-pinned"
+              className="flex items-center gap-0.5 text-xs text-muted-foreground"
+            >
+              <Pin className="h-3 w-3" aria-hidden="true" />
+            </span>
+          )}
+          {BRAINS_STUB_ACTIVE && (
+            <span
+              data-testid="chat-brain-pill-stub-chip"
+              className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
+            >
+              STUB
+            </span>
+          )}
+        </button>
+      }
+    />
   );
 }
 
@@ -356,6 +468,26 @@ export default function Chat() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handoff, status]);
 
+  // ── Brain composer pill scope (103-07-T2, D-05 corrected host) ──────────
+  // Resolved once via the D-16 seam's getDefaultProfileId() (103-CONTRACT.md §3) — never a
+  // locally invented default. An empty string until resolved simply renders the pill against no
+  // known profile yet (useActiveEngine reads "Auto" honestly rather than guessing).
+  const [brainDefaultProfileId, setBrainDefaultProfileId] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    brainsApi
+      .getDefaultProfileId()
+      .then((id) => {
+        if (!cancelled && id) setBrainDefaultProfileId(id);
+      })
+      .catch(() => {
+        /* honest degrade: the pill stays scoped to "" (Auto) below */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ── Input / scroll ──────────────────────────────────────────────────────
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -506,6 +638,12 @@ export default function Chat() {
                 ))
               )}
             </div>
+          </div>
+
+          {/* Brain composer pill (103-07-T2) — new row above the composer, does not touch the
+              textarea/send row below it. */}
+          <div className="flex items-center gap-2 px-3 pt-2">
+            <BrainComposerPill profileId={brainDefaultProfileId} />
           </div>
 
           {/* Input */}

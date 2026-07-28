@@ -15,6 +15,7 @@
  * useAstridrChat.test.ts and the pre-existing __tests__/Chat.test.tsx).
  */
 import React from "react";
+import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, waitFor, screen, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -87,6 +88,68 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
     error: vi.fn(),
   }),
+}));
+
+// ─── 103-07-T2: composer brain pill mocks ─────────────────────────────────────
+//
+// useActiveEngine, brainsApi, and BrainPicker are mocked directly (rather than exercising the
+// real Convex-backed hook / real cmdk Popover) — this file tests Chat.tsx's OWN composition of
+// the pill (label sourcing, session/pinned line, pending mirroring, trigger passthrough), not
+// BrainPicker's own internals (covered by BrainPicker.test.tsx) or useActiveEngine's own join
+// logic (covered by useActiveEngine.test.ts). Mirrors the exact idiom BrainHeaderBadge.test.tsx
+// already established for the same composition-API shape.
+type MockEngine = {
+  model: string;
+  mode: "session" | "pinned" | "inherited";
+  expiresAt?: number;
+} | null;
+
+let mockActiveEngineMap: Record<string, MockEngine> = {};
+
+vi.mock("@/hooks/useActiveEngine", () => ({
+  useActiveEngine: () => mockActiveEngineMap,
+}));
+
+const mockGetDefaultProfileId = vi.fn();
+const mockGetCatalogue = vi.fn();
+let stubActive = false;
+
+vi.mock("@/lib/brainsApi", () => ({
+  brainsApi: {
+    isStub: true,
+    getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
+    dispatchSwap: vi.fn(),
+    getDefaultProfileId: (...args: unknown[]) => mockGetDefaultProfileId(...args),
+  },
+  get BRAINS_STUB_ACTIVE() {
+    return stubActive;
+  },
+}));
+// Defaults applied once at module load — `vi.clearAllMocks()` (used throughout this file's
+// existing describe blocks) clears call history but not a previously-set mockResolvedValue, so
+// these hold for every test unless a test explicitly overrides them.
+mockGetDefaultProfileId.mockResolvedValue("assistant-default");
+mockGetCatalogue.mockResolvedValue([]);
+
+let lastBrainPickerProps: {
+  profileId: string;
+  trigger?: ReactNode;
+  onPendingChange?: (label: string | null) => void;
+} | null = null;
+
+vi.mock("@/components/brains/BrainPicker", () => ({
+  BrainPicker: (props: {
+    profileId: string;
+    trigger?: ReactNode;
+    onPendingChange?: (label: string | null) => void;
+  }) => {
+    lastBrainPickerProps = props;
+    return (
+      <div data-testid="mock-chat-brain-picker" data-profile-id={props.profileId}>
+        {props.trigger}
+      </div>
+    );
+  },
 }));
 
 // Import after mocks
@@ -410,5 +473,138 @@ describe("Chat — swap badge reconnect re-pull (WR-07)", () => {
       view.rerender(makeTree());
     });
     await waitFor(() => expect(swapPulls()).toBe(2));
+  });
+});
+
+// ─── 103-07-T2: composer brain pill (D-05 corrected host) ──────────────────────
+describe("Chat — composer brain pill (103-07-T2, D-05/D-15/D-16)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockActiveEngineMap = {};
+    stubActive = false;
+    lastBrainPickerProps = null;
+    mockGetDefaultProfileId.mockResolvedValue("assistant-default");
+    mockGetCatalogue.mockResolvedValue([]);
+  });
+
+  function renderPlainChat() {
+    return render(
+      <MemoryRouter initialEntries={[{ pathname: "/chat" }]}>
+        <Chat />
+      </MemoryRouter>
+    );
+  }
+
+  it("renders the pill in a new row above the composer row without displacing the send button", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    const { container } = renderPlainChat();
+
+    const pill = await screen.findByTestId("mock-chat-brain-picker");
+    const sendButton = screen.getByRole("button", { name: "Send message" });
+    const textarea = container.querySelector("textarea");
+
+    expect(pill).toBeInTheDocument();
+    expect(sendButton).toBeInTheDocument();
+    expect(textarea).toBeInTheDocument();
+    // The pill's row is a DOM sibling that precedes the textarea/send row — a new row above,
+    // not a replacement of it.
+    // eslint-disable-next-line no-bitwise
+    expect(pill.compareDocumentPosition(textarea!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("scopes the pill to the contract's default_profile_id via getDefaultProfileId()", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    renderPlainChat();
+
+    await waitFor(() => expect(mockGetDefaultProfileId).toHaveBeenCalled());
+    await waitFor(() => expect(lastBrainPickerProps?.profileId).toBe("assistant-default"));
+  });
+
+  it("renders the live reported engine as the pill's label", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    renderPlainChat();
+
+    expect(await screen.findByTestId("chat-brain-pill-label")).toHaveTextContent(
+      "anthropic-sonnet-5"
+    );
+  });
+
+  it("renders the pill's own visible trigger inside the picker it opens (single control, no relay)", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    renderPlainChat();
+
+    const picker = await screen.findByTestId("mock-chat-brain-picker");
+    expect(within(picker).getByTestId("chat-brain-pill-label")).toBeInTheDocument();
+  });
+
+  it("keeps the base label byte-identical while pending and shows a switching-to suffix; drops the suffix (label unchanged) on error ack", async () => {
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    renderPlainChat();
+
+    const labelBefore = (await screen.findByTestId("chat-brain-pill-label")).textContent;
+    expect(labelBefore).toBe("anthropic-sonnet-5");
+
+    act(() => {
+      lastBrainPickerProps?.onPendingChange?.("· switching to Codex CLI…");
+    });
+
+    expect(await screen.findByTestId("chat-brain-pill-pending")).toHaveTextContent(
+      "switching to Codex CLI"
+    );
+    expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
+
+    // Error ack: BrainPicker itself clears pendingTarget, which drives onPendingChange(null).
+    act(() => {
+      lastBrainPickerProps?.onPendingChange?.(null);
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("chat-brain-pill-pending")).not.toBeInTheDocument()
+    );
+    expect(screen.getByTestId("chat-brain-pill-label").textContent).toBe(labelBefore);
+  });
+
+  it("renders the session-override line, never the pinned line, for a session-override reading", async () => {
+    mockActiveEngineMap = {
+      "assistant-default": {
+        model: "anthropic-sonnet-5",
+        mode: "session",
+        expiresAt: Math.floor(Date.now() / 1000) + 1800,
+      },
+    };
+    renderPlainChat();
+
+    expect(await screen.findByTestId("chat-brain-pill-session")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-brain-pill-pinned")).not.toBeInTheDocument();
+  });
+
+  it("renders the pinned-default line, never the session line, for a pinned-default reading", async () => {
+    mockActiveEngineMap = {
+      "assistant-default": { model: "anthropic-sonnet-5", mode: "pinned" },
+    };
+    renderPlainChat();
+
+    expect(await screen.findByTestId("chat-brain-pill-pinned")).toBeInTheDocument();
+    expect(screen.queryByTestId("chat-brain-pill-session")).not.toBeInTheDocument();
+  });
+
+  it("renders the dashed STUB chip when the stub adapter is active, and omits it otherwise", async () => {
+    stubActive = true;
+    mockActiveEngineMap = { "assistant-default": { model: "anthropic-sonnet-5", mode: "inherited" } };
+    const { rerender } = renderPlainChat();
+
+    expect(await screen.findByTestId("chat-brain-pill-stub-chip")).toBeInTheDocument();
+
+    stubActive = false;
+    rerender(
+      <MemoryRouter initialEntries={[{ pathname: "/chat" }]}>
+        <Chat />
+      </MemoryRouter>
+    );
+    await waitFor(() =>
+      expect(screen.queryByTestId("chat-brain-pill-stub-chip")).not.toBeInTheDocument()
+    );
   });
 });
