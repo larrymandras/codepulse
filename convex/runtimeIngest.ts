@@ -522,6 +522,25 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           });
           break;
         }
+        case "model_routing": {
+          // Phase 103 (BSC-01, D-14): astridr's ModelRouter._emit_model_routing
+          // (router.py:426) already sends this event on every resolution — this
+          // case extends it into the per-profile activeEngineSnapshots table
+          // (103-CONTRACT.md §4). Dual snake/camelCase coalescing is
+          // load-bearing, not decoration: this file's own WR-06/168-06 lesson
+          // (see the subagent_job case above) records that a single unhandled
+          // null here previously poisoned an 8-event production batch.
+          const d = data as any;
+          await ctx.runMutation(api.activeEngine.recordRouting, {
+            profileId: d.profileId ?? d.profile_id ?? "unknown",
+            model: d.model ?? "unknown",
+            mode: d.mode ?? "inherited",
+            selectionPath: d.selectionPath ?? d.selection_path,
+            expiresAt: d.expiresAt ?? d.expires_at,
+            timestamp,
+          });
+          break;
+        }
         case "git_commit": {
           const d = data as any;
           await ctx.runMutation(api.git.recordCommit, {
