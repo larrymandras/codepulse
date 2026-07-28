@@ -424,14 +424,30 @@ export function deriveView(
 
 // ── Neighbor / focus helpers (for ego highlighting + click focus) ────────────
 
-/** All node ids directly connected to `nodeId` (either direction). */
-export function getNeighbors(graph: KgGraphData, nodeId: string): Set<string> {
+/**
+ * All node ids directly connected to any id in `nodeIds` via any link (either
+ * direction) — does NOT include the seed ids themselves. Operates on a bare
+ * links array (no `KgGraphData.stats` needed) so callers holding just a link
+ * list (e.g. a fly-to-camera framing helper) can reuse this without
+ * constructing a fake stats object. `getNeighbors` below is a single-id
+ * convenience wrapper kept for existing call sites.
+ */
+export function neighborsOfIds(
+  links: KgLink[],
+  nodeIds: Iterable<string>,
+): Set<string> {
+  const seeds = nodeIds instanceof Set ? nodeIds : new Set(nodeIds);
   const out = new Set<string>();
-  for (const l of graph.links) {
-    if (l.source === nodeId) out.add(l.target);
-    if (l.target === nodeId) out.add(l.source);
+  for (const l of links) {
+    if (seeds.has(l.source)) out.add(l.target);
+    if (seeds.has(l.target)) out.add(l.source);
   }
   return out;
+}
+
+/** All node ids directly connected to `nodeId` (either direction). */
+export function getNeighbors(graph: KgGraphData, nodeId: string): Set<string> {
+  return neighborsOfIds(graph.links, [nodeId]);
 }
 
 /**

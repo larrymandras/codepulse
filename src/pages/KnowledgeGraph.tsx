@@ -34,6 +34,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import {
   ENTITY_TYPE_COLORS,
   communityColor,
+  neighborsOfIds,
   type KgNode,
   type KgLink,
 } from "../lib/kg-graph";
@@ -231,6 +232,15 @@ export function runClearThenBloom(params: {
  * fly-to). Bounded by `maxFrames`; on expiry, flies to whatever DID resolve
  * (skipping unresolved ids and/or a still-null handle) — never throws, never
  * retries beyond the budget.
+ *
+ * 187-05 live-checkpoint fix: a lone lit source with no other nodes in frame
+ * fills zoomToFit's viewport with a single giant sphere and no context (Larry:
+ * "3D does not focus very well in the window"). `getFramingIds`, when
+ * supplied, widens the zoomToFit filterFn to the resolved sources PLUS their
+ * 1-hop neighbors — CAMERA FRAMING ONLY. `onFlown`'s resolvedIds (which drives
+ * `litNodeIds`/coloring upstream) is untouched — only the real sources are
+ * "lit"; neighbors never light up. Defaults to identity (no widening) so
+ * callers that don't pass it keep the original single-set framing.
  */
 export function flyToLitSources(params: {
   litIds: Set<string>;
@@ -241,8 +251,19 @@ export function flyToLitSources(params: {
   isStale: () => boolean;
   onFlown: (resolvedIds: Set<string>) => void;
   maxFrames?: number;
+  /** Widens the zoomToFit FRAMING filter beyond the resolved lit-source ids
+   *  (see doc comment above). Does not affect `onFlown`'s resolvedIds. */
+  getFramingIds?: (resolvedIds: Set<string>) => Set<string>;
 }): () => void {
-  const { litIds, getNodes, getHandle, isStale, onFlown, maxFrames = D09_POLL_MAX_FRAMES } = params;
+  const {
+    litIds,
+    getNodes,
+    getHandle,
+    isStale,
+    onFlown,
+    maxFrames = D09_POLL_MAX_FRAMES,
+    getFramingIds = (ids) => ids,
+  } = params;
   let cancelled = false;
   let frames = 0;
 
@@ -262,7 +283,8 @@ export function flyToLitSources(params: {
     const resolved = resolvedNow();
 
     if (handle && resolved.size === litIds.size) {
-      handle.zoomToFit(800, 60, (n: any) => resolved.has(n.id));
+      const framingIds = getFramingIds(resolved);
+      handle.zoomToFit(800, 60, (n: any) => framingIds.has(n.id));
       onFlown(resolved);
       return;
     }
@@ -273,7 +295,8 @@ export function flyToLitSources(params: {
     // T-187-14 budget expiry: fly to whichever resolved (if the handle ever
     // mounted), silently skip the rest — never retries beyond this.
     if (handle && resolved.size > 0) {
-      handle.zoomToFit(800, 60, (n: any) => resolved.has(n.id));
+      const framingIds = getFramingIds(resolved);
+      handle.zoomToFit(800, 60, (n: any) => framingIds.has(n.id));
     }
     onFlown(resolved);
   };
@@ -491,6 +514,11 @@ export default function KnowledgeGraph() {
   // frames outside the React effect lifecycle and must see nodes that stream
   // in asynchronously from the ego-lens fetch, not a stale closure snapshot.
   const graphNodesRef = useRef(graph.nodes);
+  // Live mirror of graph.links (187-05 fix) — used only to widen the
+  // zoomToFit camera-framing filter to a lit source's 1-hop neighbors so a
+  // lone lit node isn't framed alone with no context; never affects which
+  // ids are actually "lit" (see flyToLitSources' getFramingIds doc comment).
+  const graphLinksRef = useRef(graph.links);
   const bloomCancelRef = useRef<() => void>(() => {});
   const fallbackPollCancelRef = useRef<() => void>(() => {});
   // D-09 partial-resolution degrade banner (amber, non-blocking).
@@ -501,7 +529,19 @@ export default function KnowledgeGraph() {
 
   useEffect(() => {
     graphNodesRef.current = graph.nodes;
-  }, [graph.nodes]);
+    graphLinksRef.current = graph.links;
+  }, [graph.nodes, graph.links]);
+
+  // 187-05 fix: widens a resolved lit-source set to include its 1-hop
+  // neighbors, for zoomToFit's camera-FRAMING filter only. Degrades
+  // gracefully to the source-only set when no neighbor links resolve (e.g.
+  // a source with no loaded edges) — flyToLitSources' identity default
+  // covers that case since the union is then just the source set itself.
+  const framingIdsFor = useCallback((resolvedIds: Set<string>): Set<string> => {
+    const neighbors = neighborsOfIds(graphLinksRef.current, resolvedIds);
+    if (neighbors.size === 0) return resolvedIds;
+    return new Set([...resolvedIds, ...neighbors]);
+  }, []);
 
   // Cancel any in-flight tween/poll on unmount — the rAF loops above are
   // self-contained and would otherwise keep calling setState after unmount.
@@ -569,6 +609,7 @@ export default function KnowledgeGraph() {
         getHandle: () => fgRef3d.current,
         isStale: () => appliedSyncTurnRef.current !== turnId,
         onFlown: () => {},
+        getFramingIds: framingIdsFor,
       });
       return;
     }
@@ -599,6 +640,7 @@ export default function KnowledgeGraph() {
           setStaleSourceBanner({ resolved: resolvedIds.size, requested: litIds.size });
         }
       },
+      getFramingIds: framingIdsFor,
     });
     // NOTE: graph.nodes and litNodeIds are intentionally excluded — this
     // effect must fire exactly once per new turnId (guarded by

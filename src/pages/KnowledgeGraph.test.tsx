@@ -76,9 +76,18 @@ export const mockFgRef3dHandle = {
   resumeAnimation: vi.fn(),
 };
 
+// Captures the most recent props passed to the mocked ForceGraph3D (187-05
+// fix regression test) — used to call the real `colorFn` (colorFn3D) against
+// a neighbor node id and prove litNodeIds/coloring stayed scoped to the real
+// source even though zoomToFit's framing filter was widened to include it.
+export const mockForceGraph3DProps: { current: Record<string, any> | null } = {
+  current: null,
+};
+
 vi.mock("../components/graph/ForceGraph3D", () => ({
   ForceGraph3D: forwardRef((props: Record<string, any>, ref: any) => {
     useImperativeHandle(ref, () => mockFgRef3dHandle);
+    mockForceGraph3DProps.current = props;
     return (
       <div
         data-testid="force-graph-3d"
@@ -208,6 +217,26 @@ const DISTRACTOR_NODE = {
   community: null,
   x: 100,
   y: 200,
+  z: 0,
+};
+
+// A second on-screen node, 1-hop-linked to ONSCREEN_NODE_A (UUID_A) but NOT
+// itself a lit source id — used by the 187-05 neighbor-framing regression
+// test (single-source fly should widen zoomToFit's filter to include this
+// node while litNodeIds/coloring stays scoped to UUID_A only).
+const ONSCREEN_NEIGHBOR_OF_A = {
+  id: "44444444-4444-4444-8444-444444444444",
+  name: "Neighbor Widget Co",
+  entityType: "organization",
+  agentId: "agent-1",
+  val: 2,
+  degree: 0,
+  color: "#3b82f6",
+  attributes: [],
+  synthetic: false,
+  community: null,
+  x: 50,
+  y: 60,
   z: 0,
 };
 
@@ -602,6 +631,51 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(px).toBe(60);
     expect(filterFn({ id: UUID_A })).toBe(true);
     expect(filterFn({ id: UUID_B })).toBe(false);
+  });
+
+  it("187-05 neighbor framing: a single-source fly widens zoomToFit's filter to include the source's 1-hop neighbor, while litNodeIds/coloring stays scoped to the source only", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-neighbor:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    // A single lit source (UUID_A) with one loaded 1-hop neighbor and one
+    // unrelated distractor with no edge to UUID_A — proves the widening is
+    // genuinely neighbor-scoped, not "light everything on screen".
+    // `as any`: makeMockKg's inferred `graph.links` defaults to `never[]`
+    // (from its own `links: []` literal) since every other test overrides it
+    // with another empty array — this is the first override with real link
+    // objects, which `never[]` structurally rejects even though the runtime
+    // shape (KgLink) is correct.
+    await renderIn3D({
+      graph: {
+        nodes: [ONSCREEN_NODE_A, ONSCREEN_NEIGHBOR_OF_A, DISTRACTOR_NODE],
+        links: [{ id: "l1", source: UUID_A, target: ONSCREEN_NEIGHBOR_OF_A.id, current: true }],
+        stats: EMPTY_STATS,
+      } as any,
+    });
+
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    const [ms, px, filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(ms).toBe(800);
+    expect(px).toBe(60);
+    // Camera framing widens to source + its neighbor...
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: ONSCREEN_NEIGHBOR_OF_A.id })).toBe(true);
+    // ...but NOT to an unrelated node with no edge to the source.
+    expect(filterFn({ id: DISTRACTOR_NODE.id })).toBe(false);
+
+    // litNodeIds/coloring stays scoped to the REAL source only — the neighbor
+    // must never be colored/sized as "lit" even though it's in-frame.
+    const colorFn3D = mockForceGraph3DProps.current?.colorFn;
+    expect(colorFn3D).toBeTypeOf("function");
+    expect(colorFn3D({ id: UUID_A, color: "#3b82f6" })).toBe("#10b981"); // lit
+    expect(colorFn3D({ id: ONSCREEN_NEIGHBOR_OF_A.id, color: "#3b82f6" })).toBe("#3b82f6"); // NOT lit — normal color
   });
 
   it("SC#2: re-rendering with the SAME turnId never calls zoomToFit a second time (zero-motion no-op)", async () => {
