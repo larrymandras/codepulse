@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Loader2 } from "lucide-react";
+import { Loader2, Clock, Pin } from "lucide-react";
 import { toast } from "sonner";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { useProfileConfigs } from "../hooks/useProfileConfigs";
+import { useActiveEngine } from "../hooks/useActiveEngine";
 import { usePrivacy } from "../contexts/PrivacyContext";
 import { useAmbient, type PresetName, type Category } from "../contexts/AmbientContext";
 import AgentAvatar from "../components/AgentAvatar";
@@ -18,11 +19,14 @@ import { EmailDigestConfig } from "../components/EmailDigestConfig";
 import { DeliveryHistory } from "../components/DeliveryHistory";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
+import { BrainPicker } from "../components/brains/BrainPicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../components/ui/sheet";
 import { ScrollArea } from "../components/ui/scroll-area";
-import type { AgentProfile } from "../types";
+import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "../lib/brainsApi";
+import { PROVIDER_COLORS } from "../lib/providers";
+import type { AgentProfile, Avatar } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
 const CONVEX_DEPLOYMENT = CONVEX_URL ? new URL(CONVEX_URL).hostname.split(".")[0] : "unknown";
@@ -206,6 +210,187 @@ function IntelligenceSettings() {
         </SectionErrorBoundary>
       </div>
     </div>
+  );
+}
+
+/** Mirrors BrainHeaderBadge.tsx's TTL formatting (103-06) — kept local rather than extracted to a
+ * shared util, since neither file is in this plan's file scope to introduce a new shared module. */
+function formatTtl(expiresAt?: number): string {
+  if (!expiresAt) return "soon";
+  const remainingMs = expiresAt * 1000 - Date.now();
+  const minutes = Math.max(0, Math.round(remainingMs / 60000));
+  return `${minutes}m`;
+}
+
+/**
+ * AgentProfileRows — 103-07-T1. Renders one row per REAL, populated profile
+ * (`profileConfigs`, via `useProfileConfigs()`), never per the legacy `agentProfiles` table (zero
+ * rows in production, `convex/profiles.ts:113`). `agentProfiles` is consulted only as an optional
+ * join for `displayName`/`avatarId`/the Edit-button's metadata target.
+ *
+ * D-06: this row's engine label comes exclusively from `useActiveEngine()` (D-14 live,
+ * server-reported telemetry) — the removed synced-config-field read this file's old line 663 used
+ * to render was never a live-state read and must not be reintroduced here in any form, including
+ * as a fallback when no telemetry has been reported yet (an unreported profile renders an honest
+ * "Not reported" state instead of guessing from config).
+ *
+ * A separate component (not inlined in `Settings()`) so `useActiveEngine()`'s call site is a real
+ * descendant of `<SectionErrorBoundary name="Agent Profiles">` — a throwing/undefined query here
+ * degrades to this one boundary's fallback, not a blanked Settings page.
+ *
+ * Known, accepted UX nuance (not fixed here): `BrainPicker.tsx` is out of this plan's file scope,
+ * so its "This profile" / "All profiles" scope selector cannot be hidden or hard-locked for this
+ * profile-scoped entry point (UI-SPEC §9's literal wording). The picker still defaults to "This
+ * profile" on open (D-08's normal reset-on-open behavior), which satisfies the practical intent;
+ * a user could still manually toggle to "All profiles" from a per-row Swap click. Matches the
+ * precedent already documented in 103-05-SUMMARY.md for the same file-scope constraint on
+ * `BrainPickerRow.tsx`'s scope-unaware `needsConfirm` gate.
+ */
+export function AgentProfileRows({
+  profiles,
+  profileConfigs,
+  getAvatar,
+  onEdit,
+}: {
+  profiles: AgentProfile[];
+  profileConfigs: ReturnType<typeof useProfileConfigs>;
+  getAvatar: (avatarId?: string) => Avatar | null;
+  onEdit: (profile: AgentProfile | null) => void;
+}) {
+  const activeEngines = useActiveEngine();
+  const [engineCatalogue, setEngineCatalogue] = useState<CatalogueEntry[] | null>(null);
+  const [pendingByProfile, setPendingByProfile] = useState<Record<string, string | null>>({});
+
+  // Display-metadata resolution only (provider-identity dot color) — never the engine truth
+  // itself, which comes exclusively from useActiveEngine above (D-14).
+  useEffect(() => {
+    let cancelled = false;
+    brainsApi
+      .getCatalogue()
+      .then((list) => {
+        if (!cancelled) setEngineCatalogue(list);
+      })
+      .catch(() => {
+        /* honest degrade: the provider dot falls back to a neutral color below */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (profileConfigs.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground italic text-center py-4">
+        No profiles configured.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      {profileConfigs.map((c) => {
+        const linkedProfile = profiles.find((ap) => ap.profileId === c.profileId) ?? null;
+        const engine = activeEngines[c.profileId] ?? null;
+        const vendor = engineCatalogue?.find((entry) => entry.id === engine?.model)?.vendor;
+        const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
+        const pending = pendingByProfile[c.profileId] ?? null;
+
+        return (
+          <div
+            key={c._id}
+            className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
+          >
+            <AgentAvatar avatar={getAvatar(linkedProfile?.avatarId)} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-base text-foreground truncate">
+                {linkedProfile?.displayName || linkedProfile?.name || c.profileId}
+              </p>
+              <p className="text-sm text-muted-foreground truncate">{c.profileId}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-sm">
+                {engine ? (
+                  <>
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: dotColor ?? "var(--muted-foreground)" }}
+                    />
+                    <span
+                      data-testid={`settings-engine-name-${c.profileId}`}
+                      className="text-foreground"
+                    >
+                      {engine.model}
+                    </span>
+                  </>
+                ) : (
+                  <span
+                    data-testid={`settings-engine-name-${c.profileId}`}
+                    className="italic text-muted-foreground"
+                  >
+                    Not reported
+                  </span>
+                )}
+                {pending && (
+                  <span
+                    data-testid={`settings-engine-pending-${c.profileId}`}
+                    className="text-xs text-(--status-info)"
+                  >
+                    {pending}
+                  </span>
+                )}
+                {!pending && engine?.mode === "session" && (
+                  <span
+                    data-testid={`settings-engine-session-${c.profileId}`}
+                    className="flex items-center gap-0.5 text-xs text-(--status-info)"
+                  >
+                    <Clock className="h-3 w-3" aria-hidden="true" />
+                    session override · expires in {formatTtl(engine.expiresAt)}
+                  </span>
+                )}
+                {!pending && engine?.mode === "pinned" && (
+                  <span
+                    data-testid={`settings-engine-pinned-${c.profileId}`}
+                    className="flex items-center gap-0.5 text-xs text-muted-foreground"
+                  >
+                    <Pin className="h-3 w-3" aria-hidden="true" />
+                    pinned default
+                  </span>
+                )}
+                {BRAINS_STUB_ACTIVE && (
+                  <span
+                    data-testid={`settings-engine-stub-${c.profileId}`}
+                    className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
+                  >
+                    STUB
+                  </span>
+                )}
+              </p>
+            </div>
+            <BrainPicker
+              profileId={c.profileId}
+              onPendingChange={(label) =>
+                setPendingByProfile((prev) => ({ ...prev, [c.profileId]: label }))
+              }
+              trigger={
+                <button
+                  type="button"
+                  data-testid={`settings-swap-${c.profileId}`}
+                  aria-label={`Swap brain for ${c.profileId}`}
+                  className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
+                >
+                  Swap
+                </button>
+              }
+            />
+            <button
+              onClick={() => onEdit(linkedProfile)}
+              className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
+            >
+              Edit
+            </button>
+          </div>
+        );
+      })}
+    </>
   );
 }
 
@@ -644,34 +829,12 @@ export default function Settings() {
         <div className="space-y-2 mt-4">
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-2">
-              {profiles.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic text-center py-4">
-                  No custom agent profiles registered.
-                </p>
-              ) : (
-                profiles.map((p) => (
-                  <div
-                    key={p._id}
-                    className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
-                  >
-                    <AgentAvatar avatar={getAvatar(p.avatarId)} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-base text-foreground truncate">
-                        {p.displayName || p.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {p.profileId} {p.model ? `/ ${p.model}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => setEditingProfile(p)}
-                      className="bg-muted hover:bg-accent text-foreground px-3 py-1 rounded-lg text-sm"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                ))
-              )}
+              <AgentProfileRows
+                profiles={profiles}
+                profileConfigs={profileConfigs}
+                getAvatar={getAvatar}
+                onEdit={setEditingProfile}
+              />
             </div>
           </ScrollArea>
         </div>
