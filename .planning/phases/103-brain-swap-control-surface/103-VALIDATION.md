@@ -89,19 +89,41 @@ live-integration status. It stays contract-first / stub-backed, exactly as desig
 | 1 | Badge renders, no STUB chip | ✅ PASS | `aria-label="Active brain: No brain reported"`, exactly one such button in the tree, 0 console errors |
 | 2 | Real catalogue loads (~300+ entries), grouped, no truncation, no STUB banner | ✅ PASS | Switching scope to "All profiles" sends a real `{"type":"swap.catalogue","target":"brain","request_id":...}` frame and returns **331 live engines** (Claude Opus 4.8, Sonnet 5, Haiku 4.5, Fable 5, Ai21/Jamba, …), grouped under "API" |
 | 3 | Confirm modal lists every affected profile `current → new`, flags pinned-default count | Not independently re-verified this session (already unit-covered — see Per-Task Verification Map row for `GlobalSwapModal.test.tsx`) | — |
-| 4 | Confirming updates the badge from the `swap.state` readback (not the ack) | ❌ NOT VERIFIED | Blocked by defects #5 and #6 below — the modal never surfaces the real `swap.set` outcome, and the badge's global fallback never requests a state snapshot on load |
-| 5 | Summary toast offers "Revert global swap"; Revert returns the badge to the prior engine | ❌ NOT VERIFIED | Same root cause as step 4 — the swap leg was never confirmed to land, so revert was never meaningfully exercisable |
+| 4a | The `swap.set` dispatch actually reaches Ástríðr and changes the live global brain | ✅ PASS (operator-observed) | Operator confirmed a real "All profiles → Claude Haiku 4.5" swap on the live stack; Control Center `BrainControl` (the pre-existing `swap.state`-wired surface) subsequently read `claude-haiku-4-5-20251001`. The write leg genuinely works. |
+| 4b | Confirming updates **the badge** from the `swap.state` readback (not the ack) | ❌ FAIL | With the swap demonstrably in force, `BrainHeaderBadge` still read "No brain reported" — defect #6. The modal also never reported the successful `swap.set` at all, showing only the deferred axis's failures — defect #5. |
+| 5 | Summary toast offers "Revert global swap"; Revert returns the badge to the prior engine | ❌ NOT VERIFIED | Not exercisable as specified: the modal's result surface never acknowledged the successful swap, so the revert affordance was never presented against a confirmed prior state. Operator reverted manually via Control Center instead. |
 | 6 | (Same as 5 — click Revert, confirm badge reverts) | ❌ NOT VERIFIED | See above |
-| 7 | Composer pill renders in the composer without displacing the send affordance at narrow width | Not independently re-verified this session | — |
+| 7 | Composer pill renders in the composer without displacing the send affordance at narrow width | ⚠️ Layout not re-verified; **content is wrong** | Pill rendered correctly but displayed `Auto` while the live global brain was `claude-haiku-4-5-20251001` — a third disagreeing surface. See defect #6. |
 
 **D-15 confirm gate — genuinely verified and holds:** selecting an engine in "All profiles" scope
 dispatches **zero** WS frames until "Swap all profiles to {X}" is explicitly clicked. No premature
 mutation of live process state occurred at any point during this session.
 
-**Honest summary:** the global axis's **read** path (catalogue) and its **friction gate** (D-15,
-no dispatch before explicit confirm) are genuinely live-verified. The **write/readback/revert** leg
-is explicitly **NOT verified** — not because it was skipped, but because two real defects (below)
-make it currently unobservable through the shipped UI.
+**Honest summary:** the global axis's **read** path (catalogue), its **friction gate** (D-15, no
+dispatch before explicit confirm), and its **write** path (`swap.set` genuinely changes the live
+brain) are all live-verified. The **readback/revert** leg is explicitly **NOT verified** — not
+because it was skipped, but because two real defects (below) make a successful swap invisible to
+every surface this phase built.
+
+### ⚠ Headline finding — three surfaces, three answers
+
+With a single global override (`claude-haiku-4-5-20251001`) genuinely in force on the live stack,
+the operator observed three brain surfaces simultaneously reporting three different states:
+
+| Surface | Origin | Displayed | Correct? |
+|---|---|---|---|
+| Control Center `BrainControl` | pre-existing (Phase 185/186) | `claude-haiku-4-5-20251001` | ✅ correct — reads `swap.state` |
+| `BrainHeaderBadge` (dashboard-wide) | **this phase, 103-06** | `No brain reported` | ❌ defect #6 — subscribes but never requests a snapshot |
+| Chat composer pill | **this phase, 103-07** | `Auto` | ❌ defect #6 — reads the 184.1-deferred `brainsApi.getDefaultProfileId()` seam |
+
+This is precisely the failure mode BSC-01 exists to eliminate — *"stale config read presented as
+live state"* — and as shipped, **this phase added two more disagreeing voices to a surface that
+previously had one correct answer.** The pre-existing component is the only one that is right.
+
+This reframes the gap-closure target. The fix is not two independent patches: it is **one honest
+resolution order that every brain surface reads from**, so a single live global override cannot
+render three different ways. The composer pill is a genuinely distinct third code path and must be
+covered explicitly — a fix scoped only to the badge would leave it wrong.
 
 ### Defects found and FIXED during this session (already committed — not part of a future gap-closure cycle)
 
@@ -141,14 +163,27 @@ make it currently unobservable through the shipped UI.
    reports failure for the axis that is deferred by design and says nothing about the one command
    that actually works. This directly contradicts BSC-01/BSC-04's "server-confirmed status"
    requirement and is why verification steps 4-6 above could not be completed.
-6. **`BrainHeaderBadge`'s global fallback can never show an already-active override on page load.**
-   `swap.state` (subscribed at `BrainHeaderBadge.tsx:83`, added by defect-fix #2 above) is a
-   *change* event, not a snapshot — it only fires when a swap happens *while the page is open*.
-   Current state must be requested on mount with `swap.get_state`, exactly as `Chat.tsx:309` already
-   does for its own Control Center surface. `BrainHeaderBadge.tsx`'s `useGlobalEngineFallback`
-   (lines 71-91) only subscribes; it never sends `swap.get_state`. Evidence: on a fresh load of the
-   live stack, **zero** `swap.state` frames arrived and the badge read "No brain reported"
-   regardless of the actual global engine in force.
+6. **Every brain surface this phase built is blind to an already-active global override.**
+   Two distinct code paths, one shared consequence — see the headline finding above.
+
+   **6a — `BrainHeaderBadge` never requests a state snapshot.** `swap.state` (subscribed at
+   `BrainHeaderBadge.tsx:83`, added by defect-fix #2 above) is a *change* event, not a snapshot — it
+   only fires when a swap happens *while the page is open*. Current state must be requested on mount
+   with `swap.get_state`, exactly as `Chat.tsx:309` already does for its own Control Center surface.
+   `useGlobalEngineFallback` (`BrainHeaderBadge.tsx:71-91`) only subscribes; it never sends
+   `swap.get_state`. Evidence: on a fresh load of the live stack, **zero** `swap.state` frames
+   arrived and the badge read "No brain reported" while `claude-haiku-4-5-20251001` was in force.
+
+   **6b — the Chat composer pill reads the deferred per-profile seam.** `BrainComposerPill`
+   (`src/pages/Chat.tsx`, added by 103-07) scopes to `brainsApi.getDefaultProfileId()`, which routes
+   through the 184.1-deferred per-profile adapter and therefore cannot observe the global axis at
+   all. It displayed `Auto` against the same live Haiku override. This path was **not** covered by
+   defect-fix #2 and would survive a badge-only fix.
+
+   **Gap-closure guidance:** resolve 6a and 6b together via one shared source of truth for
+   "what brain is actually running" (snapshot on mount + subscribe to changes), consumed by the
+   badge, the composer pill, and `BrainControl` alike. Fixing them independently reproduces the
+   three-way disagreement in a new shape.
 
 ### Noted, not this phase's problem — do not fix here
 
