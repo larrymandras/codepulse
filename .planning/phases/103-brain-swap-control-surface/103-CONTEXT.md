@@ -4,6 +4,9 @@
 **Corrected:** 2026-07-28 — see `<blocker_reframing>`. Research during `/gsd-plan-phase 103`
 found that a **global** brain swap already ships and works; only the **per-profile** axis is
 missing. D-05, D-06, D-13 are marked `[CORRECTED]`; D-08, D-14, D-16 are marked `[AMENDED]`.
+**Gap closure 2026-07-28:** D-11 is additionally marked `[AMENDED gap-closure 2026-07-28]`,
+arising from the `103-VERIFICATION.md` gap cycle rather than from planning research — see that
+entry for its evidence and for what it deliberately leaves untouched.
 All corrections were verified against live code before being written here.
 **Status:** Ready for planning
 
@@ -171,10 +174,32 @@ design spec and implement `GatewayProvider` + `model_registry` + the REST/WS sur
   type-to-confirm). The modal doubles as the preview of what a revert would undo.
 - **D-10:** A global swap is **revertible**: snapshot each profile's prior engine before firing,
   and offer `Revert global swap` (in the success toast and until the next swap supersedes it).
-- **D-11:** Pinned defaults are **overwritten, but recorded**. Global means global — every profile
-  moves — and the snapshot records which engines were *pinned* vs *inherited* so a revert restores
-  the exact prior state **including pin status**. The confirm modal flags
-  "N profiles have pinned defaults that will be overwritten."
+- **D-11 `[AMENDED gap-closure 2026-07-28]`:** Pinned defaults are **overwritten, but recorded**.
+  Global means global — every profile moves — and the snapshot records which engines were *pinned*
+  vs *inherited* so a revert restores the exact prior state **including pin status**. The confirm
+  modal flags "N profiles have pinned defaults that will be overwritten."
+  **Amendment — a global swap SHADOWS pinned defaults; it does not overwrite them, so the confirm
+  copy's verb changes.** Operator decision 2026-07-28, taken during the `103-VERIFICATION.md`
+  gap-closure cycle. The original wording assumed a global swap writes a new default into every
+  profile. It does not, and per `103-CONTRACT.md` §8 it must not: *"'All profiles' scope in the
+  Phase 103 UI dispatches the **existing live** `swap.set` (global axis), not N `gateway.model.set`
+  calls."* `GlobalSwapModal` shipped fanning out N `gateway.model.set` calls anyway — the
+  astridr-Phase-184.1-**deferred** per-profile command — which on the live stack failed with
+  `union_tag_invalid` for every profile, every time (`103-VALIDATION.md` defect #5, live-observed).
+  Gap-closure plan `103-12` removes that fan-out, after which **nothing writes to
+  `profileConfigs.modelPreferences` during a global swap at all.**
+  What actually happens is **shadowing**, not overwriting: per `103-CONTRACT.md` §9, `router.py`'s
+  `_resolve_model` resolves the global override at **rung 2** and a per-profile default at **rung 4**
+  (`router.py:437-472`), so while the override is in force each profile's pinned default remains
+  intact on disk but inactive at resolution time. Leaving the copy as "will be overwritten" would
+  ship a false status string of exactly the class BSC-04 exists to eliminate — the confirm modal
+  would name a mutation the system never performs, in the one dialog whose entire job (D-09) is to
+  state what actually changes.
+  **What this amendment does NOT change:** the pinned-default **count** and the `Pin` icons stay in
+  the confirm listing; the snapshot still records *pinned* vs *inherited*; and the revert still
+  restores the exact prior state **including pin status**. D-11's disclosure and recording
+  obligations are untouched — **only the verb changes**, from "overwritten" to language describing
+  the pinned defaults as shadowed while the global override is in force.
 - **D-12:** Partial failure yields an **honest per-profile result** — N switched / M failed with
   reasons; failed rows keep displaying their real, unchanged engine. No all-or-nothing rollback
   (a rollback that itself fails produces a worse state). This is BSC-04 applied per row rather
