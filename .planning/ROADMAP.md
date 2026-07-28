@@ -615,6 +615,69 @@ Plans:
 
 ---
 
+## v13.0 Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
+
+> **Opened 2026-07-27** via `/gsd-new-milestone` (hand-run — no gsd-sdk state verbs, per the established anti-clobber workaround). Continues phase numbering from 102. Requirements (BSC / COST / OBS / DEBT) in [REQUIREMENTS.md](REQUIREMENTS.md).
+>
+> **Phase Details sections added 2026-07-27** during `/gsd-discuss-phase 103` — the hand-run milestone open wrote the milestone entry, the Progress rows, and REQUIREMENTS.md, but not the `### Phase N` detail sections `gsd-sdk query init.phase-op` resolves phases from, so every phase op reported `phase_found: false`.
+
+**Milestone goal:** Take direct control of Ástríðr's reasoning engine from CodePulse — swap the brain per-agent or globally on the fly — and make the consequences legible: what each model mix costs, which tools it actually calls (and where tool calls leak), plus a consolidation pass that closes out the cloud→self-hosted migration and the outstanding manual UAT.
+
+**Phase summary:**
+
+- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05)
+- [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
+- [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
+- [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
+
+**Execution order:** 106 is independent + low-risk and can run at any time · **103 gates on astridr's brain-swap backend (astridr Phase 184.1) being live end-to-end** — BSC-05 is an integration gate closed *during* execution, per the Phase-90 War Room lesson · 104 and 105 are additive over existing surfaces (Analytics/Costs, TraceWaterfall) and are independent of 103.
+
+## Phase Details
+
+### Phase 103: Brain-Swap Control Surface
+
+**Goal**: An operator can see which reasoning engine Ástríðr is running — globally and per agent — and change it on the fly from CodePulse, choosing among keyed API models (Claude family and whatever else astridr exposes) and subscription CLIs (Claude Code / Codex / Antigravity), with per-agent vs global scope and an honest, server-confirmed result.
+**Depends on**: Astridr Phase 184.1 (brain-swap backend, astridr-repo `feature/brain-swap`) — CodePulse consumes its endpoints; BSC-05 gates on them working end-to-end on the running stack before UI is built against them. Reuses the existing authenticated Ástríðr `/api/*` bearer pattern (`authHeaders()` in `src/lib/astridrApi.ts`) and the Convex-reactive telemetry path.
+**Requirements**: BSC-01, BSC-02, BSC-03, BSC-04, BSC-05
+**Success Criteria** (what must be TRUE):
+
+  1. The current reasoning engine is visible globally and per agent, driven reactively from Convex/telemetry — not a stale config read (the v9.0 VitalsRail active-profile trap).
+  2. An operator picks a different engine from the available set — keyed API models and subscription CLIs — and the swap is dispatched to astridr's brain-swap endpoint over authenticated `/api/*`.
+  3. Swap scope is explicit: per-agent swaps apply only to that agent; a global swap requires a separate deliberate confirmation before it fires.
+  4. Swap status is honest end-to-end — in-flight → success/failure → the *resulting* active engine read back from astridr; a failed swap never leaves an optimistic "switched" state on screen.
+  5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution).
+
+**UI hint**: yes
+
+---
+
+### Phase 104: Cost Intelligence
+
+**Goal**: Spend is legible per model and per provider over time, with configurable budget thresholds and alerts that fire through the existing alert-routing layer when spend spikes or crosses a threshold.
+**Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
+**Requirements**: COST-01, COST-02, COST-03
+**Success Criteria**: derived at `/gsd-discuss-phase 104` / `/gsd-plan-phase 104`.
+
+---
+
+### Phase 105: Tool & Trace Observability
+
+**Goal**: Tool behavior is observable — per-tool call frequency and success/failure rates over time, astridr's tool-filter/leak signals surfaced with the offending tool named, and a trace waterfall deep enough to show nested spans, per-tool timings, and cache hits per turn.
+**Depends on**: The v10.0 Phase 94 `TraceWaterfall` (extends it) and the v10.0 Phase 93 eval/ingest pipeline. Cross-repo signal source: astridr's invoke-leak detector (`agent_loop.tool_call_leaked_as_text` / `tool_policy_event`, astridr `b7e4a534`) — requires an ingest path into CodePulse. Independent of Phases 103/104.
+**Requirements**: OBS-01, OBS-02, OBS-03
+**Success Criteria**: derived at `/gsd-discuss-phase 105` / `/gsd-plan-phase 105`.
+
+---
+
+### Phase 106: Consolidation & Hardening
+
+**Goal**: Close out the outstanding debt — no remaining `anyApi` calls, the cloud Convex `tidy-whale-981` exported and cancelled (finishing the cloud→self-hosted migration), the >500 kB chunks code-split below the warning threshold, and the deferred manual UAT actually run.
+**Depends on**: Nothing — independent and low-risk; can run at any point in the milestone. DEBT-02 touches only the *cloud* instance; the live self-hosted backend is explicitly out of scope for any mass mutation.
+**Requirements**: DEBT-01, DEBT-02, DEBT-03, DEBT-04
+**Success Criteria**: derived at `/gsd-discuss-phase 106` / `/gsd-plan-phase 106`.
+
+---
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
