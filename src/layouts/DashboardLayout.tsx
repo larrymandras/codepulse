@@ -14,6 +14,8 @@ import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
 import { CommandPalette } from "../components/CommandPalette";
+import SectionErrorBoundary from "../components/SectionErrorBoundary";
+import { BrainHeaderBadge } from "../components/brains/BrainHeaderBadge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import AvatarUploader from "../components/AvatarUploader";
@@ -577,6 +579,9 @@ export default function DashboardLayout() {
           <div className="flex items-center gap-1.5 sm:gap-2 bg-primary/5 px-2 py-1.5 rounded-md border border-primary/10">
             <EStopButton />
             <div className="w-px h-4 bg-primary/20 mx-1" />
+            <SectionErrorBoundary name="Active Brain">
+              <BrainHeaderBadge />
+            </SectionErrorBoundary>
             <NotificationBell />
             <PrivacyShield />
             <ThemeSwitcher />
