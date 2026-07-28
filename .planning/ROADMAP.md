@@ -626,7 +626,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05)
+- [x] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (8/8 plans code-complete 2026-07-28; BSC-05 NOT satisfied — global axis partially live-verified with 2 open defects, per-profile axis deferred to astridr Phase 184.1; see [103-VALIDATION.md](phases/103-brain-swap-control-surface/103-VALIDATION.md))
 - [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
 - [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
 - [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
@@ -646,7 +646,7 @@ Plans:
   2. An operator picks a different engine from the available set — keyed API models and subscription CLIs — and the swap is dispatched to astridr's brain-swap endpoint over authenticated `/api/*`.
   3. Swap scope is explicit: per-agent swaps apply only to that agent; a global swap requires a separate deliberate confirmation before it fires.
   4. Swap status is honest end-to-end — in-flight → success/failure → the *resulting* active engine read back from astridr; a failed swap never leaves an optimistic "switched" state on screen.
-  5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution). **Split by axis 2026-07-28** — the GLOBAL axis (`swap.set` / `swap.catalogue` / `swap.state`, astridr Phase 185/186) is live and this wording is genuinely satisfied against the running stack in Plan 103-08. The PER-PROFILE axis is contract-first / stub-backed; its live verification is deferred to astridr Phase 184.1.
+  5. Before any UI is built against them, astridr's list-engines / swap / read-current endpoints are verified working end-to-end on the running stack (BSC-05 integration gate, closed during execution). **Split by axis 2026-07-28** — the GLOBAL axis (`swap.set` / `swap.catalogue` / `swap.state`, astridr Phase 185/186) is live. The PER-PROFILE axis is contract-first / stub-backed; its live verification is deferred to astridr Phase 184.1. **Plan 103-08's live checkpoint (2026-07-28) found the global axis's read path (catalogue, 331 live engines) and D-15 confirm gate genuinely work end-to-end, but the dispatch → readback → revert leg does NOT — two open defects (`GlobalSwapModal.tsx` discards the real `swap.set` result; `BrainHeaderBadge.tsx` never requests `swap.get_state` on load) block it. BSC-05 is NOT satisfied; a gap-closure cycle is recommended before it can be.**
 
 **UI hint**: yes
 **Plans:** 8 plans (5 waves)
@@ -673,7 +673,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 103-08-PLAN.md — Playwright stub round trip, live global-axis verification, VALIDATION sign-off
+- [x] 103-08-PLAN.md — Playwright stub round trip, live global-axis verification, VALIDATION sign-off — complete 2026-07-28 (BSC-05 NOT satisfied — 2 open defects found live, gap-closure recommended), see [103-08-SUMMARY.md](phases/103-brain-swap-control-surface/103-08-SUMMARY.md)
 
 ---
 
