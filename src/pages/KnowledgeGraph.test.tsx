@@ -666,6 +666,66 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(mockFgRef3dHandle.cameraPosition).not.toHaveBeenCalled();
   });
 
+  it("187 post-verify fix: onEngineStop within the sync grace window re-frames onto the lit sources instead of the whole graph", async () => {
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-enginestop:1",
+      sourceNodeIds: [UUID_A, UUID_B],
+      primaryEntityName: "Acme Corp",
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: {
+        nodes: [ONSCREEN_NODE_A, ONSCREEN_NODE_B, DISTRACTOR_NODE],
+        links: [],
+        stats: EMPTY_STATS,
+      },
+    });
+
+    // Let the D-07 fly complete first.
+    await waitFor(() => {
+      flushRaf();
+      expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    });
+    mockFgRef3dHandle.zoomToFit.mockClear();
+
+    // Simulate react-force-graph-3d's onEngineStop firing again later — e.g.
+    // the D-09 ego-lens fetch streaming in new neighbor nodes and restarting
+    // the force simulation, well after the fly's 800ms tween already
+    // completed. Pre-fix, every mount site unconditionally called
+    // zoomToFit(400, 60) with NO filter (an unfiltered whole-graph refit),
+    // silently re-framing away from the lit sources — the exact defect this
+    // test guards against.
+    mockForceGraph3DProps.current?.onEngineStop?.();
+
+    expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    const [ms, px, filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(ms).toBe(400);
+    expect(px).toBe(60);
+    // Filtered onto the lit sources — NOT an unfiltered whole-graph refit.
+    expect(filterFn).toBeTypeOf("function");
+    expect(filterFn({ id: UUID_A })).toBe(true);
+    expect(filterFn({ id: UUID_B })).toBe(true);
+    expect(filterFn({ id: DISTRACTOR_NODE.id })).toBe(false);
+  });
+
+  it("187 post-verify fix: onEngineStop with no active sync framing still performs the ordinary unfiltered whole-graph refit", async () => {
+    mockLatestAnswerSync.mockReturnValue(undefined); // SC#2: no sync row at all.
+    await renderIn3D({
+      graph: { nodes: [ONSCREEN_NODE_A, DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+    });
+
+    mockForceGraph3DProps.current?.onEngineStop?.();
+
+    expect(mockFgRef3dHandle.zoomToFit).toHaveBeenCalledTimes(1);
+    const [ms, px, filterFn] = mockFgRef3dHandle.zoomToFit.mock.calls[0];
+    expect(ms).toBe(400);
+    expect(px).toBe(60);
+    // Ordinary case (no sync driving the camera) — unchanged, unfiltered
+    // whole-graph refit, exactly the pre-fix call shape.
+    expect(filterFn).toBeUndefined();
+  });
+
   it("187-05 defect-2: an isolated lit source with no loaded neighbors parks the camera via cameraPosition instead of filling the frame with zoomToFit", async () => {
     mockLatestAnswerSync.mockReturnValue({
       turnId: "sess-isolated:1",
@@ -859,6 +919,40 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     // The poll hasn't resolved (the node never lays out in this test) — no
     // no-op fly to an unrendered node (SC#1 guarantee).
     expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
+  });
+
+  it("187 post-verify fix (WR-03): the D-09 fallback proceeds on a usable UUID even when primaryEntityName is null", async () => {
+    const setLens = vi.fn();
+    const setFilter = vi.fn();
+    // GraphQueryTool.get_name is best-effort and can legitimately return None
+    // (e.g. a name-lookup degradation) — primaryEntityName is null even
+    // though sourceNodeIds carries a perfectly usable UUID. Pre-fix, the
+    // `if (!answerSync.primaryEntityName) return;` guard silently disabled
+    // the ENTIRE fallback in this case, despite validIds[0] being available.
+    mockLatestAnswerSync.mockReturnValue({
+      turnId: "sess-noname:1",
+      sourceNodeIds: [UUID_A],
+      primaryEntityName: null,
+      updatedAt: 1,
+    });
+
+    await renderIn3D({
+      graph: { nodes: [DISTRACTOR_NODE], links: [], stats: EMPTY_STATS },
+      setLens,
+      setFilter,
+    });
+
+    await waitFor(() => {
+      expect(setLens).toHaveBeenCalledWith("entity");
+    });
+    expect(setFilter).toHaveBeenCalledWith("entityId", UUID_A);
+    expect(setFilter).toHaveBeenCalledWith("hops", 1);
+    // Never falls back to an entityName filter — there is none to use, and
+    // the dead "else if (primaryEntityName)" branch this guarded is removed.
+    expect(setFilter).not.toHaveBeenCalledWith(
+      "entityName",
+      expect.anything(),
+    );
   });
 
   it("stale-source degrade: partial resolution renders the amber banner and still flies to the resolved subset (187-05 wall-clock D-09 budget)", async () => {

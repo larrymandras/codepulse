@@ -138,6 +138,41 @@ export const D09_FETCH_POLL_MAX_MS = 8000;
 // hand-rolling new distance math.
 export const ISOLATED_NODE_CAMERA_DISTANCE = 150;
 
+// 187 post-verify fix (GLXY-01, Verification "The camera and lighting code is
+// also real" gap #3): react-force-graph-3d's onEngineStop fires on EVERY
+// settle, including one triggered later by the D-09 ego-lens fetch streaming
+// in new neighbor nodes — well after the D-07/D-09 fly's 800ms tween has
+// already completed. All three 3D mount sites previously wired
+// onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)} unconditionally,
+// so that LATER settle silently re-framed the WHOLE graph, undoing the fly.
+// SYNC_CAMERA_GRACE_MS bounds how long a settle-driven refit must instead
+// re-frame onto the lit sources (+ neighbors) rather than the whole graph —
+// covers the D09_FETCH_POLL_MAX_MS fetch window plus settle margin. Ordinary
+// initial-load / lens-switch refits (no active sync) are untouched.
+export const SYNC_CAMERA_GRACE_MS = D09_FETCH_POLL_MAX_MS + 3000;
+
+/**
+ * Resolves what a react-force-graph-3d `onEngineStop` settle should do: while
+ * a sync-driven camera framing is still authoritative (within its grace
+ * window) AND a lit set exists, re-frame onto the lit sources (+ neighbors)
+ * instead of performing an unfiltered whole-graph refit. Returns `null` for
+ * the ordinary case (ordinary initial load / lens switch / no active sync),
+ * preserving the original unconditional `zoomToFit(400, 60)` behavior.
+ * Pure + exported so this can be unit-tested without mounting the page.
+ */
+export function resolveEngineStopFilter(params: {
+  now: number;
+  syncFramingExpiresAt: number;
+  litNodeIds: Set<string>;
+  framingIds: Set<string>;
+}): ((node: { id: string }) => boolean) | null {
+  const { now, syncFramingExpiresAt, litNodeIds, framingIds } = params;
+  if (now < syncFramingExpiresAt && litNodeIds.size > 0) {
+    return (node) => framingIds.has(node.id);
+  }
+  return null;
+}
+
 function nowMs(): number {
   return typeof performance !== "undefined" ? performance.now() : Date.now();
 }
@@ -603,6 +638,11 @@ export default function KnowledgeGraph() {
     resolved: number;
     requested: number;
   } | null>(null);
+  // 187 post-verify fix: wall-clock deadline until which onEngineStop must
+  // re-frame onto the lit sources instead of doing an unfiltered whole-graph
+  // refit (see resolveEngineStopFilter / SYNC_CAMERA_GRACE_MS above). 0 =
+  // no active sync framing (ordinary refit behavior, unchanged).
+  const syncFramingExpiresAtRef = useRef<number>(0);
 
   useEffect(() => {
     graphNodesRef.current = graph.nodes;
@@ -619,6 +659,24 @@ export default function KnowledgeGraph() {
     if (neighbors.size === 0) return resolvedIds;
     return new Set([...resolvedIds, ...neighbors]);
   }, []);
+
+  // 187 post-verify fix: shared onEngineStop handler for all three 3D mount
+  // sites. Pre-fix, every settle unconditionally ran an unfiltered
+  // zoomToFit(400, 60) — including the settle caused by the D-09 ego-lens
+  // fetch streaming in new neighbor nodes, which silently re-framed the WHOLE
+  // graph and undid the D-07/D-09 fly. Within SYNC_CAMERA_GRACE_MS of a sync
+  // reaction starting (see the effect below), re-frame onto the lit sources
+  // instead; otherwise fall through to the original unfiltered refit
+  // unchanged (ordinary initial load / lens switch / no active sync).
+  const handleEngineStop3d = useCallback(() => {
+    const filterFn = resolveEngineStopFilter({
+      now: Date.now(),
+      syncFramingExpiresAt: syncFramingExpiresAtRef.current,
+      litNodeIds,
+      framingIds: framingIdsFor(litNodeIds),
+    });
+    fgRef3d.current?.zoomToFit(400, 60, filterFn ?? undefined);
+  }, [litNodeIds, framingIdsFor]);
 
   // Cancel any in-flight tween/poll on unmount — the rAF loops above are
   // self-contained and would otherwise keep calling setState after unmount.
@@ -646,6 +704,13 @@ export default function KnowledgeGraph() {
     if (validIds.length === 0) return;
 
     const litIds = new Set(validIds);
+
+    // 187 post-verify fix: this turn's camera framing becomes authoritative
+    // over onEngineStop's settle-driven refit for the grace window — covers
+    // both the immediate D-07/D-09 fly AND any later settle triggered by the
+    // D-09 ego-lens fetch streaming in new nodes (see handleEngineStop3d /
+    // resolveEngineStopFilter above).
+    syncFramingExpiresAtRef.current = Date.now() + SYNC_CAMERA_GRACE_MS;
 
     // A newer sync always wins over any in-flight animation/poll from a
     // superseded one.
@@ -691,36 +756,23 @@ export default function KnowledgeGraph() {
       return;
     }
 
-    if (!answerSync.primaryEntityName) {
-      // Off-screen with no primary entity to lens onto — litNodeIds is
-      // already set so the sources light up if/when they scroll on-screen;
-      // nothing more we can safely do (never a no-op fly to an unrendered node).
-      return;
-    }
-
     // D-09 fallback — reuse the exact ?focus= ego-lens mechanism, then poll
     // for layout readiness (and ref-mount readiness), then the SAME
     // zoomToFit call as D-07.
     //
-    // 187-05 defect fix: target the emitted UUID directly via setFilter
-    // ("entityId", ...) rather than primaryEntityName. Entity names are NOT
-    // unique — a live example has two "astridr" rows (a [person] with no
-    // facts and a [persona] with 5 facts) — so a name-driven fetch can
-    // silently resolve to the WRONG duplicate (the ego-lens loads a
-    // different row than the one sourceNodeIds actually named, and the
-    // subsequent id-match against litIds then finds nothing). litIds' first
-    // entry is always the primary source's id here (it is guaranteed
-    // non-empty by the validIds.length===0 guard above); primaryEntityName
-    // is kept only as a defensive fallback for a hypothetical no-usable-id
-    // case (unreachable today given that guard, but keeps the contract
-    // explicit rather than silently dropping the field).
+    // 187 post-verify fix (187-REVIEW WR-03): target the emitted UUID
+    // directly via setFilter("entityId", ...) — validIds[0] is guaranteed to
+    // exist here (the validIds.length===0 guard above already returned), so
+    // this path no longer gates on primaryEntityName at all. Entity names
+    // are NOT unique — a live example has two "astridr" rows (a [person]
+    // with no facts and a [persona] with 5 facts) — so a name-driven fetch
+    // can silently resolve to the WRONG duplicate. Pre-fix, a degraded
+    // `GraphQueryTool.get_name` lookup (primaryEntityName === null) disabled
+    // this entire fallback despite a perfectly usable UUID being present —
+    // the `if (!answerSync.primaryEntityName) return;` guard that used to
+    // sit here is the defect this fixes.
     setLens("entity");
-    const primarySourceId = validIds[0];
-    if (primarySourceId) {
-      setFilter("entityId", primarySourceId);
-    } else if (answerSync.primaryEntityName) {
-      setFilter("entityName", answerSync.primaryEntityName);
-    }
+    setFilter("entityId", validIds[0]);
     setFilter("hops", 1);
 
     fallbackPollCancelRef.current = flyToLitSources({
@@ -1604,7 +1656,7 @@ export default function KnowledgeGraph() {
                               selectNode(null);
                               selectEdge(null);
                             }}
-                            onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                            onEngineStop={handleEngineStop3d}
                           />
                         </Suspense>
                       )
@@ -1676,7 +1728,7 @@ export default function KnowledgeGraph() {
                           selectNode(null);
                           selectEdge(null);
                         }}
-                        onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                        onEngineStop={handleEngineStop3d}
                       />
                     </Suspense>
                   )
@@ -1718,7 +1770,7 @@ export default function KnowledgeGraph() {
                           selectNode(null);
                           selectEdge(null);
                         }}
-                        onEngineStop={() => fgRef3d.current?.zoomToFit(400, 60)}
+                        onEngineStop={handleEngineStop3d}
                       />
                     </Suspense>
                   )
