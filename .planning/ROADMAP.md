@@ -664,7 +664,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 103-05-PLAN.md — BrainPicker: popover + cmdk groups, scope selector, dual-branch dispatch
+- [x] 103-05-PLAN.md — BrainPicker: popover + cmdk groups, scope selector, dual-branch dispatch — complete 2026-07-28, see [103-05-SUMMARY.md](phases/103-brain-swap-control-surface/103-05-SUMMARY.md)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -739,7 +739,7 @@ Plans:
 | 100. Control-Surface UX | v11.0 | 5/5 | Complete   | 2026-07-24 |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
-| 103. Brain-Swap Control Surface | v13.0 | 4/8 | 🚧 Executing | — |
+| 103. Brain-Swap Control Surface | v13.0 | 5/8 | 🚧 Executing | — |
 | 104. Cost Intelligence | v13.0 | — | Planned | — |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
