@@ -150,6 +150,78 @@ describe("ForceGraph3D — Wave 0 RED scaffold (SC#1 / SC#4 / SC#5)", () => {
     cleanup();
   });
 
+  // ── 187-05 checkpoint fix: container-sizing regression ──────────────────
+  // Larry's live check found the 3D canvas rendering full-window-sized and
+  // clipped into the bottom-right of its (smaller) panel. Root cause:
+  // ForceGraph3DLib was never given explicit width/height, so the library
+  // defaulted to window.innerWidth/innerHeight. Fixed via a ResizeObserver +
+  // synchronous initial getBoundingClientRect measure in ForceGraph3D.tsx.
+  //
+  // jsdom has no real layout engine, so these tests do NOT assert pixel-
+  // perfect rendering — they assert the WIRING: whatever the container's
+  // getBoundingClientRect() reports is exactly what gets forwarded to
+  // react-force-graph-3d's width/height props, and a zero/unmeasured
+  // container never forwards 0 (which would render a blank canvas).
+  describe("container sizing (187-05 checkpoint fix)", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("forwards the measured container width/height to react-force-graph-3d", async () => {
+      // Mock the container's layout box before mount so the component's
+      // synchronous initial measurement (useLayoutEffect) picks it up.
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+        width: 842,
+        height: 517,
+        top: 0,
+        left: 0,
+        right: 842,
+        bottom: 517,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      } as DOMRect);
+
+      const fixture = makeProjectGraphFixture();
+      mockGetProjectGraph(fixture);
+
+      render(<CodeVaultGraph />);
+
+      const toggle3D = screen.getByRole("button", { name: "3D" });
+      await act(async () => {
+        fireEvent.click(toggle3D);
+      });
+
+      await screen.findByTestId("force-graph-3d");
+
+      // Real dimensions from the (mocked) container measurement — not the
+      // library's window-size default, and not vacuous/undefined.
+      expect(lastForceGraph3DProps.width).toBe(842);
+      expect(lastForceGraph3DProps.height).toBe(517);
+    });
+
+    it("does not forward zero dimensions when the container is unmeasured", async () => {
+      // jsdom's default getBoundingClientRect() returns an all-zero rect
+      // (no real layout engine) — exercised here WITHOUT any mock override,
+      // i.e. the actual jsdom default the component must degrade gracefully
+      // against rather than passing width=0/height=0 through to the library.
+      const fixture = makeProjectGraphFixture();
+      mockGetProjectGraph(fixture);
+
+      render(<CodeVaultGraph />);
+
+      const toggle3D = screen.getByRole("button", { name: "3D" });
+      await act(async () => {
+        fireEvent.click(toggle3D);
+      });
+
+      await screen.findByTestId("force-graph-3d");
+
+      expect(lastForceGraph3DProps.width).toBeUndefined();
+      expect(lastForceGraph3DProps.height).toBeUndefined();
+    });
+  });
+
   // ── SC#1: toggle-restore ─────────────────────────────────────────────────
   // Clicking "3D" shows the 3D surface; clicking "2D" restores ForceGraphCanvas.
   // RED: The render-mode toggle (aria-label="Render mode" group) does not exist

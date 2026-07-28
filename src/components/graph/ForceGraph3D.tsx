@@ -1,7 +1,9 @@
 import {
   forwardRef,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
+  useState,
 } from "react";
 import ForceGraph3DLib from "react-force-graph-3d";
 
@@ -95,6 +97,55 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
     // the library uses any-typed internals (per RESEARCH.md, do not import its types).
     const fgRef3dInner = useRef<any>(null);
 
+    // ── Container sizing (187-05 checkpoint fix) ────────────────────────────
+    // react-force-graph-3d defaults width/height to window.innerWidth/innerHeight
+    // when not supplied, so without these the library builds a canvas sized to
+    // the whole window instead of the (smaller, clipped) wrapper div — the graph
+    // ends up centered in the oversized canvas, which visually crops it into the
+    // bottom-right corner of the visible box. zoomToFit(...) then frames the lit
+    // sources relative to that wrong canvas too, so a "correct" camera fly can
+    // still park nodes off-screen (blocks SC#1).
+    //
+    // containerRef measures the SAME div that owns className (so fullscreen
+    // toggling in CodeVaultGraph.tsx, which swaps canvasClass on this element
+    // without unmounting it, is picked up by the ResizeObserver below).
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState<{
+      width: number;
+      height: number;
+    } | null>(null);
+
+    useLayoutEffect(() => {
+      const el = containerRef.current;
+      if (!el) return;
+
+      // Skip zero/degenerate measurements (unmounted, display:none, or jsdom's
+      // default all-zero layout) — passing 0 to the library renders a blank
+      // canvas instead of the "wait for a real measurement" behavior we want.
+      const applyRect = (rect: { width: number; height: number }) => {
+        if (rect.width > 0 && rect.height > 0) {
+          setDimensions({ width: rect.width, height: rect.height });
+        }
+      };
+
+      // Synchronous initial measure via useLayoutEffect (not useEffect) so the
+      // first commit already carries real dimensions, before the browser paints —
+      // otherwise the library's window-size fallback would flash for one frame.
+      applyRect(el.getBoundingClientRect());
+
+      // ResizeObserver may be unavailable in some test environments — degrade to
+      // the single initial measurement above rather than throw.
+      if (typeof ResizeObserver === "undefined") return;
+
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          applyRect(entry.contentRect);
+        }
+      });
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
+
     // Expose a typed subset of the library's imperative API.
     useImperativeHandle(ref, () => ({
       cameraPosition: (position, lookAt, ms) =>
@@ -112,6 +163,7 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
 
     return (
       <div
+        ref={containerRef}
         className={
           className ??
           "relative w-full h-[600px] rounded-[var(--radius)] border border-primary/20 overflow-hidden bg-[#09090b]"
@@ -122,10 +174,15 @@ export const ForceGraph3D = forwardRef<ForceGraph3DHandle, ForceGraph3DProps>(
          * Prop baseline from UI-SPEC §3D Sphere Geometry Props + PATTERNS.md core baseline.
          * Colors arrive as hex strings via props — hardcoded values here are:
          *   backgroundColor="#09090b"  (dark background matching the design system)
+         * width/height come from the ResizeObserver above (187-05 checkpoint fix) —
+         * left undefined until a real measurement lands so the library doesn't
+         * momentarily fall back to window.innerWidth/innerHeight.
          */}
         <ForceGraph3DLib
           ref={fgRef3dInner}
           graphData={data}
+          width={dimensions?.width}
+          height={dimensions?.height}
           nodeId="id"
           nodeLabel={labelFn}
           nodeColor={colorFn}
