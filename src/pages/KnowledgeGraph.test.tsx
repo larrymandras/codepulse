@@ -326,6 +326,7 @@ function makeMockKg(overrides: Partial<typeof mockKgReturn> = {}) {
       predicate: null,
       agentId: null,
       entityName: "",
+      entityId: null,
       hops: 1,
       asOf: null,
       limit: 100,
@@ -825,7 +826,7 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     expect(mockFgRef3dHandle.zoomToFit).not.toHaveBeenCalled();
   });
 
-  it("D-09 ego-lens fallback: an off-screen source triggers setLens('entity') + setFilter('entityName', ...) without an immediate zoomToFit", async () => {
+  it("D-09 ego-lens fallback: an off-screen source triggers setLens('entity') + setFilter('entityId', ...) without an immediate zoomToFit", async () => {
     const setLens = vi.fn();
     const setFilter = vi.fn();
     mockLatestAnswerSync.mockReturnValue({
@@ -847,7 +848,13 @@ describe("KnowledgeGraph — answer sync reaction (Phase 187 Plan 05, GLXY-01)",
     await waitFor(() => {
       expect(setLens).toHaveBeenCalledWith("entity");
     });
-    expect(setFilter).toHaveBeenCalledWith("entityName", "Acme Corp");
+    // 187-05 defect fix: the fallback targets the emitted UUID, NOT
+    // primaryEntityName — entity names are not unique (a live example has
+    // two "astridr" rows of different types), so a name-driven fetch can
+    // silently resolve to the WRONG duplicate. This is the regression test
+    // for that exact defect.
+    expect(setFilter).toHaveBeenCalledWith("entityId", UUID_A);
+    expect(setFilter).not.toHaveBeenCalledWith("entityName", "Acme Corp");
     expect(setFilter).toHaveBeenCalledWith("hops", 1);
     // The poll hasn't resolved (the node never lays out in this test) — no
     // no-op fly to an unrendered node (SC#1 guarantee).

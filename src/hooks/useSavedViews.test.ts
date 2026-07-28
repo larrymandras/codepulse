@@ -59,6 +59,7 @@ const sampleFilters: KgFilters = {
   predicate: "knows",
   agentId: null,
   entityName: "Alice",
+  entityId: null,
   hops: 2,
   asOf: null,
   limit: 50,
@@ -116,6 +117,29 @@ describe("useSavedViews", () => {
     expect(callArgs.filters.entityType).toBe("person");
     expect(callArgs.filters.entityName).toBe("Alice");
     expect(callArgs.filters.hops).toBe(2);
+  });
+
+  // -------------------------------------------------------------------------
+  // Test 1b (187-05): entityId is also excluded from persisted filters — it
+  // is a D-09 answer-sync id (programmatic/transient), never a durable saved
+  // view field.
+  // -------------------------------------------------------------------------
+  it("saveView passes filters object WITHOUT entityId key to the mutation", async () => {
+    const { useSavedViews } = await import("./useSavedViews");
+    const { result } = renderHook(() => useSavedViews());
+
+    await act(async () => {
+      await result.current.saveView(
+        "My View",
+        "entity" as KgLens,
+        { ...sampleFilters, entityId: "25016ef7-0de5-4af1-af06-f772d8d0faf4" },
+        "Alice",
+        2,
+      );
+    });
+
+    const callArgs = mockSaveMutation.mock.calls[0][0];
+    expect(callArgs.filters).not.toHaveProperty("entityId");
   });
 
   // -------------------------------------------------------------------------

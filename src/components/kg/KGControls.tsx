@@ -193,7 +193,14 @@ export default function KGControls({
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={filters.entityName}
-                onChange={(e) => setFilter("entityName", e.target.value)}
+                onChange={(e) => {
+                  setFilter("entityName", e.target.value);
+                  // 187-05: a manual name edit must win outright over any
+                  // previous D-09 answer-sync entityId — clear it so the
+                  // fetch effect (which prefers entityId when set) falls
+                  // through to the name the user just typed.
+                  setFilter("entityId", null);
+                }}
                 placeholder="Search entity by name…"
                 className="pl-8 w-56 font-mono text-sm"
               />

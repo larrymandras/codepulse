@@ -152,7 +152,21 @@ export interface OverviewParams {
 }
 
 export interface EntityParams {
-  name: string;
+  /**
+   * Exactly one of `name` / `entityId` is required — mirrors the astridr
+   * `/api/kg/entity` route contract (187-05 fix). `entityId` takes
+   * precedence: when both are supplied here, `name` is dropped before the
+   * request is sent (see `fetchEntity`) so the two can never collide server-side.
+   */
+  name?: string;
+  /**
+   * Pins the lookup to an exact entity UUID, bypassing astridr's
+   * name-similarity resolver — required when an id is already known (e.g.
+   * the D-09 answer-sync ego-lens fallback), since entity names are not
+   * unique (187-05: two "astridr" rows of different types can coexist) and
+   * a name-only fetch can silently resolve to the wrong duplicate.
+   */
+  entityId?: string;
   hops?: number;
   agentId?: string | null;
   asOf?: string | null;
@@ -207,8 +221,11 @@ export function fetchOverview(
 }
 
 export function fetchEntity(params: EntityParams): Promise<KgEntityResponse> {
+  // entity_id takes precedence — never send both (the astridr route 422s on
+  // both/neither, 187-05). kgGet already drops undefined/null/"" params.
   return kgGet<KgEntityResponse>("/api/kg/entity", {
-    name: params.name,
+    name: params.entityId ? undefined : params.name,
+    entity_id: params.entityId,
     hops: params.hops,
     agent_id: params.agentId,
     asOf: params.asOf,

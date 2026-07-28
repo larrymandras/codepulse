@@ -701,8 +701,26 @@ export default function KnowledgeGraph() {
     // D-09 fallback — reuse the exact ?focus= ego-lens mechanism, then poll
     // for layout readiness (and ref-mount readiness), then the SAME
     // zoomToFit call as D-07.
+    //
+    // 187-05 defect fix: target the emitted UUID directly via setFilter
+    // ("entityId", ...) rather than primaryEntityName. Entity names are NOT
+    // unique — a live example has two "astridr" rows (a [person] with no
+    // facts and a [persona] with 5 facts) — so a name-driven fetch can
+    // silently resolve to the WRONG duplicate (the ego-lens loads a
+    // different row than the one sourceNodeIds actually named, and the
+    // subsequent id-match against litIds then finds nothing). litIds' first
+    // entry is always the primary source's id here (it is guaranteed
+    // non-empty by the validIds.length===0 guard above); primaryEntityName
+    // is kept only as a defensive fallback for a hypothetical no-usable-id
+    // case (unreachable today given that guard, but keeps the contract
+    // explicit rather than silently dropping the field).
     setLens("entity");
-    setFilter("entityName", answerSync.primaryEntityName);
+    const primarySourceId = validIds[0];
+    if (primarySourceId) {
+      setFilter("entityId", primarySourceId);
+    } else if (answerSync.primaryEntityName) {
+      setFilter("entityName", answerSync.primaryEntityName);
+    }
     setFilter("hops", 1);
 
     fallbackPollCancelRef.current = flyToLitSources({
@@ -848,6 +866,9 @@ export default function KnowledgeGraph() {
     appliedFocusRef.current = true;
     if (lensParam === "entity") setLens("entity");
     setFilter("entityName", focusEntity);
+    // 187-05: clear a stale D-09 sync entityId — this is the user-driven
+    // name path, which must win outright, never race a previous sync's id.
+    setFilter("entityId", null);
     // Clamp ?hops to a sane integer range — a crafted URL could supply a
     // negative or huge value that would otherwise reach the backend (WR-03).
     const parsedHops = Math.max(1, Math.min(6, Math.floor(Number(hopsParam)) || 1));
@@ -876,6 +897,10 @@ export default function KnowledgeGraph() {
     setLens(view.lens as KgLens);
     // Apply all persisted filter fields
     setFilter("entityName", (view.filters.entityName as string) ?? "");
+    // 187-05: entityId is never persisted in a saved view (programmatic-only,
+    // excluded from idb persistence) — clear any stale D-09 sync id so the
+    // loaded view's name wins outright.
+    setFilter("entityId", null);
     setFilter("hops", (view.filters.hops as number) ?? 1);
     setFilter("asOf", (view.filters.asOf as string | null) ?? null);
     setFilter("entityType", (view.filters.entityType as string | null) ?? null);
@@ -950,6 +975,8 @@ export default function KnowledgeGraph() {
     (view: SavedKgView) => {
       setLens(view.lens as KgLens);
       setFilter("entityName", (view.filters.entityName as string) ?? "");
+      // 187-05: same rationale as the ?view hydration effect above.
+      setFilter("entityId", null);
       setFilter("hops", (view.filters.hops as number) ?? 1);
       setFilter("asOf", (view.filters.asOf as string | null) ?? null);
       setFilter("entityType", (view.filters.entityType as string | null) ?? null);
@@ -1214,8 +1241,11 @@ export default function KnowledgeGraph() {
   }, [activeGraph.nodes]);
 
   const isEmpty = graph.nodes.length === 0;
+  // 187-05: an entityId-driven fetch (D-09 answer-sync fallback) has no
+  // entityName text — must not show the "type a name" empty state while it
+  // is loading/loaded.
   const needsEntityName =
-    lens === "entity" && !filters.entityName.trim();
+    lens === "entity" && !filters.entityName.trim() && !filters.entityId;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">

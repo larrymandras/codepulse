@@ -32,8 +32,12 @@ export function useSavedViews() {
 
   /**
    * Persist the current KG state as a named view. Strips searchQuery before
-   * persisting (D-06 — search terms are ephemeral, not view config). Generates
-   * a fresh shareToken client-side via crypto.randomUUID() (D-03).
+   * persisting (D-06 — search terms are ephemeral, not view config). Also
+   * strips entityId (187-05) — a D-09 answer-sync id is programmatic/transient
+   * (re-derived fresh from the latest sync row, never user-chosen) and must
+   * never be captured into a saved view; `focus` (entityName) is the durable,
+   * shareable identifier for the Entity lens. Generates a fresh shareToken
+   * client-side via crypto.randomUUID() (D-03).
    *
    * Returns the shareToken on success so callers can immediately offer a
    * share URL without a round-trip.
@@ -45,8 +49,9 @@ export function useSavedViews() {
     focus: string,
     hops: number,
   ): Promise<string> => {
-    // D-06: strip the transient searchQuery before persisting
-    const { searchQuery: _sq, ...persistable } = filters;
+    // D-06: strip the transient searchQuery before persisting; 187-05: also
+    // strip the transient/programmatic entityId.
+    const { searchQuery: _sq, entityId: _eid, ...persistable } = filters;
 
     // D-03: generate opaque share token client-side (avoids Convex runtime
     // crypto.randomUUID availability question — RESEARCH Open Question 1)

@@ -101,6 +101,21 @@ describe("kgApi — fetchEntity", () => {
     expect(url.searchParams.get("hops")).toBe("2");
     expect(url.searchParams.get("asOf")).toBe("2026-01-01T00:00:00Z");
   });
+
+  it("187-05: entityId sends entity_id and OMITS name entirely, even when both are supplied", async () => {
+    fetchMock.mockResolvedValue(
+      okJson({ entity: { id: "a", name: "astridr" }, triples: [], hops: 1, asOf: null }),
+    );
+    // A name is also passed (as it would be for display/back-compat purposes)
+    // to prove entityId strictly wins and `name` never reaches the wire — the
+    // astridr route 422s if both are present, so this must never happen.
+    await fetchEntity({ entityId: "25016ef7-0de5-4af1-af06-f772d8d0faf4", name: "astridr", hops: 1 });
+    const url = lastUrl();
+    expect(url.searchParams.get("entity_id")).toBe(
+      "25016ef7-0de5-4af1-af06-f772d8d0faf4",
+    );
+    expect(url.searchParams.has("name")).toBe(false);
+  });
 });
 
 describe("kgApi — fetchContradictions", () => {

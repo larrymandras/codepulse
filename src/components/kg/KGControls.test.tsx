@@ -19,6 +19,7 @@ const defaultFilters: KgFilters = {
   predicate: null,
   agentId: null,
   entityName: "",
+  entityId: null,
   hops: 1,
   asOf: null,
   limit: 100,
@@ -157,6 +158,25 @@ describe("KGControls — SC#1: search input mutual exclusivity", () => {
     expect(
       screen.queryByPlaceholderText(/Search facts & relationships…/i),
     ).toBeNull();
+  });
+});
+
+describe("KGControls — Entity-name input behavior (187-05)", () => {
+  it("editing the entity-name input calls setFilter('entityName', value) AND clears entityId", () => {
+    const setFilter = vi.fn();
+    // Simulates a prior D-09 answer-sync id still being set — a manual edit
+    // must win outright, so entityId is explicitly cleared alongside the
+    // new name (otherwise the fetch effect's entityId-precedence would keep
+    // fetching the STALE synced entity instead of what the user just typed).
+    renderControls({
+      lens: "entity",
+      filters: { ...defaultFilters, entityId: "25016ef7-0de5-4af1-af06-f772d8d0faf4" },
+      setFilter,
+    });
+    const input = screen.getByPlaceholderText(/Search entity by name…/i);
+    fireEvent.change(input, { target: { value: "Larry" } });
+    expect(setFilter).toHaveBeenCalledWith("entityName", "Larry");
+    expect(setFilter).toHaveBeenCalledWith("entityId", null);
   });
 });
 
