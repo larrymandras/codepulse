@@ -276,9 +276,37 @@ describe("BrainPicker — catalogue fetch", () => {
     renderPicker();
 
     openPicker();
+    // UAT test 3: on the profile axis the failure is structural (the deferred astridr Phase 184.1
+    // `models.catalog` command), so the copy names that instead of promising a retry will work.
+    expect(
+      await screen.findByText(/Per-profile swapping isn't available yet/)
+    ).toBeInTheDocument();
+  });
+
+  it("does not blame transience on the profile axis, but still does on the global axis (UAT test 3)", async () => {
+    // The picker opens on the profile scope by default, so this copy is the FIRST thing an operator
+    // sees — it must not tell them to retry something that cannot succeed until an external phase
+    // ships.
+    mockGetCatalogue.mockRejectedValue(new Error("models.catalog not in the accepted union"));
+    renderPicker();
+
+    openPicker();
+    expect(
+      await screen.findByText(/Per-profile swapping isn't available yet/)
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Couldn't load the brain catalogue — try again in a moment.")
+    ).not.toBeInTheDocument();
+
+    // The global axis is genuinely live, so a failure there IS plausibly transient and keeps the
+    // retry wording.
+    mockSendCommand.mockRejectedValue(new Error("socket blip"));
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+
     expect(
       await screen.findByText("Couldn't load the brain catalogue — try again in a moment.")
     ).toBeInTheDocument();
+    expect(screen.queryByText(/Per-profile swapping isn't available yet/)).not.toBeInTheDocument();
   });
 });
 

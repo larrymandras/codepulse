@@ -506,11 +506,24 @@ export function BrainPicker({
                 <Skeleton className="h-6 w-full" />
               </div>
             )}
-            {fetchError && (
-              <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                Couldn't load the brain catalogue — try again in a moment.
-              </p>
-            )}
+            {/* UAT 2026-07-29 (103-UAT.md test 3): the profile axis's failure is STRUCTURAL, not
+                transient — `models.catalog` is absent from Ástríðr's accepted command union until
+                astridr Phase 184.1 ships, so this fetch cannot succeed no matter how many times the
+                operator retries. Since the picker opens on this scope by default, "try again in a
+                moment" was the first thing an operator saw and it blamed the wrong cause. The global
+                axis keeps the retry copy, because there a failure genuinely IS transient. */}
+            {fetchError &&
+              (scope === "profile" ? (
+                <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                  Per-profile swapping isn't available yet — switch to{" "}
+                  <span className="font-medium text-foreground">All profiles</span> to change the
+                  engine.
+                </p>
+              ) : (
+                <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                  Couldn't load the brain catalogue — try again in a moment.
+                </p>
+              ))}
             {entries !== null && !fetchError && entries.length === 0 && (
               <div className="flex flex-col gap-1 px-2 py-4 text-center">
                 <p className="text-sm font-semibold">No brains reachable</p>
