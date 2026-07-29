@@ -1,21 +1,41 @@
 /**
- * GlobalSwapModal.test.tsx — 103-04-T2. Proves D-09 (informational-only confirm friction),
- * D-11 (pinned-default overwrite count + mode-preserving revert), and D-12 (honest per-profile
- * partial-failure result, never showing the attempted target on a failed row) against real
- * fixture data, not a render-without-error smoke test.
+ * GlobalSwapModal.test.tsx — 103-04-T2, rewritten 103-12-T1/T2 (gap closure: defect #5 + CR-03).
  *
- * `useCommandDispatch` is mocked directly (asserts the live `swap.set` axis); `brainsApi` is
- * mocked directly (asserts the per-profile `gateway.model.set` fan-out axis) — this lets every
- * dispatched command shape be asserted exactly via `toHaveBeenCalledWith`, so any drift from
- * 103-CONTRACT.md fails here. A configurable per-profile-id failure map on the `brainsApi` mock
- * constructs the partial-failure scenario D-12 requires; a stub that always succeeds could not
- * exercise it at all.
+ * Proves D-09 (informational-only confirm friction) and D-11 (pinned-default shadowed-count
+ * disclosure, mode-preserving revert) against real fixture data — plus, new for this plan, the
+ * §8-compliant single-axis dispatch and D-14/D-15 honest result reporting (defect #5) and the
+ * CR-03 revert-survives-Done lifecycle fix.
+ *
+ * `useCommandDispatch` is mocked directly (asserts the live `swap.set` axis with
+ * `toHaveBeenCalledWith` on the exact command object). `@/hooks/useResolvedBrain`'s
+ * `useGlobalBrainOverride` is mocked directly (a plain mutable object + `rerender`, simulating the
+ * server-pushed `swap.state` readback landing after the ack) — this is the D-14/D-15 confirmation
+ * source per 103-12-PLAN.md's interfaces section. `@/lib/brainsApi` is ALSO mocked, even though the
+ * component no longer imports it at all post-103-12 — this is deliberate: it is the anti-stub-
+ * masking proof surface. `expect(mockDispatchSwap).not.toHaveBeenCalled()` asserted after every
+ * dispatch test is the direct 103-CONTRACT.md §8 compliance check (no per-profile
+ * `gateway.model.set` fan-out for the global axis) and would catch a regression that reintroduced
+ * the fan-out this plan deletes.
+ *
+ * ── Moved/retired coverage from the pre-103-12 suite (per 103-12-PLAN.md's explicit instruction
+ * to record this, not silently drop it) ──
+ * The old suite asserted a `Promise.allSettled` per-profile fan-out (`gateway.model.set` dispatched
+ * once per profile, a partial-failure fixture showing one row `ok` and one `error`, and a STUB chip
+ * on per-profile result rows). That entire axis is deleted by 103-CONTRACT.md §8 — a global swap
+ * never dispatches `gateway.model.set` at all, so there is no per-row partial-failure surface to
+ * test anymore (D-12 applied to a one-command axis: one command has one outcome). Those assertions
+ * are replaced below by the single-outcome-row tests in the "dispatch" describe block, and the old
+ * "fires the live swap.set global override and the per-profile gateway.model.set fan-out" test is
+ * replaced by "fires exactly the live swap.set command and never touches the deferred per-profile
+ * fan-out." The STUB-chip-on-result-row test is retired outright — `BRAINS_STUB_ACTIVE` must never
+ * render on this surface at all now (the global axis is live by definition, D-16 amendment), and a
+ * dedicated test below asserts that directly.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { CatalogueEntry, GatewayModelSetCommand } from "@/lib/brainsApi";
-import { GlobalSwapModal, type GlobalSwapProfile } from "./GlobalSwapModal";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { CatalogueEntry } from "@/lib/brainsApi";
+import { GLOBAL_SWAP_CONFIRM_TIMEOUT_MS, GlobalSwapModal, type GlobalSwapProfile } from "./GlobalSwapModal";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -27,24 +47,36 @@ vi.mock("@/hooks/useCommandDispatch", () => ({
   }),
 }));
 
+// Mutable — reassigned per-test (never mutated in place) and re-read on every render, so a test can
+// simulate the server-pushed swap.state readback landing by reassigning + calling `rerender`.
+let mockGlobalOverride: { modelOverride: string | null; voiceOverride: string | null } = {
+  modelOverride: null,
+  voiceOverride: null,
+};
+vi.mock("@/hooks/useResolvedBrain", () => ({
+  useGlobalBrainOverride: () => mockGlobalOverride,
+}));
+
+// Anti-stub-masking proof surface only — GlobalSwapModal.tsx imports NOTHING from this module
+// post-103-12 (grep -c "brainsApi" returns 0), so `mockDispatchSwap` staying at zero calls across
+// every test in this file is the direct 103-CONTRACT.md §8 compliance assertion.
 const mockDispatchSwap = vi.fn();
-let stubActive = true;
 vi.mock("@/lib/brainsApi", () => ({
   brainsApi: {
     isStub: true,
     dispatchSwap: (...args: unknown[]) => mockDispatchSwap(...args),
   },
   get BRAINS_STUB_ACTIVE() {
-    return stubActive;
+    return false;
   },
 }));
 
 const mockToastFn = vi.fn();
 vi.mock("sonner", () => ({
-  toast: Object.assign(
-    (...args: unknown[]) => mockToastFn(...args),
-    { success: vi.fn(), error: vi.fn() }
-  ),
+  toast: Object.assign((...args: unknown[]) => mockToastFn(...args), {
+    success: vi.fn(),
+    error: vi.fn(),
+  }),
 }));
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -130,13 +162,8 @@ beforeEach(() => {
   mockDispatch.mockReset();
   mockDispatch.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
   mockDispatchSwap.mockReset();
-  mockDispatchSwap.mockImplementation(async (cmd: GatewayModelSetCommand) => ({
-    type: "ack",
-    request_id: cmd.request_id,
-    status: "ok",
-  }));
   mockToastFn.mockReset();
-  stubActive = true;
+  mockGlobalOverride = { modelOverride: null, voiceOverride: null };
 });
 
 // ─── Confirm state ────────────────────────────────────────────────────────────
@@ -159,7 +186,7 @@ describe("GlobalSwapModal confirm state", () => {
     }
   });
 
-  it("renders the pinned-default warning with a computed count of 2 when 2 of 3 profiles are pinned", () => {
+  it("renders the pinned-default shadowing disclosure with a computed count of 2 when 2 of 3 profiles are pinned (D-11 amended)", () => {
     render(
       <GlobalSwapModal
         target={TARGET_NORMAL}
@@ -170,7 +197,9 @@ describe("GlobalSwapModal confirm state", () => {
     );
 
     expect(
-      screen.getByText("2 profiles have a pinned default that will be overwritten.")
+      screen.getByText(
+        "2 profiles have a pinned default that will be shadowed while this global override is in force."
+      )
     ).toBeInTheDocument();
   });
 
@@ -179,15 +208,27 @@ describe("GlobalSwapModal confirm state", () => {
       <GlobalSwapModal target={TARGET_NORMAL} profiles={ALL_PINNED} open onOpenChange={() => {}} />
     );
     expect(
-      screen.getByText("3 profiles have a pinned default that will be overwritten.")
+      screen.getByText(
+        "3 profiles have a pinned default that will be shadowed while this global override is in force."
+      )
     ).toBeInTheDocument();
 
     rerender(
       <GlobalSwapModal target={TARGET_NORMAL} profiles={NONE_PINNED} open onOpenChange={() => {}} />
     );
-    expect(
-      screen.queryByText(/pinned default that will be overwritten/)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/pinned default that will be shadowed/)).not.toBeInTheDocument();
+  });
+
+  it("never uses the word 'overwritten' — a global swap shadows pinned defaults, it never writes them (D-11 amended)", () => {
+    const { container } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={ALL_PINNED}
+        open
+        onOpenChange={() => {}}
+      />
+    );
+    expect(container.textContent).not.toMatch(/overwritten/i);
   });
 
   it("renders the expensive-tier cost warning with no second confirmation surface", () => {
@@ -224,10 +265,10 @@ describe("GlobalSwapModal confirm state", () => {
   });
 });
 
-// ─── Dispatch (confirm -> result) ─────────────────────────────────────────────
+// ─── Dispatch (confirm -> result), §8 compliance + D-14/D-15 honest reporting ─
 
-describe("GlobalSwapModal dispatch", () => {
-  it("fires the live swap.set global override and the per-profile gateway.model.set fan-out with exact shapes", async () => {
+describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
+  it("fires exactly the live swap.set command and never touches the deferred per-profile fan-out", async () => {
     render(
       <GlobalSwapModal
         target={TARGET_NORMAL}
@@ -237,7 +278,9 @@ describe("GlobalSwapModal dispatch", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
 
     await waitFor(() =>
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -247,34 +290,126 @@ describe("GlobalSwapModal dispatch", () => {
         restore: false,
       })
     );
+    // The direct §8-compliance assertion — the single most important test in this file.
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
 
-    for (const p of PINNED_AND_INHERITED_PAIR) {
-      await waitFor(() =>
-        expect(mockDispatchSwap).toHaveBeenCalledWith({
-          type: "gateway.model.set",
-          request_id: "",
-          scope: "profile",
-          profile_id: p.profileId,
-          model: TARGET_NORMAL.id,
-          mode: "default",
-        })
+  it("reports success only after the swap.state readback confirms the target model — never from the ack alone", async () => {
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={() => {}}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    // Ack alone is not enough — no success claim yet.
+    expect(screen.queryByText(`Switched to ${TARGET_NORMAL.name}.`)).not.toBeInTheDocument();
+
+    // The server-pushed swap.state readback lands.
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`)).toBeInTheDocument();
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
+
+  it("reports the server's own error text and claims nothing switched", async () => {
+    mockDispatch.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "error",
+      error: "backend unreachable",
+    });
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={() => {}}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+
+    const row = await screen.findByText(/Failed — backend unreachable/);
+    expect(row.textContent).toContain("Every profile is still on its prior engine");
+    expect(screen.queryByText(/Switched to/)).not.toBeInTheDocument();
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
+
+  it("never renders a success claim when the ack is ok but the swap.state readback never arrives (regression guard for the old ack-equals-success shortcut)", async () => {
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={() => {}}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    expect(screen.queryByText(`Switched to ${TARGET_NORMAL.name}.`)).not.toBeInTheDocument();
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
+
+  it("falls back to an honest accepted-but-unconfirmed reading after the bounded wait, still never claiming success", async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={PINNED_AND_INHERITED_PAIR}
+          open
+          onOpenChange={() => {}}
+        />
       );
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+        );
+      });
+
+      expect(
+        screen.getByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`)
+      ).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(GLOBAL_SWAP_CONFIRM_TIMEOUT_MS + 100);
+      });
+
+      expect(
+        screen.getByText(
+          `Accepted — no confirmation received yet. No profile is confirmed on ${TARGET_NORMAL.name} yet.`
+        )
+      ).toBeInTheDocument();
+      expect(screen.queryByText(`Switched to ${TARGET_NORMAL.name}.`)).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
     }
   });
 
-  it("shows a failed row with the original engine and reason, and a succeeded row with the new engine", async () => {
-    mockDispatchSwap.mockImplementation(async (cmd: GatewayModelSetCommand) => {
-      if (cmd.profile_id === "consulting") {
-        return {
-          type: "ack",
-          request_id: cmd.request_id,
-          status: "error",
-          error: 'No credentials configured for profile "consulting"',
-        };
-      }
-      return { type: "ack", request_id: cmd.request_id, status: "ok" };
-    });
-
+  it("never renders the BRAINS_STUB_ACTIVE chip on the result surface — the global axis is live by definition (D-16 amendment)", async () => {
     render(
       <GlobalSwapModal
         target={TARGET_NORMAL}
@@ -284,111 +419,70 @@ describe("GlobalSwapModal dispatch", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
-
-    const succeededRow = await screen.findByText(`Assistant: switched to ${TARGET_NORMAL.name}`);
-    expect(succeededRow).toBeInTheDocument();
-
-    const failedRow = await screen.findByText(
-      (content) =>
-        content.startsWith("Consulting: failed") &&
-        content.includes('No credentials configured for profile "consulting"') &&
-        content.includes("still on Llama 3 (local)")
-    );
-    expect(failedRow).toBeInTheDocument();
-  });
-
-  it("never renders the attempted target engine name as if it landed on a failed row", async () => {
-    mockDispatchSwap.mockImplementation(async (cmd: GatewayModelSetCommand) => {
-      if (cmd.profile_id === "consulting") {
-        return {
-          type: "ack",
-          request_id: cmd.request_id,
-          status: "error",
-          error: 'No credentials configured for profile "consulting"',
-        };
-      }
-      return { type: "ack", request_id: cmd.request_id, status: "ok" };
-    });
-
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={PINNED_AND_INHERITED_PAIR}
-        open
-        onOpenChange={() => {}}
-      />
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
     );
 
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
-
-    const failedRow = await screen.findByText(
-      (content) =>
-        content.startsWith("Consulting: failed") &&
-        content.includes('No credentials configured for profile "consulting"') &&
-        content.includes("still on Llama 3 (local)")
-    );
-    expect(failedRow.textContent).not.toContain(TARGET_NORMAL.name);
-
-    const succeededRow = screen.getByText(`Assistant: switched to ${TARGET_NORMAL.name}`);
-    expect(succeededRow).toBeInTheDocument();
-  });
-
-  it("appends a STUB chip to per-profile result rows when the stub adapter is active", async () => {
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={PINNED_AND_INHERITED_PAIR}
-        open
-        onOpenChange={() => {}}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
-
-    await screen.findByText(`Assistant: switched to ${TARGET_NORMAL.name}`);
-    expect(screen.getAllByText("STUB").length).toBeGreaterThan(0);
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    expect(screen.queryByText("STUB")).not.toBeInTheDocument();
   });
 });
 
-// ─── Dismiss / revert ─────────────────────────────────────────────────────────
+// ─── Dismiss / revert (CR-03: survives Done, renders a real result) ───────────
 
 describe("GlobalSwapModal dismiss and revert", () => {
-  it("fires a summary toast with a 'Revert global swap' action when the result is dismissed", async () => {
-    render(
+  async function swapAndConfirm(rerenderFn: (ui: React.ReactElement) => void, onOpenChange: (open: boolean) => void) {
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerenderFn(
       <GlobalSwapModal
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
-        onOpenChange={() => {}}
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+  }
+
+  it("fires a summary toast with a 'Revert global swap' action once the swap is confirmed", async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
-    await screen.findByText(`Assistant: switched to ${TARGET_NORMAL.name}`);
+    await swapAndConfirm(rerender, onOpenChange);
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
     expect(mockToastFn).toHaveBeenCalledWith(
-      `2 of 2 profiles switched to ${TARGET_NORMAL.name}.`,
+      `All profiles switched to ${TARGET_NORMAL.name}.`,
       expect.objectContaining({
         action: expect.objectContaining({ label: "Revert global swap" }),
       })
     );
   });
 
-  it("invoking Revert dispatches swap.set with restore:true and restores each profile's snapshot model with its snapshot mode preserved", async () => {
-    render(
+  it("invoking Revert reopens the dialog BEFORE dispatching, sends exactly swap.set restore:true, and renders a confirmed revert result", async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
       <GlobalSwapModal
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
-        onOpenChange={() => {}}
+        onOpenChange={onOpenChange}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` }));
-    await screen.findByText(`Assistant: switched to ${TARGET_NORMAL.name}`);
+    await swapAndConfirm(rerender, onOpenChange);
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
 
@@ -398,8 +492,13 @@ describe("GlobalSwapModal dismiss and revert", () => {
     ];
     mockDispatch.mockClear();
     mockDispatchSwap.mockClear();
+    onOpenChange.mockClear();
 
     toastOptions.action.onClick();
+
+    // CR-03: the dialog is genuinely reopened BEFORE the dispatch fires, never a real command with
+    // no visible surface.
+    expect(onOpenChange).toHaveBeenCalledWith(true);
 
     await waitFor(() =>
       expect(mockDispatch).toHaveBeenCalledWith({
@@ -408,34 +507,64 @@ describe("GlobalSwapModal dismiss and revert", () => {
         restore: true,
       })
     );
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
 
-    // Pinned profile ("Assistant") restores via mode: "default", model preserved.
-    await waitFor(() =>
-      expect(mockDispatchSwap).toHaveBeenCalledWith({
-        type: "gateway.model.set",
-        request_id: "",
-        scope: "profile",
-        profile_id: "assistant-default",
-        model: "claude-cli-sonnet5",
-        mode: "default",
-        restore: false,
-      })
+    await screen.findByText("Accepted — confirming the global override was cleared…");
+
+    // The server-pushed swap.state readback confirms the override is cleared (null).
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
     );
 
-    // Inherited profile ("Consulting") restores by clearing the pinned default the fan-out
-    // set — restore:true, model omitted — never re-pinned to its old model value.
-    await waitFor(() =>
-      expect(mockDispatchSwap).toHaveBeenCalledWith({
-        type: "gateway.model.set",
-        request_id: "",
-        scope: "profile",
-        profile_id: "consulting",
-        mode: "default",
-        restore: true,
-      })
+    expect(
+      await screen.findByText("Global override cleared — profiles are back on their own defaults.")
+    ).toBeInTheDocument();
+  });
+
+  it("does not resurrect the Revert action on a revert's own dismissal (a revert of a revert is not the D-10 affordance)", async () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
     );
 
-    await screen.findByText(`Assistant: switched to Sonnet 5 (CLI)`);
-    await screen.findByText(`Consulting: switched to Llama 3 (local)`);
+    await swapAndConfirm(rerender, onOpenChange);
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    mockToastFn.mockClear();
+    toastOptions.action.onClick();
+
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText("Global override cleared — profiles are back on their own defaults.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(mockToastFn).toHaveBeenCalledWith("Global override cleared.");
+    const revertCall = mockToastFn.mock.calls.find(
+      (call) => typeof call[1] === "object" && call[1]?.action?.label === "Revert global swap"
+    );
+    expect(revertCall).toBeUndefined();
   });
 });

@@ -1,23 +1,34 @@
 /**
- * GlobalSwapModal.tsx — 103-04-T1. The global-swap ritual: a confirmation modal that lists
- * exactly what changes, transitions in place into an honest per-profile result, and offers a
- * snapshot-backed revert (D-09/D-10/D-11/D-12).
+ * GlobalSwapModal.tsx — 103-04-T1, rewritten 103-12-T1/T2 (gap closure: defect #5 + CR-03).
  *
- * Two-axis dispatch (see 103-04-PLAN.md `<planner_reconciliation>`): a global swap fires BOTH
- *  1. the live, shipped `swap.set` runtime override (Ástríðr Phase 185/186) — never stubbed,
- *     never marked with the STUB indicator, and
- *  2. an N-command per-profile pinned-default fan-out through the D-16 `brainsApi` seam
- *     (`gateway.model.set`, `mode: "default"`), aggregated with `Promise.allSettled` so a
- *     partial failure yields an honest per-row result (D-12) with no all-or-nothing rollback.
+ * The global-swap ritual: a confirmation modal that lists exactly what changes, transitions in
+ * place into an honest result, and offers a snapshot-backed revert (D-09/D-10/D-11/D-12).
+ *
+ * Single-axis dispatch (103-CONTRACT.md §8): "All profiles" scope fires exactly ONE live command
+ * — the shipped `swap.set` runtime override (Ástríðr Phase 185/186) — and reports THAT command's
+ * outcome. The pre-103-12 version ALSO fanned out N deferred per-profile "set the gateway model"
+ * commands (the astridr-Phase-184.1 axis, not yet built) and reported THEIR guaranteed
+ * union-tag-invalid failures as the global swap's own result while discarding the real `swap.set`
+ * ack via a swallowed-error dispatch — see 103-12-PLAN.md's `<planner_reconciliation>` for the full
+ * reasoning trail (D-12 applied correctly to a one-command axis has one outcome, not N; D-11's
+ * confirm copy amended from the overwrite verb to a shadowing one, since nothing writes
+ * `profileConfigs.modelPreferences` once the fan-out is gone — 103-CONTRACT.md §9).
+ *
+ * D-14/D-15: an ack means ACCEPTED, never SWITCHED. Success is rendered only once
+ * `useGlobalBrainOverride()`'s server-pushed `swap.state` readback confirms the resulting model —
+ * a bounded fallback (`GLOBAL_SWAP_CONFIRM_TIMEOUT_MS`) states "accepted, unconfirmed" rather than
+ * hanging or inventing a success claim if the push never arrives.
  *
  * The confirm state's row list IS the friction (D-09) — there is no type-to-confirm input. The
- * same Dialog shell transitions in place from confirm to result rather than closing (D-12); a
- * failed row always keeps displaying the profile's real, unchanged engine, never the attempted
- * target. A client-held snapshot (model AND pin status, D-11) taken before dispatch backs the
- * "Revert global swap" toast action (D-10), which re-fires both axes to restore prior state.
+ * same Dialog shell transitions in place from confirm to result rather than closing. A client-held
+ * snapshot (model AND pin status, D-11) taken before dispatch backs the "Revert global swap" toast
+ * action (D-10). CR-03: `BrainPicker` keeps this modal instance mounted independently of its own
+ * visibility (a separate `globalDialogOpen` boolean, not the `globalTarget` mount guard), so a
+ * revert triggered from the summary toast — which can fire well after "Done" — has a live
+ * component instance to render into instead of firing a real command into an unmounted fiber.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Pin, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -29,12 +40,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
-import {
-  brainsApi,
-  BRAINS_STUB_ACTIVE,
-  type CatalogueEntry,
-  type GatewayModelSetCommand,
-} from "@/lib/brainsApi";
+import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
+import type { CatalogueEntry } from "@/lib/brainsApi";
 
 export type GlobalSwapProfileMode = "pinned" | "inherited" | "session";
 
@@ -61,74 +68,107 @@ interface SnapshotEntry {
   mode: GlobalSwapProfileMode;
 }
 
-type RowResult =
+/**
+ * D-14/D-15 applied to the single-command global axis: an ack means ACCEPTED, never SWITCHED.
+ * "confirming" resolves to "confirmed" only once the `swap.state` readback matches; "accepted" is
+ * the bounded fallback when no readback arrives within `GLOBAL_SWAP_CONFIRM_TIMEOUT_MS` — it never
+ * claims the switch/clear landed, only that the command was accepted for processing.
+ */
+type GlobalOutcome =
   | { status: "pending" }
-  | { status: "ok"; newModelDisplayName: string }
+  | { status: "confirming" }
+  | { status: "confirmed" }
+  | { status: "accepted" }
   | { status: "error"; reason: string };
 
 type ModalPhase = "confirm" | "result";
+type LastAction = "swap" | "revert";
+
+/**
+ * Bounded wait for the `swap.state` readback before falling back to an honest "accepted, not yet
+ * confirmed" reading — long enough for a normal WS round trip, short enough that the dialog never
+ * looks hung. Exported for direct test control.
+ */
+export const GLOBAL_SWAP_CONFIRM_TIMEOUT_MS = 4000;
 
 function profileLabel(p: { profileId: string; displayName?: string }): string {
   return p.displayName ?? p.profileId;
 }
 
-function reasonFromOutcome(
-  outcome: PromiseSettledResult<{ status: "ok" | "error"; error?: string }>,
-  fallback: string
-): string {
-  if (outcome.status === "fulfilled") return outcome.value.error ?? fallback;
-  return outcome.reason instanceof Error ? outcome.reason.message : fallback;
-}
-
-/**
- * A revert restores each snapshot entry's exact prior state, mode included (D-11) — a pinned
- * profile is restored via `mode: "default"`, a session-override profile via `mode: "session"`,
- * and an inherited (no override at all) profile is restored by CLEARING the pinned default the
- * fan-out set (`restore: true` — model ignored per 103-CONTRACT.md §2), never by re-pinning it.
- */
-function buildRestoreCommand(entry: SnapshotEntry): GatewayModelSetCommand {
-  if (entry.mode === "inherited") {
-    return {
-      type: "gateway.model.set",
-      request_id: "",
-      scope: "profile",
-      profile_id: entry.profileId,
-      mode: "default",
-      restore: true,
-    };
+function describeOutcome(outcome: GlobalOutcome, action: LastAction, targetName: string): string {
+  switch (outcome.status) {
+    case "pending":
+      return action === "swap" ? `Switching to ${targetName}…` : "Reverting the global override…";
+    case "confirming":
+      return action === "swap"
+        ? `Accepted — confirming the switch to ${targetName}…`
+        : "Accepted — confirming the global override was cleared…";
+    case "confirmed":
+      return action === "swap"
+        ? `Switched to ${targetName}.`
+        : "Global override cleared — profiles are back on their own defaults.";
+    case "accepted":
+      return action === "swap"
+        ? `Accepted — no confirmation received yet. No profile is confirmed on ${targetName} yet.`
+        : "Accepted — no confirmation received yet that the global override was cleared.";
+    case "error":
+      return action === "swap"
+        ? `Failed — ${outcome.reason}. Every profile is still on its prior engine.`
+        : `Revert failed — ${outcome.reason}. The global override may still be in force.`;
   }
-  return {
-    type: "gateway.model.set",
-    request_id: "",
-    scope: "profile",
-    profile_id: entry.profileId,
-    model: entry.model,
-    mode: entry.mode === "pinned" ? "default" : "session",
-    restore: false,
-  };
 }
 
 export function GlobalSwapModal({ target, profiles, open, onOpenChange }: GlobalSwapModalProps) {
   const { dispatch } = useCommandDispatch();
+  const { modelOverride } = useGlobalBrainOverride();
   const [phase, setPhase] = useState<ModalPhase>("confirm");
   const [snapshot, setSnapshot] = useState<SnapshotEntry[]>([]);
-  const [results, setResults] = useState<Record<string, RowResult>>({});
-  const [liveDisplay, setLiveDisplay] = useState<Record<string, string>>({});
+  const [outcome, setOutcome] = useState<GlobalOutcome>({ status: "pending" });
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [lastAction, setLastAction] = useState<"swap" | "revert">("swap");
+  const [lastAction, setLastAction] = useState<LastAction>("swap");
+
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearConfirmTimeout() {
+    if (confirmTimeoutRef.current) {
+      clearTimeout(confirmTimeoutRef.current);
+      confirmTimeoutRef.current = null;
+    }
+  }
+
+  function startConfirmTimeout() {
+    clearConfirmTimeout();
+    confirmTimeoutRef.current = setTimeout(() => {
+      setOutcome((prev) => (prev.status === "confirming" ? { status: "accepted" } : prev));
+    }, GLOBAL_SWAP_CONFIRM_TIMEOUT_MS);
+  }
 
   useEffect(() => {
     if (open) {
       setPhase("confirm");
-      setResults({});
+      setOutcome({ status: "pending" });
       setIsBusy(false);
       setLastAction("swap");
-      setLiveDisplay(
-        Object.fromEntries(profiles.map((p) => [p.profileId, p.currentModelDisplayName]))
-      );
+      setSnapshot([]);
+      clearConfirmTimeout();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // D-14/D-15 readback: once the server-pushed swap.state matches the value we're waiting to
+  // confirm (target.id for a swap, null for a revert-clear), the "confirming" outcome resolves to
+  // "confirmed" — never before, and never from the ack alone.
+  useEffect(() => {
+    if (outcome.status !== "confirming") return;
+    if (modelOverride === confirmTarget) {
+      setOutcome({ status: "confirmed" });
+      clearConfirmTimeout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelOverride, outcome.status, confirmTarget]);
+
+  useEffect(() => clearConfirmTimeout, []);
 
   const pinnedCount = profiles.filter((p) => p.mode === "pinned").length;
   const needsCostWarning = target.costTier === "expensive" || target.costTier === "unknown";
@@ -142,107 +182,70 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
       mode: p.mode,
     }));
     setSnapshot(snap);
-
-    const pending: Record<string, RowResult> = {};
-    for (const p of profiles) pending[p.profileId] = { status: "pending" };
-    setResults(pending);
+    setOutcome({ status: "pending" });
+    setConfirmTarget(target.id);
     setPhase("result");
     setLastAction("swap");
     setIsBusy(true);
 
-    // Effect 1: the live, shipped global runtime override — fired in parallel, never stubbed.
-    dispatch({ type: "swap.set", target: "brain", value: target.id, restore: false }).catch(
-      () => {}
-    );
-
-    // Effect 2: the per-profile pinned-default fan-out through the D-16 seam.
-    const settled = await Promise.allSettled(
-      profiles.map((p) =>
-        brainsApi.dispatchSwap({
-          type: "gateway.model.set",
-          request_id: "",
-          scope: "profile",
-          profile_id: p.profileId,
-          model: target.id,
-          mode: "default",
-        })
-      )
-    );
-
-    const nextResults: Record<string, RowResult> = {};
-    const nextLiveDisplay = { ...liveDisplay };
-    settled.forEach((outcome, idx) => {
-      const profileId = profiles[idx].profileId;
-      if (outcome.status === "fulfilled" && outcome.value.status === "ok") {
-        nextResults[profileId] = { status: "ok", newModelDisplayName: target.name };
-        nextLiveDisplay[profileId] = target.name;
-      } else {
-        nextResults[profileId] = {
-          status: "error",
-          reason: reasonFromOutcome(outcome, "Swap failed"),
-        };
-      }
+    // The one live command this axis ever sends (103-CONTRACT.md §8) — awaited for real, its ack
+    // is the sole source of the result surface, never discarded.
+    const ack = await dispatch({
+      type: "swap.set",
+      target: "brain",
+      value: target.id,
+      restore: false,
     });
-    setResults(nextResults);
-    setLiveDisplay(nextLiveDisplay);
+
+    if (ack.status === "ok") {
+      setOutcome({ status: "confirming" });
+      startConfirmTimeout();
+    } else {
+      setOutcome({ status: "error", reason: ack.error ?? "Swap failed" });
+    }
     setIsBusy(false);
   }
 
   async function runRevert() {
-    const pending: Record<string, RowResult> = {};
-    for (const entry of snapshot) pending[entry.profileId] = { status: "pending" };
-    setResults(pending);
+    setOutcome({ status: "pending" });
+    setConfirmTarget(null);
     setPhase("result");
     setLastAction("revert");
+    // Reopen (or keep open) BEFORE the dispatch — a real, state-mutating command must never fire
+    // with no visible surface (CR-03).
     onOpenChange(true);
     setIsBusy(true);
 
-    // Effect 1: restore the live global override via the shipped `restore: true` idiom.
-    dispatch({ type: "swap.set", target: "brain", restore: true }).catch(() => {});
+    const ack = await dispatch({ type: "swap.set", target: "brain", restore: true });
 
-    // Effect 2: restore each profile's snapshot model AND mode through the D-16 seam.
-    const settled = await Promise.allSettled(
-      snapshot.map((entry) => brainsApi.dispatchSwap(buildRestoreCommand(entry)))
-    );
-
-    const nextResults: Record<string, RowResult> = {};
-    const nextLiveDisplay = { ...liveDisplay };
-    settled.forEach((outcome, idx) => {
-      const entry = snapshot[idx];
-      if (outcome.status === "fulfilled" && outcome.value.status === "ok") {
-        nextResults[entry.profileId] = {
-          status: "ok",
-          newModelDisplayName: entry.modelDisplayName,
-        };
-        nextLiveDisplay[entry.profileId] = entry.modelDisplayName;
-      } else {
-        nextResults[entry.profileId] = {
-          status: "error",
-          reason: reasonFromOutcome(outcome, "Revert failed"),
-        };
-      }
-    });
-    setResults(nextResults);
-    setLiveDisplay(nextLiveDisplay);
+    if (ack.status === "ok") {
+      setOutcome({ status: "confirming" });
+      startConfirmTimeout();
+    } else {
+      setOutcome({ status: "error", reason: ack.error ?? "Revert failed" });
+    }
     setIsBusy(false);
   }
 
   function handleDismiss() {
     if (lastAction === "swap") {
-      const total = profiles.length;
-      const switched = Object.values(results).filter((r) => r.status === "ok").length;
-      toast(`${switched} of ${total} profiles switched to ${target.name}.`, {
-        action: {
-          label: "Revert global swap",
-          onClick: () => {
-            void runRevert();
+      if (outcome.status === "error") {
+        toast(`Swap to ${target.name} failed — ${outcome.reason}.`);
+      } else {
+        const verb = outcome.status === "confirmed" ? "switched" : "accepted, unconfirmed";
+        toast(`All profiles ${verb} to ${target.name}.`, {
+          action: {
+            label: "Revert global swap",
+            onClick: () => {
+              void runRevert();
+            },
           },
-        },
-      });
+        });
+      }
     } else {
-      const total = snapshot.length;
-      const reverted = Object.values(results).filter((r) => r.status === "ok").length;
-      toast(`${reverted} of ${total} profiles reverted.`);
+      toast(
+        outcome.status === "error" ? `Revert failed — ${outcome.reason}.` : "Global override cleared."
+      );
     }
     onOpenChange(false);
   }
@@ -262,7 +265,8 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
                 <p className="flex items-center gap-1.5 text-sm text-(--status-warn)">
                   <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {pinnedCount} profile{pinnedCount === 1 ? "" : "s"}{" "}
-                  {pinnedCount === 1 ? "has" : "have"} a pinned default that will be overwritten.
+                  {pinnedCount === 1 ? "has" : "have"} a pinned default that will be shadowed while
+                  this global override is in force.
                 </p>
               )}
               {needsCostWarning && (
@@ -277,10 +281,7 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
                   <div key={p.profileId} className="flex items-center gap-2 text-sm">
                     <span className="flex-1">{profileLabel(p)}</span>
                     {p.mode === "pinned" && (
-                      <Pin
-                        className="h-3 w-3 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
+                      <Pin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
                     )}
                     <span className="text-muted-foreground">{p.currentModelDisplayName}</span>
                     <span aria-hidden="true">→</span>
@@ -302,42 +303,48 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
           <>
             <DialogHeader>
               <DialogTitle className="text-lg font-semibold">
-                Swap all profiles to {target.name}?
+                {lastAction === "swap"
+                  ? `Swap all profiles to ${target.name}?`
+                  : "Revert global swap"}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
-              {snapshot.map((entry) => {
-                const result: RowResult = results[entry.profileId] ?? { status: "pending" };
-                const currentDisplay = liveDisplay[entry.profileId] ?? entry.modelDisplayName;
-                return (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 rounded-md border border-border p-2 text-sm">
+                {outcome.status === "confirmed" && (
+                  <Check className="h-4 w-4 shrink-0 text-(--status-ok)" aria-hidden="true" />
+                )}
+                {outcome.status === "error" && (
+                  <X className="h-4 w-4 shrink-0 text-(--status-error)" aria-hidden="true" />
+                )}
+                {outcome.status === "accepted" && (
+                  <AlertTriangle
+                    className="h-4 w-4 shrink-0 text-(--status-warn)"
+                    aria-hidden="true"
+                  />
+                )}
+                {(outcome.status === "pending" || outcome.status === "confirming") && (
+                  <span
+                    aria-hidden="true"
+                    className="h-2 w-2 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+                  />
+                )}
+                <span className="flex-1">{describeOutcome(outcome, lastAction, target.name)}</span>
+              </div>
+              <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
+                <p className="text-xs text-muted-foreground">
+                  {lastAction === "swap"
+                    ? "Profiles now governed by the global override:"
+                    : "Profiles returning to their own defaults:"}
+                </p>
+                {snapshot.map((entry) => (
                   <div key={entry.profileId} className="flex items-center gap-2 text-sm">
-                    {result.status === "ok" && (
-                      <Check
-                        className="h-3.5 w-3.5 shrink-0 text-(--status-ok)"
-                        aria-hidden="true"
-                      />
+                    {entry.mode === "pinned" && (
+                      <Pin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
                     )}
-                    {result.status === "error" && (
-                      <X
-                        className="h-3.5 w-3.5 shrink-0 text-(--status-error)"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span className="flex-1">
-                      {result.status === "ok" &&
-                        `${entry.displayName}: switched to ${result.newModelDisplayName}`}
-                      {result.status === "error" &&
-                        `${entry.displayName}: failed — ${result.reason} (still on ${currentDisplay})`}
-                      {result.status === "pending" && `${entry.displayName}: switching…`}
-                    </span>
-                    {BRAINS_STUB_ACTIVE && (
-                      <span className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground">
-                        STUB
-                      </span>
-                    )}
+                    <span className="flex-1">{entry.displayName}</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" onClick={handleDismiss} disabled={isBusy}>
