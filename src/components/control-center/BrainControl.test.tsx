@@ -192,6 +192,102 @@ describe("BrainControl", () => {
     );
   });
 
+  // ── 103-15: hardened coverage for the pre-existing restore path ─────────
+  // (103-15-PLAN's premise that this branch was unreachable does not hold
+  // for this file -- see 103-15-SUMMARY.md "Deviations". The affordance and
+  // its dispatch/gating tests above predate this plan (186-09, commit
+  // 6cc040d3). These three tests close the specific coverage gaps the plan
+  // called out: no-double-fire, disabled-while-pending, and the D-14
+  // no-self-asserted-success guard.)
+
+  it("dispatches exactly one swap.set command per Restore-usual-brain activation (no double-fire)", async () => {
+    mockSendCommand.mockImplementation(async (cmd: Record<string, unknown>) => {
+      if (cmd.type === "swap.catalogue") {
+        return { type: "ack", request_id: "r1", status: "ok", target: "brain", entries: [] };
+      }
+      return { type: "ack", request_id: "r1", status: "ok" };
+    });
+
+    render(<BrainControl override="grok-4.5" lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    const restoreRow = await screen.findByText("Restore usual brain");
+    fireEvent.click(restoreRow);
+
+    await waitFor(() => {
+      const swapSetCalls = mockSendCommand.mock.calls.filter(
+        ([cmd]) => (cmd as Record<string, unknown>).type === "swap.set"
+      );
+      expect(swapSetCalls).toHaveLength(1);
+    });
+  });
+
+  it("disables the Restore usual brain row while its dispatch is pending", async () => {
+    let resolveSwapSet: (value: unknown) => void = () => {};
+    mockSendCommand.mockImplementation(async (cmd: Record<string, unknown>) => {
+      if (cmd.type === "swap.catalogue") {
+        return { type: "ack", request_id: "r1", status: "ok", target: "brain", entries: [] };
+      }
+      return new Promise((resolve) => {
+        resolveSwapSet = resolve;
+      });
+    });
+
+    render(<BrainControl override="grok-4.5" lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    const restoreRow = await screen.findByText("Restore usual brain");
+    fireEvent.click(restoreRow);
+
+    await waitFor(() => expect(restoreRow.closest("button")).toBeDisabled());
+
+    resolveSwapSet({ type: "ack", request_id: "r1", status: "ok" });
+    await waitFor(() =>
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "swap.set", restore: true })
+      )
+    );
+  });
+
+  it("never self-asserts the override was cleared -- label reflects only the override prop (D-14)", async () => {
+    mockSendCommand.mockImplementation(async (cmd: Record<string, unknown>) => {
+      if (cmd.type === "swap.catalogue") {
+        return { type: "ack", request_id: "r1", status: "ok", target: "brain", entries: [] };
+      }
+      // Ack only -- ACCEPTED, not SWITCHED (D-14). BrainControl must not
+      // treat this as proof the override was cleared.
+      return { type: "ack", request_id: "r1", status: "ok" };
+    });
+
+    const { rerender } = render(<BrainControl override="grok-4.5" lastTurnModel={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Choose brain" }));
+
+    const restoreRow = await screen.findByText("Restore usual brain");
+    fireEvent.click(restoreRow);
+
+    await waitFor(() =>
+      expect(mockSendCommand).toHaveBeenCalledWith({
+        type: "swap.set",
+        target: "brain",
+        value: undefined,
+        restore: true,
+      })
+    );
+
+    // The ack alone must not flip the label -- BrainControl carries no local
+    // "cleared" state; it renders `override` verbatim until the parent
+    // re-renders with a new value fed by the swap.state readback
+    // (useResolvedBrain). No self-asserted success text is ever rendered.
+    expect(screen.getByText("grok-4.5")).toBeInTheDocument();
+    expect(screen.queryByText(/clear/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Auto")).not.toBeInTheDocument();
+
+    // Only once the parent re-renders with the readback-confirmed value does
+    // the label change.
+    rerender(<BrainControl override={null} lastTurnModel={null} />);
+    expect(screen.getByText("Auto")).toBeInTheDocument();
+  });
+
   it("shows the override label when active, falling back to lastTurnModel then Auto", () => {
     const { rerender } = render(<BrainControl override={null} lastTurnModel={null} />);
     expect(screen.getByText("Auto")).toBeInTheDocument();
