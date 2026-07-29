@@ -39,7 +39,7 @@ import { useEffect, useState } from "react";
 import { Clock, Pin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
-import { useResolvedBrain } from "@/hooks/useResolvedBrain";
+import { useGlobalModelNames, useResolvedBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
@@ -57,6 +57,7 @@ export function BrainHeaderBadge() {
   // the same module (`useResolvedBrain`) the Chat composer pill and (via `swapModelOverride`)
   // Control Center's `BrainControl` read, so this badge cannot disagree with them (BSC-01).
   const resolved = useResolvedBrain();
+  const globalModelNames = useGlobalModelNames();
   const profiles = useProfileConfigs();
 
   const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
@@ -112,7 +113,7 @@ export function BrainHeaderBadge() {
     ? "Mixed brains"
     : resolved.source === "none"
       ? "No brain reported"
-      : resolveModelDisplayName(resolved.model as string, catalogue);
+      : resolveModelDisplayName(resolved.model as string, catalogue, globalModelNames);
   // A global reading must never present itself as an honest per-profile reading — the
   // "(global)" qualifier is folded into the accessible name itself (not just the visible "Global"
   // chip) since an explicit `aria-label` on the button replaces all descendant text for

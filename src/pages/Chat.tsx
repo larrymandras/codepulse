@@ -29,7 +29,11 @@ import VitalsRail from "@/components/chat/VitalsRail";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useBrainFallbackNotice } from "@/components/brains/BrainFallbackNotice";
-import { useGlobalBrainOverride, useResolvedBrain } from "@/hooks/useResolvedBrain";
+import {
+  useGlobalBrainOverride,
+  useGlobalModelNames,
+  useResolvedBrain,
+} from "@/hooks/useResolvedBrain";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
@@ -146,6 +150,7 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
     };
   }, []);
 
+  const globalModelNames = useGlobalModelNames();
   const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
   const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
   const isGlobal = resolved.source === "global";
@@ -155,7 +160,7 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
   const baseLabel =
     resolved.source === "none"
       ? "Auto"
-      : resolveModelDisplayName(resolved.model as string, catalogue);
+      : resolveModelDisplayName(resolved.model as string, catalogue, globalModelNames);
 
   return (
     <BrainPicker

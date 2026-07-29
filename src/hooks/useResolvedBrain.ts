@@ -126,6 +126,7 @@ export function useGlobalBrainOverride(): GlobalBrainOverride {
   }, [subscribeEvent]);
 
   return state;
+
 }
 
 /**
@@ -137,6 +138,66 @@ export function useGlobalBrainOverride(): GlobalBrainOverride {
  *   c. `profileId` omitted → the fleet-wide reading via `deriveMixedState`: mixed when profiles
  *      disagree, the single agreed engine when they agree, "none" when nothing is reported.
  */
+/**
+ * useGlobalModelNames — an id -> display-name map for the LIVE global catalogue.
+ *
+ * Added closing the last of the UAT cosmetic leak (2026-07-29): the header badge and the Chat
+ * composer pill resolve names against `brainsApi.getCatalogue()`, the per-profile D-16 seam, which
+ * does NOT contain live global-axis ids. So while a global override was in force they rendered the
+ * raw id ("claude-sonnet-5") even though the swap dialogs correctly said "Claude Sonnet 5".
+ *
+ * Deliberately a SEPARATE hook rather than folding this into `useGlobalBrainOverride`: that hook's
+ * `swap.get_state` snapshot behavior is directly asserted by its own tests, and a display-name
+ * concern has no business changing the shape of the override-truth path. Consumers opt in.
+ *
+ * One `swap.catalogue` per `connected` transition — the picker already sends the same command on
+ * every open, so this is a small, bounded addition. On any failure it returns an empty map and every
+ * caller falls back to showing the raw id: an honest degrade, never a fabricated name.
+ */
+export function useGlobalModelNames(): Record<string, string> {
+  const [names, setNames] = useState<Record<string, string>>({});
+
+  let sendCommand: ReturnType<typeof useAstridrWS>["sendCommand"] | null;
+  let status: ReturnType<typeof useAstridrWS>["status"] | undefined;
+  try {
+    ({ sendCommand, status } = useAstridrWS());
+  } catch {
+    sendCommand = null;
+    status = undefined;
+  }
+
+  useEffect(() => {
+    if (status !== "connected" || !sendCommand) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        // `target: "brain"` is REQUIRED — Ástríðr rejects the command without it. Omitting it made
+        // this hook silently return an empty map (verified live: the badge kept showing the raw id
+        // while the honest-degrade catch swallowed the error ack). Matches BrainPicker.tsx:249.
+        const ack = await sendCommand({ type: "swap.catalogue", target: "brain" });
+        if (cancelled || ack.status !== "ok") return;
+        const raw = (ack as { entries?: unknown }).entries;
+        if (!Array.isArray(raw)) return;
+        const map: Record<string, string> = {};
+        for (const item of raw) {
+          const entry = item as { id?: unknown; name?: unknown };
+          if (typeof entry.id === "string" && typeof entry.name === "string") {
+            map[entry.id] = entry.name;
+          }
+        }
+        setNames(map);
+      } catch {
+        /* honest degrade: callers show the raw model id */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, sendCommand]);
+
+  return names;
+}
+
 export function resolveActiveBrain(args: {
   globalOverride: string | null;
   activeEngines: ActiveEngineMap;

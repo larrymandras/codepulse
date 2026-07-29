@@ -1238,3 +1238,87 @@ describe("GlobalSwapModal — a dispatch that never settles cannot trap the oper
     );
   });
 });
+
+// ── UAT test 11 follow-up: a FAILED action must not claim the override took effect ─────────────
+//
+// Found while live-inducing a swap failure (103-UAT.md test 11): the result surface's row-list header
+// was unconditionally "Profiles now governed by the global override:" for any swap action, so on a
+// FAILURE it directly contradicted the outcome line right above it, which correctly said "Every
+// profile is still on its prior engine."
+
+describe("GlobalSwapModal — a failed action's row-list header stays honest (UAT test 11)", () => {
+  beforeEach(() => {
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  });
+
+  it("does not claim profiles are governed by the override after a FAILED swap", async () => {
+    mockDispatch.mockResolvedValue({
+      type: "ack",
+      request_id: "",
+      status: "error",
+      error: "engine unavailable",
+    });
+
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+      );
+    });
+
+    expect(
+      await screen.findByText("Profiles unchanged — still on their prior engine:")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Profiles now governed by the global override:")
+    ).not.toBeInTheDocument();
+    // The outcome line and the list header must agree.
+    expect(screen.getByText(/still on its prior engine/)).toBeInTheDocument();
+  });
+
+  it("still shows the governed-by header on a SUCCESSFUL swap", async () => {
+    mockDispatch.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+      );
+    });
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(
+      await screen.findByText("Profiles now governed by the global override:")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Profiles unchanged — still on their prior engine:")
+    ).not.toBeInTheDocument();
+  });
+});

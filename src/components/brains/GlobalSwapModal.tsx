@@ -558,11 +558,17 @@ export function GlobalSwapModal({
               </div>
               <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
                 <p className="text-xs text-muted-foreground">
-                  {lastAction === "swap"
-                    ? "Profiles now governed by the global override:"
-                    : revertRestoredName
-                      ? "Profiles still governed by the global override:"
-                      : "Profiles returning to their own defaults:"}
+                  {/* UAT 2026-07-29 (test 11): on a FAILED action nothing changed, so the old
+                      unconditional "Profiles now governed by the global override:" header
+                      contradicted the outcome line directly above it, which correctly read "Every
+                      profile is still on its prior engine." Failure gets its own honest header. */}
+                  {outcome.status === "error"
+                    ? "Profiles unchanged — still on their prior engine:"
+                    : lastAction === "swap"
+                      ? "Profiles now governed by the global override:"
+                      : revertRestoredName
+                        ? "Profiles still governed by the global override:"
+                        : "Profiles returning to their own defaults:"}
                 </p>
                 {snapshot.map((entry) => (
                   <div key={entry.profileId} className="flex items-center gap-2 text-sm">

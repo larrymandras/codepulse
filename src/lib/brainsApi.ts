@@ -248,16 +248,28 @@ function stripVendorPrefix(modelId: string): string {
  */
 export function resolveModelDisplayName(
   modelId: string,
-  catalogue: CatalogueEntry[] | null | undefined
+  catalogue: CatalogueEntry[] | null | undefined,
+  fallbackNames?: Record<string, string> | null
 ): string {
-  if (!catalogue || catalogue.length === 0) return modelId;
-
-  const exact = catalogue.find((e) => e.id === modelId);
-  if (exact) return exact.name;
-
   const bare = stripVendorPrefix(modelId);
-  const suffix = catalogue.find((e) => stripVendorPrefix(e.id) === bare);
-  return suffix ? suffix.name : modelId;
+
+  if (catalogue && catalogue.length > 0) {
+    const exact = catalogue.find((e) => e.id === modelId);
+    if (exact) return exact.name;
+    const suffix = catalogue.find((e) => stripVendorPrefix(e.id) === bare);
+    if (suffix) return suffix.name;
+  }
+
+  // `fallbackNames` carries the LIVE global catalogue's names for surfaces whose own `catalogue`
+  // comes from the per-profile D-16 seam and therefore does not contain global-axis ids at all —
+  // the header badge and Chat composer pill, which is why they still rendered "claude-sonnet-5"
+  // after the first pass of this fix.
+  if (fallbackNames) {
+    const hit = fallbackNames[modelId] ?? fallbackNames[bare];
+    if (hit) return hit;
+  }
+
+  return modelId;
 }
 
 /**

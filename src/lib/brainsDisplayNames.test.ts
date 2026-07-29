@@ -95,3 +95,47 @@ describe("buildModelNameMap", () => {
     expect(map["codex-cli"]).toBe("Codex CLI");
   });
 });
+
+// ── The live-global fallback map (second pass) ─────────────────────────────────────────────────
+//
+// The header badge and Chat composer pill resolve against `brainsApi.getCatalogue()` — the
+// per-profile D-16 seam, which does NOT carry live global-axis ids. That is why, after the first
+// pass of this fix, they still rendered "claude-sonnet-5" while a global override was in force even
+// though the swap dialogs said "Claude Sonnet 5". `useGlobalModelNames()` supplies the live names as
+// a third resolution rung.
+
+describe("resolveModelDisplayName — live-global fallback map", () => {
+  const PROFILE_SEAM: CatalogueEntry[] = [entry("stub-local-model", "Stub Local Model", "local")];
+  const GLOBAL_NAMES = {
+    "claude-sonnet-5": "Claude Sonnet 5",
+    "claude-haiku-4-5-20251001": "Claude Haiku 4.5",
+  };
+
+  it("resolves a global-axis id the local catalogue has never heard of", () => {
+    expect(resolveModelDisplayName("claude-sonnet-5", PROFILE_SEAM, GLOBAL_NAMES)).toBe(
+      "Claude Sonnet 5"
+    );
+    expect(
+      resolveModelDisplayName("claude-haiku-4-5-20251001", PROFILE_SEAM, GLOBAL_NAMES)
+    ).toBe("Claude Haiku 4.5");
+  });
+
+  it("still prefers the catalogue when it DOES know the id", () => {
+    const names = { "stub-local-model": "Wrong Name From Map" };
+    expect(resolveModelDisplayName("stub-local-model", PROFILE_SEAM, names)).toBe(
+      "Stub Local Model"
+    );
+  });
+
+  it("matches the fallback map on a vendor-stripped id too", () => {
+    expect(
+      resolveModelDisplayName("anthropic/claude-sonnet-5", PROFILE_SEAM, GLOBAL_NAMES)
+    ).toBe("Claude Sonnet 5");
+  });
+
+  it("returns the raw id when neither source knows it — still never fabricates", () => {
+    expect(resolveModelDisplayName("mystery-9", PROFILE_SEAM, GLOBAL_NAMES)).toBe("mystery-9");
+    expect(resolveModelDisplayName("mystery-9", null, null)).toBe("mystery-9");
+    expect(resolveModelDisplayName("mystery-9", null, {})).toBe("mystery-9");
+  });
+});
