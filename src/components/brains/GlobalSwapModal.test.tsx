@@ -132,6 +132,18 @@ const TWO_OF_THREE_PINNED: GlobalSwapProfile[] = [
 const ALL_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({ ...p, mode: "pinned" }));
 const NONE_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({ ...p, mode: "inherited" }));
 
+// 103-14: a global override already in force before this swap dispatches — every profile mirrors
+// it (global override wins outright, 103-CONTRACT.md §9), which is also how the component resolves
+// a display name for the value it captures to restore to.
+const PRIOR_OVERRIDE_MODEL_ID = "claude-haiku-4-5-20251001";
+const PRIOR_OVERRIDE_DISPLAY_NAME = "Haiku 4.5";
+
+const PROFILES_UNDER_PRIOR_OVERRIDE: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({
+  ...p,
+  currentModel: PRIOR_OVERRIDE_MODEL_ID,
+  currentModelDisplayName: PRIOR_OVERRIDE_DISPLAY_NAME,
+}));
+
 const PINNED_AND_INHERITED_PAIR: GlobalSwapProfile[] = [
   {
     profileId: "assistant-default",
@@ -566,5 +578,328 @@ describe("GlobalSwapModal dismiss and revert", () => {
       (call) => typeof call[1] === "object" && call[1]?.action?.label === "Revert global swap"
     );
     expect(revertCall).toBeUndefined();
+  });
+});
+
+// ─── Revert-to-prior (103-14: OBS 7 gap closure) ──────────────────────────────
+//
+// `astridr/api/ws_commands.py:233`: `restore=True` clears the override, `value` is ignored — the
+// pre-103-14 `runRevert` hardcoded exactly that, so a revert following a swap that had a real prior
+// global override in force silently discarded it instead of restoring it (observed live 2026-07-29,
+// 103-13-T1: badge `claude-haiku-4-5-20251001 (global)` -> swap to `claude-opus-4-8` -> "Revert
+// global swap" -> badge `unknown`, not back to Haiku 4.5). These tests exercise the restore branch
+// directly and prove the prior value is captured at dispatch time, not read live at revert time.
+
+describe("GlobalSwapModal revert-to-prior (103-14)", () => {
+  it("reverting a swap that had a prior global override dispatches value:<prior>, restore:false — never the old unconditional restore:true", async () => {
+    mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    mockDispatch.mockClear();
+    mockDispatchSwap.mockClear();
+
+    toastOptions.action.onClick();
+
+    await waitFor(() =>
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "swap.set",
+        target: "brain",
+        value: PRIOR_OVERRIDE_MODEL_ID,
+        restore: false,
+      })
+    );
+    expect(mockDispatch).not.toHaveBeenCalledWith(
+      expect.objectContaining({ restore: true })
+    );
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+  });
+
+  it("captures the prior override at dispatch time — a live modelOverride change between the swap and the revert click does not corrupt the restore target", async () => {
+    mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    // A THIRD swap happens elsewhere (e.g. another tab) before this toast's Revert is clicked —
+    // the live modelOverride reading has moved on again. `runRevert` must still restore to the
+    // value captured when THIS swap dispatched, not whatever `modelOverride` reads now.
+    mockGlobalOverride = { modelOverride: "some-other-engine", voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    mockDispatch.mockClear();
+    toastOptions.action.onClick();
+
+    await waitFor(() =>
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "swap.set",
+        target: "brain",
+        value: PRIOR_OVERRIDE_MODEL_ID,
+        restore: false,
+      })
+    );
+  });
+
+  it("resolves confirmed only once the readback matches the restored value — never from the ack alone — and names the restored engine", async () => {
+    mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+    const onOpenChange = vi.fn();
+    let resolveAck: ((ack: { type: "ack"; request_id: string; status: string }) => void) | null =
+      null;
+
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    mockDispatch.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAck = resolve;
+        })
+    );
+
+    toastOptions.action.onClick();
+
+    // Reopened, dispatch in flight — pending copy names the restore target, not a generic clear.
+    await screen.findByText(`Reverting to ${PRIOR_OVERRIDE_DISPLAY_NAME}…`);
+
+    await act(async () => {
+      resolveAck!({ type: "ack", request_id: "", status: "ok" });
+    });
+
+    await screen.findByText(`Accepted — confirming the revert to ${PRIOR_OVERRIDE_DISPLAY_NAME}…`);
+    // Ack alone is not enough — no restored-success claim yet.
+    expect(
+      screen.queryByText(`Reverted to ${PRIOR_OVERRIDE_DISPLAY_NAME}.`)
+    ).not.toBeInTheDocument();
+
+    // The server-pushed swap.state readback lands, matching the restored value.
+    mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    expect(await screen.findByText(`Reverted to ${PRIOR_OVERRIDE_DISPLAY_NAME}.`)).toBeInTheDocument();
+    expect(
+      screen.queryByText("Global override cleared — profiles are back on their own defaults.")
+    ).not.toBeInTheDocument();
+  });
+
+  it("falls back to an honest accepted-but-unconfirmed reading naming the restore target after the bounded wait, never a bare 'cleared' claim", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGlobalOverride = { modelOverride: PRIOR_OVERRIDE_MODEL_ID, voiceOverride: null };
+      const onOpenChange = vi.fn();
+
+      const { rerender } = render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+          open
+          onOpenChange={onOpenChange}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+        );
+      });
+      await act(async () => {
+        mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+        rerender(
+          <GlobalSwapModal
+            target={TARGET_NORMAL}
+            profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
+            open
+            onOpenChange={onOpenChange}
+          />
+        );
+      });
+      expect(screen.getByText(`Switched to ${TARGET_NORMAL.name}.`)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+      const [, toastOptions] = mockToastFn.mock.calls[0] as [
+        string,
+        { action: { label: string; onClick: () => void } },
+      ];
+
+      await act(async () => {
+        toastOptions.action.onClick();
+      });
+
+      expect(
+        screen.getByText(`Accepted — confirming the revert to ${PRIOR_OVERRIDE_DISPLAY_NAME}…`)
+      ).toBeInTheDocument();
+
+      await act(async () => {
+        vi.advanceTimersByTime(GLOBAL_SWAP_CONFIRM_TIMEOUT_MS + 100);
+      });
+
+      expect(
+        screen.getByText(
+          `Accepted — no confirmation received yet that the global override was restored to ${PRIOR_OVERRIDE_DISPLAY_NAME}.`
+        )
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(`Reverted to ${PRIOR_OVERRIDE_DISPLAY_NAME}.`)
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Accepted — no confirmation received yet that the global override was cleared.")
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("still dispatches restore:true and renders the unchanged clear-case copy when no prior override was in force", async () => {
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+    );
+    await screen.findByText(`Accepted — confirming the switch to ${TARGET_NORMAL.name}…`);
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    const [, toastOptions] = mockToastFn.mock.calls[0] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    mockDispatch.mockClear();
+
+    toastOptions.action.onClick();
+
+    await waitFor(() =>
+      expect(mockDispatch).toHaveBeenCalledWith({
+        type: "swap.set",
+        target: "brain",
+        restore: true,
+      })
+    );
+
+    await screen.findByText("Accepted — confirming the global override was cleared…");
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        onOpenChange={onOpenChange}
+      />
+    );
+    expect(
+      await screen.findByText("Global override cleared — profiles are back on their own defaults.")
+    ).toBeInTheDocument();
   });
 });

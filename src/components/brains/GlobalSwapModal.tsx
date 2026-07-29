@@ -95,22 +95,46 @@ function profileLabel(p: { profileId: string; displayName?: string }): string {
   return p.displayName ?? p.profileId;
 }
 
-function describeOutcome(outcome: GlobalOutcome, action: LastAction, targetName: string): string {
+/**
+ * 103-14-T2: `restoredTo` distinguishes the two things "Revert global swap" can now mean —
+ * non-null names the prior engine being RESTORED, null means the override is being CLEARED (the
+ * pre-103-14 behavior, still exercised whenever no global override was in force before the swap
+ * being reverted). Ignored entirely for `action === "swap"`. The clear-case copy below is
+ * byte-unchanged from pre-103-14 so that path stays identical.
+ */
+function describeOutcome(
+  outcome: GlobalOutcome,
+  action: LastAction,
+  targetName: string,
+  restoredTo: string | null
+): string {
   switch (outcome.status) {
     case "pending":
-      return action === "swap" ? `Switching to ${targetName}…` : "Reverting the global override…";
+      if (action !== "swap") {
+        return restoredTo ? `Reverting to ${restoredTo}…` : "Reverting the global override…";
+      }
+      return `Switching to ${targetName}…`;
     case "confirming":
-      return action === "swap"
-        ? `Accepted — confirming the switch to ${targetName}…`
-        : "Accepted — confirming the global override was cleared…";
+      if (action !== "swap") {
+        return restoredTo
+          ? `Accepted — confirming the revert to ${restoredTo}…`
+          : "Accepted — confirming the global override was cleared…";
+      }
+      return `Accepted — confirming the switch to ${targetName}…`;
     case "confirmed":
-      return action === "swap"
-        ? `Switched to ${targetName}.`
-        : "Global override cleared — profiles are back on their own defaults.";
+      if (action !== "swap") {
+        return restoredTo
+          ? `Reverted to ${restoredTo}.`
+          : "Global override cleared — profiles are back on their own defaults.";
+      }
+      return `Switched to ${targetName}.`;
     case "accepted":
-      return action === "swap"
-        ? `Accepted — no confirmation received yet. No profile is confirmed on ${targetName} yet.`
-        : "Accepted — no confirmation received yet that the global override was cleared.";
+      if (action !== "swap") {
+        return restoredTo
+          ? `Accepted — no confirmation received yet that the global override was restored to ${restoredTo}.`
+          : "Accepted — no confirmation received yet that the global override was cleared.";
+      }
+      return `Accepted — no confirmation received yet. No profile is confirmed on ${targetName} yet.`;
     case "error":
       return action === "swap"
         ? `Failed — ${outcome.reason}. Every profile is still on its prior engine.`
@@ -127,6 +151,10 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
   const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [lastAction, setLastAction] = useState<LastAction>("swap");
+  // 103-14-T2: display name for the prior override being restored by the CURRENT revert, or null
+  // when the current/last revert is a plain clear. Distinct from `priorOverrideRef` (the raw model
+  // id used for dispatch/confirmTarget) so describeOutcome can render a human-readable name.
+  const [revertRestoredName, setRevertRestoredName] = useState<string | null>(null);
 
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 103-12-T2/CR-03: the last target.id this instance actually reset state for — NOT `open`,
@@ -135,6 +163,18 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
   // `open` is what lets a revert triggered after "Done" reopen this same instance without wiping the
   // snapshot/outcome it needs to render.
   const prevTargetIdRef = useRef<string | null>(null);
+  // 103-14-T1: the global override that was in force immediately BEFORE this swap's dispatch,
+  // captured at dispatch time (not read live inside runRevert — by the time a revert fires,
+  // `modelOverride` already holds the NEW engine, so a live read would revert to the engine being
+  // reverted FROM, not the one that preceded it). Null means "no prior override" — revert must
+  // still clear in that case, never invent a value to restore to.
+  const priorOverrideRef = useRef<string | null>(null);
+  // 103-14-T2: display name paired with `priorOverrideRef.current`, captured at the same dispatch
+  // time. Prefers a catalogue-resolved display name (the pre-swap snapshot row that matches the
+  // prior override's model id — every profile mirrors the global override's model while one is in
+  // force, so the snapshot already carries a resolved name for it); falls back to the raw model id
+  // rather than inventing a label or showing nothing.
+  const priorOverrideDisplayNameRef = useRef<string | null>(null);
 
   function clearConfirmTimeout() {
     if (confirmTimeoutRef.current) {
@@ -162,6 +202,9 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     setIsBusy(false);
     setLastAction("swap");
     setSnapshot([]);
+    setRevertRestoredName(null);
+    priorOverrideRef.current = null;
+    priorOverrideDisplayNameRef.current = null;
     clearConfirmTimeout();
   }, [target.id]);
 
@@ -197,6 +240,15 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     setLastAction("swap");
     setIsBusy(true);
 
+    // 103-14-T1/T2: capture BEFORE dispatch — this is the value (and its display name) "Revert
+    // global swap" must restore to. Captured here (not read live inside runRevert) so a revert
+    // fired well after "Done" still reverts to the engine that preceded THIS swap, not whatever
+    // modelOverride holds by then.
+    priorOverrideRef.current = modelOverride;
+    priorOverrideDisplayNameRef.current = modelOverride
+      ? (snap.find((s) => s.model === modelOverride)?.modelDisplayName ?? modelOverride)
+      : null;
+
     // The one live command this axis ever sends (103-CONTRACT.md §8) — awaited for real, its ack
     // is the sole source of the result surface, never discarded.
     const ack = await dispatch({
@@ -216,8 +268,14 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
   }
 
   async function runRevert() {
+    // 103-14-T1: restore-to-prior when a global override was in force before this swap; otherwise
+    // preserve the pre-existing clear-override behavior. Astridr defines restore:true as "clear the
+    // override, value ignored" (ws_commands.py:233) — restoring to a specific prior engine instead
+    // means dispatching `value: prior, restore: false`, exactly as a fresh swap to that engine would.
+    const prior = priorOverrideRef.current;
     setOutcome({ status: "pending" });
-    setConfirmTarget(null);
+    setConfirmTarget(prior);
+    setRevertRestoredName(prior ? priorOverrideDisplayNameRef.current : null);
     setPhase("result");
     setLastAction("revert");
     // Reopen (or keep open) BEFORE the dispatch — a real, state-mutating command must never fire
@@ -225,7 +283,9 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     onOpenChange(true);
     setIsBusy(true);
 
-    const ack = await dispatch({ type: "swap.set", target: "brain", restore: true });
+    const ack = prior
+      ? await dispatch({ type: "swap.set", target: "brain", value: prior, restore: false })
+      : await dispatch({ type: "swap.set", target: "brain", restore: true });
 
     if (ack.status === "ok") {
       setOutcome({ status: "confirming" });
@@ -251,10 +311,10 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
           },
         });
       }
+    } else if (outcome.status === "error") {
+      toast(`Revert failed — ${outcome.reason}.`);
     } else {
-      toast(
-        outcome.status === "error" ? `Revert failed — ${outcome.reason}.` : "Global override cleared."
-      );
+      toast(revertRestoredName ? `Reverted to ${revertRestoredName}.` : "Global override cleared.");
     }
     onOpenChange(false);
   }
@@ -337,13 +397,17 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
                     className="h-2 w-2 shrink-0 rounded-full bg-(--status-info) animate-pulse"
                   />
                 )}
-                <span className="flex-1">{describeOutcome(outcome, lastAction, target.name)}</span>
+                <span className="flex-1">
+                  {describeOutcome(outcome, lastAction, target.name, revertRestoredName)}
+                </span>
               </div>
               <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
                 <p className="text-xs text-muted-foreground">
                   {lastAction === "swap"
                     ? "Profiles now governed by the global override:"
-                    : "Profiles returning to their own defaults:"}
+                    : revertRestoredName
+                      ? "Profiles still governed by the global override:"
+                      : "Profiles returning to their own defaults:"}
                 </p>
                 {snapshot.map((entry) => (
                   <div key={entry.profileId} className="flex items-center gap-2 text-sm">
