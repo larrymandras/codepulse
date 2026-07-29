@@ -626,7 +626,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 11/13 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12/13 remain; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
+- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 12/13 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12 closed defect #5/CR-03/WR-02 (BSC-04, BSC-03, BSC-01); 103-13 remains; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
 - [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
 - [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
 - [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
@@ -685,7 +685,7 @@ Plans:
 
 **Gap wave 2** *(blocked on gap wave 1 — shares `BrainPicker.tsx` with 103-11, needs 103-09's readback hook)*
 
-- [ ] 103-12-PLAN.md — GlobalSwapModal reports the real `swap.set` outcome, stops the contract-§8-violating per-profile fan-out, and survives "Done" so Revert renders; + WR-02 — closes defect #5 + CR-03 (BSC-04, BSC-03, BSC-01)
+- [x] 103-12-PLAN.md — GlobalSwapModal reports the real `swap.set` outcome, stops the contract-§8-violating per-profile fan-out, and survives "Done" so Revert renders; + WR-02 — closes defect #5 + CR-03 (BSC-04, BSC-03, BSC-01) — complete 2026-07-29, see [103-12-SUMMARY.md](phases/103-brain-swap-control-surface/103-12-SUMMARY.md)
 
 **Gap wave 3** *(blocked on gap wave 2 — operator-attended, `autonomous: false`)*
 
