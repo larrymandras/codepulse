@@ -1421,4 +1421,89 @@ describe("useAstridrVoice", () => {
       expect(chat.interrupt).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ─── Duplex ears — transcript dispatch and silent fallback (188-03, D-08/D-13) ─
+  // Same RED posture as the barge-in block above: onFinalTranscript is never
+  // invoked because useAstridrVoice.ts does not yet compose useDuplexEars
+  // (188-05/188-08), so the mock's captured callback stays null and every
+  // affirmative "it dispatches/hits the gate" case below fails cleanly on the
+  // observable sink (chat.sendMessage) rather than on a thrown error.
+
+  describe("duplex ears — transcript dispatch and silent fallback (D-08/D-13)", () => {
+    it("duplex finalized transcript dispatches through the SAME sendMessage call site", async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("what's the weather like tomorrow");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "what's the weather like tomorrow",
+        expect.objectContaining({ voice: true })
+      );
+    });
+
+    it("duplex transcript passes through the existing noise gate", async () => {
+      // shouldReject (useAstridrVoice.ts:274) rejects any utterance under 3
+      // words from a COLD conversation (not warm, no open follow-up window);
+      // "um" is 1 word and neither a barge-in phrase, end-phrase, nor
+      // control verb, so it is a real input the current gate rejects --
+      // verified by reading shouldReject directly, not guessed.
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("um");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("duplex transcript still hits the control-verb fast path", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("try on grok");
+      });
+      // Same dispatch shape as the 183 recognizer's swap fast-path (line
+      // 1237 above): no debounce, swapHandled:true dedup marker.
+      expect(chat.sendMessage).toHaveBeenCalledWith("try on grok", {
+        voice: true,
+        swapHandled: true,
+      });
+    });
+
+    it("duplex unavailable is silent (D-08)", () => {
+      duplexStatusValue = "unavailable";
+      const chat = makeChat();
+      const { result } = renderVoice(chat);
+      wake();
+      const stateBefore = result.current.voiceState;
+      act(() => {
+        onDuplexUnavailableCallback?.("network");
+      });
+      // No user-visible state change out of whatever voice state we were in --
+      // the 183 recognizer keeps driving the session silently underneath.
+      expect(result.current.voiceState).toBe(stateBefore);
+      expect(mockRecognitionStart).toHaveBeenCalled();
+    });
+
+    it("duplex unavailable is disclosed ONLY on the debug trace", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onDuplexUnavailableCallback?.("network");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      expect(trace.some((entry) => entry.ev.startsWith("duplex."))).toBe(true);
+    });
+  });
 });
