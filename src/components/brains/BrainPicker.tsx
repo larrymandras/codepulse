@@ -42,19 +42,22 @@
  * scope toggle can never leave the rendered catalogue on one axis while `scope` points at the
  * other.
  *
- * 103-12 (CR-03/WR-02): `globalDialogOpen` is a SEPARATE boolean from `globalTarget` — the modal's
- * VISIBILITY, not its MOUNT state. `globalTarget` is only ever replaced by a new selection, never
- * nulled on close, so the `GlobalSwapModal` instance (and the `runRevert` closure its "Revert
- * global swap" toast action depends on) survives past "Done." WR-02: the row highlight (`isCurrent`)
- * is scope-aware — `global` scope compares against `useGlobalBrainOverride()`, `profile` scope keeps
- * comparing against the per-profile `useActiveEngine()` reading.
+ * 103-12 (CR-03/WR-02, superseded by 103-18): this component used to own `GlobalSwapModal`'s mount
+ * lifecycle directly (a `globalTarget` mount guard decoupled from a `globalDialogOpen` visibility
+ * flag). 103-18 hoists BOTH above the router outlet into `GlobalSwapContext` — see that module's
+ * docstring for why (WR-01: the modal's mount lifetime was still bounded by whichever `BrainPicker`
+ * host requested it, and the Chat composer pill's host is page-scoped, unlike `BrainHeaderBadge`).
+ * This file now only calls `useGlobalSwap().openGlobalSwap(entry, globalSwapProfiles)` from
+ * `handleSelect`'s global branch — it renders no `GlobalSwapModal` of its own. WR-02 is unaffected:
+ * the row highlight (`isCurrent`) is still scope-aware, comparing against `useGlobalBrainOverride()`
+ * for `global` scope and the per-profile `useActiveEngine()` reading for `profile` scope.
  *
- * 103-16 (CR-01): `globalSelectionNonce` is incremented in `handleSelect`'s global branch on EVERY
- * activation, including a repeat activation of the same catalogue entry, and passed to
- * `GlobalSwapModal` as `selectionNonce`. That is what lets the modal tell "the user just picked a
- * brain again" apart from "this open transition is a revert reopening the same live instance" —
- * `GlobalSwapModal.runRevert`'s own `onOpenChange(true)` call never touches this component's state,
- * so it can never bump the nonce and can never trigger the modal's reset effect.
+ * 103-16 (CR-01, hoisted by 103-18): the per-selection nonce that lets the modal tell "the user just
+ * picked a brain again" apart from "this open transition is a revert reopening the same live
+ * instance" now lives in `GlobalSwapContext`, bumped once per `openGlobalSwap` call — including a
+ * repeat activation of the same catalogue entry — instead of in this component's own state. A
+ * revert's own `onOpenChange(true)` call (inside `GlobalSwapModal`) never calls `openGlobalSwap`, so
+ * it can never bump the nonce and can never trigger the modal's reset effect.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -76,11 +79,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BrainPickerRow, needsCostConfirm } from "@/components/brains/BrainPickerRow";
-import { GlobalSwapModal, type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
+import { type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import { useGlobalSwap } from "@/contexts/GlobalSwapContext";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
 import { cn } from "@/lib/utils";
 
@@ -194,14 +198,6 @@ export function BrainPicker({
   const [fetchError, setFetchError] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingTarget, setPendingTarget] = useState<CatalogueEntry | null>(null);
-  const [globalTarget, setGlobalTarget] = useState<CatalogueEntry | null>(null);
-  // 103-12/CR-03: VISIBILITY only. Decoupled from `globalTarget` (the MOUNT guard, below) so the
-  // modal instance survives "Done" and a later "Revert global swap" toast click can genuinely
-  // reopen it — see this file's own docstring.
-  const [globalDialogOpen, setGlobalDialogOpen] = useState(false);
-  // 103-16/CR-01: bumped on every global-scope activation (including a repeat of the same brain) —
-  // see this file's own docstring and GlobalSwapModal's `selectionNonce` prop doc.
-  const [globalSelectionNonce, setGlobalSelectionNonce] = useState(0);
 
   // Consumed at most once, ever, across this component's lifetime — the mixed-badge contextual
   // default (D-08) is not a preference that can re-arm itself.
@@ -221,6 +217,10 @@ export function BrainPicker({
   // WR-02: the "All profiles" scope's row highlight must compare against the global axis, not the
   // per-profile engine — see `isCurrent` below.
   const { modelOverride: globalOverrideModel } = useGlobalBrainOverride();
+  // 103-18 (WR-01): requests a global swap through the hoisted, route-surviving instance owned by
+  // `GlobalSwapContext` instead of mounting/owning a `GlobalSwapModal` of its own — see this file's
+  // and that module's docstrings.
+  const { openGlobalSwap } = useGlobalSwap();
 
   /**
    * Scope-aware catalogue source (fix for the scope-blind picker bug): "profile" keeps using
@@ -319,20 +319,63 @@ export function BrainPicker({
     [profileId, activeEngine]
   );
 
+  /**
+   * 103-17 (gap closure, OBS 8): the live 2026-07-29 checkpoint found the global-swap confirm
+   * modal reporting a pinned-default count of 0 against three real profiles that each carried a
+   * configured `modelPreferences.primary` — because the pre-fix code derived BOTH `current` AND
+   * `mode`/pinned-status from `activeEngines` (zero rows for the real profiles), conflating two
+   * genuinely different questions: "what is this profile's LIVE engine" (telemetry,
+   * `useActiveEngine`, D-14) and "does this profile have a CONFIGURED default that a global
+   * override would shadow" (config, `profileConfigs.modelPreferences.primary`, already in hand via
+   * `allProfiles`). `currentModel`/`currentModelDisplayName`/`mode` are UNCHANGED below — still
+   * telemetry-only, per `useActiveEngine.ts`'s docstring on why config must never backfill the
+   * live column (the "obvious fix" this plan's own PLAN.md calls out as wrong). Only
+   * `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName` are new, and they are
+   * the ONLY fields `GlobalSwapModal` now reads to compute `pinnedCount` and the shadowing warning.
+   *
+   * Defined ABOVE `handleSelect` (moved here by 103-18) because `handleSelect` now passes this
+   * snapshot straight through to `openGlobalSwap` — `GlobalSwapContext` has no independent source
+   * for it (see that module's docstring).
+   */
+  const globalSwapProfiles = useMemo<GlobalSwapProfile[]>(() => {
+    return allProfiles.map((p) => {
+      const engine = activeEngines[p.profileId] ?? null;
+      const currentModel = engine?.model ?? "auto";
+      const currentEntry = entries?.find((e) => e.id === currentModel);
+      const rawPrimary: unknown = (p as { modelPreferences?: { primary?: unknown } })
+        .modelPreferences?.primary;
+      const configuredDefault =
+        typeof rawPrimary === "string" && rawPrimary.length > 0 ? rawPrimary : null;
+      const configuredDefaultEntry = configuredDefault
+        ? entries?.find((e) => e.id === configuredDefault)
+        : undefined;
+      return {
+        profileId: p.profileId,
+        currentModel,
+        currentModelDisplayName: currentEntry?.name ?? (engine ? currentModel : "Auto"),
+        mode: engine?.mode ?? "inherited",
+        hasConfiguredDefault: configuredDefault !== null,
+        configuredDefault,
+        configuredDefaultDisplayName: configuredDefault
+          ? (configuredDefaultEntry?.name ?? configuredDefault)
+          : null,
+      };
+    });
+  }, [allProfiles, activeEngines, entries]);
+
   const handleSelect = useCallback(
     (entry: CatalogueEntry) => {
       if (scope === "global") {
-        setGlobalTarget(entry);
-        setGlobalDialogOpen(true);
-        // 103-16/CR-01: every activation is a fresh selection, even a repeat of the same entry —
-        // increment unconditionally so GlobalSwapModal's reset effect always sees a change.
-        setGlobalSelectionNonce((n) => n + 1);
+        // 103-18 (WR-01): request the swap through the hoisted, route-surviving instance instead
+        // of mounting/owning a GlobalSwapModal here. `openGlobalSwap` bumps the shared selection
+        // nonce unconditionally (103-16/CR-01), including a repeat activation of the same entry.
+        openGlobalSwap(entry, globalSwapProfiles);
         handleOpenChange(false);
         return;
       }
       void handleProfileDispatch(entry);
     },
-    [scope, handleProfileDispatch]
+    [scope, handleProfileDispatch, openGlobalSwap, globalSwapProfiles]
   );
 
   /**
@@ -372,183 +415,132 @@ export function BrainPicker({
     })).filter((g) => g.entries.length > 0);
   }, [entries]);
 
-  /**
-   * 103-17 (gap closure, OBS 8): the live 2026-07-29 checkpoint found the global-swap confirm
-   * modal reporting a pinned-default count of 0 against three real profiles that each carried a
-   * configured `modelPreferences.primary` — because the pre-fix code derived BOTH `current` AND
-   * `mode`/pinned-status from `activeEngines` (zero rows for the real profiles), conflating two
-   * genuinely different questions: "what is this profile's LIVE engine" (telemetry,
-   * `useActiveEngine`, D-14) and "does this profile have a CONFIGURED default that a global
-   * override would shadow" (config, `profileConfigs.modelPreferences.primary`, already in hand via
-   * `allProfiles`). `currentModel`/`currentModelDisplayName`/`mode` are UNCHANGED below — still
-   * telemetry-only, per `useActiveEngine.ts`'s docstring on why config must never backfill the
-   * live column (the "obvious fix" this plan's own PLAN.md calls out as wrong). Only
-   * `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName` are new, and they are
-   * the ONLY fields `GlobalSwapModal` now reads to compute `pinnedCount` and the shadowing warning.
-   */
-  const globalSwapProfiles = useMemo<GlobalSwapProfile[]>(() => {
-    return allProfiles.map((p) => {
-      const engine = activeEngines[p.profileId] ?? null;
-      const currentModel = engine?.model ?? "auto";
-      const currentEntry = entries?.find((e) => e.id === currentModel);
-      const rawPrimary: unknown = (p as { modelPreferences?: { primary?: unknown } })
-        .modelPreferences?.primary;
-      const configuredDefault =
-        typeof rawPrimary === "string" && rawPrimary.length > 0 ? rawPrimary : null;
-      const configuredDefaultEntry = configuredDefault
-        ? entries?.find((e) => e.id === configuredDefault)
-        : undefined;
-      return {
-        profileId: p.profileId,
-        currentModel,
-        currentModelDisplayName: currentEntry?.name ?? (engine ? currentModel : "Auto"),
-        mode: engine?.mode ?? "inherited",
-        hasConfiguredDefault: configuredDefault !== null,
-        configuredDefault,
-        configuredDefaultDisplayName: configuredDefault
-          ? (configuredDefaultEntry?.name ?? configuredDefault)
-          : null,
-      };
-    });
-  }, [allProfiles, activeEngines, entries]);
-
   const baseLabel = activeEngine?.model ?? "Auto";
 
   return (
-    <>
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          {trigger ?? (
-            <button
-              type="button"
-              aria-label={`Active brain: ${baseLabel}`}
-              className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
-            >
-              {pendingTarget && (
-                <span
-                  aria-hidden="true"
-                  className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
-                />
-              )}
-              <span data-testid="brain-picker-base-label">{baseLabel}</span>
-              {pendingTarget && (
-                <span
-                  data-testid="brain-picker-pending-suffix"
-                  className="text-xs text-muted-foreground"
-                >
-                  · switching to {pendingTarget.name}…
-                </span>
-              )}
-              {BRAINS_STUB_ACTIVE && (
-                <span
-                  data-testid="brain-picker-trigger-stub-chip"
-                  className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
-                >
-                  STUB
-                </span>
-              )}
-            </button>
-          )}
-        </PopoverTrigger>
-        <PopoverContent align="start" className="w-96 p-2">
-          <Command>
-            <div className="flex flex-col gap-2">
-              {BRAINS_STUB_ACTIVE && (
-                <div className="flex items-center gap-2 rounded-md bg-(--status-warn)/10 px-3 py-2 text-sm text-(--status-warn)">
-                  <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  Running on stub brain data — live Ástríðr backend not connected
-                </div>
-              )}
-              <ToggleGroup
-                type="single"
-                value={scope}
-                onValueChange={(next) => {
-                  if (!next) return;
-                  const nextScope = next as PickerScope;
-                  // The catalogue is scope-sourced now (profile -> brainsApi.getCatalogue(),
-                  // global -> live swap.catalogue) -- switching scope mid-open must re-fetch, or
-                  // this would keep rendering the OLD scope's list under the NEW scope's dispatch
-                  // branch, recreating the scope-blind bug this fix closes.
-                  setScope(nextScope);
-                  void fetchCatalogue(nextScope);
-                }}
-                variant="outline"
-                className="w-full"
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        {trigger ?? (
+          <button
+            type="button"
+            aria-label={`Active brain: ${baseLabel}`}
+            className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
+          >
+            {pendingTarget && (
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--status-info) animate-pulse"
+              />
+            )}
+            <span data-testid="brain-picker-base-label">{baseLabel}</span>
+            {pendingTarget && (
+              <span
+                data-testid="brain-picker-pending-suffix"
+                className="text-xs text-muted-foreground"
               >
-                <ToggleGroupItem value="profile" className="flex-1">
-                  This profile
-                </ToggleGroupItem>
-                <ToggleGroupItem value="global" className="flex-1">
-                  All profiles
-                </ToggleGroupItem>
-              </ToggleGroup>
-              <CommandInput placeholder="Search brains…" autoFocus />
-            </div>
-            <CommandList className="max-h-80">
-              {entries === null && !fetchError && (
-                <div className="flex flex-col gap-1.5 p-1" aria-label="Loading brain catalogue">
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-6 w-full" />
-                </div>
-              )}
-              {fetchError && (
-                <p className="px-2 py-1.5 text-sm text-muted-foreground">
-                  Couldn't load the brain catalogue — try again in a moment.
+                · switching to {pendingTarget.name}…
+              </span>
+            )}
+            {BRAINS_STUB_ACTIVE && (
+              <span
+                data-testid="brain-picker-trigger-stub-chip"
+                className="rounded border border-dashed border-muted-foreground/40 px-1 text-xs text-muted-foreground"
+              >
+                STUB
+              </span>
+            )}
+          </button>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-96 p-2">
+        <Command>
+          <div className="flex flex-col gap-2">
+            {BRAINS_STUB_ACTIVE && (
+              <div className="flex items-center gap-2 rounded-md bg-(--status-warn)/10 px-3 py-2 text-sm text-(--status-warn)">
+                <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
+                Running on stub brain data — live Ástríðr backend not connected
+              </div>
+            )}
+            <ToggleGroup
+              type="single"
+              value={scope}
+              onValueChange={(next) => {
+                if (!next) return;
+                const nextScope = next as PickerScope;
+                // The catalogue is scope-sourced now (profile -> brainsApi.getCatalogue(),
+                // global -> live swap.catalogue) -- switching scope mid-open must re-fetch, or
+                // this would keep rendering the OLD scope's list under the NEW scope's dispatch
+                // branch, recreating the scope-blind bug this fix closes.
+                setScope(nextScope);
+                void fetchCatalogue(nextScope);
+              }}
+              variant="outline"
+              className="w-full"
+            >
+              <ToggleGroupItem value="profile" className="flex-1">
+                This profile
+              </ToggleGroupItem>
+              <ToggleGroupItem value="global" className="flex-1">
+                All profiles
+              </ToggleGroupItem>
+            </ToggleGroup>
+            <CommandInput placeholder="Search brains…" autoFocus />
+          </div>
+          <CommandList className="max-h-80">
+            {entries === null && !fetchError && (
+              <div className="flex flex-col gap-1.5 p-1" aria-label="Loading brain catalogue">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-full" />
+              </div>
+            )}
+            {fetchError && (
+              <p className="px-2 py-1.5 text-sm text-muted-foreground">
+                Couldn't load the brain catalogue — try again in a moment.
+              </p>
+            )}
+            {entries !== null && !fetchError && entries.length === 0 && (
+              <div className="flex flex-col gap-1 px-2 py-4 text-center">
+                <p className="text-sm font-semibold">No brains reachable</p>
+                <p className="text-xs text-muted-foreground">
+                  No API key or authenticated CLI is configured for any engine. Check Settings →
+                  LLM Providers, or ask an operator to add credentials.
                 </p>
-              )}
-              {entries !== null && !fetchError && entries.length === 0 && (
-                <div className="flex flex-col gap-1 px-2 py-4 text-center">
-                  <p className="text-sm font-semibold">No brains reachable</p>
-                  <p className="text-xs text-muted-foreground">
-                    No API key or authenticated CLI is configured for any engine. Check Settings →
-                    LLM Providers, or ask an operator to add credentials.
-                  </p>
-                </div>
-              )}
-              {entries !== null && !fetchError && entries.length > 0 && (
-                <>
-                  <CommandEmpty>No brains match your search.</CommandEmpty>
-                  {groups.map((group) => (
-                    <CommandGroup key={group.label} heading={group.label}>
-                      {group.entries.map((entry) => (
-                        <CommandItem
-                          key={entry.id}
-                          value={entry.id}
-                          keywords={[entry.name, entry.vendor]}
-                          onSelect={() => handleActivate(entry)}
-                          className={cn("p-0 rounded-md")}
-                        >
-                          <BrainPickerRow
-                            entry={entry}
-                            isCurrent={
-                              scope === "global"
-                                ? globalOverrideModel === entry.id
-                                : activeEngine?.model === entry.id
-                            }
-                            isExpanded={expandedId === entry.id}
-                            onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}
-                            onSelect={handleActivate}
-                          />
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  ))}
-                </>
-              )}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-      {globalTarget && (
-        <GlobalSwapModal
-          target={globalTarget}
-          profiles={globalSwapProfiles}
-          open={globalDialogOpen}
-          onOpenChange={setGlobalDialogOpen}
-          selectionNonce={globalSelectionNonce}
-        />
-      )}
-    </>
+              </div>
+            )}
+            {entries !== null && !fetchError && entries.length > 0 && (
+              <>
+                <CommandEmpty>No brains match your search.</CommandEmpty>
+                {groups.map((group) => (
+                  <CommandGroup key={group.label} heading={group.label}>
+                    {group.entries.map((entry) => (
+                      <CommandItem
+                        key={entry.id}
+                        value={entry.id}
+                        keywords={[entry.name, entry.vendor]}
+                        onSelect={() => handleActivate(entry)}
+                        className={cn("p-0 rounded-md")}
+                      >
+                        <BrainPickerRow
+                          entry={entry}
+                          isCurrent={
+                            scope === "global"
+                              ? globalOverrideModel === entry.id
+                              : activeEngine?.model === entry.id
+                          }
+                          isExpanded={expandedId === entry.id}
+                          onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}
+                          onSelect={handleActivate}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

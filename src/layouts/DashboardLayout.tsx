@@ -23,6 +23,11 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
+// 103-18 (WR-01 gap closure): hoists GlobalSwapModal's mount lifetime above <Outlet/> so a route
+// change (e.g. navigating away from /chat, whose BrainPicker composer pill is page-scoped) can
+// never unmount the modal instance a "Revert global swap" toast action depends on — see
+// GlobalSwapContext.tsx's own docstring for the full defect trail (WR-01, CR-03, CR-01, 103-14).
+import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 // Nav registry (navGroups/navItems/iconComponents) lives in a leaf module so
 // CommandPalette can import it too without a DashboardLayout ↔ CommandPalette
 // import cycle (WR-02, phase 96 review).
@@ -475,6 +480,11 @@ export default function DashboardLayout() {
   }, []);
 
   return (
+    // 103-18: wraps everything below, including <Outlet/> — the single app-level mount point for
+    // GlobalSwapModal's route-surviving instance. Sits alongside BrainHeaderBadge in the header
+    // cluster (both are descendants), not at the App.tsx/main.tsx root, because it only needs to
+    // outlive route changes, not the whole app lifetime.
+    <GlobalSwapProvider>
     <div className="flex h-screen overflow-hidden bg-background relative">
       <div className="matrix-bg" />
       {/* CRT Scanline Overlay */}
@@ -611,5 +621,6 @@ export default function DashboardLayout() {
       {/* Global Command Palette — Cmd+K / Ctrl+K */}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </div>
+    </GlobalSwapProvider>
   );
 }

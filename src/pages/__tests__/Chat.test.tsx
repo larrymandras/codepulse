@@ -15,6 +15,10 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+// 103-18 (WR-01): BrainPicker (rendered here via Chat's real BrainComposerPill) now requires a
+// GlobalSwapProvider ancestor — see BrainPicker.tsx/GlobalSwapContext.tsx docstrings. This suite
+// doesn't exercise the global-swap axis at all, so an unmocked, un-asserted provider is sufficient.
+import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -125,7 +129,9 @@ function injectMarkdownBlock(content: string) {
 function renderChat() {
   return render(
     <MemoryRouter>
-      <Chat />
+      <GlobalSwapProvider>
+        <Chat />
+      </GlobalSwapProvider>
     </MemoryRouter>
   );
 }

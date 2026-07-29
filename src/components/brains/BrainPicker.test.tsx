@@ -34,12 +34,20 @@
  * `globalSwapModalMode` toggle ("mock" | "real") so a handful of tests can render the ACTUAL
  * `GlobalSwapModal` against this file's already-mocked `useAstridrWS`/`useGlobalBrainOverride`/
  * `sonner` seams — see the "BrainPicker + real GlobalSwapModal" describe block.
+ *
+ * 103-18 (WR-01): `BrainPicker` no longer mounts/owns a `GlobalSwapModal` at all — it requests one
+ * through `useGlobalSwap()`, so every render in this file must be wrapped in a real
+ * `GlobalSwapProvider` (unmocked — it's the unit under test alongside `BrainPicker` itself). The
+ * `GlobalSwapModal` module-level mock below is still what the provider actually renders (same
+ * import path), so every existing `data-testid="global-swap-modal"` assertion in this file keeps
+ * working unchanged.
  */
 
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { GlobalSwapProvider } from "@/contexts/GlobalSwapContext";
 import { STUB_CATALOGUE } from "@/lib/brainsFixtures";
 import { BrainPicker } from "./BrainPicker";
 
@@ -235,7 +243,9 @@ beforeEach(() => {
 function renderPicker(props: Partial<React.ComponentProps<typeof BrainPicker>> = {}) {
   return render(
     <TooltipProvider>
-      <BrainPicker profileId="assistant-default" {...props} />
+      <GlobalSwapProvider>
+        <BrainPicker profileId="assistant-default" {...props} />
+      </GlobalSwapProvider>
     </TooltipProvider>
   );
 }
@@ -513,10 +523,12 @@ describe("BrainPicker — composition API (103-06)", () => {
     mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     render(
       <TooltipProvider>
-        <BrainPicker
-          profileId="assistant-default"
-          trigger={<button type="button">custom trigger</button>}
-        />
+        <GlobalSwapProvider>
+          <BrainPicker
+            profileId="assistant-default"
+            trigger={<button type="button">custom trigger</button>}
+          />
+        </GlobalSwapProvider>
       </TooltipProvider>
     );
 
@@ -541,7 +553,9 @@ describe("BrainPicker — composition API (103-06)", () => {
     const onPendingChange = vi.fn();
     render(
       <TooltipProvider>
-        <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+        </GlobalSwapProvider>
       </TooltipProvider>
     );
 
@@ -570,7 +584,9 @@ describe("BrainPicker — composition API (103-06)", () => {
     const onPendingChange = vi.fn();
     render(
       <TooltipProvider>
-        <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" onPendingChange={onPendingChange} />
+        </GlobalSwapProvider>
       </TooltipProvider>
     );
 
@@ -600,7 +616,9 @@ describe("BrainPicker — composition API (103-06)", () => {
 
     render(
       <TooltipProvider>
-        <Controlled />
+        <GlobalSwapProvider>
+          <Controlled />
+        </GlobalSwapProvider>
       </TooltipProvider>
     );
 
@@ -1151,6 +1169,45 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
       await screen.findByRole("button", { name: "Swap all profiles to Grok Live" })
     ).toBeInTheDocument();
     expect(screen.queryByText("Switched to Codex CLI.")).not.toBeInTheDocument();
+  });
+});
+
+// ── 103-18: exactly one GlobalSwapModal instance app-wide, regardless of host count ──────────
+//
+// WR-01's fix is ownership: `GlobalSwapProvider` (mounted once in `DashboardLayout`, above the
+// router outlet) now owns the single `GlobalSwapModal` instance every `BrainPicker` host requests
+// through `useGlobalSwap()`. This test proves the "exactly one modal" half of that guarantee with
+// TWO real `BrainPicker` instances mounted at once -- the literal shape of `BrainHeaderBadge` (one
+// host) and the Chat composer pill (a second, page-scoped host) both rendering the same component.
+
+describe("BrainPicker + GlobalSwapProvider — exactly one GlobalSwapModal instance app-wide (103-18, WR-01)", () => {
+  it("renders exactly one GlobalSwapModal even with two BrainPicker hosts mounted under the same provider", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    render(
+      <TooltipProvider>
+        <GlobalSwapProvider>
+          <BrainPicker profileId="assistant-default" />
+          <BrainPicker profileId="assistant-default" />
+        </GlobalSwapProvider>
+      </TooltipProvider>
+    );
+
+    // No swap requested yet -- the provider mounts nothing.
+    expect(screen.queryByTestId("global-swap-modal")).not.toBeInTheDocument();
+
+    // Open the SECOND host (standing in for the page-scoped Chat pill) and request a global swap.
+    const triggers = screen.getAllByRole("button", { name: /Active brain/ });
+    fireEvent.click(triggers[1]);
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI"));
+
+    // Exactly one modal instance exists app-wide, regardless of how many BrainPicker hosts are
+    // mounted -- 103-CONTRACT.md §8's "no second dispatch path, no second modal" holds structurally.
+    expect(screen.getAllByTestId("global-swap-modal")).toHaveLength(1);
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-open", "true");
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-target-id", "codex-cli");
   });
 });
 
