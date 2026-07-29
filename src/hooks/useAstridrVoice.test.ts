@@ -174,6 +174,21 @@ vi.mock("@/hooks/useDuplexEars", () => ({
   ),
 }));
 
+// ─── astridrApi mock (188-08 Task 3, usage reporting) ────────────────────────
+
+const mockReportRealtimeUsage = vi.fn(async (_seconds: number) => {});
+
+vi.mock("@/lib/astridrApi", () => ({
+  // Wrapped (not referenced directly) so the reference resolves lazily, at
+  // call time -- by which time mockReportRealtimeUsage is initialized. A
+  // direct reference here is evaluated the instant this factory runs, which
+  // (unlike the useWakeWord/useDuplexEars mocks above, whose mock-prefixed
+  // fns are only reached inside a nested closure invoked at render time) is
+  // during the SUT's own top-level import chain -- before this file's own
+  // `const mockReportRealtimeUsage = ...` has executed.
+  reportRealtimeUsage: (...args: [number]) => mockReportRealtimeUsage(...args),
+}));
+
 // ─── Fake chat engine ─────────────────────────────────────────────────────────
 
 function makeChat(overrides: Partial<AstridrChat> = {}): AstridrChat {
@@ -1504,6 +1519,32 @@ describe("useAstridrVoice", () => {
       });
       const trace = window.__astridrVoiceTrace ?? [];
       expect(trace.some((entry) => entry.ev.startsWith("duplex."))).toBe(true);
+    });
+  });
+
+  // ─── Duplex ears — usage reporting (188-08 Task 3, D-09/D-10) ──────────────
+
+  describe("duplex ears — usage reporting", () => {
+    it("onSessionEnd reports usage through reportRealtimeUsage exactly once", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      act(() => {
+        onDuplexSessionEndCallback?.({ seconds: 42 });
+      });
+      expect(mockReportRealtimeUsage).toHaveBeenCalledTimes(1);
+      expect(mockReportRealtimeUsage).toHaveBeenCalledWith(42);
+    });
+
+    it("a rejecting reporter does not throw out of the hook or block teardown", () => {
+      mockReportRealtimeUsage.mockRejectedValueOnce(new Error("network down"));
+      const chat = makeChat();
+      renderVoice(chat);
+      expect(() => {
+        act(() => {
+          onDuplexSessionEndCallback?.({ seconds: 7 });
+        });
+      }).not.toThrow();
+      expect(mockReportRealtimeUsage).toHaveBeenCalledWith(7);
     });
   });
 });

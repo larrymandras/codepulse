@@ -314,3 +314,28 @@ export async function rollbackAgent(
     },
   );
 }
+
+// ---------------------------------------------------------------------------
+// Phase 188: Realtime Duplex Ears — Usage Reporting (DUPLEX-01)
+// ---------------------------------------------------------------------------
+
+/**
+ * Reports a completed realtime duplex session's duration to astridr's budget
+ * meter (POST /api/realtime/session/usage, 188-07). Never throws and never
+ * surfaces a non-2xx response to the caller -- a failed spend report must
+ * never break voice-loop teardown (188-08 D-09/D-10). The route is
+ * idempotent-safe to call even when no budget tracker is wired server-side
+ * (200, recorded:false).
+ */
+export async function reportRealtimeUsage(seconds: number): Promise<void> {
+  try {
+    await fetch(`${ASTRIDR_API_BASE}/api/realtime/session/usage`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ seconds }),
+    });
+  } catch {
+    // Fire-and-forget: a dead/slow usage endpoint must never throw into the
+    // voice loop.
+  }
+}
