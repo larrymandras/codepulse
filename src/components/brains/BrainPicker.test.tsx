@@ -25,6 +25,15 @@
  * so this file's existing WR-01 staleness test — which relies on `mockSendCommand.mockImplementationOnce`
  * resolving exactly the NEXT `sendCommand` call — is not disturbed by an unrelated hydration call
  * this hook would otherwise make on mount.
+ *
+ * 103-16 (CR-01): `GlobalSwapModal`'s own mock (below) is why the reselect-same-brain defect
+ * shipped invisibly in the first place — every test in this file that exercised the global-swap
+ * open path asserted on the MOCK's props (`data-target-id`, `data-open`), never on the real
+ * component's internal `phase`/`outcome` state, so nothing here could have caught a reset guard
+ * that only clears on a `target.id` change. The mock now supports a module-level
+ * `globalSwapModalMode` toggle ("mock" | "real") so a handful of tests can render the ACTUAL
+ * `GlobalSwapModal` against this file's already-mocked `useAstridrWS`/`useGlobalBrainOverride`/
+ * `sonner` seams — see the "BrainPicker + real GlobalSwapModal" describe block.
  */
 
 import { useState } from "react";
@@ -95,34 +104,59 @@ vi.mock("@/hooks/useProfileConfigs", () => ({
 // 103-12/CR-03: renders regardless of `open` — MOUNT and VISIBILITY are asserted separately via
 // `data-open`, mirroring the real component's own decoupling. `mock-close`/`mock-reopen` let a
 // test drive `onOpenChange` from outside exactly as GlobalSwapModal's own Done/Revert-toast flow
-// would, without needing to un-mock the real component.
-vi.mock("@/components/brains/GlobalSwapModal", () => ({
-  GlobalSwapModal: (props: {
+// would, without needing to un-mock the real component. `data-selection-nonce` (103-16) exposes the
+// nonce BrainPicker passes through so a mock-mode test can assert it changes without needing the
+// real component's internal reset effect.
+//
+// 103-16 (CR-01): `globalSwapModalMode` lets specific tests render the REAL `GlobalSwapModal`
+// instead of this mock — set to "real" (and restored to "mock" in that test's own cleanup) for the
+// "BrainPicker + real GlobalSwapModal" describe block below. Picking between `<actual.GlobalSwapModal>`
+// and `<MockGlobalSwapModal>` via JSX (not a plain function call) keeps each on its own fiber so
+// React's hook rules stay intact even though the two are never both mounted at once.
+let globalSwapModalMode: "mock" | "real" = "mock";
+vi.mock("@/components/brains/GlobalSwapModal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/components/brains/GlobalSwapModal")>();
+  function MockGlobalSwapModal(props: {
     open: boolean;
     target?: { id: string; name: string };
     profiles: unknown[];
     onOpenChange: (next: boolean) => void;
-  }) => (
-    <div
-      data-testid="global-swap-modal"
-      data-target-id={props.target?.id}
-      data-open={props.open ? "true" : "false"}
-    >
-      Global swap modal for {props.target?.name} ({props.profiles.length} profiles)
-      <button type="button" onClick={() => props.onOpenChange(false)}>
-        mock-close
-      </button>
-      <button type="button" onClick={() => props.onOpenChange(true)}>
-        mock-reopen
-      </button>
-    </div>
-  ),
-}));
+    selectionNonce?: number;
+  }) {
+    return (
+      <div
+        data-testid="global-swap-modal"
+        data-target-id={props.target?.id}
+        data-open={props.open ? "true" : "false"}
+        data-selection-nonce={props.selectionNonce}
+      >
+        Global swap modal for {props.target?.name} ({props.profiles.length} profiles)
+        <button type="button" onClick={() => props.onOpenChange(false)}>
+          mock-close
+        </button>
+        <button type="button" onClick={() => props.onOpenChange(true)}>
+          mock-reopen
+        </button>
+      </div>
+    );
+  }
+  return {
+    ...actual,
+    GlobalSwapModal: (props: React.ComponentProps<typeof actual.GlobalSwapModal>) =>
+      globalSwapModalMode === "real" ? (
+        <actual.GlobalSwapModal {...props} />
+      ) : (
+        <MockGlobalSwapModal {...props} />
+      ),
+  };
+});
 
+const mockToastFn = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 vi.mock("sonner", () => ({
-  toast: Object.assign(vi.fn(), {
+  toast: Object.assign((...args: unknown[]) => mockToastFn(...args), {
     success: (...args: unknown[]) => mockToastSuccess(...args),
     error: (...args: unknown[]) => mockToastError(...args),
   }),
@@ -154,12 +188,17 @@ beforeAll(() => {
 beforeEach(() => {
   mockGetCatalogue.mockReset();
   mockDispatchSwap.mockReset();
+  mockToastFn.mockReset();
   mockToastSuccess.mockReset();
   mockToastError.mockReset();
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
   mockSendCommand.mockReset();
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  // 103-16: every test defaults to the lightweight mock; only the "BrainPicker + real
+  // GlobalSwapModal" describe block below opts into "real" for its own tests and restores "mock"
+  // in its own afterEach so this default never leaks into any other describe block in the file.
+  globalSwapModalMode = "mock";
   // Default so any incidental swap.catalogue call in a "profile"-scope test (there shouldn't be
   // one) resolves harmlessly instead of hanging the test on an unresolved promise. Named to line
   // up with STUB_CATALOGUE's "Codex CLI" entry so tests that toggle to "All profiles" without
@@ -895,5 +934,200 @@ describe("BrainPicker — row highlight is scope-aware (103-12, WR-02)", () => {
 
     const globalRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
     expect(globalRow?.className ?? "").toContain("bg-primary/10");
+  });
+});
+
+// ── 103-16: selectionNonce bumps on every activation, including a repeat (CR-01) ──
+//
+// Cheap, mock-mode check that BrainPicker's own wiring bumps the nonce it threads through to
+// GlobalSwapModal on every global-scope activation -- including a reselection of the exact same
+// catalogue entry, which is the one case the pre-103-16 `target.id`-keyed guard could never see.
+
+describe("BrainPicker — global-swap selection nonce bumps on every activation (103-16, CR-01)", () => {
+  it("increments selectionNonce on a repeat activation of the same brain, not just a different one", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI"));
+
+    const firstNonce = screen.getByTestId("global-swap-modal").getAttribute("data-selection-nonce");
+    expect(firstNonce).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "mock-close" }));
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI")); // reselect the SAME entry
+
+    const modal = screen.getByTestId("global-swap-modal");
+    // Same target id, but the nonce still changed -- this is the exact distinction the old
+    // `target.id`-keyed reset guard could never make.
+    expect(modal).toHaveAttribute("data-target-id", "codex-cli");
+    expect(modal.getAttribute("data-selection-nonce")).not.toBe(firstNonce);
+  });
+});
+
+// ── 103-16: real GlobalSwapModal against BrainPicker's wiring (CR-01) ─────────────
+//
+// `GlobalSwapModal` is fully mocked everywhere else in this file (see the top-of-file docstring
+// note on why that let the original CR-01 defect ship invisibly). These tests flip
+// `globalSwapModalMode` to "real" so the ACTUAL component's `phase`/`outcome` state is exercised
+// through BrainPicker's real `handleSelect` -> `selectionNonce` wiring, against this file's
+// already-mocked `useAstridrWS`/`useGlobalBrainOverride`/`sonner` seams -- no new mocking surface
+// needed. Covers all four scenarios from 103-16-PLAN.md's Task 2 action text.
+
+describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (103-16, CR-01)", () => {
+  beforeEach(() => {
+    globalSwapModalMode = "real";
+    // Only the initial "This profile" scope (the default on every popover open) reads this --
+    // every test below immediately switches to "All profiles", but the fetch still fires once on
+    // open and must resolve to something so it doesn't leave a dangling unresolved promise.
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+  });
+
+  async function openGlobalPickerAndSelect(entryName: string) {
+    openPicker();
+    await screen.findByPlaceholderText("Search brains…");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText(entryName);
+    fireEvent.click(screen.getByText(entryName));
+  }
+
+  it("(a) reselecting the same brain after a completed swap opens a fresh confirm prompt, not the stale result", async () => {
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+    // Simulate the server-pushed swap.state readback landing.
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    expect(await screen.findByText("Switched to Codex CLI.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    // Reselecting the SAME brain -- pre-103-16 this reopened directly into the stale "Switched to
+    // Codex CLI." result screen with no confirm button and no new command dispatched.
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    expect(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Switched to Codex CLI.")).not.toBeInTheDocument();
+  });
+
+  it("(b) reselecting the same brain after a failed swap restores the retry path, not a dead Done", async () => {
+    mockSendCommand.mockImplementation(async (cmd: unknown) => {
+      const type = (cmd as { type?: string }).type;
+      if (type === "swap.set") {
+        return { type: "ack", request_id: "", status: "error", error: "backend unreachable" };
+      }
+      return {
+        type: "ack",
+        request_id: "",
+        status: "ok",
+        entries: [{ id: "codex-cli", name: "Codex CLI", vendor: "codex" }],
+      };
+    });
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+
+    const errorRow = await screen.findByText(/Failed — backend unreachable/);
+    expect(errorRow.textContent).toContain("Every profile is still on its prior engine");
+    // The failed-swap result phase itself offers only Done -- no retry affordance in that phase.
+    expect(
+      screen.queryByRole("button", { name: "Swap all profiles to Codex CLI" })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    // Reselecting the SAME brain must restore the retry path -- pre-103-16 this reopened showing
+    // the identical stale error with no way to dispatch again short of picking a different brain
+    // first.
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    expect(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Failed — backend unreachable/)).not.toBeInTheDocument();
+  });
+
+  it("(c) a toast revert with no new selection still renders a real result on the surviving instance (CR-03 not regressed)", async () => {
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    expect(await screen.findByText("Switched to Codex CLI.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(mockToastFn).toHaveBeenCalledWith(
+      "All profiles switched to Codex CLI.",
+      expect.objectContaining({
+        action: expect.objectContaining({ label: "Revert global swap" }),
+      })
+    );
+    const [, toastOptions] = mockToastFn.mock.calls[mockToastFn.mock.calls.length - 1] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    // No new selection is made here -- this is the toast-revert path CR-03 protects, not a fresh
+    // BrainPicker.handleSelect activation, so `selectionNonce` never changes and the reset effect
+    // must not fire.
+    toastOptions.action.onClick();
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+
+    expect(
+      await screen.findByText("Global override cleared — profiles are back on their own defaults.")
+    ).toBeInTheDocument();
+    // Never regresses into a fresh confirm prompt on the reopen a revert depends on.
+    expect(screen.queryByText("Swap all profiles to Codex CLI?")).not.toBeInTheDocument();
+  });
+
+  it("(d) selecting a different brain after Done still opens a fresh confirm prompt (pre-existing target.id path still works)", async () => {
+    mockSendCommand.mockImplementation(async (cmd: unknown) => {
+      const type = (cmd as { type?: string }).type;
+      if (type === "swap.set") {
+        return { type: "ack", request_id: "", status: "ok" };
+      }
+      return {
+        type: "ack",
+        request_id: "",
+        status: "ok",
+        entries: [
+          { id: "codex-cli", name: "Codex CLI", vendor: "codex" },
+          { id: "x-ai/grok-4.5", name: "Grok Live", vendor: "x-ai" },
+        ],
+      };
+    });
+
+    await openGlobalPickerAndSelect("Codex CLI");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    expect(await screen.findByText("Switched to Codex CLI.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    await openGlobalPickerAndSelect("Grok Live");
+
+    expect(
+      await screen.findByRole("button", { name: "Swap all profiles to Grok Live" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Switched to Codex CLI.")).not.toBeInTheDocument();
   });
 });
