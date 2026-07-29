@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 // ============================================================
@@ -65,8 +65,17 @@ export const latestByProfile = query({
  * case (convex/runtimeIngest.ts). The UI must NEVER call this directly to
  * assert an engine — doing so would reintroduce exactly the client-asserted
  * stale-read failure BSC-01 exists to kill.
+ *
+ * ENFORCED by the builder (CR-01 fix): declared as an `internalMutation`, so
+ * it does not exist in the client-callable `api.` namespace at all — the
+ * same precedent `convex/gatewayQuota.ts`'s `insertSnapshot` already
+ * follows. This closes the devtools-forgeable write path a plain `mutation`
+ * left open (any holder of the shipped `VITE_CONVEX_URL` could otherwise
+ * call `api.activeEngine.recordRouting` directly and insert a fabricated
+ * "server-confirmed" row that `BrainHeaderBadge` would render with its
+ * confirmed-live pulse dot).
  */
-export const recordRouting = mutation({
+export const recordRouting = internalMutation({
   args: {
     profileId: v.string(),
     model: v.string(),

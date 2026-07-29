@@ -531,7 +531,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // (see the subagent_job case above) records that a single unhandled
           // null here previously poisoned an 8-event production batch.
           const d = data as any;
-          await ctx.runMutation(api.activeEngine.recordRouting, {
+          await ctx.runMutation(internal.activeEngine.recordRouting, {
             profileId: d.profileId ?? d.profile_id ?? "unknown",
             model: d.model ?? "unknown",
             mode: d.mode ?? "inherited",
