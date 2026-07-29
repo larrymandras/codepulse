@@ -111,6 +111,11 @@ beforeAll(() => {
       disconnect() {}
     };
   }
+  // jsdom does not implement scrollIntoView -- cmdk calls it on every ArrowDown-driven selection
+  // change (103-11's keyboard-activation tests are the first in this file to exercise that path).
+  if (typeof Element.prototype.scrollIntoView !== "function") {
+    Element.prototype.scrollIntoView = () => {};
+  }
 });
 
 beforeEach(() => {
@@ -536,6 +541,105 @@ describe("BrainPicker — never-truncates regression guard", () => {
 // live, shipped `swap.catalogue` command at all, so the flagship picker could not initiate even
 // the global swap that already works. These tests prove each scope reads from its own correct
 // source and that a live failure never quietly degrades into stub data.
+
+// ── 103-11: keyboard activation (CR-02) ────────────────────────────────────────
+//
+// CR-02 found the picker's cmdk CommandItems never wired `onSelect`, so the component's own
+// designed primary interaction (search -> arrow-navigate -> Enter) was completely non-functional
+// -- only a literal mouse click on the row's nested button worked. These tests drive the real,
+// unmocked cmdk `Command` via keyboard events on the `CommandInput` (never `.click()`) to prove
+// the keyboard path now dispatches through the exact same branch the mouse path uses.
+
+describe("BrainPicker — keyboard activation (103-11, CR-02)", () => {
+  it("profile scope, normal-tier row: ArrowDown + Enter dispatches the exact gateway.model.set payload", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    const search = screen.getByPlaceholderText("Search brains…");
+    fireEvent.change(search, { target: { value: "Codex" } });
+    await screen.findByText("Codex CLI");
+    expect(screen.queryByText("Antigravity CLI")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
+    expect(mockDispatchSwap).toHaveBeenCalledWith({
+      type: "gateway.model.set",
+      request_id: "",
+      scope: "profile",
+      profile_id: "assistant-default",
+      model: "codex-cli",
+      mode: "session",
+    });
+  });
+
+  it("profile scope, expensive-tier row: first Enter expands the inline confirm without dispatching, second Enter dispatches (UI-SPEC §3 regression guard)", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockDispatchSwap.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    const search = screen.getByPlaceholderText("Search brains…");
+    // "opus-4-8" (not the display name "Opus") -- cmdk's fuzzy filter/re-select-top-match-on-search
+    // behavior can otherwise let a loosely-matching duplicate-name entry ("Sonnet 5") outscore the
+    // intended target for an ambiguous query; this substring is unique to anthropic-opus-4-8's id.
+    fireEvent.change(search, { target: { value: "opus-4-8" } });
+    await screen.findByText("Opus 4.8"); // anthropic-opus-4-8, costTier: expensive
+    expect(screen.queryAllByText("Sonnet 5")).toHaveLength(0);
+
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    // First Enter must NOT dispatch -- it opens the same inline expand-to-confirm branch a mouse
+    // click takes, never a bypass (the exact regression CR-02's own note warns a naive fix
+    // would introduce).
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+    expect(await screen.findByText("Confirm swap")).toBeInTheDocument();
+    expect(
+      screen.getByText(/This model may be expensive per token\. Confirm swap to Opus 4\.8\?/)
+    ).toBeInTheDocument();
+
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    await waitFor(() => expect(mockDispatchSwap).toHaveBeenCalledTimes(1));
+    expect(mockDispatchSwap).toHaveBeenCalledWith(
+      expect.objectContaining({ model: "anthropic-opus-4-8" })
+    );
+  });
+
+  it("global scope, any row: Enter opens GlobalSwapModal and dispatches zero swap.set WS frames (D-15 confirm-gate regression guard)", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    // Scope switch re-fetches (103-08) -- the default mockSendCommand resolution (see beforeEach)
+    // resolves with a single "codex-cli" entry, matching the profile-scope fixture's own name so
+    // the same search string works for both branches.
+    await screen.findByText("Codex CLI");
+
+    const search = screen.getByPlaceholderText("Search brains…");
+    fireEvent.keyDown(search, { key: "ArrowDown" });
+    fireEvent.keyDown(search, { key: "Enter" });
+
+    const modal = await screen.findByTestId("global-swap-modal");
+    expect(modal).toHaveAttribute("data-target-id", "codex-cli");
+    expect(mockDispatchSwap).not.toHaveBeenCalled();
+    // ANTI-STUB-MASKING PROOF: asserted directly against the real sendCommand frame log, which
+    // never passes through brainsApi/VITE_BRAINS_STUB at all.
+    expect(mockSendCommand).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: "swap.set" })
+    );
+  });
+});
 
 describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
   it('scope "profile" sources the catalogue from brainsApi.getCatalogue() only, never sendCommand', async () => {

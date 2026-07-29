@@ -35,6 +35,10 @@
  * focusable trigger button sitting inside `aria-hidden="true"` — an axe `aria-hidden-focus`
  * violation). All four props are optional and independent of each other; every existing consumer
  * that omits them keeps the exact prior self-managed-Popover, own-default-trigger behavior.
+ *
+ * Keyboard activation (103-11, CR-02): `handleActivate` is the single branch decision both
+ * `CommandItem.onSelect` (search → arrow → Enter) and `BrainPickerRow`'s own button (mouse click)
+ * call — see its own doc comment below.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -55,7 +59,7 @@ import {
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { BrainPickerRow } from "@/components/brains/BrainPickerRow";
+import { BrainPickerRow, needsCostConfirm } from "@/components/brains/BrainPickerRow";
 import { GlobalSwapModal, type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
@@ -80,9 +84,9 @@ interface GlobalCatalogueEntry {
  * accurate description, not an invented one.
  *
  * `costTier: "normal"` rather than `"unknown"` is a deliberate choice, not a guess dressed up as
- * data: `BrainPickerRow`'s `needsConfirm` gate (`entry.costTier === "expensive" || "unknown"`) is
- * scope-blind — it fires the inline expand-to-confirm step for ANY row regardless of "This
- * profile" vs. "All profiles" scope. 103-UI-SPEC.md §3 is explicit that the two frictions must
+ * data: the shared `needsCostConfirm` predicate (`BrainPickerRow.tsx`) that both this file's
+ * `handleActivate` and the row itself consult is scope-blind — it fires the inline expand-to-confirm
+ * step for ANY row regardless of "This profile" vs. "All profiles" scope. 103-UI-SPEC.md §3 is explicit that the two frictions must
  * never stack for the global branch ("the row still dispatches into the global-swap modal...
  * instead of a second confirmation surface") — `GlobalSwapModal` already owns cost-tier warning
  * copy of its own (`needsCostWarning`). Tagging every live entry `"unknown"` here would silently
@@ -289,6 +293,35 @@ export function BrainPicker({
     [scope, handleProfileDispatch]
   );
 
+  /**
+   * handleActivate — the single activation entry point for BOTH input modes (103-11, CR-02):
+   * `CommandItem`'s cmdk `onSelect` (keyboard Enter, driven by cmdk's own custom-event dispatch
+   * to the currently arrow-highlighted item — never a bubbled click) and `BrainPickerRow`'s own
+   * button (mouse click; the row stops propagation on every internal click so it never ALSO
+   * reaches cmdk's bubbled click-select path, which would otherwise double-fire this function).
+   * Because both input modes call this exact function, the expand-to-confirm branch (UI-SPEC §3)
+   * and the D-15 global confirm gate (via `handleSelect`'s unchanged global-scope branch) can
+   * never drift apart between mouse and keyboard.
+   */
+  const handleActivate = useCallback(
+    (entry: CatalogueEntry) => {
+      if (expandedId === entry.id) {
+        // The inline confirm row is already open for this entry -- this activation IS the
+        // confirmation (keyboard parity with click-row-then-click-Confirm: two deliberate
+        // actions, never one).
+        handleSelect(entry);
+        setExpandedId(null);
+        return;
+      }
+      if (needsCostConfirm(entry)) {
+        setExpandedId(entry.id);
+        return;
+      }
+      handleSelect(entry);
+    },
+    [expandedId, handleSelect]
+  );
+
   const groups = useMemo(() => {
     if (!entries) return [];
     return GROUP_ORDER.map(({ group, label }) => ({
@@ -415,6 +448,7 @@ export function BrainPicker({
                           key={entry.id}
                           value={entry.id}
                           keywords={[entry.name, entry.vendor]}
+                          onSelect={() => handleActivate(entry)}
                           className={cn("p-0 rounded-md")}
                         >
                           <BrainPickerRow
@@ -422,7 +456,7 @@ export function BrainPicker({
                             isCurrent={activeEngine?.model === entry.id}
                             isExpanded={expandedId === entry.id}
                             onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}
-                            onSelect={handleSelect}
+                            onSelect={handleActivate}
                           />
                         </CommandItem>
                       ))}

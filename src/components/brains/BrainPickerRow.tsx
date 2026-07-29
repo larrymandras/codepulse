@@ -15,6 +15,12 @@
  *  - Health/quota status colors are re-tokenized to `--status-*` CSS vars, never
  *    the hardcoded Tailwind color-500 literals `ProviderHealthPanel.tsx` still
  *    carries for its dots/bars (CLAUDE.md § Styling).
+ *
+ * 103-11 (CR-02): the exported `needsCostConfirm` predicate is the single source of truth for the
+ * expand-to-confirm branch — `BrainPicker.tsx`'s `handleActivate` calls the exact same function so
+ * the keyboard path (cmdk `CommandItem.onSelect`) and this row's own mouse path can never decide
+ * differently. Every button handler below stops propagation so a mouse click never ALSO bubbles
+ * into the enclosing cmdk `CommandItem`'s own click-select handler.
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +72,16 @@ const EXPENSIVE_TIER_COPY: Record<"expensive" | "unknown", string> = {
 };
 
 /**
+ * needsCostConfirm — the single source of truth for the expand-to-confirm branch (UI-SPEC §3).
+ * Exported so `BrainPicker.tsx`'s `handleActivate` (103-11, CR-02) can make the exact same
+ * decision for the keyboard path (`CommandItem.onSelect`) that this row makes for the mouse path
+ * — the condition itself must never be duplicated/inlined a second time.
+ */
+export function needsCostConfirm(entry: CatalogueEntry): boolean {
+  return entry.costTier === "expensive" || entry.costTier === "unknown";
+}
+
+/**
  * quotaLevel — re-tokenized threshold logic copied from
  * ProviderHealthPanel.tsx:45-51's `quotaBarColor` (thresholds kept verbatim:
  * >=20% ok, 5-20% warn, <5% error — only the hardcoded Tailwind color-500
@@ -106,11 +122,18 @@ export function BrainPickerRow({
 }: BrainPickerRowProps) {
   const liveHealth = useProviderHealth();
   const healthStatus = resolveHealthStatus(entry, liveHealth);
-  const needsConfirm = entry.costTier === "expensive" || entry.costTier === "unknown";
+  const needsConfirm = needsCostConfirm(entry);
   const dotColor = PROVIDER_COLORS[entry.vendor] ?? "#6b7280";
   const billingLabel = entry.billing === "sub" ? "SUB" : "API";
 
-  const handleActivate = () => {
+  // 103-11/CR-02: every one of these handlers stops propagation so a mouse click never ALSO
+  // bubbles into the enclosing cmdk `CommandItem`'s own click-select handler (which now calls
+  // `BrainPicker.tsx`'s `handleActivate` via `onSelect`, wired for the keyboard path) --
+  // without this, a single click would double-fire `handleActivate`, and a Cancel click would
+  // bubble into a false confirmation (the enclosing `CommandItem` cannot tell "Cancel" apart from
+  // "the row" once the event reaches it).
+  const handleActivate = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     if (needsConfirm) {
       onExpandChange(true);
       return;
@@ -118,12 +141,14 @@ export function BrainPickerRow({
     onSelect(entry);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     onSelect(entry);
     onExpandChange(false);
   };
 
-  const handleCancel = () => {
+  const handleCancel = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
     onExpandChange(false);
   };
 
