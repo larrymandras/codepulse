@@ -51,6 +51,22 @@ export interface AvatarAuraProps {
 const EMERALD: [number, number, number] = [16, 185, 129]; // #10b981 — "her" tint
 const FALLBACK_CYAN: [number, number, number] = [6, 182, 212]; // #06b6d4
 
+// ─── D-16 Tier-1 lipsync: mouth-region motion constants ────────────────────
+// Tune-by-eye defaults (UI-SPEC Part 1 § "Open Questions / Claude's
+// Discretion" item 4) — nudge these against the real portrait art if the
+// ellipse visually misses the mouth. Never change the amplitude-response
+// formula (MOUTH_RX_GAIN/MOUTH_RY_GAIN) to "fix" positioning — that trades
+// away the real-voice reactivity this feature exists to add. Tier 2 (ElevenLabs
+// character timestamps → visemes → generated mouth frames) is a separate
+// future phase and must NOT be started here.
+const MOUTH_OFFSET_RATIO = 0.62; // below face-bloom center, along `base`
+const MOUTH_RX_RATIO = 0.16; // base horizontal radius, relative to `base`
+const MOUTH_RY_RATIO = 0.08; // base vertical radius, relative to `base`
+const MOUTH_RX_GAIN = 0.6; // horizontal radius amplitude response
+const MOUTH_RY_GAIN = 1.1; // vertical radius amplitude response (weighted higher — mouths open more in height)
+const MOUTH_ALPHA_BASE = 0.15;
+const MOUTH_ALPHA_GAIN = 0.5;
+
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -275,6 +291,23 @@ export function AvatarAura({ state, ttsAnalyser, className }: AvatarAuraProps) {
       ctx.beginPath();
       ctx.arc(cx, cy, scanR, rot + Math.PI, rot + Math.PI * 1.35);
       ctx.stroke();
+
+      // D-16 Tier-1 lipsync: mouth-region motion. Reuses the SAME `level`
+      // variable computed above — real TTS amplitude when `ttsAnalyser` is
+      // live, the existing synthetic breathing curve otherwise (never a
+      // second amplitude signal path). Only drawn while she's speaking, same
+      // condition as the existing speaking-frame crossfade below.
+      if (s === "speaking") {
+        const mouthCx = cx;
+        const mouthCy = cy + base * MOUTH_OFFSET_RATIO;
+        const mouthRx = base * MOUTH_RX_RATIO * (1 + level * MOUTH_RX_GAIN);
+        const mouthRy = base * MOUTH_RY_RATIO * (1 + level * MOUTH_RY_GAIN);
+        const mouthAlpha = MOUTH_ALPHA_BASE + level * MOUTH_ALPHA_GAIN;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${r},${g},${b},${mouthAlpha})`;
+        ctx.ellipse(mouthCx, mouthCy, mouthRx, mouthRy, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.globalCompositeOperation = "source-over";
     };
