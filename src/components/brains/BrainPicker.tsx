@@ -41,6 +41,13 @@
  * call — see its own doc comment below. `fetchCatalogue` (WR-01) is generation-guarded so a rapid
  * scope toggle can never leave the rendered catalogue on one axis while `scope` points at the
  * other.
+ *
+ * 103-12 (CR-03/WR-02): `globalDialogOpen` is a SEPARATE boolean from `globalTarget` — the modal's
+ * VISIBILITY, not its MOUNT state. `globalTarget` is only ever replaced by a new selection, never
+ * nulled on close, so the `GlobalSwapModal` instance (and the `runRevert` closure its "Revert
+ * global swap" toast action depends on) survives past "Done." WR-02: the row highlight (`isCurrent`)
+ * is scope-aware — `global` scope compares against `useGlobalBrainOverride()`, `profile` scope keeps
+ * comparing against the per-profile `useActiveEngine()` reading.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -64,6 +71,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BrainPickerRow, needsCostConfirm } from "@/components/brains/BrainPickerRow";
 import { GlobalSwapModal, type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
 import { useActiveEngine } from "@/hooks/useActiveEngine";
+import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
@@ -180,6 +188,10 @@ export function BrainPicker({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [pendingTarget, setPendingTarget] = useState<CatalogueEntry | null>(null);
   const [globalTarget, setGlobalTarget] = useState<CatalogueEntry | null>(null);
+  // 103-12/CR-03: VISIBILITY only. Decoupled from `globalTarget` (the MOUNT guard, below) so the
+  // modal instance survives "Done" and a later "Revert global swap" toast click can genuinely
+  // reopen it — see this file's own docstring.
+  const [globalDialogOpen, setGlobalDialogOpen] = useState(false);
 
   // Consumed at most once, ever, across this component's lifetime — the mixed-badge contextual
   // default (D-08) is not a preference that can re-arm itself.
@@ -196,6 +208,9 @@ export function BrainPicker({
   const activeEngine = activeEngines[profileId] ?? null;
   const allProfiles = useProfileConfigs();
   const { sendCommand } = useAstridrWS();
+  // WR-02: the "All profiles" scope's row highlight must compare against the global axis, not the
+  // per-profile engine — see `isCurrent` below.
+  const { modelOverride: globalOverrideModel } = useGlobalBrainOverride();
 
   /**
    * Scope-aware catalogue source (fix for the scope-blind picker bug): "profile" keeps using
@@ -298,6 +313,7 @@ export function BrainPicker({
     (entry: CatalogueEntry) => {
       if (scope === "global") {
         setGlobalTarget(entry);
+        setGlobalDialogOpen(true);
         handleOpenChange(false);
         return;
       }
@@ -466,7 +482,11 @@ export function BrainPicker({
                         >
                           <BrainPickerRow
                             entry={entry}
-                            isCurrent={activeEngine?.model === entry.id}
+                            isCurrent={
+                              scope === "global"
+                                ? globalOverrideModel === entry.id
+                                : activeEngine?.model === entry.id
+                            }
                             isExpanded={expandedId === entry.id}
                             onExpandChange={(exp) => setExpandedId(exp ? entry.id : null)}
                             onSelect={handleActivate}
@@ -485,10 +505,8 @@ export function BrainPicker({
         <GlobalSwapModal
           target={globalTarget}
           profiles={globalSwapProfiles}
-          open={globalTarget !== null}
-          onOpenChange={(next) => {
-            if (!next) setGlobalTarget(null);
-          }}
+          open={globalDialogOpen}
+          onOpenChange={setGlobalDialogOpen}
         />
       )}
     </>

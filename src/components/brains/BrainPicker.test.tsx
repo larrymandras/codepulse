@@ -18,6 +18,13 @@
  * `useAstridrWS().sendCommand` exactly as `BrainControl.tsx` does — every "profile"-scope
  * test in this file supplies a `mockSendCommand` that is never asserted against, proving
  * those tests stay entirely on the `brainsApi.getCatalogue()` seam.
+ *
+ * `@/hooks/useResolvedBrain`'s `useGlobalBrainOverride` is mocked directly (103-12, WR-02) —
+ * a plain mutable `mockGlobalOverride` object the picker reads for the "All profiles" scope's row
+ * highlight. Mocked at the hook level (not by driving `mockSendCommand`'s `swap.get_state` reply)
+ * so this file's existing WR-01 staleness test — which relies on `mockSendCommand.mockImplementationOnce`
+ * resolving exactly the NEXT `sendCommand` call — is not disturbed by an unrelated hydration call
+ * this hook would otherwise make on mount.
  */
 
 import { useState } from "react";
@@ -56,6 +63,14 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
   }),
 }));
 
+let mockGlobalOverride: { modelOverride: string | null; voiceOverride: string | null } = {
+  modelOverride: null,
+  voiceOverride: null,
+};
+vi.mock("@/hooks/useResolvedBrain", () => ({
+  useGlobalBrainOverride: () => mockGlobalOverride,
+}));
+
 const mockActiveEngines: Record<
   string,
   { profileId: string; model: string; mode: "session" | "pinned" | "inherited"; selectionPath: string; timestamp: number } | null
@@ -77,13 +92,31 @@ vi.mock("@/hooks/useProfileConfigs", () => ({
   useProfileConfigs: () => [{ profileId: "assistant-default" }, { profileId: "consulting" }],
 }));
 
+// 103-12/CR-03: renders regardless of `open` — MOUNT and VISIBILITY are asserted separately via
+// `data-open`, mirroring the real component's own decoupling. `mock-close`/`mock-reopen` let a
+// test drive `onOpenChange` from outside exactly as GlobalSwapModal's own Done/Revert-toast flow
+// would, without needing to un-mock the real component.
 vi.mock("@/components/brains/GlobalSwapModal", () => ({
-  GlobalSwapModal: (props: { open: boolean; target?: { id: string; name: string }; profiles: unknown[] }) =>
-    props.open ? (
-      <div data-testid="global-swap-modal" data-target-id={props.target?.id}>
-        Global swap modal for {props.target?.name} ({props.profiles.length} profiles)
-      </div>
-    ) : null,
+  GlobalSwapModal: (props: {
+    open: boolean;
+    target?: { id: string; name: string };
+    profiles: unknown[];
+    onOpenChange: (next: boolean) => void;
+  }) => (
+    <div
+      data-testid="global-swap-modal"
+      data-target-id={props.target?.id}
+      data-open={props.open ? "true" : "false"}
+    >
+      Global swap modal for {props.target?.name} ({props.profiles.length} profiles)
+      <button type="button" onClick={() => props.onOpenChange(false)}>
+        mock-close
+      </button>
+      <button type="button" onClick={() => props.onOpenChange(true)}>
+        mock-reopen
+      </button>
+    </div>
+  ),
 }));
 
 const mockToastSuccess = vi.fn();
@@ -126,6 +159,7 @@ beforeEach(() => {
   mockUseQuery.mockReset();
   mockUseQuery.mockReturnValue({});
   mockSendCommand.mockReset();
+  mockGlobalOverride = { modelOverride: null, voiceOverride: null };
   // Default so any incidental swap.catalogue call in a "profile"-scope test (there shouldn't be
   // one) resolves harmlessly instead of hanging the test on an unresolved promise. Named to line
   // up with STUB_CATALOGUE's "Codex CLI" entry so tests that toggle to "All profiles" without
@@ -771,5 +805,95 @@ describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
 
     expect(mockSendCommand).toHaveBeenCalledWith({ type: "swap.catalogue", target: "brain" });
     expect(mockGetCatalogue).not.toHaveBeenCalled();
+  });
+});
+
+// ── 103-12: GlobalSwapModal mount lifecycle survives close (CR-03) ────────────
+//
+// Before this fix, `{globalTarget && <GlobalSwapModal onOpenChange={next => { if (!next)
+// setGlobalTarget(null); }} />}` unmounted the modal the moment it closed (Cancel or Done), so a
+// later "Revert global swap" toast click fired real WS commands into a dead component instance
+// with zero visible feedback. The fix decouples MOUNT (`globalTarget`, only replaced by a new
+// selection) from VISIBILITY (`globalDialogOpen`, a plain boolean `onOpenChange` maps onto
+// directly in both directions).
+
+describe("BrainPicker — GlobalSwapModal mount lifecycle (103-12, CR-03)", () => {
+  it("keeps the modal instance mounted after onOpenChange(false); a later onOpenChange(true) makes it visible again", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI"));
+
+    const modal = await screen.findByTestId("global-swap-modal");
+    expect(modal).toHaveAttribute("data-open", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "mock-close" }));
+
+    // CR-03: still present in the tree (mounted) — only its visibility changed.
+    expect(screen.getByTestId("global-swap-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-open", "false");
+
+    fireEvent.click(screen.getByRole("button", { name: "mock-reopen" }));
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-open", "true");
+    // The target survived the close/reopen cycle too — the same instance, not a fresh one.
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-target-id", "codex-cli");
+  });
+
+  it("replaces the mounted instance's target only when a genuinely new selection is made", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI"));
+
+    await screen.findByTestId("global-swap-modal");
+    fireEvent.click(screen.getByRole("button", { name: "mock-close" }));
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-open", "false");
+
+    // Reopening the picker and picking the SAME entry again re-mounts with the same target id —
+    // proves the mount guard is driven by `globalTarget`, not some separate "was it ever closed"
+    // flag that would force an unwanted remount.
+    openPicker();
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+    fireEvent.click(screen.getByText("Codex CLI"));
+
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-target-id", "codex-cli");
+    expect(screen.getByTestId("global-swap-modal")).toHaveAttribute("data-open", "true");
+  });
+});
+
+// ── 103-12: row highlight is scope-aware (WR-02) ───────────────────────────────
+//
+// Before this fix, `isCurrent={activeEngine?.model === entry.id}` compared every row — in BOTH
+// "This profile" and "All profiles" scope — against the per-profile engine, so the "All profiles"
+// view could never highlight the row that actually matches the live global override.
+
+describe("BrainPicker — row highlight is scope-aware (103-12, WR-02)", () => {
+  it("tracks the global override in 'All profiles' scope, not the per-profile engine", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    renderPicker();
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+    // "This profile" scope: the mocked active engine is "anthropic-sonnet-5", not "codex-cli" —
+    // no highlight even though the global override happens to match this row's id.
+    const profileRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
+    expect(profileRow?.className ?? "").not.toContain("bg-primary/10");
+
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    await screen.findByText("Codex CLI");
+
+    const globalRow = screen.getByText("Codex CLI").closest(".rounded-md.border");
+    expect(globalRow?.className ?? "").toContain("bg-primary/10");
   });
 });

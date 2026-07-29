@@ -129,6 +129,12 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
   const [lastAction, setLastAction] = useState<LastAction>("swap");
 
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 103-12-T2/CR-03: the last target.id this instance actually reset state for — NOT `open`,
+  // because `open` now toggles independently of this component's mount lifecycle (BrainPicker keeps
+  // it mounted via a separate `globalDialogOpen` boolean). Comparing against target.id instead of
+  // `open` is what lets a revert triggered after "Done" reopen this same instance without wiping the
+  // snapshot/outcome it needs to render.
+  const prevTargetIdRef = useRef<string | null>(null);
 
   function clearConfirmTimeout() {
     if (confirmTimeoutRef.current) {
@@ -144,17 +150,20 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     }, GLOBAL_SWAP_CONFIRM_TIMEOUT_MS);
   }
 
+  // 103-12-T2/CR-03: reset only when a genuinely NEW target arrives — never on every `open`
+  // transition (see prevTargetIdRef comment above). The pre-T2 version reset on every `open`
+  // transition instead, which — once BrainPicker stops nulling `globalTarget` on close — would wipe
+  // the snapshot/outcome on the very reopen a revert depends on.
   useEffect(() => {
-    if (open) {
-      setPhase("confirm");
-      setOutcome({ status: "pending" });
-      setIsBusy(false);
-      setLastAction("swap");
-      setSnapshot([]);
-      clearConfirmTimeout();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (target.id === prevTargetIdRef.current) return;
+    prevTargetIdRef.current = target.id;
+    setPhase("confirm");
+    setOutcome({ status: "pending" });
+    setIsBusy(false);
+    setLastAction("swap");
+    setSnapshot([]);
+    clearConfirmTimeout();
+  }, [target.id]);
 
   // D-14/D-15 readback: once the server-pushed swap.state matches the value we're waiting to
   // confirm (target.id for a swap, null for a revert-clear), the "confirming" outcome resolves to
