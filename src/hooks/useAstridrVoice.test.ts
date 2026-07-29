@@ -137,6 +137,43 @@ vi.mock("@/hooks/useSpeechRecognition", () => ({
   ),
 }));
 
+// ─── useDuplexEars mock (188-03, D-04/D-08) ──────────────────────────────────
+// useDuplexEars.ts does not exist yet -- it lands in 188-05, and 188-08 wires
+// it into useAstridrVoice.ts. This mock's shape anticipates that contract
+// (see 188-03-PLAN.md § interfaces) so the barge-in/dispatch reuse cases
+// below are executable NOW and turn green the moment both land, without a
+// second edit to this harness.
+
+let onDuplexSpeechStartCallback: (() => void) | null = null;
+let onDuplexFinalTranscriptCallback: ((text: string) => void) | null = null;
+let onDuplexUnavailableCallback: ((reason: string) => void) | null = null;
+let onDuplexSessionEndCallback: ((info: { seconds: number }) => void) | null = null;
+const mockDuplexStart = vi.fn();
+const mockDuplexStop = vi.fn();
+let duplexStatusValue: "idle" | "connecting" | "connected" | "unavailable" = "idle";
+
+vi.mock("@/hooks/useDuplexEars", () => ({
+  useDuplexEars: vi.fn(
+    (options: {
+      onSpeechStart: () => void;
+      onFinalTranscript: (text: string) => void;
+      onUnavailable: (reason: string) => void;
+      onSessionEnd: (info: { seconds: number }) => void;
+      enabled: boolean;
+    }) => {
+      onDuplexSpeechStartCallback = options.onSpeechStart;
+      onDuplexFinalTranscriptCallback = options.onFinalTranscript;
+      onDuplexUnavailableCallback = options.onUnavailable;
+      onDuplexSessionEndCallback = options.onSessionEnd;
+      return {
+        start: mockDuplexStart,
+        stop: mockDuplexStop,
+        status: duplexStatusValue,
+      };
+    }
+  ),
+}));
+
 // ─── Fake chat engine ─────────────────────────────────────────────────────────
 
 function makeChat(overrides: Partial<AstridrChat> = {}): AstridrChat {
@@ -202,6 +239,11 @@ describe("useAstridrVoice", () => {
     onFinalResultCallback = null;
     onInterimResultCallback = null;
     onRecognitionEndCallback = null;
+    onDuplexSpeechStartCallback = null;
+    onDuplexFinalTranscriptCallback = null;
+    onDuplexUnavailableCallback = null;
+    onDuplexSessionEndCallback = null;
+    duplexStatusValue = "idle";
   });
 
   afterEach(() => {
@@ -1314,5 +1356,69 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).not.toHaveBeenCalled();
     expect(result.current.isLooking).toBe(false);
     expect(result.current.voiceState).toBe("listening");
+  });
+
+  // ─── Duplex ears -- barge-in reuse (188-03, D-04/D-08) ─────────────────────
+  // useDuplexEars.ts lands in 188-05; 188-08 composes it into this hook. RED
+  // here is the anti-drift defense D-08/T-188-09 require: a future duplex
+  // implementation that satisfies these cases via a DIFFERENT internal path
+  // than the 183 recognizer still fails, because assertions only look at the
+  // fake chat's public sinks (chat.interrupt / showInterruptFlash).
+
+  describe("duplex ears — barge-in reuse (D-04/D-08)", () => {
+    it("duplex speech_started while speaking triggers the SAME barge-in as the 183 recognizer", () => {
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      act(() => {
+        onDuplexSpeechStartCallback?.();
+      });
+      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+    });
+
+    it("duplex speech_started while idle does NOT barge in", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      act(() => {
+        onDuplexSpeechStartCallback?.();
+      });
+      expect(chat.interrupt).not.toHaveBeenCalled();
+    });
+
+    it("barge-in is idempotent across sources", () => {
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      // Barge from the 183 recognizer path first...
+      act(() => {
+        onInterimResultCallback?.("stop");
+      });
+      // ...then immediately from duplex — the existing bargeInFiredRef latch
+      // must cover both sources, so this must NOT fire a second interrupt.
+      act(() => {
+        onDuplexSpeechStartCallback?.();
+      });
+      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+    });
+
+    it("the interrupt flash is not duplicated", () => {
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+
+      act(() => {
+        onDuplexSpeechStartCallback?.();
+        onDuplexSpeechStartCallback?.();
+      });
+      expect(result.current.showInterruptFlash).toBe(true);
+      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+    });
   });
 });
