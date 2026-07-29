@@ -77,6 +77,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { BrainPickerRow, needsCostConfirm } from "@/components/brains/BrainPickerRow";
 import { type GlobalSwapProfile } from "@/components/brains/GlobalSwapModal";
@@ -453,6 +454,17 @@ export function BrainPicker({
         )}
       </PopoverTrigger>
       <PopoverContent align="start" className="w-96 p-2">
+        {/* Own TooltipProvider (UAT 2026-07-29 blocker): `BrainPickerRow` wraps each row's button
+            in a Radix `<Tooltip>` (103-11's WR-03 fix), and Radix context follows the REACT tree,
+            not the DOM — so this portaled content inherits its HOST's providers. `BrainHeaderBadge`
+            happens to sit inside `DashboardLayout`'s TooltipProvider (DashboardLayout.tsx:588-603),
+            but the Chat composer pill and Settings' `AgentProfileRows` render inside the routed
+            `<Outlet/>`, which neither of DashboardLayout's providers wraps — the boundary already
+            documented at SkillLifecycleMenu.tsx:186-190. Live UAT: those two entry points destroyed
+            the popover the moment rows rendered ("`Tooltip` must be used within `TooltipProvider`").
+            Owning the provider here makes the picker safe from ANY host, present or future, instead
+            of requiring every host to remember — mirrors CodeVaultGraph.tsx's documented pattern. */}
+        <TooltipProvider delayDuration={200}>
         <Command>
           <div className="flex flex-col gap-2">
             {BRAINS_STUB_ACTIVE && (
@@ -540,6 +552,7 @@ export function BrainPicker({
             )}
           </CommandList>
         </Command>
+        </TooltipProvider>
       </PopoverContent>
     </Popover>
   );

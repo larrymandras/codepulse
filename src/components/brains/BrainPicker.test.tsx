@@ -1437,3 +1437,61 @@ describe("BrainPicker + real GlobalSwapModal — pinned-default count from confi
     expect(screen.getByTestId("brain-picker-base-label").textContent).toBe("Auto");
   });
 });
+
+// ── UAT gap (2026-07-29): the picker must be safe from a host with NO TooltipProvider ─────────
+//
+// Live UAT found the picker CRASHING from two of its three entry points. `BrainPickerRow` wraps
+// each row's button in a Radix `<Tooltip>` (103-11's own WR-03 fix). Radix context follows the
+// REACT tree, not the DOM, so a portaled `PopoverContent` inherits its HOST's providers:
+//   - `BrainHeaderBadge` sits inside `DashboardLayout`'s `<TooltipProvider>` (DashboardLayout.tsx
+//     :588-603) and worked -- 331 live rows, zero errors.
+//   - the Chat composer pill (`Chat.tsx`) and Settings' `AgentProfileRows` (`Settings.tsx`) are
+//     rendered inside the routed `<Outlet/>`, which NEITHER DashboardLayout TooltipProvider wraps
+//     -- the exact boundary already documented verbatim at SkillLifecycleMenu.tsx:186-190. There,
+//     the popover was destroyed the moment rows rendered: "`Tooltip` must be used within
+//     `TooltipProvider`", ErrorBoundary trip, "went wrong" fallback.
+//
+// Every other test in this file wraps its render in a `TooltipProvider` (see `renderPicker`), which
+// is precisely why a 2815-test suite could not catch it. This test deliberately does NOT, so the
+// provider-boundary regression is caught at the unit level from now on.
+
+describe("BrainPicker — renders catalogue rows with no TooltipProvider ancestor (UAT blocker)", () => {
+  it("renders rows from a routed host that supplies no TooltipProvider, instead of throwing", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+
+    // NOTE: no <TooltipProvider> -- this is the Chat-pill / Settings-row host shape.
+    render(
+      <GlobalSwapProvider>
+        <BrainPicker profileId="assistant-default" />
+      </GlobalSwapProvider>
+    );
+
+    openPicker();
+
+    // Rows render (each one containing BrainPickerRow's Radix Tooltip) without a provider ancestor.
+    expect(await screen.findByText("Codex CLI")).toBeInTheDocument();
+    // The health dot's tooltip trigger is the specific element that threw.
+    expect(screen.getAllByTestId("health-dot").length).toBeGreaterThan(0);
+  });
+
+  it("still renders rows with no TooltipProvider after switching to the global scope", async () => {
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    // The global-scope catalogue reply comes from this file's default `mockSendCommand`
+    // (beforeEach), which returns a single "Codex CLI" entry.
+
+    render(
+      <GlobalSwapProvider>
+        <BrainPicker profileId="assistant-default" />
+      </GlobalSwapProvider>
+    );
+
+    openPicker();
+    await screen.findByText("Codex CLI");
+
+    // This is the exact live repro: the crash fired on the "All profiles" toggle, because that
+    // re-fetch re-rendered the row list.
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+
+    expect(await screen.findByText("Codex CLI")).toBeInTheDocument();
+  });
+});

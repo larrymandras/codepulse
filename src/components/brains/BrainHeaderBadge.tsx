@@ -37,7 +37,7 @@
 
 import { useEffect, useState } from "react";
 import { Clock, Pin } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useResolvedBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
@@ -123,6 +123,7 @@ export function BrainHeaderBadge() {
     !pendingLabel && (isGlobal || (isProfile && !BRAINS_STUB_ACTIVE));
 
   return (
+    <TooltipProvider>
     <Tooltip>
       <BrainPicker
         profileId={effectiveProfileId}
@@ -214,5 +215,6 @@ export function BrainHeaderBadge() {
         <p className="text-xs">{ariaLabel}</p>
       </TooltipContent>
     </Tooltip>
+    </TooltipProvider>
   );
 }
