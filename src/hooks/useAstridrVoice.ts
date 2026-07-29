@@ -41,6 +41,8 @@
 import { useReducer, useEffect, useRef, useState, useCallback } from "react";
 import { useWakeWord, type WakeWordStatus } from "@/hooks/useWakeWord";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useDuplexEars } from "@/hooks/useDuplexEars";
+import { reportRealtimeUsage } from "@/lib/astridrApi";
 import type { AstridrChat } from "@/hooks/useAstridrChat";
 import type { ScreenShareState, CaptureFrameOptions, CapturedFrame } from "@/hooks/useScreenShare";
 import {
@@ -70,6 +72,17 @@ const FOLLOW_UP_WINDOW_MS = 30_000;
 /** Stay-hot: she ended on a question — she's waiting even longer. */
 const QUESTION_FOLLOW_UP_MS = 45_000;
 const INTERRUPT_FLASH_MS = 1_500;
+/** D-07: her own ElevenLabs reply must not trip the duplex engine's VAD.
+ *  Browser AEC on mic capture (useWakeWord.ts:161,167 echoCancellation:
+ *  true) is the PRIMARY defense; this is a deliberately light SECONDARY
+ *  guard — a bounded window at TTS playback onset during which a duplex
+ *  speech-start signal is treated as (probable) echo and ignored. Starting
+ *  value; live-tuned against a real spoken test in 188-09 (Claude's
+ *  discretion per 188-CONTEXT.md D-07). Reviving 183's fingerprint
+ *  machinery or introducing acoustic AEC here is explicitly OUT OF BOUNDS
+ *  (locked milestone decision) — isEchoOfReply/stripEchoPrefix below stay
+ *  the 183 recognizer's own, separate echo guard. */
+const ECHO_SUPPRESS_MS = 400;
 /** Turn completed but no TTS arrived within this — close the turn silently. */
 const SILENT_TURN_GRACE_MS = 3_000;
 /** A flush landing while the PREVIOUS send is still being thought about
@@ -431,6 +444,19 @@ export function useAstridrVoice({
   const currentReply = () =>
     chatRef.current.streamingReplyRef.current || echoReplyRef.current;
 
+  // ─── Duplex ears bookkeeping (Phase 188, D-07/D-08/T-188-32) ─────────────
+  // echoSuppressArmedAtRef: timestamp the echo-suppression window (D-07) was
+  // armed at TTS onset. Echo requires nonzero audio round-trip time to reach
+  // the mic, so the window is exclusive of the arming instant itself — a
+  // duplex speech-start arriving in the SAME tick as TTS start cannot
+  // physically be an echo of audio that has not played yet, and is treated
+  // as a real interruption (see onDuplexSpeechStart below).
+  const echoSuppressArmedAtRef = useRef(0);
+  // activeEarsRef: which ear source is currently driving the conversation.
+  // A ref, never state — nothing renders from it (D-08/T-188-32: the only
+  // disclosure is the debug-gated trace buffer, never a UI label).
+  const activeEarsRef = useRef<"duplex" | "recognizer">("recognizer");
+
   // Keep-alive bookkeeping: intentional stops must NOT trigger a restart, and
   // rapid-cycle restarts are rate-limited (storm guard). Lifetime tracking
   // distinguishes a storm (start→die in <2s) from Chrome's routine periodic
@@ -506,6 +532,15 @@ export function useAstridrVoice({
   const handleFinalResultRef = useRef<(text: string, confidence?: number) => void>(
     () => {}
   );
+
+  // Duplex ears start/stop, ref-indirected for the same reason as the two
+  // refs above: useDuplexEars is composed further down (after handleBargeIn/
+  // handleFinalResultRef, per its own call-site requirements), but
+  // teardownConversation/onWake are declared earlier and need a stable
+  // reference to call through — a plain const would be a TDZ hazard in a
+  // useCallback dependency array declared before that const exists.
+  const duplexStartRef = useRef<() => void>(() => {});
+  const duplexStopRef = useRef<() => void>(() => {});
 
   // 186-01 (D-16): which caller requested the CURRENT recognitionStart() —
   // "wake" (fresh conversation) vs "keepalive-restart" (Chrome's routine
@@ -648,6 +683,8 @@ export function useAstridrVoice({
       intentionalStopRef.current = true; // the coming recognizer end is ours
       if (mode === "abort") recognitionAbort();
       else recognitionStop();
+      duplexStopRef.current(); // D-10: session dies with the follow-up window
+      activeEarsRef.current = "recognizer";
     },
     [
       clearSilenceTimer,
@@ -776,6 +813,8 @@ export function useAstridrVoice({
   }, [clearSendTimer, clearSilenceTimer]);
 
   // ─── Barge-in (CONV-01, D-06/D-08/D-11/D-12) ──────────────────────────────
+  // Fed by both the 183 recognizer and the duplex ears —
+  // do not special-case by source. (RESEARCH Pitfall 5's named mitigation, D-13.)
 
   const handleBargeIn = useCallback(() => {
     if (bargeInFiredRef.current) return;
@@ -896,6 +935,8 @@ export function useAstridrVoice({
     clearFollowUpWindow(); // CONV-02: a new interim consumes the window
   };
 
+  // Fed by both the 183 recognizer and the duplex ears —
+  // do not special-case by source. (RESEARCH Pitfall 5's named mitigation, D-13.)
   handleFinalResultRef.current = (rawText: string, confidence?: number) => {
     let text = rawText;
     // Canonical onresult line (186-01 D-16) — see handleInterimResultRef's
@@ -1159,6 +1200,75 @@ export function useAstridrVoice({
     }, debounceMs);
   };
 
+  // ─── Duplex ears (Phase 188, DUPLEX-01) ────────────────────────────────────
+  // A pure event router: composed AFTER handleBargeIn/handleFinalResultRef so
+  // these callbacks can reference them directly, with no forward-declaration
+  // dance. useDuplexEars owns zero conversation logic (188-05) — this hook
+  // owns zero duplicate dispatch logic. Every event funnels into the SAME
+  // sinks the 183 recognizer already uses (D-13); see the matching
+  // never-special-case-the-source comments on handleBargeIn and the
+  // final-result handler above.
+
+  const onDuplexSpeechStart = useCallback(() => {
+    trace("duplex.speech_started", { state: voiceStateRef.current });
+    if (voiceStateRef.current !== "speaking") return;
+    // D-07: echo-suppression window, exclusive of the arming instant itself
+    // (see echoSuppressArmedAtRef's doc comment above) — a light secondary
+    // guard on top of browser AEC, never a revival of 183's fingerprint
+    // machinery and never full acoustic AEC.
+    const elapsedSincePlaybackStart = Date.now() - echoSuppressArmedAtRef.current;
+    if (elapsedSincePlaybackStart > 0 && elapsedSincePlaybackStart < ECHO_SUPPRESS_MS) {
+      trace("duplex.speech_started.echo-suppressed", { elapsedSincePlaybackStart });
+      return;
+    }
+    handleBargeIn();
+  }, [handleBargeIn]);
+
+  const onDuplexFinalTranscript = useCallback((text: string) => {
+    // Never trace transcript text, only length (T-188-31/T-188-60).
+    trace("duplex.transcript", { length: text.length });
+    handleFinalResultRef.current(text);
+  }, []);
+
+  const onDuplexUnavailable = useCallback((reason: string) => {
+    // D-08/T-188-32: fall back to the 183 recognizer silently — a ref flip
+    // and a debug-gated trace, never a dispatch, never a UI label.
+    activeEarsRef.current = "recognizer";
+    trace("duplex.unavailable", { reason });
+  }, []);
+
+  const onDuplexSessionEnd = useCallback((info: { seconds: number }) => {
+    trace("duplex.session_end", { seconds: info.seconds });
+    // Fire-and-forget (D-09/D-10): a slow, dead, or rejecting usage endpoint
+    // must never delay conversation re-arming or throw into this callback --
+    // defense in depth on top of reportRealtimeUsage's own internal try/catch.
+    void reportRealtimeUsage(info.seconds).catch(() => {});
+  }, []);
+
+  const {
+    start: duplexStart,
+    stop: duplexStop,
+    status: duplexStatus,
+  } = useDuplexEars({
+    enabled,
+    // D-06 seam: multi-persona duplex rollout is out of scope this phase.
+    persona: "astridr",
+    onSpeechStart: onDuplexSpeechStart,
+    onFinalTranscript: onDuplexFinalTranscript,
+    onUnavailable: onDuplexUnavailable,
+    onSessionEnd: onDuplexSessionEnd,
+    debug: VOICE_DEBUG,
+  });
+  duplexStartRef.current = duplexStart;
+  duplexStopRef.current = duplexStop;
+
+  useEffect(() => {
+    if (duplexStatus === "connected") {
+      activeEarsRef.current = "duplex";
+      trace("duplex.ears_switch", { active: "duplex" });
+    }
+  }, [duplexStatus]);
+
   // ─── TTS lifecycle → state machine (echo guard arming, follow-up window) ──
 
   const wasPlayingRef = useRef(false);
@@ -1167,6 +1277,8 @@ export function useAstridrVoice({
       wasPlayingRef.current = true;
       trace("tts.start", { state: voiceStateRef.current });
       clearSilentTurnTimer(); // audio arrived — the watchdog stands down
+      // D-07: arm the duplex echo-suppression window at playback onset.
+      echoSuppressArmedAtRef.current = Date.now();
       // Re-arm barge-in for this speaking turn; the session is now warm.
       bargeInFiredRef.current = false;
       conversationWarmRef.current = true;
@@ -1263,6 +1375,7 @@ export function useAstridrVoice({
       recognizerStartedAtRef.current = Date.now();
       recognizerStartTriggerRef.current = "wake";
       recognitionStart();
+      duplexStartRef.current(); // D-10: opens on the same wake as the 183 fallback
       resetSilenceTimer();
     },
     debug: VOICE_DEBUG,
@@ -1276,6 +1389,7 @@ export function useAstridrVoice({
     if (!enabled) {
       trace("mic.off → release everything");
       wakeWordStop();
+      duplexStopRef.current(); // belt-and-suspenders: release the mic even mid-session
       endConversation("abort"); // release the recognizer mic instantly
     } else if (wakeWordStatus === "idle") {
       trace("mic.on → wake engine start");
