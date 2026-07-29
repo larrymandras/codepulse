@@ -1211,6 +1211,120 @@ describe("BrainPicker + GlobalSwapProvider — exactly one GlobalSwapModal insta
   });
 });
 
+// ── 103-18: WR-01 itself -- revert survives navigating away from the requesting picker ────────
+//
+// The exact reproduction 103-18-PLAN.md names: start a global swap from a page-scoped picker,
+// click Done, navigate away (unmount that picker -- `GlobalSwapProvider` itself does not, mirroring
+// how `DashboardLayout` is never remounted by a child-route navigation), then click "Revert global
+// swap" in the still-visible toast. Before this plan, the modal instance -- and the `runRevert`
+// closure the toast action calls -- lived inside the now-unmounted `BrainPicker`, so this fired a
+// real `swap.set` into a dead component with zero visible feedback.
+
+describe("BrainPicker + GlobalSwapProvider — WR-01: revert survives the requesting picker unmounting (route-change simulation)", () => {
+  it("a toast revert fired after the requesting BrainPicker unmounts still renders a visible result and dispatches for real", async () => {
+    globalSwapModalMode = "real";
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+
+    function Harness({ showPicker }: { showPicker: boolean }) {
+      return (
+        <TooltipProvider>
+          <GlobalSwapProvider>{showPicker && <BrainPicker profileId="assistant-default" />}</GlobalSwapProvider>
+        </TooltipProvider>
+      );
+    }
+
+    const { rerender } = render(<Harness showPicker={true} />);
+
+    await openGlobalPickerAndSelect("Codex CLI");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    expect(await screen.findByText("Switched to Codex CLI.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    const [, toastOptions] = mockToastFn.mock.calls[mockToastFn.mock.calls.length - 1] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+
+    // Simulate the route change: unmount ONLY the requesting picker. `GlobalSwapProvider` stays --
+    // React reconciles it as the same element at the same tree position across this rerender,
+    // exactly as it does across a real nested-route navigation under `DashboardLayout` (the actual
+    // mount point, which is never remounted by a child route swapping under its <Outlet/>).
+    rerender(<Harness showPicker={false} />);
+    expect(screen.queryByRole("button", { name: /Active brain/ })).not.toBeInTheDocument();
+
+    // The revert toast action fires well after the requesting component is gone -- must still
+    // render a REAL, visible result surface and dispatch a real command, never fire silently.
+    toastOptions.action.onClick();
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+
+    expect(
+      await screen.findByText("Global override cleared — profiles are back on their own defaults.")
+    ).toBeInTheDocument();
+    expect(mockSendCommand).toHaveBeenCalledWith({
+      type: "swap.set",
+      target: "brain",
+      restore: true,
+    });
+  });
+});
+
+// ── 103-18: 103-14 stays closed through the hoisted architecture -- revert restores, not clears ──
+//
+// 103-14's restore-to-prior fix lives entirely inside GlobalSwapModal.tsx, untouched by this plan.
+// This proves it still works end-to-end through BrainPicker's real handleSelect -> openGlobalSwap
+// wiring and the now-hoisted modal instance -- not just against GlobalSwapModal.test.tsx's directly
+// mocked useCommandDispatch.
+
+describe("BrainPicker + real GlobalSwapModal — 103-14 stays closed: revert restores the prior override, not a clear", () => {
+  it("restores the exact prior global override instead of clearing it when one was in force before the swap", async () => {
+    globalSwapModalMode = "real";
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+    // A global override is already in force (matching the default mocked active engine's model,
+    // so the pre-swap snapshot resolves a readable display name for it) BEFORE this swap starts.
+    mockGlobalOverride = { modelOverride: "anthropic-sonnet-5", voiceOverride: null };
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Swap all profiles to Codex CLI" })
+    );
+
+    expect(mockSendCommand).toHaveBeenCalledWith({
+      type: "swap.set",
+      target: "brain",
+      value: "codex-cli",
+      restore: false,
+    });
+
+    mockGlobalOverride = { modelOverride: "codex-cli", voiceOverride: null };
+    expect(await screen.findByText("Switched to Codex CLI.")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    const [, toastOptions] = mockToastFn.mock.calls[mockToastFn.mock.calls.length - 1] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    toastOptions.action.onClick();
+
+    // Restores to the PRIOR override ("anthropic-sonnet-5"), never a plain clear -- `restore:
+    // false` with the captured prior value, exactly as a fresh swap to that engine would dispatch.
+    expect(mockSendCommand).toHaveBeenCalledWith({
+      type: "swap.set",
+      target: "brain",
+      value: "anthropic-sonnet-5",
+      restore: false,
+    });
+
+    mockGlobalOverride = { modelOverride: "anthropic-sonnet-5", voiceOverride: null };
+    expect(await screen.findByText("Reverted to anthropic-sonnet-5.")).toBeInTheDocument();
+  });
+});
+
 // ── 103-17: pinned-default count from config + the D-14 boundary it must never trade away ──────
 //
 // OBS 8 (live-confirmed 2026-07-29): `useProfileConfigs()` already returns `modelPreferences` for
