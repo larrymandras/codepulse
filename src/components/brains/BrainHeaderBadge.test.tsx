@@ -43,6 +43,10 @@ const mockSubscribeEvent = vi.fn((eventType: string, callback: WSEventCallback) 
   }
   return mockUnsubscribe;
 });
+// 103-09: the badge now reads the global-override snapshot through `useResolvedBrain` ->
+// `useGlobalBrainOverride`, which sends `swap.get_state` on every connected transition.
+// Controllable so tests can seed an already-active override with ZERO swap.state events.
+const mockSendCommand = vi.fn();
 
 vi.mock("@/contexts/AstridrWSContext", () => ({
   useAstridrWS: () => {
@@ -51,7 +55,7 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
     }
     return {
       status: "connected",
-      sendCommand: vi.fn(),
+      sendCommand: mockSendCommand,
       subscribe: vi.fn(),
       subscribeEvent: mockSubscribeEvent,
       reconnect: vi.fn(),
@@ -158,6 +162,14 @@ beforeEach(() => {
   capturedSwapStateCallback = undefined;
   mockUnsubscribe.mockReset();
   mockSubscribeEvent.mockClear();
+  mockSendCommand.mockReset();
+  mockSendCommand.mockResolvedValue({
+    type: "ack",
+    request_id: "x",
+    status: "ok",
+    model_override: null,
+    voice_override_name: null,
+  });
 });
 
 type StubEngine = {
@@ -421,18 +433,18 @@ describe("BrainHeaderBadge — pending never lies (D-15)", () => {
   });
 });
 
-describe("BrainHeaderBadge — global engine fallback (103-08)", () => {
-  it("keeps showing the per-profile reading and never uses the global fallback when per-profile data is present", async () => {
+describe("BrainHeaderBadge — global engine fallback (103-08, precedence corrected under 103-09)", () => {
+  it("a live global override now WINS over an existing per-profile reading (103-09 corrects 103-08's per-profile-always-wins precedence per 103-CONTRACT.md §9 — a global override genuinely shadows the per-profile default, so showing the stale per-profile value while a global override governs the turn is exactly the BSC-01 trap)", async () => {
     seedEngines([makeEngine("assistant-default", "anthropic-sonnet-5")], ["assistant-default"]);
     renderBadge();
     await screen.findByTestId("brain-header-badge-label");
 
     emitSwapState("claude-cli-sonnet5");
 
-    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("anthropic-sonnet-5");
-    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("claude-cli-sonnet5");
+    expect(screen.getByTestId("brain-header-badge-global-chip")).toHaveTextContent("Global");
     expect(
-      screen.getByRole("button", { name: "Active brain: anthropic-sonnet-5" })
+      screen.getByRole("button", { name: "Active brain: claude-cli-sonnet5 (global)" })
     ).toBeInTheDocument();
   });
 
@@ -466,7 +478,7 @@ describe("BrainHeaderBadge — global engine fallback (103-08)", () => {
     expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
   });
 
-  it("never lets the global fallback replace a real Mixed-brains reading", async () => {
+  it("a live global override now WINS over a real Mixed-brains reading too (same 103-09 precedence correction — global is rung 2, ahead of any per-profile reading including a disagreeing fleet)", async () => {
     seedEngines(
       [
         makeEngine("assistant-default", "anthropic-sonnet-5"),
@@ -479,9 +491,9 @@ describe("BrainHeaderBadge — global engine fallback (103-08)", () => {
 
     emitSwapState("fable-5");
 
-    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("Mixed brains");
-    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Active brain: Mixed brains" })).toBeInTheDocument();
+    expect(screen.getByTestId("brain-header-badge-label")).toHaveTextContent("fable-5");
+    expect(screen.getByTestId("brain-header-badge-global-chip")).toHaveTextContent("Global");
+    expect(screen.getByRole("button", { name: "Active brain: fable-5 (global)" })).toBeInTheDocument();
   });
 
   it("degrades to no global reading, without throwing, when rendered as if outside AstridrWSProvider", async () => {
@@ -505,6 +517,51 @@ describe("BrainHeaderBadge — global engine fallback (103-08)", () => {
 
     unmount();
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("BrainHeaderBadge — global override snapshot on load (103-09, BSC-01 gap closure)", () => {
+  it("shows an override already active before page load, correctly qualified as global, from the swap.get_state ack alone — zero swap.state events", async () => {
+    mockSendCommand.mockResolvedValue({
+      type: "ack",
+      request_id: "x",
+      status: "ok",
+      model_override: "claude-haiku-4-5-20251001",
+      voice_override_name: null,
+    });
+    seedEngines([], []);
+    renderBadge();
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Active brain: claude-haiku-4-5-20251001 (global)",
+      })
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("brain-header-badge-global-chip")).toHaveTextContent("Global");
+    // This is the exact 2026-07-28 live regression: the pre-103-09 badge only ever subscribed to
+    // swap.state (a change event) and never requested a snapshot, so an override already active
+    // before load read as "No brain reported" forever. The subscription is still set up (for
+    // in-tab changes), but this test's reading comes entirely from the ack.
+    expect(capturedSwapStateCallback).toBeDefined();
+  });
+
+  it('still renders "Mixed brains" when there is no global override and two profiles disagree — the global path must not swallow the honest mixed reading', async () => {
+    seedEngines(
+      [
+        makeEngine("assistant-default", "anthropic-sonnet-5"),
+        makeEngine("consulting", "claude-cli-sonnet5"),
+      ],
+      ["assistant-default", "consulting"]
+    );
+    renderBadge();
+
+    expect(await screen.findByTestId("brain-header-badge-label")).toHaveTextContent(
+      "Mixed brains"
+    );
+    expect(
+      screen.getByRole("button", { name: "Active brain: Mixed brains" })
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
   });
 });
 

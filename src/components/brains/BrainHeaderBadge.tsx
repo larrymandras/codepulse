@@ -5,9 +5,14 @@
  * reading that says "Mixed brains" rather than silently picking one profile's value when profiles
  * disagree (the BSC-01 VitalsRail trap this phase exists to remove).
  *
- * Reads exclusively through `useActiveEngine()` + the pure `deriveMixedState()` (103-03) — the
- * same shared view-model every brain surface reads, so this badge cannot disagree with itself
- * (D-14).
+ * Reads exclusively through `useResolvedBrain()` (103-09) — the one shared "what brain is
+ * actually running" resolution order (global override, then the per-profile fleet reading via
+ * `useActiveEngine()`/`deriveMixedState()`, then an honest "none") every brain surface reads, so
+ * this badge cannot disagree with itself, the Chat composer pill, or Control Center's
+ * `BrainControl` (D-14). Before 103-09, this badge only ever *subscribed* to global-override
+ * *changes* (`swap.state`) and never requested a snapshot on mount — an override already active
+ * before page load rendered as "No brain reported" until the next live change. `useResolvedBrain`
+ * closes that gap for every consumer at once.
  *
  * This component's own visible button IS `BrainPicker`'s real Popover trigger — passed in via
  * `BrainPicker`'s `trigger` prop and rendered through `PopoverTrigger asChild`, so Radix clones the
@@ -30,12 +35,11 @@
  * position but still descendants of `<Tooltip>` once mounted.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Clock, Pin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { BrainPicker } from "@/components/brains/BrainPicker";
-import { useAstridrWS } from "@/contexts/AstridrWSContext";
-import { useActiveEngine, deriveMixedState } from "@/hooks/useActiveEngine";
+import { useResolvedBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
@@ -48,53 +52,12 @@ function formatTtl(expiresAt?: number): string {
   return `${minutes}m`;
 }
 
-/**
- * useGlobalEngineFallback — 103-08 scope addition. Reads the LIVE global engine
- * (Ástríðr's process-wide `swap.set` override, Phase 185/186 — already shipped)
- * via the exact `subscribeEvent("swap.state", ...)` + returned-unsubscribe idiom
- * `Chat.tsx:341-351` already uses. This is a READ-ONLY display source — it never
- * calls `sendCommand`/dispatches a swap, so it cannot alter live swap behavior,
- * and it shares the app's single WebSocket connection rather than opening a
- * second one.
- *
- * `useAstridrWS()` throws when rendered outside `AstridrWSProvider`
- * (`AstridrWSContext.tsx:105`). In production, `DashboardLayout` — where this
- * badge mounts on every page — is always inside the provider (`App.tsx:87-166`),
- * but this component's own tests are not, and any future out-of-provider render
- * must degrade to "no global reading" rather than crash (a throw here would
- * blank the badge dashboard-wide via `SectionErrorBoundary`). The try/catch
- * below is safe with respect to the rules of hooks: `useAstridrWS()` either
- * succeeds (its one `useContext` call already completed) or throws a *plain* JS
- * error from application code that runs *after* that hook call finished — the
- * number and order of hooks invoked per render never changes between branches.
- */
-function useGlobalEngineFallback(): string | null {
-  const [globalModel, setGlobalModel] = useState<string | null>(null);
-
-  let subscribeEvent: ReturnType<typeof useAstridrWS>["subscribeEvent"] | null;
-  try {
-    ({ subscribeEvent } = useAstridrWS());
-  } catch {
-    subscribeEvent = null;
-  }
-
-  useEffect(() => {
-    if (!subscribeEvent) return;
-    const unsubscribe = subscribeEvent("swap.state", (event) => {
-      const data = (event as { data?: Record<string, unknown> }).data;
-      setGlobalModel((data?.model_override as string | null | undefined) ?? null);
-    });
-    return unsubscribe;
-  }, [subscribeEvent]);
-
-  return globalModel;
-}
-
 export function BrainHeaderBadge() {
-  const activeEngines = useActiveEngine();
-  const mixedState = useMemo(() => deriveMixedState(activeEngines), [activeEngines]);
+  // 103-09: the badge is dashboard-wide, so it reads the shared resolver with no `profileId` —
+  // the same module (`useResolvedBrain`) the Chat composer pill and (via `swapModelOverride`)
+  // Control Center's `BrainControl` read, so this badge cannot disagree with them (BSC-01).
+  const resolved = useResolvedBrain();
   const profiles = useProfileConfigs();
-  const globalModel = useGlobalEngineFallback();
 
   const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
   const [defaultProfileId, setDefaultProfileId] = useState("");
@@ -134,40 +97,36 @@ export function BrainHeaderBadge() {
   const dotColor = (modelId: string): string =>
     PROVIDER_COLORS[vendorForModel(modelId) ?? ""] ?? "var(--muted-foreground)";
 
-  const isMixed = mixedState.mixed;
-  const engine = mixedState.single;
-
-  // 103-08 scope addition: per-profile telemetry (`useActiveEngine`, fed by the
-  // not-yet-shipped `model_routing` ingest) is the primary, preferred source and
-  // is never overridden — including the honest "Mixed brains" reading. Only when
-  // NO profile has reported anything at all does the badge fall back to the
-  // live global engine from `swap.state`. Never fabricate a per-profile reading
-  // from the global value: `engine`/`isMixed` stay exactly as derived above.
-  const hasPerProfileData = mixedState.distinctModels.length > 0;
-  const usingGlobalFallback = !hasPerProfileData && !!globalModel;
+  // 103-09: every visual derives from `resolved.source`, the shared resolution order
+  // (global override wins outright, then the per-profile fleet reading, then an honest "none")
+  // — the badge can no longer independently decide when to show a global reading; that decision
+  // now lives once, in `resolveActiveBrain`.
+  const isMixed = resolved.source === "mixed";
+  const isGlobal = resolved.source === "global";
+  const isProfile = resolved.source === "profile";
 
   const baseLabel = isMixed
     ? "Mixed brains"
-    : engine
-      ? engine.model
-      : usingGlobalFallback
-        ? (globalModel as string)
-        : "No brain reported";
-  // The global fallback must never present itself as an honest per-profile
-  // reading — the "(global)" qualifier is folded into the accessible name
-  // itself (not just a visible chip) since an explicit `aria-label` on the
-  // button replaces all descendant text for assistive tech.
-  const ariaLabel = `Active brain: ${baseLabel}${usingGlobalFallback ? " (global)" : ""}`;
+    : resolved.source === "none"
+      ? "No brain reported"
+      : (resolved.model as string);
+  // A global reading must never present itself as an honest per-profile reading — the
+  // "(global)" qualifier is folded into the accessible name itself (not just the visible "Global"
+  // chip) since an explicit `aria-label` on the button replaces all descendant text for
+  // assistive tech.
+  const ariaLabel = `Active brain: ${baseLabel}${isGlobal ? " (global)" : ""}`;
 
-  // Confirmed-live pulse (UI-SPEC "Accent" table item 4): only when a single, server-reported
-  // engine is showing, and it is neither an in-flight guess nor stub-sourced data.
-  const isConfirmedLive = !isMixed && !!engine && !pendingLabel && !BRAINS_STUB_ACTIVE;
+  // Confirmed-live pulse (UI-SPEC "Accent" table item 4): a global reading is live regardless of
+  // the D-16 stub flag (VITE_BRAINS_STUB gates only the per-profile seam); a profile reading is
+  // gated on the stub flag as before. Never pulses while a swap is pending.
+  const isConfirmedLive =
+    !pendingLabel && (isGlobal || (isProfile && !BRAINS_STUB_ACTIVE));
 
   return (
     <Tooltip>
       <BrainPicker
         profileId={effectiveProfileId}
-        entryScope={isMixed ? "global" : undefined}
+        entryScope={isMixed || isGlobal ? "global" : undefined}
         onPendingChange={setPendingLabel}
         trigger={
           <TooltipTrigger asChild>
@@ -184,7 +143,7 @@ export function BrainHeaderBadge() {
               )}
               {isMixed ? (
                 <span aria-hidden="true" className="flex items-center">
-                  {mixedState.distinctModels.slice(0, 3).map((model, i) => (
+                  {resolved.distinctModels.slice(0, 3).map((model, i) => (
                     <span
                       key={model}
                       className={cn(
@@ -195,25 +154,17 @@ export function BrainHeaderBadge() {
                     />
                   ))}
                 </span>
-              ) : engine ? (
+              ) : resolved.model ? (
                 <span
                   aria-hidden="true"
                   className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: dotColor(engine.model) }}
+                  style={{ backgroundColor: dotColor(resolved.model) }}
                 />
-              ) : (
-                usingGlobalFallback && (
-                  <span
-                    aria-hidden="true"
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: dotColor(globalModel as string) }}
-                  />
-                )
-              )}
+              ) : null}
               <span data-testid="brain-header-badge-label" className="hidden sm:inline">
                 {baseLabel}
               </span>
-              {usingGlobalFallback && (
+              {isGlobal && (
                 <span
                   data-testid="brain-header-badge-global-chip"
                   className="hidden rounded border border-border px-1 text-xs uppercase text-muted-foreground sm:inline"
@@ -229,16 +180,16 @@ export function BrainHeaderBadge() {
                   {pendingLabel}
                 </span>
               )}
-              {!isMixed && !pendingLabel && engine?.mode === "session" && (
+              {isProfile && !pendingLabel && resolved.mode === "session" && (
                 <span
                   data-testid="brain-header-badge-session"
                   className="hidden items-center gap-0.5 text-xs text-(--status-info) sm:inline-flex"
                 >
                   <Clock className="h-3 w-3" aria-hidden="true" />
-                  session override · expires in {formatTtl(engine.expiresAt)}
+                  session override · expires in {formatTtl(resolved.expiresAt)}
                 </span>
               )}
-              {!isMixed && !pendingLabel && engine?.mode === "pinned" && (
+              {isProfile && !pendingLabel && resolved.mode === "pinned" && (
                 <span
                   data-testid="brain-header-badge-pinned"
                   className="hidden items-center gap-0.5 text-xs text-muted-foreground sm:inline-flex"
