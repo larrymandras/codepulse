@@ -689,7 +689,7 @@ Plans:
 
 **Gap wave 3** *(blocked on gap wave 2 — operator-attended, `autonomous: false`)*
 
-- [ ] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — closes BSC-05 (103-13-T1, run 2026-07-29, found OBS 7: "Revert global swap" cleared the override instead of restoring the prior one — spawned 103-14 below)
+- [x] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — complete 2026-07-29, see [103-13-SUMMARY.md](phases/103-brain-swap-control-surface/103-13-SUMMARY.md). 12 observations recorded live (OBS 7: "Revert global swap" first cleared instead of restoring the prior override — spawned 103-14 below, then re-verified PASS; OBS 8: D-11 confirm modal shows "Auto"/pinnedCount=0 for real pinned profiles — real, unfixed defect, NOT closed this cycle). BSC-01/BSC-02/BSC-04/BSC-05 restated as ⚠ PARTIAL in REQUIREMENTS.md, not fully satisfied, because of OBS 8.
 - [x] 103-14-PLAN.md — `GlobalSwapModal.runRevert` captures the global override in force before a swap at dispatch time and restores to it (`value: prior, restore: false`) instead of unconditionally clearing (`restore: true`); `describeOutcome` names the restored engine across all in-flight/terminal states — closes OBS 7 (BSC-04, BSC-05) — complete 2026-07-29, see [103-14-SUMMARY.md](phases/103-brain-swap-control-surface/103-14-SUMMARY.md)
 - [x] 103-15-PLAN.md — Investigated a suspected clear-to-Auto regression in `BrainControl.tsx`; found its "Restore usual brain" affordance has been reachable and tested since 186-09 (predates this cycle) — the real regression 103-13-T1 hit was 103-14's GlobalSwapModal fix, a surface the checkpoint script never asked BrainControl to cross-check. No duplicate affordance added (would violate 103-CONTRACT.md §8); closed 3 real test-coverage gaps (no-double-fire, disabled-while-pending, D-14 no-self-assert pin) against the existing implementation instead — complete 2026-07-29, see [103-15-SUMMARY.md](phases/103-brain-swap-control-surface/103-15-SUMMARY.md)
 
@@ -757,7 +757,7 @@ Plans:
 | 100. Control-Surface UX | v11.0 | 5/5 | Complete   | 2026-07-24 |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
-| 103. Brain-Swap Control Surface | v13.0 | 15/15 | 🚧 Executing (103-13 live re-verification open) | — |
+| 103. Brain-Swap Control Surface | v13.0 | 15/15 | 🚧 Gap-closure cycle recorded 2026-07-29; BSC-01/02/04/05 PARTIAL — OBS 8 (D-11 confirm-modal accuracy) real, unfixed defect | — |
 | 104. Cost Intelligence | v13.0 | — | Planned | — |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
