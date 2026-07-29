@@ -35,7 +35,12 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CatalogueEntry } from "@/lib/brainsApi";
-import { GLOBAL_SWAP_CONFIRM_TIMEOUT_MS, GlobalSwapModal, type GlobalSwapProfile } from "./GlobalSwapModal";
+import {
+  GLOBAL_SWAP_CONFIRM_TIMEOUT_MS,
+  GLOBAL_SWAP_DISPATCH_TIMEOUT_MS,
+  GlobalSwapModal,
+  type GlobalSwapProfile,
+} from "./GlobalSwapModal";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -1100,5 +1105,136 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
     expect(
       await screen.findByText("Global override cleared — profiles are back on their own defaults.")
     ).toBeInTheDocument();
+  });
+});
+
+// ── UAT gap (2026-07-29, 103-UAT.md test 16): a never-settling dispatch must not trap the operator ──
+//
+// Observed live: clicking confirm sent ZERO WS frames and the dialog sat on "Switching to Claude
+// Haiku 4.5…" indefinitely, with Done resolved to `<button disabled>` and no Cancel and no close X
+// (this component renders `showCloseButton={false}`), so the only way out was a page reload. The
+// operator was shown in-flight progress for a command that never left the browser.
+//
+// Root cause, independent of how often it triggers: AstridrWSContext.sendCommand queues the command
+// when the socket is not OPEN and returns a promise that is NEITHER resolved NOR rejected and has NO
+// timeout, and runSwap/runRevert awaited it with no try/catch and no finally — so setIsBusy(false)
+// never ran. Both failure shapes are covered below: a promise that never settles, and one that
+// rejects.
+
+describe("GlobalSwapModal — a dispatch that never settles cannot trap the operator (UAT test 16)", () => {
+  beforeEach(() => {
+    mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  });
+
+  it("reports an honest failure and re-enables Done when the dispatch never settles", async () => {
+    // The exact live shape: sendCommand queued the command and never settled the promise.
+    mockDispatch.mockReturnValue(new Promise(() => {}));
+
+    vi.useFakeTimers();
+    try {
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={PINNED_AND_INHERITED_PAIR}
+          open
+          selectionNonce={1}
+          onOpenChange={() => {}}
+        />
+      );
+
+      await act(async () => {
+        fireEvent.click(
+          screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+        );
+      });
+
+      // Before the bound elapses the pending reading is legitimate.
+      expect(screen.getByRole("button", { name: "Done" })).toBeDisabled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(GLOBAL_SWAP_DISPATCH_TIMEOUT_MS + 100);
+      });
+
+      // Honest failure, not a fabricated success and not a permanent "Switching to…".
+      expect(screen.getByText(/never delivered|no response/i)).toBeInTheDocument();
+      expect(screen.queryByText(`Switched to ${TARGET_NORMAL.name}.`)).not.toBeInTheDocument();
+      // THE assertion: the operator can leave.
+      expect(screen.getByRole("button", { name: "Done" })).not.toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("re-enables Done when the dispatch REJECTS (ack timeout / queue full)", async () => {
+    mockDispatch.mockRejectedValue(new Error("Command timeout"));
+
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+      );
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Done" })).not.toBeDisabled()
+    );
+    expect(screen.queryByText(`Switched to ${TARGET_NORMAL.name}.`)).not.toBeInTheDocument();
+  });
+
+  it("does not trap the operator when a REVERT's dispatch rejects either", async () => {
+    // A successful swap first, so the toast's revert path has a prior override to restore.
+    mockDispatch.mockResolvedValue({ type: "ack", request_id: "", status: "ok" });
+
+    const { rerender } = render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole("button", { name: `Swap all profiles to ${TARGET_NORMAL.name}` })
+      );
+    });
+    mockGlobalOverride = { modelOverride: TARGET_NORMAL.id, voiceOverride: null };
+    rerender(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={PINNED_AND_INHERITED_PAIR}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+    await screen.findByText(`Switched to ${TARGET_NORMAL.name}.`);
+
+    // Now the revert leg fails.
+    mockDispatch.mockRejectedValue(new Error("Command queue full"));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+    const [, toastOptions] = mockToastFn.mock.calls[mockToastFn.mock.calls.length - 1] as [
+      string,
+      { action: { label: string; onClick: () => void } },
+    ];
+    await act(async () => {
+      toastOptions.action.onClick();
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Done" })).not.toBeDisabled()
+    );
   });
 });

@@ -141,6 +141,24 @@ type LastAction = "swap" | "revert";
  */
 export const GLOBAL_SWAP_CONFIRM_TIMEOUT_MS = 4000;
 
+/**
+ * Bound on the DISPATCH itself, distinct from the readback bound above (UAT 2026-07-29,
+ * 103-UAT.md test 16).
+ *
+ * `AstridrWSContext.sendCommand` queues a command when the socket is not OPEN and returns a promise
+ * that is neither resolved nor rejected and carries no timeout of its own — so `await dispatch(...)`
+ * can hang forever. Observed live: the dialog sat on "Switching to X…" indefinitely with `Done`
+ * disabled, no Cancel, and `showCloseButton={false}`, leaving a page reload as the only escape while
+ * showing in-flight progress for a command that never left the browser.
+ *
+ * Deliberately longer than `AstridrWSContext`'s own 10s `ACK_TIMEOUT_MS` so that, whenever the socket
+ * IS open, the real ack timeout wins and reports its own reason — this bound only catches the
+ * genuinely unbounded queued case. Bounded HERE rather than inside the shared `sendCommand` on
+ * purpose: making that queue reject globally would convert silent hangs into unhandled rejections in
+ * every other command panel that awaits it without a catch.
+ */
+export const GLOBAL_SWAP_DISPATCH_TIMEOUT_MS = 15000;
+
 function profileLabel(p: { profileId: string; displayName?: string }): string {
   return p.displayName ?? p.profileId;
 }
@@ -201,6 +219,42 @@ export function GlobalSwapModal({
 }: GlobalSwapModalProps) {
   const { dispatch } = useCommandDispatch();
   const { modelOverride } = useGlobalBrainOverride();
+
+  /**
+   * The single dispatch seam for both legs (UAT test 16). Guarantees a settled, shaped result no
+   * matter how the underlying command fails: a rejection (ack timeout, queue full) becomes an
+   * honest error, and a promise that never settles is bounded by
+   * `GLOBAL_SWAP_DISPATCH_TIMEOUT_MS`. Without this, `await dispatch(...)` could hang forever and
+   * every line after it — including `setIsBusy(false)` — would never run, disabling the dialog's
+   * only exit control.
+   */
+  async function dispatchBounded(
+    cmd: Record<string, unknown>
+  ): Promise<{ status: "ok" | "error"; error?: string }> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        dispatch(cmd).then((ack) => ({ status: ack.status, error: ack.error })),
+        new Promise<{ status: "error"; error: string }>((resolve) => {
+          timer = setTimeout(
+            () =>
+              resolve({
+                status: "error",
+                error: "no response from Ástríðr — the command was never delivered",
+              }),
+            GLOBAL_SWAP_DISPATCH_TIMEOUT_MS
+          );
+        }),
+      ]);
+    } catch (err) {
+      return {
+        status: "error",
+        error: err instanceof Error ? err.message : "the command could not be delivered",
+      };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
   const [phase, setPhase] = useState<ModalPhase>("confirm");
   const [snapshot, setSnapshot] = useState<SnapshotEntry[]>([]);
   const [outcome, setOutcome] = useState<GlobalOutcome>({ status: "pending" });
@@ -323,21 +377,26 @@ export function GlobalSwapModal({
       : null;
 
     // The one live command this axis ever sends (103-CONTRACT.md §8) — awaited for real, its ack
-    // is the sole source of the result surface, never discarded.
-    const ack = await dispatch({
-      type: "swap.set",
-      target: "brain",
-      value: target.id,
-      restore: false,
-    });
+    // is the sole source of the result surface, never discarded. Routed through dispatchBounded so
+    // a hang or rejection still settles into an honest outcome (UAT test 16).
+    try {
+      const ack = await dispatchBounded({
+        type: "swap.set",
+        target: "brain",
+        value: target.id,
+        restore: false,
+      });
 
-    if (ack.status === "ok") {
-      setOutcome({ status: "confirming" });
-      startConfirmTimeout();
-    } else {
-      setOutcome({ status: "error", reason: ack.error ?? "Swap failed" });
+      if (ack.status === "ok") {
+        setOutcome({ status: "confirming" });
+        startConfirmTimeout();
+      } else {
+        setOutcome({ status: "error", reason: ack.error ?? "Swap failed" });
+      }
+    } finally {
+      // Always clears, so the dialog's only exit control can never be left disabled.
+      setIsBusy(false);
     }
-    setIsBusy(false);
   }
 
   async function runRevert() {
@@ -356,17 +415,25 @@ export function GlobalSwapModal({
     onOpenChange(true);
     setIsBusy(true);
 
-    const ack = prior
-      ? await dispatch({ type: "swap.set", target: "brain", value: prior, restore: false })
-      : await dispatch({ type: "swap.set", target: "brain", restore: true });
+    try {
+      const ack = prior
+        ? await dispatchBounded({
+            type: "swap.set",
+            target: "brain",
+            value: prior,
+            restore: false,
+          })
+        : await dispatchBounded({ type: "swap.set", target: "brain", restore: true });
 
-    if (ack.status === "ok") {
-      setOutcome({ status: "confirming" });
-      startConfirmTimeout();
-    } else {
-      setOutcome({ status: "error", reason: ack.error ?? "Revert failed" });
+      if (ack.status === "ok") {
+        setOutcome({ status: "confirming" });
+        startConfirmTimeout();
+      } else {
+        setOutcome({ status: "error", reason: ack.error ?? "Revert failed" });
+      }
+    } finally {
+      setIsBusy(false);
     }
-    setIsBusy(false);
   }
 
   function handleDismiss() {
