@@ -626,7 +626,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 10/13 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11/12/13 remain; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
+- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 11/13 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12/13 remain; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
 - [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
 - [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
 - [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
@@ -681,7 +681,7 @@ Plans:
 
 - [x] 103-09-PLAN.md — One shared "what brain is actually running" resolution order (`swap.get_state` snapshot + `swap.state` subscribe), consumed by badge, composer pill and BrainControl — closes defects 6a/6b (BSC-01) — complete 2026-07-29, see [103-09-SUMMARY.md](phases/103-brain-swap-control-surface/103-09-SUMMARY.md)
 - [x] 103-10-PLAN.md — `recordRouting` → `internalMutation` via `internal.activeEngine.recordRouting`, closing the forgeable "server-confirmed" write path — closes CR-01 (BSC-01, BSC-04) — complete 2026-07-29, see [103-10-SUMMARY.md](phases/103-brain-swap-control-surface/103-10-SUMMARY.md)
-- [ ] 103-11-PLAN.md — `CommandItem.onSelect` wired through a shared activation branch so keyboard search→arrow→Enter works without bypassing the cost-confirm or global-confirm gates; + WR-03, WR-01 — closes CR-02 (BSC-02, BSC-03)
+- [x] 103-11-PLAN.md — `CommandItem.onSelect` wired through a shared activation branch so keyboard search→arrow→Enter works without bypassing the cost-confirm or global-confirm gates; + WR-03, WR-01 — closes CR-02 (BSC-02, BSC-03) — complete 2026-07-29, see [103-11-SUMMARY.md](phases/103-brain-swap-control-surface/103-11-SUMMARY.md)
 
 **Gap wave 2** *(blocked on gap wave 1 — shares `BrainPicker.tsx` with 103-11, needs 103-09's readback hook)*
 
