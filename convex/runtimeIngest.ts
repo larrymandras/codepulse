@@ -3,6 +3,7 @@ import { api, internal } from "./_generated/api";
 import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./ingestAuth";
 import { legacyEventData } from "./ingestSummary";
 import { processTaskQualityEvent } from "./evalScores";
+import { isUnresolvedRouting } from "./activeEngineFilters";
 
 /**
  * HTTP action: POST /runtime-ingest
@@ -531,9 +532,22 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // (see the subagent_job case above) records that a single unhandled
           // null here previously poisoned an 8-event production batch.
           const d = data as any;
+          const routedProfileId = d.profileId ?? d.profile_id;
+          const routedModel = d.model;
+          // UAT 2026-07-29 (103-UAT.md test 2): this case used to coalesce BOTH fields to the
+          // literal string "unknown" and store the row. That is not a defensive default here the
+          // way it is for the display-only fields below — it manufactures a per-profile engine
+          // reading out of the absence of one, and D-14 forbids exactly that. One such row
+          // ({profileId:"unknown", model:"unknown"}) reached production and made the
+          // dashboard-wide badge render "unknown" as a confirmed-live engine.
+          // Skipping (never throwing) keeps this file's own WR-06/168-06 lesson intact: one
+          // unusable event must not poison the rest of the batch.
+          if (isUnresolvedRouting({ profileId: routedProfileId, model: routedModel })) {
+            break;
+          }
           await ctx.runMutation(internal.activeEngine.recordRouting, {
-            profileId: d.profileId ?? d.profile_id ?? "unknown",
-            model: d.model ?? "unknown",
+            profileId: routedProfileId,
+            model: routedModel,
             mode: d.mode ?? "inherited",
             selectionPath: d.selectionPath ?? d.selection_path,
             expiresAt: d.expiresAt ?? d.expires_at,

@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { isUnresolvedRouting } from "../../convex/activeEngineFilters";
 import { useProfileConfigs } from "./useProfileConfigs";
 import type { ActiveEngine } from "../lib/brainsApi";
 
@@ -75,6 +76,13 @@ export function useActiveEngine(): ActiveEngineMap {
 
   const byProfileId = new Map<string, ActiveEngine>();
   for (const row of snapshots) {
+    // UAT 2026-07-29 (103-UAT.md test 2): a row carrying no resolvable profile or model is the
+    // ABSENCE of a reading, not a reading of "unknown". Dropping it here is what keeps a profile
+    // with no telemetry reading as null (→ "No brain reported") instead of letting the sentinel
+    // become deriveMixedState's single agreed model and light the confirmed-live pulse on it.
+    // Filtered on the read path as well as at ingest because one such row is already stored in
+    // production, and this hook must be honest about it before it is deleted.
+    if (isUnresolvedRouting(row)) continue;
     byProfileId.set(row.profileId, row as ActiveEngine);
   }
 

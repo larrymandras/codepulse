@@ -175,3 +175,108 @@ describe("useActiveEngine", () => {
     expect(result.current["assistant-default"]).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// UAT gap (2026-07-29, 103-UAT.md test 2): the "unknown" sentinel must never
+// become a reading.
+//
+// Live production state at the time: `activeEngineSnapshots` held exactly ONE row —
+// {profileId:"unknown", model:"unknown", mode:"inherited", selectionPath:"default"} —
+// written by runtimeIngest.ts's own coalescing, while all 3 real profiles
+// (consulting/business/personal) had no telemetry at all. The defensive join admitted
+// that row, so it became deriveMixedState's only reported entry and the dashboard-wide
+// badge rendered "unknown" as a confirmed-live engine instead of "No brain reported".
+// ---------------------------------------------------------------------------
+
+describe("useActiveEngine — unresolved-sentinel rows are not readings (UAT test 2)", () => {
+  beforeEach(() => {
+    mockUseQuery.mockReset();
+  });
+
+  /** The exact live shape, reproduced. */
+  function mockLiveSentinelState() {
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "activeEngine:latestByProfile") {
+        return [
+          {
+            profileId: "unknown",
+            model: "unknown",
+            mode: "inherited",
+            selectionPath: "default",
+            timestamp: 1785362504.9358559,
+          },
+        ];
+      }
+      if (queryRef === "profiles:listConfigs") {
+        return [
+          { profileId: "consulting" },
+          { profileId: "business" },
+          { profileId: "personal" },
+        ];
+      }
+      return undefined;
+    });
+  }
+
+  it("does not add an 'unknown' key to the map", () => {
+    mockLiveSentinelState();
+
+    const { result } = renderHook(() => useActiveEngine());
+
+    expect("unknown" in result.current).toBe(false);
+  });
+
+  it("leaves every real profile null — known profile, nothing reported", () => {
+    mockLiveSentinelState();
+
+    const { result } = renderHook(() => useActiveEngine());
+
+    expect(result.current.consulting).toBeNull();
+    expect(result.current.business).toBeNull();
+    expect(result.current.personal).toBeNull();
+  });
+
+  it("yields NO agreed engine, so the fleet-wide read stays honest rather than reading 'unknown'", () => {
+    mockLiveSentinelState();
+
+    const { result } = renderHook(() => useActiveEngine());
+    const mixed = deriveMixedState(result.current);
+
+    // This is the assertion that maps directly onto the operator-visible bug: `single`
+    // being set is what made resolveActiveBrain return source:"profile" with model "unknown".
+    expect(mixed.single).toBeUndefined();
+    expect(mixed.mixed).toBe(false);
+    expect(mixed.distinctModels).toEqual([]);
+  });
+
+  it("drops a sentinel row even when it collides with a REAL profileId", () => {
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "activeEngine:latestByProfile") {
+        return [{ profileId: "consulting", model: "unknown", mode: "inherited", timestamp: 1 }];
+      }
+      if (queryRef === "profiles:listConfigs") return [{ profileId: "consulting" }];
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useActiveEngine());
+
+    // The profile is known, so it must be present — but as null, not as "unknown".
+    expect("consulting" in result.current).toBe(true);
+    expect(result.current.consulting).toBeNull();
+  });
+
+  it("still reports a genuine reading (the guard must not swallow real telemetry)", () => {
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "activeEngine:latestByProfile") {
+        return [makeEngine("consulting", "anthropic/claude-sonnet-5")];
+      }
+      if (queryRef === "profiles:listConfigs") return [{ profileId: "consulting" }];
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useActiveEngine());
+
+    expect(result.current.consulting?.model).toBe("anthropic/claude-sonnet-5");
+    expect(deriveMixedState(result.current).single?.model).toBe("anthropic/claude-sonnet-5");
+  });
+});

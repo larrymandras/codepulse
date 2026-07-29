@@ -114,3 +114,42 @@ describe("CR-01 — recordRouting authorization boundary (source-level guard)", 
     expect(source).not.toContain("api.activeEngine.recordRouting");
   });
 });
+
+// ── UAT 2026-07-29 (103-UAT.md test 2): the ingest path must not manufacture a reading ────────
+//
+// A source-level guard for the same reason the CR-01 block above is one: the defect is about what
+// this file's own case is ALLOWED to write, and the behavior lives inside an httpAction this repo
+// has no convex-test harness for. The predicate itself is behaviorally tested in
+// activeEngineFilters.test.ts; this only pins that the model_routing case actually applies it and
+// no longer substitutes the sentinel, so the guard cannot be quietly removed later.
+
+describe("UAT test 2 — model_routing never stores an unresolved sentinel (source-level guard)", () => {
+  const runtimeIngestPath = path.resolve(__dirname, "./runtimeIngest.ts");
+
+  it("applies isUnresolvedRouting in the model_routing case", () => {
+    const source = stripCommentLines(readFileSync(runtimeIngestPath, "utf-8"));
+    expect(source).toContain("isUnresolvedRouting");
+    expect(source).toMatch(/import\s*\{[^}]*isUnresolvedRouting[^}]*\}\s*from\s*"\.\/activeEngineFilters"/);
+  });
+
+  it("no longer coalesces the recordRouting profileId/model to the literal \"unknown\"", () => {
+    const source = stripCommentLines(readFileSync(runtimeIngestPath, "utf-8"));
+    // Scoped to the model_routing case body ONLY. Other cases (profile_config, session ids)
+    // legitimately coalesce to "unknown" for display-only fields against different tables —
+    // asserting on the whole file would fail on their correct usage, not on this defect.
+    const caseStart = source.indexOf('case "model_routing"');
+    const caseBody = source.slice(caseStart, caseStart + 900);
+    // The two exact expressions that produced the production sentinel row.
+    expect(caseBody).not.toContain('d.profileId ?? d.profile_id ?? "unknown"');
+    expect(caseBody).not.toMatch(/model:\s*d\.model\s*\?\?\s*"unknown"/);
+  });
+
+  it("still guards the batch by skipping rather than throwing (WR-06/168-06 lesson)", () => {
+    const source = stripCommentLines(readFileSync(runtimeIngestPath, "utf-8"));
+    const caseStart = source.indexOf('case "model_routing"');
+    expect(caseStart).toBeGreaterThan(-1);
+    const caseBody = source.slice(caseStart, caseStart + 900);
+    expect(caseBody).toMatch(/if\s*\(isUnresolvedRouting\([\s\S]*?\)\)\s*\{\s*break;/);
+    expect(caseBody).not.toMatch(/throw\s+new/);
+  });
+});
