@@ -626,7 +626,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 12/13 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12 closed defect #5/CR-03/WR-02 (BSC-04, BSC-03, BSC-01); 103-13 remains; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
+- [ ] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle executing, 15/15 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12 closed defect #5/CR-03/WR-02 (BSC-04, BSC-03, BSC-01); 103-14 closed OBS 7 (BSC-04, BSC-05); 103-15 investigated + hardened BrainControl coverage (no requirement close); 103-13's live re-verification remains, now also covering BrainControl's Restore usual brain; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
 - [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
 - [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
 - [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
@@ -691,6 +691,7 @@ Plans:
 
 - [ ] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — closes BSC-05 (103-13-T1, run 2026-07-29, found OBS 7: "Revert global swap" cleared the override instead of restoring the prior one — spawned 103-14 below)
 - [x] 103-14-PLAN.md — `GlobalSwapModal.runRevert` captures the global override in force before a swap at dispatch time and restores to it (`value: prior, restore: false`) instead of unconditionally clearing (`restore: true`); `describeOutcome` names the restored engine across all in-flight/terminal states — closes OBS 7 (BSC-04, BSC-05) — complete 2026-07-29, see [103-14-SUMMARY.md](phases/103-brain-swap-control-surface/103-14-SUMMARY.md)
+- [x] 103-15-PLAN.md — Investigated a suspected clear-to-Auto regression in `BrainControl.tsx`; found its "Restore usual brain" affordance has been reachable and tested since 186-09 (predates this cycle) — the real regression 103-13-T1 hit was 103-14's GlobalSwapModal fix, a surface the checkpoint script never asked BrainControl to cross-check. No duplicate affordance added (would violate 103-CONTRACT.md §8); closed 3 real test-coverage gaps (no-double-fire, disabled-while-pending, D-14 no-self-assert pin) against the existing implementation instead — complete 2026-07-29, see [103-15-SUMMARY.md](phases/103-brain-swap-control-surface/103-15-SUMMARY.md)
 
 ---
 
@@ -756,7 +757,7 @@ Plans:
 | 100. Control-Surface UX | v11.0 | 5/5 | Complete   | 2026-07-24 |
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
-| 103. Brain-Swap Control Surface | v13.0 | 5/8 | 🚧 Executing | — |
+| 103. Brain-Swap Control Surface | v13.0 | 15/15 | 🚧 Executing (103-13 live re-verification open) | — |
 | 104. Cost Intelligence | v13.0 | — | Planned | — |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
