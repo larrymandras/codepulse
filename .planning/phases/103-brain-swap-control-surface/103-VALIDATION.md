@@ -235,6 +235,22 @@ covered explicitly — a fix scoped only to the badge would leave it wrong.
 | 11 | Stack left clean, intended engine recorded | ✅ PASS | Final live state verified two ways: `swap.get_state` ack `{"status":"ok","model_override":null,"model_source":null}` and the pushed `swap.state` `{"model_override":null,"model_source":null,...}`; UI badge shows no GLOBAL chip. Engine the stack was left on: **no global override (Auto / per-profile defaults)** — the exact pre-checkpoint baseline observed in OBS 2. |
 | 12 *(added during the run)* | The UI-reachable clear-to-Auto path (BrainControl's independent "Restore usual brain") | ✅ PASS | **Context:** the orchestrator initially and wrongly claimed 103-14 had removed the only clear-to-Auto path; that claim was disproved live by reading `BrainControl.tsx:217-227` and then verifying against the running stack — recorded here as the correction, not as fact. **Live result:** with no override, "Restore usual brain" is correctly ABSENT (count 0 — nothing to clear). With a Haiku 4.5 global override in force, it is PRESENT (count 1). Clicking it dispatched **exactly one** frame — `{"type":"swap.set","target":"brain","restore":true}` — and `RECV +118ms {"event_type":"swap.state","data":{"model_override":null,...}}`; badge cleared, GLOBAL chip 0. Satisfies `103-CONTRACT.md` §8 (exactly one live command). |
 
+### Post-103-16 live re-verification (same session, same running stack, stub OFF)
+
+Added after code review found (and this checkpoint reproduced) a Critical regression, and after
+Plan 103-16 fixed it. Same conditions as the table above: `:5174`, `VITE_BRAINS_STUB=false`,
+Clerk disabled, live Ástríðr WS. These are live observations, not test results.
+
+| # | Observation | Result | Verbatim evidence |
+|---|-------------|--------|-------------------|
+| 13 | 103-16's reselect fix: after a completed global swap, reselecting the SAME brain must give a FRESH confirm prompt | ✅ PASS | **Before 103-16 (the reproduction that justified the plan):** swap all profiles → Claude Haiku 4.5 → confirm → Done → reselect Claude Haiku 4.5. Dialog reopened showing the PREVIOUS result verbatim — `"Swap all profiles to Claude Haiku 4.5? / Switched to Claude Haiku 4.5. / Profiles now governed by the global override: / consulting / business / personal / Done"` — measured `confirm button = 0, cancel = 0, done = 1`. **After 103-16, identical script re-run live:** the same reselect produced a fresh confirm prompt — `"Swap all profiles to Claude Haiku 4.5? / consulting Auto → Claude Haiku 4.5 / business Auto → Claude Haiku 4.5 / personal Auto → Claude Haiku 4.5 / Cancel / Swap all profiles to Claude Haiku 4.5"` — measured `confirm button = 1, cancel = 1, done = 0`. CR-01 reproduction flag flipped `true` → `false`. |
+| 14 | 103-16 must not regress CR-03: the toast "Revert global swap" clicked after "Done" must still reopen a LIVE instance | ✅ PASS | Re-ran the OBS 7 script against the post-103-16 build: baseline no-override → swap to Haiku 4.5 → swap to Opus 4.8 → toast `"All profiles switched to Claude Opus 4.8. \| Revert global swap"` → clicked revert. `SENT +89ms {"type":"swap.set","target":"brain","value":"claude-haiku-4-5-20251001","restore":false}`; `RECV +93ms {"event_type":"swap.state","data":{"model_override":"claude-haiku-4-5-20251001",...}}`. Dialog rendered a real result row: `"Revert global swap / Reverted to claude-haiku-4-5-20251001. / Profiles still governed by the global override: / consulting / business / personal"`. Badge after revert = `"Active brain: claude-haiku-4-5-20251001 (global)"` — restored to prior engine. **Both invariants hold simultaneously**: CR-01 fixed AND CR-03 still closed. |
+| — | Stack left clean after the post-103-16 legs | ✅ PASS | Cleared via BrainControl's "Restore usual brain": exactly one `{"type":"swap.set","target":"brain","restore":true}`, `RECV +101ms {"model_override":null,...}`, badge `"Active brain: unknown"`, GLOBAL chip 0 — the same pre-checkpoint baseline as OBS 11. |
+
+**Not covered by this re-verification:** the failed-swap retry path (reselect the same brain after a
+swap that FAILED). 103-16 covers it with a unit test, but no live failure was induced to observe it,
+so it is recorded here as unit-covered only, not live-proven.
+
 ### Additional live fact recorded during the run (settles the per-profile axis honestly)
 
 Ástríðr's accepted command union, read verbatim off a live validation error during this session:
