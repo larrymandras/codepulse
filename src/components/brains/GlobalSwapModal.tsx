@@ -35,6 +35,16 @@
  * `BrainPicker`'s state at all, so it can never bump this nonce — that asymmetry is what keeps a
  * revert reopen from wiping the snapshot/outcome it depends on (CR-03) while still giving a
  * same-brain reselection the fresh reset the old `target.id`-keyed guard denied it.
+ *
+ * 103-17 (gap closure, OBS 8): `pinnedCount`/the shadowing warning/the per-row `Pin` icon now read
+ * `GlobalSwapProfile.hasConfiguredDefault` — a CONFIG signal (`profileConfigs.modelPreferences.primary`,
+ * derived by `BrainPicker`) — instead of `mode === "pinned"`, which is a TELEMETRY signal
+ * (`activeEngineSnapshots`, via `useActiveEngine`). Live checkpoint 2026-07-29 showed all three real
+ * profiles reporting `mode: "inherited"` (zero telemetry rows) while each carried a configured
+ * primary — the old `mode`-keyed count read 0 instead of 3. `mode` itself is UNCHANGED and still
+ * drives nothing here but its own field; `currentModel`/`currentModelDisplayName` stay
+ * telemetry-only too (D-14) — see `BrainPicker.tsx`'s `globalSwapProfiles` memo and
+ * `useActiveEngine.ts`'s docstring for why config must never backfill the live column.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -52,6 +62,10 @@ import { useCommandDispatch } from "@/hooks/useCommandDispatch";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import type { CatalogueEntry } from "@/lib/brainsApi";
 
+/** TELEMETRY-shaped — mirrors `ActiveEngine.mode` (`useActiveEngine.ts`) verbatim. Kept distinct
+ * from `hasConfiguredDefault` (below) on purpose (103-17): this is "what the live engine reading
+ * says," never "does this profile have a configured pin." Nothing in this file derives
+ * `pinnedCount`/the shadowing warning from this field anymore. */
 export type GlobalSwapProfileMode = "pinned" | "inherited" | "session";
 
 export interface GlobalSwapProfile {
@@ -60,6 +74,21 @@ export interface GlobalSwapProfile {
   currentModel: string;
   currentModelDisplayName: string;
   mode: GlobalSwapProfileMode;
+  /**
+   * 103-17 (OBS 8 gap closure): whether this profile carries a CONFIGURED pinned default
+   * (`profileConfigs.modelPreferences.primary`, non-empty) that a global override will shadow —
+   * a CONFIG question, answered independently of `mode`/`currentModel` (both stay telemetry-only,
+   * D-14). Drives `pinnedCount` and the shadowing warning below.
+   */
+  hasConfiguredDefault: boolean;
+  /** The configured default's raw model id being shadowed, or `null` when `hasConfiguredDefault`
+   * is false. Named separately from `currentModel` so a config value is never presented as a live
+   * reading (D-14) — see `useActiveEngine.ts`'s docstring. */
+  configuredDefault?: string | null;
+  /** Display name for `configuredDefault`, resolved against the catalogue where possible and
+   * falling back to the raw model id — lets the shadowing warning name WHAT is being shadowed, not
+   * merely how many. */
+  configuredDefaultDisplayName?: string | null;
 }
 
 export interface GlobalSwapModalProps {
@@ -84,6 +113,9 @@ interface SnapshotEntry {
   model: string;
   modelDisplayName: string;
   mode: GlobalSwapProfileMode;
+  /** 103-17: carried into the snapshot so the result-phase row list's `Pin` icon reflects the same
+   * config-derived signal the confirm phase used, not the (unchanged) telemetry `mode`. */
+  hasConfiguredDefault: boolean;
 }
 
 /**
@@ -250,7 +282,19 @@ export function GlobalSwapModal({
 
   useEffect(() => clearConfirmTimeout, []);
 
-  const pinnedCount = profiles.filter((p) => p.mode === "pinned").length;
+  // 103-17 (OBS 8): derived from the CONFIG signal, never `mode` (telemetry) — see this file's
+  // top-of-file docstring addendum and `GlobalSwapProfile.hasConfiguredDefault`'s own doc.
+  const pinnedProfiles = profiles.filter((p) => p.hasConfiguredDefault);
+  const pinnedCount = pinnedProfiles.length;
+  // De-duplicated, order-preserving list of the configured defaults actually being shadowed, so
+  // the warning can name WHAT is being shadowed rather than just how many (103-17-PLAN.md).
+  const shadowedDefaultNames = Array.from(
+    new Set(
+      pinnedProfiles.map(
+        (p) => p.configuredDefaultDisplayName ?? p.configuredDefault ?? "its configured default"
+      )
+    )
+  );
   const needsCostWarning = target.costTier === "expensive" || target.costTier === "unknown";
 
   async function runSwap() {
@@ -260,6 +304,7 @@ export function GlobalSwapModal({
       model: p.currentModel,
       modelDisplayName: p.currentModelDisplayName,
       mode: p.mode,
+      hasConfiguredDefault: p.hasConfiguredDefault,
     }));
     setSnapshot(snap);
     setOutcome({ status: "pending" });
@@ -362,8 +407,9 @@ export function GlobalSwapModal({
                 <p className="flex items-center gap-1.5 text-sm text-(--status-warn)">
                   <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
                   {pinnedCount} profile{pinnedCount === 1 ? "" : "s"}{" "}
-                  {pinnedCount === 1 ? "has" : "have"} a pinned default that will be shadowed while
-                  this global override is in force.
+                  {pinnedCount === 1 ? "has" : "have"} a pinned default (
+                  {shadowedDefaultNames.join(", ")}) that will be shadowed while this global
+                  override is in force.
                 </p>
               )}
               {needsCostWarning && (
@@ -377,7 +423,7 @@ export function GlobalSwapModal({
                 {profiles.map((p) => (
                   <div key={p.profileId} className="flex items-center gap-2 text-sm">
                     <span className="flex-1">{profileLabel(p)}</span>
-                    {p.mode === "pinned" && (
+                    {p.hasConfiguredDefault && (
                       <Pin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
                     )}
                     <span className="text-muted-foreground">{p.currentModelDisplayName}</span>
@@ -439,7 +485,7 @@ export function GlobalSwapModal({
                 </p>
                 {snapshot.map((entry) => (
                   <div key={entry.profileId} className="flex items-center gap-2 text-sm">
-                    {entry.mode === "pinned" && (
+                    {entry.hasConfiguredDefault && (
                       <Pin className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden="true" />
                     )}
                     <span className="flex-1">{entry.displayName}</span>

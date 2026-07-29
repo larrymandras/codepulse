@@ -372,16 +372,42 @@ export function BrainPicker({
     })).filter((g) => g.entries.length > 0);
   }, [entries]);
 
+  /**
+   * 103-17 (gap closure, OBS 8): the live 2026-07-29 checkpoint found the global-swap confirm
+   * modal reporting a pinned-default count of 0 against three real profiles that each carried a
+   * configured `modelPreferences.primary` — because the pre-fix code derived BOTH `current` AND
+   * `mode`/pinned-status from `activeEngines` (zero rows for the real profiles), conflating two
+   * genuinely different questions: "what is this profile's LIVE engine" (telemetry,
+   * `useActiveEngine`, D-14) and "does this profile have a CONFIGURED default that a global
+   * override would shadow" (config, `profileConfigs.modelPreferences.primary`, already in hand via
+   * `allProfiles`). `currentModel`/`currentModelDisplayName`/`mode` are UNCHANGED below — still
+   * telemetry-only, per `useActiveEngine.ts`'s docstring on why config must never backfill the
+   * live column (the "obvious fix" this plan's own PLAN.md calls out as wrong). Only
+   * `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName` are new, and they are
+   * the ONLY fields `GlobalSwapModal` now reads to compute `pinnedCount` and the shadowing warning.
+   */
   const globalSwapProfiles = useMemo<GlobalSwapProfile[]>(() => {
     return allProfiles.map((p) => {
       const engine = activeEngines[p.profileId] ?? null;
       const currentModel = engine?.model ?? "auto";
       const currentEntry = entries?.find((e) => e.id === currentModel);
+      const rawPrimary: unknown = (p as { modelPreferences?: { primary?: unknown } })
+        .modelPreferences?.primary;
+      const configuredDefault =
+        typeof rawPrimary === "string" && rawPrimary.length > 0 ? rawPrimary : null;
+      const configuredDefaultEntry = configuredDefault
+        ? entries?.find((e) => e.id === configuredDefault)
+        : undefined;
       return {
         profileId: p.profileId,
         currentModel,
         currentModelDisplayName: currentEntry?.name ?? (engine ? currentModel : "Auto"),
         mode: engine?.mode ?? "inherited",
+        hasConfiguredDefault: configuredDefault !== null,
+        configuredDefault,
+        configuredDefaultDisplayName: configuredDefault
+          ? (configuredDefaultEntry?.name ?? configuredDefault)
+          : null,
       };
     });
   }, [allProfiles, activeEngines, entries]);

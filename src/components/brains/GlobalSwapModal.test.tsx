@@ -99,6 +99,10 @@ const TARGET_EXPENSIVE: CatalogueEntry = {
   costTier: "expensive",
 };
 
+// 103-17: `hasConfiguredDefault`/`configuredDefault`/`configuredDefaultDisplayName` are the CONFIG
+// signal `pinnedCount`/the shadowing warning now read — set independently of `mode` (the
+// UNCHANGED, telemetry-shaped field) everywhere below so no test in this file can accidentally
+// prove the two are still coupled.
 const THREE_PROFILES: GlobalSwapProfile[] = [
   {
     profileId: "assistant-default",
@@ -106,6 +110,9 @@ const THREE_PROFILES: GlobalSwapProfile[] = [
     currentModel: "claude-cli-sonnet5",
     currentModelDisplayName: "Sonnet 5 (CLI)",
     mode: "pinned",
+    hasConfiguredDefault: true,
+    configuredDefault: "claude-cli-sonnet5",
+    configuredDefaultDisplayName: "Sonnet 5 (CLI)",
   },
   {
     profileId: "consulting",
@@ -113,6 +120,9 @@ const THREE_PROFILES: GlobalSwapProfile[] = [
     currentModel: "ollama-llama3",
     currentModelDisplayName: "Llama 3 (local)",
     mode: "inherited",
+    hasConfiguredDefault: false,
+    configuredDefault: null,
+    configuredDefaultDisplayName: null,
   },
   {
     profileId: "personal",
@@ -120,17 +130,44 @@ const THREE_PROFILES: GlobalSwapProfile[] = [
     currentModel: "codex-cli",
     currentModelDisplayName: "Codex CLI",
     mode: "session",
+    hasConfiguredDefault: false,
+    configuredDefault: null,
+    configuredDefaultDisplayName: null,
   },
 ];
 
+// Both config-pinned profiles share the SAME configured default name so the count-only assertions
+// below get a single, unambiguous name in the warning text.
 const TWO_OF_THREE_PINNED: GlobalSwapProfile[] = [
-  { ...THREE_PROFILES[0], mode: "pinned" },
-  { ...THREE_PROFILES[1], mode: "pinned" },
-  { ...THREE_PROFILES[2], mode: "inherited" },
+  {
+    ...THREE_PROFILES[0],
+    hasConfiguredDefault: true,
+    configuredDefault: "anthropic/claude-sonnet-5",
+    configuredDefaultDisplayName: "Sonnet 5",
+  },
+  {
+    ...THREE_PROFILES[1],
+    hasConfiguredDefault: true,
+    configuredDefault: "anthropic/claude-sonnet-5",
+    configuredDefaultDisplayName: "Sonnet 5",
+  },
+  { ...THREE_PROFILES[2], hasConfiguredDefault: false, configuredDefault: null, configuredDefaultDisplayName: null },
 ];
 
-const ALL_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({ ...p, mode: "pinned" }));
-const NONE_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({ ...p, mode: "inherited" }));
+const ALL_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({
+  ...p,
+  mode: "pinned",
+  hasConfiguredDefault: true,
+  configuredDefault: "anthropic/claude-sonnet-5",
+  configuredDefaultDisplayName: "Sonnet 5",
+}));
+const NONE_PINNED: GlobalSwapProfile[] = THREE_PROFILES.map((p) => ({
+  ...p,
+  mode: "inherited",
+  hasConfiguredDefault: false,
+  configuredDefault: null,
+  configuredDefaultDisplayName: null,
+}));
 
 // 103-14: a global override already in force before this swap dispatches — every profile mirrors
 // it (global override wins outright, 103-CONTRACT.md §9), which is also how the component resolves
@@ -151,6 +188,9 @@ const PINNED_AND_INHERITED_PAIR: GlobalSwapProfile[] = [
     currentModel: "claude-cli-sonnet5",
     currentModelDisplayName: "Sonnet 5 (CLI)",
     mode: "pinned",
+    hasConfiguredDefault: true,
+    configuredDefault: "claude-cli-sonnet5",
+    configuredDefaultDisplayName: "Sonnet 5 (CLI)",
   },
   {
     profileId: "consulting",
@@ -158,6 +198,9 @@ const PINNED_AND_INHERITED_PAIR: GlobalSwapProfile[] = [
     currentModel: "ollama-llama3",
     currentModelDisplayName: "Llama 3 (local)",
     mode: "inherited",
+    hasConfiguredDefault: false,
+    configuredDefault: null,
+    configuredDefaultDisplayName: null,
   },
 ];
 
@@ -212,7 +255,7 @@ describe("GlobalSwapModal confirm state", () => {
 
     expect(
       screen.getByText(
-        "2 profiles have a pinned default that will be shadowed while this global override is in force."
+        "2 profiles have a pinned default (Sonnet 5) that will be shadowed while this global override is in force."
       )
     ).toBeInTheDocument();
   });
@@ -223,7 +266,7 @@ describe("GlobalSwapModal confirm state", () => {
     );
     expect(
       screen.getByText(
-        "3 profiles have a pinned default that will be shadowed while this global override is in force."
+        "3 profiles have a pinned default (Sonnet 5) that will be shadowed while this global override is in force."
       )
     ).toBeInTheDocument();
 
@@ -279,6 +322,131 @@ describe("GlobalSwapModal confirm state", () => {
       />
     );
     expect(container.querySelectorAll("input")).toHaveLength(0);
+  });
+});
+
+// ─── Pinned-default count is a CONFIG signal, not a telemetry one (103-17, OBS 8 gap closure) ──
+//
+// Live checkpoint 2026-07-29 (103-13-T1): `profiles:listConfigs` showed all three real profiles
+// (consulting, business, personal) each carrying `modelPreferences.primary =
+// "anthropic/claude-sonnet-5"`, while `activeEngine:latestByProfile` had ZERO rows for any of
+// them — every profile's telemetry `mode` therefore read "inherited". The pre-fix
+// `pinnedCount = profiles.filter(p => p.mode === "pinned").length` read 0 in exactly that shape.
+// These tests pin the fix at the component boundary: `hasConfiguredDefault` (not `mode`) drives
+// the count and the warning names what's actually being shadowed.
+
+describe("GlobalSwapModal pinned-default count driven by config, not telemetry mode (103-17, OBS 8)", () => {
+  const THREE_UNREPORTED_BUT_CONFIGURED: GlobalSwapProfile[] = [
+    {
+      profileId: "consulting",
+      displayName: "consulting",
+      currentModel: "auto",
+      currentModelDisplayName: "Auto",
+      mode: "inherited",
+      hasConfiguredDefault: true,
+      configuredDefault: "anthropic/claude-sonnet-5",
+      configuredDefaultDisplayName: "Sonnet 5",
+    },
+    {
+      profileId: "business",
+      displayName: "business",
+      currentModel: "auto",
+      currentModelDisplayName: "Auto",
+      mode: "inherited",
+      hasConfiguredDefault: true,
+      configuredDefault: "anthropic/claude-sonnet-5",
+      configuredDefaultDisplayName: "Sonnet 5",
+    },
+    {
+      profileId: "personal",
+      displayName: "personal",
+      currentModel: "auto",
+      currentModelDisplayName: "Auto",
+      mode: "inherited",
+      hasConfiguredDefault: true,
+      configuredDefault: "anthropic/claude-sonnet-5",
+      configuredDefaultDisplayName: "Sonnet 5",
+    },
+  ];
+
+  it("reports a pinned-default count of 3 and names the shadowed default when mode is 'inherited' for all three (live OBS 8 shape)", () => {
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_UNREPORTED_BUT_CONFIGURED}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(
+      screen.getByText(
+        "3 profiles have a pinned default (Sonnet 5) that will be shadowed while this global override is in force."
+      )
+    ).toBeInTheDocument();
+    // The current -> new rows still show the honest "Auto" reading -- this component-level test
+    // does not itself prove D-14 (that's BrainPicker's derivation, pinned in BrainPicker.test.tsx),
+    // but it proves GlobalSwapModal renders exactly what it's given rather than inferring "Auto"
+    // is wrong from the presence of a configured default.
+    for (const p of THREE_UNREPORTED_BUT_CONFIGURED) {
+      const row = rowContainerFor(p.displayName!);
+      expect(row.textContent).toContain("Auto");
+    }
+  });
+
+  it("does not count a profile with no configured default even if its telemetry mode happens to read 'pinned' (config and telemetry are independent signals)", () => {
+    const mixed: GlobalSwapProfile[] = [
+      {
+        ...THREE_UNREPORTED_BUT_CONFIGURED[0],
+        mode: "pinned",
+        hasConfiguredDefault: false,
+        configuredDefault: null,
+        configuredDefaultDisplayName: null,
+      },
+      THREE_UNREPORTED_BUT_CONFIGURED[1],
+      THREE_UNREPORTED_BUT_CONFIGURED[2],
+    ];
+    render(
+      <GlobalSwapModal target={TARGET_NORMAL} profiles={mixed} open selectionNonce={1} onOpenChange={() => {}} />
+    );
+
+    // Only 2 of 3 are actually config-pinned -- the first profile's telemetry-reported "pinned"
+    // mode must never itself be counted (the exact coupling this fix removes).
+    expect(
+      screen.getByText(
+        "2 profiles have a pinned default (Sonnet 5) that will be shadowed while this global override is in force."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("MUTATION-CHECK REGRESSION GUARD: fails if pinnedCount is ever recoupled to `mode` instead of `hasConfiguredDefault` — see this describe block's own docstring for the manual mutation performed during 103-17 execution", () => {
+    // A profile whose telemetry `mode` is "pinned" but which has NO configured default at all —
+    // the inverse of the live OBS 8 shape. If `pinnedCount` were ever recoupled to `mode`, this
+    // fixture would render the shadowing warning; the fix must render nothing.
+    const modePinnedButNotConfigured: GlobalSwapProfile[] = [
+      {
+        profileId: "assistant-default",
+        displayName: "Assistant",
+        currentModel: "claude-cli-sonnet5",
+        currentModelDisplayName: "Sonnet 5 (CLI)",
+        mode: "pinned",
+        hasConfiguredDefault: false,
+        configuredDefault: null,
+        configuredDefaultDisplayName: null,
+      },
+    ];
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={modePinnedButNotConfigured}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.queryByText(/pinned default.*that will be shadowed/)).not.toBeInTheDocument();
   });
 });
 
