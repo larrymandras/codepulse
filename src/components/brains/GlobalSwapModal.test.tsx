@@ -187,6 +187,7 @@ describe("GlobalSwapModal confirm state", () => {
         target={TARGET_NORMAL}
         profiles={THREE_PROFILES}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -204,6 +205,7 @@ describe("GlobalSwapModal confirm state", () => {
         target={TARGET_NORMAL}
         profiles={TWO_OF_THREE_PINNED}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -217,7 +219,7 @@ describe("GlobalSwapModal confirm state", () => {
 
   it("computes the pinned-default count rather than hardcoding it — 'all pinned' and 'none pinned' fixtures produce different output", () => {
     const { rerender } = render(
-      <GlobalSwapModal target={TARGET_NORMAL} profiles={ALL_PINNED} open onOpenChange={() => {}} />
+      <GlobalSwapModal target={TARGET_NORMAL} profiles={ALL_PINNED} open selectionNonce={1} onOpenChange={() => {}} />
     );
     expect(
       screen.getByText(
@@ -226,7 +228,7 @@ describe("GlobalSwapModal confirm state", () => {
     ).toBeInTheDocument();
 
     rerender(
-      <GlobalSwapModal target={TARGET_NORMAL} profiles={NONE_PINNED} open onOpenChange={() => {}} />
+      <GlobalSwapModal target={TARGET_NORMAL} profiles={NONE_PINNED} open selectionNonce={1} onOpenChange={() => {}} />
     );
     expect(screen.queryByText(/pinned default that will be shadowed/)).not.toBeInTheDocument();
   });
@@ -237,6 +239,7 @@ describe("GlobalSwapModal confirm state", () => {
         target={TARGET_NORMAL}
         profiles={ALL_PINNED}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -249,6 +252,7 @@ describe("GlobalSwapModal confirm state", () => {
         target={TARGET_EXPENSIVE}
         profiles={THREE_PROFILES}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -270,6 +274,7 @@ describe("GlobalSwapModal confirm state", () => {
         target={TARGET_NORMAL}
         profiles={THREE_PROFILES}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -286,6 +291,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -312,6 +318,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -331,6 +338,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -351,6 +359,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -371,6 +380,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -392,6 +402,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
           target={TARGET_NORMAL}
           profiles={PINNED_AND_INHERITED_PAIR}
           open
+          selectionNonce={1}
           onOpenChange={() => {}}
         />
       );
@@ -427,6 +438,7 @@ describe("GlobalSwapModal dispatch (103-CONTRACT.md §8, D-14/D-15)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={() => {}}
       />
     );
@@ -454,6 +466,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -467,6 +480,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -490,6 +504,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -530,6 +545,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -546,6 +562,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -566,6 +583,7 @@ describe("GlobalSwapModal dismiss and revert", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -599,6 +617,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -614,6 +633,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -651,6 +671,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -666,6 +687,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -685,6 +707,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -713,6 +736,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -727,6 +751,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -767,6 +792,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -788,6 +814,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
           target={TARGET_NORMAL}
           profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
           open
+          selectionNonce={1}
           onOpenChange={onOpenChange}
         />
       );
@@ -804,6 +831,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
             target={TARGET_NORMAL}
             profiles={PROFILES_UNDER_PRIOR_OVERRIDE}
             open
+            selectionNonce={1}
             onOpenChange={onOpenChange}
           />
         );
@@ -852,6 +880,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -866,6 +895,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );
@@ -895,6 +925,7 @@ describe("GlobalSwapModal revert-to-prior (103-14)", () => {
         target={TARGET_NORMAL}
         profiles={PINNED_AND_INHERITED_PAIR}
         open
+        selectionNonce={1}
         onOpenChange={onOpenChange}
       />
     );

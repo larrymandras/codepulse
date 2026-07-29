@@ -48,6 +48,13 @@
  * global swap" toast action depends on) survives past "Done." WR-02: the row highlight (`isCurrent`)
  * is scope-aware — `global` scope compares against `useGlobalBrainOverride()`, `profile` scope keeps
  * comparing against the per-profile `useActiveEngine()` reading.
+ *
+ * 103-16 (CR-01): `globalSelectionNonce` is incremented in `handleSelect`'s global branch on EVERY
+ * activation, including a repeat activation of the same catalogue entry, and passed to
+ * `GlobalSwapModal` as `selectionNonce`. That is what lets the modal tell "the user just picked a
+ * brain again" apart from "this open transition is a revert reopening the same live instance" —
+ * `GlobalSwapModal.runRevert`'s own `onOpenChange(true)` call never touches this component's state,
+ * so it can never bump the nonce and can never trigger the modal's reset effect.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -192,6 +199,9 @@ export function BrainPicker({
   // modal instance survives "Done" and a later "Revert global swap" toast click can genuinely
   // reopen it — see this file's own docstring.
   const [globalDialogOpen, setGlobalDialogOpen] = useState(false);
+  // 103-16/CR-01: bumped on every global-scope activation (including a repeat of the same brain) —
+  // see this file's own docstring and GlobalSwapModal's `selectionNonce` prop doc.
+  const [globalSelectionNonce, setGlobalSelectionNonce] = useState(0);
 
   // Consumed at most once, ever, across this component's lifetime — the mixed-badge contextual
   // default (D-08) is not a preference that can re-arm itself.
@@ -314,6 +324,9 @@ export function BrainPicker({
       if (scope === "global") {
         setGlobalTarget(entry);
         setGlobalDialogOpen(true);
+        // 103-16/CR-01: every activation is a fresh selection, even a repeat of the same entry —
+        // increment unconditionally so GlobalSwapModal's reset effect always sees a change.
+        setGlobalSelectionNonce((n) => n + 1);
         handleOpenChange(false);
         return;
       }
@@ -507,6 +520,7 @@ export function BrainPicker({
           profiles={globalSwapProfiles}
           open={globalDialogOpen}
           onOpenChange={setGlobalDialogOpen}
+          selectionNonce={globalSelectionNonce}
         />
       )}
     </>

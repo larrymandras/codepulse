@@ -26,6 +26,15 @@
  * visibility (a separate `globalDialogOpen` boolean, not the `globalTarget` mount guard), so a
  * revert triggered from the summary toast — which can fire well after "Done" — has a live
  * component instance to render into instead of firing a real command into an unmounted fiber.
+ *
+ * 103-16 (CR-01): the reset effect below is keyed to `selectionNonce`, a value `BrainPicker`
+ * increments in the SAME handler that turns a global-scope activation into a modal open
+ * (`handleSelect`) — every activation bumps it, including a repeat activation of the SAME
+ * catalogue entry, because it is "did the user just make a selection," not "did the target id
+ * change." A revert's own `onOpenChange(true)` call (`runRevert` below) never touches
+ * `BrainPicker`'s state at all, so it can never bump this nonce — that asymmetry is what keeps a
+ * revert reopen from wiping the snapshot/outcome it depends on (CR-03) while still giving a
+ * same-brain reselection the fresh reset the old `target.id`-keyed guard denied it.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -58,6 +67,15 @@ export interface GlobalSwapModalProps {
   profiles: GlobalSwapProfile[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * 103-16 (CR-01): a value `BrainPicker` increments on every global-scope activation —
+   * including a repeat activation of the SAME catalogue entry. The reset effect below keys off a
+   * CHANGE in this value, not `target.id` equality, so reselecting the same brain after a
+   * completed-or-failed swap gets a fresh confirm prompt instead of the stale prior result. A
+   * revert's own `onOpenChange(true)` call never touches this value, so a revert reopen is
+   * unaffected (CR-03 stays closed).
+   */
+  selectionNonce: number;
 }
 
 interface SnapshotEntry {
@@ -142,7 +160,13 @@ function describeOutcome(
   }
 }
 
-export function GlobalSwapModal({ target, profiles, open, onOpenChange }: GlobalSwapModalProps) {
+export function GlobalSwapModal({
+  target,
+  profiles,
+  open,
+  onOpenChange,
+  selectionNonce,
+}: GlobalSwapModalProps) {
   const { dispatch } = useCommandDispatch();
   const { modelOverride } = useGlobalBrainOverride();
   const [phase, setPhase] = useState<ModalPhase>("confirm");
@@ -157,12 +181,15 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
   const [revertRestoredName, setRevertRestoredName] = useState<string | null>(null);
 
   const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // 103-12-T2/CR-03: the last target.id this instance actually reset state for — NOT `open`,
-  // because `open` now toggles independently of this component's mount lifecycle (BrainPicker keeps
-  // it mounted via a separate `globalDialogOpen` boolean). Comparing against target.id instead of
-  // `open` is what lets a revert triggered after "Done" reopen this same instance without wiping the
-  // snapshot/outcome it needs to render.
-  const prevTargetIdRef = useRef<string | null>(null);
+  // 103-16/CR-01: the last `selectionNonce` this instance actually reset state for — NOT `open`
+  // (would regress CR-03: a revert's own `onOpenChange(true)` also flips `open` false->true) and
+  // NOT `target.id` (would regress CR-01: reselecting the SAME catalogue entry keeps the same id,
+  // so that guard never re-fires and a fresh activation reopens showing the previous, unrelated
+  // swap's result). `selectionNonce` changes on every activation `BrainPicker.handleSelect` turns
+  // into a modal open, including a repeat of the same brain, and is untouched by `runRevert`'s own
+  // `onOpenChange(true)` call below — that's what lets a revert reopen keep the snapshot/outcome it
+  // needs while a same-brain reselection still gets a genuinely fresh reset.
+  const prevSelectionNonceRef = useRef<number | null>(null);
   // 103-14-T1: the global override that was in force immediately BEFORE this swap's dispatch,
   // captured at dispatch time (not read live inside runRevert — by the time a revert fires,
   // `modelOverride` already holds the NEW engine, so a live read would revert to the engine being
@@ -190,13 +217,14 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     }, GLOBAL_SWAP_CONFIRM_TIMEOUT_MS);
   }
 
-  // 103-12-T2/CR-03: reset only when a genuinely NEW target arrives — never on every `open`
-  // transition (see prevTargetIdRef comment above). The pre-T2 version reset on every `open`
-  // transition instead, which — once BrainPicker stops nulling `globalTarget` on close — would wipe
-  // the snapshot/outcome on the very reopen a revert depends on.
+  // 103-16/CR-01: reset only when a genuinely NEW selection arrives — never on every `open`
+  // transition (would regress CR-03) and never keyed to `target.id` alone (would regress CR-01,
+  // see prevSelectionNonceRef comment above). A revert reopen never changes `selectionNonce`, so
+  // this effect does not fire for it — the snapshot/outcome a revert depends on survives exactly as
+  // CR-03 requires.
   useEffect(() => {
-    if (target.id === prevTargetIdRef.current) return;
-    prevTargetIdRef.current = target.id;
+    if (selectionNonce === prevSelectionNonceRef.current) return;
+    prevSelectionNonceRef.current = selectionNonce;
     setPhase("confirm");
     setOutcome({ status: "pending" });
     setIsBusy(false);
@@ -206,7 +234,7 @@ export function GlobalSwapModal({ target, profiles, open, onOpenChange }: Global
     priorOverrideRef.current = null;
     priorOverrideDisplayNameRef.current = null;
     clearConfirmTimeout();
-  }, [target.id]);
+  }, [selectionNonce]);
 
   // D-14/D-15 readback: once the server-pushed swap.state matches the value we're waiting to
   // confirm (target.id for a swap, null for a revert-clear), the "confirming" outcome resolves to
