@@ -29,7 +29,7 @@ import VitalsRail from "@/components/chat/VitalsRail";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useBrainFallbackNotice } from "@/components/brains/BrainFallbackNotice";
-import { useActiveEngine } from "@/hooks/useActiveEngine";
+import { useGlobalBrainOverride, useResolvedBrain } from "@/hooks/useResolvedBrain";
 import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
@@ -94,11 +94,13 @@ function FollowUpCountdownBar({ active, durationMs }: { active: boolean; duratio
 // `default_profile_id` (103-CONTRACT.md §3) via brainsApi.getDefaultProfileId() — never an
 // invented CodePulse-side active-profile mechanism.
 //
-// This page already renders BrainControl (the LIVE global runtime axis, seeded via
-// swap.get_state / swap.state at lines ~171-232 above) inside ControlCenterPanel. The two
-// surfaces can legitimately disagree — this pill's tooltip/aria-label says it reflects the
-// per-profile default, and it deliberately never reuses BrainControl's `Brain` icon (T-103-29),
-// using a provider-color dot instead so the two are never visually conflated.
+// This page already renders BrainControl (the LIVE global runtime axis, seeded via the shared
+// `useGlobalBrainOverride` — see `src/hooks/useResolvedBrain.ts` — above) inside
+// ControlCenterPanel. 103-09: the pill now reads through the same shared resolver
+// (`useResolvedBrain`) BrainControl's value and the header badge both read, so a global override
+// can no longer disagree with what this pill shows — it deliberately never reuses BrainControl's
+// `Brain` icon (T-103-29), using a provider-color dot instead so the two surfaces stay visually
+// distinct even when they now agree.
 function formatBrainTtl(expiresAt?: number): string {
   if (!expiresAt) return "soon";
   const remainingMs = expiresAt * 1000 - Date.now();
@@ -106,14 +108,29 @@ function formatBrainTtl(expiresAt?: number): string {
   return `${minutes}m`;
 }
 
+/** Explains which axis the pill is actually showing, keyed off `resolved.source` — replaces the
+ * pre-103-09 title string that claimed a per-profile-only reading regardless of whether a global
+ * override was actually governing the turn. */
+function pillTitle(source: "global" | "profile" | "mixed" | "none"): string {
+  switch (source) {
+    case "global":
+      return "A global override is active — this surface reflects it, not the per-profile default";
+    case "profile":
+      return "This surface reflects the per-profile default";
+    case "mixed":
+      return "Multiple profiles report different engines";
+    case "none":
+      return "No engine reported for this profile yet";
+  }
+}
+
 function BrainComposerPill({ profileId }: { profileId: string }) {
-  const activeEngines = useActiveEngine();
-  const engine = activeEngines[profileId] ?? null;
+  const resolved = useResolvedBrain(profileId);
   const [catalogue, setCatalogue] = useState<CatalogueEntry[] | null>(null);
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   // Display-metadata resolution only (provider-identity dot color) — never the engine truth
-  // itself, which comes exclusively from useActiveEngine above (D-14).
+  // itself, which comes exclusively from useResolvedBrain above (D-14).
   useEffect(() => {
     let cancelled = false;
     brainsApi
@@ -129,9 +146,10 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
     };
   }, []);
 
-  const vendor = catalogue?.find((e) => e.id === engine?.model)?.vendor;
+  const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
   const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
-  const baseLabel = engine?.model ?? "Auto";
+  const isGlobal = resolved.source === "global";
+  const baseLabel = resolved.source === "none" ? "Auto" : (resolved.model as string);
 
   return (
     <BrainPicker
@@ -140,8 +158,8 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
       trigger={
         <button
           type="button"
-          aria-label={`Active brain: ${baseLabel} — opens the brain picker`}
-          title="This surface reflects the per-profile default, distinct from any active global override"
+          aria-label={`Active brain: ${baseLabel}${isGlobal ? " (global)" : ""} — opens the brain picker`}
+          title={pillTitle(resolved.source)}
           className="flex h-8 items-center gap-1.5 rounded-full border border-border px-2 text-sm hover:border-primary"
         >
           <span
@@ -150,6 +168,14 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
             style={{ backgroundColor: dotColor ?? "var(--muted-foreground)" }}
           />
           <span data-testid="chat-brain-pill-label">{baseLabel}</span>
+          {isGlobal && (
+            <span
+              data-testid="chat-brain-pill-global-chip"
+              className="rounded border border-border px-1 text-xs uppercase text-muted-foreground"
+            >
+              Global
+            </span>
+          )}
           {pendingLabel ? (
             <>
               <span
@@ -163,16 +189,16 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
           ) : (
             <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
           )}
-          {!pendingLabel && engine?.mode === "session" && (
+          {!pendingLabel && resolved.source === "profile" && resolved.mode === "session" && (
             <span
               data-testid="chat-brain-pill-session"
               className="flex items-center gap-0.5 text-xs text-(--status-info)"
             >
               <Clock className="h-3 w-3" aria-hidden="true" />
-              {formatBrainTtl(engine.expiresAt)}
+              {formatBrainTtl(resolved.expiresAt)}
             </span>
           )}
-          {!pendingLabel && engine?.mode === "pinned" && (
+          {!pendingLabel && resolved.source === "profile" && resolved.mode === "pinned" && (
             <span
               data-testid="chat-brain-pill-pinned"
               className="flex items-center gap-0.5 text-xs text-muted-foreground"
@@ -294,34 +320,12 @@ export default function Chat() {
   // chat.send fast-path right after a swap executes, 185-05). A restart
   // resets both fields to null server-side, so a fresh mount's pull hides
   // the badge again — proving it never survives a restart.
-  const [swapState, setSwapState] = useState<{
-    modelOverride: string | null;
-    voiceOverride: string | null;
-  }>({ modelOverride: null, voiceOverride: null });
-
-  useEffect(() => {
-    // Re-hydrate on every (re)connect, not just mount — a swap made while this
-    // tab's socket was down (or from another surface) would otherwise leave the
-    // badge stale until a full reload (WR-07). Skip while the socket is down.
-    if (status !== "connected") return;
-    (async () => {
-      try {
-        const ack = await sendCommand({ type: "swap.get_state" });
-        if (ack.status === "ok") {
-          setSwapState({
-            modelOverride: (ack.model_override as string | null | undefined) ?? null,
-            voiceOverride: (ack.voice_override_name as string | null | undefined) ?? null,
-          });
-        } else {
-          console.warn("Failed to hydrate swap state from server:", ack.error);
-        }
-      } catch (err) {
-        console.warn("Failed to hydrate swap state from server:", err);
-      }
-    })();
-    // sendCommand identity is stable per AstridrWSContext.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]);
+  //
+  // 103-09: the pull+push pair that used to live inline here now lives once,
+  // shared, in `useGlobalBrainOverride` (`src/hooks/useResolvedBrain.ts`) — the
+  // same module the header badge and the composer pill below both read, so this
+  // page cannot hold its own, potentially-disagreeing copy of the global axis.
+  const swapState = useGlobalBrainOverride();
 
   // 186-09 deferred item option (b): a genuinely tag-triggered swap corrects
   // the already-rendered bubble in place (backend push from wiring.py's
@@ -336,18 +340,6 @@ export default function Chat() {
     });
     return unsubChatCorrection;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscribeEvent]);
-
-  useEffect(() => {
-    const unsubSwapState = subscribeEvent("swap.state", (event) => {
-      const data = (event as { data?: Record<string, unknown> }).data;
-      if (!data) return;
-      setSwapState({
-        modelOverride: (data.model_override as string | null | undefined) ?? null,
-        voiceOverride: (data.voice_override_name as string | null | undefined) ?? null,
-      });
-    });
-    return unsubSwapState;
   }, [subscribeEvent]);
 
   // Live effective model (185-08): run.completed now carries the resolved
@@ -478,7 +470,7 @@ export default function Chat() {
   // ── Brain composer pill scope (103-07-T2, D-05 corrected host) ──────────
   // Resolved once via the D-16 seam's getDefaultProfileId() (103-CONTRACT.md §3) — never a
   // locally invented default. An empty string until resolved simply renders the pill against no
-  // known profile yet (useActiveEngine reads "Auto" honestly rather than guessing).
+  // known profile yet (useResolvedBrain reads "Auto" honestly rather than guessing).
   const [brainDefaultProfileId, setBrainDefaultProfileId] = useState("");
   useEffect(() => {
     let cancelled = false;

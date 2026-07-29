@@ -447,7 +447,7 @@ describe("Chat — swap badge reconnect re-pull (WR-07)", () => {
     mockSendCommand.mockResolvedValue({ status: "ok" });
   });
 
-  it("re-pulls swap.get_state each time the socket (re)connects", async () => {
+  it("re-pulls swap.get_state (once per shared-resolver consumer on the page) each time the socket (re)connects", async () => {
     // A fresh element each time — reusing one reference lets React bail out of
     // re-rendering, so the mocked status would never update.
     const makeTree = () => (
@@ -456,23 +456,30 @@ describe("Chat — swap badge reconnect re-pull (WR-07)", () => {
       </MemoryRouter>
     );
 
+    // 103-09: the page-level `swapState` (feeding BrainControl) and `BrainComposerPill` are two
+    // independent instances of the same shared `useGlobalBrainOverride` hook (from
+    // `src/hooks/useResolvedBrain.ts`) — each instance owns its own snapshot effect, so a single
+    // connect fires one pull per consumer, not one pull for the whole page. The WR-07 invariant
+    // this test guards — re-pull on every reconnect, never while disconnected — holds per
+    // consumer; it is asserted here as a stable multiple of the initial pull count.
     mockStatus = "connected";
     const view = render(makeTree());
-    await waitFor(() => expect(swapPulls()).toBe(1)); // initial connect pull
+    await waitFor(() => expect(swapPulls()).toBeGreaterThanOrEqual(2)); // initial connect pull(s)
+    const initialPulls = swapPulls();
 
     // Socket drops — no re-pull while down.
     await act(async () => {
       mockStatus = "reconnecting";
       view.rerender(makeTree());
     });
-    expect(swapPulls()).toBe(1);
+    expect(swapPulls()).toBe(initialPulls);
 
-    // Socket reconnects — the badge must re-hydrate from the server.
+    // Socket reconnects — every consumer must re-hydrate from the server.
     await act(async () => {
       mockStatus = "connected";
       view.rerender(makeTree());
     });
-    await waitFor(() => expect(swapPulls()).toBe(2));
+    await waitFor(() => expect(swapPulls()).toBe(initialPulls * 2));
   });
 });
 
