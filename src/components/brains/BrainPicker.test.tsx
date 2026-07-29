@@ -80,7 +80,10 @@ vi.mock("@/hooks/useResolvedBrain", () => ({
   useGlobalBrainOverride: () => mockGlobalOverride,
 }));
 
-const mockActiveEngines: Record<
+// `let`, not `const` (103-17): a handful of OBS-8 tests below reassign these per-test to exercise
+// the live 2026-07-29 checkpoint shape (zero telemetry rows, configured `modelPreferences`) —
+// reset to these defaults in `beforeEach` so no reassignment leaks across tests.
+let mockActiveEngines: Record<
   string,
   { profileId: string; model: string; mode: "session" | "pinned" | "inherited"; selectionPath: string; timestamp: number } | null
 > = {
@@ -97,8 +100,13 @@ vi.mock("@/hooks/useActiveEngine", () => ({
   useActiveEngine: () => mockActiveEngines,
 }));
 
+let mockProfileConfigs: Array<{
+  profileId: string;
+  modelPreferences?: { primary?: string; fallback?: string };
+}> = [{ profileId: "assistant-default" }, { profileId: "consulting" }];
+
 vi.mock("@/hooks/useProfileConfigs", () => ({
-  useProfileConfigs: () => [{ profileId: "assistant-default" }, { profileId: "consulting" }],
+  useProfileConfigs: () => mockProfileConfigs,
 }));
 
 // 103-12/CR-03: renders regardless of `open` — MOUNT and VISIBILITY are asserted separately via
@@ -195,6 +203,18 @@ beforeEach(() => {
   mockUseQuery.mockReturnValue({});
   mockSendCommand.mockReset();
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  // 103-17: reset the two config/telemetry seams to their file-wide defaults so the OBS-8
+  // describe block's per-test reassignments never leak into any other test in this file.
+  mockActiveEngines = {
+    "assistant-default": {
+      profileId: "assistant-default",
+      model: "anthropic-sonnet-5",
+      mode: "pinned",
+      selectionPath: "codepulse-default",
+      timestamp: Date.now(),
+    },
+  };
+  mockProfileConfigs = [{ profileId: "assistant-default" }, { profileId: "consulting" }];
   // 103-16: every test defaults to the lightweight mock; only the "BrainPicker + real
   // GlobalSwapModal" describe block below opts into "real" for its own tests and restores "mock"
   // in its own afterEach so this default never leaks into any other describe block in the file.
@@ -982,6 +1002,16 @@ describe("BrainPicker — global-swap selection nonce bumps on every activation 
 // already-mocked `useAstridrWS`/`useGlobalBrainOverride`/`sonner` seams -- no new mocking surface
 // needed. Covers all four scenarios from 103-16-PLAN.md's Task 2 action text.
 
+// Module-scope (103-17) so the OBS-8/D-14 describe block below can reuse it without duplicating
+// the open -> switch-scope -> select sequence.
+async function openGlobalPickerAndSelect(entryName: string) {
+  openPicker();
+  await screen.findByPlaceholderText("Search brains…");
+  fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+  await screen.findByText(entryName);
+  fireEvent.click(screen.getByText(entryName));
+}
+
 describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (103-16, CR-01)", () => {
   beforeEach(() => {
     globalSwapModalMode = "real";
@@ -991,14 +1021,6 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
     mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
     renderPicker();
   });
-
-  async function openGlobalPickerAndSelect(entryName: string) {
-    openPicker();
-    await screen.findByPlaceholderText("Search brains…");
-    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
-    await screen.findByText(entryName);
-    fireEvent.click(screen.getByText(entryName));
-  }
 
   it("(a) reselecting the same brain after a completed swap opens a fresh confirm prompt, not the stale result", async () => {
     await openGlobalPickerAndSelect("Codex CLI");
@@ -1129,5 +1151,118 @@ describe("BrainPicker + real GlobalSwapModal — reselect resets stale state (10
       await screen.findByRole("button", { name: "Swap all profiles to Grok Live" })
     ).toBeInTheDocument();
     expect(screen.queryByText("Switched to Codex CLI.")).not.toBeInTheDocument();
+  });
+});
+
+// ── 103-17: pinned-default count from config + the D-14 boundary it must never trade away ──────
+//
+// OBS 8 (live-confirmed 2026-07-29): `useProfileConfigs()` already returns `modelPreferences` for
+// every profile (verified live: consulting/business/personal each carry `primary:
+// "anthropic/claude-sonnet-5"`), but `globalSwapProfiles` never read it -- so with zero
+// `activeEngineSnapshots` rows (also verified live) the confirm modal reported a pinned-default
+// count of 0. These tests exercise BrainPicker's REAL `globalSwapProfiles` derivation (through the
+// real `GlobalSwapModal`) against exactly that live shape, and pin the boundary the fix must not
+// cross: the current-engine column stays "Auto" -- never back-filled from `modelPreferences.primary`
+// (the v9.0 VitalsRail trap `useActiveEngine.ts`'s docstring names explicitly, and the trap
+// 103-17-PLAN.md's objective calls out as "the obvious fix is wrong").
+
+describe("BrainPicker + real GlobalSwapModal — pinned-default count from config, D-14 boundary (103-17, OBS 8)", () => {
+  beforeEach(() => {
+    globalSwapModalMode = "real";
+    mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);
+  });
+
+  it("reports a pinned-default count of 3 and names the shadowed default when all three real profiles carry a configured primary and zero telemetry rows have reported (live OBS 8 shape)", async () => {
+    // Exactly the live 2026-07-29 checkpoint shape: `activeEngine:latestByProfile` had zero rows
+    // for the real profiles, `profiles:listConfigs` had all three carrying the same configured
+    // primary.
+    mockActiveEngines = {};
+    mockProfileConfigs = [
+      {
+        profileId: "consulting",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+      {
+        profileId: "business",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+      {
+        profileId: "personal",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+    ];
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    expect(
+      await screen.findByText(
+        "3 profiles have a pinned default (anthropic/claude-sonnet-5) that will be shadowed while this global override is in force."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("does not count a profile with no configured primary as pinned", async () => {
+    mockActiveEngines = {};
+    mockProfileConfigs = [
+      {
+        profileId: "consulting",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+      { profileId: "business" }, // no modelPreferences at all
+    ];
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    expect(
+      await screen.findByText(
+        "1 profile has a pinned default (anthropic/claude-sonnet-5) that will be shadowed while this global override is in force."
+      )
+    ).toBeInTheDocument();
+  });
+
+  it("D-14 REGRESSION GUARD: the current-engine column stays 'Auto' -- never back-filled from modelPreferences.primary -- even though a configured default exists and telemetry is silent", async () => {
+    // The risk 103-17-PLAN.md names explicitly: a later change "helpfully" back-filling the
+    // current-engine column from `modelPreferences` would re-open the exact v9.0 VitalsRail
+    // active-profile trap BSC-01 exists to remove (see useActiveEngine.ts's own docstring). This
+    // test fails if that ever happens.
+    mockActiveEngines = {};
+    mockProfileConfigs = [
+      {
+        profileId: "consulting",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+    ];
+    renderPicker();
+
+    await openGlobalPickerAndSelect("Codex CLI");
+
+    // The pinned-default warning proves the CONFIG signal reached the modal...
+    await screen.findByText(
+      "1 profile has a pinned default (anthropic/claude-sonnet-5) that will be shadowed while this global override is in force."
+    );
+    // ...but "consulting"'s own current -> new row must still show the honest unreported reading,
+    // never the configured primary.
+    const row = screen.getByText("consulting").closest("div");
+    expect(row).not.toBeNull();
+    expect(row!.textContent).toContain("Auto");
+    expect(row!.textContent).not.toContain("anthropic/claude-sonnet-5");
+  });
+
+  it("D-14 REGRESSION GUARD: the base trigger label for the picker's own profile also stays telemetry-only when that profile has a configured default but no reported engine", async () => {
+    mockActiveEngines = {};
+    mockProfileConfigs = [
+      {
+        profileId: "assistant-default",
+        modelPreferences: { primary: "anthropic/claude-sonnet-5", fallback: "qwen2.5:7b" },
+      },
+    ];
+    renderPicker();
+
+    // No telemetry row for "assistant-default" -- the trigger's base label (BrainPicker.tsx's
+    // `activeEngine?.model ?? "Auto"`) must read "Auto", never the configured primary, even though
+    // this exact profile now has a configured default.
+    expect(screen.getByTestId("brain-picker-base-label").textContent).toBe("Auto");
   });
 });
