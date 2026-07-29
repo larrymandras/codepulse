@@ -16,11 +16,14 @@
  *    the hardcoded Tailwind color-500 literals `ProviderHealthPanel.tsx` still
  *    carries for its dots/bars (CLAUDE.md § Styling).
  *
- * 103-11 (CR-02): the exported `needsCostConfirm` predicate is the single source of truth for the
- * expand-to-confirm branch — `BrainPicker.tsx`'s `handleActivate` calls the exact same function so
- * the keyboard path (cmdk `CommandItem.onSelect`) and this row's own mouse path can never decide
- * differently. Every button handler below stops propagation so a mouse click never ALSO bubbles
- * into the enclosing cmdk `CommandItem`'s own click-select handler.
+ * 103-11 (WR-03/CR-02): the row exposes exactly ONE focusable element — its own `<button>`. The
+ * health dot is purely presentational (`aria-hidden`, no `tabIndex`, no nested `TooltipTrigger`);
+ * the `Tooltip` now wraps the button itself, and the health word is folded into the button's own
+ * `aria-label` alongside the engine name, billing label, and quota state, so hover/focus discovery
+ * and non-color redundancy both survive without a second, invalid-content-model tab stop. The
+ * exported `needsCostConfirm` predicate is the single source of truth for the expand-to-confirm
+ * branch — `BrainPicker.tsx`'s `handleActivate` calls the exact same function so the keyboard path
+ * (cmdk `CommandItem.onSelect`) and this row's own mouse path can never decide differently.
  */
 
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +128,14 @@ export function BrainPickerRow({
   const needsConfirm = needsCostConfirm(entry);
   const dotColor = PROVIDER_COLORS[entry.vendor] ?? "#6b7280";
   const billingLabel = entry.billing === "sub" ? "SUB" : "API";
+  const quotaStateLabel =
+    entry.quotaRemainingPct !== undefined
+      ? `${Math.round(entry.quotaRemainingPct * 100)}% quota remaining`
+      : "unlimited quota";
+  // WR-03: the health word (previously only on the now-non-focusable dot's own aria-label) must
+  // still be reachable by assistive tech -- folded into the row button's own accessible name,
+  // alongside the engine name, billing label, and quota state.
+  const accessibleName = `${entry.name} — ${billingLabel} — ${HEALTH_LABEL[healthStatus]} — ${quotaStateLabel}`;
 
   // 103-11/CR-02: every one of these handlers stops propagation so a mouse click never ALSO
   // bubbles into the enclosing cmdk `CommandItem`'s own click-select handler (which now calls
@@ -160,44 +171,48 @@ export function BrainPickerRow({
         isCurrent && !isExpanded && "bg-primary/10"
       )}
     >
-      <button
-        type="button"
-        onClick={handleActivate}
-        className="flex w-full items-center gap-2 whitespace-normal break-words text-left"
-      >
-        <span
-          aria-hidden="true"
-          className="h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: dotColor }}
-        />
-        <span className="flex-1 text-sm">{entry.name}</span>
-        <Badge variant="outline" className="text-xs uppercase px-1 py-0">
-          {billingLabel}
-        </Badge>
-        <Tooltip>
-          <TooltipTrigger asChild>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={handleActivate}
+            aria-label={accessibleName}
+            className="flex w-full items-center gap-2 whitespace-normal break-words text-left"
+          >
             <span
-              tabIndex={0}
-              aria-label={`Health: ${HEALTH_LABEL[healthStatus]}`}
+              aria-hidden="true"
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: dotColor }}
+            />
+            <span className="flex-1 text-sm">{entry.name}</span>
+            <Badge variant="outline" className="text-xs uppercase px-1 py-0">
+              {billingLabel}
+            </Badge>
+            {/* WR-03 fix: purely presentational now -- no tabIndex, no nested TooltipTrigger. The
+                health word survives via this button's own aria-label above, and hover/focus
+                discovery survives via the Tooltip now wrapping this whole button instead. */}
+            <span
+              aria-hidden="true"
+              data-testid="health-dot"
               className={cn("h-1.5 w-1.5 shrink-0 rounded-full", HEALTH_DOT_CLASS[healthStatus])}
             />
-          </TooltipTrigger>
-          <TooltipContent side="top">
-            <p className="text-xs">{HEALTH_LABEL[healthStatus]}</p>
-          </TooltipContent>
-        </Tooltip>
-        {entry.quotaRemainingPct !== undefined ? (
-          <Progress
-            value={Math.round(entry.quotaRemainingPct * 100)}
-            aria-label={`Quota remaining ${Math.round(entry.quotaRemainingPct * 100)}%`}
-            className={cn("h-1 w-10", QUOTA_INDICATOR_CLASS[quotaLevel(entry.quotaRemainingPct)])}
-          />
-        ) : (
-          <span className="font-mono text-xs text-muted-foreground" aria-label="Unlimited quota">
-            ∞
-          </span>
-        )}
-      </button>
+            {entry.quotaRemainingPct !== undefined ? (
+              <Progress
+                value={Math.round(entry.quotaRemainingPct * 100)}
+                aria-label={`Quota remaining ${Math.round(entry.quotaRemainingPct * 100)}%`}
+                className={cn("h-1 w-10", QUOTA_INDICATOR_CLASS[quotaLevel(entry.quotaRemainingPct)])}
+              />
+            ) : (
+              <span className="font-mono text-xs text-muted-foreground" aria-label="Unlimited quota">
+                ∞
+              </span>
+            )}
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <p className="text-xs">{HEALTH_LABEL[healthStatus]}</p>
+        </TooltipContent>
+      </Tooltip>
       {isExpanded && needsConfirm && (
         <div className="mt-1.5 flex flex-col gap-1.5 border-t border-(--status-warn)/30 pt-1.5">
           <p className="text-xs text-(--status-warn)">

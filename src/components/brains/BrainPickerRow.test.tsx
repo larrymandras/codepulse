@@ -11,6 +11,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   BrainPickerRow,
+  needsCostConfirm,
   quotaLevel,
   resolveHealthStatus,
 } from "./BrainPickerRow";
@@ -89,6 +90,14 @@ describe("quotaLevel", () => {
   });
 });
 
+describe("needsCostConfirm", () => {
+  it("is true for expensive and unknown cost tiers, false for normal", () => {
+    expect(needsCostConfirm(findEntry("anthropic-opus-4-8"))).toBe(true); // costTier: expensive
+    expect(needsCostConfirm(findEntry("antigravity-cli"))).toBe(true); // costTier: unknown
+    expect(needsCostConfirm(findEntry("anthropic-sonnet-5"))).toBe(false); // costTier: normal
+  });
+});
+
 describe("resolveHealthStatus", () => {
   it("prefers the catalogue entry's own health field over live provider health", () => {
     const entry = findEntry("antigravity-cli"); // health: "degraded"
@@ -163,24 +172,62 @@ describe("BrainPickerRow — billing chip", () => {
 // Health dot (behavior)
 // ---------------------------------------------------------------------------
 
-describe("BrainPickerRow — health dot", () => {
-  it("renders a status-token dot whose tooltip reveals the health status word", async () => {
+describe("BrainPickerRow — health dot (WR-03: presentational, no nested tab stop)", () => {
+  it("renders a status-token dot that is aria-hidden and carries no tabIndex", () => {
     renderRow({ entry: findEntry("antigravity-cli") }); // health: "degraded"
-    const dot = screen.getByLabelText("Health: degraded");
+    const dot = screen.getByTestId("health-dot");
     expect(dot.className).toContain("--status-warn");
+    expect(dot).toHaveAttribute("aria-hidden", "true");
+    expect(dot).not.toHaveAttribute("tabIndex");
+  });
 
-    // Radix opens the tooltip on trigger focus (matches
-    // SkillLifecycleMenu.test.tsx's established pattern for this repo).
-    fireEvent.focus(dot);
+  it("announces the health word via the row button's own accessible name, not the dot", () => {
+    renderRow({ entry: findEntry("antigravity-cli") }); // health: "degraded"
+    const row = screen.getByRole("button");
+    expect(row).toHaveAccessibleName(expect.stringContaining("degraded"));
+  });
+
+  it("uses the error token and reachable/unreachable vocabulary for an unreachable entry, announced via the button", () => {
+    const entry: CatalogueEntry = { ...findEntry("ollama-llama3"), health: "unreachable" };
+    renderRow({ entry });
+    const dot = screen.getByTestId("health-dot");
+    expect(dot.className).toContain("--status-error");
+
+    const row = screen.getByRole("button");
+    expect(row).toHaveAccessibleName(expect.stringContaining("unreachable"));
+  });
+
+  it("announces the reachable health word via the button for a reachable entry", () => {
+    renderRow({ entry: findEntry("anthropic-sonnet-5") }); // health: "reachable"
+    const row = screen.getByRole("button");
+    expect(row).toHaveAccessibleName(expect.stringContaining("reachable"));
+  });
+
+  it("still surfaces the health word on hover/focus discovery via the Tooltip now wrapping the row button", async () => {
+    renderRow({ entry: findEntry("antigravity-cli") }); // health: "degraded"
+    const row = screen.getByRole("button");
+
+    // Radix opens the tooltip on trigger focus (matches SkillLifecycleMenu.test.tsx's
+    // established pattern for this repo) -- the Tooltip now wraps the row's button directly,
+    // not a separately-focusable nested span.
+    fireEvent.focus(row);
     const matches = await screen.findAllByText("degraded");
     expect(matches.length).toBeGreaterThan(0);
   });
 
-  it("uses the error token and reachable/unreachable vocabulary for an unreachable entry", () => {
-    const entry: CatalogueEntry = { ...findEntry("ollama-llama3"), health: "unreachable" };
-    renderRow({ entry });
-    const dot = screen.getByLabelText("Health: unreachable");
-    expect(dot.className).toContain("--status-error");
+  it("exposes exactly one focusable element in the row", () => {
+    const { container } = render(
+      <TooltipProvider>
+        <BrainPickerRow
+          entry={findEntry("anthropic-sonnet-5")}
+          isExpanded={false}
+          onExpandChange={vi.fn()}
+          onSelect={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+    const focusable = container.querySelectorAll('button, [tabindex]:not([tabindex="-1"])');
+    expect(focusable.length).toBe(1);
   });
 });
 
