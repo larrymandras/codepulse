@@ -689,7 +689,8 @@ Plans:
 
 **Gap wave 3** *(blocked on gap wave 2 — operator-attended, `autonomous: false`)*
 
-- [ ] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — closes BSC-05
+- [ ] 103-13-PLAN.md — Re-run the 103-08-T2 live checkpoint steps 4b/5/6 against the running stack with the stub OFF, then record results and restate the requirement markers — closes BSC-05 (103-13-T1, run 2026-07-29, found OBS 7: "Revert global swap" cleared the override instead of restoring the prior one — spawned 103-14 below)
+- [x] 103-14-PLAN.md — `GlobalSwapModal.runRevert` captures the global override in force before a swap at dispatch time and restores to it (`value: prior, restore: false`) instead of unconditionally clearing (`restore: true`); `describeOutcome` names the restored engine across all in-flight/terminal states — closes OBS 7 (BSC-04, BSC-05) — complete 2026-07-29, see [103-14-SUMMARY.md](phases/103-brain-swap-control-surface/103-14-SUMMARY.md)
 
 ---
 

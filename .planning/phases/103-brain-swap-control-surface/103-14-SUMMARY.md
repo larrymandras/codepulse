@@ -108,3 +108,11 @@ None — no external service configuration required.
 ---
 *Phase: 103-brain-swap-control-surface*
 *Completed: 2026-07-29*
+
+## Self-Check: PASSED
+
+- FOUND: src/components/brains/GlobalSwapModal.tsx
+- FOUND: src/components/brains/GlobalSwapModal.test.tsx
+- FOUND: .planning/phases/103-brain-swap-control-surface/103-14-SUMMARY.md
+- FOUND commit: 30322807 (fix)
+- FOUND commit: 5bbff0f8 (docs/SUMMARY)
