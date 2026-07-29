@@ -30,7 +30,7 @@ import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useBrainFallbackNotice } from "@/components/brains/BrainFallbackNotice";
 import { useGlobalBrainOverride, useResolvedBrain } from "@/hooks/useResolvedBrain";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
+import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
@@ -149,7 +149,13 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
   const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
   const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
   const isGlobal = resolved.source === "global";
-  const baseLabel = resolved.source === "none" ? "Auto" : (resolved.model as string);
+  // UAT cosmetic fix (2026-07-29): show the catalogue display name when one is known, instead of the
+  // raw model id ("claude-sonnet-5" where the swap dialog said "Claude Sonnet 5"). Falls back to the
+  // id unchanged when the catalogue has no entry — never a fabricated name.
+  const baseLabel =
+    resolved.source === "none"
+      ? "Auto"
+      : resolveModelDisplayName(resolved.model as string, catalogue);
 
   return (
     <BrainPicker

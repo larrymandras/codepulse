@@ -105,6 +105,14 @@ export interface GlobalSwapModalProps {
    * unaffected (CR-03 stays closed).
    */
   selectionNonce: number;
+  /**
+   * UAT cosmetic fix (2026-07-29): an id -> display-name map supplied by the requesting picker,
+   * which holds the fetched catalogue. This component has no catalogue of its own, which is why the
+   * revert result read "Reverted to claude-haiku-4-5-20251001" — a raw id — while the dialog title
+   * correctly said "Claude Haiku 4.5". Optional: when absent or missing a key, the id is shown
+   * unchanged rather than a fabricated name.
+   */
+  modelNames?: Record<string, string>;
 }
 
 interface SnapshotEntry {
@@ -216,6 +224,7 @@ export function GlobalSwapModal({
   open,
   onOpenChange,
   selectionNonce,
+  modelNames,
 }: GlobalSwapModalProps) {
   const { dispatch } = useCommandDispatch();
   const { modelOverride } = useGlobalBrainOverride();
@@ -372,8 +381,13 @@ export function GlobalSwapModal({
     // fired well after "Done" still reverts to the engine that preceded THIS swap, not whatever
     // modelOverride holds by then.
     priorOverrideRef.current = modelOverride;
+    // Resolution order: a per-profile snapshot row that happens to hold this exact model, then the
+    // caller-supplied catalogue name map (the usual hit for a GLOBAL override, which is never one of
+    // the snapshot's per-profile "current" values), then the raw id unchanged — never a made-up name.
     priorOverrideDisplayNameRef.current = modelOverride
-      ? (snap.find((s) => s.model === modelOverride)?.modelDisplayName ?? modelOverride)
+      ? (snap.find((s) => s.model === modelOverride)?.modelDisplayName ??
+        modelNames?.[modelOverride] ??
+        modelOverride)
       : null;
 
     // The one live command this axis ever sends (103-CONTRACT.md §8) — awaited for real, its ack

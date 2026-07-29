@@ -41,7 +41,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { BrainPicker } from "@/components/brains/BrainPicker";
 import { useResolvedBrain } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
+import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { cn } from "@/lib/utils";
 
@@ -105,11 +105,14 @@ export function BrainHeaderBadge() {
   const isGlobal = resolved.source === "global";
   const isProfile = resolved.source === "profile";
 
+  // UAT cosmetic fix (2026-07-29): show the catalogue display name when one is known, instead of the
+  // raw model id ("claude-sonnet-5" where the swap dialog said "Claude Sonnet 5"). Falls back to the
+  // id unchanged when the catalogue has no entry — never a fabricated name.
   const baseLabel = isMixed
     ? "Mixed brains"
     : resolved.source === "none"
       ? "No brain reported"
-      : (resolved.model as string);
+      : resolveModelDisplayName(resolved.model as string, catalogue);
   // A global reading must never present itself as an honest per-profile reading — the
   // "(global)" qualifier is folded into the accessible name itself (not just the visible "Global"
   // chip) since an explicit `aria-label` on the button replaces all descendant text for

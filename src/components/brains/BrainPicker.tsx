@@ -86,7 +86,13 @@ import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import { useProfileConfigs } from "@/hooks/useProfileConfigs";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useGlobalSwap } from "@/contexts/GlobalSwapContext";
-import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry } from "@/lib/brainsApi";
+import {
+  brainsApi,
+  BRAINS_STUB_ACTIVE,
+  buildModelNameMap,
+  resolveModelDisplayName,
+  type CatalogueEntry,
+} from "@/lib/brainsApi";
 import { cn } from "@/lib/utils";
 
 /** Raw entry shape `swap.catalogue` actually returns (`ws_commands.py::_handle_swap_catalogue`,
@@ -342,23 +348,24 @@ export function BrainPicker({
     return allProfiles.map((p) => {
       const engine = activeEngines[p.profileId] ?? null;
       const currentModel = engine?.model ?? "auto";
-      const currentEntry = entries?.find((e) => e.id === currentModel);
       const rawPrimary: unknown = (p as { modelPreferences?: { primary?: unknown } })
         .modelPreferences?.primary;
       const configuredDefault =
         typeof rawPrimary === "string" && rawPrimary.length > 0 ? rawPrimary : null;
-      const configuredDefaultEntry = configuredDefault
-        ? entries?.find((e) => e.id === configuredDefault)
-        : undefined;
       return {
         profileId: p.profileId,
         currentModel,
-        currentModelDisplayName: currentEntry?.name ?? (engine ? currentModel : "Auto"),
+        currentModelDisplayName: engine
+          ? resolveModelDisplayName(currentModel, entries)
+          : "Auto",
         mode: engine?.mode ?? "inherited",
         hasConfiguredDefault: configuredDefault !== null,
         configuredDefault,
+        // UAT cosmetic fix: config ids are vendor-prefixed ("anthropic/claude-sonnet-5") while live
+        // catalogue ids are not, so the previous exact-id lookup ALWAYS missed here and the
+        // shadowing warning named a raw id. resolveModelDisplayName tolerates that mismatch.
         configuredDefaultDisplayName: configuredDefault
-          ? (configuredDefaultEntry?.name ?? configuredDefault)
+          ? resolveModelDisplayName(configuredDefault, entries)
           : null,
       };
     });
@@ -370,7 +377,7 @@ export function BrainPicker({
         // 103-18 (WR-01): request the swap through the hoisted, route-surviving instance instead
         // of mounting/owning a GlobalSwapModal here. `openGlobalSwap` bumps the shared selection
         // nonce unconditionally (103-16/CR-01), including a repeat activation of the same entry.
-        openGlobalSwap(entry, globalSwapProfiles);
+        openGlobalSwap(entry, globalSwapProfiles, buildModelNameMap(entries));
         handleOpenChange(false);
         return;
       }

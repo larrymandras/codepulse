@@ -116,17 +116,25 @@ const mockGetCatalogue = vi.fn();
 const mockGetDefaultProfileId = vi.fn();
 let stubActive = false;
 
-vi.mock("@/lib/brainsApi", () => ({
-  brainsApi: {
-    isStub: true,
-    getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
-    dispatchSwap: vi.fn(),
-    getDefaultProfileId: (...args: unknown[]) => mockGetDefaultProfileId(...args),
-  },
-  get BRAINS_STUB_ACTIVE() {
-    return stubActive;
-  },
-}));
+// The display-name helpers are pure functions with no I/O, so they are wired to the REAL
+// implementations via importOriginal rather than stubbed — a stub returning the raw id would
+// silently pass the very cosmetic regression they exist to prevent (UAT 2026-07-29).
+vi.mock("@/lib/brainsApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/brainsApi")>();
+  return {
+    resolveModelDisplayName: actual.resolveModelDisplayName,
+    buildModelNameMap: actual.buildModelNameMap,
+    brainsApi: {
+      isStub: true,
+      getCatalogue: (...args: unknown[]) => mockGetCatalogue(...args),
+      dispatchSwap: vi.fn(),
+      getDefaultProfileId: (...args: unknown[]) => mockGetDefaultProfileId(...args),
+    },
+    get BRAINS_STUB_ACTIVE() {
+      return stubActive;
+    },
+  };
+});
 
 const mockUseQuery = vi.fn();
 vi.mock("convex/react", () => ({

@@ -216,3 +216,63 @@ const BRAINS_STUB = import.meta.env.VITE_BRAINS_STUB === "true";
 export const BRAINS_STUB_ACTIVE = BRAINS_STUB;
 
 export const brainsApi: BrainsAdapter = BRAINS_STUB ? stubBrainsAdapter : liveBrainsAdapter;
+
+// ─── Model display names (UAT 2026-07-29, cosmetic follow-up) ─────────────────────────────────
+//
+// Raw model ids were leaking into operator-facing copy in four places while a real display name was
+// available: the header badge and Chat composer pill labels ("claude-sonnet-5"), the confirm modal's
+// shadowing warning ("anthropic/claude-sonnet-5"), and the revert result ("Reverted to
+// claude-haiku-4-5-20251001") — all while the dialog TITLES correctly said "Claude Sonnet 5" /
+// "Claude Haiku 4.5".
+//
+// The confirm-modal case had a real cause, not just a missing lookup: `profileConfigs
+// .modelPreferences.primary` is vendor-prefixed ("anthropic/claude-sonnet-5") while live
+// `swap.catalogue` ids are not ("claude-sonnet-5"), so an exact id match could never hit. Hence the
+// prefix-tolerant match below.
+//
+// Deliberately does NOT invent a name when the catalogue has no entry: it returns the id unchanged.
+// Prettifying an unknown id is unreliable (e.g. "claude-haiku-4-5-20251001" would become "Claude
+// Haiku 4 5 20251001", worse than the id) and dressing up an identifier as a product name is the
+// same class of dishonesty D-14 exists to prevent.
+
+/** Strips a leading vendor namespace: "anthropic/claude-sonnet-5" -> "claude-sonnet-5". */
+function stripVendorPrefix(modelId: string): string {
+  const slash = modelId.lastIndexOf("/");
+  return slash === -1 ? modelId : modelId.slice(slash + 1);
+}
+
+/**
+ * Resolves a model id to its catalogue display name, tolerating the vendor-prefix mismatch between
+ * config-sourced ids and live catalogue ids. Falls back to the id itself, unchanged, when no
+ * catalogue entry matches — never a fabricated name.
+ */
+export function resolveModelDisplayName(
+  modelId: string,
+  catalogue: CatalogueEntry[] | null | undefined
+): string {
+  if (!catalogue || catalogue.length === 0) return modelId;
+
+  const exact = catalogue.find((e) => e.id === modelId);
+  if (exact) return exact.name;
+
+  const bare = stripVendorPrefix(modelId);
+  const suffix = catalogue.find((e) => stripVendorPrefix(e.id) === bare);
+  return suffix ? suffix.name : modelId;
+}
+
+/**
+ * Builds an id -> display-name map for surfaces that must resolve a name WITHOUT holding the
+ * catalogue themselves (GlobalSwapModal resolving the prior override it is reverting to). Includes
+ * both the raw and vendor-stripped keys so either id namespace resolves.
+ */
+export function buildModelNameMap(
+  catalogue: CatalogueEntry[] | null | undefined
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const entry of catalogue ?? []) {
+    map[entry.id] = entry.name;
+    const bare = stripVendorPrefix(entry.id);
+    if (!(bare in map)) map[bare] = entry.name;
+  }
+  return map;
+}

@@ -59,7 +59,11 @@ export interface GlobalSwapContextValue {
    * activation of the same catalogue entry — so the surviving `GlobalSwapModal` instance always
    * resets to a fresh confirm prompt, never the previous caller's stale result.
    */
-  openGlobalSwap: (target: CatalogueEntry, profiles: GlobalSwapProfile[]) => void;
+  openGlobalSwap: (
+    target: CatalogueEntry,
+    profiles: GlobalSwapProfile[],
+    modelNames?: Record<string, string>
+  ) => void;
 }
 
 const GlobalSwapContext = createContext<GlobalSwapContextValue | null>(null);
@@ -79,11 +83,20 @@ export function GlobalSwapProvider({ children }: { children: ReactNode }) {
   // `openGlobalSwap`, so it can never bump this — the same asymmetry `BrainPicker` relied on before
   // this plan, now owned once at the provider level instead of duplicated per-picker.
   const [selectionNonce, setSelectionNonce] = useState(0);
+  // UAT cosmetic fix: an id -> display-name map supplied by the requesting picker (which holds the
+  // fetched catalogue) so the modal can name the PRIOR override it reverts to. The modal has no
+  // catalogue of its own, which is why "Reverted to claude-haiku-4-5-20251001" showed a raw id.
+  const [modelNames, setModelNames] = useState<Record<string, string>>({});
 
   const openGlobalSwap = useCallback(
-    (nextTarget: CatalogueEntry, nextProfiles: GlobalSwapProfile[]) => {
+    (
+      nextTarget: CatalogueEntry,
+      nextProfiles: GlobalSwapProfile[],
+      nextModelNames?: Record<string, string>
+    ) => {
       setTarget(nextTarget);
       setProfiles(nextProfiles);
+      if (nextModelNames) setModelNames(nextModelNames);
       setOpen(true);
       setSelectionNonce((n) => n + 1);
     },
@@ -100,6 +113,7 @@ export function GlobalSwapProvider({ children }: { children: ReactNode }) {
           open={open}
           onOpenChange={setOpen}
           selectionNonce={selectionNonce}
+          modelNames={modelNames}
         />
       )}
     </GlobalSwapContext.Provider>

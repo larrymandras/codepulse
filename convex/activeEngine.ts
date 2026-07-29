@@ -1,5 +1,6 @@
 import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { isUnresolvedRouting } from "./activeEngineFilters";
 
 // ============================================================
 // ACTIVE ENGINE SNAPSHOTS — Phase 103 (BSC-01, D-14)
@@ -86,5 +87,54 @@ export const recordRouting = internalMutation({
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("activeEngineSnapshots", { ...args });
+  },
+});
+
+/**
+ * pruneUnresolved — deletes rows that carry no usable profile or engine identity, i.e. the
+ * `{profileId:"unknown", model:"unknown"}` sentinels the pre-2026-07-29 `model_routing` case used to
+ * write (see `activeEngineFilters.ts` for the full chain and why they were never a reading).
+ *
+ * The ingest guard stops NEW ones; this cleans up the ones already stored. Once run, it should
+ * normally be a no-op forever.
+ *
+ * BATCH-CAPPED on purpose, per this repo's self-hosted-Convex rules (CLAUDE.md): the production
+ * backend is a single-node SQLite instance whose MVCC tombstone GC cannot absorb mass deletes while
+ * serving load — an unbounded sweep here is exactly the shape that took the dashboard down for days
+ * on 2026-07-21/22. Reads a bounded window, deletes at most `limit` rows, and reports whether more
+ * remain so the caller can decide to run it again rather than this function looping.
+ *
+ * `internalMutation` (never a public `mutation`), for the same CR-01 reason `recordRouting` is: a
+ * client-callable delete path on a telemetry table is not something the browser should ever hold.
+ * Invoke it deliberately from the CLI with an admin key.
+ */
+export const pruneUnresolved = internalMutation({
+  args: {
+    limit: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const limit = Math.min(args.limit ?? 50, 200);
+
+    // Bounded scan, mirroring latestByProfile's take() discipline — never .collect() on this
+    // append-only table.
+    const rows = await ctx.db
+      .query("activeEngineSnapshots")
+      .withIndex("by_timestamp")
+      .order("desc")
+      .take(500);
+
+    const unresolved = rows.filter((row) => isUnresolvedRouting(row));
+    const batch = unresolved.slice(0, limit);
+
+    for (const row of batch) {
+      await ctx.db.delete(row._id);
+    }
+
+    return {
+      scanned: rows.length,
+      unresolvedFound: unresolved.length,
+      deleted: batch.length,
+      moreRemaining: unresolved.length > batch.length,
+    };
   },
 });
