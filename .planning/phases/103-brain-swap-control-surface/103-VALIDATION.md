@@ -193,6 +193,80 @@ covered explicitly — a fix scoped only to the badge would leave it wrong.
 
 ---
 
+## Gap-Closure Live Re-Verification (103-13-T1, 2026-07-29)
+
+> Re-runs steps 4b/5/6 of the 103-08-T2 checkpoint above, after gap-closure Plans 103-09..103-12
+> (and, mid-run, 103-14) fixed the six defects that blocked it. This section is ADDED alongside the
+> 103-08-T2 table above — nothing in that table was edited, deleted, or softened. Where this run's
+> result differs from 103-08-T2's, both are shown so the before/after is legible.
+
+### Run conditions (record verbatim — these are deviations from the operator's normal environment)
+
+- **Driver:** the orchestrator, via Playwright headless Chromium. The Claude-in-Chrome extension was
+  not connected for this run. Operator Larry explicitly chose "I drive in Chrome, you review" and
+  reviewed the resulting observation table — this was **not** a human at the keyboard clicking
+  through the UI live, and that is recorded plainly rather than implied otherwise.
+- **Port:** CodePulse dev server ran on **:5174**, not :5173 — the pre-existing autostart instance
+  (`CodePulseUI` scheduled task) already held :5173. Started from Git Bash with
+  `VITE_BRAINS_STUB=false`.
+- **Auth:** Clerk was **disabled** for this run (`VITE_CLERK_PUBLISHABLE_KEY=` empty, set via Git
+  Bash — per the repo's own PS 5.1 empty-env-var-deletes lesson, PowerShell was not used for this).
+  Without this, the sign-in gate blocks the dashboard entirely (observed: STUB/GLOBAL badge counts
+  both read 0 while the gate was up). This matches the repo's own documented e2e guard ("run e2e
+  without `VITE_CLERK_PUBLISHABLE_KEY`") and is orthogonal to brain-data provenance, but it is a real
+  deviation from the operator's normal signed-in browsing environment and is recorded as such.
+- **Backends:** Ástríðr live throughout at `ws://127.0.0.1:8181/ws/telemetry`; Convex at
+  `ws://127.0.0.1:3210`, both genuinely live (not stubbed) for the whole run.
+
+### Per-observation results (Task 1's twelve observations — OBS 12 was added live, see below)
+
+| Obs | What it checks | Result | Evidence |
+|-----|-----------------|--------|----------|
+| 1 | Pre-flight: genuinely live, not stubbed | ✅ PASS | Badge STUB-chip count = 0; picker stub-banner ("Running on stub brain data") count = 0. |
+| 2 | Global override state before page load | ✅ PASS | No override was in force at start: `swap.get_state` ack returned `{"status":"ok","model_override":null,"model_source":null}`. Driver then SET one (Claude Haiku 4.5) and reloaded, per the plan's own step 2 instruction. |
+| 3 | Three surfaces agree with one override in force | ✅ PASS — the 2026-07-28 three-way disagreement did **not** reproduce | Header badge: `aria-label="Active brain: claude-haiku-4-5-20251001 (global)"`, text "claude-haiku-4-5-20251001 \| GLOBAL", global chip = 1. Chat composer pill: `aria-label="Active brain: claude-haiku-4-5-20251001 (global) — opens the brain picker"`, text "claude-haiku-4-5-20251001 \| GLOBAL". Control Center `BrainControl`: text "BRAIN \| claude-haiku-4-5-20251001". Badge and pill both carry the required "Global" qualifier; `BrainControl` names the same engine but has no Global-chip affordance of its own (pre-existing, not a defect). |
+| 4 | Badge updates from the `swap.state` readback (not the ack) | ✅ PASS | `SENT {"type":"swap.set","target":"brain","value":"claude-opus-4-8","restore":false}` → `RECV +22ms {"event_type":"swap.state","data":{"model_override":"claude-opus-4-8","model_source":"voice-swap",...}}`. Badge before = "Active brain: claude-haiku-4-5-20251001 (global)"; after = "Active brain: claude-opus-4-8 (global)". **Method note:** badge reads taken while the result Dialog was open returned "(no badge)" — the modal `aria-hide`s the page. This was a harness artifact, not a product defect; all recorded badge values were re-read with the dialog dismissed. |
+| 5 | Modal reports the real `swap.set` outcome, not the deferred axis's failures | ✅ PASS | Verbatim: "Switched to Claude Opus 4.8. / Profiles now governed by the global override: / consulting / business / personal". No per-profile `union_tag_invalid` rows. No 0/N failure reported for a swap that succeeded — the exact §8 violation defect #5 previously produced. |
+| 6 | "Done" offers a revert action | ✅ PASS | Toast verbatim: "All profiles switched to Claude Opus 4.8. \| Revert global swap". |
+| 7 | Revert renders a real result and the badge returns to the prior engine | ❌ **FAILED on first run**, then **FIXED (Plan 103-14) and RE-VERIFIED PASS** in the same session | **First run (pre-103-14):** dialog did render a real result row — "Global override cleared — profiles are back on their own defaults." + consulting/business/personal — but the badge went to "Active brain: unknown", not back to Haiku 4.5. Frame sent: `{"type":"swap.set","target":"brain","restore":true}`. Root cause: `GlobalSwapModal.runRevert` hardcoded `restore:true`; Ástríðr defines `restore=true` as "clear the override entirely" (`ws_commands.py:233`, handler `:1100-1105`), not "restore to prior" — a client-side gap, not a protocol limit (`{"target": value}` with `restore:false` sets any specific value). **Larry's call:** fix before closing; Plan 103-14 executed live, mid-checkpoint. **Re-verification (post-103-14), same live stack:** baseline no-override → swap to Haiku 4.5 → swap to Opus 4.8 → "Revert global swap". `SENT +96ms {"type":"swap.set","target":"brain","value":"claude-haiku-4-5-20251001","restore":false}` → `RECV +101ms {"event_type":"swap.state","data":{"model_override":"claude-haiku-4-5-20251001",...}}`. Dialog verbatim: "Revert global swap / Reverted to claude-haiku-4-5-20251001. / Profiles still governed by the global override: / consulting / business / personal". Badge after revert = "Active brain: claude-haiku-4-5-20251001 (global)" — restored to the prior engine: **true**. |
+| 8 | Confirm modal's per-profile `current → new` list and pinned-default count are accurate | ❌ **FAILED — Larry's explicit disposition: treat as a real defect, do not mark fixed** | Modal verbatim: "Swap all profiles to Claude Opus 4.8? / consulting Auto → Claude Opus 4.8 / business Auto → Claude Opus 4.8 / personal Auto → Claude Opus 4.8 / Cancel / Swap all profiles to Claude Opus 4.8". Lists all 3 real profiles, no pinned-default warning (`pinnedCount = 0`). **Verified against the live self-hosted Convex:** `profiles:listConfigs` → 3 profiles; consulting/business/personal **each** carry `modelPreferences.primary = "anthropic/claude-sonnet-5"` (fallback `"qwen2.5:7b"`) — real pins. `activeEngine:latestByProfile` → exactly ONE row: `{profileId:"unknown", model:"unknown", mode:"inherited", selectionPath:"override"}` — zero rows for consulting/business/personal. **Mechanism:** `BrainPicker.tsx:362-374` derives `currentModelDisplayName`/`mode` from `activeEngines` (`activeEngineSnapshots`), not from `profileConfigs.modelPreferences` — with no per-profile snapshot rows live, every profile renders "Auto" and `pinnedCount` is 0. **Consequence:** the D-11 confirm modal understates what a global swap actually shadows; the affected requirement marker stays unsatisfied for this reason. No fix was made for this defect this cycle. (The stale `profileId:"unknown"` `activeEngineSnapshots` row is the same root cause that makes the badge read "Active brain: unknown" at baseline — related, not separately fixed.) |
+| 9 | `/chat` narrow viewport: composer pill must not displace the send affordance | ✅ PASS | At 420×900: send button (`aria-label="Send message"`) visible, `boundingBox {x:339, y:291.66, w:44, h:44}` — fully inside the 420px viewport. Composer pill visible. `document.scrollWidth > clientWidth` = false (no horizontal overflow). |
+| 10 | Keyboard-only D-15 confirm gate: zero mutating frames before explicit confirm | ✅ PASS | Typed "haiku" into the cmdk input → rows 331 → 2 ("Claude Haiku 4.5", "~Anthropic/Claude Haiku Latest") → ArrowDown → Enter → confirm modal opened for "~Anthropic/Claude Haiku Latest". Frames sent between the keyboard mark and the confirm click: 2, both read-only `swap.get_state`. Mutating frames pre-confirm = **0**. Whole-run mutating frames = 0 (that script cancelled rather than confirmed). **Method note:** an earlier attempt showed row count unchanged (331) after typing because keyboard focus was still on the scope-toggle button, not the cmdk input — a harness artifact, diagnosed and corrected, not a filter defect; that first reading was discarded. |
+| 11 | Stack left clean, intended engine recorded | ✅ PASS | Final live state verified two ways: `swap.get_state` ack `{"status":"ok","model_override":null,"model_source":null}` and the pushed `swap.state` `{"model_override":null,"model_source":null,...}`; UI badge shows no GLOBAL chip. Engine the stack was left on: **no global override (Auto / per-profile defaults)** — the exact pre-checkpoint baseline observed in OBS 2. |
+| 12 *(added during the run)* | The UI-reachable clear-to-Auto path (BrainControl's independent "Restore usual brain") | ✅ PASS | **Context:** the orchestrator initially and wrongly claimed 103-14 had removed the only clear-to-Auto path; that claim was disproved live by reading `BrainControl.tsx:217-227` and then verifying against the running stack — recorded here as the correction, not as fact. **Live result:** with no override, "Restore usual brain" is correctly ABSENT (count 0 — nothing to clear). With a Haiku 4.5 global override in force, it is PRESENT (count 1). Clicking it dispatched **exactly one** frame — `{"type":"swap.set","target":"brain","restore":true}` — and `RECV +118ms {"event_type":"swap.state","data":{"model_override":null,...}}`; badge cleared, GLOBAL chip 0. Satisfies `103-CONTRACT.md` §8 (exactly one live command). |
+
+### Additional live fact recorded during the run (settles the per-profile axis honestly)
+
+Ástríðr's accepted command union, read verbatim off a live validation error during this session:
+`agent.send_task, chat.send, agent.stop, agent.pause, agent.resume, cron.toggle, cron.trigger, approval.respond, vision.frame_reply, config.update, estop.activate, estop.deactivate, llm_gate.enable, llm_gate.disable, config.get, commands.list, swap.get_state, readiness.get, swap.set, swap.catalogue`.
+`models.catalog` is **not** in this union — the per-profile axis the picker's "This profile" scope
+dispatches is genuinely unimplemented live (the picker shows "Couldn't load the brain catalogue —
+try again in a moment." at that scope). This **confirms** the deferral to astridr Phase 184.1 rather
+than contradicting it. `ping` is likewise not in the union (matches the pre-existing item 7 above).
+The global axis's catalogue loaded **331 live entries** via `swap.catalogue` this run, matching the
+103-08-T2 figure exactly.
+
+### Headline finding, replaced — three surfaces, one answer
+
+The 2026-07-28 headline finding was "three surfaces, three answers" (badge: "No brain reported",
+pill: "Auto", `BrainControl`: correct). **This run, that disagreement did not reproduce.** With a
+single global override genuinely in force, all three surfaces named the same engine:
+
+| Surface | Origin | Displayed (103-13-T1) | Correct? |
+|---|---|---|---|
+| Control Center `BrainControl` | pre-existing (Phase 185/186) | `claude-haiku-4-5-20251001` | ✅ correct — unchanged, reads `swap.state` |
+| `BrainHeaderBadge` (dashboard-wide) | this phase, fixed by 103-09 | `claude-haiku-4-5-20251001 \| GLOBAL` | ✅ correct — now snapshot-pulls `swap.get_state` on every connect (OBS 2-4) |
+| Chat composer pill | this phase, fixed by 103-09 | `claude-haiku-4-5-20251001 \| GLOBAL` | ✅ correct — now reads the same shared resolver as the badge (OBS 3) |
+
+The fix predicted in the 103-08-T2 gap-closure guidance — "one honest resolution order that every
+brain surface reads from" (`useResolvedBrain`, shipped in 103-09) — is what closed this. **This does
+not mean BSC-01/BSC-04/BSC-05 are now fully satisfied**: OBS 8 above is a real, live-confirmed defect
+in a different part of the same honesty chain (the pre-swap confirm modal, not the resolved-state
+surfaces), and the per-profile axis remains correctly deferred. See `.planning/REQUIREMENTS.md` for
+the restated markers.
+
+---
+
 ## Per-Task Verification Map
 
 > Task IDs bound by `gsd-planner` 2026-07-28. No row was dropped and no thirteenth mapping was
@@ -286,11 +360,12 @@ reactive path works. Never `import --replace-all`; never bulk-delete on the live
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions | Result (2026-07-28, 103-08-T2) |
-|----------|-------------|------------|-------------------|---------------------------------|
-| Global swap against the running stack | BSC-05 (global axis) | Requires a live astridr process; `swap.set` mutates real process-wide state | With astridr up: open the picker, select `All profiles` scope, pick a different brain, confirm. Assert the `swap.state` push updates the badge, then use "Restore usual brain" to revert. Endpoint-exists ≠ integration-works. | ❌ **NOT VERIFIED** — dispatch/readback/revert leg blocked by open defects #5/#6 (see Live Global-Axis Verification section above). The confirm gate itself (nothing dispatches pre-confirm) IS verified. |
-| Composer pill placement on `Chat.tsx` | BSC-02 (D-05 corrected) | Visual placement/overlap in the real composer, not assertable in jsdom | Load `/chat`, confirm the pill renders in the composer without displacing the send affordance at narrow widths. | Not independently re-verified this session (last verified in 103-07 execution). |
-| Live catalogue scale behavior | BSC-02 | The real catalogue is ~300+ entries; fixtures are small | With astridr up, open the picker and confirm rows wrap without truncation and provider grouping holds — the three UX lessons already learned in `BrainControl.tsx`'s checkpoint rounds. | ✅ **VERIFIED** — live `swap.catalogue` returned 331 real engines, grouped correctly under "API" (Opus 4.8, Sonnet 5, Haiku 4.5, Fable 5, Ai21/Jamba, and others). |
+| Behavior | Requirement | Why Manual | Test Instructions | Result (2026-07-28, 103-08-T2) | Result (2026-07-29, 103-13-T1) |
+|----------|-------------|------------|-------------------|---------------------------------|---------------------------------|
+| Global swap against the running stack | BSC-05 (global axis) | Requires a live astridr process; `swap.set` mutates real process-wide state | With astridr up: open the picker, select `All profiles` scope, pick a different brain, confirm. Assert the `swap.state` push updates the badge, then use "Restore usual brain" to revert. Endpoint-exists ≠ integration-works. | ❌ **NOT VERIFIED** — dispatch/readback/revert leg blocked by open defects #5/#6 (see Live Global-Axis Verification section above). The confirm gate itself (nothing dispatches pre-confirm) IS verified. | ⚠ **PARTIAL PASS** — dispatch → readback → revert leg IS now genuinely live-verified and honest (OBS 4-7, OBS 12): badge/pill/BrainControl update from the readback, the modal reports the real `swap.set` outcome, and both revert paths (GlobalSwapModal's toast action, BrainControl's independent button) restore/clear correctly with a real visible result. Still **not a full pass**: OBS 8 found the pre-swap confirm modal is not honest about per-profile impact (see below) — a real, unfixed defect. See "Gap-Closure Live Re-Verification (103-13-T1)" above. |
+| Composer pill placement on `Chat.tsx` | BSC-02 (D-05 corrected) | Visual placement/overlap in the real composer, not assertable in jsdom | Load `/chat`, confirm the pill renders in the composer without displacing the send affordance at narrow widths. | Not independently re-verified this session (last verified in 103-07 execution). | ✅ **VERIFIED** — OBS 9: at 420×900 the send button remains fully inside the viewport (`{x:339, y:291.66, w:44, h:44}`), the pill is visible, `document.scrollWidth > clientWidth` is false. |
+| Confirm-modal per-profile accuracy | BSC-01 / BSC-04 (D-11) | Requires real, live `profileConfigs`/`activeEngineSnapshots` data, not assertable against a stub or unit fixture | Trigger an "All profiles" swap; read the confirm dialog's per-profile `current → new` list and pinned-default count against real profile data queried directly from Convex. | Not independently re-verified live this session — relied on unit coverage only (`GlobalSwapModal.test.tsx`). | ❌ **FAILED — OBS 8, real defect, not fixed.** Modal shows all 3 profiles as "Auto" with `pinnedCount=0`; live Convex `profiles:listConfigs` shows all 3 carry a real pinned `modelPreferences.primary`. `BrainPicker.tsx:362-374` reads from `activeEngineSnapshots` (empty for real profiles) instead of `profileConfigs.modelPreferences`. Larry's explicit disposition: leave unfixed, tracked as a defect. |
+| Live catalogue scale behavior | BSC-02 | The real catalogue is ~300+ entries; fixtures are small | With astridr up, open the picker and confirm rows wrap without truncation and provider grouping holds — the three UX lessons already learned in `BrainControl.tsx`'s checkpoint rounds. | ✅ **VERIFIED** — live `swap.catalogue` returned 331 real engines, grouped correctly under "API" (Opus 4.8, Sonnet 5, Haiku 4.5, Fable 5, Ai21/Jamba, and others). | ✅ **RE-CONFIRMED** — 331 live entries again this run (see "Additional live fact" above); keyboard search/filter over the same catalogue also verified (OBS 10). |
 
 ---
 
@@ -304,6 +379,7 @@ reactive path works. Never `import --replace-all`; never bulk-delete on the live
 - [x] Every fixture in "Fixtures That Actually Exercise the Behavior" is realized
 - [x] Schema push landed before any reactive-path test is claimed green (103-02-T2, live-deployed and confirmed 2026-07-28)
 - [x] Global-axis manual verification **performed** against the running stack (not stubbed) — **partial result, not a pass**: catalogue read + D-15 confirm gate genuinely live-verified; dispatch/readback/revert leg NOT verified, two defects (#5/#6) left open. See "Live Global-Axis Verification (103-08-T2)" above.
+- [x] **UPDATE 2026-07-29 (103-13-T1, gap-closure re-verification):** the dispatch → readback → revert leg IS now genuinely live-verified and honest — defects #5 and #6 (and OBS 7's newly-found revert-restores-wrong-thing regression, fixed live mid-session by Plan 103-14) are closed. The catalogue read, D-15 confirm gate, and now the write/readback/revert leg are all live-proven for the global axis, on both the GlobalSwapModal and BrainControl surfaces. **What is still NOT proven:** the D-11 pre-swap confirm modal's per-profile accuracy (OBS 8, real defect, not fixed this cycle — see "Gap-Closure Live Re-Verification (103-13-T1)" above) and the entire per-profile axis (correctly deferred to astridr Phase 184.1 — `models.catalog` confirmed absent from Ástríðr's live accepted command union this session). BSC-05 is therefore still not a full pass; see `.planning/REQUIREMENTS.md` for the exact restated markers.
 - [x] `nyquist_compliant: true` set in frontmatter
 
 ## Not Closed by This Phase
@@ -318,6 +394,19 @@ reactive path works. Never `import --replace-all`; never bulk-delete on the live
 5. `GlobalSwapModal.tsx:154,159-169` — fans out N deferred `gateway.model.set` calls for global scope (violates `103-CONTRACT.md` §8) and discards the real `swap.set` result via `.catch(() => {})`, so the result rows report failure for the wrong axis.
 6. `BrainHeaderBadge.tsx:71-91` — the global fallback only subscribes to `swap.state` (a change event); it never requests `swap.get_state` on mount, so an already-active global override never appears on page load.
 
+> **UPDATE 2026-07-29 (103-13-T1, gap-closure re-verification) — defects #5 and #6 are CLOSED,
+> live-confirmed, not just unit-tested.** #5 fixed by Plan 103-12 (`GlobalSwapModal` now awaits and
+> reports the real `swap.set` ack + `swap.state` readback; zero `gateway.model.set` calls for global
+> scope) — live-confirmed by OBS 5 above (no `union_tag_invalid` rows, no false 0/N failure). #6 fixed
+> by Plan 103-09 (`useResolvedBrain` snapshot-pulls `swap.get_state` on every connect, shared by the
+> badge and composer pill) — live-confirmed by OBS 2-4 above (the three-way disagreement did not
+> reproduce). A seventh defect was found live during this same re-verification and fixed mid-session
+> (Plan 103-14: `GlobalSwapModal.runRevert` was clearing the override instead of restoring the prior
+> one — see OBS 7's two-part entry above) — closed and re-verified PASS in the same session. **One
+> defect remains open and unfixed: OBS 8** (the D-11 confirm modal's per-profile accuracy) — a new
+> finding from this session, not one of the original six, and it is explicitly NOT closed by this
+> cycle.
+
 **Out-of-scope follow-ups (noted, deliberately not fixed this phase):**
 - **Dead `gateway.provider.set_enabled` dispatch** — `src/components/ProviderControls.tsx:188` dispatches a command with zero server-side handlers anywhere in `astridr/` (`103-CONTEXT.md` D-13 correction). Pre-existing bug, out of this phase's scope.
 - **Astridr-side registration and implementation of Phase 184.1** against `103-CONTRACT.md` — the per-profile backend itself. Belongs in `astridr-repo`, not CodePulse.
@@ -325,16 +414,25 @@ reactive path works. Never `import --replace-all`; never bulk-delete on the live
 
 ## What This Phase Does NOT Claim
 
-- **BSC-05 is NOT marked satisfied.** The global axis is partially live-verified (catalogue + confirm
-  gate); the per-profile axis remains stub-backed by design. Neither half closes BSC-05's original
-  "verified working end-to-end on the running stack" wording in full.
+- **BSC-05 is NOT marked fully satisfied, even after 103-13-T1.** The global axis's read, confirm-gate,
+  and now write/readback/revert legs are all genuinely live-verified (both the GlobalSwapModal and
+  BrainControl surfaces). The per-profile axis remains stub-backed by design (confirmed this session:
+  `models.catalog` is absent from Ástríðr's live accepted command union). And OBS 8 found a real,
+  unfixed defect in the D-11 confirm modal's per-profile accuracy — so even the global axis's honesty
+  chain has one open gap. See `.planning/REQUIREMENTS.md` for the exact restated markers.
 - **No stub run is reported as live per-profile verification** — `e2e/brain-swap.spec.ts`'s own
   header comment and this document both say so explicitly.
 - **No partial live global-axis check is reported as a full BSC-05 pass** — the per-step results
-  table above names exactly what passed and what did not, with the real defects that block the rest.
+  table above (103-08-T2) and the per-observation table above (103-13-T1) each name exactly what
+  passed and what did not, with the real defects that block the rest.
 
-**Approval:** **Conditionally approved with two open defects.** Wave 0 delivery, unit-test coverage,
-the stub round trip, and the global axis's read/confirm-gate behavior are all genuinely verified.
-The global axis's write/readback/revert leg is not verified — defects #5 and #6 above must be
-addressed (recommended: `/gsd-plan-phase 103 --gaps`) before BSC-05's global half can be marked
-satisfied. The per-profile axis remains correctly and honestly deferred to astridr Phase 184.1.
+**Approval (2026-07-28, superseded in part below):** ~~Conditionally approved with two open defects.~~
+Wave 0 delivery, unit-test coverage, the stub round trip, and the global axis's read/confirm-gate
+behavior were genuinely verified; the write/readback/revert leg was not.
+
+**UPDATE 2026-07-29 (103-13-T1):** The global axis's write/readback/revert leg is now genuinely
+live-verified — defects #5 and #6 (plus the OBS-7 revert-regression found and fixed live this
+session, Plan 103-14) are closed. **Still not a full BSC-05 pass:** OBS 8 (D-11 confirm-modal
+per-profile accuracy) is a real, live-confirmed, unfixed defect, and the per-profile axis remains
+correctly and honestly deferred to astridr Phase 184.1. See `.planning/REQUIREMENTS.md`'s restated
+BSC-01/02/04/05 markers for the exact, evidence-cited status of each requirement.
