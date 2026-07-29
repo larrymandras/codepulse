@@ -232,6 +232,7 @@ export default function Chat() {
     playAudio,
     handleApprove,
     handleReject,
+    ttsAnalyser,
   } = chat;
   const { sendCommand, subscribeEvent } = useAstridrWS();
 
@@ -684,7 +685,7 @@ export default function Chat() {
                 listening ? "" : "opacity-45 saturate-50"
               }`}
             >
-              <AvatarAura state={avatarState} ttsAnalyser={null} />
+              <AvatarAura state={avatarState} ttsAnalyser={ttsAnalyser} />
             </div>
 
             <div className="mt-2 flex items-center gap-2 text-sm text-foreground/90">

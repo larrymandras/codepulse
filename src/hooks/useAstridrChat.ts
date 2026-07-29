@@ -56,7 +56,16 @@ export function useAstridrChat() {
     setIsStreaming(v);
   }, []);
   const [ttsEnabled, setTtsEnabled] = useState(false);
-  const { play: playAudio, stop: stopAudio, isPlaying: ttsIsPlaying } = useTtsPlayback();
+  // Phase 188 / D-16: analyser opt-in enabled here is scoped by construction —
+  // useAstridrChat has exactly one production consumer (Chat.tsx), so this
+  // does not turn the analyser on globally. See useTtsPlayback.ts:11-27 for
+  // the transparent-degradation contract this relies on.
+  const {
+    play: playAudio,
+    stop: stopAudio,
+    isPlaying: ttsIsPlaying,
+    analyser: ttsAnalyser,
+  } = useTtsPlayback({ analyser: true });
 
   const activeSessionRef = useRef<string | null>(null);
 
@@ -495,6 +504,9 @@ export function useAstridrChat() {
     playAudio,
     stopAudio,
     ttsIsPlaying,
+    /** Phase 188 / D-16: real TTS amplitude AnalyserNode for the avatar's
+     *  mouth-region motion; null when unavailable (degrades transparently). */
+    ttsAnalyser,
     interrupt,
     appendLocalAssistantMessage,
     correctAssistantMessage,
