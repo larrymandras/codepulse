@@ -641,6 +641,60 @@ describe("BrainPicker — keyboard activation (103-11, CR-02)", () => {
   });
 });
 
+// ── 103-11: WR-01 staleness guard on the scope-driven catalogue fetch ─────────────────────────
+
+describe("BrainPicker — catalogue fetch generation guard (WR-01)", () => {
+  it("discards a stale (superseded) catalogue response instead of overwriting the latest scope's data", async () => {
+    let resolveGlobal: (value: unknown) => void = () => {};
+    const deferredGlobal = new Promise((resolve) => {
+      resolveGlobal = resolve;
+    });
+    mockGetCatalogue
+      .mockResolvedValueOnce(STUB_CATALOGUE) // initial open, "This profile"
+      .mockResolvedValueOnce([
+        { ...STUB_CATALOGUE[0], id: "profile-marker", name: "Profile Marker Entry" },
+      ]); // second "This profile" fetch, after the toggle-back below
+    mockSendCommand.mockImplementationOnce(() => deferredGlobal); // "All profiles" fetch -- never resolves until we say so
+
+    renderPicker();
+    openPicker();
+    await screen.findByText("Codex CLI"); // gen 1 (This profile) loaded
+
+    // Rapid toggle: This profile -> All profiles (gen 2, deliberately left unresolved) -> This
+    // profile again (gen 3, resolves immediately).
+    fireEvent.click(screen.getByRole("radio", { name: "All profiles" }));
+    fireEvent.click(screen.getByRole("radio", { name: "This profile" }));
+
+    await screen.findByText("Profile Marker Entry"); // gen 3 (the LATEST request) won the render
+
+    // Now let the STALE gen-2 (global) response resolve. If the generation guard were absent,
+    // this would overwrite the already-rendered gen-3 data with gen-2's -- exactly the scope-blind
+    // dispatch bug WR-01 describes (rendering one axis's catalogue while `scope` -- and the
+    // dispatch branch keyed on it -- points at the other).
+    resolveGlobal({
+      type: "ack",
+      request_id: "",
+      status: "ok",
+      entries: [{ id: "global-marker", name: "Global Marker Entry", vendor: "x" }],
+    });
+    // A real timer flush (not just a couple of microtask ticks) -- the stale response's `await
+    // sendCommand(...)` continuation, the guard check, and (if it were absent) the resulting
+    // setEntries/re-render all need to have a genuine chance to run before we can honestly assert
+    // the stale data never landed. A bare `await Promise.resolve()` pair is not enough ticks to
+    // reach that continuation reliably, which would make a negative assertion immediately after it
+    // pass vacuously regardless of whether the guard actually works.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(screen.getByText("Profile Marker Entry")).toBeInTheDocument();
+    expect(screen.queryByText("Global Marker Entry")).not.toBeInTheDocument();
+    // The scope selector itself agrees with what's rendered -- both point at the same axis.
+    expect(screen.getByRole("radio", { name: "This profile" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+});
+
 describe("BrainPicker — scope-aware catalogue source (103-08)", () => {
   it('scope "profile" sources the catalogue from brainsApi.getCatalogue() only, never sendCommand', async () => {
     mockGetCatalogue.mockResolvedValue(STUB_CATALOGUE);

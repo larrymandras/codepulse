@@ -38,7 +38,9 @@
  *
  * Keyboard activation (103-11, CR-02): `handleActivate` is the single branch decision both
  * `CommandItem.onSelect` (search → arrow → Enter) and `BrainPickerRow`'s own button (mouse click)
- * call — see its own doc comment below.
+ * call — see its own doc comment below. `fetchCatalogue` (WR-01) is generation-guarded so a rapid
+ * scope toggle can never leave the rendered catalogue on one axis while `scope` points at the
+ * other.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -183,6 +185,13 @@ export function BrainPicker({
   // default (D-08) is not a preference that can re-arm itself.
   const consumedEntryScope = useRef(false);
 
+  // WR-01: incremented at the top of every `fetchCatalogue` invocation. A response is only
+  // applied if its captured generation is still the latest one when it resolves — a rapid scope
+  // toggle ("This profile" -> "All profiles" -> "This profile") can otherwise let the SLOWER
+  // (now-superseded) request's response win, leaving the rendered catalogue on one axis while
+  // `scope` (and therefore the dispatch branch) points at the other.
+  const fetchGenRef = useRef(0);
+
   const activeEngines = useActiveEngine();
   const activeEngine = activeEngines[profileId] ?? null;
   const allProfiles = useProfileConfigs();
@@ -200,11 +209,13 @@ export function BrainPicker({
    */
   const fetchCatalogue = useCallback(
     async (targetScope: PickerScope) => {
+      const gen = ++fetchGenRef.current;
       setFetchError(false);
       setEntries(null);
       try {
         if (targetScope === "global") {
           const ack = await sendCommand({ type: "swap.catalogue", target: "brain" });
+          if (gen !== fetchGenRef.current) return; // stale response, scope changed since
           if (ack.status === "ok" && Array.isArray(ack.entries)) {
             setEntries(
               (ack.entries as GlobalCatalogueEntry[]).map(normalizeGlobalCatalogueEntry)
@@ -215,8 +226,10 @@ export function BrainPicker({
           return;
         }
         const list = await brainsApi.getCatalogue();
+        if (gen !== fetchGenRef.current) return; // stale response, scope changed since
         setEntries(list);
       } catch {
+        if (gen !== fetchGenRef.current) return; // stale response, scope changed since
         setFetchError(true);
       }
     },

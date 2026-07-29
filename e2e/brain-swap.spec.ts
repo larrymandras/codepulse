@@ -33,6 +33,10 @@ import { test, expect } from '@playwright/test';
  * live-stack dev server used for 103-08-T2's global-axis verification — the STUB banner will be
  * absent and this spec skips honestly instead of asserting against whatever live data happens to
  * be present.
+ *
+ * 103-11 (CR-02) added a second, keyboard-driven leg below (search → ArrowDown → Enter, never
+ * `.click()`) — this file's original mouse-only round trip is exactly why CR-02's keyboard-only
+ * regression (cmdk `CommandItem`s never wired `onSelect`) shipped undetected in the first place.
  */
 test.describe('Brain-swap picker — stub round trip', () => {
   test('picker-open to swap to toast round trip against the stub adapter', async ({ page }) => {
@@ -125,5 +129,71 @@ test.describe('Brain-swap picker — stub round trip', () => {
     const finalPopover = page.locator('[data-slot="popover-content"]');
     await expect(finalPopover).toBeVisible();
     await expect(finalPopover.getByRole('radio', { name: 'This profile' })).toBeChecked();
+  });
+
+  /**
+   * Keyboard-driven selection leg (103-11, CR-02).
+   *
+   * WHY THIS LEG EXISTS: 103-REVIEW.md's CR-02 found the picker's cmdk `CommandItem`s never wired
+   * an `onSelect` handler, so the component's own designed primary interaction — the `CommandInput`
+   * autoFocuses on open, inviting search -> arrow-navigate -> Enter — was completely non-functional.
+   * The only way to actually swap a brain was a literal mouse `.click()` on a row's nested button.
+   * The mouse-only round trip above could not have caught that regression BY CONSTRUCTION, since it
+   * never exercises cmdk's own selection/Enter path at all. This leg drives the exact same round
+   * trip via ArrowDown + Enter instead of `.click()`, so a future keyboard regression here fails a
+   * fast, always-run E2E check rather than only being catchable in a live operator session.
+   *
+   * Per 103-11-PLAN.md's own ANTI-STUB-MASKING note: this leg runs against the stub adapter, so it
+   * is NOT on its own accepted as proof that the D-15 global confirm gate and the UI-SPEC §3
+   * cost-confirm gate hold for the keyboard path — that load-bearing proof lives in
+   * `BrainPicker.test.tsx`'s unit tests (which assert the GLOBAL `swap.set` axis and the exact
+   * dispatched command shape directly, with zero `brainsApi` involvement for the global case). This
+   * E2E leg exists solely to close the mouse-only blind spot in the harness itself.
+   */
+  test('keyboard-driven selection: search, ArrowDown, Enter reaches the same accepted/pending outcome as the mouse leg', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('codepulse_onboarding_complete', 'true');
+    });
+
+    await page.goto('/');
+
+    const signInText = page.getByText('Sign in to access the telemetry dashboard');
+    const badgeButton = page.getByRole('button', { name: /^Active brain:/ });
+    await expect(signInText.or(badgeButton).first()).toBeVisible({ timeout: 15000 });
+
+    if (await signInText.count()) {
+      test.skip(true, 'Clerk auth gate present — run e2e without VITE_CLERK_PUBLISHABLE_KEY');
+    }
+
+    await expect(badgeButton).toBeVisible();
+    await badgeButton.click();
+    const popover = page.locator('[data-slot="popover-content"]');
+    await expect(popover).toBeVisible();
+
+    const stubBannerCount = await popover
+      .getByText('Running on stub brain data', { exact: false })
+      .count();
+    if (stubBannerCount === 0) {
+      test.skip(
+        true,
+        'VITE_BRAINS_STUB is not active on the served build (STUB banner absent) — the stub round trip cannot be honestly exercised against whatever live data is present. Start the dev server with VITE_BRAINS_STUB=true to run this spec.'
+      );
+    }
+
+    // Search narrows the visible row set to a single normal-tier fixture row.
+    const searchInput = popover.getByPlaceholder('Search brains…');
+    await searchInput.fill('Codex');
+    await expect(popover.getByText('Codex CLI')).toBeVisible();
+    await expect(popover.getByText('Antigravity CLI')).toBeHidden();
+
+    // ArrowDown selects the (single, filtered-to) row; Enter activates it — never a mouse click.
+    await searchInput.press('ArrowDown');
+    await searchInput.press('Enter');
+
+    // Same accepted/pending outcome the mouse leg asserts (D-15: never-optimistic pending state).
+    await expect(page.getByTestId('brain-header-badge-pending')).toContainText(
+      'switching to Codex CLI'
+    );
+    await expect(page.getByTestId('brain-header-badge-label')).toHaveText('No brain reported');
   });
 });
