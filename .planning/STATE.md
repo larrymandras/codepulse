@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
 status: executing
-stopped_at: Phase 103 COMPLETE (live UAT + post-UAT gap closure, 2026-07-30)
-last_updated: "2026-07-30T01:45:00.000Z"
+stopped_at: Phase 104 context gathered (104-CONTEXT.md, 2026-07-30) — Phase 103 COMPLETE
+last_updated: "2026-07-30T20:55:00.000Z"
 last_activity: 2026-07-30
 progress:
   total_phases: 4
@@ -57,7 +57,9 @@ Plan: 18/18 COMPLETE (2026-07-29). Plans 09-17 (first gap-closure wave + 103-17)
 
 **BSC-02/04/05 re-marked SATISFIED in REQUIREMENTS.md (2026-07-30); BSC-01 stays PARTIAL solely on the by-design per-profile deferral, not on any defect.**
 
-**ACTIVE: v13.0 (Phases 103-106).** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. Phase 103 planned (8 plans/5 waves) and now executing; 104-106 not yet planned. Sequencing: 106 (tech-debt) independent + low-risk; 104/105 additive.
+**ACTIVE: v13.0 (Phases 103-106).** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. Phase 103 COMPLETE (18/18 + post-UAT inline gap closure); 105-106 not yet planned. Sequencing: 106 (tech-debt) independent + low-risk; 104/105 additive.
+
+**Phase 104 (Cost Intelligence) — CONTEXT GATHERED 2026-07-30** (`104-CONTEXT.md`, commit `e4675da2`; no plans yet). 4 gray areas discussed, 17 decisions locked. Headlines: CodePulse **recomputes** cost from tokens × rates held in a new Convex `modelPricing` table — `src/lib/modelPricing.ts` has **no entry for `claude-sonnet-5` / `claude-opus-5` / `claude-fable-5`** (the exact models COST-01 names; they fall to the `default` $3/$15 rate, under-pricing Opus-class calls ~5×) and is imported by only three HR surfaces, i.e. it is not on the main cost path at all; unpriced models get an honest "Unpriced" bucket, **never a silent $0**; rollups store **tokens**-by-model so a rate fix re-prices history; subscription/CLI turns keep a true `$0` billed **plus** a separate "covered by subscription" shadow figure (quota burn guarded on its own axis via `gatewayQuotaSnapshots`); one generic `costBudgets` table scoped global/model/provider, per-row daily|weekly|monthly period + warn fraction, **absorbing `SDKSpendGuard`'s hardcoded `DAILY_CAP = 5.00`** rather than running beside it; "spike" = rate-projection-to-period-end, evaluated **at the tail of the existing `computeHourly` cron** — a hard constraint, because `internal.alerts.evaluateInternal` has been **disabled since 2026-07-14** (15s syscall cap → retry storms starving ingest, `convex/crons.ts:42-47`); alert-only, **no enforcement / no brain-swap dispatch**. Known consequence recorded as deferred: the 40+ static alert rules currently fire **only while the Alerts page is open** (`AlertRulesEngine.tsx:274`). Next: `/gsd-plan-phase 104`.
 
 ⚠ **Phase 103's original ROADMAP dependency wording ("gates on astridr Phase 184.1 being live end-to-end") was corrected 2026-07-28** — a GLOBAL brain swap already ships live (astridr Phase 185/186: `swap.set`/`swap.catalogue`/`swap.state`, shipped CodePulse UI `BrainControl.tsx`). Only the PER-PROFILE axis is missing (Phase 184.1's actual scope). See `103-CONTEXT.md` `<blocker_reframing>` for full detail.
 
