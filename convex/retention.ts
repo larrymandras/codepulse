@@ -80,7 +80,7 @@ export const pruneBatchV3 = internalMutation({
     const table = PRUNED_TABLES[args.tableIndex];
     if (!table) return;
     if (args.batchesUsed >= MAX_BATCHES_PER_NIGHT) {
-      console.log(`retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table}; remainder deferred to tomorrow`);
+      console.log(`retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) already exhausted before ${table}; remainder deferred to tomorrow`);
       return;
     }
     const cutoffMs = args.nowMs - RETENTION_DAYS[table] * 86400 * 1000;
@@ -125,7 +125,12 @@ export const pruneBatchV3 = internalMutation({
     });
 
     if (next.action === "cap-reached") {
-      console.log(`retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table}; remainder deferred to tomorrow`);
+      // Report the count here too: this path returns BEFORE the per-table "done" log below, so
+      // without it a capped run deletes silently and the next morning's check cannot tell whether
+      // the run did any work or stalled. (Found 2026-07-30 by actually running a capped batch.)
+      console.log(
+        `retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table} after pruning ${total} docs; remainder deferred to tomorrow`
+      );
       return;
     }
 
