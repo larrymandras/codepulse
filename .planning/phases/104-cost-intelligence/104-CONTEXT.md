@@ -74,9 +74,13 @@ threshold that raises an alert, not a cap that stops work.
   (e.g. a Claude Code turn reporting `claude-opus-5` is priced at the `claude-opus-5` API rate,
   with only `billingType` marking it subscription). An explicit per-engine `shadowModel` mapping
   row in the pricing table is the fallback for opaque ids (`claude-cli`, `codex`, …).
-  ⚠ **Researcher must confirm:** what `provider`/`model` Ástríðr actually reports for
-  CLI-gateway turns. This is genuinely unknown right now and determines whether the common path
-  or the fallback path is the real one.
+  ✅ **RESOLVED 2026-07-30 by RESEARCH.md — the fallback branch is the only real one.** CLI-gateway
+  turns report **no `model` field at all**: none of `gateway/gateway/adapters/{claude_cli,codex_cli,
+  antigravity_cli,claude_sdk}.py` populates one, and a live `llm:providerBreakdown` query returned
+  zero rows for any of the four gateway provider ids (`llm:subscriptionUsage` → `{calls: 0,
+  tokens: 0}`). The "priceable reported id" common path is dead code. Build the `shadowModel`
+  mapping branch only — and see D-18, which is the ingest work that has to land before any shadow
+  figure can exist.
 
 - **D-07:** **Dollar budgets guard billed money only; subscription traffic gets its own threshold on
   quota burn.** A dollar budget can never trip while a subscription brain is in force, so
@@ -88,6 +92,31 @@ threshold that raises an alert, not a cap that stops work.
   default view; the covered portion renders as a visually distinct segment. Reuses the existing
   `FlexBarChart` + `costByPeriodByProvider` shape rather than adding a second chart. The default
   view never displays imputed money.
+
+- **D-18:** **Gateway turns get new ingest wiring in this phase — D-05/D-06/D-08 are not a UI
+  layer over existing plumbing.** Subscription/CLI traffic currently writes **zero** rows to
+  `llmMetrics`, so the shadow figure has nothing to price until an `llmMetrics` row exists for a
+  gateway turn. Land that write, keyed on the opaque provider id already known to CodePulse
+  (`GATEWAY_PROVIDERS` in `convex/lib/providers.ts` — `claude-cli`, `codex`, `antigravity`,
+  `claude-sdk`) with `billingType: "subscription"`, sourced from the gateway task-completed event
+  (RESEARCH.md notes `"gateway_task_completed"` carries `costUsd` and is currently unrouted). The
+  `shadowModel` mapping row (D-06 fallback) keys off that same id set. If the tokens needed to
+  price a shadow figure are not present on the gateway event, an Ástríðr-side emit change is in
+  scope — say so in the plan rather than shipping a shadow figure derived from nothing (D-03's rule
+  applies to imputed money too: an unpriceable subscription turn is shown as unpriced, never as $0
+  or as a guess).
+  ⚠ **This is new work on an ingest path.** Per `CLAUDE.md`, a failure here rolls back the ingest
+  transaction — the write must be additive and must not widen the hot path's failure surface.
+  *(Decided 2026-07-30 after research; chosen over descoping D-05/D-06/D-08 to a follow-up.)*
+
+- **D-20:** **The dead quota poller is repaired in this phase, as D-07's precondition.**
+  `convex/gatewayQuota.ts:53` polls `${ASTRIDR_API_URL}/quota` every 5 minutes, but `/quota` exists
+  only on the CLI-gateway sidecar (`gateway/gateway/app.py:302`), not on Ástríðr's main API — so
+  `gatewayQuotaSnapshots` has never filled and D-07 has nothing to threshold on. Point the poller
+  at the gateway sidecar's own base URL (its own env var, not `ASTRIDR_API_URL`), and **verify
+  live that snapshots actually land** before building the D-07 threshold on top. A threshold over
+  an empty table is exactly the surface-asserting-more-than-it-knows failure `<specifics>` names.
+  *(Decided 2026-07-30 after research; chosen over descoping D-07.)*
 
 ### Budget Thresholds (COST-02)
 
@@ -114,6 +143,18 @@ threshold that raises an alert, not a cap that stops work.
   burn-rate projection ("at current rate, you'll hit $5 by ~3:40pm") is preserved and becomes
   D-13's mechanism. Do NOT ship a second spend gauge on Analytics beside it — two caps that can
   disagree is the stale-second-source pattern Phase 103's D-03 exists to prevent.
+
+- **D-19:** **`CostForecastPanel`'s pre-existing monthly cap folds into `costBudgets` too — D-12
+  applies to all three cap sources, not just `SDKSpendGuard`.** Research found a third,
+  undocumented cap CONTEXT.md missed: `convex/forecasts.ts:90` reads a monthly limit from
+  `agentConfigs["intelligence.budget_cap"]` (own `setBudgetCap` mutation, own `getBudgetConfig`
+  query, own 80%/100% `classifyBudgetStatus`), rendered by `CostForecastPanel` — the **first**
+  panel in the Analytics cost cluster (`Analytics.tsx:88`), directly above `SDKSpendGuard` at
+  `:96`. Leaving it independent while shipping `costBudgets` reproduces the exact two-caps-that-
+  disagree anti-pattern D-12 exists to prevent, on the most prominent panel on the page. It becomes
+  a `scope: "global", period: "monthly"` row; the existing `agentConfigs` value is migrated into it
+  as the seed, and the panel reads the budget row thereafter. Three cap sources collapse to one.
+  *(Decided 2026-07-30 after research; chosen over leaving it as a documented gap.)*
 
 ### Alert Firing (COST-03)
 
