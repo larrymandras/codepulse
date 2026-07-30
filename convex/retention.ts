@@ -1,6 +1,7 @@
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import { planNextPruneStep } from "./retentionCursor";
 
 // Nightly retention pruning (2026-07-14, revised after the self-hosted
 // migration incidents — full history in memory note "convex-selfhosted-setup").
@@ -68,6 +69,12 @@ export const pruneBatchV3 = internalMutation({
     nowMs: v.number(),
     deletedSoFar: v.number(),
     batchesUsed: v.number(),
+    /**
+     * Inclusive lower bound for this batch's index seek (2026-07-30 fix). Optional so any
+     * already-scheduled job from the old signature still runs — it simply starts at the head, which
+     * is correct for a table's first batch.
+     */
+    cursorMs: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const table = PRUNED_TABLES[args.tableIndex];
@@ -77,38 +84,75 @@ export const pruneBatchV3 = internalMutation({
       return;
     }
     const cutoffMs = args.nowMs - RETENTION_DAYS[table] * 86400 * 1000;
-    // Default query order is _creationTime ascending — oldest docs first,
-    // served by the built-in creation-time index (no table scan).
-    const batch = await ctx.db.query(table as any).order("asc").take(BATCH_SIZE);
+    const cursorMs = args.cursorMs ?? 0;
+
+    // 2026-07-30: seek to `cursorMs` instead of re-scanning from the head, and bound the range by
+    // the cutoff so every returned doc is already eligible for deletion.
+    //
+    // The old form — `.query(table).order("asc").take(BATCH_SIZE)` — restarted at the head on EVERY
+    // batch, so batch k walked past the ~200×(k-1) tombstones its own predecessors had just made.
+    // Those tombstones live until DOCUMENT_RETENTION_DELAY (1800s) collects them, and a full run
+    // takes ~30 min at 3s/batch, so none of them were ever GC'd mid-run. The scan degraded until the
+    // isolate blew its time limit (SystemTimeout on 2026-07-29 and 2026-07-30). Because the abort
+    // skips the reschedule below, the whole chain died at table index 0 (`runtime_events`) and the
+    // other 13 tables went unpruned every night. See convex/retentionCursor.ts for the full write-up.
+    const batch = await ctx.db
+      .query(table as any)
+      .withIndex("by_creation_time", (q: any) =>
+        q.gte("_creationTime", cursorMs).lt("_creationTime", cutoffMs)
+      )
+      .order("asc")
+      .take(BATCH_SIZE);
+
     let deleted = 0;
+    let lastCreationTime: number | null = null;
     for (const doc of batch) {
-      if (doc._creationTime < cutoffMs) {
-        await ctx.db.delete(doc._id);
-        deleted++;
-      } else {
-        break; // ascending order: first young doc means the rest are younger
-      }
+      await ctx.db.delete(doc._id);
+      deleted++;
+      lastCreationTime = doc._creationTime;
     }
+
     const total = args.deletedSoFar + deleted;
-    if (deleted === BATCH_SIZE) {
+    const next = planNextPruneStep({
+      batchLength: batch.length,
+      lastCreationTime,
+      cursorMs,
+      tableIndex: args.tableIndex,
+      tableCount: PRUNED_TABLES.length,
+      batchesUsed: args.batchesUsed,
+      maxBatches: MAX_BATCHES_PER_NIGHT,
+      batchSize: BATCH_SIZE,
+    });
+
+    if (next.action === "cap-reached") {
+      console.log(`retention: nightly batch cap (${MAX_BATCHES_PER_NIGHT}) hit at ${table}; remainder deferred to tomorrow`);
+      return;
+    }
+
+    if (next.action === "continue-table") {
       await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatchV3, {
-        tableIndex: args.tableIndex,
+        tableIndex: next.tableIndex,
         nowMs: args.nowMs,
         deletedSoFar: total,
         batchesUsed: args.batchesUsed + 1,
+        cursorMs: next.cursorMs,
       });
-    } else {
-      if (total > 0) console.log(`retention: ${table} done, pruned ${total} docs`);
-      if (args.tableIndex + 1 < PRUNED_TABLES.length) {
-        await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatchV3, {
-          tableIndex: args.tableIndex + 1,
-          nowMs: args.nowMs,
-          deletedSoFar: 0,
-          batchesUsed: args.batchesUsed + 1,
-        });
-      } else {
-        console.log("retention: all tables pruned");
-      }
+      return;
     }
+
+    if (total > 0) console.log(`retention: ${table} done, pruned ${total} docs`);
+
+    if (next.action === "next-table") {
+      await ctx.scheduler.runAfter(RESCHEDULE_DELAY_MS, internal.retention.pruneBatchV3, {
+        tableIndex: next.tableIndex,
+        nowMs: args.nowMs,
+        deletedSoFar: 0,
+        batchesUsed: args.batchesUsed + 1,
+        cursorMs: next.cursorMs,
+      });
+      return;
+    }
+
+    console.log("retention: all tables pruned");
   },
 });
