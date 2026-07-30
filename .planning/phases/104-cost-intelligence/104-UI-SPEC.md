@@ -55,9 +55,11 @@ Exceptions: **44px minimum touch target** on every interactive row action in `Mo
 
 Declared from the actual scale already in use across the cost cluster (`SDKSpendGuard.tsx`, `CostForecastPanel.tsx`, `CostBreakdown.tsx`) — this phase pins these down as the canonical set for every **new** component so the two competing conventions already visible in the codebase (mono-uppercase eyebrow vs. plain-uppercase-muted eyebrow) don't gain a third variant.
 
+**Weight collapsed to exactly 2**, matching shipped precedent in the exact files this phase extends — not invented. Evidence: `CostForecastPanel.tsx:11,22,57` (`font-normal` on every eyebrow/label) and `:65,69,73` (`font-semibold` on every metric value, e.g. `text-2xl font-semibold tabular-nums`); `CostBreakdown.tsx:140` (`text-xs font-mono uppercase tracking-widest text-muted-foreground` — no weight class, implicit regular 400) and `:144` (`text-xl font-semibold tabular-nums` on the total-cost value); `CostTrendChart.tsx` (no `font-*` weight utility anywhere in the file — implicit regular 400 throughout, both eyebrow and body). Two isolated `font-medium` (500) instances exist elsewhere (`MetricCard.tsx:141`'s `text-3xl font-medium` value, `CostBreakdown.tsx:129`'s empty-state body text) but are one-offs outside the dominant pattern in the files this phase directly extends/mirrors, and are not carried into any new component this phase adds. Uppercase + `tracking-widest`/`tracking-wide` already carries the eyebrow/label's visual distinction from body text — a third weight isn't needed to do that job.
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
-| Label (eyebrow) | 12px (`text-xs`) | 500 medium, uppercase, `tracking-widest` | 1.2 |
+| Label (eyebrow) | 12px (`text-xs`) | 400 regular, uppercase, `tracking-widest` | 1.2 |
 | Body | 14px (`text-sm`) | 400 regular | 1.5 |
 | Metric value | 20px (`text-xl`) | 600 semibold, `tabular-nums` | 1.2 |
 | Heading (panel title) | 14px (`text-sm`) | 400 regular, uppercase, `tracking-wide`, `text-muted-foreground` | 1.2 |
@@ -99,6 +101,13 @@ Accent reserved for (explicit, never "all interactive elements"): the Billed/Bil
 
 ---
 
+## Visual Focal Point
+
+- **Analytics cost cluster:** unchanged from the existing layout — `CostForecastPanel`'s monthly progress bar/gauge (the `md:col-span-8` panel, `Analytics.tsx:87-90`) is the primary anchor. It already holds the largest text (`text-2xl font-semibold` stat boxes) and the widest column in the top row versus `SDKSpendGuard`'s `md:col-span-4`. This phase does not change that weighting — `UnpricedModelsNudge` and the Billed/Billed+Covered toggle are secondary, subordinate elements that sit above/within the cluster but do not compete with the forecast panel's progress bar for primary attention.
+- **Settings "Cost & Budgets" tab:** `CostBudgetsAdmin`'s budget row list is the primary anchor. Each row renders the same colored progress-bar treatment established by `SDKSpendGuard` (status-token fill: ok/warn/breach), giving it more visual weight than `ModelPricingAdmin`'s plain neutral rate table above it — appropriate, since the budget list is the actionable "what will alert me" surface operators come to this tab to check, while the pricing table is closer to reference/setup-once data.
+
+---
+
 ## Copywriting Contract
 
 | Element | Copy |
@@ -118,7 +127,7 @@ Accent reserved for (explicit, never "all interactive elements"): the Billed/Bil
 | Alert message template (COST-03, D-16 honesty) | "{scope label} budget at {pct}% (${spend} of ${limit}) — projected to hit ${limit} by ~{time}." Never implies enforcement (no "will be throttled", "will swap engine", etc.) — alert-only per D-16 |
 | Destructive confirmation — delete pricing rate | "Remove pricing rate for {model}?" / body: "Past cost figures using this rate stay as last computed. New calls for this model become Unpriced until a new rate is entered." |
 | Destructive confirmation — delete budget threshold | "Delete this budget threshold?" / body: "Alerts tied to this threshold stop firing immediately. This can't be undone." |
-| Destructive confirmation button label | "Remove" (pricing) / "Delete" (budget) — matches the distinction already implicit in `AlertRuleForm.tsx`'s delete-confirm pattern (Sheet + `deleteOpen` confirm state) |
+| Destructive confirmation button label | "Remove" (pricing) / "Delete" (budget) — matches the distinction already implicit in `AlertRuleForm.tsx`'s delete-confirm pattern (Sheet + `deleteOpen` confirm state); acceptable as single-word labels since the dialog heading above each button already names the object being removed |
 
 ---
 
@@ -130,8 +139,8 @@ Not part of the template's required sections but load-bearing for the planner/ex
 |-----------|--------|-------|
 | `src/components/CostBreakdownTable.tsx` | NEW | Per-(provider, model) table + Unpriced rows, COST-01. Reuses shadcn `Table` primitives (not the raw `<table>` HTML `CostBreakdown.tsx` currently hand-rolls with `ui/table`) — same shadcn table this codebase already imports elsewhere |
 | `src/components/UnpricedModelsNudge.tsx` | NEW | Persistent (not permanently-dismissible while gap exists) nudge, D-03. Lives at the top of the Analytics cost cluster, above the `CostForecastPanel`/`SDKSpendGuard` row, so it's visible without scroll |
-| `src/components/ModelPricingAdmin.tsx` | NEW | Sheet-based list + CRUD form, mirrors `AlertRuleForm.tsx`'s dirty-tracking / delete-confirm / `toast.success`\`toast.error\` pattern verbatim. Lives in **Settings**, new "Cost & Budgets" tab |
-| `src/components/CostBudgetsAdmin.tsx` | NEW | Same Sheet-based CRUD pattern. Scope selector (`Select` primitive): Global / Model / Provider / Quota — 4 options per the folded-in D-07 quota threshold (Claude's Discretion resolved: one admin surface, one table, `scope: "quota"` as the 4th value, not a second table + second UI). Same "Cost & Budgets" Settings tab, below `ModelPricingAdmin` |
+| `src/components/ModelPricingAdmin.tsx` | NEW | Sheet-based list + CRUD form, mirrors `AlertRuleForm.tsx`'s dirty-tracking / delete-confirm / `toast.success`\`toast.error\` pattern verbatim. Lives in **Settings**, new "Cost & Budgets" tab, below `CostBudgetsAdmin`. **Icon-only row actions (edit/delete) require an explicit `aria-label`** on the button element itself — e.g. `aria-label="Edit pricing rate for {model}"` / `aria-label="Remove pricing rate for {model}"` — mirroring the shipped pattern in `AlertRulesEngine.tsx:158,231,242` (`aria-label="Mute rule"` / `aria-label="Unmute rule"` on its icon-only mute-toggle buttons). Do not ship an icon button with no accessible name. |
+| `src/components/CostBudgetsAdmin.tsx` | NEW | Same Sheet-based CRUD pattern, same `aria-label` requirement on icon-only row actions (`aria-label="Edit budget threshold"` / `aria-label="Delete budget threshold"`, same precedent as above). Scope selector (`Select` primitive): Global / Model / Provider / Quota — 4 options per the folded-in D-07 quota threshold (Claude's Discretion resolved: one admin surface, one table, `scope: "quota"` as the 4th value, not a second table + second UI). Same "Cost & Budgets" Settings tab, above `ModelPricingAdmin` — see Visual Focal Point |
 | `src/components/CostTrendChart.tsx` | EDIT | Add Billed/Billed+Covered toggle (D-08) to the existing header row, next to the `InfoTooltip`. Fix hardcoded hex (see Color section) |
 | `src/components/CostBreakdown.tsx` | EDIT | Fix hardcoded hex only — scope decision from RESEARCH.md Pitfall 3 (whether `costByGoalPeriod` gets D-01's recompute-at-read-time treatment) is a backend/planning call, not a UI-SPEC concern, but if in scope, this component's dollar figures must read the same recomputed values `CostBreakdownTable` does — no second "true" total |
 | `src/components/SDKSpendGuard.tsx` | EDIT | D-12 rewires onto the `costBudgets` global-daily row — same visual output, new data source. Sparkline hex → tokens (see Color section) |
