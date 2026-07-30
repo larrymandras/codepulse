@@ -49,6 +49,8 @@ import {
   voiceReducer,
   isEndPhrase,
   isBargeInPhrase,
+  matchedBargePhrase,
+  phraseAppearsIn,
   isPureBargeInPhrase,
   isStrictModeCommand,
   decideVisionIntent,
@@ -82,7 +84,9 @@ const INTERRUPT_FLASH_MS = 1_500;
  *  machinery or introducing acoustic AEC here is explicitly OUT OF BOUNDS
  *  (locked milestone decision) — isEchoOfReply/stripEchoPrefix below stay
  *  the 183 recognizer's own, separate echo guard. */
-const ECHO_SUPPRESS_MS = 400;
+// (No duplex echo-suppression constants: the duplex ears no longer trigger
+// barge-in at all — see onDuplexSpeechStart for why both the time-window and
+// the corroboration approaches failed live on 2026-07-30.)
 /** Turn completed but no TTS arrived within this — close the turn silently. */
 const SILENT_TURN_GRACE_MS = 3_000;
 /** A flush landing while the PREVIOUS send is still being thought about
@@ -445,16 +449,12 @@ export function useAstridrVoice({
     chatRef.current.streamingReplyRef.current || echoReplyRef.current;
 
   // ─── Duplex ears bookkeeping (Phase 188, D-07/D-08/T-188-32) ─────────────
-  // echoSuppressArmedAtRef: timestamp the echo-suppression window (D-07) was
-  // armed at TTS onset. Echo requires nonzero audio round-trip time to reach
-  // the mic, so the window is exclusive of the arming instant itself — a
-  // duplex speech-start arriving in the SAME tick as TTS start cannot
-  // physically be an echo of audio that has not played yet, and is treated
-  // as a real interruption (see onDuplexSpeechStart below).
-  const echoSuppressArmedAtRef = useRef(0);
   // activeEarsRef: which ear source is currently driving the conversation.
   // A ref, never state — nothing renders from it (D-08/T-188-32: the only
-  // disclosure is the debug-gated trace buffer, never a UI label).
+  // disclosure is the debug-gated trace buffer, never a UI label). READ by
+  // the recognizer's onFinalResult to suppress duplicate dispatch; it was
+  // previously written and never read, which is how both ears' transcripts
+  // ended up concatenated into one message (live 2026-07-30 16:15).
   const activeEarsRef = useRef<"duplex" | "recognizer">("recognizer");
 
   // Keep-alive bookkeeping: intentional stops must NOT trigger a restart, and
@@ -487,6 +487,14 @@ export function useAstridrVoice({
   // via the lost-interim rejoin below — it must never be used as a rejoin
   // source, regardless of how it compares by length/distance to the new
   // final. Reset alongside every longestInterimRef reset.
+  //
+  // Set at the echo-drop site in handleInterimResult's `speaking` branch
+  // (D-07 FINAL, 2026-07-30). It moved there when free-form talk-over during
+  // speech was removed: dropping an interim does not end Chrome's utterance,
+  // so the SAME utterance keeps growing and its later interims land while
+  // voiceState is already "transcribing", where they are recorded normally.
+  // Without the flag, that second copy of her own echo looks like clean user
+  // speech and can rejoin a later, unrelated final.
   const longestInterimFromSpeakingRef = useRef(false);
 
   // Continuation merge: the last voice message sent + when. A mid-sentence
@@ -558,7 +566,24 @@ export function useAstridrVoice({
   } = useSpeechRecognition({
     continuous: true,
     interimResults: true,
-    onFinalResult: (t, c) => handleFinalResultRef.current(t, c),
+    // D-08/T-188-32: when the duplex ears are driving, THEY are the source of
+    // truth for finals. activeEarsRef was previously assigned but never read
+    // anywhere — so both ears dispatched, and handleFinalResult's accumulator
+    // (`accumulated + text`) GLUED the two transcripts together. Live trace
+    // 2026-07-30 16:15: recognizer final "what did we work on today" +
+    // duplex final "What did we work on today?" were sent as the single
+    // message "what did we work on today What did we work on today?".
+    // Interims are deliberately still processed while duplex drives — they
+    // are what carries echo detection AND barge-in now that the duplex ears
+    // no longer barge (see onDuplexSpeechStart). Only the duplicate FINAL
+    // dispatch is suppressed here.
+    onFinalResult: (t, c) => {
+      if (activeEarsRef.current === "duplex") {
+        trace("final.duplicate-ear-dropped", { source: "recognizer" });
+        return;
+      }
+      handleFinalResultRef.current(t, c);
+    },
     onInterimResult: (t) => handleInterimResultRef.current(t),
     onStart: () => {
       trace("recognizer.start", {
@@ -862,18 +887,56 @@ export function useAstridrVoice({
     // interjection ("actually just tomorrow") interrupts her AND flows on as
     // your live utterance (talk-over-with-content).
     if (voiceStateRef.current === "speaking") {
-      if (isBargeInPhrase(text)) {
+      // D-07 FINAL (Larry's decision, 2026-07-30, after three live failures):
+      // while she is speaking, ONLY an explicit barge phrase interrupts.
+      //
+      // Content-based echo rejection cannot work over open speakers. The echo
+      // reaching the mic is degraded (speaker -> room -> mic), so Chrome emits
+      // arbitrary garbage for it. One 40s reply produced: "bentuk", " Wolf",
+      // "Hej", "kilometraje", "الوحدة", "Oração" — and " World Cup", which at
+      // 2 words / 8 chars cleared every short-token guard, matched nothing in
+      // her story, and was therefore classified as Larry talking over her.
+      // It cut her off while he was silent. No fingerprint can match garbage,
+      // and no length threshold separates "garbled echo" from "real speech",
+      // because garbled echo IS arbitrary text.
+      //
+      // A fixed phrase list is robust by construction: "World Cup" will never
+      // match "stop"/"wait"/"hold on", and neither will the next garbage.
+      // This is also what the UI already promises — 'SAY "HEY ÁSTRÍÐR" TO
+      // START · "STOP" INTERRUPTS · "GOODBYE" ENDS'.
+      //
+      // Cost, accepted: free-form talk-over no longer interrupts.
+      const phrase = matchedBargePhrase(text);
+      if (phrase) {
+        // ...but only if the phrase is not HER OWN word coming back. Live
+        // 2026-07-30 her story ended "the sea only keeps those who stop
+        // fighting it" — echo of that would self-barge on "stop". Checked
+        // against her reply text, not via isEchoOfReply, which returns true
+        // for any utterance under 2 words and would swallow every real
+        // one-word "stop".
+        if (phraseAppearsIn(currentReply(), phrase)) {
+          trace("interim.barge-phrase-in-her-reply", { text, phrase });
+          return;
+        }
         trace("interim.barge-in", { text });
         handleBargeIn();
         return;
       }
-      if (isEchoOfReply(text, currentReply())) {
-        trace("interim.echo-dropped", { text });
-        return;
-      }
-      trace("interim.talk-over", { text });
-      handleBargeIn();
-      // fall through — this interim is YOUR speech, show and track it
+      // Everything else heard while she speaks is treated as echo. Not
+      // fingerprinted — see above for why that cannot be made reliable.
+      //
+      // Still mark the speaking-era taint (Defect A's guard). Dropping the
+      // interim here does NOT end the utterance: Chrome keeps growing the
+      // same one, and its later interims arrive after voiceState has flipped
+      // to "transcribing", where they ARE recorded as longestInterim. Live
+      // 2026-07-30: " World Cup" was heard at .204 while speaking and again
+      // at .748 while transcribing. Without this flag that second copy looks
+      // like clean user speech and can rejoin a later, unrelated final —
+      // verified by the rejoin test, which leaked "I couldn't find what's on
+      // my calendar today" when this line was missing.
+      longestInterimFromSpeakingRef.current = true;
+      trace("interim.ignored-while-speaking", { text });
+      return;
     } else if (isEchoAnchored() || Date.now() < echoTailUntilRef.current) {
       // Echo tail: her TTS just ended but the recognizer may still be
       // finalizing an utterance that STARTED as her voice — and Chrome glues
@@ -914,8 +977,11 @@ export function useAstridrVoice({
     // both refs together.
     if (text.trim().length > longestInterimRef.current.trim().length) {
       longestInterimRef.current = text;
-      longestInterimFromSpeakingRef.current =
-        longestInterimFromSpeakingRef.current || voiceStateRef.current === "speaking";
+      // The `longestInterimFromSpeakingRef` update that used to sit here is
+      // now unreachable (TS proves it): the speaking branch above always
+      // returns, so no interim captured DURING speech reaches this point.
+      // The ref keeps any prior taint on its own; it is cleared only by the
+      // standard resets described above.
     }
 
     // 186-01 voice timer guard: a post-teardown Web Speech interim straggler
@@ -955,20 +1021,35 @@ export function useAstridrVoice({
     longestInterimRef.current = "";
     longestInterimFromSpeakingRef.current = false;
 
-    // Echo guard + talk-over (see interim handler above).
+    // D-07 FINAL — the SAME rule as the interim handler above. This branch
+    // was missed in the first pass and made things strictly worse: the
+    // duplex ears transcribed her own TTS echo as the FINAL "It's worth.",
+    // which fell through the old talk-over path, barged her mid-story AND
+    // was dispatched as a user message — so she answered her own echo with
+    // "Hey Larry! What can I do for you?" (live 2026-07-30 18:20:17-18:20:19,
+    // then merged into "It's worth. Hallo!").
+    //
+    // Note the duplicate-ear guard on the recognizer's onFinalResult does NOT
+    // cover this: the offending final came from the DUPLEX ears, which are
+    // the active source. Source-blindness is deliberate (D-13) — the fix
+    // belongs here, in the shared sink, not in a per-source special case.
+    //
+    // Returning (rather than falling through) is the important part: while
+    // she is speaking, a non-barge-phrase final is echo and must never reach
+    // the accumulator or flushSend.
     if (voiceStateRef.current === "speaking") {
-      if (isBargeInPhrase(text)) {
+      const phrase = matchedBargePhrase(text);
+      if (phrase) {
+        if (phraseAppearsIn(currentReply(), phrase)) {
+          trace("final.barge-phrase-in-her-reply", { text, phrase });
+          return;
+        }
         trace("final.barge-in", { text });
         handleBargeIn();
         return;
       }
-      if (isEchoOfReply(text, currentReply())) {
-        trace("final.echo-dropped", { text });
-        return;
-      }
-      trace("final.talk-over", { text });
-      handleBargeIn();
-      // fall through — this final is YOUR speech, process it normally
+      trace("final.ignored-while-speaking", { text });
+      return;
     } else if (isEchoAnchored() || Date.now() < echoTailUntilRef.current) {
       // Echo tail (see interim handler): strip her glued echo prefix; keep
       // only the user's part. Pure echo → dropped entirely.
@@ -1209,20 +1290,37 @@ export function useAstridrVoice({
   // never-special-case-the-source comments on handleBargeIn and the
   // final-result handler above.
 
+  // D-07 REVISED (Larry's decision, 2026-07-30, after two live failures):
+  // the duplex ears do NOT trigger barge-in. Their VAD is OpenAI's
+  // server-side energy detector — it carries no text, so at the instant it
+  // fires it cannot tell Larry's voice from her own reply coming back
+  // through open speakers. Browser AEC (echoCancellation:true, already
+  // requested on the duplex stream in useDuplexEars) demonstrably does not
+  // cancel it.
+  //
+  // Two fixes were tried and both failed live:
+  //   1. A time window (ECHO_SUPPRESS_MS=400) — echo arrived 1.7s into
+  //      playback (trace 16:16:10.371), long past it. Widening it far enough
+  //      would suppress real barge-in for the whole reply.
+  //   2. Corroborating against the recognizer's content-based echo match —
+  //      assumed the recognizer flags echo FIRST. It did at 16:16 (770ms
+  //      lead) but NOT at 16:35: duplex fired at .363 and the recognizer's
+  //      first interim arrived at .521, 158ms LATER. The race order is not
+  //      guaranteed, so after-the-fact corroboration cannot work.
+  //
+  // Barge-in therefore belongs to the 183 recognizer path alone, which is
+  // content-aware (isEchoOfReply) and already distinguishes echo from real
+  // talk-over correctly — see the interim handler's echo-dropped vs
+  // talk-over branches. Cost: barge-in latency is recognizer-interim speed
+  // (~1s) rather than duplex VAD speed (~150ms). That is the accepted
+  // tradeoff: a slightly slower interruption beats one that fires
+  // constantly on her own voice and makes conversation impossible.
+  //
+  // The duplex ears keep their real job: fast, accurate TRANSCRIPTION
+  // (onDuplexFinalTranscript), which is unaffected by this.
   const onDuplexSpeechStart = useCallback(() => {
     trace("duplex.speech_started", { state: voiceStateRef.current });
-    if (voiceStateRef.current !== "speaking") return;
-    // D-07: echo-suppression window, exclusive of the arming instant itself
-    // (see echoSuppressArmedAtRef's doc comment above) — a light secondary
-    // guard on top of browser AEC, never a revival of 183's fingerprint
-    // machinery and never full acoustic AEC.
-    const elapsedSincePlaybackStart = Date.now() - echoSuppressArmedAtRef.current;
-    if (elapsedSincePlaybackStart > 0 && elapsedSincePlaybackStart < ECHO_SUPPRESS_MS) {
-      trace("duplex.speech_started.echo-suppressed", { elapsedSincePlaybackStart });
-      return;
-    }
-    handleBargeIn();
-  }, [handleBargeIn]);
+  }, []);
 
   const onDuplexFinalTranscript = useCallback((text: string) => {
     // Never trace transcript text, only length (T-188-31/T-188-60).
@@ -1277,8 +1375,6 @@ export function useAstridrVoice({
       wasPlayingRef.current = true;
       trace("tts.start", { state: voiceStateRef.current });
       clearSilentTurnTimer(); // audio arrived — the watchdog stands down
-      // D-07: arm the duplex echo-suppression window at playback onset.
-      echoSuppressArmedAtRef.current = Date.now();
       // Re-arm barge-in for this speaking turn; the session is now warm.
       bargeInFiredRef.current = false;
       conversationWarmRef.current = true;

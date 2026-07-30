@@ -702,7 +702,15 @@ describe("useAstridrVoice", () => {
     expect(result.current.voiceState).toBe("speaking");
   });
 
-  it("talk-over with content: non-echo speech during speaking interrupts AND becomes the message", async () => {
+  // SUPERSEDES "talk-over with content ... interrupts AND becomes the
+  // message" (D-07 FINAL, Larry's decision 2026-07-30).
+  //
+  // Free-form talk-over during speech is gone. Content cannot distinguish her
+  // echo from real speech over open speakers: degraded echo transcribes as
+  // arbitrary garbage, and the version of this branch that trusted content
+  // dispatched her OWN echo as a user message — "It's worth." was sent, and
+  // she replied "Hey Larry! What can I do for you?" to herself.
+  it("free-form speech during speaking is treated as echo — never barges, never sends", async () => {
     let chat = makeChat({
       interrupt: vi.fn(() => "the weather tomorrow is"),
       streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees with strong winds" },
@@ -715,14 +723,53 @@ describe("useAstridrVoice", () => {
     act(() => {
       onFinalResultCallback?.("actually just give me Tuesday please");
     });
-    expect(chat.interrupt).toHaveBeenCalled(); // interrupted her
     await act(async () => {
       vi.advanceTimersByTime(2100);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("actually just give me Tuesday please", {
-      interruptedReply: "the weather tomorrow is",
-      voice: true,
+
+    expect(chat.interrupt).not.toHaveBeenCalled();
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it("a barge phrase in a longer utterance still interrupts AND becomes the message", async () => {
+    let chat = makeChat({
+      interrupt: vi.fn(() => "the weather tomorrow is"),
+      streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees with strong winds" },
+    } as Partial<AstridrChat>);
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    expect(result.current.voiceState).toBe("speaking");
+
+    // "hold on" is a barge phrase and does not appear in her reply.
+    act(() => {
+      onFinalResultCallback?.("hold on give me Tuesday instead");
     });
+    expect(chat.interrupt).toHaveBeenCalled();
+  });
+
+  it("her own echo is never dispatched as a user message", async () => {
+    // The live regression: duplex transcribed her TTS as the final
+    // "It's worth." while state was "speaking"; it barged AND was sent.
+    let chat = makeChat({
+      streamingReplyRef: {
+        current: "Under a bruised grey sky the longship Sea-Wolf cut through the North Sea swells",
+      },
+    } as Partial<AstridrChat>);
+    const { result, rerender } = renderVoice(chat);
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    expect(result.current.voiceState).toBe("speaking");
+
+    act(() => {
+      onDuplexFinalTranscriptCallback?.("It's worth.");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+    expect(chat.interrupt).not.toHaveBeenCalled();
   });
 
   it("echo guard still drops her own reply text during speaking", async () => {
@@ -868,13 +915,18 @@ describe("useAstridrVoice", () => {
     chat = setTtsPlaying(rerender, chat, true);
     expect(result.current.voiceState).toBe("speaking");
 
-    // Misclassified talk-over during her TTS (Defect A's own mechanism: with
-    // no known reply text, isEchoOfReply's `!reply` branch treats this as
-    // real user speech, not echo) — never finalizes.
+    // D-07 FINAL (2026-07-30): the misclassification this test was written
+    // for is now IMPOSSIBLE AT SOURCE, not merely guarded downstream. A
+    // non-barge-phrase interim heard while she speaks is treated as echo and
+    // dropped, so it never becomes a "longest interim" and never taints a
+    // later utterance. Content-based echo/real discrimination was removed
+    // because degraded echo transcribes as arbitrary garbage (live: "World
+    // Cup" from her own story cut her off mid-sentence).
     act(() => {
       onInterimResultCallback?.(" I couldn't");
     });
-    expect(result.current.voiceState).toBe("transcribing");
+    // Was "transcribing" when this fragment was misread as talk-over.
+    expect(result.current.voiceState).toBe("speaking");
 
     chat = setTtsPlaying(rerender, chat, false); // she stops; the fragment is orphaned
     act(() => {
@@ -1381,7 +1433,18 @@ describe("useAstridrVoice", () => {
   // fake chat's public sinks (chat.interrupt / showInterruptFlash).
 
   describe("duplex ears — barge-in reuse (D-04/D-08)", () => {
-    it("duplex speech_started while speaking triggers the SAME barge-in as the 183 recognizer", () => {
+    // SUPERSEDES "duplex speech_started triggers the SAME barge-in" (188-03).
+    //
+    // D-04's intent — ONE barge-in implementation, never a second parallel
+    // path — is unchanged and still honoured. What changed is which source
+    // may TRIGGER it. The duplex ears' VAD is OpenAI's server-side energy
+    // detector: it carries no text, so at the instant it fires it cannot
+    // distinguish Larry's voice from her own reply returning through open
+    // speakers. Two guards were tried and both failed live on 2026-07-30
+    // (time window: echo arrived 1.7s into playback; recognizer
+    // corroboration: the duplex VAD won the race by 158ms), so barge-in now
+    // belongs solely to the content-aware recognizer path.
+    it("duplex speech_started does NOT barge in — it cannot tell her voice from Larry's", () => {
       let chat = makeChat();
       const { result, rerender } = renderVoice(chat);
       wake();
@@ -1391,7 +1454,7 @@ describe("useAstridrVoice", () => {
       act(() => {
         onDuplexSpeechStartCallback?.();
       });
-      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+      expect(chat.interrupt).not.toHaveBeenCalled();
     });
 
     it("duplex speech_started while idle does NOT barge in", () => {
@@ -1422,15 +1485,130 @@ describe("useAstridrVoice", () => {
       expect(chat.interrupt).toHaveBeenCalledTimes(1);
     });
 
+    // ─── Self-barge over open speakers (live 2026-07-30 16:16) ──────────────
+    // Larry was SILENT. Her own TTS came back through open speakers, the
+    // recognizer correctly logged interim.echo-dropped at 16:16:09.603, and
+    // 770ms later the duplex ears' textless VAD fired barge-in.fired at
+    // 16:16:10.371 and cut her off mid-sentence. ECHO_SUPPRESS_MS (400ms)
+    // could not catch it — the echo arrived 1.7s into playback.
+    it("does NOT self-barge when the recognizer just content-matched an echo", () => {
+      let chat = makeChat({
+        streamingReplyRef: { current: "Honestly I'm not seeing anything logged from today" },
+      });
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      // Her own voice reaches the recognizer first and is identified by content.
+      act(() => {
+        onInterimResultCallback?.("honestly I'm not seeing anything");
+      });
+      // The duplex VAD then reacts to the SAME audio. It carries no text, so
+      // it must corroborate against the recognizer's verdict.
+      act(() => {
+        onDuplexSpeechStartCallback?.();
+      });
+
+      expect(chat.interrupt).not.toHaveBeenCalled();
+    });
+
+    // ─── D-07 FINAL: only barge phrases interrupt while she speaks ──────────
+    it("garbled echo of her own voice never barges, however unlike her text", () => {
+      // Live 2026-07-30: her Viking story produced "bentuk", " Wolf", "Hej",
+      // "kilometraje", "الوحدة", "Oração" and " World Cup" from Chrome
+      // mis-hearing her OWN audio. " World Cup" cleared every short-token
+      // guard, matched nothing in her story, and cut her off while Larry was
+      // silent. No fingerprint can match garbage — so nothing but an explicit
+      // barge phrase is allowed to interrupt.
+      for (const garbage of [" World Cup", "kilometraje", "bentuk", "Oração"]) {
+        let chat = makeChat({
+          streamingReplyRef: { current: "Under a bruised grey sky the longship Sea-Wolf cut through the North Sea swells" },
+        });
+        const { result, rerender } = renderVoice(chat);
+        wake();
+        chat = setTtsPlaying(rerender, chat, true);
+        expect(result.current.voiceState).toBe("speaking");
+
+        act(() => {
+          onInterimResultCallback?.(garbage);
+        });
+
+        expect(chat.interrupt).not.toHaveBeenCalled();
+      }
+    });
+
+    it("her own reply containing 'stop' does NOT self-barge", () => {
+      // Larry's live story ended: "...the sea only keeps those who stop
+      // fighting it." isBargeInPhrase matches "stop" ANYWHERE in an
+      // utterance, so echo of her own closing line would have interrupted
+      // her — the phrase-only rule would have INTRODUCED this bug.
+      let chat = makeChat({
+        streamingReplyRef: {
+          current: "proof, once again, that the sea only keeps those who stop fighting it",
+        },
+      });
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      act(() => {
+        onInterimResultCallback?.("stop fighting it");
+      });
+
+      expect(chat.interrupt).not.toHaveBeenCalled();
+    });
+
+    it("a real 'stop' DOES barge when her reply does not contain it", () => {
+      let chat = makeChat({
+        streamingReplyRef: { current: "Under a bruised grey sky the longship cut through the swells" },
+      });
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      act(() => {
+        onInterimResultCallback?.("stop");
+      });
+
+      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+    });
+
+    it("a REAL interruption still barges — via the content-aware recognizer", () => {
+      let chat = makeChat({
+        streamingReplyRef: { current: "Honestly I'm not seeing anything logged from today" },
+      });
+      const { result, rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      expect(result.current.voiceState).toBe("speaking");
+
+      // Larry genuinely talks over her. The text does NOT match her reply,
+      // so the recognizer's talk-over branch fires barge-in. This is the
+      // path that must keep working now that duplex no longer barges.
+      act(() => {
+        onInterimResultCallback?.("actually hold on a second");
+      });
+
+      expect(chat.interrupt).toHaveBeenCalledTimes(1);
+    });
+
     it("the interrupt flash is not duplicated", () => {
-      let chat = makeChat();
+      let chat = makeChat({
+        streamingReplyRef: { current: "Honestly I'm not seeing anything logged from today" },
+      });
       const { result, rerender } = renderVoice(chat);
       wake();
       chat = setTtsPlaying(rerender, chat, true);
 
+      // Two talk-over interims in a row must still flash and interrupt once
+      // (the bargeInFiredRef latch). Driven through the recognizer now that
+      // it is the sole barge-in trigger.
       act(() => {
-        onDuplexSpeechStartCallback?.();
-        onDuplexSpeechStartCallback?.();
+        onInterimResultCallback?.("actually hold on");
+        onInterimResultCallback?.("actually hold on a second");
       });
       expect(result.current.showInterruptFlash).toBe(true);
       expect(chat.interrupt).toHaveBeenCalledTimes(1);
@@ -1459,6 +1637,50 @@ describe("useAstridrVoice", () => {
         "what's the weather like tomorrow",
         expect.objectContaining({ voice: true })
       );
+    });
+
+    // ─── Double-transcript concatenation (live 2026-07-30 16:15) ────────────
+    // activeEarsRef was assigned but never READ, so both ears dispatched
+    // finals into handleFinalResult's accumulator (`accumulated + text`) and
+    // the two transcripts were GLUED. Larry asked one question and she
+    // received: "what did we work on today What did we work on today?"
+    it("does NOT send the question twice when both ears finalize it", async () => {
+      duplexStatusValue = "connected";
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+
+      act(() => {
+        // Duplex (the active ear) finalizes...
+        onDuplexFinalTranscriptCallback?.("what did we work on today");
+        // ...and the 183 recognizer finalizes the SAME utterance.
+        onFinalResultCallback?.("what did we work on today", 0.97);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "what did we work on today",
+        expect.objectContaining({ voice: true })
+      );
+    });
+
+    it("the recognizer still drives finals when duplex is NOT active", async () => {
+      duplexStatusValue = "idle";
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+
+      act(() => {
+        onFinalResultCallback?.("what did we work on today", 0.97);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
     });
 
     it("duplex transcript passes through the existing noise gate", async () => {

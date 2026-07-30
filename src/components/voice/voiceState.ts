@@ -132,16 +132,35 @@ const BARGE_IN_PHRASES = [
  * just at the end.
  */
 export function isBargeInPhrase(text: string): boolean {
+  return matchedBargePhrase(text) !== null;
+}
+
+/** True if `phrase` (already normalized, space-separated) appears as a
+ *  contiguous word-sequence anywhere in `text`. */
+export function phraseAppearsIn(text: string, phrase: string): boolean {
   const norm = normalize(text);
   if (!norm) return false;
   const words = norm.split(" ");
-  return BARGE_IN_PHRASES.some((phrase) => {
-    const phraseWords = phrase.split(" ");
-    for (let i = 0; i <= words.length - phraseWords.length; i++) {
-      if (phraseWords.every((w, j) => words[i + j] === w)) return true;
-    }
-    return false;
-  });
+  const phraseWords = phrase.split(" ");
+  for (let i = 0; i <= words.length - phraseWords.length; i++) {
+    if (phraseWords.every((w, j) => words[i + j] === w)) return true;
+  }
+  return false;
+}
+
+/**
+ * Which barge-in phrase `text` contains, or null.
+ *
+ * Callers need the IDENTITY of the match, not just a boolean: while she is
+ * speaking, a heard "stop" is only a real interrupt if HER OWN reply does not
+ * also contain "stop". Live 2026-07-30: her story ended "...the sea only keeps
+ * those who stop fighting it" — echo of that line would otherwise self-barge
+ * on her own word. See useAstridrVoice's speaking branch.
+ */
+export function matchedBargePhrase(text: string): string | null {
+  const norm = normalize(text);
+  if (!norm) return null;
+  return BARGE_IN_PHRASES.find((phrase) => phraseAppearsIn(norm, phrase)) ?? null;
 }
 
 /**
