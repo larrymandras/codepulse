@@ -1,8 +1,23 @@
 ---
 phase: 103-brain-swap-control-surface
-verified: 2026-07-29T23:00:00Z
-status: gaps_found
-score: 2/5 must-haves verified
+verified: 2026-07-30T01:45:00Z
+status: verified
+score: 5/5 must-haves verified (BSC-01's per-agent half remains deferred to astridr Phase 184.1 by design, not counted as a defect per this report's own standing rule)
+superseded_by: 103-UAT.md
+re_verification_note: >
+  This report was written 2026-07-29T23:00 and recorded two remaining gaps (OBS 8's confirm-modal
+  data source, and the current-cycle WR-01 page-scoped revert). BOTH ARE NOW CLOSED AND
+  LIVE-VERIFIED — see 103-UAT.md, an operator-attended UAT run against the running Ástríðr +
+  self-hosted Convex stack on 2026-07-29/30 (16/16 tests resolved). The two Human Verification
+  items this report raised are also discharged: the failed-swap retry path was live-exercised
+  (UAT test 11, failure induced by socket interception so nothing live was mutated) and the
+  narrow-width composer pill was re-measured at 420px.
+  That UAT additionally found FOUR defects this report did not — most importantly a BLOCKER: the
+  picker crashed whenever catalogue rows rendered from a routed host, so the Chat composer pill and
+  Settings' Swap buttons were both unusable and only the header badge worked. This report could not
+  have caught it: its evidence was source-reading plus a unit suite, and every unit test wraps the
+  picker in a TooltipProvider the real routed hosts do not supply. All four are fixed and
+  live-re-verified (a9ef7e16, ddb51d96, fc9828ff, 6afd67dd, plus 35d16d5a/025d7502).
 overrides_applied: 0
 re_verification:
   previous_status: gaps_found
@@ -16,7 +31,19 @@ re_verification:
     - "WR-01/WR-02/WR-03 (first review cycle: catalogue-fetch staleness guard, scope-blind row highlight, nested-focusable health dot) — closed by 103-11/103-12, verified live in source."
     - "OBS 7 (GlobalSwapModal.runRevert cleared the override instead of restoring the prior one) — found live mid-checkpoint 2026-07-29, closed by 103-14, re-verified PASS in the same live session (103-VALIDATION.md OBS 7 second half)."
     - "Second-review-cycle CR-01 (GlobalSwapModal reused stale phase/outcome state on a same-brain reselect, silently breaking the retry path after a failed swap) — found by 103-REVIEW.md 2026-07-29, closed by 103-16 (selectionNonce reset guard), verified live in source (GlobalSwapModal.tsx:184-237, BrainPicker.tsx:202-204,322-336), via two live-performed mutation checks (both directions of the regression reintroduced and confirmed caught), AND independently re-verified against the running Astridr WS stack — 103-VALIDATION.md OBS 13 (the same reselect script that reproduced the defect at confirm=0/done=1 now measures confirm=1/cancel=1/done=0) and OBS 14 (CR-03 toast-revert still reopens a live instance and restores the prior engine, so both invariants hold at once). Live-proven except the failed-swap retry path, which is unit-covered only."
-  gaps_remaining:
+  gaps_remaining: []
+  gaps_closed_2026_07_30:
+    - "OBS 8 — CLOSED by 103-17 and LIVE-VERIFIED 2026-07-30 (103-UAT.md test 6): the confirm modal
+       reads '3 profiles have a pinned default (Claude Sonnet 5) that will be shadowed…' with 3 Pin
+       icons, while the current-engine column still reads 'Auto' — the count became honest WITHOUT
+       back-filling the telemetry column from config, so the D-14 boundary held."
+    - "Current-cycle WR-01 — CLOSED by 103-18 and LIVE-VERIFIED 2026-07-30 (103-UAT.md test 9):
+       a global swap started from a routed, page-scoped host, then Done, then navigating away, then
+       clicking the toast's 'Revert global swap' — the hoisted app-level modal reopened with a real
+       visible result and exactly one real swap.set frame."
+    - "BSC-05's live gate — DISCHARGED: the operator-attended re-verification pass this report named
+       as the single remaining item was performed (103-UAT.md)."
+  gaps_remaining_superseded:
     - "OBS 8 — the D-11 pre-swap confirm modal (GlobalSwapModal, fed by BrainPicker.tsx's globalSwapProfiles) reads per-profile current/pinned state from activeEngineSnapshots (empty for real profiles) instead of the live, already-available profileConfigs.modelPreferences — unchanged, unfixed, confirmed present in current source at BrainPicker.tsx:375-387."
     - "Second-review-cycle WR-01 — the Chat composer pill's page-scoped BrainPicker/GlobalSwapModal instance does not survive route navigation, so a 'Revert global swap' toast clicked after leaving /chat fires a real swap.set with zero UI feedback — unchanged, unfixed, confirmed present in current source (Chat.tsx:154-159, GlobalSwapModal.tsx:270-297)."
   regressions: []

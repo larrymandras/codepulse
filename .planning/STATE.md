@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
 status: executing
-stopped_at: Completed 103-18-PLAN.md
-last_updated: "2026-07-29T19:41:56.990Z"
-last_activity: 2026-07-29
+stopped_at: Phase 103 COMPLETE (live UAT + post-UAT gap closure, 2026-07-30)
+last_updated: "2026-07-30T01:45:00.000Z"
+last_activity: 2026-07-30
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 18
   completed_plans: 18
-  percent: 0
+  percent: 25
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -43,8 +43,19 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 103 (brain-swap-control-surface) — GAP-CLOSURE CYCLE 18/18 plans CODE-complete; a SECOND wave (103-17, 103-18) was added after a live checkpoint (103-13-T1) and a code review found two more blocking defects (OBS 8, closed by 103-17; WR-01, closed by 103-18, this plan)
-Plan: 18/18 COMPLETE (2026-07-29). Plans 09-17 (first gap-closure wave + 103-17) closed defects 6a/6b, CR-01 (`recordRouting`), CR-02, WR-01 (an earlier, different WR-01 — scope reset), WR-03, defect #5, CR-03, WR-02, OBS 7, CR-01 (`GlobalSwapModal` stale-reselect), and OBS 8 (D-11 confirm-modal pinned-default count now config-derived). Plan 18 (103-18, this plan) closes **WR-01** (2026-07-29 code review) — starting a global swap from the page-scoped Chat composer pill, clicking Done, navigating away, then clicking "Revert global swap" in the still-visible toast previously fired a real `swap.set` into an unmounted component with zero UI feedback. Fix: a new `GlobalSwapContext` (`GlobalSwapProvider`/`useGlobalSwap`) owns the single `GlobalSwapModal` instance, mounted once in `DashboardLayout` above `<Outlet/>` instead of by whichever `BrainPicker` host opened it — both hosts (`BrainHeaderBadge`, the Chat pill) now drive the same surviving instance through `openGlobalSwap()`. CR-03 (mount survives Done), 103-16/CR-01 (reset keyed to a fresh `selectionNonce`), and 103-14 (revert restores the prior override) were all verified to remain closed post-hoist — the pre-existing tests covering them continued to pass unchanged, and two NEW tests (the WR-01 reproduction itself, and 103-14 exercised end-to-end through the hoisted architecture) were added, both mutation-checked live. See `.planning/phases/103-brain-swap-control-surface/103-18-SUMMARY.md`. **All 18 plans in this gap-closure cycle are now CODE-complete. Outstanding before the phase can be marked done: live re-verification of 103-16/103-17/103-18's fixes against the running Ástríðr stack — the orchestrator's job, explicitly not claimed by any of these three plans' own `<verification>` sections (a green unit suite is not accepted as proof of a live fix, this cycle's established pattern). BSC-01..05 remain un-re-marked in REQUIREMENTS.md pending that verification.**
+Phase: 103 (brain-swap-control-surface) — ✅ **COMPLETE 2026-07-30** (18/18 plans + a post-UAT inline gap-closure round). GAP-CLOSURE CYCLE 18/18 plans CODE-complete; a SECOND wave (103-17, 103-18) was added after a live checkpoint (103-13-T1) and a code review found two more blocking defects (OBS 8, closed by 103-17; WR-01, closed by 103-18, this plan)
+Plan: 18/18 COMPLETE (2026-07-29). Plans 09-17 (first gap-closure wave + 103-17) closed defects 6a/6b, CR-01 (`recordRouting`), CR-02, WR-01 (an earlier, different WR-01 — scope reset), WR-03, defect #5, CR-03, WR-02, OBS 7, CR-01 (`GlobalSwapModal` stale-reselect), and OBS 8 (D-11 confirm-modal pinned-default count now config-derived). Plan 18 (103-18, this plan) closes **WR-01** (2026-07-29 code review) — starting a global swap from the page-scoped Chat composer pill, clicking Done, navigating away, then clicking "Revert global swap" in the still-visible toast previously fired a real `swap.set` into an unmounted component with zero UI feedback. Fix: a new `GlobalSwapContext` (`GlobalSwapProvider`/`useGlobalSwap`) owns the single `GlobalSwapModal` instance, mounted once in `DashboardLayout` above `<Outlet/>` instead of by whichever `BrainPicker` host opened it — both hosts (`BrainHeaderBadge`, the Chat pill) now drive the same surviving instance through `openGlobalSwap()`. CR-03 (mount survives Done), 103-16/CR-01 (reset keyed to a fresh `selectionNonce`), and 103-14 (revert restores the prior override) were all verified to remain closed post-hoist — the pre-existing tests covering them continued to pass unchanged, and two NEW tests (the WR-01 reproduction itself, and 103-14 exercised end-to-end through the hoisted architecture) were added, both mutation-checked live. See `.planning/phases/103-brain-swap-control-surface/103-18-SUMMARY.md`. **All 18 plans in this gap-closure cycle are CODE-complete, and the outstanding live re-verification HAS NOW BEEN DONE** — see `103-UAT.md` (operator-attended, 2026-07-29/30, 16/16 tests resolved against the running Ástríðr + self-hosted Convex stack on a Clerk-disabled ephemeral server; the operator's own :5173 was never touched, and every live swap was reverted so the stack ended as it started).
+
+**The UAT confirmed 103-16/17/18 live AND found four further defects, all now fixed and live-re-verified (no PLAN/SUMMARY artifacts — executed inline as gap closure at the operator's direction, so `total_plans` correctly stays 18):**
+- 🛑 **BLOCKER** — the brain picker CRASHED whenever catalogue rows rendered from a routed host (Chat composer pill, Settings Swap buttons): `BrainPickerRow`'s Radix `<Tooltip>` had no `TooltipProvider` ancestor outside `DashboardLayout`'s header cluster, so 2 of the phase's 3 swap entry points were unusable on the only axis that can dispatch. Only the header badge worked. Fixed `a9ef7e16` (picker owns its own provider); isolated against a working header-badge control.
+- **MAJOR** — the badge rendered the literal `"unknown"` ingest sentinel as a real engine WITH the confirmed-live pulse. Fixed `ddb51d96` (guard at both the ingest and read boundaries).
+- **MAJOR** — a never-settling dispatch trapped the operator in a modal showing false in-flight progress, `Done` disabled, no escape but a reload. Fixed `fc9828ff`.
+- **MINOR** — the picker opened onto the deferred per-profile axis and blamed transience. Fixed `6afd67dd`.
+- Plus, found while inducing a live failure: a FAILED swap's row header still claimed the override applied (`025d7502`), and raw model ids leaked into four operator-facing strings (`35d16d5a`, `025d7502`).
+
+**Convex ingest guard DEPLOYED to the live self-hosted instance 2026-07-30** (`✔ No indexes are deleted by this push`) and proven end-to-end: a real swap now creates ZERO sentinel rows. Cleanup found the problem was never one row — **all 93 rows in `activeEngineSnapshots` were unresolved sentinels**, pruned in 3 batched runs (batch-capped per the self-hosted-Convex rules); the table is now empty and the prune is idempotent. The per-profile telemetry axis has therefore never carried a valid row, which is exactly astridr Phase 184.1's scope.
+
+**BSC-02/04/05 re-marked SATISFIED in REQUIREMENTS.md (2026-07-30); BSC-01 stays PARTIAL solely on the by-design per-profile deferral, not on any defect.**
 
 **ACTIVE: v13.0 (Phases 103-106).** Requirements (BSC-01..05 / COST-01..03 / OBS-01..03 / DEBT-01..04) in REQUIREMENTS.md; roadmap in ROADMAP.md. Phase 103 planned (8 plans/5 waves) and now executing; 104-106 not yet planned. Sequencing: 106 (tech-debt) independent + low-risk; 104/105 additive.
 
@@ -65,7 +76,7 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Phase 103 — gap-closure cycle 18/18 plans CODE-complete (Plan 18/103-18 done 2026-07-29, closed WR-01); live re-verification of 103-16/103-17/103-18 against the running Ástríðr stack still outstanding (orchestrator's job) before the phase/BSC-01..05 can be marked complete
+Status: Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 104-106 (not yet planned)
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
 Last activity: 2026-07-29
