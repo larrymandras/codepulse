@@ -24,14 +24,14 @@ threshold that raises an alert, not a cap that stops work.
 
 ### Cost Attribution — where the dollar comes from (COST-01)
 
-- **D-01: CodePulse recomputes cost from tokens × rate.** The displayed dollar figure is derived
+- **D-01:** **CodePulse recomputes cost from tokens × rate.** The displayed dollar figure is derived
   by CodePulse, not taken from the ingest payload. `convex/runtimeIngest.ts:68`
   (`cost: d.cost ?? d.costUsd ?? d.cost_usd`) currently accepts whatever Ástríðr posts, and the
   field is **optional** — an un-costed call silently contributes $0 today. Keep persisting the
   reported value (it is useful evidence), but it is no longer the truth the UI renders.
   Rationale: one place to fix a mispriced model, and history can be re-priced (D-04).
 
-- **D-02: Rates live in a Convex `modelPricing` table with an admin surface**, seeded from the
+- **D-02:** **Rates live in a Convex `modelPricing` table with an admin surface**, seeded from the
   current `src/lib/modelPricing.ts` values. Pricing a newly-swapped-to engine must not require a
   code change plus a Convex deploy — Phase 103 shipped a live catalogue of ~331 engines an
   operator can switch to at will.
@@ -42,7 +42,7 @@ threshold that raises an alert, not a cap that stops work.
   (`src/pages/hr/AgentAnalytics.tsx`, `src/components/hr/detail/MetricsDashboard.tsx`,
   `TokenUsageChart.tsx`) — it is **not** on the main cost path at all today.
 
-- **D-03: An unpriced model is never silently valued.** A call whose model has no pricing row is
+- **D-03:** **An unpriced model is never silently valued.** A call whose model has no pricing row is
   excluded from the dollar total and shown as its own "Unpriced" row carrying its real token
   counts, plus a persistent "N models need rates" affordance into the pricing admin. Do **not**
   fall back to the `default` rate and do **not** render it as $0 inside the total.
@@ -50,7 +50,7 @@ threshold that raises an alert, not a cap that stops work.
   knows (see `<specifics>`). A total that absorbs a guess is that failure, in the one number an
   operator will trust most.
 
-- **D-04: Rollups store tokens-by-model; dollars are derived at read time.** Correcting or adding
+- **D-04:** **Rollups store tokens-by-model; dollars are derived at read time.** Correcting or adding
   a rate must retroactively fix every chart back to the start of retention, and an unpriced
   bucket must heal the moment its rate is entered. This constrains the rollup schema —
   `convex/aggregates.ts` `computeHourly`/`rollupDaily` currently pre-aggregate dollars; the
@@ -62,7 +62,7 @@ threshold that raises an alert, not a cap that stops work.
 
 ### Subscription & CLI Spend (COST-01)
 
-- **D-05: Billed stays $0; a separate "covered by subscription" shadow figure is shown
+- **D-05:** **Billed stays $0; a separate "covered by subscription" shadow figure is shown
   alongside it.** Subscription/CLI turns genuinely cost nothing per call (`billingType:
   "subscription"` → `estimateCost` returns 0, the existing D-12 rule). But Phase 103 makes a swap
   to Claude Code / Codex / Antigravity a one-click operator action, so spend can now collapse for
@@ -70,7 +70,7 @@ threshold that raises an alert, not a cap that stops work.
   the engine's API rate so the drop explains itself. The two numbers are **never** merged into
   one headline — the billed total must always mean money actually owed.
 
-- **D-06: The shadow rate comes from the turn's own reported model when that id is priceable**
+- **D-06:** **The shadow rate comes from the turn's own reported model when that id is priceable**
   (e.g. a Claude Code turn reporting `claude-opus-5` is priced at the `claude-opus-5` API rate,
   with only `billingType` marking it subscription). An explicit per-engine `shadowModel` mapping
   row in the pricing table is the fallback for opaque ids (`claude-cli`, `codex`, …).
@@ -78,37 +78,37 @@ threshold that raises an alert, not a cap that stops work.
   CLI-gateway turns. This is genuinely unknown right now and determines whether the common path
   or the fallback path is the real one.
 
-- **D-07: Dollar budgets guard billed money only; subscription traffic gets its own threshold on
+- **D-07:** **Dollar budgets guard billed money only; subscription traffic gets its own threshold on
   quota burn.** A dollar budget can never trip while a subscription brain is in force, so
   `gatewayQuotaSnapshots` (`convex/schema.ts:1540` — `usedToday`, `dailyLimit`, `spendUsd`,
   `remainingPct`) carries a threshold of its own, firing through the same alert routing. Each
   axis is guarded in the unit that actually constrains it. No fictional dollars enter a budget.
 
-- **D-08: One over-time chart with a `Billed` / `Billed + covered` toggle**, billed as the
+- **D-08:** **One over-time chart with a `Billed` / `Billed + covered` toggle**, billed as the
   default view; the covered portion renders as a visually distinct segment. Reuses the existing
   `FlexBarChart` + `costByPeriodByProvider` shape rather than adding a second chart. The default
   view never displays imputed money.
 
 ### Budget Thresholds (COST-02)
 
-- **D-09: One generic `costBudgets` Convex table with a `scope` discriminator** —
+- **D-09:** **One generic `costBudgets` Convex table with a `scope` discriminator** —
   `"global" | "model" | "provider"` plus a key. Per-profile and per-goal are deliberately NOT in
   this phase but must be reachable as a new scope value rather than a new subsystem.
   (Per-profile was considered and dropped: `llmMetrics` carries `agentId` and `goalId` but **no**
   `profileId` (`convex/schema.ts:306-330`), so attributing spend to a profile needs a join that
   may not exist — see `<deferred>`.)
 
-- **D-10: Period is per-row: `daily | weekly | monthly`.** A $5/day guardrail and a $100/month
+- **D-10:** **Period is per-row: `daily | weekly | monthly`.** A $5/day guardrail and a $100/month
   ceiling are different questions and both are wanted. The daily/hourly rollups that answer them
   already exist in `convex/aggregates.ts`. Planner must pick and state a timezone for period
   boundaries (UTC vs local) — the existing crons are UTC-anchored (`crons.daily … hourUTC`).
 
-- **D-11: Each budget row carries a limit plus a warn fraction (default `0.8`)**, generalizing
+- **D-11:** **Each budget row carries a limit plus a warn fraction (default `0.8`)**, generalizing
   today's `ALERT_THRESHOLD`. Warn fires at `warnFraction × limit` as severity `warning`; breach
   fires at the limit as severity `error` — both already in the `alerts.severity` vocabulary
   (`convex/schema.ts:112`). Not a free-form levels list; two firing points, no more.
 
-- **D-12: `SDKSpendGuard` is rewired onto the global-daily budget row, not left alongside it.**
+- **D-12:** **`SDKSpendGuard` is rewired onto the global-daily budget row, not left alongside it.**
   `src/components/SDKSpendGuard.tsx:8-9` hardcodes `DAILY_CAP = 5.00` / `ALERT_THRESHOLD = 0.8`;
   those constants survive only as the **seed values** for the first `costBudgets` row. Its
   burn-rate projection ("at current rate, you'll hit $5 by ~3:40pm") is preserved and becomes
@@ -117,7 +117,7 @@ threshold that raises an alert, not a cap that stops work.
 
 ### Alert Firing (COST-03)
 
-- **D-13: "Spike" is defined as rate-projection-to-period-end.** Extrapolate the current burn
+- **D-13:** **"Spike" is defined as rate-projection-to-period-end.** Extrapolate the current burn
   rate to the budget's period boundary and fire when the projection breaches the limit. This is
   the algorithm `SDKSpendGuard` already implements and the operator already reads; every alert
   can therefore name a concrete number and time. A rolling-baseline / z-score anomaly detector
@@ -125,7 +125,7 @@ threshold that raises an alert, not a cap that stops work.
   `convex/anomalyDetection.ts` already implements a z-score evaluator for other metrics; do not
   duplicate it, and do not silently re-purpose it either).
 
-- **D-14: The evaluator runs at the tail of the existing `internal.aggregates.computeHourly`
+- **D-14:** **The evaluator runs at the tail of the existing `internal.aggregates.computeHourly`
   cron.** No new scheduled function.
   🛑 **This is a hard constraint, not a preference.** `convex/crons.ts:42-47` shows
   `internal.alerts.evaluateInternal` — the Phase 6 alert-rule evaluation cron — **disabled since
@@ -136,19 +136,19 @@ threshold that raises an alert, not a cap that stops work.
   Accepted cost: alert latency up to one hour. Ingest-time evaluation was explicitly rejected —
   it adds work to the hottest path, and a failure there rolls back the ingest transaction.
 
-- **D-15: Fire once per budget, per level, per period; re-arm at the period reset.** Dedup keyed
+- **D-15:** **Fire once per budget, per level, per period; re-arm at the period reset.** Dedup keyed
   on `(budgetId, level, periodStart)` stored in the alert's `details`, mirroring
   `convex/evalScores.ts` `detectRegressionsForPersona`, which dedups on `details.changeDate`
   against prior alerts in any status (active, acknowledged, or resolved). Escalation
   warn → breach still gets through. No re-firing every cycle — 16 identical alerts a day get
   buried by the auto-acknowledge-stale cron, which is worse than not firing.
 
-- **D-16: Alert-only. No enforcement, no dispatch.** A tripped budget does not swap the brain,
+- **D-16:** **Alert-only. No enforcement, no dispatch.** A tripped budget does not swap the brain,
   throttle, or mutate Ástríðr in any way — even though Phase 103 made that mechanically
   possible. An autonomous runtime mutation driven by an up-to-an-hour-stale rollup is its own
   phase with its own confirm ritual and its own live verification (see `<deferred>`).
 
-- **D-17: Alerts must be inserted via the delivering path, not `alerts.create`.**
+- **D-17:** **Alerts must be inserted via the delivering path, not `alerts.create`.**
   `convex/evalScores.ts:1225-1249` documents this explicitly: the fire path inserts with
   `webhookStatus: "pending"` and schedules `internal.webhookDelivery.sendAlertWebhook` — "this
   insert call does not use the shared createIfNew helper, and never calls the public
