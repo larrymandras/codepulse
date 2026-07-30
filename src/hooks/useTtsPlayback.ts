@@ -43,8 +43,6 @@ const ASTRIDR_API_URL = import.meta.env.VITE_ASTRIDR_API_URL ?? "http://localhos
 //
 // These events go into the SAME window.__astridrVoiceTrace ring buffer the
 // voice hooks use, so COPY TRACE picks them up with no extra wiring.
-let ttsPlaybackSeq = 0;
-
 /** Round a possibly-absent media time to 2dp, or null. Media properties are
  *  read defensively: this is a DIAGNOSTIC and must never be able to break
  *  playback (it did, briefly — `currentTime.toFixed` on a mock element). */
@@ -132,6 +130,10 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
   // Identifies one playback across its whole lifecycle in the trace, so a
   // replacement (playback N torn down while N+1 starts) is unmistakable.
   const playbackIdRef = useRef(0);
+  // URL of the element currently live in audioRef, for duplicate-event
+  // suppression in play(). Cleared on teardown so a REPLAY of the same URL
+  // after completion still works.
+  const currentUrlRef = useRef<string | null>(null);
 
   const normalizeUrl = (url: string) =>
     url.startsWith("http") ? url : `${ASTRIDR_API_URL}${url}`;
@@ -145,6 +147,7 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
       audioRef.current.onerror = null;
       audioRef.current.pause();
       audioRef.current = null;
+      currentUrlRef.current = null;
     }
     if (sourceRef.current) {
       try {
@@ -197,6 +200,7 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
       const playbackId = ++playbackIdRef.current;
       const audio = new Audio(fullUrl);
       audioRef.current = audio;
+      currentUrlRef.current = fullUrl;
       setIsPlaying(true);
       ttsTrace("play.request", audio, { playbackId, url: fullUrl, mode: "plain" });
 
@@ -257,6 +261,7 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
       const audio = new Audio();
       audio.crossOrigin = "anonymous";
       audioRef.current = audio;
+      currentUrlRef.current = fullUrl;
       ttsTrace("play.request", audio, { playbackId, url: fullUrl, mode: "analysed" });
 
       const source = ctx.createMediaElementSource(audio);
@@ -295,8 +300,26 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
 
   const play = useCallback(
     (url: string) => {
-      const token = ++playTokenRef.current;
       const fullUrl = normalizeUrl(url);
+      // Duplicate-event guard (live 2026-07-30). The backend emits run.tts
+      // TWICE for one reply with an identical URL, 8ms apart, and playback is
+      // replacement-based — so the second event tears down the first. It was
+      // harmless only because it landed at currentTime:0; arriving mid-reply
+      // it cuts her off and reports barged:false, the exact symptom chased
+      // through four rounds of unrelated echo fixes.
+      //
+      // Scoped deliberately narrow: only a request for the URL that is
+      // ALREADY live is ignored. A different URL still replaces, so genuine
+      // chunked TTS is untouched, and teardown clears currentUrlRef so a
+      // REPLAY of the same file after it finishes still works.
+      if (audioRef.current && currentUrlRef.current === fullUrl) {
+        ttsTrace("duplicate.ignored", audioRef.current, {
+          url: fullUrl,
+          playbackId: playbackIdRef.current,
+        });
+        return;
+      }
+      const token = ++playTokenRef.current;
       if (!analyserEnabled) {
         // Default: original plain playback, no Web Audio at all.
         playPlain(fullUrl, token);
