@@ -56,6 +56,14 @@ export function useAstridrChat() {
     setIsStreaming(v);
   }, []);
   const [ttsEnabled, setTtsEnabled] = useState(false);
+  // Mirror of ttsEnabled for use OUTSIDE React state updaters. The run.tts
+  // handler previously read the current value by calling setTtsEnabled with a
+  // side-effecting updater — see the run.tts subscription below for why that
+  // was a real bug, not a style nit.
+  const ttsEnabledRef = useRef(false);
+  useEffect(() => {
+    ttsEnabledRef.current = ttsEnabled;
+  }, [ttsEnabled]);
   // Phase 188 / D-16: analyser opt-in enabled here is scoped by construction —
   // useAstridrChat has exactly one production consumer (Chat.tsx), so this
   // does not turn the analyser on globally. See useTtsPlayback.ts:11-27 for
@@ -326,43 +334,50 @@ export function useAstridrChat() {
             : msg
         )
       );
-      setTtsEnabled((current) => {
-        // 2026-07-30 instrumentation: playback here is REPLACEMENT-based
-        // (useTtsPlayback.playPlain tears down any live element first), and
-        // this auto-play is NOT session-filtered — the session check above
-        // gates only the message update. So a second run.tts for this reply,
-        // or one from a stale/other session, silently cuts the audio
-        // mid-sentence with no barge-in involved. Logged rather than
-        // filtered for now: filtering blind could suppress legitimate
-        // chunked TTS, and one trace will show which is actually happening.
-        const willPlay = current && !ttsSuppressedRef.current;
-        if (typeof window !== "undefined") {
-          const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
-            .__astridrVoiceTrace ??= []);
-          buf.push({
-            t: new Date().toISOString().slice(11, 23),
-            ev: "run.tts.received",
-            d: {
-              sessionMatches: data.session_id === activeSessionRef.current,
-              eventSession: data.session_id,
-              activeSession: activeSessionRef.current,
-              ttsEnabled: current,
-              ttsSuppressed: ttsSuppressedRef.current,
-              willPlay,
-            },
-          });
-          if (buf.length > 500) buf.shift();
-        }
-        // Post-interrupt suppression: a barged-in turn's late TTS must never
-        // play ("she would not stop"). The bubble still gets its replay URL.
-        if (willPlay) {
-          playAudio(data.audio_url!);
-        } else if (current) {
-          // eslint-disable-next-line no-console
-          console.log("[voice] tts.suppressed — late chunk from an interrupted turn");
-        }
-        return current;
-      });
+      // ROOT CAUSE of the intermittent "she got cut off while I was silent"
+      // (live 2026-07-30, found via the playback trace):
+      //
+      // This used to be `setTtsEnabled((current) => { ...playAudio(current)... })`
+      // — reading state through an updater purely to get `current`, with
+      // side effects inside it. React StrictMode (enabled in main.tsx:42)
+      // DOUBLE-INVOKES state updaters in development precisely to surface
+      // impure ones, so a single run.tts event produced TWO playAudio()
+      // calls ~8ms apart. Playback is replacement-based, so the second call
+      // tore down the first element. It was survivable only when the
+      // duplicate landed at currentTime:0; once audio had begun it cut her
+      // mid-sentence — and because no barge-in ran, tts.end logged
+      // barged:false, which sent four rounds of fixes after echo and
+      // barge-in instead of this.
+      //
+      // The current value now comes from a ref, and the side effect runs
+      // once, outside any updater.
+      const current = ttsEnabledRef.current;
+      const willPlay = current && !ttsSuppressedRef.current;
+      if (typeof window !== "undefined") {
+        const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+          .__astridrVoiceTrace ??= []);
+        buf.push({
+          t: new Date().toISOString().slice(11, 23),
+          ev: "run.tts.received",
+          d: {
+            sessionMatches: data.session_id === activeSessionRef.current,
+            eventSession: data.session_id,
+            activeSession: activeSessionRef.current,
+            ttsEnabled: current,
+            ttsSuppressed: ttsSuppressedRef.current,
+            willPlay,
+          },
+        });
+        if (buf.length > 500) buf.shift();
+      }
+      // Post-interrupt suppression: a barged-in turn's late TTS must never
+      // play ("she would not stop"). The bubble still gets its replay URL.
+      if (willPlay) {
+        playAudio(data.audio_url!);
+      } else if (current) {
+        // eslint-disable-next-line no-console
+        console.log("[voice] tts.suppressed — late chunk from an interrupted turn");
+      }
     });
 
     const unsubCompleted = subscribeEvent("run.completed", (event) => {
