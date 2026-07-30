@@ -327,9 +327,35 @@ export function useAstridrChat() {
         )
       );
       setTtsEnabled((current) => {
+        // 2026-07-30 instrumentation: playback here is REPLACEMENT-based
+        // (useTtsPlayback.playPlain tears down any live element first), and
+        // this auto-play is NOT session-filtered — the session check above
+        // gates only the message update. So a second run.tts for this reply,
+        // or one from a stale/other session, silently cuts the audio
+        // mid-sentence with no barge-in involved. Logged rather than
+        // filtered for now: filtering blind could suppress legitimate
+        // chunked TTS, and one trace will show which is actually happening.
+        const willPlay = current && !ttsSuppressedRef.current;
+        if (typeof window !== "undefined") {
+          const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+            .__astridrVoiceTrace ??= []);
+          buf.push({
+            t: new Date().toISOString().slice(11, 23),
+            ev: "run.tts.received",
+            d: {
+              sessionMatches: data.session_id === activeSessionRef.current,
+              eventSession: data.session_id,
+              activeSession: activeSessionRef.current,
+              ttsEnabled: current,
+              ttsSuppressed: ttsSuppressedRef.current,
+              willPlay,
+            },
+          });
+          if (buf.length > 500) buf.shift();
+        }
         // Post-interrupt suppression: a barged-in turn's late TTS must never
         // play ("she would not stop"). The bubble still gets its replay URL.
-        if (current && !ttsSuppressedRef.current) {
+        if (willPlay) {
           playAudio(data.audio_url!);
         } else if (current) {
           // eslint-disable-next-line no-console
@@ -432,8 +458,13 @@ export function useAstridrChat() {
   // streaming message in the thread, and returns the partial reply text so the
   // caller can thread it into the next send (D-11/D-12). Safe to call when
   // nothing is streaming — returns "".
-  const interrupt = useCallback((): string => {
-    stopAudio();
+  const interrupt = useCallback((reason: string = "unattributed"): string => {
+    // `reason` threads the CALLER's identity down to the playback trace. Only
+    // one of the six call sites is a real barge-in; the rest (flushSend,
+    // continuation-merge, vision-capture, pure-barge-processing,
+    // swap-dispatch) also stop audio but never set bargeInFiredRef, so
+    // tts.end reported barged:false for a cut that definitely happened.
+    stopAudio(`interrupt:${reason}`);
     ttsSuppressedRef.current = true; // late chunks from this turn stay silent
     const partial = streamingTextRef.current;
     const session = activeSessionRef.current;

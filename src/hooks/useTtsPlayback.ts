@@ -33,6 +33,57 @@ import { useState, useRef, useCallback, useEffect } from "react";
 
 const ASTRIDR_API_URL = import.meta.env.VITE_ASTRIDR_API_URL ?? "http://localhost:8181";
 
+// ─── Playback tracing (2026-07-30) ────────────────────────────────────────────
+// Added because `tts.end { barged }` in useAstridrVoice could not distinguish
+// "she finished" from "something cut her off". It reports only whether OUR
+// barge-in latch fired, and five of the six chat.interrupt() call sites stop
+// audio WITHOUT setting that latch — so a real cut logged barged:false and was
+// read (by me) as a clean finish. teardownAudioEl() also nulls onended before
+// pause(), making a stop indistinguishable from a natural end downstream.
+//
+// These events go into the SAME window.__astridrVoiceTrace ring buffer the
+// voice hooks use, so COPY TRACE picks them up with no extra wiring.
+let ttsPlaybackSeq = 0;
+
+/** Round a possibly-absent media time to 2dp, or null. Media properties are
+ *  read defensively: this is a DIAGNOSTIC and must never be able to break
+ *  playback (it did, briefly — `currentTime.toFixed` on a mock element). */
+function num(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? Number(v.toFixed(2)) : null;
+}
+
+function ttsTrace(ev: string, audio: HTMLAudioElement | null, d?: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const entry = {
+      t: new Date().toISOString().slice(11, 23),
+      ev: `tts.audio.${ev}`,
+      d: {
+        ...d,
+        ...(audio
+          ? {
+              // The decisive pair: currentTime far below duration on a
+              // teardown means playback was CUT, whatever the cause claims.
+              currentTime: num(audio.currentTime),
+              duration: num(audio.duration),
+              paused: audio.paused ?? null,
+              ended: audio.ended ?? null,
+              readyState: audio.readyState ?? null,
+              networkState: audio.networkState ?? null,
+              errorCode: audio.error?.code ?? null,
+            }
+          : {}),
+      },
+    };
+    const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
+      .__astridrVoiceTrace ??= []);
+    buf.push(entry);
+    if (buf.length > 500) buf.shift();
+  } catch {
+    // Never let tracing surface into playback.
+  }
+}
+
 // ─── Options / return type ────────────────────────────────────────────────────
 
 export interface UseTtsPlaybackOptions {
@@ -48,7 +99,8 @@ export interface UseTtsPlaybackReturn {
   /** Play audio at the given URL (relative or absolute). Normalizes relative paths internally. */
   play: (url: string) => void;
   /** Pause and discard the current audio. */
-  stop: () => void;
+  /** `reason` is recorded in the playback trace so a stop is attributable. */
+  stop: (reason?: string) => void;
   /** True while the <audio> element is playing; false after onended or stop(). */
   isPlaying: boolean;
   /**
@@ -77,12 +129,18 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
 
   // Monotonic token so stale error/ended handlers from a superseded play() no-op.
   const playTokenRef = useRef(0);
+  // Identifies one playback across its whole lifecycle in the trace, so a
+  // replacement (playback N torn down while N+1 starts) is unmistakable.
+  const playbackIdRef = useRef(0);
 
   const normalizeUrl = (url: string) =>
     url.startsWith("http") ? url : `${ASTRIDR_API_URL}${url}`;
 
-  const teardownAudioEl = useCallback(() => {
+  const teardownAudioEl = useCallback((cause: string = "unspecified") => {
     if (audioRef.current) {
+      // Capture BEFORE pause() — afterwards `paused` is always true and the
+      // cause of the stop is unrecoverable.
+      ttsTrace("teardown", audioRef.current, { cause, playbackId: playbackIdRef.current });
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
       audioRef.current.pause();
@@ -102,7 +160,7 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
   useEffect(() => {
     return () => {
       playTokenRef.current += 1;
-      teardownAudioEl();
+      teardownAudioEl("unmount");
       if (audioCtxRef.current) {
         void audioCtxRef.current.close().catch(() => {});
         audioCtxRef.current = null;
@@ -111,9 +169,14 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
     };
   }, [teardownAudioEl]);
 
-  const stop = useCallback(() => {
+  const stop = useCallback((reason: string = "unattributed") => {
+    // `reason` is threaded from the caller so a stop is attributable. Most
+    // chat.interrupt() call sites are NOT barge-in (flushSend,
+    // continuation-merge, vision-capture, swap-dispatch) yet all of them
+    // stop audio, and none set the barge latch that tts.end reports.
+    ttsTrace("stop.called", audioRef.current, { reason, playbackId: playbackIdRef.current });
     playTokenRef.current += 1;
-    teardownAudioEl();
+    teardownAudioEl(`stop:${reason}`);
     setIsPlaying(false);
   }, [teardownAudioEl]);
 
@@ -121,19 +184,35 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
   const playPlain = useCallback(
     (fullUrl: string, token: number) => {
       if (token !== playTokenRef.current) return;
-      teardownAudioEl();
+      // A live element here means THIS play is replacing one mid-flight —
+      // the "multiple run.tts replace the current audio" case.
+      if (audioRef.current) {
+        ttsTrace("replace", audioRef.current, {
+          replacedBy: fullUrl,
+          playbackId: playbackIdRef.current,
+        });
+      }
+      teardownAudioEl("replaced-by-new-play");
 
+      const playbackId = ++playbackIdRef.current;
       const audio = new Audio(fullUrl);
       audioRef.current = audio;
       setIsPlaying(true);
+      ttsTrace("play.request", audio, { playbackId, url: fullUrl, mode: "plain" });
 
       audio.play().catch((err) => {
+        ttsTrace("play.rejected", audio, { playbackId, error: String(err) });
         console.warn("TTS playback failed:", err);
         if (token === playTokenRef.current) setIsPlaying(false);
       });
+      audio.onerror = () => ttsTrace("error", audio, { playbackId });
       audio.onended = () => {
         if (token !== playTokenRef.current) return;
-        teardownAudioEl();
+        // currentTime vs duration here is what proves a "natural" end was
+        // actually complete — a source truncated server-side also fires
+        // `ended`, and looked identical before this line existed.
+        ttsTrace("ended", audio, { playbackId });
+        teardownAudioEl("ended");
         setIsPlaying(false);
       };
     },
@@ -165,11 +244,20 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
       if (ctx.state !== "running") throw new Error("AudioContext suspended");
       if (token !== playTokenRef.current) return;
 
-      teardownAudioEl();
+      if (audioRef.current) {
+        ttsTrace("replace", audioRef.current, {
+          replacedBy: fullUrl,
+          playbackId: playbackIdRef.current,
+          mode: "analysed",
+        });
+      }
+      teardownAudioEl("replaced-by-new-play:analysed");
 
+      const playbackId = ++playbackIdRef.current;
       const audio = new Audio();
       audio.crossOrigin = "anonymous";
       audioRef.current = audio;
+      ttsTrace("play.request", audio, { playbackId, url: fullUrl, mode: "analysed" });
 
       const source = ctx.createMediaElementSource(audio);
       source.connect(analyserRef.current!); // analyser is already → destination
@@ -180,12 +268,16 @@ export function useTtsPlayback(options?: UseTtsPlaybackOptions): UseTtsPlaybackR
 
       audio.onerror = () => {
         if (token !== playTokenRef.current) return;
+        // This tears down and restarts playback WITHOUT any barge-in — a
+        // silent mid-reply cut if it fires after audio has begun.
+        ttsTrace("error", audio, { playbackId, fallback: "plain" });
         console.warn("TTS analysed load failed; falling back to plain playback");
         playPlain(fullUrl, token);
       };
       audio.onended = () => {
         if (token !== playTokenRef.current) return;
-        teardownAudioEl();
+        ttsTrace("ended", audio, { playbackId, mode: "analysed" });
+        teardownAudioEl("ended");
         setIsPlaying(false);
       };
 

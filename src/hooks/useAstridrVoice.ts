@@ -817,7 +817,7 @@ export function useAstridrVoice({
     if (continuing) {
       const merged = `${prev.text} ${message}`;
       trace("flushSend.merged-continuation", { merged });
-      chatRef.current.interrupt(); // cancel the half-question turn
+      chatRef.current.interrupt("continuation-merge"); // cancel the half-question turn
       interruptedReplyRef.current = ""; // our own continuation, not her reply
       lastSentRef.current = { text: merged, at: Date.now() };
       await chatRef.current.sendMessage(merged, { voice: true });
@@ -830,7 +830,7 @@ export function useAstridrVoice({
     // and returns any partial we don't already hold; when idle it's a no-op "".
     const prior = interruptedReplyRef.current;
     interruptedReplyRef.current = "";
-    const partial = chatRef.current.interrupt();
+    const partial = chatRef.current.interrupt("flush-send");
     const interruptedReply = prior || partial || undefined;
 
     lastSentRef.current = { text: message, at: Date.now() };
@@ -859,7 +859,7 @@ export function useAstridrVoice({
     }
 
     // Cuts TTS instantly, cancels the server turn, returns the partial reply.
-    const partial = chatRef.current.interrupt();
+    const partial = chatRef.current.interrupt("barge-in");
     if (partial) interruptedReplyRef.current = partial;
 
     dispatch({ type: "BARGE_IN" });
@@ -1100,7 +1100,7 @@ export function useAstridrVoice({
         // new top-level reducer state; isLooking only overrides the label.
         dispatch({ type: "FINAL_RESULT" });
         setIsLooking(true);
-        chatRef.current.interrupt(); // cancel any in-flight turn so this send isn't dropped
+        chatRef.current.interrupt("vision-capture"); // cancel any in-flight turn so this send isn't dropped
         void (async () => {
           try {
             const frame = await screenShareRef.current.captureFrame();
@@ -1146,7 +1146,7 @@ export function useAstridrVoice({
       closePendingRef.current = false;
       if (chatRef.current.isStreaming) {
         conversationWarmRef.current = true;
-        const partial = chatRef.current.interrupt();
+        const partial = chatRef.current.interrupt("pure-barge-processing");
         if (partial) interruptedReplyRef.current = partial;
         dispatch({ type: "BARGE_IN" });
         setShowInterruptFlash(true);
@@ -1184,7 +1184,7 @@ export function useAstridrVoice({
       accumulatedRef.current = "";
       setFinalText("");
       dispatch({ type: "FINAL_RESULT" });
-      chatRef.current.interrupt(); // cancel any in-flight turn so this send isn't dropped
+      chatRef.current.interrupt("swap-dispatch"); // cancel any in-flight turn so this send isn't dropped
       void chatRef.current.sendMessage(text, { voice: true, swapHandled: true });
       return;
     }
