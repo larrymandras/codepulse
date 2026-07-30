@@ -9,6 +9,7 @@
  */
 
 import type * as activeEngine from "../activeEngine.js";
+import type * as activeEngineFilters from "../activeEngineFilters.js";
 import type * as activeTime from "../activeTime.js";
 import type * as advisorEvents from "../advisorEvents.js";
 import type * as agentConfigVersions from "../agentConfigVersions.js";
@@ -160,6 +161,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   activeEngine: typeof activeEngine;
+  activeEngineFilters: typeof activeEngineFilters;
   activeTime: typeof activeTime;
   advisorEvents: typeof advisorEvents;
   agentConfigVersions: typeof agentConfigVersions;
