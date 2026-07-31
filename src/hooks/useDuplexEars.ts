@@ -68,6 +68,11 @@ const DUPLEX_DATA_CHANNEL_LABEL = "oai-events";
 /** Verbatim data-channel event `type` literals observed in 188-SMOKE.md. A
  *  future API rename is a one-line change here. */
 const DUPLEX_EVENT_SPEECH_STARTED = "input_audio_buffer.speech_started";
+// Traced only (2026-07-31, tail-hallucination investigation) -- not otherwise handled.
+// Never subscribed before; gives a repro trace the wall-clock moment OpenAI's server_vad
+// decided speech stopped, to compare against duplex.transcript / tts.end timestamps in the
+// ring buffer and see whether hallucinated finals land inside or outside ECHO_TAIL_MS.
+const DUPLEX_EVENT_SPEECH_STOPPED = "input_audio_buffer.speech_stopped";
 const DUPLEX_EVENT_TRANSCRIPT_COMPLETED =
   "conversation.item.input_audio_transcription.completed";
 const DUPLEX_EVENT_TRANSCRIPT_DELTA =
@@ -308,6 +313,14 @@ export function useDuplexEars(options: UseDuplexEarsOptions): UseDuplexEarsRetur
           if (type === DUPLEX_EVENT_SPEECH_STARTED) {
             trace("speech_started");
             onSpeechStartRef.current();
+            return;
+          }
+          if (type === DUPLEX_EVENT_SPEECH_STOPPED) {
+            // Trace only -- no handler wired to this yet. Added for the tail-hallucination
+            // repro: read against duplex.transcript's timestamp for the SAME utterance to see
+            // OpenAI's own server_vad + inference + WebRTC round-trip latency, and against the
+            // nearest tts.end to see whether it lands inside or outside ECHO_TAIL_MS.
+            trace("speech_stopped");
             return;
           }
           if (type === DUPLEX_EVENT_TRANSCRIPT_COMPLETED) {

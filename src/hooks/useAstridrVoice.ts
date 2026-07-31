@@ -954,6 +954,11 @@ export function useAstridrVoice({
       }
       if (remainder !== text.trim()) {
         trace("interim.echo-tail-stripped", { from: text, to: remainder });
+      } else {
+        // 2026-07-31 tail-hallucination repro: explicit trace for the case the fuzzy echo match
+        // was checked and found NO match — previously silent, so a hallucinated token slipping
+        // through here was invisible in the trace, only inferable. Diagnostic only.
+        trace("interim.echo-tail-checked-no-match", { text });
       }
       text = remainder;
     } else {
@@ -1061,6 +1066,10 @@ export function useAstridrVoice({
       }
       if (remainder !== text.trim()) {
         trace("final.echo-tail-stripped", { from: text, to: remainder });
+      } else {
+        // 2026-07-31 tail-hallucination repro: see the matching comment in the interim
+        // handler above — explicit trace for "checked, no match, passed through".
+        trace("final.echo-tail-checked-no-match", { text });
       }
       text = remainder;
     }
@@ -1324,7 +1333,16 @@ export function useAstridrVoice({
 
   const onDuplexFinalTranscript = useCallback((text: string) => {
     // Never trace transcript text, only length (T-188-31/T-188-60).
-    trace("duplex.transcript", { length: text.length });
+    // msSinceTtsEnd/insideTailWindow added 2026-07-31 for the tail-hallucination repro (garbage
+    // tokens like "Twing."/"bentuk" observed right after her TTS ends) -- diagnostic only, does
+    // not change routing. Lets a live trace show directly whether hallucinated finals land inside
+    // ECHO_TAIL_MS (where the fuzzy echo match at least gets a chance to run) or after it expires
+    // (where today NOTHING defends against them at all).
+    trace("duplex.transcript", {
+      length: text.length,
+      msSinceTtsEnd: echoTailUntilRef.current ? Date.now() - (echoTailUntilRef.current - ECHO_TAIL_MS) : null,
+      insideTailWindow: Date.now() < echoTailUntilRef.current,
+    });
     handleFinalResultRef.current(text);
   }, []);
 
