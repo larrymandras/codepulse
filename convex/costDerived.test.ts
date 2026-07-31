@@ -1,5 +1,11 @@
 import { describe, test, expect } from "vitest";
-import { deriveBucketDollars, costOverTime, costBreakdown } from "./costDerived";
+import {
+  deriveBucketDollars,
+  costOverTime,
+  costBreakdown,
+  unpricedModels,
+  computePeriodSpend,
+} from "./costDerived";
 import { buildRateIndex, type PricingRow } from "./modelPricing";
 
 // ---------------------------------------------------------------------------
@@ -240,6 +246,138 @@ describe("costBreakdown", () => {
     expect(insertCalls.length).toBe(0);
     expect(patchCalls.length).toBe(0);
     expect(deleteCalls.length).toBe(0);
+  });
+});
+
+describe("unpricedModels", () => {
+  test("counts distinct (provider, model) pairs, not rows, and sums token counts per pair across billingTypes", async () => {
+    const bucketStart = recentBucketStart();
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 300, dimensions: { provider: "x", model: "y", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 100, dimensions: { provider: "x", model: "y", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 50, dimensions: { provider: "x", model: "y", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 20, dimensions: { provider: "x", model: "y", billingType: "subscription", goalId: "" } },
+      ],
+      modelPricing: [],
+    });
+
+    const result = await (unpricedModels as any)._handler(ctx, { lookbackHours: 24 });
+
+    expect(result.count).toBe(1);
+    expect(result.models).toHaveLength(1);
+    expect(result.models[0].provider).toBe("x");
+    expect(result.models[0].model).toBe("y");
+    expect(result.models[0].promptTokens).toBe(350);
+    expect(result.models[0].completionTokens).toBe(120);
+  });
+});
+
+describe("computePeriodSpend", () => {
+  const DAY = 86400;
+  const nowSec = 1_700_000_000;
+  const todayStart = Math.floor(nowSec / DAY) * DAY;
+
+  test("a periodStart earlier than today reads BOTH the daily and hourly windows without double-counting", async () => {
+    const periodStart = todayStart - 3 * DAY;
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        // A whole day inside [periodStart, todayStart) — read via the daily window.
+        { metric_type: "tokens_prompt", period: "daily", bucket_start: todayStart - 2 * DAY, value: 1000, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "daily", bucket_start: todayStart - 2 * DAY, value: 500, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        // Today's own hour — read via the hourly window.
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 200, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 100, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [makeRate({ model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015 })],
+    });
+
+    const result = await computePeriodSpend(ctx as any, { scope: "global", scopeKey: "", periodStart, nowSec });
+
+    const expectedBilled = (1000 + 200) * 0.000003 + (500 + 100) * 0.000015;
+    expect(result.billedUsd).toBeCloseTo(expectedBilled, 10);
+    expect(result.unpricedTokens).toBe(0);
+  });
+
+  test("a daily budget (periodStart === todayStart) issues no daily-period read at all", async () => {
+    const { ctx, queryLog } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 100, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 50, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [makeRate({ model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015 })],
+    });
+
+    await computePeriodSpend(ctx as any, { scope: "global", scopeKey: "", periodStart: todayStart, nowSec });
+
+    const issuedDailyRead = queryLog.some(
+      (entry) =>
+        entry.table === "aggregates" &&
+        entry.predicates.some((p) => p.op === "eq" && p.field === "period" && p.value === "daily")
+    );
+    expect(issuedDailyRead).toBe(false);
+  });
+
+  test("scope: 'model' excludes other models' buckets", async () => {
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 1000, dimensions: { provider: "anthropic_direct", model: "model-a", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 500, dimensions: { provider: "anthropic_direct", model: "model-a", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 9999, dimensions: { provider: "anthropic_direct", model: "model-b", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 9999, dimensions: { provider: "anthropic_direct", model: "model-b", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [
+        makeRate({ model: "model-a", inputPerToken: 0.000003, outputPerToken: 0.000015 }),
+        makeRate({ model: "model-b", inputPerToken: 0.000003, outputPerToken: 0.000015 }),
+      ],
+    });
+
+    const result = await computePeriodSpend(ctx as any, {
+      scope: "model",
+      scopeKey: "model-a",
+      periodStart: todayStart,
+      nowSec,
+    });
+
+    expect(result.billedUsd).toBeCloseTo(1000 * 0.000003 + 500 * 0.000015, 10);
+  });
+
+  test("excludes billingType: 'subscription' buckets from billedUsd under every scope", async () => {
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 1000, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 500, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 5000, dimensions: { provider: "claude-cli", model: "claude-cli-turn", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 2000, dimensions: { provider: "claude-cli", model: "claude-cli-turn", billingType: "subscription", goalId: "" } },
+      ],
+      modelPricing: [
+        makeRate({ model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015 }),
+        makeRate({ model: "claude-cli", shadowForProvider: "claude-cli", inputPerToken: 0.000005, outputPerToken: 0.000025 }),
+      ],
+    });
+
+    for (const scope of ["global", "model", "provider"] as const) {
+      const scopeKey = scope === "model" ? "claude-sonnet-4-5" : scope === "provider" ? "anthropic_direct" : "";
+      const result = await computePeriodSpend(ctx as any, { scope, scopeKey, periodStart: todayStart, nowSec });
+      expect(result.billedUsd).toBeCloseTo(1000 * 0.000003 + 500 * 0.000015, 10);
+    }
+  });
+
+  test("unpriced buckets contribute to unpricedTokens and nothing to billedUsd", async () => {
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 1000, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 500, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-4-5", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: todayStart + 3600, value: 300, dimensions: { provider: "openrouter", model: "unrated-model", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: todayStart + 3600, value: 100, dimensions: { provider: "openrouter", model: "unrated-model", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [makeRate({ model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015 })],
+    });
+
+    const result = await computePeriodSpend(ctx as any, { scope: "global", scopeKey: "", periodStart: todayStart, nowSec });
+
+    expect(result.billedUsd).toBeCloseTo(1000 * 0.000003 + 500 * 0.000015, 10);
+    expect(result.unpricedTokens).toBe(400);
   });
 });
 

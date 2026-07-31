@@ -326,3 +326,140 @@ export const costBreakdown = query({
   },
   handler: async (ctx, args) => deriveBreakdown(ctx, args.period, args.lookbackHours ?? 24),
 });
+
+// ============================================================
+// unpricedModels — the SINGLE source for "how many models need rates".
+// Thin wrapper over the same costBreakdown derivation, restricted to
+// priced: false rows, so the nudge (104-09) and the pricing-admin
+// suggestion list (104-07) can never disagree.
+// ============================================================
+
+export const unpricedModels = query({
+  args: {
+    lookbackHours: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const { rows } = await deriveBreakdown(ctx, "hourly", args.lookbackHours ?? 24);
+
+    // Count/report distinct (provider, model) PAIRS, not rows — a model can
+    // in principle appear unpriced under more than one billingType.
+    const byPair = new Map<
+      string,
+      { provider: string; model: string; billingType: string; promptTokens: number; completionTokens: number }
+    >();
+    for (const r of rows) {
+      if (r.priced) continue;
+      const key = `${r.provider}::${r.model}`;
+      const existing = byPair.get(key);
+      if (existing) {
+        existing.promptTokens += r.promptTokens;
+        existing.completionTokens += r.completionTokens;
+      } else {
+        byPair.set(key, {
+          provider: r.provider,
+          model: r.model,
+          billingType: r.billingType,
+          promptTokens: r.promptTokens,
+          completionTokens: r.completionTokens,
+        });
+      }
+    }
+
+    const models = Array.from(byPair.values());
+    return { count: models.length, models };
+  },
+});
+
+// ============================================================
+// computePeriodSpend — the bounded "spend so far this period" helper the
+// budget evaluator (plan 104-06) calls directly from computeHourly's
+// mutation ctx. A plain exported async function, NOT a Convex query.
+// ============================================================
+
+/**
+ * Bounded read strategy (RESEARCH.md Pitfall 4 — a monthly budget must
+ * never read 744 hours of hourly buckets): whole days strictly BEFORE today
+ * read from `period: "daily"` buckets; today itself reads from
+ * `period: "hourly"` buckets. These two windows are DISJOINT BY
+ * CONSTRUCTION — the daily read is upper-bounded at `todayStart` and the
+ * hourly read is lower-bounded at `max(periodStart, todayStart)` — so they
+ * can never both cover the same hour and double-count today. A monthly
+ * budget therefore reads at most ~31 daily bucket-sets plus ~24 hourly
+ * bucket-sets, never a raw `llmMetrics` re-scan.
+ *
+ * Scope filtering (D-07): only `billingType: "api"` buckets ever contribute
+ * to `billedUsd` under every scope — a dollar budget guards billed money
+ * only; subscription/quota traffic is guarded on its own axis
+ * (`gatewayQuotaSnapshots`, plan 104-06's `"quota"` scope, not handled
+ * here).
+ */
+export async function computePeriodSpend(
+  ctx: { db: DatabaseReader },
+  args: {
+    scope: "global" | "model" | "provider";
+    scopeKey: string;
+    periodStart: number;
+    nowSec: number;
+  }
+): Promise<{ billedUsd: number; unpricedTokens: number }> {
+  const todayStart = Math.floor(args.nowSec / 86400) * 86400;
+  const index = await loadRateIndex(ctx);
+
+  type Group = { provider: string; model: string; billingType: string; promptTokens: number; completionTokens: number };
+  const groups = new Map<string, Group>();
+
+  function accumulate(rows: AggregateRow[], field: "promptTokens" | "completionTokens") {
+    for (const row of rows) {
+      const d = dimsOf(row.dimensions);
+      const key = `${d.provider}::${d.model}::${d.billingType}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { provider: d.provider, model: d.model, billingType: d.billingType, promptTokens: 0, completionTokens: 0 };
+        groups.set(key, g);
+      }
+      g[field] += row.value;
+    }
+  }
+
+  // Whole-day window: [periodStart, todayStart). Skipped entirely for a
+  // daily budget (periodStart === todayStart) — issues NO "daily"-period
+  // read at all in that case.
+  if (args.periodStart < todayStart) {
+    const dailyPrompt = await fetchAggregateRows(ctx, "tokens_prompt", "daily", args.periodStart, todayStart);
+    const dailyCompletion = await fetchAggregateRows(ctx, "tokens_completion", "daily", args.periodStart, todayStart);
+    accumulate(dailyPrompt, "promptTokens");
+    accumulate(dailyCompletion, "completionTokens");
+  }
+
+  // Today window: [max(periodStart, todayStart), now) via the lower-bound
+  // only (no upper bound needed — "up to now" is the read's natural end).
+  const hourlyLowerBound = Math.max(args.periodStart, todayStart);
+  const hourlyPrompt = await fetchAggregateRows(ctx, "tokens_prompt", "hourly", hourlyLowerBound);
+  const hourlyCompletion = await fetchAggregateRows(ctx, "tokens_completion", "hourly", hourlyLowerBound);
+  accumulate(hourlyPrompt, "promptTokens");
+  accumulate(hourlyCompletion, "completionTokens");
+
+  let billedUsd = 0;
+  let unpricedTokens = 0;
+  for (const g of groups.values()) {
+    // D-07: a dollar budget guards billed (api) money only, on every scope —
+    // subscription buckets never contribute to billedUsd here.
+    if (g.billingType !== "api") continue;
+    if (args.scope === "model" && g.model !== args.scopeKey) continue;
+    if (args.scope === "provider" && g.provider !== args.scopeKey) continue;
+
+    const derived = deriveBucketDollars(
+      { provider: g.provider, model: g.model, billingType: g.billingType },
+      g.promptTokens,
+      g.completionTokens,
+      index
+    );
+    if (derived.billedUsd !== null) {
+      billedUsd += derived.billedUsd;
+    } else {
+      unpricedTokens += g.promptTokens + g.completionTokens;
+    }
+  }
+
+  return { billedUsd, unpricedTokens };
+}
