@@ -713,16 +713,30 @@ Plans:
 **Plans:** 11 plans in 5 waves
 
 Plans:
+**Wave 1**
+
 - [ ] 104-01-PLAN.md — Schema (`modelPricing`, `costBudgets`) + pricing CRUD with the Clerk gate, pure rate resolution with no default fallback, and the seed incl. sonnet-5/opus-5/fable-5 and the D-06 shadow rows — COST-01, COST-02
 - [ ] 104-02-PLAN.md — Repair the two dead telemetry pipes: gateway completions into `llmMetrics` (D-18, incl. an astridr-repo token-emit change) and the quota poller repointed at the CLI-gateway sidecar (D-20) — COST-01, COST-02
 - [ ] 104-03-PLAN.md — Widen the hourly rollup with `tokens_prompt`/`tokens_completion` buckets plus a resumable, batch-capped, insert-only backfill (D-04) — COST-01
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 104-04-PLAN.md — `costBudgets` CRUD, UTC period-boundary helpers, and the migration folding `SDKSpendGuard`'s constants and the legacy `agentConfigs` monthly cap into seed rows (D-09/D-10/D-11/D-12/D-19) — COST-02
 - [ ] 104-05-PLAN.md — `convex/costDerived.ts`: the single place tokens become money, with billed/covered/unpriced kept separate, plus the goal-scoped HivePage queries moved onto the same derivation (D-01/D-03/D-05) — COST-01
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 104-06-PLAN.md — Budget evaluator: projection to period end, warn/breach classification, per-period dedup, fire-and-deliver, appended to the tail of `computeHourly` with no new cron (D-13/D-14/D-15/D-16/D-17) — COST-03
 - [ ] 104-07-PLAN.md — Settings "Cost & Budgets" tab: `CostBudgetsAdmin` above `ModelPricingAdmin`, both error-isolated (D-02/D-07/D-09/D-10/D-11) — COST-01, COST-02
+- [ ] 104-10-PLAN.md — `CostTrendChart` Billed / Billed + Covered toggle over the derived series, plus the mandatory hex-to-token remediation on it and `CostBreakdown` (D-08) — COST-01
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 104-08-PLAN.md — Collapse the remaining cap sources: rewire `SDKSpendGuard` and `CostForecastPanel`/`forecasts.ts` onto `costBudgets`, retire the legacy Settings cap form, prove exactly one cap source remains (D-12/D-19) — COST-02
 - [ ] 104-09-PLAN.md — `CostBreakdownTable` + `UnpricedModelsNudge` mounted in the Analytics cost cluster (D-03/D-05) — COST-01
-- [ ] 104-10-PLAN.md — `CostTrendChart` Billed / Billed + Covered toggle over the derived series, plus the mandatory hex-to-token remediation on it and `CostBreakdown` (D-08) — COST-01
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 104-11-PLAN.md — Deploy, seed, backfill, then live-verify every Manual-Only row: D-18/D-20 pipes, D-14 evaluator cost, D-04 live re-price, D-03 nudge accuracy, six-theme pass (blocking checkpoints) — COST-01, COST-02, COST-03
 
 ---
