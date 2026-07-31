@@ -6,6 +6,45 @@ import { buildRateIndex } from "./modelPricing";
 import { deriveBucketDollars } from "./costDerived";
 import { evaluateBudgets } from "./costBudgetEval";
 
+// ---- Bounded llmMetrics window read --------------------------------------
+//
+// Convex allows exactly ONE paginated query per function invocation. Both
+// readers here previously ran `.paginate()` inside a `while (true)` cursor
+// loop, which violates that:
+//   - `backfillTokenSplit` (104-03) called such a loop once PER HOUR, so at the
+//     documented `maxHours: 6` it always issued 6 paginated queries and failed
+//     on its very first live invocation, 0 rows or not:
+//     "This query or mutation function ran multiple paginated queries."
+//   - `computeHourly` (pre-existing, Phase 88 `4e8c2be9`) has the same loop and
+//     survives only because a page of 500 has always covered one hour, so
+//     `isDone` is true on the first call and the loop exits after one paginate.
+//     The first hour to exceed 500 rows would kill the LIVE CRON -- and now also
+//     the budget evaluator appended to its tail (D-14).
+// Neither was catchable by the unit suite: the fake ctx in aggregates.test.ts
+// implemented `paginate()` more permissively than Convex and allowed repeated
+// calls. That mock now enforces the real single-call rule.
+//
+// A single index-range-bounded `.take()` is bounded by construction and needs no
+// pagination at all. Truncation is REPORTED rather than silently undercounting
+// token buckets (the honesty rule this whole phase is built on).
+// Found 2026-07-31 at Phase 104's live-deploy gate.
+const LLM_WINDOW_READ_CAP = 4000;
+
+async function fetchLlmRowsForWindow(
+  ctx: { db: any },
+  windowStart: number,
+  windowEnd: number
+): Promise<{ rows: Array<Doc<"llmMetrics">>; truncated: boolean }> {
+  const rows: Array<Doc<"llmMetrics">> = await ctx.db
+    .query("llmMetrics")
+    .withIndex("by_timestamp", (q: any) =>
+      q.gte("timestamp", windowStart).lt("timestamp", windowEnd)
+    )
+    .filter((q: any) => q.neq(q.field("archived"), true))
+    .take(LLM_WINDOW_READ_CAP);
+  return { rows, truncated: rows.length >= LLM_WINDOW_READ_CAP };
+}
+
 // ---- D-04 (Phase 104) shared helpers -------------------------------------
 // Factored out of computeHourly's Task 1 edit so computeHourly (the live
 // cron) and backfillTokenSplit (the manual historical backfill, below) share
@@ -79,23 +118,22 @@ export const computeHourly = internalMutation({
     const hourEnd = hourStart + 3600;
 
     // --- Cost aggregation: group by provider+model ---
-    // D-03 / Pitfall: paginate the llmMetrics read instead of an unbounded
-    // .collect(). A high-volume hour can exceed the 16 MiB/exec read limit and
-    // silently fail the cron; cursor pages keep each read bounded.
-    const LLM_PAGE_SIZE = 500; // tunable batch size for the cost-read pagination
-    const llmRows: Array<Doc<"llmMetrics">> = [];
-    let llmCursor: string | null = null;
-    while (true) {
-      const page = await ctx.db
-        .query("llmMetrics")
-        .withIndex("by_timestamp", (q) =>
-          q.gte("timestamp", hourStart).lt("timestamp", hourEnd)
-        )
-        .filter((q) => q.neq(q.field("archived"), true))
-        .paginate({ numItems: LLM_PAGE_SIZE, cursor: llmCursor });
-      llmRows.push(...page.page);
-      if (page.isDone) break;
-      llmCursor = page.continueCursor;
+    // Bounded by an index range + a hard row cap, NOT by a paginate cursor loop
+    // (Convex permits one paginated query per function -- see
+    // fetchLlmRowsForWindow's note). Keeps each read well inside the 16 MiB/exec
+    // limit that the original pagination was reaching for.
+    const { rows: llmRows, truncated: llmTruncated } = await fetchLlmRowsForWindow(
+      ctx,
+      hourStart,
+      hourEnd
+    );
+    if (llmTruncated) {
+      // Loud on purpose: past the cap this hour's cost/token buckets UNDERCOUNT,
+      // and a silent undercount is exactly what D-03's honesty rule forbids.
+      console.warn(
+        `[computeHourly] hour ${hourStart} hit the ${LLM_WINDOW_READ_CAP}-row read cap — ` +
+          `its cost/token buckets undercount. Raise LLM_WINDOW_READ_CAP or shorten the bucket.`
+      );
     }
 
     const costByDim: Record<string, number> = {};
@@ -287,28 +325,19 @@ export const rollupDaily = internalMutation({
 // tokens_prompt/tokens_completion buckets ----------------------------------
 
 const TOKEN_SPLIT_BACKFILL_CURSOR_KEY = "phase104.tokenSplitBackfill.cursor";
-const BACKFILL_LLM_PAGE_SIZE = 500;
 
-/** Same bounded, paginated llmMetrics read shape as computeHourly's — never a bare .collect(). */
+/**
+ * Same bounded llmMetrics read shape as computeHourly's — never a bare
+ * .collect(), and never a paginate cursor loop (this function is called once per
+ * hour inside a maxHours loop, so any paginate here means N paginated queries in
+ * one mutation, which Convex rejects outright).
+ */
 async function fetchLlmRowsForHour(
   ctx: { db: any },
   hourStart: number,
   hourEnd: number
-): Promise<Array<Doc<"llmMetrics">>> {
-  const rows: Array<Doc<"llmMetrics">> = [];
-  let cursor: string | null = null;
-  while (true) {
-    const result: { page: Array<Doc<"llmMetrics">>; isDone: boolean; continueCursor: string } =
-      await ctx.db
-        .query("llmMetrics")
-        .withIndex("by_timestamp", (q: any) => q.gte("timestamp", hourStart).lt("timestamp", hourEnd))
-        .filter((q: any) => q.neq(q.field("archived"), true))
-        .paginate({ numItems: BACKFILL_LLM_PAGE_SIZE, cursor });
-    rows.push(...result.page);
-    if (result.isDone) break;
-    cursor = result.continueCursor;
-  }
-  return rows;
+): Promise<{ rows: Array<Doc<"llmMetrics">>; truncated: boolean }> {
+  return fetchLlmRowsForWindow(ctx, hourStart, hourEnd);
 }
 
 /**
@@ -366,7 +395,7 @@ export const backfillTokenSplit = internalMutation({
     const cursorRow = cursorRows.length > 0 ? cursorRows[cursorRows.length - 1] : null;
 
     if (cursorRow?.value === "done") {
-      return { hoursProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true };
+      return { hoursProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true, truncatedHours: [] as number[] };
     }
 
     let cursor: number =
@@ -377,6 +406,7 @@ export const backfillTokenSplit = internalMutation({
     let hoursProcessed = 0;
     let rowsInserted = 0;
     let done = false;
+    const truncatedHours: number[] = [];
 
     while (hoursProcessed < maxHours) {
       if (cursor < retentionFloorHour) {
@@ -385,7 +415,16 @@ export const backfillTokenSplit = internalMutation({
       }
       const hourStart = cursor;
       const hourEnd = hourStart + 3600;
-      const llmRows = await fetchLlmRowsForHour(ctx, hourStart, hourEnd);
+      const { rows: llmRows, truncated } = await fetchLlmRowsForHour(ctx, hourStart, hourEnd);
+      if (truncated) {
+        // Record rather than swallow: this hour's token buckets undercount, and
+        // the operator needs to know WHICH hour so it can be re-run at a larger
+        // cap instead of silently trusting a short total.
+        truncatedHours.push(hourStart);
+        console.warn(
+          `[backfillTokenSplit] hour ${hourStart} hit the ${LLM_WINDOW_READ_CAP}-row read cap — its token buckets undercount.`
+        );
+      }
       const { promptInserted, completionInserted } = await insertTokenSplitBuckets(ctx, hourStart, llmRows);
       rowsInserted += promptInserted + completionInserted;
       hoursProcessed++;
@@ -404,7 +443,7 @@ export const backfillTokenSplit = internalMutation({
       updatedAt: Date.now() / 1000,
     });
 
-    return { hoursProcessed, rowsInserted, nextCursor: nextCursorValue, done };
+    return { hoursProcessed, rowsInserted, nextCursor: nextCursorValue, done, truncatedHours };
   },
 });
 

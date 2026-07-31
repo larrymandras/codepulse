@@ -30,6 +30,10 @@ function makeAggregatesCtx(
     modelPricing: [...(opts.modelPricing ?? [])],
   };
   let nextId = 1;
+  // Per-ctx paginate counter — each test builds a fresh ctx and invokes one
+  // handler, so this scopes to a single function invocation the way Convex's own
+  // limit does. See the throw in paginate() below.
+  let paginateCalls = 0;
   const patchCalls: unknown[] = [];
   const deleteCalls: unknown[] = [];
 
@@ -83,7 +87,28 @@ function makeAggregatesCtx(
         const ordered = dir === "desc" ? [...filtered].reverse() : filtered;
         return ordered[0] ?? null;
       },
+      // Bounded read used by fetchLlmRowsForWindow — same filter/order semantics
+      // as collect(), capped at `n`. Unlike paginate() there is no per-invocation
+      // limit on this in Convex, which is exactly why it is the right shape for a
+      // helper called once per hour inside a loop.
+      async take(n: number) {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const ordered = dir === "desc" ? [...filtered].reverse() : filtered;
+        return ordered.slice(0, n);
+      },
       async paginate({ numItems, cursor }: { numItems: number; cursor: string | null }) {
+        // Convex allows exactly ONE paginated query per function invocation and
+        // throws on the second. This mock previously allowed unlimited calls,
+        // which let two real multi-paginate bugs (backfillTokenSplit's per-hour
+        // cursor loop, and computeHourly's latent one) pass 34 green tests and
+        // then fail on the first live invocation at Phase 104's deploy gate.
+        // Enforce the real constraint so the suite can catch it. (2026-07-31)
+        paginateCalls++;
+        if (paginateCalls > 1) {
+          throw new Error(
+            "This query or mutation function ran multiple paginated queries. Convex only supports a single paginated query in each function."
+          );
+        }
         const filtered = rows.filter((r) => predicates.every((p) => p(r)));
         const start = cursor ? Number(cursor) : 0;
         const page = filtered.slice(start, start + numItems);
