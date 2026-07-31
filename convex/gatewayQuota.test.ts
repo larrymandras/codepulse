@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { deduplicateByProvider } from "./gatewayQuota";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { deduplicateByProvider, pollAndStore } from "./gatewayQuota";
 
 // Tests for GW-08: gatewayQuota backend service
 
@@ -36,6 +36,60 @@ describe("gatewayQuota — insertSnapshot args shape", () => {
     };
     expect(args.dailyLimit).toBeUndefined();
     expect(args.spendCapUsd).toBeUndefined();
+  });
+});
+
+describe("pollAndStore — D-20 fetch target (Phase 104)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  function makeCtx() {
+    const runMutation = vi.fn(async () => undefined);
+    return { ctx: { runMutation } as any, runMutation };
+  }
+
+  it("performs no fetch and no mutation when CLI_GATEWAY_URL is absent from the env", async () => {
+    vi.stubEnv("CLI_GATEWAY_URL", "");
+    const { ctx, runMutation } = makeCtx();
+
+    await (pollAndStore as any)._handler(ctx);
+
+    expect(fetch).not.toHaveBeenCalled();
+    expect(runMutation).not.toHaveBeenCalled();
+  });
+
+  it("builds the fetch URL from CLI_GATEWAY_URL, ending in /quota, when it is set", async () => {
+    vi.stubEnv("CLI_GATEWAY_URL", "http://cli-gateway:8200");
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    });
+    const { ctx } = makeCtx();
+
+    await (pollAndStore as any)._handler(ctx);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url] = (fetch as any).mock.calls[0];
+    expect(url).toBe("http://cli-gateway:8200/quota");
+  });
+
+  it("never reads ASTRIDR_API_URL as a fallback target", async () => {
+    vi.stubEnv("CLI_GATEWAY_URL", "");
+    vi.stubEnv("ASTRIDR_API_URL", "http://astridr:8181");
+    const { ctx, runMutation } = makeCtx();
+
+    await (pollAndStore as any)._handler(ctx);
+
+    // Even with ASTRIDR_API_URL set, an absent CLI_GATEWAY_URL must still
+    // warn-and-return — no silent fallback to the wrong host.
+    expect(fetch).not.toHaveBeenCalled();
+    expect(runMutation).not.toHaveBeenCalled();
   });
 });
 

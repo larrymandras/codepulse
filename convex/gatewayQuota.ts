@@ -25,19 +25,37 @@ export function deduplicateByProvider<
 }
 
 /**
- * pollAndStore — internalAction that fetches /quota from the Astridr gateway
- * and writes one snapshot per provider into gatewayQuotaSnapshots.
+ * pollAndStore — internalAction that fetches /quota from the CLI-gateway
+ * sidecar and writes one snapshot per provider into gatewayQuotaSnapshots.
  *
- * T-68-01: never logs ASTRIDR_API_KEY value.
+ * D-20 (Phase 104): this previously targeted Ástríðr's main web API base URL
+ * env var (`web.py`, default `:8181`), which has NO `/quota` route at all.
+ * The only `/quota` route in the entire astridr-repo lives on the SEPARATE
+ * CLI-gateway sidecar (`gateway/gateway/app.py:302`, its own host and port,
+ * not proxied by the main API). As a direct result, `gatewayQuotaSnapshots`
+ * has never filled — verified live 2026-07-30 (`npx convex run
+ * gatewayQuota:latestByProvider` returned `[]`). Repointed at
+ * `CLI_GATEWAY_URL`, the sidecar's own base URL, with NO fallback to that
+ * old main-API env var — a silent fallback to a URL that 404s is exactly
+ * what produced this dead poller in the first place.
+ * D-07's quota-burn threshold depends on this table actually filling — plan
+ * 104-11 owns the live confirmation that snapshots land on the running
+ * instance before any threshold is built on top of it.
+ *
+ * T-68-01: never logs the API key value.
  */
 export const pollAndStore = internalAction({
   args: {},
   handler: async (ctx) => {
-    const apiBase = process.env.ASTRIDR_API_URL;
-    const apiKey = process.env.ASTRIDR_API_KEY;
+    const apiBase = process.env.CLI_GATEWAY_URL;
+    // Falls back to ASTRIDR_API_KEY so an existing single-key deployment
+    // keeps working without requiring a second secret to be provisioned.
+    const apiKey = process.env.CLI_GATEWAY_API_KEY ?? process.env.ASTRIDR_API_KEY;
 
     if (!apiBase) {
-      console.warn("[gatewayQuota] ASTRIDR_API_URL is not set — skipping quota poll");
+      console.warn(
+        "[gatewayQuota] CLI_GATEWAY_URL is not set — skipping quota poll (see Phase 104 D-20)"
+      );
       return;
     }
 

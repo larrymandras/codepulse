@@ -96,6 +96,8 @@ The production backend is SELF-HOSTED (single node, SQLite) at `C:\Users\mandr\c
 - `VITE_ASTRIDR_API_URL` — Ástríðr backend URL (default: `http://localhost:8181`).
 - `VITE_ASTRIDR_API_KEY` — Ástríðr API bearer token. Required for all `/api/*` calls.
 - `CONVEX_DEPLOY_KEY` — Optional. For CI/CD Convex deploys.
+- `CLI_GATEWAY_URL` — Convex-side env var (not `VITE_`-prefixed). Base URL of the CLI-gateway sidecar (its own host:port, separate from `ASTRIDR_API_URL`). Required for `convex/gatewayQuota.ts`'s `pollAndStore` cron to fill `gatewayQuotaSnapshots` (Phase 104 D-20) — no fallback to `ASTRIDR_API_URL`, which has no `/quota` route.
+- `CLI_GATEWAY_API_KEY` — Optional. Bearer token for the CLI-gateway sidecar's `/quota` route. Falls back to `ASTRIDR_API_KEY` when unset.
 
 ## Testing
 
