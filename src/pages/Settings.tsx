@@ -133,34 +133,7 @@ function RetentionControl() {
   );
 }
 
-function IntelligenceSettings() {
-  const budgetConfig = useQuery(api.forecasts.getBudgetConfig);
-  const setBudgetCapMutation = useMutation(api.forecasts.setBudgetCap);
-  const [cap, setCap] = useState<number>(0);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
-
-  // Sync local state when server value loads
-  useEffect(() => {
-    if (budgetConfig?.budgetCap != null) {
-      setCap(budgetConfig.budgetCap);
-    }
-  }, [budgetConfig?.budgetCap]);
-
-  const isValid = cap > 0 && cap < 1_000_000;
-
-  const handleSave = async () => {
-    if (!isValid) return;
-    setSaveState("saving");
-    try {
-      await setBudgetCapMutation({ cap });
-      setSaveState("saved");
-      setTimeout(() => setSaveState("idle"), 2000);
-    } catch {
-      setSaveState("idle");
-      toast.error("Failed to save budget cap. Please try again.");
-    }
-  };
-
+function IntelligenceSettings({ onNavigateToCostBudgets }: { onNavigateToCostBudgets: () => void }) {
   return (
     <div className="bg-card border border-border rounded-xl p-4 mt-12">
       <div className="space-y-4">
@@ -170,37 +143,19 @@ function IntelligenceSettings() {
           </h3>
         </div>
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-muted-foreground">Monthly Budget Cap ($)</label>
-            <input
-              type="number"
-              min={1}
-              max={999999}
-              value={cap === 0 && budgetConfig?.budgetCap == null ? "" : cap}
-              onChange={(e) => setCap(Number(e.target.value))}
-              disabled={saveState === "saving"}
-              placeholder="e.g. 100"
-              className={`w-28 text-right bg-background border px-2 py-1 text-base tabular-nums ${
-                cap !== 0 && !isValid ? "border-destructive" : "border-input"
-              } focus:outline-none focus:ring-1 focus:ring-ring/50`}
-            />
-            <button
-              onClick={handleSave}
-              disabled={!isValid || saveState === "saving"}
-              className="px-3 py-1 text-base bg-primary text-primary-foreground disabled:opacity-50 flex items-center gap-2"
-            >
-              {saveState === "saving" && <Loader2 className="h-4 w-4 animate-spin" />}
-              {saveState === "saved" ? "Saved" : saveState === "saving" ? "Saving..." : "Save Budget Settings"}
-            </button>
-          </div>
-          {cap !== 0 && !isValid && (
-            <p className="text-sm text-[hsl(var(--status-error))]">
-              Enter a value between 1 and 999,999.
-            </p>
-          )}
+          {/* D-19 (Phase 104 Plan 08): the budget-cap form that used to live here
+              (the two now-DEPRECATED forecasts.ts budget functions) is
+              retired, not disabled — the costBudgets-backed Cost & Budgets
+              tab is the one remaining cap-editing surface. */}
           <p className="text-base text-muted-foreground">
-            Monthly spending cap for cost forecasting. Set to 0 or leave blank to disable budget tracking.
+            Budget thresholds moved to the Cost & Budgets tab.
           </p>
+          <button
+            onClick={onNavigateToCostBudgets}
+            className="px-3 py-1 text-base bg-primary text-primary-foreground"
+          >
+            Go to Cost & Budgets
+          </button>
         </div>
 
         {/* LLM Providers subsection */}
@@ -416,6 +371,11 @@ export default function Settings() {
   const [emailSaving, setEmailSaving] = useState<string | null>(null);
   const [emailSaved, setEmailSaved] = useState<string | null>(null);
 
+  // Controlled so IntelligenceSettings' "Go to Cost & Budgets" control (D-19,
+  // Phase 104 Plan 08 — the retired legacy budget-cap form's replacement) can
+  // switch tabs programmatically.
+  const [activeTab, setActiveTab] = useState("general");
+
   const getProfileEmail = (profileId: string) => {
     const config = profileConfigs.find((c) => c.profileId === profileId);
     return (config as Record<string, unknown>)?.emailAddress as string | undefined
@@ -458,12 +418,12 @@ export default function Settings() {
     <div className="space-y-6">
       <PageHeader title="Settings" />
 
-      <Tabs defaultValue="general" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-6 bg-muted/50 w-full justify-start overflow-x-auto flex-nowrap rounded-lg p-1">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="providers">LLM Providers</TabsTrigger>
-          <TabsTrigger value="cost-budgets">Cost &amp; Budgets</TabsTrigger>
+          <TabsTrigger value="cost-budgets">Cost & Budgets</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
@@ -945,7 +905,7 @@ export default function Settings() {
 
       {/* Intelligence */}
       <SectionErrorBoundary name="Intelligence">
-        <IntelligenceSettings />
+        <IntelligenceSettings onNavigateToCostBudgets={() => setActiveTab("cost-budgets")} />
       </SectionErrorBoundary>
         </TabsContent>
       </Tabs>

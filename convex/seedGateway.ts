@@ -2,8 +2,18 @@ import { internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { GATEWAY_PROVIDERS } from "./lib/providers";
 
-const DAILY_CAP = 5.00;
-const ALERT_THRESHOLD = 0.8;
+// NOT the product's spend cap — that lives in convex/costBudgets.ts (D-12/
+// D-19). These are a one-time seed for the "SDK Spend Guard" alertRuleCustom
+// row below, a static threshold rule evaluated only by
+// AlertRulesEngine.tsx's client-side `api.alerts.evaluate` call while an
+// operator has the Alerts page open — its own cron evaluator
+// (internal.alerts.evaluateInternal) has been disabled since 2026-07-14
+// (see convex/crons.ts). Renamed off DAILY_CAP/ALERT_THRESHOLD so this repo's
+// one-cap-source grep gate (104-08's Task 3) has exactly one legitimate,
+// classified exemption here instead of a second, indistinguishable cap
+// source.
+const LEGACY_SEED_DAILY_CAP = 5.00;
+const LEGACY_SEED_ALERT_THRESHOLD = 0.8;
 
 const GATEWAY_PROFILES = [
   { profileId: "claude-cli",  name: "Claude CLI",  model: "claude-opus-4-8",   displayName: "Claude CLI -- Subscription" },
@@ -30,7 +40,7 @@ export const seedSDKSpendAlert = internalMutation({
       conditions: [{
         metric: "sdk_spend_usd_today",
         operator: "gte",
-        threshold: DAILY_CAP * ALERT_THRESHOLD,
+        threshold: LEGACY_SEED_DAILY_CAP * LEGACY_SEED_ALERT_THRESHOLD,
         lookbackWindow: "24h",
       }],
       conditionLogic: "AND",
