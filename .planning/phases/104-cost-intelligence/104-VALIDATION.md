@@ -76,6 +76,79 @@ Requirement-level map from research. Task IDs are assigned at plan time.
 
 ---
 
+---
+
+## Live Deployment Log — 2026-07-31
+
+Executed by `/gsd-execute-phase 104` (plan 104-11 Task 1) against the SELF-HOSTED
+deployment. Target confirmed as `http://127.0.0.1:3210` before any write, by matching
+env-var names AND a data read against the explicitly-addressed local backend — the
+cloud deployment is retired (memory `convex-topology-all-local`), and LESSONS
+2026-07-17 records `npx convex` silently hitting the wrong backend.
+
+### Pre-flight baseline (16:45:51Z, before deploy)
+
+| Probe | Value |
+|-------|-------|
+| `docker stats convex-backend` | 31.18 GiB / 64 GiB (48.71%), CPU 2.25%, PIDs 84 |
+| `llm:subscriptionUsage` | `{calls: 0, tokens: 0}` — D-18 baseline |
+| `gatewayQuota:latestByProvider` | `[]` — D-20 baseline (poller dead, as RESEARCH found) |
+| `llm:providerBreakdown` | `openai` 3 calls / `grok` 7 calls, **`cost: 0` on both** — direct evidence for the phase premise; no gateway provider present |
+
+### Deploy
+
+First attempt **FAILED** after passing the index-deletion safety check —
+`npx convex deploy` aborted on 2 x TS2307 (`Cannot find module '@/lib/utils'`,
+`'@/lib/hexToRgba'`) while `npx tsc --noEmit` and vitest were both green.
+Cause: plan 104-06 added the repo's only convex-to-src import, and
+`convex/tsconfig.json` had no `paths` mapping. Fixed in `e9ca3f9a` (NOT with
+`--typecheck=disable`). Redeployed successfully.
+
+- `No indexes are deleted by this push` — the documented stop condition did NOT trigger
+- `Schema validation complete.` then `Deployed Convex functions to http://127.0.0.1:3210`
+
+### Seeds
+
+| Command | Result |
+|---------|--------|
+| `modelPricing:seedDefaults` | `{inserted: 23}` |
+| `costBudgets:seedFromLegacyCaps` | `{seededDaily: true, seededMonthly: false, monthlySkippedReason: "no positive-number agentConfigs[intelligence.budget_cap] row exists to migrate — no monthly budget was invented"}` |
+
+The monthly refusal is the CORRECT outcome, matching 104-04's live finding: no legacy
+monthly cap exists, and none was fabricated. **An operator must set a monthly budget
+explicitly via Settings → Cost & Budgets if one is wanted.**
+
+### Backfill
+
+`aggregates:backfillTokenSplit` with `maxHours: 6`, run repeatedly per the plan.
+
+First invocation **FAILED**: "This query or mutation function ran multiple paginated
+queries. Convex only supports a single paginated query in each function." — despite 34
+green unit tests. The same defect was then found in `computeHourly` (the live cron,
+pre-existing from Phase 88). Both fixed in `921517db`; the test mock that had allowed it
+now enforces Convex's real single-paginate rule.
+
+After the fix: reached **`done: true` in exactly 120 invocations** (720 h / 6 — matching
+104-03's predicted count), 1-2 s each. `docker stats` sampled after every invocation:
+memory stayed flat 31.13-31.19 GiB and **ended below the starting value**. The
+3-consecutive-monotonic-climb abort (the tombstone/index-rot signature) never tripped.
+
+### Read-only confirmations
+
+| Check | Result |
+|-------|--------|
+| `modelPricing:list` row count | 23 |
+| ...no row with `model === "default"` | **0** — D-03's no-fallback rule holds live |
+| ...`claude-sonnet-5` / `claude-opus-5` / `claude-fable-5` present | all 3 present |
+| ...`claude-cli` row with `shadowForProvider: "claude-cli"` | present (D-06 shadow rate) |
+| `costBudgets:list` | exactly one row: `("global", "", "daily")`, `limit: 5`, `warnFraction: 0.8`, `unit: "usd"`, `enabled: true` |
+| `costDerived:unpricedModels` (24 h) | `{count: 0, models: []}` |
+| `costDerived:costBreakdown` field shape | `billedTotal` and `coveredTotal` both present; **no** `totalCost`, **no** `combinedTotal` — D-05 separation holds live |
+| `costBreakdown` totals (24 h) | `billedTotal: $4.8834`, `coveredTotal: 0`, `unpricedModelCount: 0`, `unpricedTokenTotal: 0` |
+
+No command run in this task contained `--replace-all`. No bulk delete or bulk patch was issued.
+
+
 ## Manual-Only Verifications
 
 These cannot be proven by the unit suite. **A green suite is not accepted as proof for any row
@@ -91,6 +164,28 @@ here** — the same live-verification discipline Phase 103 established.
 
 ---
 
+### Results — 2026-07-31
+
+Recorded per the plan's rule: **a row that could not be executed is recorded as NOT
+EXECUTED, never as passing.**
+
+| Behavior | Req | Verdict | Evidence |
+|----------|-----|---------|----------|
+| D-14: tail-append does not push `computeHourly` past the 15 s syscall cap | COST-03 | **PASS** | Invoked live twice: 1648 ms and 1290 ms wall **including ~1 s of `npx` startup**, so server-side execution is well under 1 s against a 15 s cap. Convex log confirms the evaluator ran: `[computeHourly] budget eval {evaluated: 1, fired: 0, skippedDeduped: 0, skippedNoData: 0, errors: 0}`. No retry-backoff entries. `docker stats` flat at 31.16 GiB, CPU 0.04%. |
+| D-03: the "N models need rates" nudge reflects reality on day one | COST-01 | **PASS** | `unpricedModels` returns `count: 0`. Verified ACCURATE rather than trusted: every row in `costBreakdown` reports `priced: true, pricedVia: "model"`, and `unpricedTokenTotal: 0`, so the live model mix is genuinely fully priced by the 23-row seed. |
+| D-04: adding a rate re-prices existing charts with no rollup re-run | COST-01 | **PASS (mechanism)** / write path NOT EXECUTED | Proved arithmetically against live data: for all 5 breakdown rows, `billedUsd` equals `promptTokens x inputPerToken + completionTokens x outputPerToken` to within 1e-9 (e.g. `claude-opus-4-8` 620201/23875 gives $3.6978800 expected and actual). Dollars are therefore recomputed from the live `modelPricing` table at read time, not read from stored `llmMetrics.cost`. The rate-EDIT half needs a signed-in Clerk session (`modelPricing:update` sits behind `ctx.auth.getUserIdentity()` and the CLI has no identity), so it was not exercised. |
+| D-16: no budget alert names or performs an enforcement action | COST-03 | **NOT EXERCISED** (not a pass) | No alert fired during verification, so the forbidden-word guard was never exercised against a real message. The non-fire is CORRECT, independently verified: UTC-day billed spend was $3.0471 against the $4.00 warn line, projecting to $4.2784 against the $5.00 limit, so both the spend axis and D-13's spike branch correctly return null. (The $4.88 24 h figure spans two UTC days.) Guard remains unit-tested only. |
+| A1: the gateway to Astridr to Convex forwarding chain is live at all | COST-01 | **NOT EXECUTED** | Blocked upstream — see D-18. |
+| D-18: a real gateway turn produces a real `llmMetrics` row | COST-01 | **NOT EXECUTED** | The Astridr-side token-emit change (`9adb25b6`) is on the **unmerged** `feature/brain-swap` branch and is not deployed, so there is no live signal to test. Requires: merge + deploy astridr, then drive one gateway turn. Baseline captured for the eventual re-test: `subscriptionUsage {calls: 0, tokens: 0}`, no gateway provider in `providerBreakdown`. |
+| D-20: the repaired quota poller actually lands rows | COST-02 | **NOT EXECUTED** | `CLI_GATEWAY_URL` is **not set** on the deployment — confirmed via `npx convex env list` (names only; 5 vars present, none of them `CLI_GATEWAY_URL`). `pollAndStore` therefore warn-and-returns exactly as designed, and `gatewayQuota:latestByProvider` remains `[]`. Requires an operator to set `CLI_GATEWAY_URL` (and optionally `CLI_GATEWAY_API_KEY`) as Convex env vars. |
+
+**Defects found by this live gate that the green suite could not see:** 3 —
+the convex deploy typecheck break (`e9ca3f9a`), the multi-paginate failure in both
+`backfillTokenSplit` and the live `computeHourly` cron (`921517db`), and the test mock
+that was more permissive than Convex (same commit). This is the gate earning its keep.
+
+---
+
 ## Validation Sign-Off
 
 - [ ] All tasks have `<automated>` verify or Wave 0 dependencies
@@ -98,7 +193,8 @@ here** — the same live-verification discipline Phase 103 established.
 - [ ] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
 - [ ] Feedback latency < 60s
-- [ ] Every **Manual-Only** row above executed and recorded — not inferred from a green suite
+- [~] Every **Manual-Only** row above executed and recorded — 3 of 7 PASS, 1 partial, 3 NOT EXECUTED (D-18/D-20/A1 blocked on the unmerged astridr commit and the unset `CLI_GATEWAY_URL`); all recorded verbatim, none inferred from a green suite
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** partial — Task 1 (deploy/seed/backfill) complete and recorded; D-18/D-20/A1 deferred
+with explicit blockers, so `nyquist_compliant` stays false and Phase 104 stays OPEN.
