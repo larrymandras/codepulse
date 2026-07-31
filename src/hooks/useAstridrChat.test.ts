@@ -207,6 +207,71 @@ describe("useAstridrChat — post-interrupt TTS suppression", () => {
   });
 });
 
+// ─── run.tts sessionMatches trace fix (2026-07-31) ───────────────────────────
+// activeSessionRef is a TURN-LIFECYCLE ref, nulled by whichever terminal event
+// ends a turn (run.completed / run.error / interrupt()). run.tts audio is a
+// SEPARATE, asynchronously-arriving side-channel event (synthesis is slower
+// than text delivery) that can legitimately arrive AFTER the terminal event
+// already nulled activeSessionRef — so the sessionMatches trace diagnostic
+// must compare against lastSessionRef (set alongside activeSessionRef, never
+// cleared), not activeSessionRef itself. Confirmed against the REAL backend
+// contract (astridr/agent/post_turn_pipeline.py): run.text is emitted once
+// with the full final text and no `done` field at all (that branch is
+// unreachable in production) — run.completed is the actual sole terminal
+// event for a normal turn, matching the sequence exercised here.
+
+describe("useAstridrChat — run.tts sessionMatches trace (2026-07-31 live finding)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+    (window as unknown as { __astridrVoiceTrace?: unknown[] }).__astridrVoiceTrace = [];
+  });
+
+  function lastTtsTraceEntry(): { sessionMatches?: unknown } {
+    const buf = (window as unknown as { __astridrVoiceTrace?: Array<{ ev: string; d: Record<string, unknown> }> })
+      .__astridrVoiceTrace;
+    const entries = (buf ?? []).filter((e) => e.ev === "run.tts.received");
+    return entries[entries.length - 1]?.d ?? {};
+  }
+
+  it("sessionMatches reads true when run.tts arrives AFTER run.completed already nulled activeSessionRef", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+
+    // The real terminal event for a normal turn — nulls activeSessionRef.
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    // run.tts arrives afterward, same session — this is the normal case,
+    // not an edge case, since TTS synthesis is slower than text delivery.
+    act(() => {
+      getHandler("run.tts")?.({ data: { session_id: "sess-1", audio_url: "http://a/reply.mp3" } });
+    });
+
+    expect(lastTtsTraceEntry().sessionMatches).toBe(true);
+  });
+
+  it("sessionMatches reads false when run.tts belongs to a DIFFERENT (stale/foreign) session", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    act(() => {
+      getHandler("run.tts")?.({ data: { session_id: "sess-999-foreign", audio_url: "http://a/foreign.mp3" } });
+    });
+
+    expect(lastTtsTraceEntry().sessionMatches).toBe(false);
+  });
+});
+
 // ─── 186-01 follow-up (Defect A, fresh live trace, 186-09 swap testing) ──────
 // ws_commands.py::_handle_chat_send's control-verb fast-path short-circuit
 // (swap refusals/confirmations, focus/quiet-hours toggles, catalogue

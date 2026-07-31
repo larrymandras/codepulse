@@ -373,9 +373,9 @@ export function useAstridrChat() {
           t: new Date().toISOString().slice(11, 23),
           ev: "run.tts.received",
           d: {
-            sessionMatches: data.session_id === activeSessionRef.current,
+            sessionMatches: data.session_id === lastSessionRef.current,
             eventSession: data.session_id,
-            activeSession: activeSessionRef.current,
+            activeSession: lastSessionRef.current,
             ttsEnabled: current,
             ttsSuppressed: ttsSuppressedRef.current,
             willPlay,
