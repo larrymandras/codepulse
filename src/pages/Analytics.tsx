@@ -22,6 +22,8 @@ import ApiErrorPanel from "../components/ApiErrorPanel";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import CostForecastPanel from "../components/CostForecastPanel";
 import SDKSpendGuard from "../components/SDKSpendGuard";
+import UnpricedModelsNudge from "../components/UnpricedModelsNudge";
+import CostBreakdownTable from "../components/CostBreakdownTable";
 import GatewayQuotaPanel from "../components/GatewayQuotaPanel";
 import ProviderComparisonChart from "../components/ProviderComparisonChart";
 import RoutingDecisionsTable from "../components/RoutingDecisionsTable";
@@ -81,6 +83,13 @@ export default function Analytics() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-min">
+        {/* Unpriced Models Nudge — full-width, above the fold, no GlassPanel chrome (D-03) */}
+        <div className="md:col-span-12">
+          <SectionErrorBoundary name="Unpriced Models">
+            <UnpricedModelsNudge />
+          </SectionErrorBoundary>
+        </div>
+
         {/* Top Row */}
         <div className="md:col-span-8">
           <SectionErrorBoundary name="Cost Forecast">
@@ -295,7 +304,16 @@ export default function Analytics() {
              </GlassPanel>
            </SectionErrorBoundary>
         </div>
-        
+
+        {/* Cost Breakdown — per-provider/per-model table with Unpriced rows (COST-01) */}
+        <div className="md:col-span-12">
+          <SectionErrorBoundary name="Cost Breakdown">
+            <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+              <CostBreakdownTable />
+            </GlassPanel>
+          </SectionErrorBoundary>
+        </div>
+
         {/* LLM Analytics & Capability Growth */}
         <div className="md:col-span-6">
            <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
