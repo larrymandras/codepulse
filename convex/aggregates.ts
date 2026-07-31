@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { getBillingType } from "./lib/providers";
 import { buildRateIndex } from "./modelPricing";
 import { deriveBucketDollars } from "./costDerived";
+import { evaluateBudgets } from "./costBudgetEval";
 
 // ---- D-04 (Phase 104) shared helpers -------------------------------------
 // Factored out of computeHourly's Task 1 edit so computeHourly (the live
@@ -188,6 +189,39 @@ export const computeHourly = internalMutation({
     // incrementSankeyBuckets (convex/analyticsRollup.ts). Re-deriving them from a
     // raw events scan in the cron would double-count every event already counted
     // at ingest time (Pitfall 1). The cron now only aggregates cost.
+
+    // D-14 (Phase 104, hard constraint — not a preference): budget alert
+    // evaluation runs HERE, at the tail of the cron that already ran, rather
+    // than on its own schedule. This mutation has already read the hour's
+    // llmMetrics and already written this hour's token buckets, so
+    // evaluating budgets here adds a small, bounded amount of read work
+    // (see costBudgetEval.ts's evaluateBudgets doc comment for the exact
+    // bound) instead of a new independent scan.
+    //
+    // A dedicated cron for this is forbidden: convex/crons.ts:27-32 records
+    // that the Phase 6 general alert-rule cron
+    // (internal.alerts.evaluateInternal) was DISABLED on 2026-07-14 after
+    // its fan-out read pattern hit the 15s syscall cap on self-hosted
+    // Convex — and a failing cron execution retries on its own backoff
+    // regardless of schedule, so the retry storms starved ingest mutations
+    // no matter how the schedule was throttled. Routing budget evaluation
+    // through this already-running mutation sidesteps that failure mode
+    // entirely. Accepted cost: alert latency up to one hour.
+    //
+    // The try/catch below is MANDATORY, not defensive boilerplate: a throw
+    // here would fail computeHourly's whole execution, which would then
+    // enter exactly the retry-backoff loop D-14 exists to avoid, and would
+    // also lose this hour's rollup buckets (which have already been
+    // inserted above, but a thrown mutation still surfaces as a failed run
+    // to the scheduler). `now` — not a second `Date.now()` call — is passed
+    // through so the budget evaluator's elapsed-hours math cannot disagree
+    // with this run's own bucket-boundary math by a few milliseconds.
+    try {
+      const result = await evaluateBudgets(ctx, now);
+      console.log("[computeHourly] budget eval", result);
+    } catch (err) {
+      console.warn("[computeHourly] budget eval failed:", (err as Error).message);
+    }
   },
 });
 

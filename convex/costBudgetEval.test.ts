@@ -6,7 +6,7 @@
  * Task 2 (dedup + fire path, below) and Task 3 (cron tail-append) extend
  * this file.
  */
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import {
   projectPeriodEndSpend,
   classifyBudgetLevel,
@@ -16,6 +16,23 @@ import {
 } from "./costBudgetEval";
 import { projectDayEndSpend, DAILY_CAP } from "../src/components/SDKSpendGuard";
 import { periodStartFor } from "./costBudgets";
+
+// Task 3 (cron tail-append): wrap the REAL evaluateBudgets in a vi.fn spy so
+// convex/aggregates.ts's computeHourly (which imports evaluateBudgets from
+// this same module) can be asserted against for call count/args/rejection
+// behavior, without changing behavior for the Task 1/2 tests above (which
+// import evaluateBudgets directly and still exercise the real
+// implementation through the spy's pass-through wrapper).
+vi.mock("./costBudgetEval", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./costBudgetEval")>();
+  return { ...actual, evaluateBudgets: vi.fn(actual.evaluateBudgets) };
+});
+
+// Imported AFTER the vi.mock call above (source order doesn't matter — the
+// mock is hoisted by vitest's transform — but this ordering keeps the
+// dependency honest to read): aggregates.ts's own `import { evaluateBudgets }
+// from "./costBudgetEval"` resolves to this same spy-wrapped module.
+import { computeHourly } from "./aggregates";
 
 // ---------------------------------------------------------------------------
 // projectPeriodEndSpend (D-13)
@@ -583,6 +600,196 @@ describe("evaluateBudgets — dedup and fire (D-15/D-16/D-17)", () => {
       expect(call.delay).toBe(0);
       expect(Object.keys(call.args as object).sort()).toEqual(["alertId", "attempt"]);
       expect((call.args as { attempt: number }).attempt).toBe(1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// cron tail-append (D-14) — Task 3. Exercises the REAL computeHourly handler
+// (imported below, AFTER the vi.mock("./costBudgetEval", ...) call above —
+// module-level vi.mock calls are hoisted by vitest regardless of source
+// order, so aggregates.ts's own `import { evaluateBudgets } from
+// "./costBudgetEval"` resolves to the same spy-wrapped module here) via the
+// `._handler` escape hatch, matching convex/aggregates.test.ts's own
+// "token split" describe block's convention exactly (same fake-ctx shape:
+// query/withIndex(eq/gte/gt/lte/lt)/filter(neq)/collect/first/paginate),
+// extended with the costBudgets/gatewayQuotaSnapshots/alerts tables and a
+// scheduler.runAfter recorder evaluateBudgets itself needs.
+// ---------------------------------------------------------------------------
+
+function makeCronCtx(
+  opts: {
+    llmMetrics?: FakeDoc[];
+    aggregates?: FakeDoc[];
+    agentConfigs?: FakeDoc[];
+    modelPricing?: FakeDoc[];
+    costBudgets?: FakeDoc[];
+    gatewayQuotaSnapshots?: FakeDoc[];
+    alerts?: FakeDoc[];
+  } = {}
+) {
+  const tables: Record<string, FakeDoc[]> = {
+    llmMetrics: [...(opts.llmMetrics ?? [])],
+    aggregates: [...(opts.aggregates ?? [])],
+    agentConfigs: [...(opts.agentConfigs ?? [])],
+    modelPricing: [...(opts.modelPricing ?? [])],
+    costBudgets: [...(opts.costBudgets ?? [])],
+    gatewayQuotaSnapshots: [...(opts.gatewayQuotaSnapshots ?? [])],
+    alerts: [...(opts.alerts ?? [])],
+  };
+  let nextId = 1;
+  const schedulerCalls: Array<{ delay: number; args: unknown }> = [];
+
+  function query(table: string) {
+    const rows = tables[table] ?? (tables[table] = []);
+    const predicates: Array<(r: FakeDoc) => boolean> = [];
+    let dir: "asc" | "desc" = "asc";
+
+    const chain = {
+      withIndex(_index: string, cb?: (q: any) => any) {
+        if (cb) {
+          const q: any = {};
+          for (const op of ["eq", "gte", "gt", "lte", "lt"] as const) {
+            q[op] = (field: string, value: unknown) => {
+              predicates.push((r) => {
+                const v = r[field];
+                if (op === "eq") return v === value;
+                if (op === "gte") return v >= (value as number);
+                if (op === "gt") return v > (value as number);
+                if (op === "lte") return v <= (value as number);
+                return v < (value as number);
+              });
+              return q;
+            };
+          }
+          cb(q);
+        }
+        return chain;
+      },
+      filter(cb: (q: any) => any) {
+        const q = {
+          field: (name: string) => ({ __field: name }),
+          neq: (ref: { __field: string }, value: unknown) => {
+            predicates.push((r) => r[ref.__field] !== value);
+            return true;
+          },
+        };
+        cb(q);
+        return chain;
+      },
+      order(direction: "asc" | "desc") {
+        dir = direction;
+        return chain;
+      },
+      async collect() {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        return dir === "desc" ? [...filtered].reverse() : filtered;
+      },
+      async first() {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const ordered = dir === "desc" ? [...filtered].reverse() : filtered;
+        return ordered[0] ?? null;
+      },
+      async take(n: number) {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const ordered = dir === "desc" ? [...filtered].reverse() : filtered;
+        return ordered.slice(0, n);
+      },
+      async paginate({ numItems, cursor }: { numItems: number; cursor: string | null }) {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const start = cursor ? Number(cursor) : 0;
+        const page = filtered.slice(start, start + numItems);
+        const isDone = start + numItems >= filtered.length;
+        return { page, isDone, continueCursor: String(start + numItems) };
+      },
+    };
+    return chain;
+  }
+
+  const db = {
+    query,
+    async insert(table: string, doc: FakeDoc) {
+      const row = { ...doc, _id: `${table}_${nextId}`, _creationTime: nextId };
+      nextId++;
+      (tables[table] ?? (tables[table] = [])).push(row);
+      return row._id;
+    },
+    async patch() {
+      throw new Error("db.patch not expected in these cron tail-append tests");
+    },
+    async delete() {
+      throw new Error("db.delete not expected in these cron tail-append tests");
+    },
+  };
+
+  const scheduler = {
+    async runAfter(delay: number, _fn: unknown, args: unknown) {
+      schedulerCalls.push({ delay, args });
+    },
+  };
+
+  return { ctx: { db, scheduler } as any, tables, schedulerCalls };
+}
+
+describe("computeHourly — cron tail-append (D-14)", () => {
+  test("when evaluateBudgets throws, the handler still resolves and the token/cost bucket inserts are unaffected", async () => {
+    vi.mocked(evaluateBudgets).mockClear();
+    vi.mocked(evaluateBudgets).mockRejectedValueOnce(new Error("simulated evaluateBudgets failure"));
+
+    const hourStart = Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
+    const { ctx, tables } = makeCronCtx({
+      llmMetrics: [
+        {
+          provider: "anthropic_direct",
+          model: "claude-sonnet-5",
+          cost: 0.01,
+          promptTokens: 100,
+          completionTokens: 20,
+          totalTokens: 120,
+          billingType: "api",
+          timestamp: hourStart + 10,
+          archived: false,
+        },
+      ],
+    });
+
+    await expect((computeHourly as any)._handler(ctx)).resolves.toBeUndefined();
+
+    const costRow = tables.aggregates.find((r) => r.metric_type === "cost");
+    const promptRow = tables.aggregates.find((r) => r.metric_type === "tokens_prompt");
+    expect(costRow).toBeDefined();
+    expect(promptRow).toBeDefined();
+    expect(promptRow!.value).toBe(100);
+
+    vi.mocked(evaluateBudgets).mockClear();
+  });
+
+  test("evaluateBudgets is invoked exactly once per computeHourly invocation", async () => {
+    vi.mocked(evaluateBudgets).mockClear();
+
+    const { ctx } = makeCronCtx({});
+    await (computeHourly as any)._handler(ctx);
+
+    expect(vi.mocked(evaluateBudgets)).toHaveBeenCalledTimes(1);
+
+    vi.mocked(evaluateBudgets).mockClear();
+  });
+
+  test("the timestamp passed to evaluateBudgets equals the `now` the handler used to compute hourStart", async () => {
+    vi.mocked(evaluateBudgets).mockClear();
+    const fixedNowMs = Date.UTC(2026, 6, 15, 13, 20, 0); // 2026-07-15 13:20:00 UTC
+    const dateSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs);
+
+    try {
+      const { ctx } = makeCronCtx({});
+      await (computeHourly as any)._handler(ctx);
+
+      expect(vi.mocked(evaluateBudgets)).toHaveBeenCalledTimes(1);
+      const [, nowArg] = vi.mocked(evaluateBudgets).mock.calls[0];
+      expect(nowArg).toBe(fixedNowMs / 1000);
+    } finally {
+      dateSpy.mockRestore();
+      vi.mocked(evaluateBudgets).mockClear();
     }
   });
 });
