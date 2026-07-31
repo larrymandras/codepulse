@@ -710,7 +710,7 @@ Plans:
 **Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
 **Requirements**: COST-01, COST-02, COST-03
 **Success Criteria**: Every displayed dollar is recomputed by CodePulse from tokens x a Convex-editable rate; an unpriced model is excluded from the total and named, never valued at a default; billed and subscription-covered spend are shown as two figures that never merge; budgets are persisted per scope and period with a limit and a warn fraction; a warn or breach fires exactly one alert per period through the existing webhook-delivery path; nothing in the phase enforces, throttles or mutates Astridr.
-**Plans:** 9/11 plans executed
+**Plans:** 10/11 plans executed
 
 Plans:
 **Wave 1**
@@ -733,7 +733,7 @@ Plans:
 **Wave 4** *(blocked on Wave 3 completion)*
 
 - [x] 104-08-PLAN.md — Collapse the remaining cap sources: rewire `SDKSpendGuard` and `CostForecastPanel`/`forecasts.ts` onto `costBudgets`, retire the legacy Settings cap form, prove exactly one cap source remains (D-12/D-19) — COST-02
-- [ ] 104-09-PLAN.md — `CostBreakdownTable` + `UnpricedModelsNudge` mounted in the Analytics cost cluster (D-03/D-05) — COST-01
+- [x] 104-09-PLAN.md — `CostBreakdownTable` + `UnpricedModelsNudge` mounted in the Analytics cost cluster (D-03/D-05) — COST-01
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -795,7 +795,7 @@ Plans:
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 | 103. Brain-Swap Control Surface | v13.0 | 18/18 | 🚧 Code-complete, live re-verification of 103-16/17/18 pending | — |
-| 104. Cost Intelligence | v13.0 | 9/11 | In Progress|  |
+| 104. Cost Intelligence | v13.0 | 10/11 | In Progress|  |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
 
