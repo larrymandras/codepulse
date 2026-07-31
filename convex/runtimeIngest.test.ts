@@ -10,6 +10,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
+import { resolveGatewayTaskCompleted } from "./runtimeIngest";
 
 // ---------------------------------------------------------------------------
 // Extracted swarm_task routing logic — mirrors runtimeIngest.ts case exactly
@@ -340,5 +341,76 @@ describe("runtimeIngest — task_quality case", () => {
     const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
     expect(ingestSource).toContain("internal.evalScores.ingestTaskQuality");
     expect(ingestSource).not.toContain("api.evalScores.ingestTaskQuality");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 104 (D-18) — gateway_task_completed → llmMetrics ingest wiring
+// ---------------------------------------------------------------------------
+//
+// The gateway_task_completed case calls the exported resolveGatewayTaskCompleted
+// (this file) to build api.llm.recordCall's args, mirroring the extracted-
+// pure-function convention used above for swarm_task/task_quality (convex-test
+// is not installed). A non-null return means exactly one recordCall would
+// fire; null means zero.
+
+describe("gateway", () => {
+  it("a gateway_task_completed payload with tokens produces exactly one recordCall whose provider/model equal the gateway id and cost equals cost_usd", () => {
+    const args = resolveGatewayTaskCompleted(
+      {
+        provider: "claude-cli",
+        cost_usd: 0.0,
+        prompt_tokens: 1200,
+        completion_tokens: 340,
+        duration_ms: 5400,
+        session_id: "sess-1",
+      },
+      1_750_000_000
+    );
+    expect(args).not.toBeNull();
+    expect(args!.provider).toBe("claude-cli");
+    expect(args!.model).toBe("claude-cli");
+    expect(args!.cost).toBe(0.0);
+    expect(args!.promptTokens).toBe(1200);
+    expect(args!.completionTokens).toBe(340);
+    expect(args!.totalTokens).toBe(1540);
+    expect(args!.toolName).toBe("gateway:claude-cli");
+  });
+
+  it("a payload with no token fields produces totalTokens === 0 and a toolName ending in :tokens-unreported", () => {
+    const args = resolveGatewayTaskCompleted(
+      {
+        provider: "codex",
+        cost_usd: 0.12,
+        session_id: "sess-2",
+      },
+      1_750_000_100
+    );
+    expect(args).not.toBeNull();
+    expect(args!.totalTokens).toBe(0);
+    expect(args!.promptTokens).toBe(0);
+    expect(args!.completionTokens).toBe(0);
+    expect(args!.toolName).toBe("gateway:codex:tokens-unreported");
+  });
+
+  it("a payload whose provider is not in GATEWAY_PROVIDERS produces zero recordCall calls (returns null)", () => {
+    const args = resolveGatewayTaskCompleted(
+      { provider: "some-unknown-engine", cost_usd: 1.5 },
+      1_750_000_200
+    );
+    expect(args).toBeNull();
+  });
+
+  it("the pre-existing gateway.task_completed (dot) case still calls api.toolExecutions.insert and api.sessions.upsert — additive-only regression guard (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    const dotCaseMatch = ingestSource.match(
+      /case "gateway\.task_completed": \{[\s\S]*?\n {8}\}/
+    );
+    expect(dotCaseMatch).not.toBeNull();
+    const dotCaseBody = dotCaseMatch![0];
+    expect(dotCaseBody).toContain("api.toolExecutions.insert");
+    expect(dotCaseBody).toContain("api.sessions.upsert");
   });
 });

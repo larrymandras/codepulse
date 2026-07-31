@@ -4,6 +4,66 @@ import { getCorsHeaders, validateIngestAuth, unauthorizedResponse } from "./inge
 import { legacyEventData } from "./ingestSummary";
 import { processTaskQualityEvent } from "./evalScores";
 import { isUnresolvedRouting } from "./activeEngineFilters";
+import { GATEWAY_PROVIDERS } from "./lib/providers";
+
+/**
+ * D-18 (Phase 104): resolves a `gateway_task_completed` event payload into the
+ * args for api.llm.recordCall, or `null` when the reported provider id is not
+ * a recognized GATEWAY_PROVIDERS member — a row keyed on an id no
+ * `shadowForProvider` mapping row can match would be unpriceable noise, so no
+ * llmMetrics row is written for it (the caller still logs a warning and lets
+ * the unconditional generic events.insertEvent call above the switch stand as
+ * the only record of the event).
+ *
+ * Exported for unit testing (convex-test is not installed in this repo;
+ * mirrors the processTaskQualityEvent/processSwarmTaskEvent pure-function
+ * extraction convention already used in this file's test suite).
+ */
+export function resolveGatewayTaskCompleted(
+  d: Record<string, any>,
+  timestamp: number
+): {
+  provider: string;
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  latencyMs: number;
+  cost?: number;
+  sessionId?: string;
+  timestamp: number;
+  toolName: string;
+} | null {
+  const provider = d.provider ?? d.account ?? "unknown";
+  if (!(GATEWAY_PROVIDERS as readonly string[]).includes(provider)) {
+    return null;
+  }
+
+  const promptTokens = d.promptTokens ?? d.prompt_tokens ?? d.input_tokens;
+  const completionTokens = d.completionTokens ?? d.completion_tokens ?? d.output_tokens;
+  // HONESTY REQUIREMENT (D-18 + D-03): both counts absent must be
+  // distinguishable from a real zero-token turn — the derivation layer
+  // (plan 104-05) must treat a subscription row with zero total tokens as
+  // UNPRICEABLE and never render it as $0.00 of covered spend. The
+  // `:tokens-unreported` toolName suffix is that distinguishing signal.
+  const tokensReported = promptTokens != null || completionTokens != null;
+
+  return {
+    provider,
+    // D-06: model = the SAME opaque gateway id as provider. No gateway event
+    // carries a real model id anywhere in the pipe (RESEARCH.md verified) —
+    // the fallback shadowForProvider mapping row is the only rate path.
+    model: provider,
+    promptTokens: promptTokens ?? 0,
+    completionTokens: completionTokens ?? 0,
+    totalTokens: (promptTokens ?? 0) + (completionTokens ?? 0),
+    latencyMs: d.duration_ms ?? d.durationMs ?? 0,
+    cost: d.cost_usd ?? d.costUsd,
+    sessionId: d.session_id ?? d.sessionId,
+    timestamp,
+    toolName: tokensReported ? `gateway:${provider}` : `gateway:${provider}:tokens-unreported`,
+  };
+}
 
 /**
  * HTTP action: POST /runtime-ingest
@@ -978,6 +1038,37 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             sessionId,
             provider,
           });
+          break;
+        }
+        case "gateway_task_completed": {
+          // D-18 (Phase 104): UNDERSCORE — distinct from "gateway.task_completed"
+          // (DOT) above. This is the CLI-gateway sidecar's task-completed
+          // webhook, forwarded verbatim by astridr's web.py
+          // /internal/gateway/task_completed handler, and the only gateway
+          // event that carries cost_usd. Previously unrouted (fell through to
+          // the generic events.insertEvent above, where cost/tokens/model were
+          // never queryable). ADDITIVE ONLY: does not alter the dot-named case
+          // above or any other case in this switch. Inherits the
+          // validateIngestAuth Bearer gate above — no new route, no second
+          // auth check. The recordCall write is isolated in its own try/catch
+          // so a failure here cannot roll back the surrounding ingest
+          // transaction or widen the hot path's failure surface (CLAUDE.md).
+          const d = data as any;
+          const recordCallArgs = resolveGatewayTaskCompleted(d, timestamp);
+          if (recordCallArgs) {
+            try {
+              await ctx.runMutation(api.llm.recordCall, recordCallArgs);
+            } catch (err) {
+              console.warn(
+                "[runtimeIngest] gateway_task_completed: recordCall failed:",
+                (err as Error).message
+              );
+            }
+          } else {
+            console.warn(
+              `[runtimeIngest] gateway_task_completed: unrecognized provider id "${d.provider ?? d.account ?? "unknown"}" — skipping llmMetrics write (unpriceable)`
+            );
+          }
           break;
         }
         case "gateway.task_failed": {
