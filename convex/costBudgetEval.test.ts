@@ -7,6 +7,8 @@
  * this file.
  */
 import { describe, test, expect, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   projectPeriodEndSpend,
   classifyBudgetLevel,
@@ -790,6 +792,34 @@ describe("computeHourly — cron tail-append (D-14)", () => {
     } finally {
       dateSpy.mockRestore();
       vi.mocked(evaluateBudgets).mockClear();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Performance invariant (D-14). Structural, not behavioral: "reads fewer
+// documents" is not observable through a mock ctx that returns a fixed array,
+// so the guard asserts the range bound is present in the source. Precedent for
+// source-level invariant tests: activeEngine.test.ts, runtimeIngest.test.ts.
+// ---------------------------------------------------------------------------
+describe("evaluateBudgets — dedup read stays bounded (D-14 syscall budget)", () => {
+  const src = readFileSync(resolve(process.cwd(), "convex/costBudgetEval.ts"), "utf-8");
+
+  test("the by_source dedup read is range-bounded on createdAt", () => {
+    // `alerts` is excluded from retention.ts's RETENTION_DAYS ("kept forever"),
+    // so an unbounded read here grows one row per fired period, forever, inside
+    // computeHourly — the exact read-growth shape that got
+    // internal.alerts.evaluateInternal disabled on 2026-07-14.
+    expect(src).toMatch(
+      /withIndex\(\s*"by_source",[\s\S]{0,120}?\.gte\("createdAt",\s*periodStart\)/
+    );
+  });
+
+  test("no unbounded read of the alerts table survives in this module", () => {
+    const bySourceReads = src.match(/\.withIndex\(\s*"by_source"[\s\S]{0,200}?\.collect\(\)/g) ?? [];
+    expect(bySourceReads.length).toBeGreaterThan(0);
+    for (const read of bySourceReads) {
+      expect(read).toContain('.gte("createdAt"');
     }
   });
 });

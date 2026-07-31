@@ -277,9 +277,19 @@ export async function evaluateBudgets(
       // Because `level` is part of the source string, an escalation from
       // "warning" to "error" within the same period still gets through.
       const source = `cost-budget:${budget._id}:${level}`;
+      // PERFORMANCE INVARIANT (do not remove the createdAt lower bound):
+      // `alerts` is in retention.ts's "kept forever" set, so an unbounded
+      // read of every alert ever fired for this (budget, level) pair would
+      // grow by one row per period, forever — inside `computeHourly`, the one
+      // mutation that must not blow the self-hosted 15s syscall cap (D-14).
+      // The `by_source` index is composite `["source", "createdAt"]`, so the
+      // read range-bounds for free. This cannot drop a match: an alert for
+      // period P is always written DURING P, hence its `createdAt >= P`.
       const priorAlerts = (await ctx.db
         .query("alerts")
-        .withIndex("by_source", (q: any) => q.eq("source", source))
+        .withIndex("by_source", (q: any) =>
+          q.eq("source", source).gte("createdAt", periodStart)
+        )
         .collect()) as unknown as Array<{ details?: { periodStart?: number } }>;
       const priorPeriodStarts = new Set(
         priorAlerts.map((a) => a.details?.periodStart).filter((p): p is number => typeof p === "number")
