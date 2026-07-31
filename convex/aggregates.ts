@@ -105,6 +105,73 @@ export const computeHourly = internalMutation({
       });
     }
 
+    // D-04 (Phase 104): tokens_prompt / tokens_completion hourly buckets.
+    // These exist so the read path can do `tokens × modelPricing rate` at QUERY
+    // time instead of here — correcting or adding a rate then re-prices every
+    // chart back to the start of retention without re-running this mutation, and
+    // an unpriced bucket heals the moment its rate is entered. Same
+    // {provider, model, billingType, goalId} dimension key and same 4-segment
+    // defaults as the cost/tokens blocks above, filled from the SAME single pass
+    // over llmRows (no second scan). Each metric type gets its OWN
+    // idempotency guard — a shared guard would let a partially-completed cron
+    // re-run double-count one split half while skipping the other.
+    const promptByDim: Record<string, number> = {};
+    const completionByDim: Record<string, number> = {};
+    for (const r of llmRows) {
+      const billingType = (r as any).billingType ?? getBillingType(r.provider);
+      const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
+      promptByDim[key] = (promptByDim[key] ?? 0) + ((r as any).promptTokens ?? 0);
+      completionByDim[key] = (completionByDim[key] ?? 0) + ((r as any).completionTokens ?? 0);
+    }
+
+    const existingPromptRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "tokens_prompt").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingPromptKeys = new Set(
+      existingPromptRows.map((r) => {
+        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+      })
+    );
+    for (const [dim, value] of Object.entries(promptByDim)) {
+      if (existingPromptKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [provider, model, billingType, goalId] = dim.split("::");
+      await ctx.db.insert("aggregates", {
+        metric_type: "tokens_prompt",
+        period: "hourly",
+        bucket_start: hourStart,
+        value,
+        dimensions: { provider, model, billingType, goalId },
+      });
+    }
+
+    const existingCompletionRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q) =>
+        q.eq("metric_type", "tokens_completion").eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingCompletionKeys = new Set(
+      existingCompletionRows.map((r) => {
+        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
+        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+      })
+    );
+    for (const [dim, value] of Object.entries(completionByDim)) {
+      if (existingCompletionKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [provider, model, billingType, goalId] = dim.split("::");
+      await ctx.db.insert("aggregates", {
+        metric_type: "tokens_completion",
+        period: "hourly",
+        bucket_start: hourStart,
+        value,
+        dimensions: { provider, model, billingType, goalId },
+      });
+    }
+
     // Phase 88 (D-02): the event-count ("events") and error-count ("errors")
     // aggregation branches were REMOVED here. Those metrics are now maintained
     // authoritatively at ingest time in events.ingest → incrementEventBucket /
@@ -116,6 +183,11 @@ export const computeHourly = internalMutation({
 
 // ---- Daily rollup (called by cron at 01:00 UTC) ----
 // Rolls up 24 hourly rows into daily summaries. Does NOT re-scan raw tables.
+// D-04 (Phase 104): the "tokens_prompt" / "tokens_completion" metric types added
+// to computeHourly above need NO change here — this mutation groups generically
+// by metric_type + JSON.stringify(dimensions), so any metric_type (including the
+// two new ones) rolls into daily buckets automatically. Do not "fix" this by
+// adding a tokens_prompt/tokens_completion-specific branch.
 export const rollupDaily = internalMutation({
   args: {},
   handler: async (ctx) => {

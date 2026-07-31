@@ -1,5 +1,123 @@
 import { describe, test, expect } from "vitest";
 import { getBillingType } from "./lib/providers";
+import { computeHourly } from "./aggregates";
+
+// ---------------------------------------------------------------------------
+// Fake ctx for exercising the real mutation handlers via `._handler` (the raw
+// function Convex's mutation()/query() wrappers expose — see
+// convex/modelPricing.test.ts's header comment; this repo has no convex-test).
+// Supports just enough of ctx.db to drive computeHourly/backfillTokenSplit:
+// withIndex(eq/gte/gt/lte/lt), filter(neq), collect(), first(), paginate(),
+// and insert(). db.patch/db.delete THROW — the token-split backfill must be
+// insert-only (D-04 / CLAUDE.md self-hosted rules), so any accidental call
+// fails the test loudly instead of silently no-op'ing.
+// ---------------------------------------------------------------------------
+
+type FakeDoc = Record<string, any>;
+
+function makeAggregatesCtx(
+  opts: {
+    llmMetrics?: FakeDoc[];
+    aggregates?: FakeDoc[];
+    agentConfigs?: FakeDoc[];
+  } = {}
+) {
+  const tables: Record<string, FakeDoc[]> = {
+    llmMetrics: [...(opts.llmMetrics ?? [])],
+    aggregates: [...(opts.aggregates ?? [])],
+    agentConfigs: [...(opts.agentConfigs ?? [])],
+  };
+  let nextId = 1;
+  const patchCalls: unknown[] = [];
+  const deleteCalls: unknown[] = [];
+
+  function query(table: string) {
+    const rows = tables[table] ?? (tables[table] = []);
+    const predicates: Array<(r: FakeDoc) => boolean> = [];
+    let dir: "asc" | "desc" = "asc";
+
+    const chain = {
+      withIndex(_index: string, cb?: (q: any) => any) {
+        if (cb) {
+          const q: any = {};
+          for (const op of ["eq", "gte", "gt", "lte", "lt"] as const) {
+            q[op] = (field: string, value: unknown) => {
+              predicates.push((r) => {
+                const v = r[field];
+                if (op === "eq") return v === value;
+                if (op === "gte") return v >= (value as number);
+                if (op === "gt") return v > (value as number);
+                if (op === "lte") return v <= (value as number);
+                return v < (value as number);
+              });
+              return q;
+            };
+          }
+          cb(q);
+        }
+        return chain;
+      },
+      filter(cb: (q: any) => any) {
+        const q = {
+          field: (name: string) => ({ __field: name }),
+          neq: (ref: { __field: string }, value: unknown) => {
+            predicates.push((r) => r[ref.__field] !== value);
+            return true;
+          },
+        };
+        cb(q);
+        return chain;
+      },
+      order(direction: "asc" | "desc") {
+        dir = direction;
+        return chain;
+      },
+      async collect() {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        return dir === "desc" ? [...filtered].reverse() : filtered;
+      },
+      async first() {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const ordered = dir === "desc" ? [...filtered].reverse() : filtered;
+        return ordered[0] ?? null;
+      },
+      async paginate({ numItems, cursor }: { numItems: number; cursor: string | null }) {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        const start = cursor ? Number(cursor) : 0;
+        const page = filtered.slice(start, start + numItems);
+        const isDone = start + numItems >= filtered.length;
+        return { page, isDone, continueCursor: String(start + numItems) };
+      },
+    };
+    return chain;
+  }
+
+  const db = {
+    query,
+    async insert(table: string, doc: FakeDoc) {
+      const row = { ...doc, _id: `${table}_${nextId}`, _creationTime: nextId };
+      nextId++;
+      (tables[table] ?? (tables[table] = [])).push(row);
+      return row._id;
+    },
+    patch(...args: unknown[]) {
+      patchCalls.push(args);
+      throw new Error("db.patch must not be called — the token-split path is insert-only");
+    },
+    delete(...args: unknown[]) {
+      deleteCalls.push(args);
+      throw new Error("db.delete must not be called — the token-split path is insert-only");
+    },
+  };
+
+  return { ctx: { db }, tables, patchCalls, deleteCalls };
+}
+
+/** Mirrors computeHourly's own `hourStart` derivation so fixtures land in-bucket. */
+function currentHourStart(): number {
+  const now = Date.now() / 1000;
+  return Math.floor(now / 3600) * 3600 - 3600;
+}
 
 describe("aggregates", () => {
   describe("computeHourly — bucket logic", () => {
@@ -321,6 +439,122 @@ describe("aggregates", () => {
       expect(goalId).toBe(""); // empty string, not undefined
       const dimensions = { provider, model, billingType, goalId };
       expect(dimensions.goalId).toBe("");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 104 (D-04): tokens_prompt / tokens_completion hourly buckets, plus
+  // the resumable backfill. Unlike the describe blocks above (pure logic
+  // simulation), these exercise the REAL computeHourly/backfillTokenSplit
+  // mutation handlers via `._handler` against the fake ctx above.
+  // -------------------------------------------------------------------------
+  describe("token split", () => {
+    test("computeHourly writes tokens_prompt and tokens_completion with the same dimensions as cost", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          {
+            provider: "anthropic_direct",
+            model: "claude-sonnet-5",
+            cost: 0.01,
+            promptTokens: 100,
+            completionTokens: 20,
+            totalTokens: 120,
+            billingType: "api",
+            timestamp: hourStart + 10,
+            archived: false,
+          },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const promptRow = tables.aggregates.find((r) => r.metric_type === "tokens_prompt");
+      const completionRow = tables.aggregates.find((r) => r.metric_type === "tokens_completion");
+      const costRow = tables.aggregates.find((r) => r.metric_type === "cost");
+
+      expect(promptRow).toBeDefined();
+      expect(completionRow).toBeDefined();
+      expect(promptRow!.value).toBe(100);
+      expect(completionRow!.value).toBe(20);
+      expect(promptRow!.dimensions).toEqual(costRow!.dimensions);
+      expect(completionRow!.dimensions).toEqual(costRow!.dimensions);
+    });
+
+    test("two rows sharing a dimension key sum into one insert per metric type", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 100, completionTokens: 20, billingType: "api", timestamp: hourStart + 5, archived: false },
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.02, promptTokens: 50, completionTokens: 10, billingType: "api", timestamp: hourStart + 15, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      const completionRows = tables.aggregates.filter((r) => r.metric_type === "tokens_completion");
+      expect(promptRows).toHaveLength(1);
+      expect(promptRows[0].value).toBe(150);
+      expect(completionRows).toHaveLength(1);
+      expect(completionRows[0].value).toBe(30);
+    });
+
+    test("rows differing only in goalId produce separate inserts (4-segment key preserved)", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 100, completionTokens: 20, billingType: "api", goalId: "goal-1", timestamp: hourStart + 5, archived: false },
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 40, completionTokens: 8, billingType: "api", goalId: "goal-2", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows).toHaveLength(2);
+      expect(promptRows.map((r) => r.value).sort((a, b) => a - b)).toEqual([40, 100]);
+    });
+
+    test("a re-run inserts only the missing tokens_completion rows when tokens_prompt already exists (independent guards)", async () => {
+      const hourStart = currentHourStart();
+      const existingPrompt = {
+        metric_type: "tokens_prompt",
+        period: "hourly",
+        bucket_start: hourStart,
+        value: 100,
+        dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5", billingType: "api", goalId: "" },
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 100, completionTokens: 20, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+        aggregates: [existingPrompt],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      const completionRows = tables.aggregates.filter((r) => r.metric_type === "tokens_completion");
+      expect(promptRows).toHaveLength(1); // unchanged — no duplicate inserted
+      expect(completionRows).toHaveLength(1); // newly inserted by the independent guard
+      expect(completionRows[0].value).toBe(20);
+    });
+
+    test("an llmMetrics row missing promptTokens contributes 0 rather than NaN", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, completionTokens: 20, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows).toHaveLength(1);
+      expect(promptRows[0].value).toBe(0);
+      expect(Number.isNaN(promptRows[0].value)).toBe(false);
     });
   });
 
