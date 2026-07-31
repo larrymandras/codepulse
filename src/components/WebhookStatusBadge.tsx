@@ -10,22 +10,26 @@
  * Phase 06-05: ALR-06 alert lifecycle UI
  */
 
+// Use the SHARED helper, which takes EPOCH SECONDS. This component previously
+// carried its own local copy that did `Date.now() - ts` — i.e. it expected
+// MILLISECONDS. Every producer of `webhookDeliveredAt` writes seconds
+// (`convex/webhookDelivery.ts` sets it from `Date.now() / 1000`, and the schema
+// stores that verbatim), so subtracting a seconds value from a millisecond
+// `Date.now()` yielded ~1.785e12 ms and the badge rendered "Delivered 20645d
+// ago" — a 1970 date — on a webhook delivered seconds earlier.
+//
+// The giveaway was that the alert's OWN timestamp one line above rendered
+// correctly ("17m ago"): Alerts.tsx feeds the same kind of seconds value to a
+// seconds-based helper. 14 of the repo's 15 epoch-based `relativeTime` copies
+// are seconds-based; this was one of the odd ones out.
+// Found 2026-07-31 at Phase 104's live gate, on the first real budget alert.
+import { relativeTime } from "@/lib/formatters";
+
 interface WebhookStatusBadgeProps {
   status?: string;
+  /** Epoch SECONDS (matches `alerts.webhookDeliveredAt`), never milliseconds. */
   deliveredAt?: number;
   attempts?: number;
-}
-
-function relativeTime(ts: number): string {
-  const diffMs = Date.now() - ts;
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  return `${diffDay}d ago`;
 }
 
 export function WebhookStatusBadge({
