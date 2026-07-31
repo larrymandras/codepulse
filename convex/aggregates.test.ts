@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { getBillingType } from "./lib/providers";
-import { computeHourly, backfillTokenSplit } from "./aggregates";
+import { computeHourly, backfillTokenSplit, costByGoalPeriod, llmByGoal } from "./aggregates";
 
 // ---------------------------------------------------------------------------
 // Fake ctx for exercising the real mutation handlers via `._handler` (the raw
@@ -20,12 +20,14 @@ function makeAggregatesCtx(
     llmMetrics?: FakeDoc[];
     aggregates?: FakeDoc[];
     agentConfigs?: FakeDoc[];
+    modelPricing?: FakeDoc[];
   } = {}
 ) {
   const tables: Record<string, FakeDoc[]> = {
     llmMetrics: [...(opts.llmMetrics ?? [])],
     aggregates: [...(opts.aggregates ?? [])],
     agentConfigs: [...(opts.agentConfigs ?? [])],
+    modelPricing: [...(opts.modelPricing ?? [])],
   };
   let nextId = 1;
   const patchCalls: unknown[] = [];
@@ -730,6 +732,100 @@ describe("aggregates", () => {
       expect(result).toHaveLength(2);
       expect(result[0]).toEqual({ agentId: "agent-1", model: "claude-3-opus", cost: 0.05 });
       expect(result[1]).toEqual({ agentId: "agent-2", model: "gpt-4o-mini", cost: 0.01 });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 104 (D-01, RESEARCH.md Open Question 1 resolved YES — 104-05-PLAN.md
+  // Task 3): costByGoalPeriod/llmByGoal now derive dollars from tokens via
+  // costDerived.deriveBucketDollars() instead of trusting the ingested `cost`
+  // field. Unlike the describe block above (pure logic simulation of the OLD
+  // shape), these exercise the REAL query handlers via `._handler`.
+  // -------------------------------------------------------------------------
+  describe("goal cost derivation", () => {
+    test("a goal whose rows use a priced model returns billedTotal computed from tokens, DIFFERENT from reportedTotal when the ingested cost disagrees with the rate", async () => {
+      const { ctx } = makeAggregatesCtx({
+        llmMetrics: [
+          {
+            goalId: "goal-1",
+            provider: "anthropic_direct",
+            model: "claude-sonnet-4-5",
+            promptTokens: 1000,
+            completionTokens: 500,
+            billingType: "api",
+            cost: 999, // deliberately WRONG ingested figure — proves it's no longer the rendered truth
+            archived: false,
+          },
+        ],
+        modelPricing: [
+          { model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015, source: "manual" },
+        ],
+      });
+
+      const result = await (costByGoalPeriod as any)._handler(ctx, { goalId: "goal-1" });
+
+      const expectedBilled = 1000 * 0.000003 + 500 * 0.000015;
+      expect(result.billedTotal).toBeCloseTo(expectedBilled, 10);
+      expect(result.reportedTotal).toBe(999);
+      expect(result.billedTotal).not.toBeCloseTo(result.reportedTotal, 2);
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].priced).toBe(true);
+    });
+
+    test("a goal whose model has no rate returns that row priced:false, contributing nothing to billedTotal", async () => {
+      const { ctx } = makeAggregatesCtx({
+        llmMetrics: [
+          {
+            goalId: "goal-2",
+            provider: "openrouter",
+            model: "unrated-model",
+            promptTokens: 300,
+            completionTokens: 100,
+            billingType: "api",
+            cost: 0.5,
+            archived: false,
+          },
+        ],
+        modelPricing: [], // no rate for "unrated-model"
+      });
+
+      const result = await (costByGoalPeriod as any)._handler(ctx, { goalId: "goal-2" });
+
+      expect(result.billedTotal).toBe(0);
+      expect(result.unpricedModelCount).toBe(1);
+      expect(result.rows[0].priced).toBe(false);
+      expect(result.rows[0].billedUsd).toBeNull();
+      // The ingested figure still survives as evidence.
+      expect(result.reportedTotal).toBe(0.5);
+    });
+
+    test("llmByGoal returns billedUsd and reportedCost as separate fields", async () => {
+      const { ctx } = makeAggregatesCtx({
+        llmMetrics: [
+          {
+            goalId: "goal-3",
+            agentId: "agent-1",
+            provider: "anthropic_direct",
+            model: "claude-sonnet-4-5",
+            promptTokens: 200,
+            completionTokens: 100,
+            billingType: "api",
+            cost: 42, // deliberately WRONG — llmByGoal must not read it as the rendered dollar figure
+            archived: false,
+          },
+        ],
+        modelPricing: [
+          { model: "claude-sonnet-4-5", inputPerToken: 0.000003, outputPerToken: 0.000015, source: "manual" },
+        ],
+      });
+
+      const result = await (llmByGoal as any)._handler(ctx, { goalId: "goal-3" });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].reportedCost).toBe(42);
+      expect(result[0].billedUsd).toBeCloseTo(200 * 0.000003 + 100 * 0.000015, 10);
+      expect(result[0].billedUsd).not.toBeCloseTo(result[0].reportedCost, 2);
+      expect(result[0].agentId).toBe("agent-1");
     });
   });
 

@@ -3,35 +3,54 @@
  *
  * Phase 149-04 — PULSE-04.
  * Mirrors useAgentTopology's "skip" sentinel pattern for conditional queries.
+ *
+ * Phase 104 D-01 (2026-07-31): dollars are recomputed from tokens x
+ * modelPricing rate via convex/costDerived.ts's deriveBucketDollars() — the
+ * same derivation every other cost surface in the phase uses, so this
+ * goal-scoped HivePage breakdown can no longer disagree with Analytics. The
+ * ingested `cost` field survives only as `reportedCost`/`reportedTotal`
+ * (evidence, not the rendered truth). Do not reintroduce a bare `cost` field
+ * or a combined total-`cost` field on either shape below.
  */
 
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-
-export type CostRow = {
-  provider: string;
-  model: string;
-  cost: number;
-};
+import type { DerivedRow } from "../../convex/costDerived";
 
 export type CostByGoalResult = {
-  rows: CostRow[];
-  totalCost: number;
+  rows: DerivedRow[];
+  billedTotal: number;
+  coveredTotal: number;
+  unpricedModelCount: number;
+  /** The ingested-cost figure, kept as evidence (D-01) — never the rendered truth. */
+  reportedTotal: number;
 };
 
 export type LlmRow = {
   agentId?: string;
   model: string;
   provider: string;
-  cost: number;
+  promptTokens: number;
+  completionTokens: number;
+  billingType: string;
+  /** null when the row is unpriced or billingType is subscription (D-03/D-05). */
+  billedUsd: number | null;
+  /** The ingested-cost figure, kept as evidence (D-01) — never the rendered truth. */
+  reportedCost: number;
 };
 
-const DEFAULT_COST: CostByGoalResult = { rows: [], totalCost: 0 };
+const DEFAULT_COST: CostByGoalResult = {
+  rows: [],
+  billedTotal: 0,
+  coveredTotal: 0,
+  unpricedModelCount: 0,
+  reportedTotal: 0,
+};
 
 /**
- * Returns grouped (provider, model) cost rows for the given goalId.
+ * Returns derived per-(provider, model) cost rows for the given goalId.
  * Uses "skip" sentinel when goalId is null/undefined so no query fires.
- * Returns { rows: [], totalCost: 0 } when loading or goalId is absent.
+ * Returns DEFAULT_COST when loading or goalId is absent.
  */
 export function useCostByGoal(goalId: string | null | undefined): CostByGoalResult {
   return (
@@ -43,8 +62,8 @@ export function useCostByGoal(goalId: string | null | undefined): CostByGoalResu
 }
 
 /**
- * Returns raw (agentId, model, provider, cost) rows for the given goalId.
- * Used by CostBreakdown for the model-tier flag join (D-12).
+ * Returns raw per-row {agentId, model, provider, ...} rows for the given goalId.
+ * Used by CostBreakdown for the model-tier flag join (D-12) and per-row dollar display.
  * Uses "skip" sentinel when goalId is null/undefined.
  * Returns [] when loading or goalId is absent.
  */

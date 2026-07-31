@@ -8,6 +8,15 @@
  *
  * Replaces the legacy CostBreakdown stub (which used api.llm.costByModel).
  * Now goal-scoped via useCostByGoal(goalId) → api.aggregates.costByGoalPeriod.
+ *
+ * Phase 104 D-01 (2026-07-31, RESEARCH.md Open Question 1, resolved YES):
+ * dollar figures are recomputed by CodePulse from tokens x modelPricing rate
+ * (deriveBucketDollars), not read from the ingested `cost` field, so this
+ * goal-scoped breakdown can no longer disagree with the Analytics cost
+ * cluster. A row whose model has no pricing rate renders an "Unpriced"
+ * badge with its real token counts — never $0.00 inside the total (D-03).
+ * This edit is scoped to the data-source rewire only; the hex-color
+ * remediation for this file is plan 104-10's job.
  */
 
 import { DollarSign } from "lucide-react";
@@ -64,22 +73,32 @@ const tierFlagConfig: Record<TierFlag, { dotClass: string; labelClass: string }>
   },
 };
 
+// ── D-03: Unpriced badge — uses the status-warn TOKEN (not hex), matching
+// the contract plan 104-09's breakdown table also uses. This is new UI, not
+// a hex-remediation of an existing element, so it is token-driven from the
+// start even though the rest of this file's pre-existing hex is deferred to
+// plan 104-10.
+const UNPRICED_BADGE_CLASS =
+  "border-[var(--status-warn)]/60 text-[var(--status-warn)] bg-[color-mix(in_oklab,var(--status-warn)_12%,transparent)] text-xs font-mono w-fit";
+
 interface CostBreakdownProps {
   goalId?: string | null | undefined;
 }
 
 export default function CostBreakdown({ goalId }: CostBreakdownProps) {
-  const { rows, totalCost } = useCostByGoal(goalId);
+  const { rows, billedTotal } = useCostByGoal(goalId);
   const llmRows = useLlmByGoal(goalId);
 
-  const isRunaway = totalCost > RUNAWAY_THRESHOLD;
+  const isRunaway = billedTotal > RUNAWAY_THRESHOLD;
   const tierFlag = computeTierFlag(llmRows, goalId);
   const { dotClass, labelClass } = tierFlagConfig[tierFlag];
 
-  // Sparkline data: one bar per cost row (label=model, value=cost)
+  // Sparkline data: one bar per row (label=model, value=billedUsd). Unpriced
+  // rows (billedUsd === null) render as a zero-height bar — the sparkline is
+  // a visual trend, not a total, so this does not violate D-03.
   const sparklineData = rows.map((r) => ({
     label: r.model,
-    value: r.cost,
+    value: r.billedUsd ?? 0,
   }));
 
   return (
@@ -135,7 +154,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
         <div className="flex gap-4">
           {/* Left column (60%): total cost + per-model table */}
           <div className="flex-[3] min-w-0">
-            {/* Total cost metric */}
+            {/* Total cost metric — recomputed (billed) total, D-01 */}
             <div className="mb-3">
               <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-0.5">
                 TOTAL COST
@@ -145,7 +164,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                   isRunaway ? "text-[#eab308]" : "text-foreground"
                 }`}
               >
-                ${totalCost.toFixed(4)}
+                ${billedTotal.toFixed(4)}
               </p>
             </div>
 
@@ -171,9 +190,9 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                 {rows.map((row, i) => {
                   const isOpus = row.model.toLowerCase().includes("opus");
                   const pct =
-                    totalCost > 0
-                      ? ((row.cost / totalCost) * 100).toFixed(1)
-                      : "0.0";
+                    billedTotal > 0 && row.billedUsd !== null
+                      ? ((row.billedUsd / billedTotal) * 100).toFixed(1)
+                      : "—";
                   return (
                     <TableRow
                       key={`${row.provider}-${row.model}-${i}`}
@@ -192,7 +211,18 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                       <TableCell
                         className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
                       >
-                        ${row.cost.toFixed(4)}
+                        {!row.priced ? (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={UNPRICED_BADGE_CLASS}>
+                              Unpriced
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                              {(row.promptTokens + row.completionTokens).toLocaleString()} tok
+                            </span>
+                          </div>
+                        ) : (
+                          `$${(row.billedUsd ?? 0).toFixed(4)}`
+                        )}
                       </TableCell>
                       <TableCell
                         className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}

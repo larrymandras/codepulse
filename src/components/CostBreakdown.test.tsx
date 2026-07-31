@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import type { DerivedRow } from "../../convex/costDerived";
+import type { CostByGoalResult, LlmRow } from "../hooks/useCostByGoal";
 
 // ── Convex mocks ────────────────────────────────────────────────────────────
 vi.mock("convex/react", () => ({
@@ -16,11 +18,14 @@ vi.mock("../../convex/_generated/api", () => ({
 }));
 
 // ── useCostByGoal mock ───────────────────────────────────────────────────────
-let mockCostData: { rows: Array<{ provider: string; model: string; cost: number }>; totalCost: number } = {
+let mockCostData: CostByGoalResult = {
   rows: [],
-  totalCost: 0,
+  billedTotal: 0,
+  coveredTotal: 0,
+  unpricedModelCount: 0,
+  reportedTotal: 0,
 };
-let mockLlmRows: Array<{ agentId?: string; model: string; provider: string; cost: number }> = [];
+let mockLlmRows: LlmRow[] = [];
 
 vi.mock("../hooks/useCostByGoal", () => ({
   useCostByGoal: vi.fn(() => mockCostData),
@@ -40,17 +45,54 @@ import CostBreakdown from "./CostBreakdown";
 const mockUseCostByGoal = vi.mocked(useCostByGoal);
 const mockUseLlmByGoal = vi.mocked(useLlmByGoal);
 
+function pricedRow(overrides: Partial<DerivedRow> & { provider: string; model: string }): DerivedRow {
+  return {
+    billingType: "api",
+    promptTokens: 1000,
+    completionTokens: 500,
+    billedUsd: 0,
+    coveredUsd: null,
+    priced: true,
+    pricedVia: "model",
+    ...overrides,
+  };
+}
+
+function unpricedRow(overrides: Partial<DerivedRow> & { provider: string; model: string }): DerivedRow {
+  return {
+    billingType: "api",
+    promptTokens: 300,
+    completionTokens: 100,
+    billedUsd: null,
+    coveredUsd: null,
+    priced: false,
+    pricedVia: null,
+    ...overrides,
+  };
+}
+
+function llmRow(overrides: Partial<LlmRow> & { model: string; provider: string }): LlmRow {
+  return {
+    promptTokens: 1000,
+    completionTokens: 500,
+    billingType: "api",
+    billedUsd: 0,
+    reportedCost: 0,
+    ...overrides,
+  };
+}
+
 describe("CostBreakdown", () => {
   beforeEach(() => {
-    mockCostData = { rows: [], totalCost: 0 };
+    mockCostData = { rows: [], billedTotal: 0, coveredTotal: 0, unpricedModelCount: 0, reportedTotal: 0 };
     mockLlmRows = [];
     vi.clearAllMocks();
-    mockUseCostByGoal.mockReturnValue({ rows: [], totalCost: 0 });
+    mockUseCostByGoal.mockReturnValue(mockCostData);
     mockUseLlmByGoal.mockReturnValue([]);
   });
 
   it('renders "No cost data yet" empty state when rows are empty', () => {
-    mockUseCostByGoal.mockReturnValue({ rows: [], totalCost: 0 });
+    mockUseCostByGoal.mockReturnValue({ rows: [], billedTotal: 0, coveredTotal: 0, unpricedModelCount: 0, reportedTotal: 0 });
     mockUseLlmByGoal.mockReturnValue([]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -58,31 +100,66 @@ describe("CostBreakdown", () => {
     expect(screen.getByText("No cost data yet")).toBeInTheDocument();
   });
 
-  it("renders total cost in tabular-nums format", () => {
+  it("renders total cost in tabular-nums format from billedTotal (D-01 recomputed figure, not the ingested cost)", () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-sonnet-4-5", cost: 0.1234 }],
-      totalCost: 0.1234,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.1234 })],
+      billedTotal: 0.1234,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.5, // deliberately different from billedTotal — proves it's not read anywhere
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.1234 },
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.1234 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
 
-    // Total cost appears as text-xl semibold; the TOTAL COST label is the sibling
     expect(screen.getByText("TOTAL COST")).toBeInTheDocument();
-    // At least one "$0.1234" must be in the document (total + table cell)
     const costEls = screen.getAllByText("$0.1234");
     expect(costEls.length).toBeGreaterThanOrEqual(1);
+    // The stale/ingested reportedTotal figure never renders.
+    expect(screen.queryByText("$0.5000")).not.toBeInTheDocument();
+  });
+
+  it('renders an "Unpriced" badge with real token counts for a priced:false row — never $0.00, and never inside the total', () => {
+    // Mix a priced row with an unpriced row so the total is genuinely
+    // non-zero — proves the unpriced row's tokens were excluded from
+    // billedTotal (D-03), not merely that an all-unpriced total happens to
+    // read $0.0000 correctly.
+    mockUseCostByGoal.mockReturnValue({
+      rows: [
+        pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.05 }),
+        unpricedRow({ provider: "openrouter", model: "unrated-model", promptTokens: 300, completionTokens: 100 }),
+      ],
+      billedTotal: 0.05,
+      coveredTotal: 0,
+      unpricedModelCount: 1,
+      reportedTotal: 0.05,
+    });
+    mockUseLlmByGoal.mockReturnValue([
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.05 }),
+    ]);
+
+    render(<CostBreakdown goalId="goal-1" />);
+
+    expect(screen.getByText("Unpriced")).toBeInTheDocument();
+    expect(screen.getByText("400 tok")).toBeInTheDocument();
+    // The header total reflects ONLY the priced row.
+    expect(screen.getAllByText("$0.0500").length).toBeGreaterThanOrEqual(1);
+    // No cell anywhere renders the unpriced row as a fabricated $0.00.
+    expect(screen.queryByText("$0.0000")).not.toBeInTheDocument();
   });
 
   it('shows "TIER OK" when all workers are on Sonnet/Haiku (no opus workers)', () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-sonnet-4-5", cost: 0.05 }],
-      totalCost: 0.05,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.05 })],
+      billedTotal: 0.05,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.05,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.05 },
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.05 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -92,11 +169,14 @@ describe("CostBreakdown", () => {
 
   it('shows "OPUS WORKER" when a non-queen agentId is on an opus model', () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-opus-4-8", cost: 0.20 }],
-      totalCost: 0.20,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-opus-4-8", billedUsd: 0.20 })],
+      billedTotal: 0.20,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.20,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "worker-1", model: "claude-opus-4-8", provider: "anthropic", cost: 0.20 },
+      llmRow({ agentId: "worker-1", model: "claude-opus-4-8", provider: "anthropic", billedUsd: 0.20 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -106,12 +186,15 @@ describe("CostBreakdown", () => {
 
   it('shows "TIER OK" when only the queen is on opus (worker on sonnet)', () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-opus-4-8", cost: 0.10 }],
-      totalCost: 0.10,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-opus-4-8", billedUsd: 0.10 })],
+      billedTotal: 0.10,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.10,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "queen", model: "claude-opus-4-8", provider: "anthropic", cost: 0.10 },
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.05 },
+      llmRow({ agentId: "queen", model: "claude-opus-4-8", provider: "anthropic", billedUsd: 0.10 }),
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.05 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -120,13 +203,16 @@ describe("CostBreakdown", () => {
     expect(screen.queryByText("OPUS WORKER")).not.toBeInTheDocument();
   });
 
-  it("activates runaway warning when totalCost > RUNAWAY_THRESHOLD (0.6 > 0.50)", () => {
+  it("activates runaway warning when billedTotal > RUNAWAY_THRESHOLD (0.6 > 0.50)", () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-opus-4-8", cost: 0.6 }],
-      totalCost: 0.6,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-opus-4-8", billedUsd: 0.6 })],
+      billedTotal: 0.6,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.6,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "queen", model: "claude-opus-4-8", provider: "anthropic", cost: 0.6 },
+      llmRow({ agentId: "queen", model: "claude-opus-4-8", provider: "anthropic", billedUsd: 0.6 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -134,13 +220,16 @@ describe("CostBreakdown", () => {
     expect(screen.getByText("COST WARNING")).toBeInTheDocument();
   });
 
-  it("does NOT activate runaway warning when totalCost < RUNAWAY_THRESHOLD (0.4 < 0.50)", () => {
+  it("does NOT activate runaway warning when billedTotal < RUNAWAY_THRESHOLD (0.4 < 0.50)", () => {
     mockUseCostByGoal.mockReturnValue({
-      rows: [{ provider: "anthropic", model: "claude-sonnet-4-5", cost: 0.4 }],
-      totalCost: 0.4,
+      rows: [pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.4 })],
+      billedTotal: 0.4,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.4,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.4 },
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.4 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -151,13 +240,16 @@ describe("CostBreakdown", () => {
   it("renders per-model table rows with provider and model columns", () => {
     mockUseCostByGoal.mockReturnValue({
       rows: [
-        { provider: "anthropic", model: "claude-sonnet-4-5", cost: 0.05 },
-        { provider: "anthropic", model: "claude-haiku-3", cost: 0.01 },
+        pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.05 }),
+        pricedRow({ provider: "anthropic", model: "claude-haiku-3", billedUsd: 0.01 }),
       ],
-      totalCost: 0.06,
+      billedTotal: 0.06,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.06,
     });
     mockUseLlmByGoal.mockReturnValue([
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.05 },
+      llmRow({ agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", billedUsd: 0.05 }),
     ]);
 
     render(<CostBreakdown goalId="goal-1" />);
@@ -172,7 +264,7 @@ describe("CostBreakdown", () => {
   });
 
   it('shows "CHECKING..." tier flag while llmByGoal rows are loading (empty)', () => {
-    mockUseCostByGoal.mockReturnValue({ rows: [], totalCost: 0 });
+    mockUseCostByGoal.mockReturnValue({ rows: [], billedTotal: 0, coveredTotal: 0, unpricedModelCount: 0, reportedTotal: 0 });
     mockUseLlmByGoal.mockReturnValue([]);
 
     render(<CostBreakdown goalId="goal-1" />);

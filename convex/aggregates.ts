@@ -2,6 +2,8 @@ import { internalMutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getBillingType } from "./lib/providers";
+import { buildRateIndex } from "./modelPricing";
+import { deriveBucketDollars } from "./costDerived";
 
 // ---- D-04 (Phase 104) shared helpers -------------------------------------
 // Factored out of computeHourly's Task 1 edit so computeHourly (the live
@@ -475,10 +477,20 @@ export const errorTrendByPeriod = query({
   },
 });
 
-// ---- PULSE-02: Per-goal cost query (OQ-1: direct llmMetrics by_goal scan) ----
+// ---- PULSE-02 / Phase 104 D-01 (RESEARCH.md Open Question 1, resolved YES —
+// see 104-05-PLAN.md): Per-goal cost query, direct llmMetrics by_goal scan.
 // Reads llmMetrics directly via the by_goal index (added in Plan 149-01).
 // This single query covers both live goals (cost before next cron tick) and
 // completed goals — no aggregates-vs-llmMetrics branching needed (~100 rows/run max).
+//
+// Phase 104 D-01: dollars are now RECOMPUTED from tokens x modelPricing rate
+// via the same deriveBucketDollars() every other cost surface in the phase
+// uses — this query no longer trusts the ingested `cost` field as the
+// rendered truth. The ingested figure survives as `reportedTotal`
+// (evidence, not truth) so a discrepancy stays observable (D-01/T-104-21).
+// Do not rename any field on this shape back to a bare `cost` or a combined
+// total-`cost` name — that
+// silently reintroduces a consumer reading the old, no-longer-true number.
 export const costByGoalPeriod = query({
   args: {
     goalId: v.string(),
@@ -490,26 +502,62 @@ export const costByGoalPeriod = query({
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
-    // Group by provider::model, summing cost
-    const grouped: Record<string, { provider: string; model: string; cost: number }> = {};
+    const index = buildRateIndex(await ctx.db.query("modelPricing").collect());
+
+    // Group by provider::model, accumulating TOKENS (not cost) plus the
+    // ingested cost as evidence — dollars are derived below.
+    const grouped: Record<
+      string,
+      { provider: string; model: string; billingType: string; promptTokens: number; completionTokens: number }
+    > = {};
+    let reportedTotal = 0;
     for (const r of rows) {
+      const billingType = (r as any).billingType ?? getBillingType(r.provider);
       const key = `${r.provider}::${r.model}`;
       if (!grouped[key]) {
-        grouped[key] = { provider: r.provider, model: r.model, cost: 0 };
+        grouped[key] = { provider: r.provider, model: r.model, billingType, promptTokens: 0, completionTokens: 0 };
       }
-      grouped[key].cost += r.cost ?? 0;
+      grouped[key].promptTokens += (r as any).promptTokens ?? 0;
+      grouped[key].completionTokens += (r as any).completionTokens ?? 0;
+      reportedTotal += r.cost ?? 0;
     }
 
-    const resultRows = Object.values(grouped);
-    const totalCost = resultRows.reduce((sum, r) => sum + r.cost, 0);
+    const derivedRows = Object.values(grouped).map((g) =>
+      deriveBucketDollars(
+        { provider: g.provider, model: g.model, billingType: g.billingType },
+        g.promptTokens,
+        g.completionTokens,
+        index
+      )
+    );
 
-    return { rows: resultRows, totalCost };
+    // billedTotal and coveredTotal are summed SEPARATELY (D-05) — never one
+    // combined figure.
+    let billedTotal = 0;
+    let coveredTotal = 0;
+    const unpricedPairs = new Set<string>();
+    for (const r of derivedRows) {
+      if (r.billedUsd !== null) billedTotal += r.billedUsd;
+      if (r.coveredUsd !== null) coveredTotal += r.coveredUsd;
+      if (!r.priced) unpricedPairs.add(`${r.provider}::${r.model}`);
+    }
+
+    return {
+      rows: derivedRows,
+      billedTotal,
+      coveredTotal,
+      unpricedModelCount: unpricedPairs.size,
+      reportedTotal,
+    };
   },
 });
 
-// ---- PULSE-02: Per-goal raw LLM rows for tier-flag join (Plan 04 CostBreakdown) ----
-// Returns {agentId, model, cost} rows for a goalId so Plan 04 can join agentId → model tier.
-// Separate from costByGoalPeriod to avoid overloading the grouped shape with raw row data.
+// ---- PULSE-02 / Phase 104 D-01: Per-goal raw LLM rows for tier-flag join
+// (Plan 04 CostBreakdown). Returns per-row {agentId, model, provider,
+// promptTokens, completionTokens, billingType, billedUsd, reportedCost} for
+// a goalId so CostBreakdown can join agentId -> model tier AND render the
+// same recomputed dollar figure costByGoalPeriod uses. Separate from
+// costByGoalPeriod to avoid overloading the grouped shape with raw row data.
 export const llmByGoal = query({
   args: {
     goalId: v.string(),
@@ -521,12 +569,29 @@ export const llmByGoal = query({
       .filter((q) => q.neq(q.field("archived"), true))
       .collect();
 
-    return rows.map((r) => ({
-      agentId: (r as any).agentId as string | undefined,
-      model: r.model,
-      provider: r.provider,
-      cost: r.cost ?? 0,
-    }));
+    const index = buildRateIndex(await ctx.db.query("modelPricing").collect());
+
+    return rows.map((r) => {
+      const billingType = (r as any).billingType ?? getBillingType(r.provider);
+      const promptTokens = (r as any).promptTokens ?? 0;
+      const completionTokens = (r as any).completionTokens ?? 0;
+      const derived = deriveBucketDollars(
+        { provider: r.provider, model: r.model, billingType },
+        promptTokens,
+        completionTokens,
+        index
+      );
+      return {
+        agentId: (r as any).agentId as string | undefined,
+        model: r.model,
+        provider: r.provider,
+        promptTokens,
+        completionTokens,
+        billingType,
+        billedUsd: derived.billedUsd,
+        reportedCost: r.cost ?? 0,
+      };
+    });
   },
 });
 

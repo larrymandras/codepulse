@@ -25,10 +25,10 @@ describe("useCostByGoal", () => {
     vi.clearAllMocks();
   });
 
-  it("returns default { rows: [], totalCost: 0 } when useQuery is undefined (loading)", () => {
+  it("returns the default cost shape when useQuery is undefined (loading)", () => {
     mockUseQuery.mockReturnValue(undefined);
     const { result } = renderHook(() => useCostByGoal("goal-1"));
-    expect(result.current).toEqual({ rows: [], totalCost: 0 });
+    expect(result.current).toEqual({ rows: [], billedTotal: 0, coveredTotal: 0, unpricedModelCount: 0, reportedTotal: 0 });
   });
 
   it("passes 'skip' sentinel to useQuery when goalId is null", () => {
@@ -58,19 +58,32 @@ describe("useCostByGoal", () => {
   it("returns actual data when useQuery resolves", () => {
     const mockData = {
       rows: [
-        { provider: "anthropic", model: "claude-sonnet-4-5", cost: 0.12 },
+        {
+          provider: "anthropic",
+          model: "claude-sonnet-4-5",
+          billingType: "api" as const,
+          promptTokens: 1000,
+          completionTokens: 500,
+          billedUsd: 0.12,
+          coveredUsd: null,
+          priced: true,
+          pricedVia: "model" as const,
+        },
       ],
-      totalCost: 0.12,
+      billedTotal: 0.12,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.15,
     };
     mockUseQuery.mockReturnValue(mockData as ReturnType<typeof useQuery>);
     const { result } = renderHook(() => useCostByGoal("goal-1"));
     expect(result.current).toEqual(mockData);
   });
 
-  it("returns default shape when goalId is null (skip sentinel path)", () => {
+  it("returns the default cost shape when goalId is null (skip sentinel path)", () => {
     mockUseQuery.mockReturnValue(undefined);
     const { result } = renderHook(() => useCostByGoal(null));
-    expect(result.current).toEqual({ rows: [], totalCost: 0 });
+    expect(result.current).toEqual({ rows: [], billedTotal: 0, coveredTotal: 0, unpricedModelCount: 0, reportedTotal: 0 });
   });
 });
 
@@ -93,14 +106,32 @@ describe("useLlmByGoal", () => {
     expect(lastCall[1]).toBe("skip");
   });
 
-  it("returns rows with agentId for tier-flag join", () => {
+  it("returns rows with agentId, billedUsd, and reportedCost for tier-flag join", () => {
     const rows = [
-      { agentId: "agent-1", model: "claude-sonnet-4-5", provider: "anthropic", cost: 0.05 },
-      { agentId: "queen", model: "claude-opus-4-8", provider: "anthropic", cost: 0.10 },
+      {
+        agentId: "agent-1",
+        model: "claude-sonnet-4-5",
+        provider: "anthropic",
+        promptTokens: 500,
+        completionTokens: 200,
+        billingType: "api",
+        billedUsd: 0.05,
+        reportedCost: 0.05,
+      },
+      {
+        agentId: "queen",
+        model: "claude-opus-4-8",
+        provider: "anthropic",
+        promptTokens: 1000,
+        completionTokens: 400,
+        billingType: "api",
+        billedUsd: 0.10,
+        reportedCost: 0.10,
+      },
     ];
     mockUseQuery.mockReturnValue(rows as ReturnType<typeof useQuery>);
     const { result } = renderHook(() => useLlmByGoal("goal-1"));
     expect(result.current).toHaveLength(2);
-    expect(result.current[0]).toMatchObject({ agentId: "agent-1", model: "claude-sonnet-4-5" });
+    expect(result.current[0]).toMatchObject({ agentId: "agent-1", model: "claude-sonnet-4-5", billedUsd: 0.05 });
   });
 });
