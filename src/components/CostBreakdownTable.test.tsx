@@ -111,6 +111,28 @@ describe("CostBreakdownTable", () => {
     expect(within(unpricedRow).queryByText(/\$0\.00/)).not.toBeInTheDocument();
   });
 
+  it("renders the unpriced-tokens caption when unpricedTokenTotal is positive", () => {
+    // Regression coverage for a real gap (2026-07-31 adversarial mutation
+    // test): unpricedTokenTotal > 0 was the correct gate all along, but no
+    // test asserted the caption's presence -- flipping it to < 0 (making
+    // the caption permanently unreachable) passed every existing test.
+    mockUseQuery.mockReturnValue(BREAKDOWN_FIXTURE);
+    render(<CostBreakdownTable />);
+
+    expect(
+      screen.getByText(/400 tokens in this window aren't priced and/)
+    ).toBeInTheDocument();
+  });
+
+  it("does not render the unpriced-tokens caption when unpricedTokenTotal is zero", () => {
+    mockUseQuery.mockReturnValue(EMPTY_BREAKDOWN);
+    render(<CostBreakdownTable />);
+
+    expect(
+      screen.queryByText(/tokens in this window aren't priced/)
+    ).not.toBeInTheDocument();
+  });
+
   it("renders a subscription row with a zero billed figure and a non-zero covered figure", () => {
     mockUseQuery.mockReturnValue(BREAKDOWN_FIXTURE);
     render(<CostBreakdownTable />);
