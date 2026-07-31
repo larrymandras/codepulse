@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
 status: executing
-stopped_at: Phase 104 PLANNED (11 plans, 5 waves, checker passed, 2026-07-31) — Phase 103 COMPLETE
-last_updated: "2026-07-31T12:56:08.729Z"
-last_activity: 2026-07-31 -- Phase 104 planning complete
+stopped_at: Phase 104 Plan 01 (persistence layer) complete
+last_updated: "2026-07-31T13:17:00.000Z"
+last_activity: 2026-07-31 -- Phase 104 Plan 01 executed
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 29
-  completed_plans: 18
+  completed_plans: 19
   percent: 25
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** **v13.0 (Brain-Swap Control, Cost Intelligence & Consolidation)** — Phase 103 (Brain-Swap Control Surface) gap-closure cycle EXECUTING, Plan 17/18 complete (2026-07-29: OBS 8 closed — global-swap confirm modal's pinned-default count now reads `profileConfigs.modelPreferences.primary` instead of the empty per-profile telemetry axis, D-14 boundary preserved and regression-tested). One plan remains: 103-18 (review WR-01 — hoist global-swap ownership above the router outlet so the revert closure survives navigation). Next: `/gsd-execute-phase 103` resumes at Plan 18/18. Prior v11.0 (Skills) & v12.0 (Reminders) shipped.
+**Current focus:** Phase 104 — cost-intelligence
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,8 +43,8 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 103 (brain-swap-control-surface) — ✅ **COMPLETE 2026-07-30** (18/18 plans + a post-UAT inline gap-closure round). GAP-CLOSURE CYCLE 18/18 plans CODE-complete; a SECOND wave (103-17, 103-18) was added after a live checkpoint (103-13-T1) and a code review found two more blocking defects (OBS 8, closed by 103-17; WR-01, closed by 103-18, this plan)
-Plan: 18/18 COMPLETE (2026-07-29). Plans 09-17 (first gap-closure wave + 103-17) closed defects 6a/6b, CR-01 (`recordRouting`), CR-02, WR-01 (an earlier, different WR-01 — scope reset), WR-03, defect #5, CR-03, WR-02, OBS 7, CR-01 (`GlobalSwapModal` stale-reselect), and OBS 8 (D-11 confirm-modal pinned-default count now config-derived). Plan 18 (103-18, this plan) closes **WR-01** (2026-07-29 code review) — starting a global swap from the page-scoped Chat composer pill, clicking Done, navigating away, then clicking "Revert global swap" in the still-visible toast previously fired a real `swap.set` into an unmounted component with zero UI feedback. Fix: a new `GlobalSwapContext` (`GlobalSwapProvider`/`useGlobalSwap`) owns the single `GlobalSwapModal` instance, mounted once in `DashboardLayout` above `<Outlet/>` instead of by whichever `BrainPicker` host opened it — both hosts (`BrainHeaderBadge`, the Chat pill) now drive the same surviving instance through `openGlobalSwap()`. CR-03 (mount survives Done), 103-16/CR-01 (reset keyed to a fresh `selectionNonce`), and 103-14 (revert restores the prior override) were all verified to remain closed post-hoist — the pre-existing tests covering them continued to pass unchanged, and two NEW tests (the WR-01 reproduction itself, and 103-14 exercised end-to-end through the hoisted architecture) were added, both mutation-checked live. See `.planning/phases/103-brain-swap-control-surface/103-18-SUMMARY.md`. **All 18 plans in this gap-closure cycle are CODE-complete, and the outstanding live re-verification HAS NOW BEEN DONE** — see `103-UAT.md` (operator-attended, 2026-07-29/30, 16/16 tests resolved against the running Ástríðr + self-hosted Convex stack on a Clerk-disabled ephemeral server; the operator's own :5173 was never touched, and every live swap was reverted so the stack ended as it started).
+Phase: 104 (cost-intelligence) — EXECUTING
+Plan: 1 of 11 COMPLETE (2026-07-31) — persistence layer: `convex/schema.ts` gained `modelPricing`/`costBudgets` tables; `convex/modelPricing.ts` ships CRUD + Clerk auth gate + pure rate-resolution helpers (`buildRateIndex`/`resolveRate`/`priceTokens`, D-03's no-default-fallback rule) + idempotent `seedDefaults` (15 code-table rates + claude-opus-5/sonnet-5/fable-5 + 3 D-06 shadow rows); 16 unit tests passing; `src/lib/modelPricing.ts` marked SEED SOURCE ONLY. See `104-01-SUMMARY.md`. Next: Plan 02.
 
 **The UAT confirmed 103-16/17/18 live AND found four further defects, all now fixed and live-re-verified (no PLAN/SUMMARY artifacts — executed inline as gap closure at the operator's direction, so `total_plans` correctly stays 18):**
 
@@ -79,14 +79,14 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Ready to execute — **Phase 104 PLANNED 2026-07-31** (11 plans, 5 waves, plan-checker PASSED; 3/3 REQ + 20/20 CONTEXT decisions covered, verified independently after both the coverage gate and the gap analyzer self-skipped on the `104-` filename prefix). Next: `/gsd-execute-phase 104`.
+Status: Executing Phase 104 — Plan 01/11 complete (persistence layer, `104-01-SUMMARY.md`)
 
 Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 105-106 (not yet planned).
 
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-31 -- Phase 104 planning complete
+Last activity: 2026-07-31 -- Phase 104 Plan 01 executed (modelPricing/costBudgets persistence layer, 3 tasks, 16 tests, commits d31fbe66/4c3916ec/a06f135c)
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 
@@ -176,6 +176,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v13.0 / Phase 104 Plan 01 decisions (2026-07-31, cost-intelligence persistence layer — schema + modelPricing CRUD/seed):**
+
+- **`resolveRate` has exactly two hit paths and one miss path, with no default-rate fallback anywhere in executable code (D-03).** Two doc-comment wordings were adjusted (avoiding the literal substrings `llmMetrics` and quoted `"default"` in prose) so the plan's own grep-based acceptance criteria — which check the whole file, not just executable lines — hold against comments too, not just code.
+- **`seedDefaults` is idempotent/additive-only and manually operator-triggered** (`npx convex run modelPricing:seedDefaults`), not a cron — consistent with CLAUDE.md's self-hosted Convex rule against unattended bulk mutation. It has not yet been run against the live deployment; `modelPricing.list` returns empty until an operator runs it.
+- **`src/lib/modelPricing.ts` kept in place as a seed source only**, not migrated — its 3 HR-surface consumers (`AgentAnalytics.tsx`, `MetricsDashboard.tsx`, `TokenUsageChart.tsx`) are documented as drifting, per 104-CONTEXT.md's explicit deferral to planner's discretion.
+- **COST-01/COST-02 NOT marked complete in REQUIREMENTS.md** — this plan ships only the persistence layer (1 of 11 plans in Phase 104); the breakdown chart/table and budget UI that the requirements actually describe land in later plans.
+- **`npx convex codegen`'s literal "dataModel.d.ts names both tables" acceptance criterion doesn't hold in this Convex version** (`DataModel` is derived generically via `DataModelFromSchemaDefinition`, not enumerated) — verified via `npx tsc --noEmit` exiting 0 instead, which is the plan's own first-listed verification method for this command.
+- Executed sequentially on `master` (no worktree); STATE.md/ROADMAP.md updated by hand per this file's established anti-clobber workaround — no `gsd-sdk state.*`/`roadmap.*` verbs run.
 
 **v13.0 / Phase 103 Plan 13 decisions (2026-07-29, gap-closure live re-verification + requirement restatement — Task 1 operator-delegated live checkpoint, Task 2 record/restate):**
 

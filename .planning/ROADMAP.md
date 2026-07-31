@@ -715,7 +715,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 104-01-PLAN.md — Schema (`modelPricing`, `costBudgets`) + pricing CRUD with the Clerk gate, pure rate resolution with no default fallback, and the seed incl. sonnet-5/opus-5/fable-5 and the D-06 shadow rows — COST-01, COST-02
+- [x] 104-01-PLAN.md — Schema (`modelPricing`, `costBudgets`) + pricing CRUD with the Clerk gate, pure rate resolution with no default fallback, and the seed incl. sonnet-5/opus-5/fable-5 and the D-06 shadow rows — COST-01, COST-02 — ✅ complete 2026-07-31, see `104-01-SUMMARY.md`
 - [ ] 104-02-PLAN.md — Repair the two dead telemetry pipes: gateway completions into `llmMetrics` (D-18, incl. an astridr-repo token-emit change) and the quota poller repointed at the CLI-gateway sidecar (D-20) — COST-01, COST-02
 - [ ] 104-03-PLAN.md — Widen the hourly rollup with `tokens_prompt`/`tokens_completion` buckets plus a resumable, batch-capped, insert-only backfill (D-04) — COST-01
 
