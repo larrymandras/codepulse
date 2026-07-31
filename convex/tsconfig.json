@@ -17,6 +17,21 @@
      * possible. The root tsconfig.json already declares the same. */
     "types": ["node"],
 
+    /* `convex/costBudgetEval.test.ts` imports the pure `projectDayEndSpend` helper
+     * from `src/components/SDKSpendGuard.tsx` (Phase 104 D-13 reuses its exact
+     * projection math). Because the "include" glob below covers this whole
+     * directory, that import pulls the component - and transitively shadcn's
+     * badge.tsx and useThemeColors.ts - into THIS typecheck, where the root
+     * tsconfig's at-slash path alias does not exist. Result: `npx convex deploy`
+     * died on 2 x TS2307 ("Cannot find module") while `npx tsc --noEmit` and
+     * vitest both stayed green, because each resolves the alias itself. Mirror
+     * the root mapping so all three agree. Found 2026-07-31 at Phase 104's
+     * live-deploy gate. No "baseUrl": it is deprecated (TS5101) and paths
+     * already resolve relative to this file. */
+    "paths": {
+      "@/*": ["../src/*"]
+    },
+
     /* These compiler options are required by Convex */
     "target": "ESNext",
     "lib": ["ES2021", "dom"],
