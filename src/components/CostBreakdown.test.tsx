@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { DerivedRow } from "../../convex/costDerived";
 import type { CostByGoalResult, LlmRow } from "../hooks/useCostByGoal";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ── Convex mocks ────────────────────────────────────────────────────────────
 vi.mock("convex/react", () => ({
@@ -274,5 +279,40 @@ describe("CostBreakdown", () => {
     // With null goalId we'd also get CHECKING... — test the goalId=null path separately
     // For non-null goalId with empty rows from a real goalId, CHECKING... is correct
     expect(screen.getByText("CHECKING...")).toBeInTheDocument();
+  });
+
+  it("renders entirely from design tokens — no hex literal and no legacy amber/red/green/yellow Tailwind color class (104-10 hex remediation)", () => {
+    const source = readFileSync(join(__dirname, "CostBreakdown.tsx"), "utf-8");
+    const hexMatches = source.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g);
+    expect(hexMatches).toBeNull();
+    const legacyColorMatches = source.match(/amber-|text-red-|bg-red-|green-[0-9]|yellow-[0-9]/g);
+    expect(legacyColorMatches).toBeNull();
+  });
+
+  it("still distinguishes an Opus-tier row with its own class after the hex-to-token remediation", () => {
+    mockUseCostByGoal.mockReturnValue({
+      rows: [
+        pricedRow({ provider: "anthropic", model: "claude-opus-4-8", billedUsd: 0.1 }),
+        pricedRow({ provider: "anthropic", model: "claude-sonnet-4-5", billedUsd: 0.05 }),
+      ],
+      billedTotal: 0.15,
+      coveredTotal: 0,
+      unpricedModelCount: 0,
+      reportedTotal: 0.15,
+    });
+    mockUseLlmByGoal.mockReturnValue([
+      llmRow({ agentId: "worker-1", model: "claude-opus-4-8", provider: "anthropic", billedUsd: 0.1 }),
+    ]);
+
+    render(<CostBreakdown goalId="goal-1" />);
+
+    const opusRow = screen.getByText("claude-opus-4-8").closest("tr");
+    const sonnetRow = screen.getByText("claude-sonnet-4-5").closest("tr");
+    expect(opusRow).not.toBeNull();
+    expect(sonnetRow).not.toBeNull();
+    // The Opus row still carries a distinguishing class (now token-driven);
+    // the non-Opus row does not carry the same class.
+    expect(opusRow!.className).toMatch(/status-warn/);
+    expect(sonnetRow!.className).not.toMatch(/status-warn/);
   });
 });

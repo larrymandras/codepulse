@@ -58,20 +58,32 @@ function computeTierFlag(
 }
 
 // ── Tier flag visual classes ────────────────────────────────────────────────
+// Status colors are driven entirely by the design-token scale (--status-*),
+// matching MetricCard.tsx's severityConfig convention — no hardcoded hex.
 const tierFlagConfig: Record<TierFlag, { dotClass: string; labelClass: string }> = {
   "TIER OK": {
-    dotClass: "w-2 h-2 rounded-full bg-[#10b981]",
-    labelClass: "text-xs font-mono text-[#10b981]",
+    dotClass: "w-2 h-2 rounded-full bg-[var(--status-ok)]",
+    labelClass: "text-xs font-mono text-[var(--status-ok)]",
   },
   "OPUS WORKER": {
-    dotClass: "w-2 h-2 rounded-full bg-[#ef4444] animate-pulse",
-    labelClass: "text-xs font-mono text-[#ef4444]",
+    dotClass: "w-2 h-2 rounded-full bg-[var(--status-error)] animate-pulse",
+    labelClass: "text-xs font-mono text-[var(--status-error)]",
   },
   "CHECKING...": {
     dotClass: "w-2 h-2 rounded-full bg-muted-foreground/50",
     labelClass: "text-xs font-mono text-muted-foreground",
   },
 };
+
+// ── Runaway-warning visual classes (warn token, color-mix derived tints) ───
+const RUNAWAY_WRAPPER_CLASS =
+  "border border-[var(--status-warn)]/40 shadow-[0_0_15px_color-mix(in_oklab,var(--status-warn)_15%,transparent)] rounded-xl p-1";
+const RUNAWAY_TEXT_CLASS = "text-[var(--status-warn)]";
+const RUNAWAY_DOT_CLASS = "bg-[var(--status-warn)]";
+const RUNAWAY_BADGE_CLASS =
+  "border-[var(--status-warn)]/60 text-[var(--status-warn)] bg-[color-mix(in_oklab,var(--status-warn)_10%,transparent)] text-xs font-mono";
+const OPUS_ROW_CLASS = "bg-[color-mix(in_oklab,var(--status-warn)_10%,transparent)]";
+const OPUS_CELL_CLASS = "text-[var(--status-warn)]";
 
 // ── D-03: Unpriced badge — uses the status-warn TOKEN (not hex), matching
 // the contract plan 104-09's breakdown table also uses. This is new UI, not
@@ -102,33 +114,24 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
   }));
 
   return (
-    <div
-      className={
-        isRunaway
-          ? "border border-[#eab308]/40 shadow-[0_0_15px_rgba(234,179,8,0.15)] rounded-xl p-1"
-          : ""
-      }
-    >
+    <div className={isRunaway ? RUNAWAY_WRAPPER_CLASS : ""}>
       {/* Header: COST label + live-pulse dot + runaway warning badge + tier flag */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <h2
             className={`text-xs font-mono uppercase tracking-widest flex items-center gap-2 ${
-              isRunaway ? "text-[#eab308]" : "text-primary"
+              isRunaway ? RUNAWAY_TEXT_CLASS : "text-primary"
             }`}
           >
             <span
               className={`w-2 h-2 rounded-full animate-pulse ${
-                isRunaway ? "bg-[#eab308]" : "bg-primary"
+                isRunaway ? RUNAWAY_DOT_CLASS : "bg-primary"
               }`}
             />
             COST
           </h2>
           {isRunaway && (
-            <Badge
-              variant="outline"
-              className="border-[#eab308]/60 text-[#eab308] bg-[#eab308]/10 text-xs font-mono"
-            >
+            <Badge variant="outline" className={RUNAWAY_BADGE_CLASS}>
               COST WARNING
             </Badge>
           )}
@@ -161,7 +164,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
               </p>
               <p
                 className={`text-xl font-semibold tabular-nums ${
-                  isRunaway ? "text-[#eab308]" : "text-foreground"
+                  isRunaway ? RUNAWAY_TEXT_CLASS : "text-foreground"
                 }`}
               >
                 ${billedTotal.toFixed(4)}
@@ -196,20 +199,20 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                   return (
                     <TableRow
                       key={`${row.provider}-${row.model}-${i}`}
-                      className={isOpus ? "bg-amber-500/10" : ""}
+                      className={isOpus ? OPUS_ROW_CLASS : ""}
                     >
                       <TableCell
-                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? OPUS_CELL_CLASS : ""}`}
                       >
                         {row.provider}
                       </TableCell>
                       <TableCell
-                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? OPUS_CELL_CLASS : ""}`}
                       >
                         {row.model}
                       </TableCell>
                       <TableCell
-                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? OPUS_CELL_CLASS : ""}`}
                       >
                         {!row.priced ? (
                           <div className="flex flex-col gap-0.5">
@@ -225,7 +228,7 @@ export default function CostBreakdown({ goalId }: CostBreakdownProps) {
                         )}
                       </TableCell>
                       <TableCell
-                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? "text-amber-300" : ""}`}
+                        className={`text-sm tabular-nums px-1 py-1 ${isOpus ? OPUS_CELL_CLASS : ""}`}
                       >
                         {pct}%
                       </TableCell>
