@@ -1,3 +1,14 @@
+// SEED SOURCE ONLY (Phase 104). convex/modelPricing is now the runtime
+// source of truth for cost calculations — this table only supplies the
+// initial rows for `convex/modelPricing.ts`'s `seedDefaults` mutation.
+// Three HR surfaces still import `estimateCost` from this file directly and
+// were NOT migrated onto the Convex table in Phase 104 (104-CONTEXT.md
+// <deferred>, planner's call, phase boundary does not require it):
+//   - src/pages/hr/AgentAnalytics.tsx
+//   - src/components/hr/detail/MetricsDashboard.tsx
+//   - TokenUsageChart.tsx
+// Those three will silently drift from any rate correction made through the
+// admin surface until migrated — recorded here rather than left silent.
 const PRICING: Record<string, { input: number; output: number }> = {
   "claude-opus-4-5":       { input:  5.00 / 1_000_000, output: 25.00 / 1_000_000 },
   "claude-opus-4-6":       { input:  5.00 / 1_000_000, output: 25.00 / 1_000_000 },

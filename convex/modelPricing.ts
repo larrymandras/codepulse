@@ -17,7 +17,7 @@
  * phase — `convex/costDerived.ts` `unpricedModels` (plan 104-05) — so the
  * nudge count and the breakdown table can never disagree.
  */
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import { GATEWAY_PROVIDERS } from "./lib/providers";
@@ -225,5 +225,150 @@ export const get = query({
   args: { id: v.id("modelPricing") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.id);
+  },
+});
+
+// ============================================================
+// Seed — idempotent, additive-only
+// ============================================================
+
+/**
+ * Manual invocation: `npx convex run modelPricing:seedDefaults '{}'`
+ *
+ * Must be run once before plan 104-09's surfaces (breakdown table, unpriced
+ * nudge, budget panels) are useful — it is what populates the rate rows and
+ * D-06 shadow rows those surfaces read. Not registered as a cron
+ * (convex/crons.ts) — per CLAUDE.md's self-hosted Convex rules, no bulk
+ * mutation runs unattended against the live instance; this is an
+ * operator-triggered, one-time (idempotent) seed.
+ *
+ * IDEMPOTENT and ADDITIVE ONLY: for each seed entry, reads `by_model` first
+ * and skips if a row already exists. Never patches an existing row and
+ * never deletes anything.
+ */
+type SeedEntry = {
+  model: string;
+  inputPerToken: number;
+  outputPerToken: number;
+  shadowForProvider?: string;
+  notes?: string;
+};
+
+const PER_MTOK = 1_000_000;
+
+const SEED_MODELS: SeedEntry[] = [
+  // ---- Part A: copied verbatim from src/lib/modelPricing.ts's PRICING map,
+  // EXCLUDING its catch-all fallback key (D-03: no fallback row is ever
+  // seeded). ----
+  { model: "claude-opus-4-5", inputPerToken: 5.00 / PER_MTOK, outputPerToken: 25.00 / PER_MTOK },
+  { model: "claude-opus-4-6", inputPerToken: 5.00 / PER_MTOK, outputPerToken: 25.00 / PER_MTOK },
+  { model: "claude-opus-4-7", inputPerToken: 5.00 / PER_MTOK, outputPerToken: 25.00 / PER_MTOK },
+  { model: "claude-opus-4-8", inputPerToken: 5.00 / PER_MTOK, outputPerToken: 25.00 / PER_MTOK },
+  { model: "claude-sonnet-4-5", inputPerToken: 3.00 / PER_MTOK, outputPerToken: 15.00 / PER_MTOK },
+  { model: "claude-sonnet-4-6", inputPerToken: 3.00 / PER_MTOK, outputPerToken: 15.00 / PER_MTOK },
+  { model: "claude-haiku-3-5", inputPerToken: 0.80 / PER_MTOK, outputPerToken: 4.00 / PER_MTOK },
+  { model: "claude-haiku-4-5", inputPerToken: 0.80 / PER_MTOK, outputPerToken: 4.00 / PER_MTOK },
+  { model: "gpt-4o", inputPerToken: 2.50 / PER_MTOK, outputPerToken: 10.00 / PER_MTOK },
+  { model: "gpt-4o-mini", inputPerToken: 0.15 / PER_MTOK, outputPerToken: 0.60 / PER_MTOK },
+  { model: "gemini-2.5-pro", inputPerToken: 1.25 / PER_MTOK, outputPerToken: 10.00 / PER_MTOK },
+  { model: "gemini-2.5-flash", inputPerToken: 0.30 / PER_MTOK, outputPerToken: 2.50 / PER_MTOK },
+  { model: "gemini-3.5-flash", inputPerToken: 1.50 / PER_MTOK, outputPerToken: 9.00 / PER_MTOK },
+  { model: "gemini-3.1-pro-preview", inputPerToken: 2.00 / PER_MTOK, outputPerToken: 12.00 / PER_MTOK },
+  { model: "gemini-3.1-flash-lite", inputPerToken: 0.25 / PER_MTOK, outputPerToken: 1.50 / PER_MTOK },
+
+  // ---- Part B: the three models REQUIREMENTS.md COST-01 names that have
+  // no entry in the code table today (D-02's verified gap). Published
+  // Anthropic list rates, expressed per token. ----
+  {
+    model: "claude-opus-5",
+    inputPerToken: 5.00 / PER_MTOK,
+    outputPerToken: 25.00 / PER_MTOK,
+    notes: "Seeded Phase 104 — verify against the current published rate card",
+  },
+  {
+    model: "claude-sonnet-5",
+    inputPerToken: 3.00 / PER_MTOK,
+    outputPerToken: 15.00 / PER_MTOK,
+    notes: "Seeded Phase 104 — verify against the current published rate card",
+  },
+  {
+    model: "claude-fable-5",
+    inputPerToken: 3.00 / PER_MTOK,
+    outputPerToken: 15.00 / PER_MTOK,
+    notes: "Seeded Phase 104 — verify against the current published rate card",
+  },
+
+  // ---- Two live model ids RESEARCH.md observed in production metrics that
+  // are the same model under a differently-prefixed id. ----
+  { model: "claude-haiku-4-5-20251001", inputPerToken: 0.80 / PER_MTOK, outputPerToken: 4.00 / PER_MTOK },
+  { model: "google/gemini-2.5-flash", inputPerToken: 0.30 / PER_MTOK, outputPerToken: 2.50 / PER_MTOK },
+
+  // Deliberately NOT seeded: google/gemini-3.6-flash, gpt-4.1, grok-4.5 —
+  // no verified rate exists for these; leaving them unseeded lets D-03's
+  // Unpriced path and plan 104-09's nudge surface them for an operator to
+  // price, rather than shipping a guessed rate.
+];
+
+const SHADOW_MTOK_OPUS = { input: 5.00 / PER_MTOK, output: 25.00 / PER_MTOK };
+const SHADOW_MTOK_SONNET = { input: 3.00 / PER_MTOK, output: 15.00 / PER_MTOK };
+const SHADOW_NOTES =
+  "D-06 shadow rate — prices subscription turns to show what they would have cost on API billing. Not billed.";
+
+// ---- Part C: one D-06 shadow-mapping row per subscription-billed
+// GATEWAY_PROVIDERS entry. claude-sdk is deliberately excluded — it is
+// "api"-billed and prices on its own reported model id. ----
+const SEED_SHADOW_ROWS: SeedEntry[] = [
+  {
+    model: "claude-cli",
+    inputPerToken: SHADOW_MTOK_OPUS.input,
+    outputPerToken: SHADOW_MTOK_OPUS.output,
+    shadowForProvider: "claude-cli",
+    notes: SHADOW_NOTES,
+  },
+  {
+    model: "codex",
+    inputPerToken: SHADOW_MTOK_OPUS.input,
+    outputPerToken: SHADOW_MTOK_OPUS.output,
+    shadowForProvider: "codex",
+    notes: SHADOW_NOTES,
+  },
+  {
+    model: "antigravity",
+    inputPerToken: SHADOW_MTOK_SONNET.input,
+    outputPerToken: SHADOW_MTOK_SONNET.output,
+    shadowForProvider: "antigravity",
+    notes: SHADOW_NOTES,
+  },
+];
+
+/** Pure — exported so the idempotency/content behavior is unit-testable without a live ctx. */
+export function buildSeedSet(): SeedEntry[] {
+  return [...SEED_MODELS, ...SEED_SHADOW_ROWS];
+}
+
+export const seedDefaults = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    let inserted = 0;
+    for (const entry of buildSeedSet()) {
+      const existing = await ctx.db
+        .query("modelPricing")
+        .withIndex("by_model", (q) => q.eq("model", entry.model))
+        .first();
+      if (existing) continue;
+      await ctx.db.insert("modelPricing", {
+        model: entry.model,
+        inputPerToken: entry.inputPerToken,
+        outputPerToken: entry.outputPerToken,
+        shadowForProvider: entry.shadowForProvider,
+        source: "seed",
+        notes: entry.notes,
+        createdAt: now,
+        updatedAt: now,
+      });
+      inserted++;
+    }
+    return { inserted };
   },
 });

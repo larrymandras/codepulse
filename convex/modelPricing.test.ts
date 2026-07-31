@@ -15,6 +15,8 @@ import {
   resolveRate,
   priceTokens,
   create,
+  seedDefaults,
+  buildSeedSet,
   type PricingRow,
 } from "./modelPricing";
 
@@ -232,5 +234,102 @@ describe("modelPricing.create — identity gate + validation", () => {
     });
 
     expect(result).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// seedDefaults — idempotent, additive-only (Task 3)
+// ---------------------------------------------------------------------------
+
+/** A mutable in-memory modelPricing table, so idempotency can be tested across two calls. */
+function makeSeedCtx() {
+  const store: Array<Record<string, unknown> & { model: string }> = [];
+  const ctx = {
+    db: {
+      query(_table: string) {
+        void _table;
+        return {
+          withIndex(_index: string, cb: (q: any) => any) {
+            void _index;
+            let matchedModel: string | undefined;
+            const q = {
+              eq(_field: string, value: string) {
+                matchedModel = value;
+                return q;
+              },
+            };
+            cb(q);
+            return {
+              async first() {
+                return store.find((r) => r.model === matchedModel) ?? null;
+              },
+            };
+          },
+        };
+      },
+      async insert(_table: string, doc: Record<string, unknown> & { model: string }) {
+        void _table;
+        store.push(doc);
+        return `id_${doc.model}`;
+      },
+    },
+  };
+  return { ctx, store };
+}
+
+describe("modelPricing.seedDefaults", () => {
+  it("is idempotent — running the seed handler twice inserts each model exactly once", async () => {
+    const { ctx, store } = makeSeedCtx();
+
+    const first = await (seedDefaults as any)._handler(ctx);
+    const countAfterFirst = store.length;
+    expect(first.inserted).toBe(buildSeedSet().length);
+    expect(countAfterFirst).toBe(buildSeedSet().length);
+
+    const second = await (seedDefaults as any)._handler(ctx);
+    expect(second.inserted).toBe(0);
+    expect(store.length).toBe(countAfterFirst);
+
+    // each model id appears exactly once
+    const models = store.map((r) => r.model);
+    expect(new Set(models).size).toBe(models.length);
+  });
+
+  it("produces rate rows for claude-sonnet-5, claude-opus-5, and claude-fable-5", async () => {
+    const { ctx, store } = makeSeedCtx();
+    await (seedDefaults as any)._handler(ctx);
+
+    for (const model of ["claude-sonnet-5", "claude-opus-5", "claude-fable-5"]) {
+      const row = store.find((r) => r.model === model);
+      expect(row, `expected a seeded row for ${model}`).toBeDefined();
+      expect(row!.inputPerToken).toBeGreaterThan(0);
+      expect(row!.outputPerToken).toBeGreaterThan(0);
+    }
+  });
+
+  it("seeds no row named 'default' (D-03 regression guard)", async () => {
+    const { ctx, store } = makeSeedCtx();
+    await (seedDefaults as any)._handler(ctx);
+
+    expect(store.some((r) => r.model === "default")).toBe(false);
+  });
+
+  it("seeds a claude-cli shadow row with shadowForProvider === 'claude-cli'", async () => {
+    const { ctx, store } = makeSeedCtx();
+    await (seedDefaults as any)._handler(ctx);
+
+    const shadowRow = store.find(
+      (r) => r.model === "claude-cli" && r.shadowForProvider === "claude-cli"
+    );
+    expect(shadowRow).toBeDefined();
+  });
+
+  it("seeds shadow rows for codex and antigravity but not claude-sdk", async () => {
+    const { ctx, store } = makeSeedCtx();
+    await (seedDefaults as any)._handler(ctx);
+
+    expect(store.some((r) => r.shadowForProvider === "codex")).toBe(true);
+    expect(store.some((r) => r.shadowForProvider === "antigravity")).toBe(true);
+    expect(store.some((r) => r.shadowForProvider === "claude-sdk")).toBe(false);
   });
 });
