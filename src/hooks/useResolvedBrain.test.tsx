@@ -20,6 +20,7 @@ import {
   useGlobalBrainOverride,
   resolveActiveBrain,
   useResolvedBrain,
+  useLastTurnModel,
 } from "./useResolvedBrain";
 import type { ActiveEngineMap } from "./useActiveEngine";
 import type { ActiveEngine } from "../lib/brainsApi";
@@ -32,9 +33,11 @@ let mockStatus: "connected" | "reconnecting" | "disconnected" = "connected";
 let mockAstridrWSThrows = false;
 const mockSendCommand = vi.fn();
 let capturedSwapStateCallback: WSEventCallback | undefined;
+let capturedRunCompletedCallback: WSEventCallback | undefined;
 const mockUnsubscribe = vi.fn();
 const mockSubscribeEvent = vi.fn((eventType: string, callback: WSEventCallback) => {
   if (eventType === "swap.state") capturedSwapStateCallback = callback;
+  if (eventType === "run.completed") capturedRunCompletedCallback = callback;
   return mockUnsubscribe;
 });
 
@@ -108,6 +111,7 @@ beforeEach(() => {
   mockSendCommand.mockReset();
   mockSendCommand.mockResolvedValue(okAck());
   capturedSwapStateCallback = undefined;
+  capturedRunCompletedCallback = undefined;
   mockUnsubscribe.mockReset();
   mockSubscribeEvent.mockClear();
   mockUseQuery.mockReset();
@@ -264,5 +268,108 @@ describe("resolveActiveBrain (pure)", () => {
     });
     expect(result.source).toBe("none");
     expect(result.model).toBeNull();
+  });
+
+  // 2026-07-31 live finding: per-profile telemetry (activeEngineSnapshots) is permanently empty
+  // because astridr-repo's router.py emitter never sends profileId/uses a different key name
+  // than the Convex ingest expects (untracked "Astridr Phase 184.1" per 103-CONTRACT.md) — so in
+  // production, activeEngines is ALWAYS {} and every profile/mixed reading falls straight to
+  // "none" today. lastTurnModel is the fallback that keeps the badge honest instead of blank.
+  it("falls back to lastTurn (fleet-wide) when nothing is reported at all and a last-turn model is known", () => {
+    const result = resolveActiveBrain({
+      globalOverride: null,
+      activeEngines: {},
+      lastTurnModel: "claude-sonnet-5",
+    });
+    expect(result.source).toBe("lastTurn");
+    expect(result.model).toBe("claude-sonnet-5");
+  });
+
+  it("falls back to lastTurn for a supplied profileId with no reported engine but a known last-turn model", () => {
+    const result = resolveActiveBrain({
+      globalOverride: null,
+      activeEngines: { "assistant-default": null },
+      profileId: "assistant-default",
+      lastTurnModel: "claude-sonnet-5",
+    });
+    expect(result.source).toBe("lastTurn");
+    expect(result.model).toBe("claude-sonnet-5");
+  });
+
+  it("still resolves none, not lastTurn, when no last-turn model has been observed either", () => {
+    const result = resolveActiveBrain({ globalOverride: null, activeEngines: {}, lastTurnModel: null });
+    expect(result.source).toBe("none");
+    expect(result.model).toBeNull();
+  });
+
+  it("a real profile reading still wins over lastTurn (lastTurn is the last rung, not a preference)", () => {
+    const activeEngines: ActiveEngineMap = {
+      "assistant-default": makeEngine("assistant-default", "anthropic-sonnet-5"),
+    };
+    const result = resolveActiveBrain({
+      globalOverride: null,
+      activeEngines,
+      profileId: "assistant-default",
+      lastTurnModel: "claude-sonnet-5",
+    });
+    expect(result.source).toBe("profile");
+    expect(result.model).toBe("anthropic-sonnet-5");
+  });
+
+  it("a global override still wins over lastTurn", () => {
+    const result = resolveActiveBrain({
+      globalOverride: "claude-haiku-4-5-20251001",
+      activeEngines: {},
+      lastTurnModel: "claude-sonnet-5",
+    });
+    expect(result.source).toBe("global");
+    expect(result.model).toBe("claude-haiku-4-5-20251001");
+  });
+});
+
+describe("useLastTurnModel / useResolvedBrain — 'No brain reported' fallback (2026-07-31 live finding)", () => {
+  it("useLastTurnModel starts null and updates from a live run.completed push", async () => {
+    const { result } = renderHook(() => useLastTurnModel());
+    expect(result.current).toBeNull();
+    expect(capturedRunCompletedCallback).toBeDefined();
+
+    act(() => {
+      capturedRunCompletedCallback?.({
+        event_type: "run.completed",
+        data: { session_id: "s1", model: "claude-sonnet-5" },
+      });
+    });
+
+    await waitFor(() => expect(result.current).toBe("claude-sonnet-5"));
+  });
+
+  it("useLastTurnModel keeps the last real model through a fast-path turn with no/empty model", async () => {
+    const { result } = renderHook(() => useLastTurnModel());
+
+    act(() => {
+      capturedRunCompletedCallback?.({ event_type: "run.completed", data: { model: "claude-sonnet-5" } });
+    });
+    await waitFor(() => expect(result.current).toBe("claude-sonnet-5"));
+
+    act(() => {
+      capturedRunCompletedCallback?.({ event_type: "run.completed", data: { model: "" } });
+    });
+    expect(result.current).toBe("claude-sonnet-5");
+  });
+
+  it("useResolvedBrain resolves { source: 'lastTurn' } instead of blanking to 'none' once a turn has completed, with no per-profile telemetry ever reported", async () => {
+    seedEngines([], []);
+    const { result } = renderHook(() => useResolvedBrain());
+    await waitFor(() => expect(result.current.source).toBe("none"));
+
+    act(() => {
+      capturedRunCompletedCallback?.({
+        event_type: "run.completed",
+        data: { model: "claude-sonnet-5" },
+      });
+    });
+
+    await waitFor(() => expect(result.current.source).toBe("lastTurn"));
+    expect(result.current.model).toBe("claude-sonnet-5");
   });
 });

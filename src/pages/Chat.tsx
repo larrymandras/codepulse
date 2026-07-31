@@ -115,7 +115,7 @@ function formatBrainTtl(expiresAt?: number): string {
 /** Explains which axis the pill is actually showing, keyed off `resolved.source` — replaces the
  * pre-103-09 title string that claimed a per-profile-only reading regardless of whether a global
  * override was actually governing the turn. */
-function pillTitle(source: "global" | "profile" | "mixed" | "none"): string {
+function pillTitle(source: "global" | "profile" | "mixed" | "lastTurn" | "none"): string {
   switch (source) {
     case "global":
       return "A global override is active — this surface reflects it, not the per-profile default";
@@ -123,6 +123,8 @@ function pillTitle(source: "global" | "profile" | "mixed" | "none"): string {
       return "This surface reflects the per-profile default";
     case "mixed":
       return "Multiple profiles report different engines";
+    case "lastTurn":
+      return "No per-profile engine reported yet — showing the model that answered the last completed turn";
     case "none":
       return "No engine reported for this profile yet";
   }

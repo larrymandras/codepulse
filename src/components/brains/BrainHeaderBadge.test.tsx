@@ -515,16 +515,18 @@ describe("BrainHeaderBadge — global engine fallback (103-08, precedence correc
     expect(screen.queryByTestId("brain-header-badge-global-chip")).not.toBeInTheDocument();
   });
 
-  it("unsubscribes from swap.state on unmount", async () => {
+  it("unsubscribes from swap.state and run.completed on unmount", async () => {
     seedEngines([], []);
     const { unmount } = renderBadge();
     await screen.findByTestId("brain-header-badge-label");
 
     expect(mockSubscribeEvent).toHaveBeenCalledWith("swap.state", expect.any(Function));
+    // useLastTurnModel's run.completed fallback subscription (2026-07-31 "No brain reported" fix).
+    expect(mockSubscribeEvent).toHaveBeenCalledWith("run.completed", expect.any(Function));
     expect(mockUnsubscribe).not.toHaveBeenCalled();
 
     unmount();
-    expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+    expect(mockUnsubscribe).toHaveBeenCalledTimes(2);
   });
 });
 

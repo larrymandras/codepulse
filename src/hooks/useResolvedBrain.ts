@@ -37,7 +37,7 @@ export interface GlobalBrainOverride {
 // `src/lib/`) so this file has zero dependency on that module — the global axis this hook owns
 // must never be able to be masked or satisfied by that seam's stub flag either way.
 export interface ResolvedBrain {
-  source: "global" | "profile" | "mixed" | "none";
+  source: "global" | "profile" | "mixed" | "lastTurn" | "none";
   model: string | null;
   mode?: NonNullable<ActiveEngineMap[string]>["mode"];
   expiresAt?: number;
@@ -198,12 +198,56 @@ export function useGlobalModelNames(): Record<string, string> {
   return names;
 }
 
+/**
+ * useLastTurnModel — the fleet-wide "model that answered the most recent completed turn",
+ * sourced from `run.completed`'s `model` field (185-08; the same signal Control Center's
+ * `BrainControl` and Chat.tsx's own `lastTurnModel` already use and that is confirmed working
+ * live). Added to close the "No brain reported" gap (live finding 2026-07-31): the per-profile
+ * telemetry rung (`useActiveEngine`, fed by astridr's `model_routing` ingest) is permanently
+ * empty because the backend emitter never sends `profileId` and uses a different key name
+ * (`selectedModel`, not `model`) than the Convex ingest expects — a real gap in astridr-repo's
+ * router.py, tracked separately as the still-unbuilt "Ástríðr Phase 184.1" per
+ * 103-CONTRACT.md. Rather than leave the header badge honestly-but-uselessly blank until that
+ * backend work lands, this hook gives `resolveActiveBrain` a THIRD rung to fall back to.
+ *
+ * D-14 compliance: this is not a guess and not a persisted config value re-presented as live
+ * state (the BSC-01 trap `useActiveEngine`'s docstring warns against) — `run.completed.model`
+ * is genuine server-pushed, per-turn-confirmed state, just delivered over a different (already
+ * working) telemetry path than the per-profile one. Callers must treat `source: "lastTurn"` as
+ * distinct from `"profile"` — it is fleet-wide and can lag behind whichever profile most
+ * recently completed a turn, not a live per-profile reading.
+ */
+export function useLastTurnModel(): string | null {
+  const [model, setModel] = useState<string | null>(null);
+
+  let subscribeEvent: ReturnType<typeof useAstridrWS>["subscribeEvent"] | null;
+  try {
+    ({ subscribeEvent } = useAstridrWS());
+  } catch {
+    subscribeEvent = null;
+  }
+
+  useEffect(() => {
+    if (!subscribeEvent) return;
+    return subscribeEvent("run.completed", (event) => {
+      const data = (event as { data?: Record<string, unknown> }).data;
+      const completedModel = data?.model as string | undefined;
+      // Fast-path turns (control-verb refusals/confirmations, catalogue answers) complete with
+      // no/empty model — keep the last real one rather than overwriting with a blank reading.
+      if (completedModel) setModel(completedModel);
+    });
+  }, [subscribeEvent]);
+
+  return model;
+}
+
 export function resolveActiveBrain(args: {
   globalOverride: string | null;
   activeEngines: ActiveEngineMap;
   profileId?: string;
+  lastTurnModel?: string | null;
 }): ResolvedBrain {
-  const { globalOverride, activeEngines, profileId } = args;
+  const { globalOverride, activeEngines, profileId, lastTurnModel } = args;
 
   if (globalOverride) {
     return { source: "global", model: globalOverride, distinctModels: [] };
@@ -219,6 +263,9 @@ export function resolveActiveBrain(args: {
         expiresAt: engine.expiresAt,
         distinctModels: [],
       };
+    }
+    if (lastTurnModel) {
+      return { source: "lastTurn", model: lastTurnModel, distinctModels: [] };
     }
     return { source: "none", model: null, distinctModels: [] };
   }
@@ -236,6 +283,9 @@ export function resolveActiveBrain(args: {
       distinctModels: mixedState.distinctModels,
     };
   }
+  if (lastTurnModel) {
+    return { source: "lastTurn", model: lastTurnModel, distinctModels: [] };
+  }
   return { source: "none", model: null, distinctModels: [] };
 }
 
@@ -247,9 +297,10 @@ export function resolveActiveBrain(args: {
 export function useResolvedBrain(profileId?: string): ResolvedBrain {
   const { modelOverride } = useGlobalBrainOverride();
   const activeEngines = useActiveEngine();
+  const lastTurnModel = useLastTurnModel();
 
   return useMemo(
-    () => resolveActiveBrain({ globalOverride: modelOverride, activeEngines, profileId }),
-    [modelOverride, activeEngines, profileId]
+    () => resolveActiveBrain({ globalOverride: modelOverride, activeEngines, profileId, lastTurnModel }),
+    [modelOverride, activeEngines, profileId, lastTurnModel]
   );
 }
