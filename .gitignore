@@ -33,3 +33,10 @@ open-design/
 docs/PROGRESS-SNAPSHOT.md
 docs/PROGRESS-DIFF.md
 docs/gsd-progress-snapshot.log
+
+# GSD overnight execution supervisor (scripts/gsd-overnight-supervisor.ps1,
+# 2026-07-31) — loop-state checkpoint, run log, and generated report, all
+# regenerated per run.
+docs/gsd-overnight-checkpoint-*.json
+docs/gsd-overnight-report-*.md
+docs/gsd-overnight-supervisor.log
