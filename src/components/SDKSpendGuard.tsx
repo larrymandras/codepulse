@@ -1,12 +1,12 @@
 import { useQuery } from "convex/react";
+import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { formatCost } from "../lib/formatters";
 import { Badge } from "./ui/badge";
 import Sparkline from "./Sparkline";
 import { Clock } from "lucide-react";
-
-export const DAILY_CAP = 5.00;
-export const ALERT_THRESHOLD = 0.8;  // D-04: 80% = $4 auto-alert
+import { useCostBudget } from "../hooks/useCostBudgets";
+import { useThemeColors } from "../hooks/useThemeColors";
 
 /** Pure function for status classification -- exported for testing. */
 export function classifyCapStatus(
@@ -19,8 +19,14 @@ export function classifyCapStatus(
   return "ok";
 }
 
-/** Pure function for projecting end-of-day spend -- exported for testing. */
-export function projectDayEndSpend(todaySpend: number, elapsedHours: number): {
+/**
+ * Pure function for projecting end-of-day spend -- exported for testing.
+ * D-12: the cap is a caller-supplied parameter (the global daily costBudgets
+ * row's `limit`), never a module constant — see convex/costBudgetEval.ts's
+ * `projectPeriodEndSpend`, which generalizes this same algorithm across
+ * daily/weekly/monthly periods and mirrors this function's math exactly.
+ */
+export function projectDayEndSpend(todaySpend: number, elapsedHours: number, cap: number): {
   projectedTotal: number;
   willExceedCap: boolean;
   projectedHitTime: Date | null;
@@ -28,10 +34,10 @@ export function projectDayEndSpend(todaySpend: number, elapsedHours: number): {
   if (elapsedHours <= 0) return { projectedTotal: 0, willExceedCap: false, projectedHitTime: null };
   const hourlyRate = todaySpend / elapsedHours;
   const projectedTotal = hourlyRate * 24;
-  const willExceedCap = projectedTotal > DAILY_CAP;
+  const willExceedCap = projectedTotal > cap;
   const dayStartEpoch = Math.floor(Date.now() / 1000 / 86400) * 86400;
   const projectedHitTime = willExceedCap && hourlyRate > 0
-    ? new Date((dayStartEpoch + (DAILY_CAP / hourlyRate) * 3600) * 1000)
+    ? new Date((dayStartEpoch + (cap / hourlyRate) * 3600) * 1000)
     : null;
   return { projectedTotal, willExceedCap, projectedHitTime };
 }
@@ -43,8 +49,13 @@ export default function SDKSpendGuard() {
     lookbackHours: 24,
     billingType: "api",
   });
+  // D-12: the daily cap and warn fraction come from the global/daily
+  // costBudgets row, not a hardcoded constant. `undefined` (loading) and
+  // `null` (no budget configured) are rendered as distinct, honest states.
+  const budget = useCostBudget("global", "", "daily");
+  const theme = useThemeColors();
 
-  if (rawBuckets === undefined) {
+  if (rawBuckets === undefined || budget === undefined) {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
@@ -76,11 +87,37 @@ export default function SDKSpendGuard() {
   // Elapsed hours since day start
   const elapsedHours = (now - dayStartEpoch) / 3600;
 
-  // Project end-of-day
-  const { projectedTotal, willExceedCap, projectedHitTime } = projectDayEndSpend(todaySpend, elapsedHours);
+  // No daily budget configured: show today's spend and the sparkline honestly,
+  // with no gauge, no percentage and no projection against a cap nobody set.
+  if (budget === null) {
+    return (
+      <div className="space-y-2">
+        <h3 className="text-sm font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
+        <div className="flex items-baseline gap-2">
+          <p className="text-xl font-semibold tabular-nums">{formatCost(todaySpend)}</p>
+          <span className="text-base text-muted-foreground">today</span>
+        </div>
+        <div className="w-full">
+          <Sparkline data={sparklineData} width={300} height={40} color={theme.statusOk} />
+        </div>
+        <p className="text-base text-muted-foreground">
+          No daily budget set.{" "}
+          <Link to="/settings" className="underline hover:text-foreground">
+            Set one in Settings → Cost &amp; Budgets.
+          </Link>
+        </p>
+      </div>
+    );
+  }
 
-  const percentage = Math.min((todaySpend / DAILY_CAP) * 100, 100);
-  const status = classifyCapStatus(todaySpend, DAILY_CAP, ALERT_THRESHOLD);
+  const cap = budget.limit;
+  const alertThreshold = budget.warnFraction;
+
+  // Project end-of-day
+  const { projectedTotal, willExceedCap, projectedHitTime } = projectDayEndSpend(todaySpend, elapsedHours, cap);
+
+  const percentage = Math.min((todaySpend / cap) * 100, 100);
+  const status = classifyCapStatus(todaySpend, cap, alertThreshold);
 
   const barColor =
     status === "exceeded" ? "bg-[--status-error]"
@@ -88,9 +125,9 @@ export default function SDKSpendGuard() {
     : "bg-[--status-ok]";
 
   const sparklineColor =
-    status === "exceeded" ? "#ef4444"
-    : status === "warning" ? "#eab308"
-    : "#10b981";
+    status === "exceeded" ? theme.statusError
+    : status === "warning" ? theme.statusWarn
+    : theme.statusOk;
 
   const badgeVariant = status === "exceeded" ? "destructive" : "outline";
   const statusLabel =
@@ -106,7 +143,7 @@ export default function SDKSpendGuard() {
       {/* Metric row */}
       <div className="flex items-baseline gap-2">
         <p className="text-xl font-semibold tabular-nums">{formatCost(todaySpend)}</p>
-        <span className="text-base text-muted-foreground">of {formatCost(DAILY_CAP)} today</span>
+        <span className="text-base text-muted-foreground">of {formatCost(cap)} today</span>
       </div>
 
       {/* Gauge bar */}
@@ -118,10 +155,10 @@ export default function SDKSpendGuard() {
               style={{ width: `${percentage}%` }}
             />
           </div>
-          {/* 80% threshold marker */}
+          {/* warn threshold marker */}
           <div
             className="absolute top-0 w-px h-full bg-[--status-warn] opacity-70"
-            style={{ left: "80%" }}
+            style={{ left: `${alertThreshold * 100}%` }}
           />
         </div>
         {/* Status badge */}
@@ -143,7 +180,7 @@ export default function SDKSpendGuard() {
         willExceedCap ? (
           <p className="text-base text-[--status-warn]">
             <Clock className="inline h-3 w-3 mr-1" />
-            At current rate, you'll hit {formatCost(DAILY_CAP)} by ~{projectedHitTime?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            At current rate, you'll hit {formatCost(cap)} by ~{projectedHitTime?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </p>
         ) : (
           <p className="text-base text-muted-foreground">Projected: {formatCost(projectedTotal)} today</p>

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { classifyCapStatus, DAILY_CAP, ALERT_THRESHOLD } from "./SDKSpendCapGauge";
+import { classifyCapStatus } from "./SDKSpendCapGauge";
 
 describe("SDKSpendCapGauge", () => {
   describe("classifyCapStatus", () => {
@@ -29,12 +29,6 @@ describe("SDKSpendCapGauge", () => {
 
     test("returns 'ok' when spend is 0", () => {
       expect(classifyCapStatus(0, 5.00, 0.8)).toBe("ok");
-    });
-
-    test("uses exported DAILY_CAP and ALERT_THRESHOLD constants", () => {
-      // Verify the constants match D-04 requirements
-      expect(DAILY_CAP).toBe(5.00);
-      expect(ALERT_THRESHOLD).toBe(0.8);
     });
   });
 });

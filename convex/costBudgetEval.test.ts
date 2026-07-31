@@ -16,8 +16,14 @@ import {
   containsForbiddenEnforcementWord,
   evaluateBudgets,
 } from "./costBudgetEval";
-import { projectDayEndSpend, DAILY_CAP } from "../src/components/SDKSpendGuard";
+import { projectDayEndSpend } from "../src/components/SDKSpendGuard";
 import { periodStartFor } from "./costBudgets";
+
+// Local test-only fixture — SDKSpendGuard no longer exports a DAILY_CAP
+// constant (D-12: the cap now comes from a costBudgets row). This value is
+// only used below to reproduce projectDayEndSpend's legacy numbers by
+// passing the same figure both functions used to close over.
+const DAILY_CAP = 5.0;
 
 // Task 3 (cron tail-append): wrap the REAL evaluateBudgets in a vi.fn spy so
 // convex/aggregates.ts's computeHourly (which imports evaluateBudgets from
@@ -46,7 +52,7 @@ describe("projectPeriodEndSpend", () => {
     const spend = 2.4;
     const elapsedHours = 6;
 
-    const legacy = projectDayEndSpend(spend, elapsedHours);
+    const legacy = projectDayEndSpend(spend, elapsedHours, DAILY_CAP);
     const generalized = projectPeriodEndSpend(spend, elapsedHours, 24, DAILY_CAP, dayStart);
 
     expect(generalized.projectedTotal).toBeCloseTo(legacy.projectedTotal, 10);
