@@ -26,3 +26,10 @@ open-design/
 # Raw security-audit output (curated results live in .planning/phases/*/95-SECURITY-AUDIT.md)
 .audits/
 .vercel
+
+# Nightly /gsd-progress --forensic snapshot (scripts/gsd-progress-snapshot.ps1,
+# scheduled task "GSD-Progress-Snapshot", 2026-07-31) — regenerated every run,
+# git history of it would just be daily noise commits. Local-read-only by design.
+docs/PROGRESS-SNAPSHOT.md
+docs/PROGRESS-DIFF.md
+docs/gsd-progress-snapshot.log
