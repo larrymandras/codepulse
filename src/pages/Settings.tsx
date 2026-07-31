@@ -19,6 +19,8 @@ import { EmailDigestConfig } from "../components/EmailDigestConfig";
 import { DeliveryHistory } from "../components/DeliveryHistory";
 import LLMProviderConfig from "../components/LLMProviderConfig";
 import ProviderControls from "../components/ProviderControls";
+import CostBudgetsAdmin from "../components/CostBudgetsAdmin";
+import ModelPricingAdmin from "../components/ModelPricingAdmin";
 import { BrainPicker } from "../components/brains/BrainPicker";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
@@ -461,6 +463,7 @@ export default function Settings() {
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="agents">Agents</TabsTrigger>
           <TabsTrigger value="providers">LLM Providers</TabsTrigger>
+          <TabsTrigger value="cost-budgets">Cost &amp; Budgets</TabsTrigger>
           <TabsTrigger value="notifications">Notifications</TabsTrigger>
         </TabsList>
 
@@ -900,6 +903,15 @@ export default function Settings() {
       </div>
       </SectionErrorBoundary>
 
+        </TabsContent>
+
+        <TabsContent value="cost-budgets" className="space-y-6 mt-0">
+          <SectionErrorBoundary name="Cost Budgets">
+            <CostBudgetsAdmin />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="Model Pricing">
+            <ModelPricingAdmin />
+          </SectionErrorBoundary>
         </TabsContent>
 
         <TabsContent value="notifications" className="space-y-6 mt-0">
