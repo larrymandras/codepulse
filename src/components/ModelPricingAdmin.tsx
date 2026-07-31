@@ -21,6 +21,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { convexErrorMessage } from "@/lib/convexError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -180,8 +181,8 @@ export default function ModelPricingAdmin() {
       }
       setDirty(false);
       setOpen(false);
-    } catch {
-      toast.error("Rate could not be saved. Check the values and try again.");
+    } catch (err) {
+      toast.error(convexErrorMessage(err, "Rate could not be saved. Check the values and try again."));
     } finally {
       setSaving(false);
     }
@@ -195,8 +196,8 @@ export default function ModelPricingAdmin() {
       toast.success("Pricing rate removed.");
       setDeleteTarget(null);
       setOpen(false);
-    } catch {
-      toast.error("Failed to remove pricing rate.");
+    } catch (err) {
+      toast.error(convexErrorMessage(err, "Failed to remove pricing rate."));
     } finally {
       setDeleting(false);
     }
@@ -466,8 +467,10 @@ export default function ModelPricingAdmin() {
             <DialogTitle>{`Remove pricing rate for ${deleteTarget?.model}?`}</DialogTitle>
           </DialogHeader>
           <p className="text-base text-muted-foreground">
-            Past cost figures using this rate stay as last computed. New calls for this model
-            become Unpriced until a new rate is entered.
+            Dollars are recomputed from this table on every read (D-04), so removing this rate
+            also re-prices history: past buckets for this model become Unpriced, and their tokens
+            drop out of every cost total until a new rate is entered. Editing the rate instead
+            re-prices history at the new value.
           </p>
           <DialogFooter>
             <DialogClose asChild>

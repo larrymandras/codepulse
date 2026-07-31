@@ -166,6 +166,38 @@ describe("ModelPricingAdmin", () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
+  it("surfaces a rejected mutation's ConvexError .data instead of the generic fallback (WR-02)", async () => {
+    // Convex redacts plain-Error messages to "Server Error", so only `.data`
+    // carries a reason. A bare `catch {}` threw it away and always showed the
+    // generic copy — the operator never learned the row was a duplicate.
+    mockCreate.mockRejectedValueOnce({ data: "A rate for some-model already exists." });
+
+    render(<ModelPricingAdmin />);
+    fireEvent.click(screen.getByText("Add pricing rate"));
+    fireEvent.change(screen.getByPlaceholderText("e.g. claude-sonnet-5"), {
+      target: { value: "some-model" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("e.g. 3"), { target: { value: "3" } });
+    fireEvent.change(screen.getByPlaceholderText("e.g. 15"), { target: { value: "15" } });
+    fireEvent.click(screen.getByText("Save Rate"));
+
+    await vi.waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("A rate for some-model already exists.");
+    });
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "Rate could not be saved. Check the values and try again."
+    );
+  });
+
+  it("the delete-confirm copy states that removing a rate RE-PRICES history (CR-02)", () => {
+    // D-04 recomputes dollars from this table on every read, so the previous
+    // copy ("Past cost figures ... stay as last computed") promised the exact
+    // opposite of what deletion does.
+    const source = readFileSync(join(__dirname, "ModelPricingAdmin.tsx"), "utf-8");
+    expect(source).not.toContain("stay as last computed");
+    expect(source).toMatch(/re-prices history/);
+  });
+
   it("contains no hardcoded hex color in the source file", () => {
     const source = readFileSync(join(__dirname, "ModelPricingAdmin.tsx"), "utf-8");
     const hexMatches = source.match(/#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b/g);

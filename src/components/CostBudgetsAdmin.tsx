@@ -29,6 +29,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { toast } from "sonner";
+import { convexErrorMessage } from "@/lib/convexError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,8 +207,8 @@ export default function CostBudgetsAdmin() {
       }
       setDirty(false);
       setOpen(false);
-    } catch {
-      toast.error("Budget could not be saved. Check the values and try again.");
+    } catch (err) {
+      toast.error(convexErrorMessage(err, "Budget could not be saved. Check the values and try again."));
     } finally {
       setSaving(false);
     }
@@ -221,8 +222,8 @@ export default function CostBudgetsAdmin() {
       toast.success("Budget threshold deleted.");
       setDeleteTarget(null);
       setOpen(false);
-    } catch {
-      toast.error("Failed to delete budget threshold.");
+    } catch (err) {
+      toast.error(convexErrorMessage(err, "Failed to delete budget threshold."));
     } finally {
       setDeleting(false);
     }
