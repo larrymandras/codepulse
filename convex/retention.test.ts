@@ -1,0 +1,67 @@
+/**
+ * Tests for convex/retention.ts's RETENTION_DAYS policy table.
+ *
+ * The prune loop does `ctx.db.query(table as any)` off the KEYS of this object,
+ * with the table name cast away. That means a key which is not a real schema
+ * table is a permanent, SILENT no-op: the nightly run deletes nothing for it,
+ * forever, and nothing surfaces the mismatch. These tests make that class of
+ * typo fail at CI time instead of being discovered by an OOM crash-loop.
+ *
+ * Source-level schema parsing (rather than importing the schema object) keeps
+ * this test free of the Convex codegen/runtime, matching the precedent in
+ * runtimeIngest.test.ts and activeEngine.test.ts.
+ */
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { RETENTION_DAYS } from "./retention";
+
+const schemaSource = readFileSync(resolve(process.cwd(), "convex/schema.ts"), "utf-8");
+
+/** Every `someTable: defineTable({` declared in schema.ts. */
+const schemaTables = new Set(
+  Array.from(schemaSource.matchAll(/^\s{2}([A-Za-z_][A-Za-z0-9_]*):\s*defineTable\(/gm)).map(
+    (m) => m[1]
+  )
+);
+
+describe("RETENTION_DAYS", () => {
+  it("parsed a plausible set of tables out of schema.ts (harness liveness check)", () => {
+    // Guard the guard: if the regex ever stops matching, every assertion below
+    // would pass vacuously against an empty set.
+    expect(schemaTables.size).toBeGreaterThan(20);
+    expect(schemaTables.has("alerts")).toBe(true);
+    expect(schemaTables.has("llmMetrics")).toBe(true);
+  });
+
+  it("every pruned table name is a real table in schema.ts (silent-no-op guard)", () => {
+    const unknown = Object.keys(RETENTION_DAYS).filter((t) => !schemaTables.has(t));
+    expect(unknown).toEqual([]);
+  });
+
+  it("every retention window is a positive whole number of days", () => {
+    for (const [table, days] of Object.entries(RETENTION_DAYS)) {
+      expect(days, `${table} retention`).toBeGreaterThan(0);
+      expect(Number.isInteger(days), `${table} retention must be whole days`).toBe(true);
+    }
+  });
+
+  it("bounds gatewayQuotaSnapshots, which D-20 revived from a permanently-empty table (WR-01)", () => {
+    // Phase 104 D-20 repointed the dead 5-minute quota poller at the CLI-gateway
+    // sidecar. Before that fix the table never grew, so its absence here was
+    // harmless; afterwards it accrues ~288 rows/provider/day forever.
+    expect(RETENTION_DAYS.gatewayQuotaSnapshots).toBe(30);
+  });
+
+  it("still keeps the cost/trend tables forever — pruning these would break dashboards", () => {
+    // Phase 104 derives dollars from `aggregates` token buckets on every read, so
+    // pruning aggregates or llmMetrics would silently destroy re-priceable history
+    // (D-04). retention.ts's header comment states this; assert it.
+    for (const keepForever of ["aggregates", "llmMetrics", "sessions", "alerts"]) {
+      expect(
+        Object.keys(RETENTION_DAYS),
+        `${keepForever} must NOT be pruned`
+      ).not.toContain(keepForever);
+    }
+  });
+});

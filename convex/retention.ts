@@ -7,6 +7,8 @@ import { planNextPruneStep } from "./retentionCursor";
 // migration incidents — full history in memory note "convex-selfhosted-setup").
 //
 // Policy (decided with Larry 2026-07-14): high-rate runtime firehose tables
+// keep 14 days (cut from 30 on 2026-07-17 — see the tier comment below; this
+// line said 30 until 2026-07-31 and contradicted the table); poll snapshots
 // keep 30 days; build/history event tables keep 90 days. Aggregates, llmMetrics
 // (cost history), sessions, alerts, and config/audit tables are kept forever —
 // trend dashboards keep working; only drill-down to old raw events ages out.
@@ -20,7 +22,10 @@ import { planNextPruneStep } from "./retentionCursor";
 //   inflate boot memory until the ~2-day retention GC (OOM crash-loop cause).
 //   If the cap is hit, the log says so and the remainder waits for tomorrow.
 
-const RETENTION_DAYS: Record<string, number> = {
+// Exported for retention.test.ts, which asserts every key here is a REAL schema
+// table: a typo'd table name is a permanent SILENT no-op — the nightly prune
+// simply never deletes anything for it and nothing ever reports the mismatch.
+export const RETENTION_DAYS: Record<string, number> = {
   // runtime firehose — 14 days (cut from 30d 2026-07-17 w/ Larry: 30d steady
   // state was ~896k runtime_events pushing the snapshot-export peak >48g into an
   // OOM loop; 14d ~halves it. Bulk cut applied offline via trim+reimport, so the
@@ -31,6 +36,16 @@ const RETENTION_DAYS: Record<string, number> = {
   selfHealingEvents: 14,
   fileOps: 14,
   heartbeatAlerts: 14,
+  // poll snapshots — 30 days (added 2026-07-31, Phase 104 D-20). The 5-minute
+  // gatewayQuota poller was DEAD before this phase (`gatewayQuota:latestByProvider`
+  // returned []), so this table never grew and was never pruned. D-20 repointed the
+  // poller at the CLI-gateway sidecar and revives it, which turns a permanently-empty
+  // table into ~288 rows/provider/day forever on the instance that has already gone
+  // down twice from read growth. Bounding it here BEFORE the poller runs in anger
+  // avoids ever needing a mass delete (which is what created the tombstone storms
+  // this whole module exists to avoid). Only the latest row per provider is ever
+  // read, so 30 days is pure headroom for trend queries, not a functional limit.
+  gatewayQuotaSnapshots: 30,
   // build/history — 90 days
   events: 90,
   environmentSnapshots: 90,
