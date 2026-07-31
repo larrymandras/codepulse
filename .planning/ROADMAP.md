@@ -710,7 +710,7 @@ Plans:
 **Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
 **Requirements**: COST-01, COST-02, COST-03
 **Success Criteria**: Every displayed dollar is recomputed by CodePulse from tokens x a Convex-editable rate; an unpriced model is excluded from the total and named, never valued at a default; billed and subscription-covered spend are shown as two figures that never merge; budgets are persisted per scope and period with a limit and a warn fraction; a warn or breach fires exactly one alert per period through the existing webhook-delivery path; nothing in the phase enforces, throttles or mutates Astridr.
-**Plans:** 5/11 plans executed
+**Plans:** 6/11 plans executed
 
 Plans:
 **Wave 1**
@@ -726,7 +726,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 104-06-PLAN.md — Budget evaluator: projection to period end, warn/breach classification, per-period dedup, fire-and-deliver, appended to the tail of `computeHourly` with no new cron (D-13/D-14/D-15/D-16/D-17) — COST-03
+- [x] 104-06-PLAN.md — Budget evaluator: projection to period end, warn/breach classification, per-period dedup, fire-and-deliver, appended to the tail of `computeHourly` with no new cron (D-13/D-14/D-15/D-16/D-17) — COST-03
 - [ ] 104-07-PLAN.md — Settings "Cost & Budgets" tab: `CostBudgetsAdmin` above `ModelPricingAdmin`, both error-isolated (D-02/D-07/D-09/D-10/D-11) — COST-01, COST-02
 - [ ] 104-10-PLAN.md — `CostTrendChart` Billed / Billed + Covered toggle over the derived series, plus the mandatory hex-to-token remediation on it and `CostBreakdown` (D-08) — COST-01
 
@@ -795,7 +795,7 @@ Plans:
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 | 103. Brain-Swap Control Surface | v13.0 | 18/18 | 🚧 Code-complete, live re-verification of 103-16/17/18 pending | — |
-| 104. Cost Intelligence | v13.0 | 5/11 | In Progress|  |
+| 104. Cost Intelligence | v13.0 | 6/11 | In Progress|  |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
 
