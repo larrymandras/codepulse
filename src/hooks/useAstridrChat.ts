@@ -76,6 +76,18 @@ export function useAstridrChat() {
   } = useTtsPlayback({ analyser: true });
 
   const activeSessionRef = useRef<string | null>(null);
+  // Deliberately separate from activeSessionRef, which is a TURN-LIFECYCLE ref
+  // (valid only while text is streaming, nulled the instant it finishes — see
+  // the four clear sites below). run.tts audio is synthesized from the
+  // finished text, so it structurally arrives AFTER activeSessionRef has
+  // already gone null; comparing against it always reads sessionMatches:false
+  // (live 2026-07-30, see commit e66712a9's note on why that filter was never
+  // added). lastSessionRef mirrors the same assignment but is never cleared,
+  // so it answers "does this audio belong to the turn we just had" instead of
+  // "is a turn currently streaming" — the question run.tts actually needs
+  // answered. Mirrors the never-cleared per-message `sessionId` already used
+  // correctly for the audioUrl match below.
+  const lastSessionRef = useRef<string | null>(null);
 
   // VISION-01: the live screenShare instance, handed over post-mount by
   // useAstridrVoice.ts (see registerScreenShare doc comment above).
@@ -161,6 +173,7 @@ export function useAstridrChat() {
           (ack.data?.session_id as string | undefined) ??
           generateId();
         activeSessionRef.current = sessionId;
+        lastSessionRef.current = sessionId;
         streamingTextRef.current = "";
         ttsSuppressedRef.current = false; // new turn — her voice is welcome again
 
