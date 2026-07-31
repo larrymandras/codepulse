@@ -710,14 +710,14 @@ Plans:
 **Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
 **Requirements**: COST-01, COST-02, COST-03
 **Success Criteria**: Every displayed dollar is recomputed by CodePulse from tokens x a Convex-editable rate; an unpriced model is excluded from the total and named, never valued at a default; billed and subscription-covered spend are shown as two figures that never merge; budgets are persisted per scope and period with a limit and a warn fraction; a warn or breach fires exactly one alert per period through the existing webhook-delivery path; nothing in the phase enforces, throttles or mutates Astridr.
-**Plans:** 11 plans in 5 waves
+**Plans:** 3/11 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 104-01-PLAN.md — Schema (`modelPricing`, `costBudgets`) + pricing CRUD with the Clerk gate, pure rate resolution with no default fallback, and the seed incl. sonnet-5/opus-5/fable-5 and the D-06 shadow rows — COST-01, COST-02 — ✅ complete 2026-07-31, see `104-01-SUMMARY.md`
 - [x] 104-02-PLAN.md — Repair the two dead telemetry pipes: gateway completions into `llmMetrics` (D-18, incl. an astridr-repo token-emit change) and the quota poller repointed at the CLI-gateway sidecar (D-20) — COST-01, COST-02 — ✅ complete 2026-07-31, see `104-02-SUMMARY.md`
-- [ ] 104-03-PLAN.md — Widen the hourly rollup with `tokens_prompt`/`tokens_completion` buckets plus a resumable, batch-capped, insert-only backfill (D-04) — COST-01
+- [x] 104-03-PLAN.md — Widen the hourly rollup with `tokens_prompt`/`tokens_completion` buckets plus a resumable, batch-capped, insert-only backfill (D-04) — COST-01
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -795,7 +795,7 @@ Plans:
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 | 103. Brain-Swap Control Surface | v13.0 | 18/18 | 🚧 Code-complete, live re-verification of 103-16/17/18 pending | — |
-| 104. Cost Intelligence | v13.0 | 2/11 | 🚧 Executing | — |
+| 104. Cost Intelligence | v13.0 | 3/11 | 🚧 Executing | — |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
 
