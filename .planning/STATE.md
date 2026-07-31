@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
 status: executing
-stopped_at: Phase 104 Plan 01 (persistence layer) complete
-last_updated: "2026-07-31T13:17:00.000Z"
-last_activity: 2026-07-31 -- Phase 104 Plan 01 executed
+stopped_at: Phase 104 Plan 02 (ingest prerequisites) complete
+last_updated: "2026-07-31T13:31:00.000Z"
+last_activity: 2026-07-31 -- Phase 104 Plan 02 executed
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 29
-  completed_plans: 19
+  completed_plans: 20
   percent: 25
 ---
 
@@ -44,7 +44,8 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 104 (cost-intelligence) — EXECUTING
-Plan: 1 of 11 COMPLETE (2026-07-31) — persistence layer: `convex/schema.ts` gained `modelPricing`/`costBudgets` tables; `convex/modelPricing.ts` ships CRUD + Clerk auth gate + pure rate-resolution helpers (`buildRateIndex`/`resolveRate`/`priceTokens`, D-03's no-default-fallback rule) + idempotent `seedDefaults` (15 code-table rates + claude-opus-5/sonnet-5/fable-5 + 3 D-06 shadow rows); 16 unit tests passing; `src/lib/modelPricing.ts` marked SEED SOURCE ONLY. See `104-01-SUMMARY.md`. Next: Plan 02.
+Plan: 2 of 11 COMPLETE (2026-07-31) — persistence layer: `convex/schema.ts` gained `modelPricing`/`costBudgets` tables; `convex/modelPricing.ts` ships CRUD + Clerk auth gate + pure rate-resolution helpers (`buildRateIndex`/`resolveRate`/`priceTokens`, D-03's no-default-fallback rule) + idempotent `seedDefaults` (15 code-table rates + claude-opus-5/sonnet-5/fable-5 + 3 D-06 shadow rows); 16 unit tests passing; `src/lib/modelPricing.ts` marked SEED SOURCE ONLY. See `104-01-SUMMARY.md`.
+Plan 2 of 11 COMPLETE (2026-07-31) — ingest prerequisites (cross-repo): `convex/runtimeIngest.ts` gained a `gateway_task_completed` case writing `llmMetrics` rows for CLI-gateway/subscription turns (D-18, `billingType: "subscription"`, model keyed on the opaque provider id per D-06's only viable branch, honesty-tagged `:tokens-unreported` when no tokens are reported); `convex/gatewayQuota.ts`'s `pollAndStore` repointed at a new `CLI_GATEWAY_URL` env var (D-20, no fallback to the dead `ASTRIDR_API_URL` target). Cross-repo astridr-repo change (commit `9adb25b6` on branch `feature/brain-swap`, NOT yet merged to `main` or deployed): `claude_cli.py` now extracts real token counts from the CLI's stream-json `usage` object onto the gateway telemetry payload end-to-end through `web.py`'s forwarding handler; `codex_cli.py`/`antigravity_cli.py` confirmed to have no usage object at all. 33 codepulse + 55 astridr-repo tests passing. See `104-02-SUMMARY.md`. Next: Plan 03.
 
 **The UAT confirmed 103-16/17/18 live AND found four further defects, all now fixed and live-re-verified (no PLAN/SUMMARY artifacts — executed inline as gap closure at the operator's direction, so `total_plans` correctly stays 18):**
 
@@ -79,14 +80,14 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Executing Phase 104 — Plan 01/11 complete (persistence layer, `104-01-SUMMARY.md`)
+Status: Executing Phase 104 — Plan 02/11 complete (ingest prerequisites, cross-repo, `104-02-SUMMARY.md`)
 
 Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 105-106 (not yet planned).
 
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-31 -- Phase 104 Plan 01 executed (modelPricing/costBudgets persistence layer, 3 tasks, 16 tests, commits d31fbe66/4c3916ec/a06f135c)
+Last activity: 2026-07-31 -- Phase 104 Plan 02 executed (gateway_task_completed llmMetrics ingest + gatewayQuota D-20 repoint, cross-repo astridr-repo token-count telemetry, 3 tasks, commits b46d0d37/9adb25b6/85323640)
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 
@@ -176,6 +177,15 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 ### Decisions
 
 See PROJECT.md Key Decisions table for full history.
+
+**v13.0 / Phase 104 Plan 02 decisions (2026-07-31, cost-intelligence ingest prerequisites — cross-repo D-18/D-20):**
+
+- **`resolveGatewayTaskCompleted` assigns (not sums) reported token counts** — an adapter's `usage` object is already the whole run's total, unlike `cost_usd` which several astridr-repo adapters emit incrementally across multiple stream events. Mirrored identically on the astridr-repo side in `task_manager.py`'s `TaskState.prompt_tokens`/`.completion_tokens` accumulation.
+- **`astridr/channels/web.py` modified though absent from the plan's `files_modified` list** (Rule 2 — auto-add missing critical functionality): the plan's own action text conditioned this on what the file's forwarding shape turned out to be; reading it showed the `/internal/gateway/task_completed` handler explicitly enumerates every forwarded field rather than passing the body opaquely, so without this fix the two new token fields would have been silently dropped at that hop and the entire cross-repo change would ship no observable effect on the CodePulse side.
+- **Two `gatewayQuota.ts` doc comments reworded to avoid the literal substring `ASTRIDR_API_URL`**, same precedent as Plan 01's `resolveRate`/`llmMetrics` wording fix — the plan's acceptance criteria (`grep -c 'ASTRIDR_API_URL' convex/gatewayQuota.ts` returns 0) checks the whole file, not just executable code.
+- **The plan's literal `grep -c 'case "gateway.task_completed"'` acceptance check is a regex-dot ambiguity, not evidence of duplication** — `.` matches `_`, so after adding `gateway_task_completed` the regex-mode count is 2; a fixed-string grep (`grep -cF`) confirms the literal dot-cased case still occurs exactly once, unaltered.
+- **astridr-repo commit (`9adb25b6`) lands on `feature/brain-swap`, not `main`** — matches this repo's existing v13.0 integration branch; not yet merged or deployed. `CLI_GATEWAY_URL`/`CLI_GATEWAY_API_KEY` also require live operator configuration on the self-hosted Convex deployment before D-20's fix has any observable effect — both are User Setup Required items, not blockers on this plan's own completion.
+- Executed sequentially on `master` (codepulse) and `feature/brain-swap` (astridr-repo, pre-existing branch — no branch created or switched by this plan); STATE.md/ROADMAP.md updated by hand per this file's established anti-clobber workaround. `gsd-sdk query state.advance-plan` was invoked once, found to clobber the narrative exactly as this file's LESSONS/Decisions history predicts (`stopped_at`/`Status`/`Last activity` overwritten with unrelated stale boilerplate; numeric counters were correct), reverted via `git checkout -- .planning/STATE.md`, and redone entirely by hand.
 
 **v13.0 / Phase 104 Plan 01 decisions (2026-07-31, cost-intelligence persistence layer — schema + modelPricing CRUD/seed):**
 
