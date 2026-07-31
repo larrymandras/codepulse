@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { getBillingType } from "./lib/providers";
-import { computeHourly } from "./aggregates";
+import { computeHourly, backfillTokenSplit } from "./aggregates";
 
 // ---------------------------------------------------------------------------
 // Fake ctx for exercising the real mutation handlers via `._handler` (the raw
@@ -555,6 +555,98 @@ describe("aggregates", () => {
       expect(promptRows).toHaveLength(1);
       expect(promptRows[0].value).toBe(0);
       expect(Number.isNaN(promptRows[0].value)).toBe(false);
+    });
+  });
+
+  describe("backfill", () => {
+    test("an invocation with maxHours: 2 processes exactly two hour buckets and no more", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 20, completionTokens: 4, billingType: "api", timestamp: hourStart - 3600 + 5, archived: false },
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 30, completionTokens: 6, billingType: "api", timestamp: hourStart - 7200 + 5, archived: false },
+        ],
+      });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 2 });
+
+      expect(result.hoursProcessed).toBe(2);
+      expect(result.done).toBe(false);
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      // Only the two most recent complete hours were processed — the third-hour-back
+      // llmMetrics row (30 prompt tokens) must NOT have produced a bucket yet.
+      expect(promptRows.map((r) => r.value).sort((a, b) => a - b)).toEqual([10, 20]);
+    });
+
+    test("the returned nextCursor is the third hour back", async () => {
+      const hourStart = currentHourStart();
+      const { ctx } = makeAggregatesCtx({ llmMetrics: [] });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 2 });
+
+      expect(result.nextCursor).toBe(hourStart - 2 * 3600);
+    });
+
+    test("an hour whose tokens_prompt rows already exist inserts no duplicate for that metric type", async () => {
+      const hourStart = currentHourStart();
+      const existingPrompt = {
+        metric_type: "tokens_prompt",
+        period: "hourly",
+        bucket_start: hourStart,
+        value: 999,
+        dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5", billingType: "api", goalId: "" },
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+        aggregates: [existingPrompt],
+      });
+
+      await (backfillTokenSplit as any)._handler(ctx, { maxHours: 1 });
+
+      const promptRows = tables.aggregates.filter((r) => r.metric_type === "tokens_prompt");
+      expect(promptRows).toHaveLength(1);
+      expect(promptRows[0].value).toBe(999); // untouched — no duplicate for that metric type
+      const completionRows = tables.aggregates.filter((r) => r.metric_type === "tokens_completion");
+      expect(completionRows).toHaveLength(1); // independent guard still inserts this one
+    });
+
+    test("reaching the retention floor returns done: true and writes the terminal cursor sentinel", async () => {
+      const hourStart = currentHourStart();
+      // Cursor already sits well past the (default 30-day) retention floor.
+      const staleCursor = {
+        configKey: "phase104.tokenSplitBackfill.cursor",
+        value: hourStart - 40 * 86400,
+        source: "runtime",
+        updatedAt: 0,
+      };
+      const { ctx, tables } = makeAggregatesCtx({ agentConfigs: [staleCursor] });
+
+      const result = await (backfillTokenSplit as any)._handler(ctx, { maxHours: 6 });
+
+      expect(result.done).toBe(true);
+      expect(result.hoursProcessed).toBe(0);
+      expect(result.nextCursor).toBe("done");
+      const cursorRows = tables.agentConfigs.filter(
+        (r) => r.configKey === "phase104.tokenSplitBackfill.cursor"
+      );
+      expect(cursorRows[cursorRows.length - 1].value).toBe("done");
+    });
+
+    test("issues no db.patch and no db.delete call on the fake ctx", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, patchCalls, deleteCalls } = makeAggregatesCtx({
+        llmMetrics: [
+          { provider: "anthropic_direct", model: "claude-sonnet-5", cost: 0.01, promptTokens: 10, completionTokens: 2, billingType: "api", timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (backfillTokenSplit as any)._handler(ctx, { maxHours: 3 });
+
+      expect(patchCalls).toHaveLength(0);
+      expect(deleteCalls).toHaveLength(0);
     });
   });
 

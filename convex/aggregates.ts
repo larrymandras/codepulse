@@ -3,6 +3,70 @@ import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getBillingType } from "./lib/providers";
 
+// ---- D-04 (Phase 104) shared helpers -------------------------------------
+// Factored out of computeHourly's Task 1 edit so computeHourly (the live
+// cron) and backfillTokenSplit (the manual historical backfill, below) share
+// the exact same accumulate+guard+insert logic and cannot drift from each
+// other (104-03-PLAN.md Task 2).
+
+type SplitDims = { provider?: string; model?: string; billingType?: string; goalId?: string };
+
+/** Reconstructs the identical 4-segment dimension key an existing aggregates row used. */
+function reconstructTokenSplitKey(dims: SplitDims | null | undefined): string {
+  return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
+}
+
+/**
+ * Sums prompt/completion tokens per {provider, model, billingType, goalId} dimension
+ * key across `llmRows`, then inserts any missing `tokens_prompt`/`tokens_completion`
+ * hourly buckets for `hourStart` — each metric type behind its OWN idempotency guard
+ * (a shared guard would let a partially-completed run double-count one split half
+ * while correctly skipping the other). Never patches or deletes an existing row —
+ * insert-only, per CLAUDE.md's self-hosted Convex rules.
+ */
+async function insertTokenSplitBuckets(
+  ctx: { db: any },
+  hourStart: number,
+  llmRows: Array<Doc<"llmMetrics">>
+): Promise<{ promptInserted: number; completionInserted: number }> {
+  const promptByDim: Record<string, number> = {};
+  const completionByDim: Record<string, number> = {};
+  for (const r of llmRows) {
+    const billingType = (r as any).billingType ?? getBillingType(r.provider);
+    const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
+    promptByDim[key] = (promptByDim[key] ?? 0) + ((r as any).promptTokens ?? 0);
+    completionByDim[key] = (completionByDim[key] ?? 0) + ((r as any).completionTokens ?? 0);
+  }
+
+  async function insertMissing(metricType: string, byDim: Record<string, number>): Promise<number> {
+    const existingRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q: any) =>
+        q.eq("metric_type", metricType).eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingKeys = new Set(existingRows.map((r: any) => reconstructTokenSplitKey(r.dimensions)));
+    let count = 0;
+    for (const [dim, value] of Object.entries(byDim)) {
+      if (existingKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [provider, model, billingType, goalId] = dim.split("::");
+      await ctx.db.insert("aggregates", {
+        metric_type: metricType,
+        period: "hourly",
+        bucket_start: hourStart,
+        value,
+        dimensions: { provider, model, billingType, goalId },
+      });
+      count++;
+    }
+    return count;
+  }
+
+  const promptInserted = await insertMissing("tokens_prompt", promptByDim);
+  const completionInserted = await insertMissing("tokens_completion", completionByDim);
+  return { promptInserted, completionInserted };
+}
+
 // ---- Hourly aggregation (called by cron every hour) ----
 export const computeHourly = internalMutation({
   args: {},
@@ -110,67 +174,11 @@ export const computeHourly = internalMutation({
     // time instead of here — correcting or adding a rate then re-prices every
     // chart back to the start of retention without re-running this mutation, and
     // an unpriced bucket heals the moment its rate is entered. Same
-    // {provider, model, billingType, goalId} dimension key and same 4-segment
-    // defaults as the cost/tokens blocks above, filled from the SAME single pass
-    // over llmRows (no second scan). Each metric type gets its OWN
-    // idempotency guard — a shared guard would let a partially-completed cron
-    // re-run double-count one split half while skipping the other.
-    const promptByDim: Record<string, number> = {};
-    const completionByDim: Record<string, number> = {};
-    for (const r of llmRows) {
-      const billingType = (r as any).billingType ?? getBillingType(r.provider);
-      const key = `${r.provider}::${r.model}::${billingType}::${(r as any).goalId ?? ""}`;
-      promptByDim[key] = (promptByDim[key] ?? 0) + ((r as any).promptTokens ?? 0);
-      completionByDim[key] = (completionByDim[key] ?? 0) + ((r as any).completionTokens ?? 0);
-    }
-
-    const existingPromptRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_type_period_bucket", (q) =>
-        q.eq("metric_type", "tokens_prompt").eq("period", "hourly").eq("bucket_start", hourStart)
-      )
-      .collect();
-    const existingPromptKeys = new Set(
-      existingPromptRows.map((r) => {
-        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
-        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
-      })
-    );
-    for (const [dim, value] of Object.entries(promptByDim)) {
-      if (existingPromptKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
-      const [provider, model, billingType, goalId] = dim.split("::");
-      await ctx.db.insert("aggregates", {
-        metric_type: "tokens_prompt",
-        period: "hourly",
-        bucket_start: hourStart,
-        value,
-        dimensions: { provider, model, billingType, goalId },
-      });
-    }
-
-    const existingCompletionRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_type_period_bucket", (q) =>
-        q.eq("metric_type", "tokens_completion").eq("period", "hourly").eq("bucket_start", hourStart)
-      )
-      .collect();
-    const existingCompletionKeys = new Set(
-      existingCompletionRows.map((r) => {
-        const dims = r.dimensions as { provider?: string; model?: string; billingType?: string; goalId?: string } | null;
-        return `${dims?.provider ?? "unknown"}::${dims?.model ?? "unknown"}::${dims?.billingType ?? "api"}::${dims?.goalId ?? ""}`;
-      })
-    );
-    for (const [dim, value] of Object.entries(completionByDim)) {
-      if (existingCompletionKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
-      const [provider, model, billingType, goalId] = dim.split("::");
-      await ctx.db.insert("aggregates", {
-        metric_type: "tokens_completion",
-        period: "hourly",
-        bucket_start: hourStart,
-        value,
-        dimensions: { provider, model, billingType, goalId },
-      });
-    }
+    // {provider, model, billingType, goalId} dimension key as the cost/tokens
+    // blocks above, filled from the SAME llmRows already fetched (no second
+    // scan). Shared with backfillTokenSplit below via insertTokenSplitBuckets
+    // so the two paths cannot drift (Task 2).
+    await insertTokenSplitBuckets(ctx, hourStart, llmRows);
 
     // Phase 88 (D-02): the event-count ("events") and error-count ("errors")
     // aggregation branches were REMOVED here. Those metrics are now maintained
@@ -236,6 +244,131 @@ export const rollupDaily = internalMutation({
         dimensions: entry.dimensions,
       });
     }
+  },
+});
+
+// ---- D-04 (Phase 104): resumable, batch-capped backfill of historical
+// tokens_prompt/tokens_completion buckets ----------------------------------
+
+const TOKEN_SPLIT_BACKFILL_CURSOR_KEY = "phase104.tokenSplitBackfill.cursor";
+const BACKFILL_LLM_PAGE_SIZE = 500;
+
+/** Same bounded, paginated llmMetrics read shape as computeHourly's — never a bare .collect(). */
+async function fetchLlmRowsForHour(
+  ctx: { db: any },
+  hourStart: number,
+  hourEnd: number
+): Promise<Array<Doc<"llmMetrics">>> {
+  const rows: Array<Doc<"llmMetrics">> = [];
+  let cursor: string | null = null;
+  while (true) {
+    const result: { page: Array<Doc<"llmMetrics">>; isDone: boolean; continueCursor: string } =
+      await ctx.db
+        .query("llmMetrics")
+        .withIndex("by_timestamp", (q: any) => q.gte("timestamp", hourStart).lt("timestamp", hourEnd))
+        .filter((q: any) => q.neq(q.field("archived"), true))
+        .paginate({ numItems: BACKFILL_LLM_PAGE_SIZE, cursor });
+    rows.push(...result.page);
+    if (result.isDone) break;
+    cursor = result.continueCursor;
+  }
+  return rows;
+}
+
+/**
+ * Manual, resumable, INSERT-ONLY backfill of tokens_prompt/tokens_completion hourly
+ * buckets for hours BEFORE this deploy, so D-04's "a rate correction re-prices every
+ * chart back to the start of retention" holds for history, not only new hours.
+ *
+ * Invocation (repeat until the return value's `done` is true — NOT a cron):
+ *   npx convex run aggregates:backfillTokenSplit '{"maxHours": 6}'
+ *
+ * Not registered in convex/crons.ts on purpose. See the disabled-cron incident
+ * note there (2026-07-14): an unattended long-running/self-retriggering mutation
+ * on self-hosted Convex starves ingest via retry storms regardless of schedule.
+ * This mutation instead does a small, hard-capped amount of work per invocation
+ * and lets an operator decide whether/when to call it again.
+ *
+ * Retention floor: llmMetrics is one of the tables convex/retention.ts's own
+ * comment marks "kept forever" (it is not in that module's PRUNED_TABLES — only
+ * the runtime-firehose/build-history tables are physically deleted there). The
+ * retention window that DOES apply to llmMetrics specifically is
+ * `agentConfigs["retention_days"]` (convex/archival.ts's markStaleArchived,
+ * default 30, clamped 1-365 — the sibling retention module for this exact
+ * table). Reusing that existing, already-configurable value here — rather than
+ * inventing a third, independent retention number — is what "do not hardcode a
+ * second retention number" means in practice, since retention.ts itself defines
+ * none for this table.
+ *
+ * Resume position: agentConfigs["phase104.tokenSplitBackfill.cursor"], whose
+ * value is the bucket_start (epoch seconds) of the NEXT hour to process, or the
+ * string "done" once the retention floor is reached. Written via ctx.db.insert
+ * ONLY (never patch) — the newest row for that configKey (by insertion/
+ * _creationTime order, Convex's default collect() order) is the current cursor.
+ * This keeps the whole mutation insert-only end to end, matching the aggregates
+ * writes above.
+ */
+export const backfillTokenSplit = internalMutation({
+  args: { maxHours: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    const maxHours = args.maxHours ?? 6;
+
+    const retentionConfig = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "retention_days"))
+      .first();
+    const retentionDays = retentionConfig?.value != null ? Number(retentionConfig.value) : 30;
+    const retentionFloorHour =
+      Math.floor((Date.now() / 1000 - retentionDays * 86400) / 3600) * 3600;
+
+    const cursorRows = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", TOKEN_SPLIT_BACKFILL_CURSOR_KEY))
+      .collect();
+    // Insert-only cursor: the last row (ascending _creationTime, Convex's default
+    // collect() order) is the most recently written cursor value.
+    const cursorRow = cursorRows.length > 0 ? cursorRows[cursorRows.length - 1] : null;
+
+    if (cursorRow?.value === "done") {
+      return { hoursProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true };
+    }
+
+    let cursor: number =
+      cursorRow?.value != null
+        ? Number(cursorRow.value)
+        : Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
+
+    let hoursProcessed = 0;
+    let rowsInserted = 0;
+    let done = false;
+
+    while (hoursProcessed < maxHours) {
+      if (cursor < retentionFloorHour) {
+        done = true;
+        break;
+      }
+      const hourStart = cursor;
+      const hourEnd = hourStart + 3600;
+      const llmRows = await fetchLlmRowsForHour(ctx, hourStart, hourEnd);
+      const { promptInserted, completionInserted } = await insertTokenSplitBuckets(ctx, hourStart, llmRows);
+      rowsInserted += promptInserted + completionInserted;
+      hoursProcessed++;
+      cursor = hourStart - 3600;
+    }
+
+    if (!done && cursor < retentionFloorHour) {
+      done = true;
+    }
+
+    const nextCursorValue: number | "done" = done ? "done" : cursor;
+    await ctx.db.insert("agentConfigs", {
+      configKey: TOKEN_SPLIT_BACKFILL_CURSOR_KEY,
+      value: nextCursorValue,
+      source: "runtime",
+      updatedAt: Date.now() / 1000,
+    });
+
+    return { hoursProcessed, rowsInserted, nextCursor: nextCursorValue, done };
   },
 });
 
