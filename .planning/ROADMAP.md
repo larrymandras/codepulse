@@ -709,7 +709,21 @@ Plans:
 **Goal**: Spend is legible per model and per provider over time, with configurable budget thresholds and alerts that fire through the existing alert-routing layer when spend spikes or crosses a threshold.
 **Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
 **Requirements**: COST-01, COST-02, COST-03
-**Success Criteria**: derived at `/gsd-discuss-phase 104` / `/gsd-plan-phase 104`.
+**Success Criteria**: Every displayed dollar is recomputed by CodePulse from tokens x a Convex-editable rate; an unpriced model is excluded from the total and named, never valued at a default; billed and subscription-covered spend are shown as two figures that never merge; budgets are persisted per scope and period with a limit and a warn fraction; a warn or breach fires exactly one alert per period through the existing webhook-delivery path; nothing in the phase enforces, throttles or mutates Astridr.
+**Plans:** 11 plans in 5 waves
+
+Plans:
+- [ ] 104-01-PLAN.md — Schema (`modelPricing`, `costBudgets`) + pricing CRUD with the Clerk gate, pure rate resolution with no default fallback, and the seed incl. sonnet-5/opus-5/fable-5 and the D-06 shadow rows — COST-01, COST-02
+- [ ] 104-02-PLAN.md — Repair the two dead telemetry pipes: gateway completions into `llmMetrics` (D-18, incl. an astridr-repo token-emit change) and the quota poller repointed at the CLI-gateway sidecar (D-20) — COST-01, COST-02
+- [ ] 104-03-PLAN.md — Widen the hourly rollup with `tokens_prompt`/`tokens_completion` buckets plus a resumable, batch-capped, insert-only backfill (D-04) — COST-01
+- [ ] 104-04-PLAN.md — `costBudgets` CRUD, UTC period-boundary helpers, and the migration folding `SDKSpendGuard`'s constants and the legacy `agentConfigs` monthly cap into seed rows (D-09/D-10/D-11/D-12/D-19) — COST-02
+- [ ] 104-05-PLAN.md — `convex/costDerived.ts`: the single place tokens become money, with billed/covered/unpriced kept separate, plus the goal-scoped HivePage queries moved onto the same derivation (D-01/D-03/D-05) — COST-01
+- [ ] 104-06-PLAN.md — Budget evaluator: projection to period end, warn/breach classification, per-period dedup, fire-and-deliver, appended to the tail of `computeHourly` with no new cron (D-13/D-14/D-15/D-16/D-17) — COST-03
+- [ ] 104-07-PLAN.md — Settings "Cost & Budgets" tab: `CostBudgetsAdmin` above `ModelPricingAdmin`, both error-isolated (D-02/D-07/D-09/D-10/D-11) — COST-01, COST-02
+- [ ] 104-08-PLAN.md — Collapse the remaining cap sources: rewire `SDKSpendGuard` and `CostForecastPanel`/`forecasts.ts` onto `costBudgets`, retire the legacy Settings cap form, prove exactly one cap source remains (D-12/D-19) — COST-02
+- [ ] 104-09-PLAN.md — `CostBreakdownTable` + `UnpricedModelsNudge` mounted in the Analytics cost cluster (D-03/D-05) — COST-01
+- [ ] 104-10-PLAN.md — `CostTrendChart` Billed / Billed + Covered toggle over the derived series, plus the mandatory hex-to-token remediation on it and `CostBreakdown` (D-08) — COST-01
+- [ ] 104-11-PLAN.md — Deploy, seed, backfill, then live-verify every Manual-Only row: D-18/D-20 pipes, D-14 evaluator cost, D-04 live re-price, D-03 nudge accuracy, six-theme pass (blocking checkpoints) — COST-01, COST-02, COST-03
 
 ---
 
