@@ -7,7 +7,14 @@
  * established in convex/modelPricing.test.ts.
  */
 import { describe, it, expect } from "vitest";
-import { periodStartFor, periodEndFor, periodHours, create, update } from "./costBudgets";
+import {
+  periodStartFor,
+  periodEndFor,
+  periodHours,
+  create,
+  update,
+  seedFromLegacyCaps,
+} from "./costBudgets";
 
 // ---------------------------------------------------------------------------
 // periodStartFor / periodEndFor / periodHours — UTC anchoring (D-10)
@@ -226,6 +233,70 @@ describe("costBudgets.update — immutability of scope/scopeKey/period", () => {
     await expect((update as any)._handler(ctx, { id, period: "weekly" })).rejects.toThrow(
       /immutable/i
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// seedFromLegacyCaps — D-12/D-19 migration, idempotent + additive-only
+// ---------------------------------------------------------------------------
+
+describe("costBudgets.seedFromLegacyCaps", () => {
+  it("running the handler twice produces exactly one daily row and one monthly row", async () => {
+    const { ctx, costBudgets } = makeCtx({
+      agentConfigs: [{ _id: "ac_1", configKey: "intelligence.budget_cap", value: 120 }],
+    });
+
+    const first = await (seedFromLegacyCaps as any)._handler(ctx);
+    expect(first.seededDaily).toBe(true);
+    expect(first.seededMonthly).toBe(true);
+    expect(costBudgets.filter((r) => r.period === "daily")).toHaveLength(1);
+    expect(costBudgets.filter((r) => r.period === "monthly")).toHaveLength(1);
+
+    const second = await (seedFromLegacyCaps as any)._handler(ctx);
+    expect(second.seededDaily).toBe(false);
+    expect(second.seededMonthly).toBe(false);
+    expect(costBudgets.filter((r) => r.period === "daily")).toHaveLength(1);
+    expect(costBudgets.filter((r) => r.period === "monthly")).toHaveLength(1);
+  });
+
+  it("the daily row's limit is 5 and warnFraction is 0.8", async () => {
+    const { ctx, costBudgets } = makeCtx();
+    await (seedFromLegacyCaps as any)._handler(ctx);
+
+    const daily = costBudgets.find((r) => r.period === "daily");
+    expect(daily?.limit).toBe(5);
+    expect(daily?.warnFraction).toBe(0.8);
+  });
+
+  it("with no agentConfigs row present, seededMonthly is false, monthlySkippedReason is non-empty, and no monthly row is inserted", async () => {
+    const { ctx, costBudgets } = makeCtx();
+    const result = await (seedFromLegacyCaps as any)._handler(ctx);
+
+    expect(result.seededMonthly).toBe(false);
+    expect(typeof result.monthlySkippedReason).toBe("string");
+    expect(result.monthlySkippedReason.length).toBeGreaterThan(0);
+    expect(costBudgets.some((r) => r.period === "monthly")).toBe(false);
+  });
+
+  it("with an agentConfigs row whose value is 120, the monthly row's limit is 120", async () => {
+    const { ctx, costBudgets } = makeCtx({
+      agentConfigs: [{ _id: "ac_1", configKey: "intelligence.budget_cap", value: 120 }],
+    });
+    const result = await (seedFromLegacyCaps as any)._handler(ctx);
+
+    expect(result.seededMonthly).toBe(true);
+    const monthly = costBudgets.find((r) => r.period === "monthly");
+    expect(monthly?.limit).toBe(120);
+  });
+
+  it("issues no db.delete and no db.patch call", async () => {
+    const { ctx, callCounts } = makeCtx({
+      agentConfigs: [{ _id: "ac_1", configKey: "intelligence.budget_cap", value: 120 }],
+    });
+    await (seedFromLegacyCaps as any)._handler(ctx);
+    await (seedFromLegacyCaps as any)._handler(ctx);
+
+    expect(callCounts()).toEqual({ deleteCalls: 0, patchCalls: 0 });
   });
 });
 

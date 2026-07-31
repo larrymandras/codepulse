@@ -21,8 +21,12 @@
  * D-07: `unit` ("usd" | "quota_pct") is derived server-side from `scope`
  * and is never a caller argument — no fictional dollar ever enters a quota
  * budget.
+ * D-12 / D-19: `seedFromLegacyCaps` folds this repo's two remaining
+ * independent legacy cap sources (`SDKSpendGuard`'s hardcoded constants and
+ * `forecasts.ts`'s `agentConfigs["intelligence.budget_cap"]`) into the
+ * first two rows of this table.
  */
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { ConvexError } from "convex/values";
 import type { Id } from "./_generated/dataModel";
@@ -292,5 +296,98 @@ export const getByScope = query({
         q.eq("scope", args.scope).eq("scopeKey", scopeKey).eq("period", args.period)
       )
       .first();
+  },
+});
+
+// ============================================================
+// Migration — folds this repo's remaining independent legacy cap sources
+// into the first two costBudgets rows (D-12, D-19). Idempotent and
+// additive: each seed reads by_scope_key_period first and skips when a row
+// already exists. Never patches or deletes.
+//
+// Manual invocation: `npx convex run costBudgets:seedFromLegacyCaps '{}'`
+// Must be run BEFORE plan 104-08 rewires SDKSpendGuard / CostForecastPanel
+// onto costBudgets rows, or both panels will render their "no budget
+// configured" state. Not registered as a cron (convex/crons.ts) — per
+// CLAUDE.md's self-hosted Convex rules, no bulk mutation runs unattended
+// against the live instance.
+// ============================================================
+
+export const seedFromLegacyCaps = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now() / 1000;
+    let seededDaily = false;
+    let seededMonthly = false;
+    let monthlySkippedReason: string | null = null;
+
+    // Seed 1 (D-12): src/components/SDKSpendGuard.tsx:8-9 —
+    // DAILY_CAP = 5.00, ALERT_THRESHOLD = 0.8. Carried across so the
+    // operator's existing gauge does not silently change value on deploy.
+    const existingDaily = await ctx.db
+      .query("costBudgets")
+      .withIndex("by_scope_key_period", (q) =>
+        q.eq("scope", "global").eq("scopeKey", "").eq("period", "daily")
+      )
+      .first();
+    if (!existingDaily) {
+      await ctx.db.insert("costBudgets", {
+        scope: "global",
+        scopeKey: "",
+        period: "daily",
+        limit: 5.0,
+        warnFraction: 0.8,
+        unit: "usd",
+        enabled: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      seededDaily = true;
+    }
+
+    // Seed 2 (D-19): convex/forecasts.ts's monthly cap, currently read from
+    // agentConfigs["intelligence.budget_cap"] (own setBudgetCap mutation,
+    // own getBudgetConfig query, own classifyBudgetStatus 80%/100% tiers —
+    // matched here by warnFraction: 0.8 so CostForecastPanel's rendered
+    // status does not shift on migration). Never invent a monthly limit
+    // the operator never set — a budget with no prior value is skipped
+    // honestly rather than shipping a fictional threshold.
+    const existingMonthly = await ctx.db
+      .query("costBudgets")
+      .withIndex("by_scope_key_period", (q) =>
+        q.eq("scope", "global").eq("scopeKey", "").eq("period", "monthly")
+      )
+      .first();
+    if (existingMonthly) {
+      monthlySkippedReason = "a global monthly costBudgets row already exists";
+    } else {
+      const legacyConfig = await ctx.db
+        .query("agentConfigs")
+        .withIndex("by_key", (q) => q.eq("configKey", "intelligence.budget_cap"))
+        .first();
+      const legacyValue =
+        legacyConfig != null && typeof legacyConfig.value === "number" ? legacyConfig.value : null;
+      if (legacyValue != null && legacyValue > 0) {
+        await ctx.db.insert("costBudgets", {
+          scope: "global",
+          scopeKey: "",
+          period: "monthly",
+          limit: legacyValue,
+          warnFraction: 0.8,
+          unit: "usd",
+          enabled: true,
+          createdAt: now,
+          updatedAt: now,
+        });
+        seededMonthly = true;
+      } else {
+        monthlySkippedReason =
+          'no positive-number agentConfigs["intelligence.budget_cap"] row exists to migrate — no monthly budget was invented';
+      }
+    }
+    // Leave the agentConfigs row itself in place: plan 104-08 stops reading
+    // it, but deleting it is a mutation with no upside.
+
+    return { seededDaily, seededMonthly, monthlySkippedReason };
   },
 });
