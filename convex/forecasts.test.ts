@@ -4,7 +4,73 @@ import {
   projectSpend,
   classifyBudgetStatus,
   filterAPIBilledRows,
+  costForecast,
 } from "./forecasts";
+
+// ---------------------------------------------------------------------------
+// Fake ctx — same convention as convex/aggregates.test.ts / costDerived.test.ts
+// (this repo has no convex-test): exercises the real `costForecast` query
+// handler via the `._handler` escape hatch. Every withIndex predicate call is
+// logged to `queryLog` so a test can assert costForecast never issues an
+// agentConfigs `by_key` lookup for "intelligence.budget_cap" (D-19).
+// ---------------------------------------------------------------------------
+
+type FakeDoc = Record<string, any>;
+type PredicateLog = { op: string; field: string; value: unknown };
+type QueryLogEntry = { table: string; predicates: PredicateLog[] };
+
+function makeForecastCtx(
+  opts: { aggregates?: FakeDoc[]; costBudgets?: FakeDoc[]; agentConfigs?: FakeDoc[] } = {}
+) {
+  const tables: Record<string, FakeDoc[]> = {
+    aggregates: [...(opts.aggregates ?? [])],
+    costBudgets: [...(opts.costBudgets ?? [])],
+    agentConfigs: [...(opts.agentConfigs ?? [])],
+  };
+  const queryLog: QueryLogEntry[] = [];
+
+  function query(table: string) {
+    const rows = tables[table] ?? (tables[table] = []);
+    const predicates: Array<(r: FakeDoc) => boolean> = [];
+    const logEntry: QueryLogEntry = { table, predicates: [] };
+    queryLog.push(logEntry);
+
+    const chain = {
+      withIndex(_index: string, cb?: (q: any) => any) {
+        if (cb) {
+          const q: any = {};
+          for (const op of ["eq", "gte", "gt", "lte", "lt"] as const) {
+            q[op] = (field: string, value: unknown) => {
+              logEntry.predicates.push({ op, field, value });
+              predicates.push((r) => {
+                const v = r[field];
+                if (op === "eq") return v === value;
+                if (op === "gte") return v >= (value as number);
+                if (op === "gt") return v > (value as number);
+                if (op === "lte") return v <= (value as number);
+                return v < (value as number);
+              });
+              return q;
+            };
+          }
+          cb(q);
+        }
+        return chain;
+      },
+      async collect() {
+        return rows.filter((r) => predicates.every((p) => p(r)));
+      },
+      async first() {
+        const filtered = rows.filter((r) => predicates.every((p) => p(r)));
+        return filtered[0] ?? null;
+      },
+    };
+    return chain;
+  }
+
+  const db = { query };
+  return { ctx: { db }, tables, queryLog };
+}
 
 describe("forecasts", () => {
   test("computeMovingAverage returns correct 7-day average from daily cost rows", () => {
@@ -67,6 +133,84 @@ describe("forecasts", () => {
 
   test("classifyBudgetStatus below 80% ($3 of $5 cap) returns 'ok'", () => {
     expect(classifyBudgetStatus(3.0, 5.0)).toBe("ok");
+  });
+
+  // D-19 / D-11: warnFraction is now an explicit third argument, read from a
+  // costBudgets row rather than a hardcoded 0.8.
+  test("classifyBudgetStatus with an explicit warnFraction of 0.5 returns 'warning' at 50%", () => {
+    expect(classifyBudgetStatus(50, 100, 0.5)).toBe("warning");
+    expect(classifyBudgetStatus(49, 100, 0.5)).toBe("ok");
+  });
+
+  test("classifyBudgetStatus called with two arguments still warns at 80% (back-compat guard)", () => {
+    expect(classifyBudgetStatus(80, 100)).toBe("warning");
+    expect(classifyBudgetStatus(79, 100)).toBe("ok");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// costForecast — D-19: reads its monthly cap/warnFraction from the global
+// costBudgets row, never from agentConfigs.
+// ---------------------------------------------------------------------------
+
+describe("costForecast (D-19 data-source rewire)", () => {
+  const DAY = 86400;
+  const now = Date.now() / 1000;
+
+  function seedThreeDaysOfCost(aggregates: FakeDoc[]) {
+    for (let i = 1; i <= 3; i++) {
+      aggregates.push({
+        metric_type: "cost",
+        period: "daily",
+        bucket_start: Math.floor(now / DAY) * DAY - i * DAY,
+        value: 10,
+        dimensions: { billingType: "api" },
+      });
+    }
+  }
+
+  test("reads its cap and warnFraction from a costBudgets fixture, not agentConfigs", async () => {
+    const aggregates: FakeDoc[] = [];
+    seedThreeDaysOfCost(aggregates);
+    const costBudgets: FakeDoc[] = [
+      { scope: "global", scopeKey: "", period: "monthly", limit: 120, warnFraction: 0.5 },
+    ];
+    // A legacy agentConfigs row is present too — if costForecast read it,
+    // this test would see 999 instead of 120.
+    const agentConfigs: FakeDoc[] = [
+      { configKey: "intelligence.budget_cap", value: 999 },
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, costBudgets, agentConfigs });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    expect(result.budgetCap).toBe(120);
+    expect(result.warnFraction).toBe(0.5);
+  });
+
+  test("returns budgetCap: null when no global monthly costBudgets row exists", async () => {
+    const aggregates: FakeDoc[] = [];
+    seedThreeDaysOfCost(aggregates);
+    const { ctx } = makeForecastCtx({ aggregates, costBudgets: [] });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    expect(result.budgetCap).toBeNull();
+    expect(result.warnFraction).toBe(0.8);
+  });
+
+  test("never issues an agentConfigs by_key lookup for intelligence.budget_cap", async () => {
+    const aggregates: FakeDoc[] = [];
+    seedThreeDaysOfCost(aggregates);
+    const costBudgets: FakeDoc[] = [
+      { scope: "global", scopeKey: "", period: "monthly", limit: 50, warnFraction: 0.8 },
+    ];
+    const { ctx, queryLog } = makeForecastCtx({ aggregates, costBudgets });
+
+    await (costForecast as any)._handler(ctx);
+
+    const agentConfigsReads = queryLog.filter((entry) => entry.table === "agentConfigs");
+    expect(agentConfigsReads).toHaveLength(0);
   });
 });
 

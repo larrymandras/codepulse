@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { Link } from "react-router-dom";
 import { api } from "../../convex/_generated/api";
 import { formatCost } from "../lib/formatters";
 
@@ -45,6 +46,9 @@ export default function CostForecastPanel() {
         ? "bg-[--status-warn]"
         : "bg-[--status-ok]";
 
+  // D-19: budgetCap is null when no global/monthly costBudgets row exists —
+  // this is only rendered when budgetCap is a real, positive number, never
+  // fabricated as a 0% or 100% bar against a cap nobody set.
   const budgetPercentage =
     budgetCap != null && budgetCap > 0
       ? Math.min((projectedMonthly / budgetCap) * 100, 100)
@@ -92,7 +96,12 @@ export default function CostForecastPanel() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">No budget cap configured</p>
+          <p className="text-sm text-muted-foreground">
+            No monthly budget set.{" "}
+            <Link to="/settings" className="underline hover:text-foreground">
+              Set one in Settings → Cost &amp; Budgets.
+            </Link>
+          </p>
         )}
         <p className="text-xs text-muted-foreground mt-1">
           Subscription providers (claude-cli, codex, antigravity) excluded from forecast

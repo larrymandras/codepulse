@@ -35,14 +35,22 @@ export function projectSpend(avgDaily: number): {
   return { daily: avgDaily, weekly: avgDaily * 7, monthly: avgDaily * 30 };
 }
 
+/**
+ * D-19 / D-11: `warnFraction` defaults to 0.8 so every pre-existing call
+ * site (and every test written before this generalization) keeps behaving
+ * identically. Once `costForecast` migrates to reading the global monthly
+ * `costBudgets` row, it passes that row's own `warnFraction` here instead
+ * of relying on the default.
+ */
 export function classifyBudgetStatus(
   projectedMonthly: number,
-  budgetCap: number | null
+  budgetCap: number | null,
+  warnFraction: number = 0.8
 ): "ok" | "warning" | "exceeded" {
   if (budgetCap == null || budgetCap <= 0) return "ok";
   const ratio = projectedMonthly / budgetCap;
   if (ratio >= 1.0) return "exceeded";
-  if (ratio >= 0.8) return "warning";
+  if (ratio >= warnFraction) return "warning";
   return "ok";
 }
 
@@ -84,12 +92,18 @@ export const costForecast = query({
     const avgDaily = computeMovingAverage(dailyValues, totalDaysAvailable);
     const projections = projectSpend(avgDaily);
 
-    // Read budget cap from agentConfigs
-    const budgetConfig = await ctx.db
-      .query("agentConfigs")
-      .withIndex("by_key", (q) => q.eq("configKey", "intelligence.budget_cap"))
+    // D-19: budget cap and warn fraction come from the global/monthly
+    // costBudgets row (convex/costBudgets.ts), not agentConfigs. The legacy
+    // agentConfigs monthly-cap key is read only by the two DEPRECATED
+    // functions below, never here.
+    const budgetRow = await ctx.db
+      .query("costBudgets")
+      .withIndex("by_scope_key_period", (q) =>
+        q.eq("scope", "global").eq("scopeKey", "").eq("period", "monthly")
+      )
       .first();
-    const budgetCap = budgetConfig != null ? (budgetConfig.value as number) : null;
+    const budgetCap = budgetRow?.limit ?? null;
+    const warnFraction = budgetRow?.warnFraction ?? 0.8;
 
     // Current month spend: sum all daily rows in current calendar month
     const now30DayAgo = now - 30 * 86400;
@@ -106,13 +120,14 @@ export const costForecast = query({
 
     const insufficientData = totalDaysAvailable < 3;
 
-    const budgetStatus = classifyBudgetStatus(projections.monthly, budgetCap);
+    const budgetStatus = classifyBudgetStatus(projections.monthly, budgetCap, warnFraction);
 
     return {
       projectedDaily: projections.daily,
       projectedWeekly: projections.weekly,
       projectedMonthly: projections.monthly,
       budgetCap,
+      warnFraction,
       budgetStatus,
       currentMonthSpend,
       dailyHistory,
@@ -122,6 +137,15 @@ export const costForecast = query({
 });
 
 // ---- Convex query: getBudgetConfig ----
+//
+// DEPRECATED (D-19, Phase 104 Plan 08): superseded by
+// `api.costBudgets.getByScope({ scope: "global", scopeKey: "", period:
+// "monthly" })`. `costForecast` above no longer calls this — nothing in the
+// app reads its result. Left deployed (not deleted) because deleting an
+// exported Convex function while a deployed client bundle may still
+// reference it is a deploy-order hazard; the legacy Settings form that used
+// to call this was removed in the same plan. Still reads the legacy
+// agentConfigs monthly-cap row unchanged.
 
 export const getBudgetConfig = query({
   args: {},
@@ -136,6 +160,12 @@ export const getBudgetConfig = query({
 });
 
 // ---- Convex mutation: setBudgetCap ----
+//
+// DEPRECATED (D-19, Phase 104 Plan 08): superseded by `api.costBudgets.create`
+// / `api.costBudgets.update` on the global/monthly scope. Still authenticated
+// and still writable, but nothing reads what it writes anymore (T-104-36:
+// accepted risk — an inert write, not deleted for the same deploy-order
+// reason as getBudgetConfig above).
 
 export const setBudgetCap = mutation({
   args: { cap: v.float64() },
