@@ -101,3 +101,7 @@ None - no external service configuration required. Note for the operator: `npx c
 ---
 *Phase: 104-cost-intelligence*
 *Completed: 2026-07-31*
+
+## Self-Check: PASSED
+
+All created/modified files found on disk (convex/schema.ts, convex/modelPricing.ts, convex/modelPricing.test.ts, src/lib/modelPricing.ts, this SUMMARY). All 4 commit hashes (d31fbe66, 4c3916ec, a06f135c, 83134045) found in `git log --oneline --all`.
