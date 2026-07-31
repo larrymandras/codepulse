@@ -1550,6 +1550,48 @@ export default defineSchema({
     .index("by_provider", ["provider", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
 
+  // ==== COST INTELLIGENCE (Phase 104) ====
+
+  modelPricing: defineTable({
+    model: v.string(),
+    // Rates are PER TOKEN (already divided by 1_000_000), matching the
+    // src/lib/modelPricing.ts literal convention. A per-Mtok value stored
+    // here would mis-price every call by 1e6 — see modelPricing.ts's
+    // create/update range validation, which enforces this.
+    inputPerToken: v.float64(),
+    outputPerToken: v.float64(),
+    // Reserved slots for the deferred cache-token pricing idea (D-cache,
+    // see 104-CONTEXT.md <deferred>). NOT read by Phase 104 — llmMetrics
+    // already carries cacheReadInputTokens/cacheCreationInputTokens, but
+    // no code in this phase multiplies against these fields.
+    cacheReadPerToken: v.optional(v.float64()),
+    cacheWritePerToken: v.optional(v.float64()),
+    // D-06 fallback: when set, this row prices subscription turns whose
+    // `provider` equals this value (one of GATEWAY_PROVIDERS). Never used
+    // as a fallback for API-billed turns.
+    shadowForProvider: v.optional(v.string()),
+    source: v.string(), // "manual" | "seed"
+    notes: v.optional(v.string()),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_model", ["model"])
+    .index("by_shadow_provider", ["shadowForProvider"]),
+
+  costBudgets: defineTable({
+    scope: v.string(), // "global" | "model" | "provider" | "quota"
+    scopeKey: v.string(), // "" for global; model id / provider id otherwise
+    period: v.string(), // "daily" | "weekly" | "monthly"
+    limit: v.float64(),
+    warnFraction: v.float64(), // defaults to 0.8 at the call site (D-11)
+    unit: v.string(), // "usd" | "quota_pct" (D-07: no fictional dollars in a quota budget)
+    enabled: v.boolean(),
+    createdAt: v.float64(),
+    updatedAt: v.float64(),
+  })
+    .index("by_enabled", ["enabled"])
+    .index("by_scope_key_period", ["scope", "scopeKey", "period"]),
+
   routingDecisions: defineTable({
     taskId: v.string(),
     requestedProvider: v.string(),
