@@ -5,7 +5,7 @@ import { formatCost } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
 
 export default function LlmAnalyticsPanel() {
-  const providerData = useQuery(api.llm.providerBreakdown) ?? [];
+  const providerData = useQuery(api.llm.providerBreakdown, {}) ?? [];
   const costByModel = useQuery(api.llm.costByModel) ?? {};
 
   const modelRows = Object.entries(costByModel)

@@ -293,9 +293,11 @@ export default function Analytics() {
 
         {/* Cost Trend & Gateway Quota */}
         <div className="md:col-span-8">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <CostTrendChart />
-           </GlassPanel>
+           <SectionErrorBoundary name="Cost Trend">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <CostTrendChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         <div className="md:col-span-4">
            <SectionErrorBoundary name="Gateway Quota">
@@ -315,22 +317,33 @@ export default function Analytics() {
         </div>
 
         {/* LLM Analytics & Capability Growth */}
+        {/* Boundary added 2026-08-01: this was one of the few panels on the page
+            NOT wrapped, so when its `llm:providerBreakdown` query timed out
+            ("too many system operations") the unhandled useQuery throw unmounted
+            the whole React tree and blanked ALL of Analytics rather than just
+            this widget. 35 sibling sections were already wrapped. */}
         <div className="md:col-span-6">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <LlmAnalyticsPanel />
-           </GlassPanel>
+           <SectionErrorBoundary name="LLM Analytics">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <LlmAnalyticsPanel />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         <div className="md:col-span-6">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <CapabilityGrowthChart />
-           </GlassPanel>
+           <SectionErrorBoundary name="Capability Growth">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <CapabilityGrowthChart />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
 
         {/* Session Comparison */}
         <div className="md:col-span-12">
-           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
-             <SessionComparison />
-           </GlassPanel>
+           <SectionErrorBoundary name="Session Comparison">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <SessionComparison />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
 
         <div className="md:col-span-12 mt-4">
@@ -339,40 +352,52 @@ export default function Analytics() {
 
         {/* Heatmap */}
         <div className="md:col-span-12">
-           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
-             <ActivityHeatmap />
-           </GlassPanel>
+           <SectionErrorBoundary name="Activity Heatmap">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <ActivityHeatmap />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
 
         {/* Sankey & Sunburst */}
         <div className="md:col-span-8">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <SankeyFlow />
-           </GlassPanel>
+           <SectionErrorBoundary name="Token Flow">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <SankeyFlow />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         <div className="md:col-span-4">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <TokenSunburst />
-           </GlassPanel>
+           <SectionErrorBoundary name="Token Sunburst">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <TokenSunburst />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         
         {/* Error Rate & Session Duration */}
         <div className="md:col-span-6">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <ErrorRateTrend />
-           </GlassPanel>
+           <SectionErrorBoundary name="Error Rate Trend">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <ErrorRateTrend />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         <div className="md:col-span-6">
-           <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
-             <SessionDurationHistogram />
-           </GlassPanel>
+           <SectionErrorBoundary name="Session Duration">
+             <GlassPanel className="p-4 h-full hover:scale-[1.01] transition-transform duration-300">
+               <SessionDurationHistogram />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
 
         {/* Token Waterfall */}
         <div className="md:col-span-12">
-           <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
-             <TokenWaterfall />
-           </GlassPanel>
+           <SectionErrorBoundary name="Token Waterfall">
+             <GlassPanel className="p-4 hover:scale-[1.01] transition-transform duration-300">
+               <TokenWaterfall />
+             </GlassPanel>
+           </SectionErrorBoundary>
         </div>
         
         <div className="md:col-span-12 mt-4">

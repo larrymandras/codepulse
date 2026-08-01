@@ -196,14 +196,47 @@ export const costByModel = query({
   },
 });
 
+// STOPGAP (2026-08-01, Phase 104 live gate). This query was an UNBOUNDED
+// 30-day `.collect()` over llmMetrics (~7 080 rows and growing). On its own it
+// still returns, but Analytics fires 10 queries concurrently and Phase 104 added
+// several more readers to that page (CostBreakdownTable, UnpricedModelsNudge,
+// CostTrendChart on costDerived, the rewired SDKSpendGuard and
+// CostForecastPanel). The combined load tipped the self-hosted instance over:
+//   [CONVEX Q(llm:providerBreakdown)] Server Error
+//   Your request timed out performing too many system operations
+// and because an unhandled useQuery throw unmounts the tree, ONE query took the
+// whole Analytics page down.
+//
+// This adds a hard row cap that WARNS rather than silently under-reporting, so
+// the query can no longer grow without bound. NOTE: narrowing the window was
+// TRIED and REVERTED -- 7 days still scanned 7 052 of the 7 080 rows (the data
+// is dense in the last week), so it bought nothing and only cost semantics.
+// The page-wide blackout is fixed separately, by wrapping LlmAnalyticsPanel in
+// the SectionErrorBoundary it was missing. This is a stopgap: the real
+// fix is to read the pre-aggregated `aggregates` rollups instead of raw
+// llmMetrics, which is tracked with CR-01 in the Phase 104 gap plan.
+// Note `.filter()` runs AFTER the index read in Convex, so archived rows are
+// read and then discarded — they count against the budget either way.
+const PROVIDER_BREAKDOWN_DEFAULT_DAYS = 30;
+const PROVIDER_BREAKDOWN_ROW_CAP = 8000;
+
 export const providerBreakdown = query({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
+  args: { lookbackDays: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    const days = args.lookbackDays ?? PROVIDER_BREAKDOWN_DEFAULT_DAYS;
+    const cutoff = Date.now() / 1000 - days * 86400;
     const all = await ctx.db.query("llmMetrics")
       .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
       .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+      .take(PROVIDER_BREAKDOWN_ROW_CAP);
+    if (all.length >= PROVIDER_BREAKDOWN_ROW_CAP) {
+      // Loud on purpose: past the cap these per-provider totals UNDERCOUNT, and
+      // a silent undercount on a cost surface is exactly what D-03 forbids.
+      console.warn(
+        `[llm.providerBreakdown] hit the ${PROVIDER_BREAKDOWN_ROW_CAP}-row cap over ${days}d — ` +
+          `totals undercount. Move this onto the aggregates rollups (CR-01 gap plan).`
+      );
+    }
     const grouped: Record<string, { calls: number; totalLatency: number; cost: number }> = {};
     for (const r of all) {
       if (!grouped[r.provider]) grouped[r.provider] = { calls: 0, totalLatency: 0, cost: 0 };
