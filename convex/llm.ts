@@ -253,25 +253,6 @@ export const providerBreakdown = query({
   },
 });
 
-export const costOverTime = query({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() / 1000 - 30 * 86400;
-    const all = await ctx.db
-      .query("llmMetrics")
-      .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
-      .order("asc")
-      .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
-    return all.map((r) => ({
-      timestamp: r.timestamp,
-      provider: r.provider,
-      cost: r.cost ?? 0,
-      tokens: r.totalTokens,
-    }));
-  },
-});
-
 export const latencyOverTime = query({
   args: {},
   handler: async (ctx) => {

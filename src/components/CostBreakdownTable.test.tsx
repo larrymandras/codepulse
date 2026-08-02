@@ -31,6 +31,7 @@ type Row = {
   billedUsd: number | null;
   coveredUsd: number | null;
   priced: boolean;
+  unpricedReason?: "no-rate" | "no-tokens" | null;
   pricedVia: "model" | "shadow" | null;
 };
 
@@ -43,6 +44,7 @@ const PRICED_API_ROW: Row = {
   billedUsd: 1.25,
   coveredUsd: null,
   priced: true,
+  unpricedReason: null,
   pricedVia: "model",
 };
 
@@ -55,6 +57,7 @@ const SUBSCRIPTION_ROW: Row = {
   billedUsd: 0,
   coveredUsd: 3.5,
   priced: true,
+  unpricedReason: null,
   pricedVia: "shadow",
 };
 
@@ -65,6 +68,7 @@ const UNPRICED_ROW: Row = {
   promptTokens: 300,
   completionTokens: 100,
   priced: false,
+  unpricedReason: "no-rate" as const,
   billedUsd: null,
   coveredUsd: null,
   pricedVia: null,

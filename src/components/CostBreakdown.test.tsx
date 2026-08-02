@@ -59,6 +59,7 @@ function pricedRow(overrides: Partial<DerivedRow> & { provider: string; model: s
     coveredUsd: null,
     priced: true,
     pricedVia: "model",
+    unpricedReason: null,
     ...overrides,
   };
 }
@@ -71,6 +72,7 @@ function unpricedRow(overrides: Partial<DerivedRow> & { provider: string; model:
     billedUsd: null,
     coveredUsd: null,
     priced: false,
+    unpricedReason: "no-rate" as const,
     pricedVia: null,
     ...overrides,
   };

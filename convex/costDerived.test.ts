@@ -271,6 +271,105 @@ describe("unpricedModels", () => {
     expect(result.models[0].promptTokens).toBe(350);
     expect(result.models[0].completionTokens).toBe(120);
   });
+
+  // ---------------------------------------------------------------------
+  // D-03 accuracy regression, found on the RENDERED nudge at the Phase 104
+  // validation gate (2026-08-02). The nudge claimed 4 models "need pricing
+  // rates" including `claude-cli`, while costBreakdown simultaneously
+  // reported that same model as priced:true / coveredUsd 0.180785 against
+  // its seeded D-06 shadow row. Cause: `priced: false` means BOTH "no rate"
+  // and "no tokens reported", and the query filtered on the boolean.
+  // ---------------------------------------------------------------------
+  test("does NOT demand a rate for a priced model that merely has a zero-token bucket", async () => {
+    const bucketStart = recentBucketStart();
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        // A real, priced subscription turn for claude-cli...
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 1000, dimensions: { provider: "claude-cli", model: "claude-cli", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 10, dimensions: { provider: "claude-cli", model: "claude-cli", billingType: "subscription", goalId: "" } },
+        // ...plus a ZERO-token bucket for the very same model in another hour.
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart - 3600, value: 0, dimensions: { provider: "claude-cli", model: "claude-cli", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart - 3600, value: 0, dimensions: { provider: "claude-cli", model: "claude-cli", billingType: "subscription", goalId: "" } },
+      ],
+      // The D-06 shadow row: claude-cli IS priced.
+      modelPricing: [
+        { model: "claude-cli", inputPerToken: 0.000005, outputPerToken: 0.000025, shadowForProvider: "claude-cli" } as unknown as PricingRow,
+      ],
+    });
+
+    const result = await (unpricedModels as any)._handler(ctx, { lookbackHours: 24 });
+
+    expect(result.count).toBe(0);
+    expect(result.models).toEqual([]);
+  });
+
+  test("a model with NO rate is still reported, so the guard did not just disable the nudge", async () => {
+    const bucketStart = recentBucketStart();
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 500, dimensions: { provider: "openai", model: "gpt-4.1", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 40, dimensions: { provider: "openai", model: "gpt-4.1", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [],
+    });
+
+    const result = await (unpricedModels as any)._handler(ctx, { lookbackHours: 24 });
+
+    expect(result.count).toBe(1);
+    expect(result.models[0].model).toBe("gpt-4.1");
+  });
+
+  test("a zero-token bucket for an UNPRICED model is not reported either — no tokens means no missing cost", async () => {
+    const bucketStart = recentBucketStart();
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 0, dimensions: { provider: "codex", model: "codex", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 0, dimensions: { provider: "codex", model: "codex", billingType: "subscription", goalId: "" } },
+      ],
+      modelPricing: [],
+    });
+
+    const result = await (unpricedModels as any)._handler(ctx, { lookbackHours: 24 });
+
+    expect(result.count).toBe(0);
+  });
+
+  test("deriveBucketDollars distinguishes the two unpriced reasons", () => {
+    const index = buildRateIndex([
+      { model: "m", inputPerToken: 0.001, outputPerToken: 0.002 } as unknown as PricingRow,
+    ]);
+    const noTokens = deriveBucketDollars({ provider: "p", model: "m", billingType: "api" }, 0, 0, index);
+    const noRate = deriveBucketDollars({ provider: "p", model: "absent", billingType: "api" }, 10, 5, index);
+
+    expect(noTokens.priced).toBe(false);
+    expect(noTokens.unpricedReason).toBe("no-tokens");
+    expect(noRate.priced).toBe(false);
+    expect(noRate.unpricedReason).toBe("no-rate");
+    // The dollar-field honesty guard is UNCHANGED by this fix.
+    expect(noTokens.billedUsd).toBeNull();
+    expect(noTokens.coveredUsd).toBeNull();
+    expect(noRate.billedUsd).toBeNull();
+    expect(noRate.coveredUsd).toBeNull();
+  });
+
+  test("costBreakdown's unpricedModelCount also excludes zero-token pairs", async () => {
+    const bucketStart = recentBucketStart();
+    const { ctx } = makeCostDerivedCtx({
+      aggregates: [
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 0, dimensions: { provider: "codex", model: "codex", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 0, dimensions: { provider: "codex", model: "codex", billingType: "subscription", goalId: "" } },
+        { metric_type: "tokens_prompt", period: "hourly", bucket_start: bucketStart, value: 700, dimensions: { provider: "openai", model: "gpt-4.1", billingType: "api", goalId: "" } },
+        { metric_type: "tokens_completion", period: "hourly", bucket_start: bucketStart, value: 30, dimensions: { provider: "openai", model: "gpt-4.1", billingType: "api", goalId: "" } },
+      ],
+      modelPricing: [],
+    });
+
+    const result = await (costBreakdown as any)._handler(ctx, { period: "hourly", lookbackHours: 24 });
+
+    // Only gpt-4.1 genuinely needs a rate; codex reported no tokens at all.
+    expect(result.unpricedModelCount).toBe(1);
+    expect(result.unpricedTokenTotal).toBe(730);
+  });
 });
 
 describe("computePeriodSpend", () => {

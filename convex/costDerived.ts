@@ -49,6 +49,25 @@ export type DerivedRow = {
   coveredUsd: number | null;
   priced: boolean;
   pricedVia: "model" | "shadow" | null;
+  /**
+   * WHY a row is unpriced — null when it IS priced.
+   *
+   * `priced: false` alone is ambiguous: it means both "no rate exists for this
+   * model" AND "no tokens were reported for this bucket", which are completely
+   * different facts. Conflating them made the D-03 nudge claim that
+   * `claude-cli` "needs pricing rates" while `costBreakdown` simultaneously
+   * reported the same model as `priced: true, coveredUsd: 0.180785` against its
+   * seeded D-06 shadow row — the model has a perfectly good rate and simply had
+   * a zero-token bucket in the window.
+   *
+   *   "no-rate"   -> genuinely missing from modelPricing; an operator must act.
+   *   "no-tokens" -> rate may well exist; usage was never reported for this
+   *                  bucket, so there is no cost to be missing.
+   *
+   * Only "no-rate" belongs in any "N models need rates" count.
+   * Found 2026-08-02 on the rendered nudge at Phase 104's validation gate.
+   */
+  unpricedReason: "no-rate" | "no-tokens" | null;
 };
 
 type AggregateRow = { bucket_start: number; value: number; dimensions: unknown };
@@ -86,14 +105,16 @@ export function deriveBucketDollars(
   // gateway never reported usage for this bucket — pricing it at $0.0000 of
   // covered/billed spend would assert money that was never measured.
   if (promptTokens === 0 && completionTokens === 0) {
-    return { ...base, billedUsd: null, coveredUsd: null, priced: false, pricedVia: null };
+    // Dollar fields stay null (correct — never assert money that was not
+    // measured), but this is NOT "needs a rate": see unpricedReason.
+    return { ...base, billedUsd: null, coveredUsd: null, priced: false, pricedVia: null, unpricedReason: "no-tokens" as const };
   }
 
   const hit = resolveRate(dims, index);
   if (hit === null) {
     // D-03: no default-rate fallback, no $0 inside a total — both dollar
     // fields are null so an unpriced bucket can never be silently summed.
-    return { ...base, billedUsd: null, coveredUsd: null, priced: false, pricedVia: null };
+    return { ...base, billedUsd: null, coveredUsd: null, priced: false, pricedVia: null, unpricedReason: "no-rate" as const };
   }
 
   if (isSubscription) {
@@ -102,11 +123,11 @@ export function deriveBucketDollars(
     // the resolved rate so a brain-swap spend drop explains itself, but the
     // two numbers are never summed into one headline.
     const coveredUsd = priceTokens(promptTokens, completionTokens, hit.rate);
-    return { ...base, billedUsd: 0, coveredUsd, priced: true, pricedVia: hit.via };
+    return { ...base, billedUsd: 0, coveredUsd, priced: true, pricedVia: hit.via, unpricedReason: null };
   }
 
   const billedUsd = priceTokens(promptTokens, completionTokens, hit.rate);
-  return { ...base, billedUsd, coveredUsd: null, priced: true, pricedVia: hit.via };
+  return { ...base, billedUsd, coveredUsd: null, priced: true, pricedVia: hit.via, unpricedReason: null };
 }
 
 // ============================================================
@@ -304,7 +325,10 @@ async function deriveBreakdown(
   for (const r of rows) {
     if (r.billedUsd !== null) billedTotal += r.billedUsd;
     if (r.coveredUsd !== null) coveredTotal += r.coveredUsd;
-    if (!r.priced) {
+    // Only "no-rate" counts as a model NEEDING a rate. A "no-tokens" row has
+    // no reported usage, so there is no missing cost to report and the model
+    // may well already be priced (Phase 104 gate, 2026-08-02).
+    if (r.unpricedReason === "no-rate") {
       unpricedTokenTotal += r.promptTokens + r.completionTokens;
       unpricedPairs.add(`${r.provider}::${r.model}`);
     }
@@ -348,7 +372,10 @@ export const unpricedModels = query({
       { provider: string; model: string; billingType: string; promptTokens: number; completionTokens: number }
     >();
     for (const r of rows) {
-      if (r.priced) continue;
+      // NOT `if (r.priced) continue` — that also swept in zero-token buckets
+      // for models that ARE priced (e.g. claude-cli's D-06 shadow row), which
+      // made the nudge demand rates for models that already had them.
+      if (r.unpricedReason !== "no-rate") continue;
       const key = `${r.provider}::${r.model}`;
       const existing = byPair.get(key);
       if (existing) {

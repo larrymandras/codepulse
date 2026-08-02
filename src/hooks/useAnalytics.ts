@@ -1,10 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 
-export function useCostOverTime() {
-  return useQuery(api.llm.costOverTime) ?? [];
-}
-
 export function useLatencyOverTime() {
   return useQuery(api.llm.latencyOverTime) ?? [];
 }
