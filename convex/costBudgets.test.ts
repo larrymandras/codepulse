@@ -14,6 +14,7 @@ import {
   create,
   update,
   seedFromLegacyCaps,
+  getByScope,
 } from "./costBudgets";
 
 // ---------------------------------------------------------------------------
@@ -166,7 +167,7 @@ describe("costBudgets.create — identity gate + validation", () => {
   it("throws 'Unauthenticated' when ctx.auth.getUserIdentity() resolves to null", async () => {
     const { ctx } = makeCtx({ identity: null });
     await expect(
-      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5 })
+      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5, enabled: true })
     ).rejects.toThrow("Unauthenticated");
   });
 
@@ -176,8 +177,7 @@ describe("costBudgets.create — identity gate + validation", () => {
       scope: "quota",
       scopeKey: "claude-cli",
       period: "daily",
-      limit: 50,
-    });
+      limit: 50, enabled: true });
     const row = await ctx.db.get(id);
     expect(row?.unit).toBe("quota_pct");
   });
@@ -189,15 +189,14 @@ describe("costBudgets.create — identity gate + validation", () => {
         scope: "global",
         period: "daily",
         limit: 5,
-        warnFraction: 1.2,
-      })
+        warnFraction: 1.2, enabled: true })
     ).rejects.toThrow(/warnFraction/);
   });
 
   it("rejects a limit of 0", async () => {
     const { ctx } = makeCtx({ identity: { subject: "user_1" } });
     await expect(
-      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 0 })
+      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 0, enabled: true })
     ).rejects.toThrow(/limit/i);
   });
 
@@ -208,16 +207,15 @@ describe("costBudgets.create — identity gate + validation", () => {
         scope: "global",
         scopeKey: "claude-sonnet-5",
         period: "daily",
-        limit: 5,
-      })
+        limit: 5, enabled: true })
     ).rejects.toThrow(/scopeKey/);
   });
 
   it("rejects a duplicate (scope, scopeKey, period)", async () => {
     const { ctx } = makeCtx({ identity: { subject: "user_1" } });
-    await (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5 });
+    await (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5, enabled: true });
     await expect(
-      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 10 })
+      (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 10, enabled: true })
     ).rejects.toThrow(/already exists/i);
   });
 });
@@ -229,7 +227,7 @@ describe("costBudgets.create — identity gate + validation", () => {
 describe("costBudgets.update — immutability of scope/scopeKey/period", () => {
   it("rejects an attempt to change period", async () => {
     const { ctx } = makeCtx({ identity: { subject: "user_1" } });
-    const id = await (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5 });
+    const id = await (create as any)._handler(ctx, { scope: "global", period: "daily", limit: 5, enabled: true });
     await expect((update as any)._handler(ctx, { id, period: "weekly" })).rejects.toThrow(
       /immutable/i
     );
@@ -301,3 +299,47 @@ describe("costBudgets.seedFromLegacyCaps", () => {
 });
 
 export { makeCtx };
+
+
+describe("costBudgets.getByScope — a disabled budget is not a configured cap", () => {
+  // Regression: SDKSpendGuard reads this query and treats `null` as "no budget
+  // set" but a row as an ACTIVE cap. getByScope returned disabled rows, so
+  // turning a budget off in Settings left the gauge, the "On Track" badge and
+  // the projection on screen while costBudgetEval (which filters on `enabled`)
+  // would never alert on it. Display and evaluator disagreed.
+  // Found 2026-08-02 at the Phase 104 validation gate.
+  function ctxWith(rows: any[]) {
+    return {
+      db: {
+        query: () => ({
+          withIndex: () => ({
+            first: async () => rows[0] ?? null,
+          }),
+        }),
+      },
+    } as any;
+  }
+
+  it("returns null for a disabled row", async () => {
+    const ctx = ctxWith([
+      { _id: "b1", scope: "global", scopeKey: "", period: "daily", limit: 5, warnFraction: 0.8, unit: "usd", enabled: false },
+    ]);
+    const got = await (getByScope as any)._handler(ctx, { scope: "global", scopeKey: "", period: "daily" });
+    expect(got).toBeNull();
+  });
+
+  it("still returns an enabled row — the guard did not just disable the query", async () => {
+    const ctx = ctxWith([
+      { _id: "b1", scope: "global", scopeKey: "", period: "daily", limit: 5, warnFraction: 0.8, unit: "usd", enabled: true },
+    ]);
+    const got = await (getByScope as any)._handler(ctx, { scope: "global", scopeKey: "", period: "daily" });
+    expect(got).not.toBeNull();
+    expect(got.limit).toBe(5);
+  });
+
+  it("returns null when no row exists at all (unchanged)", async () => {
+    const ctx = ctxWith([]);
+    const got = await (getByScope as any)._handler(ctx, { scope: "global", scopeKey: "", period: "daily" });
+    expect(got).toBeNull();
+  });
+});

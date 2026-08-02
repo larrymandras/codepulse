@@ -102,8 +102,12 @@ export const costForecast = query({
         q.eq("scope", "global").eq("scopeKey", "").eq("period", "monthly")
       )
       .first();
-    const budgetCap = budgetRow?.limit ?? null;
-    const warnFraction = budgetRow?.warnFraction ?? 0.8;
+    // Same rule as costBudgets.getByScope: a disabled row is not a configured
+    // cap, so the panel falls to its honest "No monthly budget set." state
+    // rather than projecting against a threshold the evaluator ignores.
+    const activeBudget = budgetRow && budgetRow.enabled ? budgetRow : null;
+    const budgetCap = activeBudget?.limit ?? null;
+    const warnFraction = activeBudget?.warnFraction ?? 0.8;
 
     // Current month spend: sum all daily rows in current calendar month
     const now30DayAgo = now - 30 * 86400;

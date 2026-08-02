@@ -173,7 +173,7 @@ describe("costForecast (D-19 data-source rewire)", () => {
     const aggregates: FakeDoc[] = [];
     seedThreeDaysOfCost(aggregates);
     const costBudgets: FakeDoc[] = [
-      { scope: "global", scopeKey: "", period: "monthly", limit: 120, warnFraction: 0.5 },
+      { scope: "global", scopeKey: "", period: "monthly", limit: 120, warnFraction: 0.5, enabled: true },
     ];
     // A legacy agentConfigs row is present too — if costForecast read it,
     // this test would see 999 instead of 120.
@@ -186,6 +186,24 @@ describe("costForecast (D-19 data-source rewire)", () => {
 
     expect(result.budgetCap).toBe(120);
     expect(result.warnFraction).toBe(0.5);
+  });
+
+  // A DISABLED budget is not a configured cap. costBudgetEval already skips
+  // disabled rows, so honouring one here made the panel project against a
+  // threshold that would never fire an alert. Found 2026-08-02 at the Phase 104
+  // validation gate, when disabling the budget in Settings changed nothing.
+  test("treats a DISABLED monthly budget as no budget at all", async () => {
+    const aggregates: FakeDoc[] = [];
+    seedThreeDaysOfCost(aggregates);
+    const costBudgets: FakeDoc[] = [
+      { scope: "global", scopeKey: "", period: "monthly", limit: 120, warnFraction: 0.5, enabled: false },
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, costBudgets });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    expect(result.budgetCap).toBeNull();
+    expect(result.warnFraction).toBe(0.8);
   });
 
   test("returns budgetCap: null when no global monthly costBudgets row exists", async () => {
@@ -203,7 +221,7 @@ describe("costForecast (D-19 data-source rewire)", () => {
     const aggregates: FakeDoc[] = [];
     seedThreeDaysOfCost(aggregates);
     const costBudgets: FakeDoc[] = [
-      { scope: "global", scopeKey: "", period: "monthly", limit: 50, warnFraction: 0.8 },
+      { scope: "global", scopeKey: "", period: "monthly", limit: 50, warnFraction: 0.8, enabled: true },
     ];
     const { ctx, queryLog } = makeForecastCtx({ aggregates, costBudgets });
 

@@ -290,12 +290,20 @@ export const getByScope = query({
   },
   handler: async (ctx, args) => {
     const scopeKey = args.scopeKey ?? "";
-    return await ctx.db
+    const row = await ctx.db
       .query("costBudgets")
       .withIndex("by_scope_key_period", (q) =>
         q.eq("scope", args.scope).eq("scopeKey", scopeKey).eq("period", args.period)
       )
       .first();
+    // A DISABLED budget is not a configured cap. `costBudgetEval` already
+    // skips disabled rows (`allBudgets.filter((b) => b.enabled)`), so without
+    // this the display and the evaluator disagreed: SDKSpendGuard painted a
+    // live gauge, an "On Track" badge and a projection against a threshold
+    // that would never fire an alert. Returning null puts the caller on its
+    // honest "No daily budget set." branch — `undefined` still means loading.
+    // Found 2026-08-02 at Phase 104's validation gate.
+    return row && row.enabled ? row : null;
   },
 });
 
