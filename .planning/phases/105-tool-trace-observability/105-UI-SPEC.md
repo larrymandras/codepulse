@@ -33,6 +33,23 @@ created: 2026-08-03
 
 ---
 
+## Visual Hierarchy
+
+**Primary visual anchor:** the Tool Usage summary strip (the `MetricCard` row) at the top of the
+Tools page. It is the first thing an operator's eye lands on and answers OBS-01's headline
+question — how often tools are being called and how often they fail — without scrolling.
+
+Everything below it is secondary and read top-to-bottom in the order locked by D-16: the usage
+analytics charts, then the policy-event feed beneath them (stacked sections, never tabs). Within
+the policy feed, the only element permitted to compete for attention is a `--status-error`
+`malformed_policy_boot` badge — that is the single case where a row should out-shout the summary
+strip, because it means the tool policy failed open.
+
+The `TraceWaterfall` extension is not part of this hierarchy; it lives on its own existing surface
+and is reached via the "View in Tools →" cross-link (D-15), not surfaced inline here.
+
+---
+
 ## Spacing Scale
 
 Base 8-point scale (template default), **plus the codebase's standing half-step exceptions** —
@@ -60,17 +77,25 @@ not diverge.
 ## Typography
 
 Reuses the existing scale verbatim (`PageHeader.tsx`, `SectionHeader.tsx`, `MetricCard.tsx`,
-`ToolExecutionPanel.tsx`). This phase introduces **zero new sizes or weights** — the two weights
-below are the ones every *new* text this phase renders should use; `700` (page title, via
-`PageHeader`) is listed separately because it is produced by an already-built shared component,
-not a choice made here.
+`ToolExecutionPanel.tsx`). This phase introduces **zero new sizes or weights**.
+
+**Weights this phase introduces: 2 (400, 600).** Every new text element this phase renders uses
+one of these:
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body / table cells | 14px (`text-sm`) | 400 (regular) | 1.5 |
 | Section/panel label, badges, filter pills | 14px (`text-sm`), mono, uppercase, `tracking-widest` | 600 (semibold) | 1.2 |
 | Metadata (timestamps, ids, counts) | 12px (`text-xs`), mono | 400 (regular) | 1.5 |
-| Page title (`PageHeader`, inherited component — not a new choice) | 24px (`text-2xl`) | 700 (bold) | 1.2 |
+
+Exceptions (inherited, not introduced) — same convention as the Spacing Scale section above. This
+weight is produced by an already-built shared component that this phase renders but does not
+modify; it is **not** a typography choice made here and must not be counted against the 2-weight
+budget:
+
+| Role | Size | Weight | Line Height | Source |
+|------|------|--------|-------------|--------|
+| Page title | 24px (`text-2xl`) | 700 (bold) | 1.2 | `PageHeader.tsx:18` (`text-2xl font-bold`), pre-existing |
 
 ---
 
@@ -158,11 +183,11 @@ This phase is additive to an already-built surface. Nothing below should be rebu
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (was FLAG — "no explicit primary-visual-anchor statement"; resolved by the Visual Hierarchy section added above)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS (was FLAG — "3 weights in table"; resolved by splitting the introduced weights (400/600) from the inherited `PageHeader` 700, mirroring the Spacing Exceptions pattern)
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** APPROVED by `gsd-ui-checker` (6/6 dimensions, 2 non-blocking FLAGs raised and since fixed in this file).

@@ -1,0 +1,31 @@
+{
+  "phase": 105,
+  "phaseName": "tool-trace-observability",
+  "created": "2026-08-03T20:55:12.293Z",
+  "history": [
+    {
+      "timestamp": "2026-08-03T20:55:12.294Z",
+      "command": "ui-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-03T20:55:12.294Z",
+  "isFrontend": true,
+  "artifacts": {
+    "CONTEXT.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "105-CONTEXT.md"
+      ]
+    },
+    "DISCUSSION-LOG.md": {
+      "status": "complete",
+      "count": 1,
+      "files": [
+        "105-DISCUSSION-LOG.md"
+      ]
+    }
+  }
+}
