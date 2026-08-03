@@ -17,7 +17,7 @@
 import React from "react";
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, waitFor, screen, act, within } from "@testing-library/react";
+import { render, waitFor, screen, act, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
@@ -78,9 +78,14 @@ vi.mock("@/hooks/useAstridrChat", () => ({
 // calls useQuery(api.inbox.listAll) -- an empty array is sufficient, this
 // suite doesn't exercise the focus-exit toast itself (see
 // FocusExitDigest.test.tsx for that coverage).
+// 188-13: command-center mode mounts LlmStatusPanel/SystemMonitorPanel,
+// both of which pull through useLlmMetrics -> usePaginatedQuery — add it
+// alongside the existing useQuery/useMutation mocks (a wholesale-mocked
+// module has no real implementation for anything not listed here).
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => mockRecordSkillLaunch),
   useQuery: vi.fn(() => []),
+  usePaginatedQuery: vi.fn(() => ({ results: [], status: "Exhausted", loadMore: vi.fn() })),
 }));
 
 vi.mock("sonner", () => ({
@@ -106,9 +111,19 @@ type MockEngine = {
 
 let mockActiveEngineMap: Record<string, MockEngine> = {};
 
-vi.mock("@/hooks/useActiveEngine", () => ({
-  useActiveEngine: () => mockActiveEngineMap,
-}));
+// 188-13: LlmStatusPanel is the first consumer in this tree to call
+// useResolvedBrain() with NO profileId, which routes through the real
+// deriveMixedState() (previously untouched by this file's mocks — every
+// other consumer here always passes a profileId). Keep it real via
+// importOriginal rather than stubbing useActiveEngine wholesale, or that
+// branch throws "no deriveMixedState export" the moment it's exercised.
+vi.mock("@/hooks/useActiveEngine", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useActiveEngine")>();
+  return {
+    ...actual,
+    useActiveEngine: () => mockActiveEngineMap,
+  };
+});
 
 const mockGetDefaultProfileId = vi.fn();
 const mockGetCatalogue = vi.fn();
@@ -621,5 +636,205 @@ describe("Chat — composer brain pill (103-07-T2, D-05/D-15/D-16)", () => {
     await waitFor(() =>
       expect(screen.queryByTestId("chat-brain-pill-stub-chip")).not.toBeInTheDocument()
     );
+  });
+});
+
+// ─── 188-13: Command Center toggle + layout + panel mounts (D-18) ───────────
+//
+// The seven panel components (IntelligenceFeedPanel/ActiveAgentsPanel/
+// MissionTimelinePanel/LlmStatusPanel/SystemMonitorPanel/VoiceStatusPanel/
+// QuickCommandsPanel) are NOT mocked here — they mount for real, through the
+// SAME useQuery/usePaginatedQuery mocks already wired above (each already
+// defaults to an empty/loading-safe shape), matching this file's existing
+// convention of exercising the real component tree rather than re-stubbing
+// every leaf. This also proves T-188-53 (SectionErrorBoundary around every
+// mount) end-to-end: if any panel threw during mount, these tests would fail
+// with an uncaught error instead of a clean pass.
+const LS_COMMAND_CENTER = "codepulse-command-center";
+
+function findByClassSubstring(container: HTMLElement, marker: string): HTMLElement | undefined {
+  return Array.from(container.querySelectorAll<HTMLElement>("div")).find((el) =>
+    el.className.includes(marker)
+  );
+}
+
+const SEVEN_PANEL_LABELS = [
+  "INTELLIGENCE FEED",
+  "ACTIVE AGENTS",
+  "MISSION TIMELINE",
+  "LLM STATUS",
+  "SYSTEM MONITOR",
+  "VOICE STATUS",
+  "QUICK COMMANDS",
+];
+
+function gridToggle() {
+  return screen.getByRole("button", { name: /command center mode/i });
+}
+
+describe("Chat — command center toggle (188-13, D-18)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+    localStorage.removeItem(LS_COMMAND_CENTER);
+  });
+
+  it("renders OFF by default: GRID label, aria-pressed=false", () => {
+    renderChat();
+    const toggle = gridToggle();
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(toggle).toHaveTextContent("GRID");
+    expect(toggle).not.toHaveTextContent("GRID ON");
+    expect(toggle).toHaveAttribute("aria-label", "Enter command center mode");
+  });
+
+  it("toggling flips aria-pressed + the label and persists instantly to localStorage", () => {
+    renderChat();
+    const toggle = gridToggle();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(toggle).toHaveTextContent("GRID ON");
+    expect(toggle).toHaveAttribute("aria-label", "Exit command center mode");
+    expect(localStorage.getItem(LS_COMMAND_CENTER)).toBe("true");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+    expect(localStorage.getItem(LS_COMMAND_CENTER)).toBe("false");
+  });
+
+  it("hydrates ON from localStorage on mount", () => {
+    localStorage.setItem(LS_COMMAND_CENTER, "true");
+    renderChat();
+    expect(gridToggle()).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("Chat — command-center layout (188-13, D-18)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+    localStorage.removeItem(LS_COMMAND_CENTER);
+  });
+
+  it("with the mode OFF, the grid keeps the exact original lg:grid-cols string and mounts none of the seven panels", () => {
+    const { container } = renderChat();
+
+    const calmGrid = findByClassSubstring(
+      container,
+      "lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)]"
+    );
+    expect(calmGrid).toBeDefined();
+    expect(calmGrid?.className).not.toContain("xl:grid-cols-[240px");
+
+    for (const label of SEVEN_PANEL_LABELS) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+  });
+
+  it("with the mode ON, the 5-track xl grid (calm sizing intact) + footer band + all seven panels render", () => {
+    const { container } = renderChat();
+    fireEvent.click(gridToggle());
+
+    const ccGrid = findByClassSubstring(container, "xl:grid-cols-[240px");
+    expect(ccGrid).toBeDefined();
+    // The three calm tracks keep their exact existing sizing fragment inside
+    // the same grid element — nothing in them reflows.
+    expect(ccGrid?.className).toContain(
+      "lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)]"
+    );
+
+    for (const label of SEVEN_PANEL_LABELS) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+  });
+
+  it("never adds a transition/animation class to the layout swap", () => {
+    const { container } = renderChat();
+    fireEvent.click(gridToggle());
+    const ccGrid = findByClassSubstring(container, "xl:grid-cols-[240px");
+    expect(ccGrid?.className ?? "").not.toMatch(/transition-\[grid|animate-/);
+  });
+});
+
+describe("Chat — command-center panel mounts (188-13, D-18, T-188-52/53)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    registeredEventHandlers.clear();
+    mockStatus = "connected";
+    mockSendCommand.mockResolvedValue({ status: "ok" });
+    localStorage.removeItem(LS_COMMAND_CENTER);
+  });
+
+  function enterCommandCenter() {
+    renderChat();
+    fireEvent.click(gridToggle());
+  }
+
+  it("Quick Commands' Strict Mode reaches the SAME voice-prefs executor a spoken command / ControlCenterPanel use", async () => {
+    enterCommandCenter();
+    mockSendCommand.mockClear();
+
+    const panel = screen.getByTestId("quick-commands-panel");
+    fireEvent.click(within(panel).getByRole("button", { name: /Strict Mode/i }));
+
+    await waitFor(() => {
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "config.update",
+          section: "voice-prefs",
+          changes: { strict_mode: true },
+        })
+      );
+    });
+  });
+
+  it("Quick Commands' Focus Mode reaches the SAME proactive-prefs executor ControlCenterPanel's FocusModeToggle uses", async () => {
+    enterCommandCenter();
+    mockSendCommand.mockClear();
+
+    const panel = screen.getByTestId("quick-commands-panel");
+    fireEvent.click(within(panel).getByRole("button", { name: /Focus Mode/i }));
+
+    await waitFor(() => {
+      expect(mockSendCommand).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: "config.update",
+          section: "proactive-prefs",
+          changes: { focus_mode: true },
+        })
+      );
+    });
+  });
+
+  it("Quick Commands' Stop button wires to the voice hook's barge-in cut without throwing (no second interrupt mechanism)", () => {
+    enterCommandCenter();
+    const panel = screen.getByTestId("quick-commands-panel");
+    expect(() =>
+      fireEvent.click(within(panel).getByRole("button", { name: /^Stop$/i }))
+    ).not.toThrow();
+  });
+
+  it("VoiceStatusPanel is bound to the SAME avatarState ControlCenterPanel receives as voiceState", () => {
+    enterCommandCenter();
+    // No live voice engine is armed in this jsdom harness, so avatarState
+    // resolves to "idle" — the same value ControlCenterPanel's own
+    // ReadinessPill would render for.
+    expect(screen.getByTestId("voice-status-chip-idle").className).toContain("text-primary");
+  });
+
+  it("mounts none of the seven command-center panels while the mode is off", () => {
+    renderChat();
+    for (const label of SEVEN_PANEL_LABELS) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    // QuickCommandsPanel specifically — the panel this describe block is
+    // about — is absent (its container, and therefore its own
+    // useProactivePrefs() instance, never mounts while off).
+    expect(screen.queryByTestId("quick-commands-panel")).not.toBeInTheDocument();
   });
 });

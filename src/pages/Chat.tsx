@@ -21,10 +21,28 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Send, Mic, MicOff, AlertCircle, Eye, ChevronDown, Clock, Pin } from "lucide-react";
+import {
+  Send,
+  Mic,
+  MicOff,
+  AlertCircle,
+  Eye,
+  ChevronDown,
+  Clock,
+  Pin,
+  LayoutGrid,
+} from "lucide-react";
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
+import { IntelligenceFeedPanel } from "@/components/control-center/IntelligenceFeedPanel";
+import { ActiveAgentsPanel } from "@/components/control-center/ActiveAgentsPanel";
+import { MissionTimelinePanel } from "@/components/control-center/MissionTimelinePanel";
+import { LlmStatusPanel } from "@/components/control-center/LlmStatusPanel";
+import { SystemMonitorPanel } from "@/components/control-center/SystemMonitorPanel";
+import { VoiceStatusPanel } from "@/components/control-center/VoiceStatusPanel";
+import { QuickCommandsPanel } from "@/components/control-center/QuickCommandsPanel";
+import { useProactivePrefs } from "@/hooks/useProactivePrefs";
 import VitalsRail from "@/components/chat/VitalsRail";
 import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { BrainPicker } from "@/components/brains/BrainPicker";
@@ -38,7 +56,7 @@ import { brainsApi, BRAINS_STUB_ACTIVE, type CatalogueEntry, resolveModelDisplay
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
-import { useScreenShare } from "@/hooks/useScreenShare";
+import { useScreenShare, type ScreenShareState } from "@/hooks/useScreenShare";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { runLostScreenAck, type VoiceState } from "@/components/voice/voiceState";
 import { extractProactiveAlertBody } from "@/lib/proactiveAlert";
@@ -46,6 +64,9 @@ import type { AutoSendHandoff } from "@/lib/skillRun";
 
 const LS_LISTENING = "codepulse-astridr-listening";
 const LS_STRICT = "codepulse-strict-mode";
+// 188-13 (D-18): command-center mode toggle, same read/write idiom as the
+// two constants above.
+const LS_COMMAND_CENTER = "codepulse-command-center";
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
@@ -233,6 +254,45 @@ function BrainComposerPill({ profileId }: { profileId: string }) {
   );
 }
 
+// ─── Quick Commands container (188-13, D-18) ─────────────────────────────
+//
+// Owns its own useProactivePrefs() instance so QuickCommandsPanel's Focus
+// Mode button writes through the SAME persist call ControlCenterPanel's own
+// FocusModeToggle uses (186-09 no-parallel-path rule; see
+// src/hooks/useProactivePrefs.ts) — a thin adapter, not a lifted handler
+// reference, because lifting focus-mode state into Chat.tsx itself would
+// mean ControlCenterPanel and Chat.tsx holding two independently-hydrated
+// copies of the exact same server state (the trap useResolvedBrain's own
+// docstring warns about) rather than two instances of one shared hook.
+//
+// Rendered ONLY inside command-center mode (see the footer band below) so
+// no `proactive_prefs.state` subscription opens while the mode is off —
+// satisfies D-18's "no subscription opened while off" requirement, since a
+// hook call itself (not just its JSX) is gated by whether this component is
+// mounted, not by an internal conditional.
+function QuickCommandsContainer(props: {
+  strictMode: boolean;
+  onStrictModeChange: (v: boolean) => void;
+  screenShareState: ScreenShareState;
+  onScreenShareStart: () => unknown;
+  onScreenShareStop: () => void;
+  onStop: () => void;
+}) {
+  const { prefs, onFocusModeChange } = useProactivePrefs();
+  return (
+    <QuickCommandsPanel
+      strictMode={props.strictMode}
+      onStrictModeChange={props.onStrictModeChange}
+      focusMode={prefs.focus_mode}
+      onFocusModeChange={onFocusModeChange}
+      screenShareState={props.screenShareState}
+      onScreenShareStart={props.onScreenShareStart}
+      onScreenShareStop={props.onScreenShareStop}
+      onStop={props.onStop}
+    />
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Chat() {
@@ -267,6 +327,23 @@ export default function Chat() {
     setListening(v);
     try {
       localStorage.setItem(LS_LISTENING, JSON.stringify(v));
+    } catch {
+      /* localStorage unavailable — keep the optimistic in-memory value */
+    }
+  };
+
+  // ── Command center mode (188-13, D-18) — persisted, instant toggle ──────
+  const [commandCenter, setCommandCenterState] = useState<boolean>(() => {
+    try {
+      return JSON.parse(localStorage.getItem(LS_COMMAND_CENTER) ?? "false");
+    } catch {
+      return false;
+    }
+  });
+  const setCommandCenter = (v: boolean) => {
+    setCommandCenterState(v);
+    try {
+      localStorage.setItem(LS_COMMAND_CENTER, JSON.stringify(v));
     } catch {
       /* localStorage unavailable — keep the optimistic in-memory value */
     }
@@ -561,6 +638,189 @@ export default function Chat() {
     voice.conversationActive &&
     (voice.voiceState === "listening" || voice.voiceState === "transcribing");
 
+  // ── 188-13 (D-18) — the three calm-layout tracks, extracted ONCE and
+  // reused byte-identically by both the calm branch and the command-center
+  // branch below (never duplicated markup — the regression guard is the
+  // "with the mode off" Chat.test.tsx assertion on the calm grid's own
+  // className string). Command-center mode adds ONE additive conditional
+  // fragment inside centerColumn (VoiceStatusPanel, panel f) — everything
+  // else in these three columns is identical in both modes. ────────────────
+  const chatColumn = (
+    <div className="flex flex-col min-h-0 rounded-xl border border-border/60 bg-card/20 overflow-hidden">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4">
+          {messages.length === 0 ? (
+            <div className="h-full flex items-center justify-center py-12">
+              <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                {listening
+                  ? "Say “Hey Ástríðr” or type below to talk to her."
+                  : "Listening is off — type below to talk to Ástríðr."}
+              </p>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <ChatBubble
+                key={msg.id}
+                role={msg.role}
+                content={msg.content}
+                blocks={msg.blocks}
+                streaming={msg.streaming}
+                timestamp={msg.timestamp}
+                audioUrl={msg.audioUrl}
+                onPlayAudio={playAudio}
+                onApprove={handleApprove}
+                onReject={handleReject}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Brain composer pill (103-07-T2) — new row above the composer, does not touch the
+          textarea/send row below it. */}
+      <div className="flex items-center gap-2 px-3 pt-2">
+        <BrainComposerPill profileId={brainDefaultProfileId} />
+      </div>
+
+      {/* Input */}
+      <div className="border-t border-border/60 p-3">
+        <div className="flex items-end gap-2">
+          <textarea
+            rows={1}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={onKeyDown}
+            disabled={disconnected}
+            placeholder={disconnected ? "Reconnecting…" : "Type or speak to Ástríðr…"}
+            className="flex-1 resize-none max-h-32 rounded-xl bg-background border border-border px-3.5 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:shadow-[var(--glow-xs)]"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!draft.trim() || isStreaming || disconnected}
+            title="Send"
+            aria-label="Send message"
+            className="w-11 h-11 shrink-0 rounded-xl grid place-items-center bg-primary/15 border border-primary/40 text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="mt-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground/70 text-center">
+          {listening
+            ? "SAY “HEY ÁSTRÍÐR” TO START · “STOP” INTERRUPTS · “GOODBYE” ENDS"
+            : "LISTENING OFF — NOTHING HOLDS THE MIC"}
+        </p>
+      </div>
+    </div>
+  );
+
+  const centerColumn = (
+    <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-0.5">
+      <div className="flex flex-col items-center rounded-xl border border-border/60 bg-card/20 pt-5 pb-4 px-3">
+        <div
+          className={`w-full max-w-[340px] transition-[opacity,filter] duration-300 ${
+            listening ? "" : "opacity-45 saturate-50"
+          }`}
+        >
+          <AvatarAura state={avatarState} ttsAnalyser={ttsAnalyser} />
+        </div>
+
+        <div className="mt-2 flex items-center gap-2 text-sm text-foreground/90">
+          {showBars && (
+            <span className="flex items-end gap-[3px] h-4" aria-hidden="true">
+              <span className="w-[3px] h-1.5 bg-primary rounded-full animate-pulse" />
+              <span className="w-[3px] h-3.5 bg-primary rounded-full animate-pulse [animation-delay:120ms]" />
+              <span className="w-[3px] h-2 bg-primary rounded-full animate-pulse [animation-delay:240ms]" />
+              <span className="w-[3px] h-4 bg-primary rounded-full animate-pulse [animation-delay:360ms]" />
+            </span>
+          )}
+          {voice.isLooking && (
+            <Eye
+              className={`w-3 h-3 text-muted-foreground ${
+                prefersReducedMotion() ? "" : "animate-pulse"
+              }`}
+              aria-hidden="true"
+            />
+          )}
+          <span aria-live="polite" className={listening ? "" : "text-muted-foreground"}>
+            {stateLabel}
+          </span>
+        </div>
+
+        {/* Live transcript — what she's hearing right now */}
+        {(voice.interimText || voice.finalText || voice.showInterruptFlash) && (
+          <div className="mt-1.5 w-full px-2 text-center font-mono text-[11px] tracking-wide min-h-[16px]">
+            {voice.showInterruptFlash && (
+              <span className="text-(--status-warn) font-semibold mr-2">
+                — interrupted —
+              </span>
+            )}
+            {voice.finalText && (
+              <span className="text-foreground/90">“{voice.finalText}</span>
+            )}
+            {voice.interimText && (
+              <span className="text-muted-foreground italic">
+                {voice.finalText ? " " : "“"}
+                {voice.interimText}
+              </span>
+            )}
+            {(voice.finalText || voice.interimText) && (
+              <span className="text-muted-foreground">”</span>
+            )}
+          </div>
+        )}
+
+        {/* Follow-up window countdown (CONV-02, stay-hot aware) */}
+        <div className="w-full mt-2 px-2">
+          <FollowUpCountdownBar active={voice.followUpOpen} durationMs={voice.followUpMs} />
+        </div>
+
+        {/* Wake engine failure — recovery is toggle off → on */}
+        {voiceError && (
+          <div className="mt-2 flex items-start gap-2 text-left">
+            <AlertCircle className="w-3.5 h-3.5 text-(--status-warn) mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Wake-word engine failed
+              {voice.wakeWordError ? ` (${voice.wakeWordError})` : ""}. Toggle the
+              mic off and on to retry — typing still works.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Control Center (D-17) — now stacked under the aura in column ② */}
+      <ControlCenterPanel
+        disconnected={disconnected}
+        micOff={!listening}
+        voiceState={avatarState}
+        strictMode={strictMode}
+        onStrictModeChange={handleStrictModeChange}
+        screenShareState={screenShare.state}
+        onScreenShareStart={screenShare.start}
+        onScreenShareStop={screenShare.stop}
+        swapModelOverride={swapState.modelOverride}
+        swapVoiceOverride={swapState.voiceOverride}
+        lastTurnModel={lastTurnModel}
+      />
+
+      {/* Voice Status (188-13, panel f) — inline subpanel directly beneath
+          Control Center, command-center mode only. Bound to the SAME
+          avatarState value ControlCenterPanel already receives as
+          voiceState (188-UI-SPEC.md panel table row f). */}
+      {commandCenter && (
+        <SectionErrorBoundary name="Voice Status">
+          <VoiceStatusPanel state={avatarState} />
+        </SectionErrorBoundary>
+      )}
+    </div>
+  );
+
+  const vitalsColumn = (
+    <SectionErrorBoundary name="Vitals">
+      <VitalsRail lastTurnModel={lastTurnModel} disconnected={disconnected} />
+    </SectionErrorBoundary>
+  );
+
   return (
     <div className="presence-ambient flex flex-col h-full">
       {/* Phase 186-13 (D-07) "you're back" focus-exit digest toast now
@@ -595,6 +855,29 @@ export default function Chat() {
               COPY TRACE
             </button>
           )}
+          {/* Command center mode (188-13, D-18) — expands into the seven-panel
+              JARVIS layout; the calm 3-column layout is never removed. */}
+          <button
+            type="button"
+            onClick={() => setCommandCenter(!commandCenter)}
+            title={commandCenter ? "Exit command center mode" : "Enter command center mode"}
+            aria-label={commandCenter ? "Exit command center mode" : "Enter command center mode"}
+            aria-pressed={commandCenter}
+            className={`flex items-center gap-2 h-9 px-3 rounded-lg border text-sm transition-colors ${
+              commandCenter
+                ? "border-primary/45 bg-primary/10 text-primary hover:bg-primary/20"
+                : "border-border bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <LayoutGrid className="w-4 h-4" />
+            {/* UI-SPEC § Typography: pinned to the 14px Caption role
+                (text-sm) — deliberately NOT the smaller mono size the mic
+                button below uses; copying that would introduce an
+                undeclared 5th type size. */}
+            <span className="font-mono text-sm tracking-wide">
+              {commandCenter ? "GRID ON" : "GRID"}
+            </span>
+          </button>
           {/* Listening on/off — full off = text-only */}
           <button
             type="button"
@@ -616,175 +899,84 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* ── 3-column command center ─────────────────────────────────────────
-          ① chat + history · ② her AvatarAura + Control Center · ③ vitals.
-          Everything from the prior presence screen is preserved verbatim; the
-          vitals column (③) is additive. Stacks to one column below lg. */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] gap-4 pt-4">
-
-        {/* ── COLUMN 1 — chat + history ────────────────────────────────── */}
-        <div className="flex flex-col min-h-0 rounded-xl border border-border/60 bg-card/20 overflow-hidden">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-4">
-              {messages.length === 0 ? (
-                <div className="h-full flex items-center justify-center py-12">
-                  <p className="text-sm text-muted-foreground text-center leading-relaxed">
-                    {listening
-                      ? "Say “Hey Ástríðr” or type below to talk to her."
-                      : "Listening is off — type below to talk to Ástríðr."}
-                  </p>
-                </div>
-              ) : (
-                messages.map((msg) => (
-                  <ChatBubble
-                    key={msg.id}
-                    role={msg.role}
-                    content={msg.content}
-                    blocks={msg.blocks}
-                    streaming={msg.streaming}
-                    timestamp={msg.timestamp}
-                    audioUrl={msg.audioUrl}
-                    onPlayAudio={playAudio}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Brain composer pill (103-07-T2) — new row above the composer, does not touch the
-              textarea/send row below it. */}
-          <div className="flex items-center gap-2 px-3 pt-2">
-            <BrainComposerPill profileId={brainDefaultProfileId} />
-          </div>
-
-          {/* Input */}
-          <div className="border-t border-border/60 p-3">
-            <div className="flex items-end gap-2">
-              <textarea
-                rows={1}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={onKeyDown}
-                disabled={disconnected}
-                placeholder={disconnected ? "Reconnecting…" : "Type or speak to Ástríðr…"}
-                className="flex-1 resize-none max-h-32 rounded-xl bg-background border border-border px-3.5 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:shadow-[var(--glow-xs)]"
-              />
-              <button
-                type="button"
-                onClick={submit}
-                disabled={!draft.trim() || isStreaming || disconnected}
-                title="Send"
-                aria-label="Send message"
-                className="w-11 h-11 shrink-0 rounded-xl grid place-items-center bg-primary/15 border border-primary/40 text-primary hover:bg-primary/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                <Send className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="mt-2 font-mono text-[10px] tracking-[0.08em] text-muted-foreground/70 text-center">
-              {listening
-                ? "SAY “HEY ÁSTRÍÐR” TO START · “STOP” INTERRUPTS · “GOODBYE” ENDS"
-                : "LISTENING OFF — NOTHING HOLDS THE MIC"}
-            </p>
-          </div>
-        </div>
-
-        {/* ── COLUMN 2 — AvatarAura + Control Center (preserved) ─────────── */}
-        <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-0.5">
-          <div className="flex flex-col items-center rounded-xl border border-border/60 bg-card/20 pt-5 pb-4 px-3">
-            <div
-              className={`w-full max-w-[340px] transition-[opacity,filter] duration-300 ${
-                listening ? "" : "opacity-45 saturate-50"
-              }`}
-            >
-              <AvatarAura state={avatarState} ttsAnalyser={ttsAnalyser} />
+      {commandCenter ? (
+        <>
+          {/* ── 5-track command center (188-13, D-18) ───────────────────────
+              LEFT RAIL / chat / center / RIGHT RAIL / vitals at ≥xl. The
+              three calm tracks (chat/center/vitals) keep their EXACT
+              existing sizing fragment — nothing in them reflows. Below xl
+              down to lg, each rail collapses into its own horizontal-scroll
+              strip flanking the still-3-column calm row (lg:order pins
+              vitals into that row and pushes the right rail below it so the
+              two rail strips never overlap the same grid cell). Below lg,
+              everything stacks in reading order: left rail, chat, center,
+              right rail, vitals — the DOM order below already matches this,
+              so no reordering is needed at that breakpoint. */}
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
+            {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1">
+              <SectionErrorBoundary name="Intelligence Feed">
+                <IntelligenceFeedPanel />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="Active Agents">
+                <ActiveAgentsPanel />
+              </SectionErrorBoundary>
             </div>
 
-            <div className="mt-2 flex items-center gap-2 text-sm text-foreground/90">
-              {showBars && (
-                <span className="flex items-end gap-[3px] h-4" aria-hidden="true">
-                  <span className="w-[3px] h-1.5 bg-primary rounded-full animate-pulse" />
-                  <span className="w-[3px] h-3.5 bg-primary rounded-full animate-pulse [animation-delay:120ms]" />
-                  <span className="w-[3px] h-2 bg-primary rounded-full animate-pulse [animation-delay:240ms]" />
-                  <span className="w-[3px] h-4 bg-primary rounded-full animate-pulse [animation-delay:360ms]" />
-                </span>
-              )}
-              {voice.isLooking && (
-                <Eye
-                  className={`w-3 h-3 text-muted-foreground ${
-                    prefersReducedMotion() ? "" : "animate-pulse"
-                  }`}
-                  aria-hidden="true"
+            {chatColumn}
+            {centerColumn}
+
+            {/* RIGHT RAIL — (d) LLM Status, (e) System Monitor. Ordered
+                after vitals at the lg tier (lg:order-5) so the still-3-column
+                calm row (chat/center/vitals) stays intact as one row, with
+                this rail rendering as its own strip below it; xl:order-none
+                restores the natural leftrail/chat/center/rightrail/vitals
+                column sequence. */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 lg:order-5 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 xl:order-none">
+              <SectionErrorBoundary name="LLM Status">
+                <LlmStatusPanel />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="System Monitor">
+                <SystemMonitorPanel />
+              </SectionErrorBoundary>
+            </div>
+
+            <div className="min-h-0 lg:order-4 xl:order-none">{vitalsColumn}</div>
+          </div>
+
+          {/* FOOTER BAND — (c) Mission Timeline (~60%), (g) Quick Commands
+              (~40%), command-center mode only. */}
+          <div className="mt-4 flex flex-col lg:flex-row gap-4">
+            <div className="min-w-0 lg:w-[60%]">
+              <SectionErrorBoundary name="Mission Timeline">
+                <MissionTimelinePanel />
+              </SectionErrorBoundary>
+            </div>
+            <div className="min-w-0 lg:w-[40%]">
+              <SectionErrorBoundary name="Quick Commands">
+                <QuickCommandsContainer
+                  strictMode={strictMode}
+                  onStrictModeChange={handleStrictModeChange}
+                  screenShareState={screenShare.state}
+                  onScreenShareStart={screenShare.start}
+                  onScreenShareStop={screenShare.stop}
+                  onStop={voice.triggerBargeIn}
                 />
-              )}
-              <span aria-live="polite" className={listening ? "" : "text-muted-foreground"}>
-                {stateLabel}
-              </span>
+              </SectionErrorBoundary>
             </div>
-
-            {/* Live transcript — what she's hearing right now */}
-            {(voice.interimText || voice.finalText || voice.showInterruptFlash) && (
-              <div className="mt-1.5 w-full px-2 text-center font-mono text-[11px] tracking-wide min-h-[16px]">
-                {voice.showInterruptFlash && (
-                  <span className="text-(--status-warn) font-semibold mr-2">
-                    — interrupted —
-                  </span>
-                )}
-                {voice.finalText && (
-                  <span className="text-foreground/90">“{voice.finalText}</span>
-                )}
-                {voice.interimText && (
-                  <span className="text-muted-foreground italic">
-                    {voice.finalText ? " " : "“"}
-                    {voice.interimText}
-                  </span>
-                )}
-                {(voice.finalText || voice.interimText) && (
-                  <span className="text-muted-foreground">”</span>
-                )}
-              </div>
-            )}
-
-            {/* Follow-up window countdown (CONV-02, stay-hot aware) */}
-            <div className="w-full mt-2 px-2">
-              <FollowUpCountdownBar active={voice.followUpOpen} durationMs={voice.followUpMs} />
-            </div>
-
-            {/* Wake engine failure — recovery is toggle off → on */}
-            {voiceError && (
-              <div className="mt-2 flex items-start gap-2 text-left">
-                <AlertCircle className="w-3.5 h-3.5 text-(--status-warn) mt-0.5 shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Wake-word engine failed
-                  {voice.wakeWordError ? ` (${voice.wakeWordError})` : ""}. Toggle the
-                  mic off and on to retry — typing still works.
-                </p>
-              </div>
-            )}
           </div>
-
-          {/* Control Center (D-17) — now stacked under the aura in column ② */}
-          <ControlCenterPanel
-            disconnected={disconnected}
-            micOff={!listening}
-            voiceState={avatarState}
-            strictMode={strictMode}
-            onStrictModeChange={handleStrictModeChange}
-            screenShareState={screenShare.state}
-            onScreenShareStart={screenShare.start}
-            onScreenShareStop={screenShare.stop}
-            swapModelOverride={swapState.modelOverride}
-            swapVoiceOverride={swapState.voiceOverride}
-            lastTurnModel={lastTurnModel}
-          />
+        </>
+      ) : (
+        /* ── 3-column calm layout (unchanged) ────────────────────────────
+            ① chat + history · ② her AvatarAura + Control Center · ③ vitals.
+            Byte-identical to the pre-188-13 render — this exact div, this
+            exact className, these exact three children, no wrapper. */
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] gap-4 pt-4">
+          {chatColumn}
+          {centerColumn}
+          {vitalsColumn}
         </div>
-
-        {/* ── COLUMN 3 — vitals (additive) ──────────────────────────────── */}
-        <SectionErrorBoundary name="Vitals">
-          <VitalsRail lastTurnModel={lastTurnModel} disconnected={disconnected} />
-        </SectionErrorBoundary>
-      </div>
+      )}
     </div>
   );
 }
