@@ -52,15 +52,23 @@ export default function Analytics() {
   const { events } = useRecentEvents(100);
   const { calls: llmCalls, status: llmStatus, loadMore: loadMoreLlm } = useLlmMetrics();
   // Phase 67 D-01: Split cost view — API spend (real money) vs Subscription usage (call counts/tokens)
-  const apiCostByProvider = useQuery(api.aggregates.costByPeriod, {
+  // CR-01 follow-up (2026-08-03, found by the phase verifier): this card was a
+  // THIRD surface still sourcing a displayed dollar figure from the legacy
+  // pre-baked `metric_type: "cost"` aggregate (convex/aggregates.ts sums
+  // `r.cost ?? 0` from the raw ingested llmMetrics.cost). D-01 says that value is
+  // stored but is NOT the truth the UI renders. Left alone it could disagree with
+  // the Cost Forecast and SDK Spend Cap panels directly below it -- the exact
+  // two-sources-of-truth symptom CR-01 was written to remove. Matches the legacy
+  // 30-day window (costByPeriod's default lookbackDays).
+  const apiSpendDerived = useQuery(api.costDerived.billedOverTime, {
     period: "daily",
-    billingType: "api",
-  }) ?? {};
+    lookbackHours: 30 * 24,
+  });
   const subscriptionUsage = useQuery(api.llm.subscriptionUsage) ?? { calls: 0, tokens: 0 };
   // Prompt-cache hit rate (Anthropic) — verifies caching is actually being hit
   const cacheStats = useQuery(api.llm.cacheStats, {});
-  // Keep total cost (all types) for backward compat with existing components
-  const costByProvider = useQuery(api.aggregates.costByPeriod, { period: "daily" }) ?? {};
+  // (Removed 2026-08-03: a second `costByPeriod` read whose only consumer was
+  // `totalCost`, which was never rendered anywhere. Dead legacy read.)
   // Swap 3: event counts aggregate for Total Events MetricCard
   const eventCounts = useQuery(api.aggregates.eventCountsByPeriod, { period: "daily" }) ?? {};
   const totalAggregateEvents = Object.values(eventCounts).reduce((s, v) => s + (v as number), 0);
@@ -72,8 +80,10 @@ export default function Analytics() {
   const advisorSavings = useQuery(api.advisorEvents.savingsSummary);
   const advisorRecent = useQuery(api.advisorEvents.recent, { limit: 20 });
 
-  const totalApiSpend = Object.values(apiCostByProvider).reduce((s, v) => s + (v as number), 0);
-  const totalCost = Object.values(costByProvider).reduce((s, v) => s + (v as number), 0);
+  const totalApiSpend = (apiSpendDerived?.buckets ?? []).reduce(
+    (s: number, b: { billedUsd: number }) => s + b.billedUsd,
+    0
+  );
   const totalTokens = llmCalls.reduce((s: number, c: any) => s + (c.totalTokens ?? 0), 0);
 
   return (
@@ -133,7 +143,7 @@ export default function Analytics() {
                     threshold={{ ok: 50, warn: 20, invertDirection: true }}
                   />
                   <div className="flex items-start gap-2">
-                    <MetricCard label="API Spend" value={formatCost(totalApiSpend)} />
+                    <MetricCard label="API Spend" value={apiSpendDerived ? formatCost(totalApiSpend) : "--"} />
                     {anomalies.cost && (
                       <AnomalyBadge
                         severity={anomalies.cost.severity as "warning" | "critical"}
