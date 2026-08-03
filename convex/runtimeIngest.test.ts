@@ -10,7 +10,14 @@
  */
 import { describe, it, expect } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
-import { resolveGatewayTaskCompleted } from "./runtimeIngest";
+import {
+  resolveGatewayTaskCompleted,
+  parseToolPolicyEvent,
+  resolveToolExecutionRow,
+  TOOL_POLICY_EVENT_KINDS,
+  TOOL_POLICY_ERROR_MAX_LEN,
+  ASTRIDR_TOOL_PROVIDER,
+} from "./runtimeIngest";
 
 // ---------------------------------------------------------------------------
 // Extracted swarm_task routing logic — mirrors runtimeIngest.ts case exactly
@@ -412,5 +419,194 @@ describe("gateway", () => {
     const dotCaseBody = dotCaseMatch![0];
     expect(dotCaseBody).toContain("api.toolExecutions.insert");
     expect(dotCaseBody).toContain("api.sessions.upsert");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 105 D-01/D-02/D-03 — tool_executed → toolExecutions
+// ---------------------------------------------------------------------------
+
+describe("tool_executed → toolExecutions (Phase 105 D-01)", () => {
+  it("always tags provider: astridr, never read from the payload (T-105-12)", () => {
+    const row = resolveToolExecutionRow({ toolName: "web_search", provider: "someone-else" }, 1000);
+    expect(row.provider).toBe(ASTRIDR_TOOL_PROVIDER);
+    expect(row.provider).toBe("astridr");
+  });
+
+  it("passes through durationMs/traceId/round when present (camelCase)", () => {
+    const row = resolveToolExecutionRow(
+      { toolName: "web_search", durationMs: 42, traceId: "trace-1", round: 3 },
+      1000
+    );
+    expect(row.durationMs).toBe(42);
+    expect(row.traceId).toBe("trace-1");
+    expect(row.round).toBe(3);
+  });
+
+  it("passes through durationMs/traceId via snake_case fallback", () => {
+    const row = resolveToolExecutionRow(
+      { toolName: "web_search", duration_ms: 99, trace_id: "trace-2" },
+      1000
+    );
+    expect(row.durationMs).toBe(99);
+    expect(row.traceId).toBe("trace-2");
+  });
+
+  it("leaves durationMs/traceId/round undefined when absent (no fabricated values)", () => {
+    const row = resolveToolExecutionRow({ toolName: "web_search" }, 1000);
+    expect(row.durationMs).toBeUndefined();
+    expect(row.traceId).toBeUndefined();
+    expect(row.round).toBeUndefined();
+  });
+
+  it("defaults sessionId/toolName to 'unknown' when absent, matching the existing callGraphEdges convention", () => {
+    const row = resolveToolExecutionRow({}, 1000);
+    expect(row.sessionId).toBe("unknown");
+    expect(row.toolName).toBe("unknown");
+  });
+
+  it("defaults success to true when absent, matching the existing callGraphEdges convention", () => {
+    const row = resolveToolExecutionRow({ toolName: "web_search" }, 1000);
+    expect(row.success).toBe(true);
+  });
+
+  it("D-01 additive-only regression guard: the tool_executed case still calls api.callGraphEdges.upsertEdge AND now also api.toolExecutions.insert (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    const caseMatch = ingestSource.match(/case "tool_executed": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("api.callGraphEdges.upsertEdge");
+    expect(caseBody).toContain("api.toolExecutions.insert");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 105 D-05/D-06 — tool_policy_event
+// ---------------------------------------------------------------------------
+
+describe("tool_policy_event (Phase 105 D-05)", () => {
+  it("maps a tool_call_leaked_as_text payload (mixed camel/snake casing) to the full field set", () => {
+    const parsed = parseToolPolicyEvent(
+      {
+        event: "tool_call_leaked_as_text",
+        tool: "web_search",
+        sessionId: "sess-1", // camelCase, per astridr's real payload
+        taskCategory: "research", // camelCase
+        tool_was_offered: true, // snake_case, per astridr's real payload
+        tools_offered_count: 5, // snake_case
+        round: 2,
+        agentId: "agent-1",
+      },
+      1000
+    );
+    expect(parsed).not.toBeNull();
+    expect(parsed).toMatchObject({
+      event: "tool_call_leaked_as_text",
+      tool: "web_search",
+      sessionId: "sess-1",
+      taskCategory: "research",
+      toolWasOffered: true,
+      toolsOfferedCount: 5,
+      round: 2,
+      agentId: "agent-1",
+    });
+  });
+
+  it("maps a malformed_policy_boot payload to { event, field, error, timestamp } with tool undefined", () => {
+    const parsed = parseToolPolicyEvent(
+      { event: "malformed_policy_boot", field: "clusters.0.tags", error: "expected list, got str" },
+      1000
+    );
+    expect(parsed).toMatchObject({
+      event: "malformed_policy_boot",
+      field: "clusters.0.tags",
+      error: "expected list, got str",
+      timestamp: 1000,
+    });
+    expect(parsed!.tool).toBeUndefined();
+  });
+
+  it("maps a malformed_policy_reload_rejected payload the same way as boot (field/error, no session)", () => {
+    const parsed = parseToolPolicyEvent(
+      { event: "malformed_policy_reload_rejected", field: "x", error: "y" },
+      1000
+    );
+    expect(parsed).toMatchObject({ event: "malformed_policy_reload_rejected", field: "x", error: "y" });
+    expect(parsed!.sessionId).toBeUndefined();
+  });
+
+  it("maps an execution_denied payload to tool + sessionId", () => {
+    const parsed = parseToolPolicyEvent(
+      { event: "execution_denied", tool: "delegate_task", sessionId: "sess-9" },
+      1000
+    );
+    expect(parsed).toMatchObject({ event: "execution_denied", tool: "delegate_task", sessionId: "sess-9" });
+  });
+
+  it("returns null for an unrecognised event value", () => {
+    const parsed = parseToolPolicyEvent({ event: "some_future_kind", foo: "bar" }, 1000);
+    expect(parsed).toBeNull();
+  });
+
+  it("returns null when event is entirely absent", () => {
+    const parsed = parseToolPolicyEvent({ tool: "web_search" }, 1000);
+    expect(parsed).toBeNull();
+  });
+
+  it("every TOOL_POLICY_EVENT_KINDS member parses successfully (round-trip coverage)", () => {
+    for (const kind of TOOL_POLICY_EVENT_KINDS) {
+      const parsed = parseToolPolicyEvent({ event: kind }, 1000);
+      expect(parsed).not.toBeNull();
+      expect(parsed!.event).toBe(kind);
+    }
+  });
+
+  it(`truncates error beyond ${TOOL_POLICY_ERROR_MAX_LEN} characters and appends an explicit marker`, () => {
+    const longError = "x".repeat(TOOL_POLICY_ERROR_MAX_LEN + 50);
+    const parsed = parseToolPolicyEvent({ event: "malformed_policy_boot", error: longError }, 1000);
+    expect(parsed!.error!.length).toBeGreaterThan(TOOL_POLICY_ERROR_MAX_LEN); // marker text appended
+    expect(parsed!.error!.startsWith("x".repeat(TOOL_POLICY_ERROR_MAX_LEN))).toBe(true);
+    expect(parsed!.error).toContain("truncated");
+  });
+
+  it("does not truncate an error at or under the max length", () => {
+    const shortError = "boom";
+    const parsed = parseToolPolicyEvent({ event: "malformed_policy_boot", error: shortError }, 1000);
+    expect(parsed!.error).toBe(shortError);
+  });
+
+  it("distinguishes toolsOfferedCount: 0 (filter offered zero tools) from undefined (no filter active)", () => {
+    const zeroOffered = parseToolPolicyEvent(
+      { event: "tool_call_leaked_as_text", tools_offered_count: 0 },
+      1000
+    );
+    const noFilter = parseToolPolicyEvent({ event: "tool_call_leaked_as_text" }, 1000);
+    expect(zeroOffered!.toolsOfferedCount).toBe(0);
+    expect(noFilter!.toolsOfferedCount).toBeUndefined();
+  });
+
+  it("toolsOfferedCount: 0 on the PRIMARY (camelCase) field is not coalesced away by a `||`-style truthiness trap", () => {
+    // A `||` fallback (instead of `??`) would treat 0 as falsy and fall
+    // through to the snake_case field (here, absent) — losing the real 0.
+    const parsed = parseToolPolicyEvent(
+      { event: "tool_call_leaked_as_text", toolsOfferedCount: 0 },
+      1000
+    );
+    expect(parsed!.toolsOfferedCount).toBe(0);
+  });
+
+  it("D-05/D-06 regression guard: the switch has a tool_policy_event case calling internal.toolPolicyEvents.record, and no switch-level default arm (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    const caseMatch = ingestSource.match(/case "tool_policy_event": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    expect(caseMatch![0]).toContain("internal.toolPolicyEvents.record");
+    // Deliberately no default: arm anywhere in the switch (F1) — a catch-all
+    // would mask a fifth future kind's absence the same way the original
+    // missing case masked all four of today's kinds.
+    expect(ingestSource).not.toMatch(/\n\s+default:\s*\{/);
   });
 });

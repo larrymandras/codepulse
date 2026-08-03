@@ -65,6 +65,106 @@ export function resolveGatewayTaskCompleted(
   };
 }
 
+// ---------------------------------------------------------------------------
+// Phase 105 D-01/D-02/D-05/D-06 — tool_executed + tool_policy_event helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Constant provider tag for every `toolExecutions` row written from
+ * Ástríðr's `tool_executed` runtime event. Assigned by the RECEIVER, never
+ * read from the payload (T-105-12) — a mis-sent or absent `provider` field
+ * in the payload can never land a row in another source's bucket. Plans
+ * 105-01 and 105-06 both string-match on this exact value.
+ */
+export const ASTRIDR_TOOL_PROVIDER = "astridr";
+
+/**
+ * Resolves a `tool_executed` payload into the args for
+ * `api.toolExecutions.insert` (D-01: per-call row, distinct from the
+ * cumulative `callGraphEdges` counter this case also still writes).
+ * Exported for unit testing.
+ */
+export function resolveToolExecutionRow(d: any, timestamp: number) {
+  return {
+    sessionId: d.sessionId ?? d.session_id ?? "unknown",
+    toolName: d.toolName ?? d.tool_name ?? "unknown",
+    success: d.success ?? true,
+    durationMs: d.durationMs ?? d.duration_ms,
+    traceId: d.traceId ?? d.trace_id,
+    round: d.round,
+    provider: ASTRIDR_TOOL_PROVIDER,
+    timestamp,
+  };
+}
+
+/** The 4 kinds Ástríðr's `tool_policy_event` can send — see docs/astridr-contract.md §2.34. */
+export const TOOL_POLICY_EVENT_KINDS = [
+  "malformed_policy_boot",
+  "malformed_policy_reload_rejected",
+  "execution_denied",
+  "tool_call_leaked_as_text",
+] as const;
+
+/** Model-generated `tool` text and exception-derived `error` text are bounded
+ * before they ever reach a persisted field (T-105-11). */
+export const TOOL_POLICY_ERROR_MAX_LEN = 500;
+
+export interface ToolPolicyEventArgs {
+  event: string;
+  tool?: string;
+  sessionId?: string;
+  agentId?: string;
+  taskCategory?: string;
+  toolWasOffered?: boolean;
+  toolsOfferedCount?: number;
+  round?: number;
+  field?: string;
+  error?: string;
+  timestamp: number;
+}
+
+function truncatePolicyError(error: string | undefined): string | undefined {
+  if (error == null) return undefined;
+  if (error.length <= TOOL_POLICY_ERROR_MAX_LEN) return error;
+  return error.slice(0, TOOL_POLICY_ERROR_MAX_LEN) + "... [truncated]";
+}
+
+/**
+ * Parses a `tool_policy_event` payload into the args for
+ * `internal.toolPolicyEvents.record`, or `null` for an unrecognised/absent
+ * `event` value — an unknown kind is REJECTED, not stored under a made-up
+ * label and not silently dropped without trace (the caller logs a warning
+ * on `null`, D-05/D-06/T-105-15). Dual snake/camel coalescing on every
+ * field per the WR-06/168-06 defensive-ingest convention: astridr sends
+ * `tool_was_offered`/`tools_offered_count` in snake_case while sending
+ * `sessionId`/`taskCategory` in camelCase (verified live in plan 105-02) —
+ * the mixed casing is real, which is exactly why both are coalesced.
+ * Exported for unit testing.
+ */
+export function parseToolPolicyEvent(d: any, timestamp: number): ToolPolicyEventArgs | null {
+  const event = d?.event;
+  if (typeof event !== "string" || !(TOOL_POLICY_EVENT_KINDS as readonly string[]).includes(event)) {
+    return null;
+  }
+
+  return {
+    event,
+    tool: d.tool,
+    sessionId: d.sessionId ?? d.session_id,
+    agentId: d.agentId ?? d.agent_id,
+    taskCategory: d.taskCategory ?? d.task_category,
+    // toolsOfferedCount: 0 (the filter offered zero tools) must survive
+    // distinctly from undefined (no filter was active) — `??` (not `||`)
+    // preserves 0 because only null/undefined trigger the fallback.
+    toolWasOffered: d.toolWasOffered ?? d.tool_was_offered,
+    toolsOfferedCount: d.toolsOfferedCount ?? d.tools_offered_count,
+    round: d.round,
+    field: d.field,
+    error: truncatePolicyError(d.error),
+    timestamp,
+  };
+}
+
 /**
  * HTTP action: POST /runtime-ingest
  *
@@ -134,6 +234,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             traceId: d.traceId ?? d.trace_id,         // Phase 94 TRACE-01 — per-turn trace grouping
             cacheReadInputTokens: d.cacheReadInputTokens ?? d.cache_read_input_tokens,
             cacheCreationInputTokens: d.cacheCreationInputTokens ?? d.cache_creation_input_tokens,
+            round: d.round, // Phase 105 D-10
           });
           break;
         }
@@ -842,6 +943,11 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // M1.P1: agent↔tool call-graph edge emitted on EVERY tool execution
           // (success or failure) by Ástríðr's agent loop. Broader source than
           // hive_mind_entry, which only covered multi-agent coordination calls.
+          // Phase 105 D-01/D-02/D-03: this case now feeds BOTH callGraphEdges
+          // (cumulative, unchanged, still powers Tool Galaxy) AND toolExecutions
+          // (a per-call row tagged provider: "astridr", giving OBS-01 "over
+          // time" history and OBS-03 trace-waterfall nesting via traceId/round —
+          // neither existed from any Ástríðr source before this phase).
           const d = data as any;
           const toolExecutedAgent = d.agentId ?? d.agent_id;
           if (toolExecutedAgent) {
@@ -853,6 +959,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
               timestamp,
             });
           }
+          await ctx.runMutation(api.toolExecutions.insert, resolveToolExecutionRow(d, timestamp));
           break;
         }
         case "kits_snapshot": {
@@ -1148,6 +1255,28 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             workflowRunUrl: d.workflowRunUrl ?? d.workflow_run_url,
             timestamp,
           });
+          break;
+        }
+        case "tool_policy_event": {
+          // Phase 105 D-05/D-06: 4 kinds — malformed_policy_boot,
+          // malformed_policy_reload_rejected, execution_denied,
+          // tool_call_leaked_as_text. Before this case existed, all four were
+          // silently discarded (no case, no default). record is an
+          // internalMutation (T-105-10), so this table is reachable only
+          // through this already-Bearer-gated httpAction. An unrecognised
+          // kind is logged, never stored under a made-up label and never
+          // silently dropped without trace (T-105-15) — deliberately NOT a
+          // catch-all fallback arm on the switch itself (105-03-PLAN.md
+          // finding F1: a catch-all here would mask a fifth future kind's
+          // absence the same way this switch's missing case masked these four).
+          const parsed = parseToolPolicyEvent(data as any, timestamp);
+          if (parsed) {
+            await ctx.runMutation(internal.toolPolicyEvents.record, parsed);
+          } else {
+            console.warn(
+              `tool_policy_event: unrecognised or missing "event" value, dropped: ${(data as any)?.event}`
+            );
+          }
           break;
         }
       }

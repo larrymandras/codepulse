@@ -55,6 +55,14 @@ export const RETENTION_DAYS: Record<string, number> = {
   cronExecutions: 90,
   jobLifecycle: 90,
   agentCoordination: 90,
+  // Phase 105 D-05 — new table, bounded BEFORE it can ever need a mass
+  // delete (the same pre-emptive move D-20 made for gatewayQuotaSnapshots).
+  // Policy events are low-volume (boot/reload fire once per boot; denials
+  // and leaks are rare by design), so 90 days keeps the feed useful across
+  // a milestone without exposing the instance to another tombstone-storm
+  // incident; 14 would age the signal out faster than an operator would
+  // notice it.
+  toolPolicyEvents: 90,
 };
 
 const PRUNED_TABLES = Object.keys(RETENTION_DAYS);
