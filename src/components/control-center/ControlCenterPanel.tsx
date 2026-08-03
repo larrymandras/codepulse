@@ -16,12 +16,13 @@
  * labeled FocusModeToggle (new, D-04), QuietHoursIndicator (new, D-05),
  * labeled ShareScreenToggle (relocated).
  *
- * Owns focus_mode + quiet-hours state: hydrates from `config.get`
- * section:"proactive-prefs" on mount (mirrors `Chat.tsx`'s `strictMode`
- * hydrate exactly), persists focus_mode via `config.update` (optimistic +
- * localStorage), and converges live with the "focus mode on/off"/"good
- * night"/"I'm up" spoken verbs (186-03) via the `proactive_prefs.state`
- * live push the backend's chat.send fast-path now emits (D-04 WS-synced).
+ * Focus_mode + quiet-hours state (hydrate/persist/live-push) lives in the
+ * shared `useProactivePrefs()` hook (188-13) — this panel is one of its two
+ * consumers (the other is `QuickCommandsPanel` via `Chat.tsx`'s command-center
+ * mode), so both surfaces write through the exact same `config.update`
+ * call and converge via the same `proactive_prefs.state` live push the
+ * backend's chat.send fast-path emits for the "focus mode on/off"/"good
+ * night"/"I'm up" spoken verbs (186-03).
  *
  * DEVIATIONS (186-08, post-checkpoint live feedback from Larry's first
  * visual pass — see 186-08-SUMMARY.md "Deviations" for the full record):
@@ -42,8 +43,7 @@
  * @see 186-UI-SPEC.md "Control Center (D-17)" + "Copywriting Contract"
  */
 
-import { useState, useEffect, useCallback } from "react";
-import * as jsYaml from "js-yaml";
+import { useState, useEffect } from "react";
 import { WifiOff, MicOff } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { StrictModeToggle } from "@/components/voice/StrictModeToggle";
@@ -54,54 +54,23 @@ import { ReadinessPill } from "./ReadinessPill";
 import { BrainControl } from "./BrainControl";
 import { VoiceControl } from "./VoiceControl";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
+import {
+  useProactivePrefs,
+  isWithinQuietHours,
+  DEFAULT_PROACTIVE_PREFS,
+  type ProactivePrefs,
+} from "@/hooks/useProactivePrefs";
 import type { VoiceState } from "@/components/voice/voiceState";
 import type { ScreenShareState } from "@/hooks/useScreenShare";
 
-const LS_FOCUS = "codepulse-focus-mode";
 const READINESS_POLL_MS = 3000;
 
-export interface ProactivePrefs {
-  focus_mode: boolean;
-  quiet_hours_start: string;
-  quiet_hours_end: string;
-  quiet_hours_override: boolean | null;
-}
-
-export const DEFAULT_PROACTIVE_PREFS: ProactivePrefs = {
-  focus_mode: false,
-  quiet_hours_start: "22:00",
-  quiet_hours_end: "06:00",
-  quiet_hours_override: null,
-};
-
-/**
- * Mirrors `astridr/automation/governor.py::_compute_quiet_hours_active`
- * exactly (client-side DISPLAY only — the governor is the server-side
- * enforcement point; this uses the browser's local time as an approximation
- * of `ASTRIDR_TIMEZONE`, which is acceptable for a read-only indicator).
- */
-export function isWithinQuietHours(
-  prefs: ProactivePrefs,
-  now: Date = new Date()
-): boolean {
-  if (prefs.quiet_hours_override !== null && prefs.quiet_hours_override !== undefined) {
-    return prefs.quiet_hours_override;
-  }
-  const [startH, startM] = (prefs.quiet_hours_start ?? "").split(":").map(Number);
-  const [endH, endM] = (prefs.quiet_hours_end ?? "").split(":").map(Number);
-  if ([startH, startM, endH, endM].some((n) => Number.isNaN(n))) return false;
-
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const startMinutes = startH * 60 + startM;
-  const endMinutes = endH * 60 + endM;
-
-  if (startMinutes <= endMinutes) {
-    // Same-day window (e.g. 09:00 -> 17:00).
-    return nowMinutes >= startMinutes && nowMinutes < endMinutes;
-  }
-  // Overnight window (e.g. 22:00 -> 06:00).
-  return nowMinutes >= startMinutes || nowMinutes < endMinutes;
-}
+// 188-13 (D-18): focus-mode/quiet-hours state now lives in the shared
+// `useProactivePrefs` hook so QuickCommandsPanel's Focus Mode button (Chat.tsx,
+// command-center mode) can write through the SAME persist call this panel's
+// own FocusModeToggle uses — never a second focus-mode mutation. Re-exported
+// here unchanged so existing importers of this module keep working.
+export { isWithinQuietHours, DEFAULT_PROACTIVE_PREFS, type ProactivePrefs };
 
 export interface ControlCenterPanelProps {
   /** WS status is disconnected — shows a DISCONNECTED pill instead of ReadinessPill. */
@@ -134,7 +103,7 @@ export function ControlCenterPanel({
   swapVoiceOverride,
   lastTurnModel,
 }: ControlCenterPanelProps) {
-  const { sendCommand, subscribeEvent } = useAstridrWS();
+  const { sendCommand } = useAstridrWS();
 
   // ── Readiness (D-17 warm-up pill) — poll readiness.get until true ───────
   const [ready, setReady] = useState(false);
@@ -165,86 +134,12 @@ export function ControlCenterPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Focus mode + quiet hours (D-04/D-05) — localStorage instant paint,
-  // server truth, mirrors Chat.tsx's strictMode pattern exactly ───────────
-  const [prefs, setPrefs] = useState<ProactivePrefs>(() => {
-    try {
-      const storedFocus = JSON.parse(localStorage.getItem(LS_FOCUS) ?? "false");
-      return { ...DEFAULT_PROACTIVE_PREFS, focus_mode: Boolean(storedFocus) };
-    } catch {
-      return DEFAULT_PROACTIVE_PREFS;
-    }
-  });
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const ack = await sendCommand({ type: "config.get", section: "proactive-prefs" });
-        if (ack.status === "ok") {
-          const content = ((ack.data as Record<string, unknown>)?.content ??
-            (ack as Record<string, unknown>).content ??
-            "") as string;
-          const parsed = (jsYaml.load(content) as Partial<ProactivePrefs>) ?? {};
-          setPrefs((prev) => ({ ...prev, ...parsed }));
-          if (typeof parsed.focus_mode === "boolean") {
-            localStorage.setItem(LS_FOCUS, JSON.stringify(parsed.focus_mode));
-          }
-        } else {
-          console.warn("Failed to hydrate proactive prefs from server:", ack.error);
-        }
-      } catch (err) {
-        console.warn("Failed to hydrate proactive prefs from server:", err);
-      }
-    })();
-    // Mount-only hydration — sendCommand identity is stable per AstridrWSContext.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Live convergence: a spoken "focus mode on/off"/"good night"/"I'm up"
-  // verb (186-03) persists to the SAME config file server-side — the
-  // chat.send fast-path pushes it back so this tab updates without a reload.
-  useEffect(() => {
-    const unsub = subscribeEvent("proactive_prefs.state", (event) => {
-      const data = (event as { data?: Partial<ProactivePrefs> }).data;
-      if (!data) return;
-      setPrefs((prev) => ({ ...prev, ...data }));
-      if (typeof data.focus_mode === "boolean") {
-        localStorage.setItem(LS_FOCUS, JSON.stringify(data.focus_mode));
-      }
-    });
-    return unsub;
-  }, [subscribeEvent]);
-
-  const handleFocusModeChange = useCallback(
-    (v: boolean) => {
-      setPrefs((prev) => ({ ...prev, focus_mode: v }));
-      localStorage.setItem(LS_FOCUS, JSON.stringify(v));
-      sendCommand({
-        type: "config.update",
-        request_id: crypto.randomUUID(),
-        section: "proactive-prefs",
-        changes: { focus_mode: v },
-        dry_run: false,
-      })
-        .then((ack) => {
-          if (ack.status !== "ok") console.warn("Failed to persist focus mode:", ack.error);
-        })
-        .catch((err) => {
-          console.warn("Failed to persist focus mode:", err);
-        });
-    },
-    [sendCommand]
-  );
-
-  // Quiet-hours-active is a clock-window computation, not just a config
-  // read — re-derive on every prefs change AND every 30s so the indicator
-  // flips even if nothing else pushed an update while the window rolled over.
-  const [quietHoursActive, setQuietHoursActive] = useState(() => isWithinQuietHours(prefs));
-  useEffect(() => {
-    setQuietHoursActive(isWithinQuietHours(prefs));
-    const id = setInterval(() => setQuietHoursActive(isWithinQuietHours(prefs)), 30_000);
-    return () => clearInterval(id);
-  }, [prefs]);
+  // ── Focus mode + quiet hours (D-04/D-05) — 188-13: now owned by the
+  // shared useProactivePrefs() hook (localStorage instant paint, server
+  // truth, live-push convergence) so QuickCommandsPanel's Focus Mode button
+  // reuses the SAME persist call as this panel's own FocusModeToggle. ─────
+  const { prefs, quietHoursActive, onFocusModeChange: handleFocusModeChange } =
+    useProactivePrefs();
 
   return (
     <div

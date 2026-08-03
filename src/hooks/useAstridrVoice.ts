@@ -357,6 +357,11 @@ export interface UseAstridrVoiceReturn {
   /** D-04: a vision-triggered capture+routing is in flight — state badge
    *  shows "Looking…" instead of "Thinking…"/"Processing…". */
   isLooking: boolean;
+  /** 188-13 (D-18 Quick Commands "Stop"): exposes the SAME barge-in cut
+   *  both the 183 recognizer's phrase match and the duplex engine's
+   *  speech-start signal already dispatch through — no second interrupt
+   *  mechanism (188-UI-SPEC.md Part 3 §1). */
+  triggerBargeIn: () => void;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -1542,5 +1547,6 @@ export function useAstridrVoice({
     wakeWordError,
     speechAvailable,
     isLooking,
+    triggerBargeIn: handleBargeIn,
   };
 }
