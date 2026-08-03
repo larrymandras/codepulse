@@ -181,9 +181,12 @@ function rowCachePercent(row: LlmCallRow): number {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function TraceWaterfall({ sessionId }: { sessionId: string }) {
-  const rows = useQuery(api.llm.sessionCalls, { sessionId }) as
-    | LlmCallRow[]
+  const result = useQuery(api.llm.sessionCalls, { sessionId }) as
+    | { rows: LlmCallRow[]; truncated: boolean; cap: number }
     | undefined;
+  const rows = result?.rows;
+  const truncated = result?.truncated ?? false;
+  const cap = result?.cap;
 
   const groups = useMemo(() => groupByTrace(rows ?? []), [rows]);
   const timeRange = useMemo(() => computeTimeRange(rows ?? []), [rows]);
@@ -214,6 +217,20 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6">
+        {/* Truncation notice (D-12) — only rendered when the read cap was hit */}
+        {truncated && (
+          <div
+            className="text-sm rounded-md px-3 py-2"
+            style={{
+              color: "var(--status-warn)",
+              border: "1px solid color-mix(in srgb, var(--status-warn) 40%, transparent)",
+              backgroundColor: "color-mix(in srgb, var(--status-warn) 12%, transparent)",
+            }}
+          >
+            Showing the most recent {cap} calls — older calls in this session aren't loaded.
+          </div>
+        )}
+
         {/* Summary strip (D-15) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>

@@ -227,7 +227,7 @@ describe("TraceWaterfall (component)", () => {
   });
 
   it('renders "No LLM calls yet" empty state when the session has zero rows', () => {
-    mockUseQuery.mockReturnValue([]);
+    mockUseQuery.mockReturnValue({ rows: [], truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -250,7 +250,7 @@ describe("TraceWaterfall (component)", () => {
       makeRow({ _id: "4", traceId: undefined, timestamp: 1_700_000_030 }),
       makeRow({ _id: "5", traceId: "trace-a", timestamp: 1_700_000_040 }),
     ];
-    mockUseQuery.mockReturnValue(rows);
+    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -269,7 +269,7 @@ describe("TraceWaterfall (component)", () => {
       makeRow({ _id: "1", cost: 0.01, totalTokens: 100 }),
       makeRow({ _id: "2", cost: undefined, totalTokens: 200 }),
     ];
-    mockUseQuery.mockReturnValue(rows);
+    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 

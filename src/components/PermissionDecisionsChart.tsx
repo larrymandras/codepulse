@@ -4,7 +4,12 @@ import { FlexBarChart } from "./FlexBarChart";
 import InfoTooltip from "./InfoTooltip";
 
 export default function PermissionDecisionsChart() {
-  const executions = useQuery(api.toolExecutions.recentExecutions) ?? [];
+  // D-15/D-02: exclude Ástríðr rows — this panel is the operator's own Claude
+  // Code session view; Ástríðr's own tool activity lives on the /tools page.
+  const executions =
+    useQuery(api.toolExecutions.recentExecutions, {
+      excludeProvider: "astridr",
+    }) ?? [];
 
   let acceptCount = 0;
   let rejectCount = 0;

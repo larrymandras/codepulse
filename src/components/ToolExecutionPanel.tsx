@@ -40,8 +40,15 @@ function PillButton({
 }
 
 export default function ToolExecutionPanel() {
-  const executions = useQuery(api.toolExecutions.recentExecutions) ?? [];
-  const successRateData = useQuery(api.toolExecutions.successRate) ?? [];
+  // D-15/D-02: exclude Ástríðr rows — this panel is the operator's own Claude
+  // Code session view; Ástríðr's own tool activity lives on the /tools page.
+  const executions =
+    useQuery(api.toolExecutions.recentExecutions, {
+      excludeProvider: "astridr",
+    }) ?? [];
+  const successRateData =
+    useQuery(api.toolExecutions.successRate, { excludeProvider: "astridr" })
+      ?.tools ?? [];
 
   const [toolFilter, setToolFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
