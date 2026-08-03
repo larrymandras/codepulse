@@ -758,13 +758,13 @@ Plans:
   8. The three existing tool panels keep working unchanged, proven by a control rather than by inspection.
 
 **UI hint**: yes
-**Plans:** 1/9 plans executed
+**Plans:** 2/9 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 105-01-PLAN.md - bounded feeder reads (`sessionCalls`, `listBySession`, `successRate`, `avgDuration`) + the D-15 zero-regression `excludeProvider` guard
-- [ ] 105-02-PLAN.md - cross-repo astridr commit: `durationMs`/`traceId`/`round` on `tool_executed`, the widened leak payload, the per-round ContextVar, and the contract doc
+- [x] 105-02-PLAN.md - cross-repo astridr commit: `durationMs`/`traceId`/`round` on `tool_executed`, the widened leak payload, the per-round ContextVar, and the contract doc
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
