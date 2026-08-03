@@ -66,6 +66,8 @@ key-files:
 
 # Plan 104-11 — Live Validation Against the Running Stack
 
+**Executed every Manual-Only validation row against the RUNNING self-hosted stack — deploy, seeds, a 120-invocation backfill, one real gateway turn and a real fired budget alert — closing D-14/D-18/D-20/A1/D-03/D-16/D-15 with live evidence rather than a green suite, and surfacing eleven defects that 3,100+ passing tests could not see (ten fixed in-session, including a `convex deploy` that could not typecheck at all, a multi-paginate failure in the live `computeHourly` cron, and CR-01's four separate legacy-cost surfaces).**
+
 ## What this plan was for
 
 104-VALIDATION.md lists behaviours that a green unit suite is **explicitly not accepted as proof
