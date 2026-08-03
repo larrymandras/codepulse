@@ -28,6 +28,8 @@ import { useMcpHealthSources } from "@/hooks/useMcpHealth";
 import { useActiveAlerts } from "@/hooks/useAlerts";
 import { useActiveSessions } from "@/hooks/useActiveSessions";
 import { useRecentEvents } from "@/hooks/useRecentEvents";
+import { RadialGauge } from "./RadialGauge";
+import { contextWindow, fmtK } from "./vitalsHelpers";
 
 // ── small presentational helpers ────────────────────────────────────────────
 
@@ -52,52 +54,6 @@ function Card({
         </span>
       </div>
       {children}
-    </div>
-  );
-}
-
-function RadialGauge({
-  value,
-  label,
-  warnAt = 85,
-}: {
-  value: number | undefined | null;
-  label: string;
-  warnAt?: number;
-}) {
-  const has = value != null && Number.isFinite(value);
-  const pct = has ? Math.max(0, Math.min(100, value as number)) : 0;
-  const r = 29;
-  const circ = 2 * Math.PI * r;
-  const off = circ * (1 - pct / 100);
-  const warn = has && pct >= warnAt;
-  const stroke = warn ? "var(--status-warn)" : "var(--primary)";
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-[64px] h-[64px]">
-        <svg viewBox="0 0 72 72" className="w-full h-full -rotate-90">
-          <circle cx="36" cy="36" r={r} fill="none" strokeWidth="7" className="stroke-border/50" />
-          <circle
-            cx="36"
-            cy="36"
-            r={r}
-            fill="none"
-            strokeWidth="7"
-            strokeLinecap="round"
-            stroke={stroke}
-            strokeDasharray={circ}
-            strokeDashoffset={has ? off : circ}
-            style={{ transition: "stroke-dashoffset .5s ease" }}
-          />
-        </svg>
-        <div className="absolute inset-0 grid place-items-center font-mono font-bold text-sm tabular-nums">
-          {has ? Math.round(pct) : "—"}
-          {has && <span className="text-[9px] text-muted-foreground ml-0.5">%</span>}
-        </div>
-      </div>
-      <div className="mt-1 font-mono text-[9px] tracking-[0.14em] uppercase text-muted-foreground">
-        {label}
-      </div>
     </div>
   );
 }
@@ -135,19 +91,7 @@ function Sparkline({ points }: { points: number[] }) {
   );
 }
 
-// ── model context windows (public facts, not stored in-schema) ───────────────
-
-function contextWindow(model: string | null | undefined): number | null {
-  if (!model) return null;
-  const m = model.toLowerCase();
-  if (m.includes("1m")) return 1_000_000;
-  if (m.includes("opus") || m.includes("sonnet") || m.includes("haiku")) return 200_000;
-  if (m.includes("gpt-5") || m.includes("gpt5")) return 400_000;
-  return null;
-}
-
 const fmtInt = (n: number) => Math.round(n).toLocaleString();
-const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${Math.round(n)}`);
 
 // timestamps arrive as seconds in some tables, ms in others — normalise.
 function relTime(t: number | undefined): string {
