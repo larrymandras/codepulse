@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { SESSION_CALLS_READ_CAP } from "./llm";
 
 // ---------------------------------------------------------------------------
 // Minimal in-memory ctx.db for goalId-persistence test (Phase 149 PULSE-01)
@@ -34,12 +35,22 @@ async function recordCallLogic(ctx: any, args: any) {
   });
 }
 
-// Mirrors the sessionCalls query handler in llm.ts (Phase 94 TRACE-02):
-// by_session index filter + archived exclusion + ascending timestamp order.
-function sessionCallsLogic(store: { llmMetrics: Record<string, any>[] }, args: { sessionId: string }) {
-  return store.llmMetrics
-    .filter((r) => r.sessionId === args.sessionId && r.archived !== true)
-    .sort((a, b) => a.timestamp - b.timestamp);
+// Mirrors the sessionCalls query handler in llm.ts (Phase 105 D-12 + Phase 94
+// TRACE-02): by_session index filter + archived exclusion, read in
+// descending timestamp order and capped, then reversed back to ascending so
+// a cap hit keeps the MOST RECENT rows (not the oldest).
+function sessionCallsLogic(
+  store: { llmMetrics: Record<string, any>[] },
+  args: { sessionId: string },
+  cap: number = SESSION_CALLS_READ_CAP
+) {
+  const filtered = store.llmMetrics.filter(
+    (r) => r.sessionId === args.sessionId && r.archived !== true
+  );
+  const descRows = [...filtered].sort((a, b) => b.timestamp - a.timestamp).slice(0, cap);
+  const truncated = descRows.length >= cap;
+  const rows = descRows.slice().reverse();
+  return { rows, truncated, cap };
 }
 
 describe("llm", () => {
@@ -124,29 +135,59 @@ describe("llm", () => {
 
     it("returns only rows matching the given sessionId", () => {
       const store = seedMixedStore();
-      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      const { rows } = sessionCallsLogic(store, { sessionId: "sess-A" });
       expect(rows.every((r) => r.sessionId === "sess-A")).toBe(true);
       expect(rows).toHaveLength(3);
     });
 
     it("excludes archived rows", () => {
       const store = seedMixedStore();
-      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      const { rows } = sessionCallsLogic(store, { sessionId: "sess-A" });
       expect(rows.some((r) => r.archived === true)).toBe(false);
     });
 
     it("returns rows in ascending timestamp order", () => {
       const store = seedMixedStore();
-      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      const { rows } = sessionCallsLogic(store, { sessionId: "sess-A" });
       expect(rows.map((r) => r.timestamp)).toEqual([100, 200, 300]);
     });
 
     it("a legacy row with no traceId is still returned with traceId undefined", () => {
       const store = seedMixedStore();
-      const rows = sessionCallsLogic(store, { sessionId: "sess-A" });
+      const { rows } = sessionCallsLogic(store, { sessionId: "sess-A" });
       const legacyRow = rows.find((r) => r.timestamp === 200);
       expect(legacyRow).toBeDefined();
       expect(legacyRow!.traceId).toBeUndefined();
+    });
+
+    it("truncated=false below the cap; truncated=true at/above the cap (Phase 105 D-12)", () => {
+      const belowCap = makeLlmStore();
+      for (let i = 0; i < SESSION_CALLS_READ_CAP - 1; i++) {
+        belowCap.llmMetrics.push({ sessionId: "sess-cap", timestamp: i });
+      }
+      const atCap = makeLlmStore();
+      for (let i = 0; i < SESSION_CALLS_READ_CAP; i++) {
+        atCap.llmMetrics.push({ sessionId: "sess-cap", timestamp: i });
+      }
+
+      expect(sessionCallsLogic(belowCap, { sessionId: "sess-cap" }).truncated).toBe(false);
+      expect(sessionCallsLogic(atCap, { sessionId: "sess-cap" }).truncated).toBe(true);
+    });
+
+    it("keeps the MOST RECENT cap rows when the session exceeds the cap, not the oldest", () => {
+      const store = makeLlmStore();
+      for (let i = 0; i < SESSION_CALLS_READ_CAP + 5; i++) {
+        store.llmMetrics.push({ sessionId: "sess-cap", timestamp: i });
+      }
+
+      const { rows, truncated, cap } = sessionCallsLogic(store, { sessionId: "sess-cap" });
+
+      expect(truncated).toBe(true);
+      expect(cap).toBe(SESSION_CALLS_READ_CAP);
+      const timestamps = rows.map((r) => r.timestamp);
+      expect(timestamps).toEqual([...timestamps].sort((a, b) => a - b));
+      expect(Math.min(...timestamps)).toBe(5); // oldest 5 dropped
+      expect(Math.max(...timestamps)).toBe(SESSION_CALLS_READ_CAP + 4);
     });
   });
 

@@ -279,4 +279,32 @@ describe("TraceWaterfall (component)", () => {
     expect(screen.getByText("Total Tokens")).toBeInTheDocument();
     expect(screen.getByText("Cache Read Ratio")).toBeInTheDocument();
   });
+
+  // -------------------------------------------------------------------------
+  // Truncation banner (Phase 105 D-12) — present only when truncated is true
+  // -------------------------------------------------------------------------
+
+  it("does NOT render the truncation banner when truncated is false", () => {
+    const rows: LlmCallRow[] = [makeRow({ _id: "1" })];
+    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(
+      screen.queryByText(/older calls in this session aren't loaded/)
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the exact Task-2 truncation banner copy when truncated is true", () => {
+    const rows: LlmCallRow[] = [makeRow({ _id: "1" })];
+    mockUseQuery.mockReturnValue({ rows, truncated: true, cap: 1000 });
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(
+      screen.getByText(
+        "Showing the most recent 1000 calls — older calls in this session aren't loaded."
+      )
+    ).toBeInTheDocument();
+  });
 });
