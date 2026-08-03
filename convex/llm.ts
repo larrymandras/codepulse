@@ -117,21 +117,39 @@ export const cacheStats = query({
 });
 
 /**
- * Full-session, chronological, non-archived llmMetrics rows for the Trace
- * Waterfall (Phase 94 TRACE-02). Unlike cacheStats, no rolling-window cutoff
- * is applied — the Trace tab shows the whole session so the client can group
- * rows by traceId. No server-side grouping/cost estimation/cache derivation;
- * the UI component owns presentation (D-14/D-13).
+ * Bounded read cap for `sessionCalls` (Phase 105 D-12). The previous
+ * unbounded full-table read is exactly the class of read that caused the
+ * 2026-07-21/22 outage and the 2026-08-02 Analytics blackout on this
+ * single-node self-hosted SQLite backend (CLAUDE.md's "Self-Hosted Convex —
+ * Operational Rules").
+ */
+export const SESSION_CALLS_READ_CAP = 1000;
+
+/**
+ * Non-archived llmMetrics rows for the Trace Waterfall (Phase 94 TRACE-02),
+ * capped at SESSION_CALLS_READ_CAP and reported honestly via `truncated`
+ * (Phase 105 D-12) instead of the previous unbounded read that claimed to
+ * show "the whole session". When a session exceeds the cap, the MOST RECENT
+ * rows are kept (read in descending order, then reversed back to ascending)
+ * so the client's chronological grouping-by-traceId is unaffected and the
+ * truncation banner's "most recent {cap}" copy is literally true. No
+ * server-side grouping/cost estimation/cache derivation; the UI component
+ * owns presentation (D-14/D-13).
  */
 export const sessionCalls = query({
   args: { sessionId: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const descRows = await ctx.db
       .query("llmMetrics")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
-      .order("asc")
+      .order("desc")
       .filter((q) => q.neq(q.field("archived"), true))
-      .collect();
+      .take(SESSION_CALLS_READ_CAP);
+
+    const truncated = descRows.length >= SESSION_CALLS_READ_CAP;
+    const rows = descRows.slice().reverse();
+
+    return { rows, truncated, cap: SESSION_CALLS_READ_CAP };
   },
 });
 
