@@ -121,6 +121,53 @@ function includeFilterClaudeCliOnly(rows: ToolExecRow[]): ToolExecRow[] {
 }
 
 // ---------------------------------------------------------------------------
+// insert — traceId/round persistence (Phase 105 D-03/D-10)
+// ---------------------------------------------------------------------------
+
+/** Mirrors the `insert` handler: `ctx.db.insert("toolExecutions", args)`. */
+function makeToolExecStore() {
+  const toolExecutions: Record<string, any>[] = [];
+  const db = {
+    insert: async (tableName: string, data: Record<string, any>) => {
+      if (tableName === "toolExecutions") toolExecutions.push({ ...data });
+    },
+  };
+  return { toolExecutions, db };
+}
+
+async function insertLogic(ctx: { db: { insert: Function } }, args: Record<string, any>) {
+  await ctx.db.insert("toolExecutions", args);
+}
+
+describe("insert — traceId/round persistence (Phase 105 D-03/D-10)", () => {
+  it("persists traceId and round when provided", async () => {
+    const store = makeToolExecStore();
+    await insertLogic(store, {
+      sessionId: "sess-1",
+      toolName: "web_search",
+      success: true,
+      timestamp: 1000,
+      traceId: "trace-abc",
+      round: 2,
+    });
+    expect(store.toolExecutions[0].traceId).toBe("trace-abc");
+    expect(store.toolExecutions[0].round).toBe(2);
+  });
+
+  it("traceId and round are undefined when omitted (all 4 legacy callers pass neither)", async () => {
+    const store = makeToolExecStore();
+    await insertLogic(store, {
+      sessionId: "sess-1",
+      toolName: "Bash",
+      success: true,
+      timestamp: 1000,
+    });
+    expect(store.toolExecutions[0].traceId).toBeUndefined();
+    expect(store.toolExecutions[0].round).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // excludeByProvider — pure helper
 // ---------------------------------------------------------------------------
 

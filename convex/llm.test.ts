@@ -32,6 +32,7 @@ async function recordCallLogic(ctx: any, args: any) {
     billingType: "api",
     goalId: args.goalId,  // Phase 149 PULSE-01
     traceId: args.traceId,  // Phase 94 TRACE-01
+    round: args.round,  // Phase 105 D-10
   });
 }
 
@@ -117,6 +118,54 @@ describe("llm", () => {
         // traceId intentionally absent
       });
       expect(store.llmMetrics[0].traceId).toBeUndefined();
+    });
+  });
+
+  describe("recordCall — round persistence (Phase 105 D-10)", () => {
+    it("persists round into the llmMetrics row", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        round: 3,
+      });
+      expect(store.llmMetrics).toHaveLength(1);
+      expect(store.llmMetrics[0].round).toBe(3);
+    });
+
+    it("round 0 is persisted, not dropped by a falsy-value bug", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        round: 0,
+      });
+      expect(store.llmMetrics[0].round).toBe(0);
+    });
+
+    it("round is undefined when omitted (backward compat — existing callers unaffected)", async () => {
+      const store = makeLlmStore();
+      await recordCallLogic(store, {
+        provider: "anthropic",
+        model: "claude-sonnet-4-6",
+        promptTokens: 100,
+        completionTokens: 50,
+        totalTokens: 150,
+        latencyMs: 200,
+        timestamp: 1000,
+        // round intentionally absent
+      });
+      expect(store.llmMetrics[0].round).toBeUndefined();
     });
   });
 

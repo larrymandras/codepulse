@@ -42,6 +42,8 @@ export const insert = mutation({
     errorMessage: v.optional(v.string()),
     provider: v.optional(v.string()),
     timestamp: v.float64(),
+    traceId: v.optional(v.string()), // Phase 105 D-03
+    round: v.optional(v.float64()),  // Phase 105 D-10
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("toolExecutions", args);

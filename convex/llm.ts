@@ -20,6 +20,7 @@ export const recordCall = mutation({
     traceId: v.optional(v.string()),  // Phase 94 TRACE-01 — per-turn trace grouping
     cacheReadInputTokens: v.optional(v.float64()),      // prompt-cache hit monitoring
     cacheCreationInputTokens: v.optional(v.float64()),  // prompt-cache write monitoring
+    round: v.optional(v.float64()), // Phase 105 D-10 — per-round trace-waterfall join key
   },
   handler: async (ctx, args) => {
     const billingType = getBillingType(args.provider);
@@ -40,6 +41,7 @@ export const recordCall = mutation({
       traceId: args.traceId,
       cacheReadInputTokens: args.cacheReadInputTokens,
       cacheCreationInputTokens: args.cacheCreationInputTokens,
+      round: args.round,
     });
   },
 });
