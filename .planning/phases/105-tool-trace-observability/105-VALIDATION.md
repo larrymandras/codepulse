@@ -64,6 +64,8 @@ not by a passing unit test on the parser.
 | TBD | TBD | TBD | OBS-03 | — | `TraceWaterfall` nests tool rows under the correct LLM-call parent when `round` is present | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ⬜ pending |
 | TBD | TBD | TBD | OBS-03 | — | `groupCacheRatio` denominator matches `shapeCacheAcc` exactly (D-11 "one formula" regression) | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ⬜ pending |
 | TBD | TBD | TBD | OBS-03 | — | Both feeder queries are capped AND the UI states truncation when the cap is hit | unit + component | `npx vitest run convex/llm.test.ts` / `src/components/TraceWaterfall.test.tsx` | ⚠ verify in W0 | ⬜ pending |
+| TBD | TBD | TBD | OBS-01 (D-15 corrected) | — | `ToolExecutionPanel` + `PermissionDecisionsChart` still show Claude-Code-only rankings after Ástríðr rows exist in `toolExecutions` — control: seed both providers, assert the panels' output is byte-identical to the single-provider baseline | unit | `npx vitest run convex/toolExecutions.test.ts` | ⚠ verify in W0 | ⬜ pending |
+| TBD | TBD | TBD | OBS-01 (D-12 extended) | — | `successRate` and `avgDuration` are capped and report truncation, matching `fetchLlmRowsForWindow`'s `{rows, truncated}` shape | unit | `npx vitest run convex/toolExecutions.test.ts` | ⚠ verify in W0 | ⬜ pending |
 | TBD | TBD | TBD | OBS-01/02/03 (cross-repo) | — | astridr payload widening (D-03 / D-08 / D-10) emits the added fields | unit (pytest) | astridr-repo: path TBD in Wave 0 | ⚠ verify in W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -72,11 +74,16 @@ not by a passing unit test on the parser.
 
 ## Wave 0 Requirements
 
-- [ ] `convex/runtimeIngest.test.ts` — does not exist; needed for the extended `tool_executed` case and the new `tool_policy_event` case (pure-function extraction convention)
+> **Corrected 2026-08-03 at plan-phase.** RESEARCH.md listed `convex/runtimeIngest.test.ts` as
+> missing and `convex/llm.test.ts` as unconfirmed. Both **exist** (verified on disk). Extend them;
+> do not create parallel files.
+
+- [x] ~~`convex/runtimeIngest.test.ts` — does not exist~~ → **exists.** Add cases for the extended `tool_executed` case and the new `tool_policy_event` case alongside the existing `resolveGatewayTaskCompleted` / `processSwarmTaskEvent` pure-function tests.
+- [x] ~~Confirm whether `convex/llm.test.ts` exists~~ → **exists.** Extend for the D-12 `sessionCalls` cap.
 - [ ] `convex/toolPolicyEvents.test.ts` — new table + mutations, needs its own test file
 - [ ] `convex/toolPolicyAlertEval.test.ts` — D-06 alert evaluator, including the negative-kind isolation control
 - [ ] `src/pages/Tools.test.tsx` — new page, needs a component test scaffold
-- [ ] **Confirm** whether `convex/llm.test.ts` exists and covers `sessionCalls` — NOT verified during research. Do not assume a green baseline for the D-12 cap change until confirmed.
+- [ ] `convex/toolExecutions.test.ts` — confirm existence; needed for the D-15 provider-filter arg and the D-12-extended caps on `successRate` / `avgDuration`
 - [ ] **Confirm** astridr-repo's pytest path for `loop.py`'s `tool_executed` / leak-detector emits — research did not enumerate astridr-repo's test directory.
 - [ ] Extend `convex/aggregates.test.ts` (exists, 34 tests) rather than creating a parallel file.
 

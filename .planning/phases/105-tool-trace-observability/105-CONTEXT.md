@@ -154,6 +154,13 @@ change to astridr's tool-filter behavior, policy semantics, or agent loop contro
   Rationale: this is the same shape as the query that blanked all of Analytics on 2026-08-02
   (`3b31c9f4` — one timing-out query, one missing boundary, whole page gone).
 
+  **EXTENDED at plan-phase (2026-08-03).** Two more unbounded reads sit directly in D-01's blast
+  radius and were missed during discussion: `toolExecutions.successRate` (`convex/toolExecutions.ts:36-39`)
+  and `toolExecutions.avgDuration` (`:66-69`) both `.collect()` the entire 24h window with no cap.
+  Ástríðr's tool volume lands on exactly these reads. **Resolution (Larry, plan-phase):** bound both
+  in this phase using the same `{rows, truncated}` shape as `aggregates.ts`'s `fetchLlmRowsForWindow`,
+  per the CLAUDE.md bounded-read rule for the self-hosted single-node backend.
+
 ### Information architecture
 
 - **D-13:** **A new dedicated Tools page**, owning OBS-01's per-tool frequency + success/failure
@@ -172,6 +179,18 @@ change to astridr's tool-filter behavior, policy semantics, or agent loop contro
   **Verified during discussion:** `ToolBreakdown` reads `useRecentEvents(100)` → the build-time
   `events` table (`src/pages/Dashboard.tsx:25,137`), **not** `toolExecutions` — so D-01/D-02's
   source mixing does not reach it and it needs no source filter.
+
+  **CORRECTED at plan-phase (2026-08-03) — the "zero regression surface" claim was verified for
+  `ToolBreakdown` only, and is FALSE for the other two panels.** Confirmed live:
+  `ToolExecutionPanel.tsx:43-44` reads `api.toolExecutions.recentExecutions` **and**
+  `api.toolExecutions.successRate`; `PermissionDecisionsChart.tsx:7` reads
+  `api.toolExecutions.recentExecutions`. Both queries (`convex/toolExecutions.ts:21-30` and
+  `:32-60`) take **no args and never filter by `provider`** — so the moment D-01 writes Ástríðr
+  rows into `toolExecutions`, both panels' tool rankings and success rates shift silently.
+  **Resolution (Larry, plan-phase):** add an optional `provider` arg to `recentExecutions` and
+  `successRate`, and have `ToolExecutionPanel` + `PermissionDecisionsChart` request Claude Code
+  rows only. This preserves today's behavior exactly and actually delivers the zero-regression
+  surface D-15 intends. `ToolBreakdown` still needs no change.
 
 - **D-16:** **The Tools page is stacked sections on one scroll**, not tabs: usage analytics first,
   policy feed beneath, each in its own `SectionErrorBoundary`. A rare-but-important signal stays
