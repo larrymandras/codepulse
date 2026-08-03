@@ -187,10 +187,23 @@ change to astridr's tool-filter behavior, policy semantics, or agent loop contro
   `api.toolExecutions.recentExecutions`. Both queries (`convex/toolExecutions.ts:21-30` and
   `:32-60`) take **no args and never filter by `provider`** — so the moment D-01 writes Ástríðr
   rows into `toolExecutions`, both panels' tool rankings and success rates shift silently.
-  **Resolution (Larry, plan-phase):** add an optional `provider` arg to `recentExecutions` and
-  `successRate`, and have `ToolExecutionPanel` + `PermissionDecisionsChart` request Claude Code
-  rows only. This preserves today's behavior exactly and actually delivers the zero-regression
-  surface D-15 intends. `ToolBreakdown` still needs no change.
+  **Resolution (Larry, plan-phase):** filter the two panels so D-01's new rows cannot shift them.
+  `ToolBreakdown` still needs no change.
+
+  **MECHANISM CORRECTED during planning — use EXCLUDE, not include.** The first-drafted resolution
+  ("request Claude-Code-only rows") would have caused the very regression it exists to prevent.
+  Verified live: `provider` is set only on the *success* path (`convex/ingest.ts:153`,
+  `provider: data.provider ?? "claude-cli"`) and is **absent entirely** on
+  `convex/ingest.ts:168-177` (`PostToolUseFailure` — every Claude Code tool failure),
+  `convex/otelLogs.ts:169-176`, and `convex/runtimeIngest.ts:761-768`. Gateway rows also carry
+  `provider: "claude-cli"`, colliding with the hook rows. An include-filter on `"claude-cli"`
+  would therefore drop every failure row and render `ToolExecutionPanel` at 100% success for
+  every tool. **Built instead:** an `excludeProvider: "astridr"` arg on `recentExecutions` and
+  `successRate`, with the acceptance criterion written as a two-run CONTROL (`toEqual` against an
+  astridr-free baseline), not as "the argument exists".
+  Related pre-existing defect, deliberately NOT fixed here: `convex/ingest.ts:168` omits `provider`
+  on the Claude Code failure path. Fixing it would move the baseline the D-15 control asserts
+  against. Recorded as a Phase 106 candidate.
 
 - **D-16:** **The Tools page is stacked sections on one scroll**, not tabs: usage analytics first,
   policy feed beneath, each in its own `SectionErrorBoundary`. A rare-but-important signal stays

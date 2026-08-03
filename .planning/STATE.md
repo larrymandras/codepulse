@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
-status: planning
-stopped_at: Phase 105 UI-SPEC approved
-last_updated: "2026-08-03T21:03:20.029Z"
-last_activity: 2026-08-03
+status: executing
+stopped_at: Phase 105 planned — 9 plans, 6 waves, checker passed (0 blockers)
+last_updated: "2026-08-03T22:18:21.782Z"
+last_activity: 2026-08-03 -- Phase 105 planning complete
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 29
+  total_plans: 38
   completed_plans: 29
   percent: 50
 ---
@@ -96,14 +96,14 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Ready to plan
+Status: Ready to execute
 
 Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 105-106 (not yet planned).
 
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-08-03
+Last activity: 2026-08-03 -- Phase 105 planning complete
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 

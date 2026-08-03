@@ -523,9 +523,16 @@ current convention).
 load-bearing factual claims; every payload-shape and file:line claim in this document was independently
 re-verified against the live source in both repos during this research session.
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+> Both questions were resolved during planning (2026-08-03). Resolutions live in the plans cited
+> below; in both cases the planner rejected this section's recommendation for a better-reasoned one.
+> The original text is kept for the reasoning trail.
 
 1. **Should `toolPolicyEvents` alerting dedup per-window or per-lifetime-until-acknowledged?**
+   → **RESOLVED in `105-04-PLAN.md` (finding F4): dedup on the completed-hour bucket.** The
+   recommendation below (a 5-minute bucket) was rejected — a sub-hour granularity buys nothing when
+   the evaluator only runs hourly at `computeHourly`'s tail.
    - What we know: D-06 says "alert on the fail-open kinds only," reusing Phase 104's exact delivery path.
      Phase 104's `evaluateBudgets` dedups on `(budgetId, level, periodStart)` — i.e., once per period.
    - What's unclear: a `malformed_policy_boot` event is a discrete occurrence (one per boot), not a
@@ -538,6 +545,10 @@ re-verified against the live source in both repos during this research session.
      detail with no data-model consequence.
 
 2. **Does the astridr-repo commit's round ContextVar need a reset/`finally` guarantee at loop boundaries?**
+   → **RESOLVED in `105-02-PLAN.md` (finding F1): reset at TURN level, joining `traceId`'s existing
+   `try/finally` at `loop.py:938-942`.** The `while True` round loop is ~620 lines with many exit
+   paths, so a per-round `finally` would be fragile; the round ContextVar therefore adopts the
+   existing turn-scoped discipline rather than inventing its own lifecycle.
    - What we know: `_current_trace_id` (the existing sibling ContextVar) has explicit `set_trace_context`/
      `reset_trace_context` functions returning a `Token` for reset — implying callers are expected to reset it,
      but this research did not trace every call site of `set_trace_context`/`reset_trace_context` to confirm a
