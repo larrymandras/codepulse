@@ -154,9 +154,22 @@ no tombstone growth. No command contained `--replace-all`; no bulk delete or pat
 `CLI_GATEWAY_URL` is set to `http://astridr-cli-gateway:8200` on the deployment. No monthly budget
 exists (none was invented — `seedFromLegacyCaps` refused, correctly), so `CostForecastPanel` shows
 its honest "No monthly budget set." state until one is created in Settings → Cost & Budgets. The
-astridr token-emit commit `9adb25b6` is live in the running containers but still **unmerged** on
-`feature/brain-swap`; a future `docker compose up --build` from a different branch would silently
-revert D-18.
+astridr token-emit commit `9adb25b6` was live in the running containers but existed ONLY on
+`feature/brain-swap`, so a `docker compose up --build` from another branch would have silently
+reverted D-18. **Resolved 2026-08-03:** cherry-picked onto astridr `main` as `7ae2cd1f`. The commit
+is fully self-contained — all 9 files, including `astridr/channels/web.py`'s forwarding change and
+both test files, are in that single commit, with no follow-ups touching it — so the pick captured the
+whole change rather than a half-fix. Applied cleanly (no conflicts) and functionally verified on
+`main`, not just textually: `gateway/tests/test_adapters.py` + `test_telemetry_client.py` = 55 passed,
+and the `prompt_tokens`/`promptTokens` occurrence counts on `main` now match the running containers
+exactly (4/5/5/1 and 1).
+
+Done via astridr's existing `main` worktree (`astridr-wt-183`) rather than by switching the shared
+checkout's branch, per the shared-checkout rule — that checkout is still on `feature/brain-swap`,
+untouched. Two caveats: local `main` (`7ae2cd1f`) is now AHEAD of `origin/main` (`d580e4c5`) and was
+deliberately **not pushed** — that is a remote/CI-affecting action for the operator to take. And the
+eight other in-flight astridr worktree branches do not carry the change yet; they inherit it on their
+next merge from `main`.
 
 ---
 *Phase: 104-cost-intelligence*
