@@ -227,9 +227,22 @@ that was more permissive than Convex (same commit). This is the gate earning its
 
 **Approval:** APPROVED for the VALIDATION CONTRACT (2026-08-03) — every Manual-Only row was executed against the running stack and recorded verbatim, and all now pass. 7 defects were surfaced by this gate that no green suite could see; 6 are fixed and deployed.
 
-**This is NOT the same as the phase being complete.** Two items remain open and are NOT part of this validation contract:
-1. **CR-01** — `SDKSpendGuard`/`CostForecastPanel` still derive SPEND from the raw ingested `llmMetrics.cost` while every other surface derives it from tokens × rates, so two different dollar figures can render on one page. That contradicts **D-01**, a locked decision, so the phase should not be marked complete until it is closed.
-2. **`llm:providerBreakdown` → aggregates** — the row cap added in `3b31c9f4` is an explicit stopgap.
+**CR-01 is now CLOSED** (was listed here as blocking; superseded 2026-08-03). It turned out to have
+FOUR instances, not the two originally reported — `22a1733f` fixed `SDKSpendGuard` and
+`CostForecastPanel`, and the phase verifier then caught that commit's own "the last two cost
+surfaces" claim as false: `7e278003` additionally moved Analytics' **API Spend** MetricCard and
+**LlmAnalyticsPanel**'s Model Breakdown money column onto the derived layer, and deleted a dead
+second `costByPeriod` read. Measured live on the same 24h window, derived **$2.8136** vs legacy
+**$2.4895** — the gauge had been under-reporting ~13%.
 
-Both are the same theme (legacy raw reads vs. the derived layer) and belong in one `/gsd-plan-phase 104 --gaps` plan.
-with explicit blockers, so `nyquist_compliant` stays false and Phase 104 stays OPEN.
+Scope of that closure, stated precisely: **every AGGREGATE spend surface** — the ones COST-01/02/03
+actually target — now derives dollars from tokens × live rates. Three PRE-EXISTING per-call/per-trace
+debug readouts still display the value the agent reported (`Analytics.tsx`'s Recent-LLM-Calls row,
+`TraceWaterfall.tsx`, `chat/VitalsRail.tsx`). All three predate this phase (Phase 94 / the chat
+command-center), none were touched by it, and none is an aggregate spend figure. Recorded as
+informational, out of scope for D-01 here — not silently dropped.
+
+**Remaining, and explicitly NOT blocking:** `llm:providerBreakdown` is bounded by a row cap
+(`3b31c9f4`) rather than rewired onto the aggregates rollups. Its `cost` field is not displayed
+anywhere (the Provider Comparison chart plots call counts), so it is a performance stopgap, not a
+locked-decision violation — a phase-106 tech-debt candidate.
