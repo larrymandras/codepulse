@@ -746,7 +746,47 @@ Plans:
 **Goal**: Tool behavior is observable — per-tool call frequency and success/failure rates over time, astridr's tool-filter/leak signals surfaced with the offending tool named, and a trace waterfall deep enough to show nested spans, per-tool timings, and cache hits per turn.
 **Depends on**: The v10.0 Phase 94 `TraceWaterfall` (extends it) and the v10.0 Phase 93 eval/ingest pipeline. Cross-repo signal source: astridr's invoke-leak detector (`agent_loop.tool_call_leaked_as_text` / `tool_policy_event`, astridr `b7e4a534`) — requires an ingest path into CodePulse. Independent of Phases 103/104.
 **Requirements**: OBS-01, OBS-02, OBS-03
-**Success Criteria**: derived at `/gsd-discuss-phase 105` / `/gsd-plan-phase 105`.
+**Success Criteria** (what must be TRUE):
+
+  1. Astridr's real tools (`web_search`, `telegram_tool`, `cli_gateway`, `memory_search`, ...) exist as per-call `toolExecutions` rows - they have only ever existed as cumulative `callGraphEdges` counters, which makes "over time" architecturally impossible today.
+  2. Per-tool call frequency and success/failure rates render over time from hourly aggregate buckets that survive the 14-day `toolExecutions` prune, without raising retention on the self-hosted instance.
+  3. The default tool view is Astridr's, and no mixed-source ranking is ever shown without the operator deliberately asking for it.
+  4. All four `tool_policy_event` kinds land and are visible with the offending tool named - they are silently discarded at the ingest boundary today (no `case`, no `default`), and have never once been stored.
+  5. The two fail-open kinds (`malformed_policy_boot`, `malformed_policy_reload_rejected`) raise an alert through the existing routing layer; the leak and denial kinds never do, because a denial is the policy working correctly.
+  6. Tool executions nest under the round that ran them in the trace waterfall, with per-tool timings readable as a share of the turn and a per-turn cache ratio - attribution reported by Astridr, never inferred from timestamp proximity.
+  7. Every feeder read is bounded and states truncation on screen rather than rendering a partial view that looks complete.
+  8. The three existing tool panels keep working unchanged, proven by a control rather than by inspection.
+
+**UI hint**: yes
+**Plans:** 9 plans in 6 waves
+
+Plans:
+**Wave 1**
+
+- [ ] 105-01-PLAN.md - bounded feeder reads (`sessionCalls`, `listBySession`, `successRate`, `avgDuration`) + the D-15 zero-regression `excludeProvider` guard
+- [ ] 105-02-PLAN.md - cross-repo astridr commit: `durationMs`/`traceId`/`round` on `tool_executed`, the widened leak payload, the per-round ContextVar, and the contract doc
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 105-03-PLAN.md - Convex substrate: `toolPolicyEvents` table + internalMutation, the `tool_policy_event` ingest case, per-call `toolExecutions` rows tagged `astridr`, retention
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 105-04-PLAN.md - hourly `tool_*` aggregate buckets + the fail-open-only alert evaluator at `computeHourly`'s tail (no new cron)
+- [ ] 105-05-PLAN.md - TraceWaterfall: round-level nesting, tool bars, per-turn cache ratio, dual truncation notice
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 105-06-PLAN.md - `toolAnalytics` queries + `ToolUsagePanel` (OBS-01 usage section, Astridr-default source filter)
+- [ ] 105-07-PLAN.md - `ToolPolicyFeed` (OBS-02 policy/leak feed, four-kind mapping, D-07 last-received clause)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 105-08-PLAN.md - `/tools` page, OBSERVE nav entry + Wrench icon, D-15 cross-links
+
+**Wave 6** *(blocked on Wave 5 completion)*
+
+- [ ] 105-09-PLAN.md - live validation: deploy, D-07 induction of all four kinds, alert isolation, UI/theme pass, requirement markers
 
 ---
 
