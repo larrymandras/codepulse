@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v13.0
-milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation
-status: executing
-stopped_at: Phase 104 VALIDATION APPROVED (all Manual-Only rows pass); phase still OPEN for CR-01 + providerBreakdown rewire via /gsd-plan-phase 104 --gaps
-last_updated: "2026-08-03T12:30:00.000Z"
-last_activity: 2026-08-03 -- Phase 104 validation CLOSED OUT: 104-VALIDATION.md approved (nyquist_compliant/wave_0_complete true), every Manual-Only row passing. Final defect found by Larry's own testing and fixed (b26b22f4): a DISABLED budget still rendered as an active cap. 7 defects surfaced by the live gate, 6 fixed. CR-01 + providerBreakdown rewire remain.
+milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
+status: planning
+stopped_at: context exhaustion at 75% (2026-08-03)
+last_updated: "2026-08-03T13:23:05.548Z"
+last_activity: 2026-08-03
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 29
-  completed_plans: 28
-  percent: 25
+  completed_plans: 29
+  percent: 50
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 104 — cost-intelligence
+**Current focus:** Phase 105 — tool & trace observability
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,8 +43,8 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 104 (cost-intelligence) — EXECUTING
-Plan: 1 of 11 COMPLETE (2026-07-31) — persistence layer: `convex/schema.ts` gained `modelPricing`/`costBudgets` tables; `convex/modelPricing.ts` ships CRUD + Clerk auth gate + pure rate-resolution helpers (`buildRateIndex`/`resolveRate`/`priceTokens`, D-03's no-default-fallback rule) + idempotent `seedDefaults` (15 code-table rates + claude-opus-5/sonnet-5/fable-5 + 3 D-06 shadow rows); 16 unit tests passing; `src/lib/modelPricing.ts` marked SEED SOURCE ONLY. See `104-01-SUMMARY.md`.
+Phase: 105
+Plan: Not started
 Plan 2 of 11 COMPLETE (2026-07-31) — ingest prerequisites (cross-repo): `convex/runtimeIngest.ts` gained a `gateway_task_completed` case writing `llmMetrics` rows for CLI-gateway/subscription turns (D-18, `billingType: "subscription"`, model keyed on the opaque provider id per D-06's only viable branch, honesty-tagged `:tokens-unreported` when no tokens are reported); `convex/gatewayQuota.ts`'s `pollAndStore` repointed at a new `CLI_GATEWAY_URL` env var (D-20, no fallback to the dead `ASTRIDR_API_URL` target). Cross-repo astridr-repo change (commit `9adb25b6` on branch `feature/brain-swap`, NOT yet merged to `main` or deployed): `claude_cli.py` now extracts real token counts from the CLI's stream-json `usage` object onto the gateway telemetry payload end-to-end through `web.py`'s forwarding handler; `codex_cli.py`/`antigravity_cli.py` confirmed to have no usage object at all. 33 codepulse + 55 astridr-repo tests passing. See `104-02-SUMMARY.md`.
 Plan 3 of 11 COMPLETE (2026-07-31) — rollup widening + backfill: `convex/aggregates.ts` `computeHourly` now writes `tokens_prompt`/`tokens_completion` hourly buckets on the existing `{provider, model, billingType, goalId}` dimension key (D-04), each behind its own idempotency guard, filled from the already-fetched `llmRows` pass (no new scan); `rollupDaily` needed no code change (generic metric_type grouping already covers the new types). New `backfillTokenSplit` internalMutation (manually invoked, `npx convex run aggregates:backfillTokenSplit '{"maxHours": 6}'`, repeated until `done`) resumably fills the same split for history, insert-only end to end (including its own `agentConfigs` cursor, written via insert-not-patch), capped at `maxHours` (default 6/invocation), NOT on a cron. Retention floor resolved from `agentConfigs["retention_days"]` (default 30d) — `convex/retention.ts` itself excludes `llmMetrics` from its pruned tables ("kept forever" there), so that file defines no retention window for this table; the plan's own framing of `retention.ts` as the reach limit didn't hold against the live code, documented as a decision in `104-03-SUMMARY.md`. A full backfill at defaults needs 120 invocations (720h / 6h). 10 new unit tests (34/34 in `aggregates.test.ts`); full repo suite 3002/3002 passing; `tsc --noEmit` clean. See `104-03-SUMMARY.md`.
 Plan 4 of 11 COMPLETE (2026-07-31) — cost budget persistence + legacy cap migration: `convex/costBudgets.ts` ships pure UTC-anchored period-boundary helpers (`periodStartFor`/`periodEndFor`/`periodHours` for daily/weekly/monthly — D-10, matching `crons.ts`'s `hourUTC`/`rollupDaily`'s day-floor/`SDKSpendGuard`'s identical floor), Clerk-gated `create`/`update`/`remove` (D-07 derives `unit` server-side from `scope`, never a caller arg; `update` rejects changes to the now-immutable `scope`/`scopeKey`/`period`), unauthenticated `list`/`get`/`getByScope` reads, and an idempotent additive-only `seedFromLegacyCaps` internalMutation migrating `SDKSpendGuard`'s hardcoded `DAILY_CAP=5.00`/`ALERT_THRESHOLD=0.8` (D-12) and `agentConfigs["intelligence.budget_cap"]` (D-19) into seed rows — the monthly seed is skipped honestly (no fictional threshold) when no legacy value exists. Live-checked via `npx convex run forecasts:getBudgetConfig '{}'` → `{budgetCap: null}`: **the live deployment has no `intelligence.budget_cap` row today**, so running the seed live will populate only the daily budget; plan 104-08 should expect the monthly axis to need an operator-set value. 15 new unit tests passing; full repo suite 3017/3017 passing; `tsc --noEmit` clean. See `104-04-SUMMARY.md`. Next: Plan 05.
@@ -93,14 +93,14 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Executing Phase 104 — Plans 01-10 complete (10/11 executed); only Plan 11 (live verification/UAT) remains. Most recent: Plan 09 (cost breakdown table + unpriced-models nudge, `104-09-SUMMARY.md`)
+Status: Ready to plan
 
 Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 105-106 (not yet planned).
 
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-07-31 -- Phase 104 Plan 09 executed (CostBreakdownTable + UnpricedModelsNudge mounted on Analytics, COST-01, 3 tasks, commits 3203a0e7/97c04687/410aca52)
+Last activity: 2026-08-03
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 
@@ -258,23 +258,28 @@ See PROJECT.md Key Decisions table for full history.
 - **STATE.md frontmatter was clobbered a SECOND time (2026-08-02)** by the same gsd-sdk `state.*` defect — `total_phases` 4->8, `percent` 25->13, `last_activity` regressed to "Plan 09 executed". Rebuilt from HEAD again with only this session's edits re-applied. Twice in one phase; treat any STATE.md diff as suspect before committing.
 
 **v13.0 / Phase 104 orchestrator decisions (2026-07-31, execute-phase code review + live gate):**
+
 - **Budget-alert dedup read range-bounded** (`527adc7f`) — `costBudgetEval`'s `alerts.by_source` dedup read had
   no lower bound over a table `retention.ts` keeps forever, so it grew one row per fired period forever INSIDE
   `computeHourly` — the one mutation D-14 exists to protect. Bounded on `createdAt` (composite index makes it
   free; an alert for period P is always written during P). Two structural guards, mutation-tested.
+
 - **CR-01 accepted as a VERIFIED GAP, deliberately not fixed inline** (Larry's call) — `SDKSpendGuard` and
   `CostForecastPanel` still show spend from the raw ingested `llmMetrics.cost` field while the chart/table/
   evaluator derive it from tokens x rates, so two different dollar figures render on one Analytics page. D-01
   says `cost` "stops being the displayed truth"; no plan in the phase ever owned this — 104-08's own threat
   model states `costForecast`'s aggregates read is "unchanged". Route: `/gsd-plan-phase 104 --gaps`.
+
 - **`gatewayQuotaSnapshots` bounded at 30 days** (`380f13d9`, Larry's call) — D-20 revives a dead poller, so a
   permanently-empty table starts accruing ~288 rows/provider/day forever on the instance that has gone down
   twice from read growth. Bounded BEFORE it fills, which avoids ever needing the mass delete that caused this
   module's original tombstone outages. `RETENTION_DAYS` now exported and guarded by a test asserting every key
   is a REAL schema table — the prune casts the table name away, so a typo there is a permanent silent no-op.
+
 - **Two admin-UI honesty fixes** (`d9213c52`) — four handlers discarded `ConvexError.data` behind a generic
   toast (Convex redacts plain-Error messages, so `.data` must be read first); and the delete-rate dialog
   claimed past figures "stay as last computed", the exact opposite of D-04's recompute-on-read.
+
 - **Three defects found ONLY by the live gate** — (1) `npx convex deploy` broke on the `@/` alias because
   104-06 added the repo's only convex-to-src import while `convex/tsconfig.json` had no `paths` map
   (`e9ca3f9a`; fixed properly, NOT with `--typecheck=disable`); (2) `backfillTokenSplit` issued multiple
@@ -282,6 +287,7 @@ See PROJECT.md Key Decisions table for full history.
   the LIVE `computeHourly` cron (pre-existing, Phase 88, latent only because one 500-row page covered one
   hour), both fixed in `921517db`; (3) the aggregates test mock implemented `paginate()` more permissively
   than Convex, which is why 34 tests stayed green — it now throws Convex's real error and is mutation-tested.
+
 - **STATE.md frontmatter clobber rejected at commit time** — the working copy had been rewritten to
   `total_phases: 8` / `percent: 13` and had lost the Last-session block (v13.0 spans phases 103-106, so 4/25
   are correct). Restored from HEAD and only this session's edits re-applied, per the standing anti-clobber rule.
@@ -735,12 +741,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-07-30T21:51:11.403Z
-Stopped at: Phase 104 UI-SPEC approved
+Last session: 2026-08-03T13:23:05.537Z
+Stopped at: context exhaustion at 75% (2026-08-03)
 Next action: Phase 103's gap-closure cycle is 18/18 plans CODE-complete (103-18 closed WR-01, 2026-07-29). Next step is an operator-attended LIVE re-verification against the running Ástríðr stack covering 103-16 (reselect gets a fresh confirm prompt), 103-17 (pinned-default count reads config), and 103-18 (revert survives navigating away from the Chat composer pill) — a green unit suite is explicitly not accepted as proof per this cycle's established pattern (see 103-VERIFICATION.md). Only after that should BSC-01..05 be re-marked complete in REQUIREMENTS.md and the phase checkbox flipped in ROADMAP.md.
 
 --- Historical (v11.0, closed 2026-07-25) --- Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This was the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/104-cost-intelligence/104-UI-SPEC.md
+Resume file: None
 
 ## Operator Next Steps
 

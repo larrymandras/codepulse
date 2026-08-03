@@ -627,7 +627,7 @@ Plans:
 **Phase summary:**
 
 - [x] **Phase 103 — Brain-Swap Control Surface** — live current-engine view + on-the-fly swap (keyed API models + subscription CLIs), per-agent vs global scope, server-confirmed status (BSC-01..05) (gap-closure cycle CODE-complete, 18/18 plans complete 2026-07-29 — 103-09 closed defects 6a/6b (BSC-01); 103-10 closed CR-01 (BSC-01, BSC-04); 103-11 closed CR-02/WR-01/WR-03 (BSC-02, BSC-03); 103-12 closed defect #5/CR-03/WR-02 (BSC-04, BSC-03, BSC-01); 103-14 closed OBS 7 (BSC-04, BSC-05); 103-15 investigated + hardened BrainControl coverage (no requirement close); 103-16 closed a code-review CR-01 (`GlobalSwapModal` reused stale phase/outcome on a same-brain reselect, live-reproduced by the orchestrator 2026-07-29 — see [103-16-PLAN.md](phases/103-brain-swap-control-surface/103-16-PLAN.md)) — BSC-02, BSC-04; 103-17 closed **OBS 8** (confirm modal's pinned-default count now reads `profileConfigs.modelPreferences.primary` via a new config-derived `hasConfiguredDefault` signal, decoupled from the unchanged telemetry-only `mode`/current-engine reading — D-14 boundary regression-tested — see [103-17-PLAN.md](phases/103-brain-swap-control-surface/103-17-PLAN.md)) — BSC-01, BSC-04, BSC-05; 103-18 closed **WR-01** (global-swap ownership hoisted into a `DashboardLayout`-level `GlobalSwapContext`, above the router outlet, so a "Revert global swap" toast fired after navigating away from a page-scoped picker still reaches a live, visible instance — CR-03/103-14/103-16 all verified still closed post-hoist — see [103-18-PLAN.md](phases/103-brain-swap-control-surface/103-18-PLAN.md)); 103-13's live re-verification is DONE (14 operator-attended observations against the running Ástríðr stack, stub OFF, 2026-07-29 — see [103-VALIDATION.md](phases/103-brain-swap-control-surface/103-VALIDATION.md)). **Phase COMPLETE 2026-07-30.** The outstanding live re-verification was performed as an operator-attended UAT ([103-UAT.md](phases/103-brain-swap-control-surface/103-UAT.md)): 16/16 tests resolved against the running Ástríðr + self-hosted Convex stack. It confirmed 103-16/17/18 live AND found 4 further defects — a BLOCKER (the picker crashed from 2 of its 3 entry points, leaving only the header badge usable), the "unknown" sentinel rendered as a real engine, a never-settling dispatch that trapped the operator, and misleading deferred-axis copy — all fixed and live-re-verified (a9ef7e16, ddb51d96, fc9828ff, 6afd67dd, 35d16d5a, 025d7502). The Convex ingest guard was deployed to the live self-hosted instance and proven (a real swap now creates zero sentinel rows; 93 pre-existing sentinels pruned). BSC-02/04/05 re-marked SATISFIED; BSC-01 stays PARTIAL solely on the by-design astridr-184.1 per-profile deferral; see [103-VERIFICATION.md](phases/103-brain-swap-control-surface/103-VERIFICATION.md))
-- [ ] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03)
+- [x] **Phase 104 — Cost Intelligence** — per-model/per-provider cost breakdown over time, configurable budget thresholds, anomaly/budget alerts through existing alert routing (COST-01..03) (completed 2026-08-03)
 - [ ] **Phase 105 — Tool & Trace Observability** — tool-usage analytics, astridr tool-filter/leak signals surfaced, deeper trace waterfall with nested spans + per-tool timings (OBS-01..03)
 - [ ] **Phase 106 — Consolidation & Hardening** — typed-api sweep, retire cloud Convex `tidy-whale-981`, chunk code-split, finish deferred manual UAT (DEBT-01..04)
 
@@ -710,7 +710,7 @@ Plans:
 **Depends on**: Existing cost/pricing plumbing from v5.0 (Phases 67-69 multi-provider pricing, gateway observability, SDK spend guard) and the v9.0 Phase 88 analytics rollup. Alert delivery reuses the v4.0 Phase 6 alert-routing layer — no new channels. Independent of Phase 103, though it becomes more valuable once engines are being swapped.
 **Requirements**: COST-01, COST-02, COST-03
 **Success Criteria**: Every displayed dollar is recomputed by CodePulse from tokens x a Convex-editable rate; an unpriced model is excluded from the total and named, never valued at a default; billed and subscription-covered spend are shown as two figures that never merge; budgets are persisted per scope and period with a limit and a warn fraction; a warn or breach fires exactly one alert per period through the existing webhook-delivery path; nothing in the phase enforces, throttles or mutates Astridr.
-**Plans:** 10/11 plans executed
+**Plans:** 11/11 plans complete
 
 Plans:
 **Wave 1**
@@ -737,7 +737,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 104-11-PLAN.md — Deploy, seed, backfill, then live-verify every Manual-Only row: D-18/D-20 pipes, D-14 evaluator cost, D-04 live re-price, D-03 nudge accuracy, six-theme pass (blocking checkpoints) — COST-01, COST-02, COST-03
+- [x] 104-11-PLAN.md — Deploy, seed, backfill, then live-verify every Manual-Only row: D-18/D-20 pipes, D-14 evaluator cost, D-04 live re-price, D-03 nudge accuracy, six-theme pass (blocking checkpoints) — COST-01, COST-02, COST-03
 
 ---
 
@@ -795,7 +795,7 @@ Plans:
 | 101. Reminders & Calendar Command Center | v12.0 | 7/7 | Complete    | 2026-07-20 |
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 | 103. Brain-Swap Control Surface | v13.0 | 18/18 | 🚧 Code-complete, live re-verification of 103-16/17/18 pending | — |
-| 104. Cost Intelligence | v13.0 | 10/11 | In Progress|  |
+| 104. Cost Intelligence | v13.0 | 11/11 | Complete    | 2026-08-03 |
 | 105. Tool & Trace Observability | v13.0 | — | Planned | — |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
 
