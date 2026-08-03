@@ -44,10 +44,16 @@ export function projectDayEndSpend(todaySpend: number, elapsedHours: number, cap
 
 /** SDK Spend Guard — upgraded from SDKSpendCapGauge with sparkline + projection. */
 export default function SDKSpendGuard() {
-  const rawBuckets = useQuery(api.aggregates.costByPeriodByProvider, {
+  // CR-01 (2026-08-03): read DERIVED billed dollars (tokens x live rates), not
+  // the legacy pre-baked `metric_type: "cost"` aggregate that came from the raw
+  // ingested `llmMetrics.cost`. D-01 — `cost` is stored but is no longer the
+  // displayed truth. This gauge and CostForecastPanel were the last two surfaces
+  // on the old source, which meant Analytics could render two different dollar
+  // figures for the same spend. No billingType arg needed: subscription buckets
+  // derive to billedUsd 0, so a dollar cap guards api money only (D-07).
+  const derived = useQuery(api.costDerived.billedOverTime, {
     period: "hourly",
     lookbackHours: 24,
-    billingType: "api",
   });
   // D-12: the daily cap and warn fraction come from the global/daily
   // costBudgets row, not a hardcoded constant. `undefined` (loading) and
@@ -55,7 +61,7 @@ export default function SDKSpendGuard() {
   const budget = useCostBudget("global", "", "daily");
   const theme = useThemeColors();
 
-  if (rawBuckets === undefined || budget === undefined) {
+  if (derived === undefined || budget === undefined) {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-mono tracking-widest text-primary uppercase">SDK DAILY CAP</h3>
@@ -66,19 +72,18 @@ export default function SDKSpendGuard() {
     );
   }
 
-  const buckets = rawBuckets;
+  const buckets = derived.buckets;
   const now = Date.now() / 1000;
   const dayStartEpoch = Math.floor(now / 86400) * 86400;
 
   // Filter to today's buckets only
   const todayBuckets = buckets.filter(
-    (b: { bucket_start: number; byProvider: Record<string, number> }) => b.bucket_start >= dayStartEpoch
+    (b: { bucket_start: number; billedUsd: number }) => b.bucket_start >= dayStartEpoch
   );
 
   // Sum all provider values per bucket for sparkline
   const sparklineData = todayBuckets.map(
-    (b: { bucket_start: number; byProvider: Record<string, number> }) =>
-      Object.values(b.byProvider).reduce((s, v) => s + (v as number), 0)
+    (b: { bucket_start: number; billedUsd: number }) => b.billedUsd
   );
 
   // Compute today's total spend

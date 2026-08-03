@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
+import { deriveBilledByBucket } from "./costDerived";
 
 // ---- Pure helper functions (exported for testing) ----
 
@@ -63,22 +64,19 @@ export const costForecast = query({
     const lookbackSeconds = 30 * 86400;
     const cutoff = now - lookbackSeconds;
 
-    // Read last 30 days of daily cost aggregates
-    const rows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_type_period_bucket", (q) =>
-        q.eq("metric_type", "cost").eq("period", "daily").gte("bucket_start", cutoff)
-      )
-      .collect();
-
-    // Phase 67 D-02: Only project API-billed spend. Subscription usage tracked but not forecasted.
-    const apiRows = filterAPIBilledRows(rows);
-
-    // Group by bucket_start (sum values across providers per day)
-    const byDay: Record<number, number> = {};
-    for (const row of apiRows) {
-      byDay[row.bucket_start] = (byDay[row.bucket_start] ?? 0) + row.value;
-    }
+    // CR-01 (2026-08-03): derive dollars from tokens x live rates, exactly like
+    // every other cost surface, instead of reading the legacy pre-baked
+    // `metric_type: "cost"` bucket (populated from the raw ingested
+    // `llmMetrics.cost`). D-01: `cost` is still stored but is no longer the
+    // displayed truth. Before this, THIS panel and SDKSpendGuard were the last
+    // two surfaces on the old source, so Analytics could show two different
+    // dollar figures for the same spend.
+    //
+    // Phase 67 D-02 still holds — only API-billed spend is projected — and now
+    // falls out for free: subscription buckets derive to `billedUsd: 0`, so no
+    // billingType filter is needed (which is why `filterAPIBilledRows` is no
+    // longer called here). Unpriced buckets are excluded rather than counted $0.
+    const { byBucket: byDay, unpricedTokens } = await deriveBilledByBucket(ctx, "daily", cutoff);
 
     // Build sorted list of days
     const sortedBuckets = Object.keys(byDay)
@@ -136,6 +134,9 @@ export const costForecast = query({
       currentMonthSpend,
       dailyHistory,
       insufficientData,
+      // D-03 honesty: tokens in this window that have no rate are NOT folded
+      // into the projection as $0. Surfaced so the panel can say so.
+      unpricedTokens,
     };
   },
 });

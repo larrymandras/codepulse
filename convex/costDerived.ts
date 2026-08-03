@@ -490,3 +490,108 @@ export async function computePeriodSpend(
 
   return { billedUsd, unpricedTokens };
 }
+
+// ============================================================
+// deriveBilledByBucket — billed (api) dollars per time bucket, derived.
+//
+// CR-01 (2026-08-03). `SDKSpendGuard` and `CostForecastPanel` were the last two
+// cost surfaces still reading the LEGACY pre-baked `metric_type: "cost"`
+// aggregate, which is populated from the raw ingested `llmMetrics.cost` field
+// (convex/aggregates.ts sums `r.cost ?? 0`). Every other surface — the trend
+// chart, the breakdown table, the goal-scoped Hive queries and the budget
+// evaluator — derives dollars from tokens x live rates through this module.
+//
+// That split meant two different dollar figures could render on one Analytics
+// page, and it directly contradicted D-01: "the displayed dollar figure is
+// derived by CodePulse, not taken from the ingest payload... `cost` continues to
+// be stored but stops being the displayed truth." The premise of the whole phase
+// is that the ingested value is WRONG (CONTEXT.md: sonnet-5/opus-5/fable-5 had
+// no rate at all and fell to a default that under-priced Opus-class calls ~5x).
+//
+// Subscription buckets price to `billedUsd: 0` (money actually owed is $0), so
+// summing billedUsd naturally excludes them without a billingType filter —
+// which is what D-07 wants from a dollar budget. Unpriced buckets return null
+// and are reported as `unpricedTokens` instead of being silently counted as $0.
+// ============================================================
+
+export async function deriveBilledByBucket(
+  ctx: { db: DatabaseReader },
+  period: string,
+  gteBucketStart: number
+): Promise<{ byBucket: Record<number, number>; unpricedTokens: number }> {
+  const promptRows = await fetchAggregateRows(ctx, "tokens_prompt", period, gteBucketStart);
+  const completionRows = await fetchAggregateRows(ctx, "tokens_completion", period, gteBucketStart);
+  const index = await loadRateIndex(ctx);
+
+  type Cell = {
+    bucket_start: number;
+    provider: string;
+    model: string;
+    billingType: string;
+    promptTokens: number;
+    completionTokens: number;
+  };
+  const cells = new Map<string, Cell>();
+
+  function accumulate(rows: AggregateRow[], field: "promptTokens" | "completionTokens") {
+    for (const row of rows) {
+      const d = dimsOf(row.dimensions);
+      const key = `${row.bucket_start}::${d.provider}::${d.model}::${d.billingType}`;
+      let cell = cells.get(key);
+      if (!cell) {
+        cell = {
+          bucket_start: row.bucket_start,
+          provider: d.provider,
+          model: d.model,
+          billingType: d.billingType,
+          promptTokens: 0,
+          completionTokens: 0,
+        };
+        cells.set(key, cell);
+      }
+      cell[field] += row.value;
+    }
+  }
+  accumulate(promptRows, "promptTokens");
+  accumulate(completionRows, "completionTokens");
+
+  const byBucket: Record<number, number> = {};
+  let unpricedTokens = 0;
+  for (const c of cells.values()) {
+    const derived = deriveBucketDollars(
+      { provider: c.provider, model: c.model, billingType: c.billingType },
+      c.promptTokens,
+      c.completionTokens,
+      index
+    );
+    if (derived.billedUsd !== null) {
+      byBucket[c.bucket_start] = (byBucket[c.bucket_start] ?? 0) + derived.billedUsd;
+    } else {
+      unpricedTokens += c.promptTokens + c.completionTokens;
+    }
+  }
+
+  return { byBucket, unpricedTokens };
+}
+
+/**
+ * Query form of the above, for the SDK spend gauge (CR-01). Returns buckets in
+ * ascending order with the SAME `bucket_start` field name the legacy
+ * `aggregates.costByPeriodByProvider` used, so the consumer swap is a field
+ * rename rather than a rewrite.
+ */
+export const billedOverTime = query({
+  args: {
+    period: v.string(),
+    lookbackHours: v.optional(v.float64()),
+  },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() / 1000 - (args.lookbackHours ?? 24) * 3600;
+    const { byBucket, unpricedTokens } = await deriveBilledByBucket(ctx, args.period, cutoff);
+    const buckets = Object.keys(byBucket)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .map((bucket_start) => ({ bucket_start, billedUsd: byBucket[bucket_start] }));
+    return { buckets, unpricedTokens };
+  },
+});

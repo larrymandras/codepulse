@@ -99,10 +99,16 @@ describe("SDKSpendGuard", () => {
 
   describe("rendering", () => {
     const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400;
-    const buckets = [
-      { bucket_start: dayStart + 3600, byProvider: { anthropic_direct: 1.5 } },
-      { bucket_start: dayStart + 7200, byProvider: { anthropic_direct: 1.5 } },
-    ];
+    // CR-01: the gauge now reads api.costDerived.billedOverTime, whose shape is
+    // { buckets: [{ bucket_start, billedUsd }], unpricedTokens } -- derived from
+    // tokens x live rates rather than the legacy pre-baked "cost" aggregate.
+    const buckets = {
+      buckets: [
+        { bucket_start: dayStart + 3600, billedUsd: 1.5 },
+        { bucket_start: dayStart + 7200, billedUsd: 1.5 },
+      ],
+      unpricedTokens: 0,
+    };
 
     it("renders the loading skeleton while the budget query is undefined", () => {
       vi.mocked(useQuery).mockReturnValue(buckets);

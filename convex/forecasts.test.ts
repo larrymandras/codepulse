@@ -20,12 +20,21 @@ type PredicateLog = { op: string; field: string; value: unknown };
 type QueryLogEntry = { table: string; predicates: PredicateLog[] };
 
 function makeForecastCtx(
-  opts: { aggregates?: FakeDoc[]; costBudgets?: FakeDoc[]; agentConfigs?: FakeDoc[] } = {}
+  opts: {
+    aggregates?: FakeDoc[];
+    costBudgets?: FakeDoc[];
+    agentConfigs?: FakeDoc[];
+    // CR-01: costForecast now derives dollars via costDerived.deriveBilledByBucket,
+    // which loads the rate index from modelPricing. Without this table the index
+    // is empty, every bucket is unpriced, and the forecast is silently $0.
+    modelPricing?: FakeDoc[];
+  } = {}
 ) {
   const tables: Record<string, FakeDoc[]> = {
     aggregates: [...(opts.aggregates ?? [])],
     costBudgets: [...(opts.costBudgets ?? [])],
     agentConfigs: [...(opts.agentConfigs ?? [])],
+    modelPricing: [...(opts.modelPricing ?? [])],
   };
   const queryLog: QueryLogEntry[] = [];
 
@@ -272,5 +281,103 @@ describe("filterAPIBilledRows", () => {
     expect(result).toHaveLength(2);
     expect(result[0].value).toBe(1.5);
     expect(result[1].value).toBe(3.0);
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// CR-01 (2026-08-03). costForecast was the last query still projecting from the
+// LEGACY pre-baked `metric_type: "cost"` aggregate, which is populated from the
+// raw ingested `llmMetrics.cost`. Every other cost surface derives dollars from
+// tokens x live rates, so Analytics could render two different dollar figures
+// for the same spend -- a direct contradiction of D-01 ("`cost` continues to be
+// stored but stops being the displayed truth").
+//
+// These tests were absent before: the existing suite asserted budgetCap and
+// warnFraction but NEVER a spend value, so the data source was completely
+// unguarded and swapping it broke nothing.
+// ---------------------------------------------------------------------------
+describe("costForecast — derives dollars from tokens x rates (CR-01 / D-01)", () => {
+  const DAY = 86400;
+  const RATE: FakeDoc[] = [
+    // $1 per 1000 prompt tokens, $2 per 1000 completion tokens.
+    { model: "m1", inputPerToken: 0.001, outputPerToken: 0.002 },
+  ];
+
+  function tokenDay(bucketStart: number, prompt: number, completion: number): FakeDoc[] {
+    const dims = { provider: "p1", model: "m1", billingType: "api", goalId: "" };
+    return [
+      { metric_type: "tokens_prompt", period: "daily", bucket_start: bucketStart, value: prompt, dimensions: dims },
+      { metric_type: "tokens_completion", period: "daily", bucket_start: bucketStart, value: completion, dimensions: dims },
+    ];
+  }
+
+  test("projects from derived token dollars, not from a pre-baked cost bucket", async () => {
+    const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
+    const aggregates: FakeDoc[] = [
+      ...tokenDay(today - 3 * DAY, 1000, 1000), // $1.00 + $2.00 = $3.00
+      ...tokenDay(today - 2 * DAY, 1000, 1000),
+      ...tokenDay(today - 1 * DAY, 1000, 1000),
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, modelPricing: RATE, costBudgets: [] });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    // $3.00/day derived from tokens.
+    expect(result.projectedDaily).toBeCloseTo(3.0, 8);
+    expect(result.projectedMonthly).toBeCloseTo(90.0, 6);
+    expect(result.insufficientData).toBe(false);
+  });
+
+  test("IGNORES a legacy metric_type:'cost' bucket entirely — the D-01 proof", async () => {
+    const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
+    const aggregates: FakeDoc[] = [
+      ...tokenDay(today - 3 * DAY, 1000, 1000),
+      ...tokenDay(today - 2 * DAY, 1000, 1000),
+      ...tokenDay(today - 1 * DAY, 1000, 1000),
+      // A wildly wrong legacy value. If costForecast still read this, the
+      // projection below would be nowhere near $3.00/day.
+      { metric_type: "cost", period: "daily", bucket_start: today - 1 * DAY, value: 999,
+        dimensions: { provider: "p1", model: "m1", billingType: "api", goalId: "" } },
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, modelPricing: RATE, costBudgets: [] });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    expect(result.projectedDaily).toBeCloseTo(3.0, 8);
+    expect(result.projectedDaily).not.toBeCloseTo(999, 0);
+  });
+
+  test("excludes SUBSCRIPTION tokens from a dollar projection (Phase 67 D-02 / D-07)", async () => {
+    const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
+    const subDims = { provider: "claude-cli", model: "m1", billingType: "subscription", goalId: "" };
+    const aggregates: FakeDoc[] = [
+      ...tokenDay(today - 2 * DAY, 1000, 1000),
+      ...tokenDay(today - 1 * DAY, 1000, 1000),
+      // Subscription tokens price to billedUsd 0 — must not inflate the forecast.
+      { metric_type: "tokens_prompt", period: "daily", bucket_start: today - 1 * DAY, value: 500000, dimensions: subDims },
+      { metric_type: "tokens_completion", period: "daily", bucket_start: today - 1 * DAY, value: 500000, dimensions: subDims },
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, modelPricing: RATE, costBudgets: [] });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    // Both days are $3.00 of api money; the half-million subscription tokens add nothing.
+    expect(result.projectedDaily).toBeCloseTo(3.0, 8);
+  });
+
+  test("reports unpriced tokens instead of folding them in as $0", async () => {
+    const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
+    const unpriced = { provider: "openai", model: "absent-from-pricing", billingType: "api", goalId: "" };
+    const aggregates: FakeDoc[] = [
+      ...tokenDay(today - 1 * DAY, 1000, 1000),
+      { metric_type: "tokens_prompt", period: "daily", bucket_start: today - 1 * DAY, value: 4000, dimensions: unpriced },
+      { metric_type: "tokens_completion", period: "daily", bucket_start: today - 1 * DAY, value: 1000, dimensions: unpriced },
+    ];
+    const { ctx } = makeForecastCtx({ aggregates, modelPricing: RATE, costBudgets: [] });
+
+    const result = await (costForecast as any)._handler(ctx);
+
+    expect(result.unpricedTokens).toBe(5000);
   });
 });
