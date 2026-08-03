@@ -321,6 +321,7 @@ export default defineSchema({
     traceId: v.optional(v.string()),    // Phase 94 TRACE-01 — per-turn trace grouping
     cacheReadInputTokens: v.optional(v.float64()),      // prompt-cache hit monitoring
     cacheCreationInputTokens: v.optional(v.float64()),  // prompt-cache write monitoring
+    round: v.optional(v.float64()), // Phase 105 D-10 — per-round trace-waterfall join key
   })
     .index("by_provider", ["provider", "timestamp"])
     .index("by_model", ["model", "timestamp"])
@@ -569,11 +570,20 @@ export default defineSchema({
     timestamp: v.float64(),
     archived: v.optional(v.boolean()),
     provider: v.optional(v.string()),
+    // Phase 105 D-03/D-10 — per-call trace/turn-number join keys, populated
+    // when the row originates from Ástríðr's `tool_executed` runtime event
+    // (case "tool_executed" in runtimeIngest.ts). Claude Code hook rows
+    // never carry these.
+    traceId: v.optional(v.string()),
+    round: v.optional(v.float64()),
   })
     .index("by_session", ["sessionId"])
     .index("by_tool", ["toolName", "timestamp"])
     .index("by_timestamp", ["timestamp"])
-    .index("by_provider", ["provider"]),
+    .index("by_provider", ["provider"])
+    // Phase 105 D-09 — Tools page's default Ástríðr-only drill-down reads
+    // this on every page load; not speculative.
+    .index("by_provider_time", ["provider", "timestamp"]),
 
   permissionRequests: defineTable({
     sessionId: v.string(),
@@ -584,6 +594,32 @@ export default defineSchema({
   })
     .index("by_timestamp", ["timestamp"])
     .index("by_tool", ["toolName", "timestamp"]),
+
+  // TOOL POLICY EVENTS (Phase 105 D-05/D-06) — 4 kinds, verified live against
+  // astridr-repo: malformed_policy_boot/malformed_policy_reload_rejected send
+  // `field`+`error` (no session, synthetic "system:bootstrap"); execution_denied
+  // sends `tool`+`sessionId`; tool_call_leaked_as_text sends `tool`,
+  // `taskCategory`, `sessionId`, plus D-08's `toolWasOffered`/`toolsOfferedCount`/
+  // `round`/`agentId`. Fields are optional because only some kinds send them.
+  // Prior to Phase 105 this event had no case/default and was silently dropped.
+  toolPolicyEvents: defineTable({
+    event: v.string(), // one of the four kinds above
+    tool: v.optional(v.string()),
+    sessionId: v.optional(v.string()),
+    agentId: v.optional(v.string()),
+    taskCategory: v.optional(v.string()),
+    toolWasOffered: v.optional(v.boolean()),
+    toolsOfferedCount: v.optional(v.float64()),
+    round: v.optional(v.float64()),
+    field: v.optional(v.string()),
+    error: v.optional(v.string()),
+    timestamp: v.float64(),
+  })
+    .index("by_timestamp", ["timestamp"])
+    // D-06's per-kind, time-range-bounded evaluator scan — a single-field
+    // ["event"] index cannot range-bound on time, so this compound shape
+    // is mandatory.
+    .index("by_event", ["event", "timestamp"]),
 
   worktreeEvents: defineTable({
     sessionId: v.optional(v.string()),
