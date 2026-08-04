@@ -17,7 +17,7 @@
 
 import { describe, test, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 
 // ─── Module mocks (declared before component import — Vitest hoisting) ──────
 

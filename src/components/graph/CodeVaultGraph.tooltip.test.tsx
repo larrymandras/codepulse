@@ -12,7 +12,7 @@
 
 import { describe, it, vi, beforeEach, afterEach, expect } from "vitest";
 import { render as rtlRender, screen, cleanup } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import type { ReactElement } from "react";
 import {
   makeProjectGraphFixture,

@@ -1,6 +1,6 @@
 import { describe, test, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { SkillsInCategory } from "../SkillsInCategory";
 import { SkillLaunchProvider } from "../SkillLaunchProvider";
 

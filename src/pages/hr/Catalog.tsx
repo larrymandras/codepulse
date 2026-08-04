@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { GlassPanel } from "@/components/GlassPanel";
 import CatalogBrowser from "@/components/hr/CatalogBrowser";
 import type { CatalogEntry } from "@/lib/astridrApi";

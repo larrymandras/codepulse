@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router";
 import { FormProvider } from "react-hook-form";
 import { useWizard } from "@/hooks/useWizard";
 import WizardShell from "@/components/hr/WizardShell";

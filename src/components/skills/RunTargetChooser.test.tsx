@@ -10,12 +10,12 @@
  * SkillLaunchProvider.test.tsx) — this suite only asserts that picking
  * "forge" routes through the shared SkillLaunchProvider context. convex/react
  * is mocked because SkillLaunchProvider calls useMutation directly.
- * react-router-dom's useNavigate is spied (actual module preserved) so
+ * react-router's useNavigate is spied (actual module preserved) so
  * MemoryRouter still works for anything else in the tree.
  */
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 
 // Radix DropdownMenu/Popover use ResizeObserver internally — jsdom doesn't
 // provide it (same shim as RunChatPopover.test.tsx / SkillLifecycleMenu.test.tsx).
@@ -30,10 +30,10 @@ beforeAll(() => {
 });
 
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
+vi.mock("react-router", async () => {
   const actual =
-    await vi.importActual<typeof import("react-router-dom")>(
-      "react-router-dom"
+    await vi.importActual<typeof import("react-router")>(
+      "react-router"
     );
   return { ...actual, useNavigate: () => mockNavigate };
 });

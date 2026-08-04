@@ -53,8 +53,8 @@ vi.mock("../../convex/_generated/api", () => ({
 // Capture the navigate mock so we can assert calls
 const mockNavigate = vi.fn();
 
-// Mock react-router-dom navigate — GraphsHub tiles call useNavigate on click
-vi.mock("react-router-dom", () => ({
+// Mock react-router navigate — GraphsHub tiles call useNavigate on click
+vi.mock("react-router", () => ({
   useNavigate: () => mockNavigate,
   Link: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

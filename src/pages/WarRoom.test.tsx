@@ -51,7 +51,7 @@ vi.mock("@/contexts/AstridrWSContext", () => ({
 // useParams — returns {} by default (overridden per-test for deep-link cases).
 // WarRoom.tsx does not currently call useParams, so this mock is the contract
 // for Plan 06 to satisfy.
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useParams: vi.fn().mockReturnValue({}),
 }));
 
@@ -99,7 +99,7 @@ vi.mock("@/components/hr/WarRoomLaunchDialog", () => ({
 
 import WarRoom from "./WarRoom";
 import { useQuery } from "convex/react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

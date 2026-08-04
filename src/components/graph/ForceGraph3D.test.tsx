@@ -20,7 +20,7 @@ import {
   cleanup,
   act,
 } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import type { ReactElement } from "react";
 import {
   makeProjectGraphFixture,
@@ -133,7 +133,7 @@ vi.mock("@/components/ui/tooltip", () => ({
 
 import { CodeVaultGraph } from "./CodeVaultGraph";
 
-// Render inside a Router so react-router-dom hooks resolve
+// Render inside a Router so react-router hooks resolve
 const render = (ui: ReactElement) => rtlRender(ui, { wrapper: MemoryRouter });
 
 // ---------------------------------------------------------------------------

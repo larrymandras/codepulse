@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import ForceGraph2D from "react-force-graph-2d";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   Boxes,
   AlertTriangle,

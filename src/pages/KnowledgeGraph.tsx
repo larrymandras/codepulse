@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { Share2, AlertTriangle, Info, ChevronLeft } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";

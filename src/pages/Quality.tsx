@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import MetricCard, { thresholdColor } from "../components/MetricCard";
 import { SectionHeader } from "../components/SectionHeader";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";

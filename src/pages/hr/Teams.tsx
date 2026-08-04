@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { GlassPanel } from "@/components/GlassPanel";
 import { TeamCard } from "@/components/hr/TeamCard";
 import { TeamEditor } from "@/components/hr/TeamEditor";

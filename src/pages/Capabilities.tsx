@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import OriginBadge from "../components/OriginBadge";
 import { Search } from "lucide-react";
 import MetricCard from "../components/MetricCard";

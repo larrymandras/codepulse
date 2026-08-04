@@ -12,7 +12,7 @@
  */
 
 import { useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useQuery } from "convex/react";
 import { Network } from "lucide-react";
 import { api } from "../../convex/_generated/api";

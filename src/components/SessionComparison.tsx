@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { formatDuration } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { ScrollArea } from "./ui/scroll-area";
 import {
   Table,

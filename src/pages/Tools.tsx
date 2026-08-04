@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";

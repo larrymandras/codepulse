@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router";
 import { GlassPanel } from "@/components/GlassPanel";
 import { RosterFilterBar } from "@/components/hr/RosterFilterBar";
 import { ViewSwitcher } from "@/components/hr/ViewSwitcher";

@@ -22,7 +22,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { toast } from "sonner";
 import { useQuery, useMutation } from "convex/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 
 vi.mock("sonner", () => ({
   toast: Object.assign(vi.fn(), {
@@ -31,16 +31,16 @@ vi.mock("sonner", () => ({
   }),
 }));
 
-// react-router-dom's useNavigate is spied (actual module preserved for
+// react-router's useNavigate is spied (actual module preserved for
 // MemoryRouter) — mirrors RunTargetChooser.test.tsx's convention. The Run
 // submenu (D-02) dispatches Chat/Ástríðr picks through useRunLaunch, which
 // navigates on submit; this suite never exercises submit, but useRunLaunch
 // still calls useNavigate() at render time.
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
+vi.mock("react-router", async () => {
   const actual =
-    await vi.importActual<typeof import("react-router-dom")>(
-      "react-router-dom"
+    await vi.importActual<typeof import("react-router")>(
+      "react-router"
     );
   return { ...actual, useNavigate: () => mockNavigate };
 });

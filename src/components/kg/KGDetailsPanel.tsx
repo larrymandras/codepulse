@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { ArrowRight, ExternalLink, AlertTriangle, X, ChevronLeft } from "lucide-react";
 import { entityTypeColor } from "../../lib/kg-graph";
 import type { KgGraphData, KgNode, KgLink, KgAttribute } from "../../lib/kg-graph";

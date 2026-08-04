@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery } from "convex/react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {

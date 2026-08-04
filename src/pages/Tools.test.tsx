@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 
 // ── Mocks (must precede the component import) ───────────────────────────────
 // Trivial stubs so this page test does not re-test ToolUsagePanel's or

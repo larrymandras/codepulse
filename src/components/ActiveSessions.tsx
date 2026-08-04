@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { useActiveSessions } from "../hooks/useActiveSessions";
 import { formatTimestamp } from "../lib/formatters";
 import InfoTooltip from "./InfoTooltip";

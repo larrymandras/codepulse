@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAstridrWS } from "@/contexts/AstridrWSContext";
 import { useCommandCatalog } from "@/hooks/useCommandCatalog";
 import { toast } from "sonner";

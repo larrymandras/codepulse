@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import SessionTimeline from "./SessionTimeline";
 
-// Mock react-router-dom (SessionTimeline may use Link)
-vi.mock("react-router-dom", () => ({
+// Mock react-router (SessionTimeline may use Link)
+vi.mock("react-router", () => ({
   Link: ({ children, to }: any) => <a href={to}>{children}</a>,
   useNavigate: vi.fn(() => vi.fn()),
 }));

@@ -19,7 +19,7 @@
 
 import { describe, it, vi, beforeEach, expect, afterEach } from "vitest";
 import { render as rtlRender, screen, fireEvent, cleanup, act, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import type { ReactElement } from "react";
 import {
   makeProjectGraphFixture,

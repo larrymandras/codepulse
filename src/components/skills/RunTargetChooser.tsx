@@ -16,7 +16,7 @@
  * DropdownMenuItem's onSelect fights Radix's own close-autofocus return).
  */
 import { useRef, useState, isValidElement, cloneElement, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Check, MessageSquare, Bot, Sparkles } from "lucide-react";
 import {
   DropdownMenu,

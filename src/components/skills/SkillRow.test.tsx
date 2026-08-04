@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { SkillRow } from "./SkillRow";
 import { SkillLaunchProvider } from "./SkillLaunchProvider";
 import { DORMANT_ORIGIN } from "@/lib/skills";

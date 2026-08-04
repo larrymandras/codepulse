@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
 import { ChevronLeft, FileText } from "lucide-react";
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { EntityRow } from "../components/EntityRow";

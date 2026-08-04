@@ -1,5 +1,5 @@
 import { useQuery } from "convex/react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { formatCost } from "../lib/formatters";
 

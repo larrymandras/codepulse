@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import KGDetailsPanel from "./KGDetailsPanel";
 import { toGraphData, type KgPayload } from "../../lib/kg-graph";
 import type { KgEntity, KgTriple } from "../../lib/kgApi";

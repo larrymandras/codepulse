@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
 import { useAstridrWS } from "../contexts/AstridrWSContext";
