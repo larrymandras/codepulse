@@ -22,7 +22,59 @@ export default defineConfig({
         }
       },
     },
-  ],
+    // Emits dist/chunk-composition.json with per-chunk module attribution
+    // (DEBT-03 chunk-size investigation). Opt-in only — a normal `npm run
+    // build` never runs this plugin's hook, so the emitted asset set is
+    // byte-for-byte unchanged. Reproduce with:
+    //   ANALYZE_BUNDLE=1 npm run build
+    // then read dist/chunk-composition.json.
+    process.env.ANALYZE_BUNDLE === "1" && {
+      name: "chunk-composition-report",
+      generateBundle(_options, bundle) {
+        const chunks: Array<{
+          fileName: string;
+          renderedBytes: number;
+          isEntry: boolean;
+          isDynamicEntry: boolean;
+          modules: Array<{ id: string; renderedLength: number }>;
+          otherModulesCount: number;
+          otherModulesBytes: number;
+        }> = [];
+
+        for (const asset of Object.values(bundle)) {
+          if (asset.type !== "chunk") continue;
+
+          const allModules = Object.entries(asset.modules)
+            .map(([id, mod]) => ({ id, renderedLength: mod.renderedLength }))
+            .sort((a, b) => b.renderedLength - a.renderedLength);
+
+          const topModules = allModules.slice(0, 30);
+          const restModules = allModules.slice(30);
+
+          chunks.push({
+            fileName: asset.fileName,
+            renderedBytes: asset.code.length,
+            isEntry: asset.isEntry,
+            isDynamicEntry: asset.isDynamicEntry,
+            modules: topModules,
+            otherModulesCount: restModules.length,
+            otherModulesBytes: restModules.reduce(
+              (sum, m) => sum + m.renderedLength,
+              0,
+            ),
+          });
+        }
+
+        chunks.sort((a, b) => b.renderedBytes - a.renderedBytes);
+
+        this.emitFile({
+          type: "asset",
+          fileName: "chunk-composition.json",
+          source: JSON.stringify({ chunks }, null, 2),
+        });
+      },
+    },
+  ].filter(Boolean),
   optimizeDeps: {
     // Prevent Vite pre-bundling the WASM module (RESEARCH Pitfall 7). The ort WASM
     // runtime itself is loaded from a pinned CDN at runtime (see wakeWordWorker.ts);
