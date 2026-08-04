@@ -79,7 +79,7 @@ export function IntelligenceFeedPanel() {
   );
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px] flex-1 min-h-0">
+    <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px]">
       <span className="font-mono text-sm tracking-[0.1em] text-muted-foreground flex items-center gap-2">
         <Radio className="w-4 h-4" aria-hidden="true" />
         INTELLIGENCE FEED
@@ -89,7 +89,14 @@ export function IntelligenceFeedPanel() {
         <p className="text-sm text-muted-foreground">Nothing needs you right now.</p>
       ) : (
         <div
-          className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2"
+          // 188-14 live finding: a fixed max-height (not flex-1/min-h-0) is
+          // deliberate — this panel sits in the command-center grid
+          // alongside centerColumn, which needs its OWN natural (unbounded)
+          // height so Control Center isn't squeezed. The two can't share
+          // one grid-row-derived height cap, so this scroll region is
+          // self-contained: it caps and scrolls regardless of what height
+          // the row ends up being, on its own.
+          className="max-h-[45vh] overflow-y-auto flex flex-col gap-2"
           aria-live="polite"
           aria-atomic="false"
         >

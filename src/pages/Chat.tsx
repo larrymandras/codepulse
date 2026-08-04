@@ -925,7 +925,7 @@ export default function Chat() {
               everything stacks in reading order: left rail, chat, center,
               right rail, vitals — the DOM order below already matches this,
               so no reordering is needed at that breakpoint. */}
-          <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)] grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
             {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents. min-h-0
                 lets Intelligence Feed's own flex-1 scroll region actually
                 bound to the grid row height instead of growing to fit its
@@ -941,21 +941,7 @@ export default function Chat() {
             </div>
 
             {chatColumn}
-            {/* h-full min-h-0 overflow-y-auto bounds centerColumn to its grid
-                cell (188-14 live finding): centerColumn is shared with the
-                calm layout unchanged, but command-center mode adds real
-                height inside it (VoiceStatusPanel, inline under Control
-                Center) that the calm layout never had, and the grid's row
-                only became a real minmax(0,1fr) track (see grid-rows-[...]
-                below) as part of this same fix — without both, the extra
-                content painted past the grid's bottom edge and overlapped
-                the footer band. overflow-y-auto (not -hidden) matters here:
-                a hard clip made Control Center's lower controls (Brain,
-                Voice, Strict/Focus Mode, Share Screen) permanently
-                unreachable with no scrollbar; auto keeps them reachable by
-                scrolling this cell. Calm layout is untouched: this wrapper
-                only exists in the command-center branch. */}
-            <div className="h-full min-h-0 overflow-y-auto">{centerColumn}</div>
+            {centerColumn}
 
             {/* RIGHT RAIL — (d) LLM Status, (e) System Monitor. Ordered
                 after vitals at the lg tier (lg:order-5) so the still-3-column
