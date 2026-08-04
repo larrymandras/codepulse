@@ -758,7 +758,7 @@ Plans:
   8. The three existing tool panels keep working unchanged, proven by a control rather than by inspection.
 
 **UI hint**: yes
-**Plans:** 9/9 plans executed — PHASE COMPLETE 2026-08-04
+**Plans:** 9/9 plans complete — PHASE COMPLETE 2026-08-04
 
 Plans:
 **Wave 1**
