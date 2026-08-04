@@ -88,5 +88,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Explicit wide bind so the tailnet interface stays reachable across
+    // restarts (106-05, Tailscale laptop checklist) -- verified live via
+    // `curl http://<tailnet-ip>:5173/` returning 200 from the office PC.
+    host: true,
   },
 });
