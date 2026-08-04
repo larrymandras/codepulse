@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FlexBarChart } from "./FlexBarChart";
 import InfoTooltip from "./InfoTooltip";
 
@@ -24,6 +25,7 @@ export default function ToolBreakdown({ events }: ToolBreakdownProps) {
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Tool Usage
         <InfoTooltip text="Top 10 most-used tools ranked by execution count" />
+        <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline ml-auto">View in Tools →</Link>
       </h2>
       {data.length === 0 ? (
         <p className="text-sm font-mono text-muted-foreground py-8 text-center">No tool data yet</p>

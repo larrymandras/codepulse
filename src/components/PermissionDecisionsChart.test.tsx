@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 // ── Convex mocks (must precede the component import) ────────────────────────
 vi.mock("convex/react", () => ({
@@ -19,6 +20,14 @@ import PermissionDecisionsChart from "./PermissionDecisionsChart";
 
 const mockUseQuery = vi.mocked(useQuery);
 
+function renderChart() {
+  return render(
+    <MemoryRouter>
+      <PermissionDecisionsChart />
+    </MemoryRouter>
+  );
+}
+
 describe("PermissionDecisionsChart (Phase 105 D-15)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,7 +36,7 @@ describe("PermissionDecisionsChart (Phase 105 D-15)", () => {
   it("passes excludeProvider: 'astridr' to toolExecutions.recentExecutions", () => {
     mockUseQuery.mockReturnValue([]);
 
-    render(<PermissionDecisionsChart />);
+    renderChart();
 
     expect(mockUseQuery).toHaveBeenCalledWith(
       "toolExecutions:recentExecutions",
@@ -38,7 +47,7 @@ describe("PermissionDecisionsChart (Phase 105 D-15)", () => {
   it("renders the empty state when there is no decision data", () => {
     mockUseQuery.mockReturnValue([]);
 
-    render(<PermissionDecisionsChart />);
+    renderChart();
 
     expect(screen.getByText("No permission decision data yet")).toBeInTheDocument();
   });
@@ -49,8 +58,19 @@ describe("PermissionDecisionsChart (Phase 105 D-15)", () => {
       { toolName: "Edit", success: false, decision: "reject", decisionSource: "policy", timestamp: 2 },
     ]);
 
-    render(<PermissionDecisionsChart />);
+    renderChart();
 
     expect(screen.getByText(/2 total decisions/)).toBeInTheDocument();
+  });
+
+  it("renders a 'View in Tools ->' link pointing at /tools when decisions are present (Phase 105-08)", () => {
+    mockUseQuery.mockReturnValue([
+      { toolName: "Bash", success: true, decision: "accept", decisionSource: "user", timestamp: 1 },
+    ]);
+
+    renderChart();
+
+    const link = screen.getByRole("link", { name: /View in Tools/ });
+    expect(link).toHaveAttribute("href", "/tools");
   });
 });

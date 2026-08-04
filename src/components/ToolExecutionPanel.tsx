@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { FlexBarChart } from "./FlexBarChart";
@@ -156,6 +157,7 @@ export default function ToolExecutionPanel() {
         <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Tool Executions
         <InfoTooltip text="Tool execution metrics: success rates, durations, and recent activity with decision tracking" />
+        <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline ml-auto">View in Tools →</Link>
       </h2>
 
       {/* Summary bar */}

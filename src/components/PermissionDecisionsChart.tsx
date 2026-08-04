@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { FlexBarChart } from "./FlexBarChart";
@@ -50,9 +51,12 @@ export default function PermissionDecisionsChart() {
 
   return (
     <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5">
-      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide mb-4">
+      <div className="flex items-center justify-between mb-4">
+      <h2 className="text-base font-semibold text-gray-200 uppercase tracking-wide">
         Permission Decisions
       </h2>
+        <Link to="/tools" className="text-primary text-xs font-mono tracking-widest uppercase hover:underline">View in Tools →</Link>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
