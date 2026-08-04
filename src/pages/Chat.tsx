@@ -900,7 +900,20 @@ export default function Chat() {
       </div>
 
       {commandCenter ? (
-        <>
+        // 188-14 live finding: command-center mode adds real height (the
+        // footer band below, plus VoiceStatusPanel inline inside the center
+        // column) that the calm layout never had to accommodate. The page
+        // itself has no scroll (presence-ambient is a fixed h-full column),
+        // so without this wrapper the footer band was rendered with zero
+        // remaining flex space and visually overlapped Control Center rather
+        // than pushing the page taller. flex-1 min-h-0 lets this scroll
+        // region fill the remaining page height; overflow-y-auto lets it
+        // grow past that when the grid + footer band's combined content
+        // needs more room than the viewport gives. The grid's own flex-1
+        // min-h-0 (below) still governs the common case — Intelligence
+        // Feed's internal scroll, not page scroll, handles a long item list
+        // when there's enough vertical room.
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
           {/* ── 5-track command center (188-13, D-18) ───────────────────────
               LEFT RAIL / chat / center / RIGHT RAIL / vitals at ≥xl. The
               three calm tracks (chat/center/vitals) keep their EXACT
@@ -912,9 +925,13 @@ export default function Chat() {
               everything stacks in reading order: left rail, chat, center,
               right rail, vitals — the DOM order below already matches this,
               so no reordering is needed at that breakpoint. */}
-          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
-            {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1">
+          <div className="flex-1 min-h-0 grid grid-rows-[minmax(0,1fr)] grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
+            {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents. min-h-0
+                lets Intelligence Feed's own flex-1 scroll region actually
+                bound to the grid row height instead of growing to fit its
+                full unbounded item list (188-14 live finding: without this,
+                Active Agents rendered 13000px+ below the fold, invisible). */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 min-h-0">
               <SectionErrorBoundary name="Intelligence Feed">
                 <IntelligenceFeedPanel />
               </SectionErrorBoundary>
@@ -924,7 +941,21 @@ export default function Chat() {
             </div>
 
             {chatColumn}
-            {centerColumn}
+            {/* h-full min-h-0 overflow-y-auto bounds centerColumn to its grid
+                cell (188-14 live finding): centerColumn is shared with the
+                calm layout unchanged, but command-center mode adds real
+                height inside it (VoiceStatusPanel, inline under Control
+                Center) that the calm layout never had, and the grid's row
+                only became a real minmax(0,1fr) track (see grid-rows-[...]
+                below) as part of this same fix — without both, the extra
+                content painted past the grid's bottom edge and overlapped
+                the footer band. overflow-y-auto (not -hidden) matters here:
+                a hard clip made Control Center's lower controls (Brain,
+                Voice, Strict/Focus Mode, Share Screen) permanently
+                unreachable with no scrollbar; auto keeps them reachable by
+                scrolling this cell. Calm layout is untouched: this wrapper
+                only exists in the command-center branch. */}
+            <div className="h-full min-h-0 overflow-y-auto">{centerColumn}</div>
 
             {/* RIGHT RAIL — (d) LLM Status, (e) System Monitor. Ordered
                 after vitals at the lg tier (lg:order-5) so the still-3-column
@@ -965,7 +996,7 @@ export default function Chat() {
               </SectionErrorBoundary>
             </div>
           </div>
-        </>
+        </div>
       ) : (
         /* ── 3-column calm layout (unchanged) ────────────────────────────
             ① chat + history · ② her AvatarAura + Control Center · ③ vitals.

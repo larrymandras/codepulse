@@ -79,7 +79,7 @@ export function IntelligenceFeedPanel() {
   );
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px]">
+    <div className="rounded-xl border border-border/50 bg-card/60 backdrop-blur-md p-5 flex flex-col gap-3 min-w-[240px] flex-1 min-h-0">
       <span className="font-mono text-sm tracking-[0.1em] text-muted-foreground flex items-center gap-2">
         <Radio className="w-4 h-4" aria-hidden="true" />
         INTELLIGENCE FEED
