@@ -407,6 +407,77 @@ folded in.
 
 ---
 
+## Task 3 — Live UI Pass: D-15 Regression (Found a Real, Long-Standing Regression, Fixed Going Forward)
+
+> Plan 105-09, Task 3 §2 (D-15 regression control). Executed 2026-08-04.
+
+### The defect
+
+Re-ran the exact `toolExecutions:successRate` query with `excludeProvider: "astridr"` from Task 1's
+baseline and diffed. It was NOT byte-identical: `weather` went from `{success: 2, total: 2}` to
+`{success: 3, total: 3}` after one real Ástríðr weather induction — a genuine D-15 leak, live.
+
+Root cause: `astridr/engine/execution_tracker.py` wraps **every** tool call `loop.py` makes
+(`origin="user_request"` included — confirmed by reading the call site at `loop.py:2265`, not
+automation-only) and independently emits a `command_execution` telemetry event, distinct from
+Phase 105's `tool_executed` event for the SAME call. `runtimeIngest.ts`'s `command_execution` case
+(pre-dates Phase 105) inserts its own `toolExecutions` row using `sessionId: profileId ?? "unknown"`
+and set **no `provider` field at all**. D-15's `excludeProvider: "astridr"` filter
+(`convex/toolExecutions.ts`'s `excludeByProvider`) only matches rows with `provider === "astridr"`
+set — so this second, untagged row for every Ástríðr tool call sailed straight through into
+`ToolExecutionPanel` and `PermissionDecisionsChart`.
+
+**This is not new.** Querying `toolExecutions:listBySession` for the literal fallback sessionIds
+`"astridr"` and `"unknown"` surfaced untagged rows dating back to **2026-07-22** (`timestamp
+1784630733`), spanning nearly the whole Ástríðr tool catalog (`weather`, `web_search`,
+`generate_image`, `home_assistant`, `obsidian`, `see_screen`, `reminders`, `google_personal`,
+`delegate_task`, and more) — this ingest-path gap predates Phase 105 entirely and has been silently
+polluting both legacy panels for at least two weeks.
+
+### The fix
+
+- `convex/runtimeIngest.ts` — extracted a new pure function `resolveCommandExecutionToolRow(d,
+  execStatus, timestamp)` (mirroring the existing `resolveToolExecutionRow` pattern exactly) that
+  unconditionally tags `provider: ASTRIDR_TOOL_PROVIDER`, since `command_execution` is sent
+  exclusively by `execution_tracker.py` (confirmed: `grep -rln '"command_execution"'` across
+  astridr-repo returns only that one sender). The `command_execution` case now calls it instead of
+  an inline untagged object literal.
+- `convex/runtimeIngest.test.ts` — 6 new tests (`resolveCommandExecutionToolRow` behavior +
+  a static source-check regression guard mirroring the existing `tool_executed` one).
+- Verified: `npx tsc --noEmit` clean; full suite `npx vitest run` → 273 files / 3401 tests (up from
+  3395 after the Task-2 alert-badge fix); `npx convex deploy --yes` → `No indexes are deleted by this
+  push`.
+- **Live-verified the fix, not just the unit tests**: drove a second real Ástríðr turn ("What's the
+  weather in Portland right now?") after deploying. The new `command_execution`-sourced row now
+  carries `provider: "astridr"` (raw row: `{"sessionId":"astridr","toolName":"weather","provider":
+  "astridr","success":true,...}`, no `traceId`/`round` since it's the `command_execution` path, not
+  `tool_executed` — expected and correct, they're different events for the same call).
+
+### What the fix does NOT do — historical backlog is explicitly out of scope today
+
+The fix stops **new** Ástríðr tool calls from leaking, verified above. It does **not** retroactively
+correct the pre-existing untagged rows found dating back to 2026-07-22. Per CLAUDE.md's Self-Hosted
+Convex operational rules ("Never bulk-delete or bulk-patch a large table on the live instance"),
+retagging dozens of historical rows spanning two weeks is exactly the kind of bulk write this project
+forbids improvising inline on the live single-node backend. Per explicit user decision, this is
+recorded honestly rather than attempted: **the live dashboard will keep showing this historical
+contamination in `ToolExecutionPanel`/`PermissionDecisionsChart` until those rows age out of the
+500/4000-row read windows naturally, or until a dedicated, deliberately batch-capped cleanup phase
+addresses the backlog.** Flagged here as a follow-up candidate for a future phase, not fixed today.
+
+### D-15 verdict
+
+**PARTIAL, not a clean PASS.** The regression that let Ástríðr tools leak into the Claude-Code-only
+panels is fixed for all NEW tool calls, live-verified. The pre-existing historical leak (2+ weeks of
+untagged rows, discovered as a byproduct of this investigation, entirely predating Phase 105) is
+explicitly NOT remediated today and is called out here rather than silently left contaminating the
+"before/after byte-identical" claim the plan's acceptance criteria originally asked for — that claim
+cannot honestly be made while the historical rows remain. Both legacy panels will show a mix of
+genuine Claude-Code activity and residual pre-existing Ástríðr rows (NOT new ones) until the backlog
+is separately cleaned up.
+
+---
+
 ## Validation Sign-Off
 
 - [ ] All tasks have `<automated>` verify or a Wave 0 dependency

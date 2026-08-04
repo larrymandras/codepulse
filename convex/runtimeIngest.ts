@@ -97,6 +97,36 @@ export function resolveToolExecutionRow(d: any, timestamp: number) {
   };
 }
 
+/**
+ * Phase 105-09 (live gate, 2026-08-04): `command_execution` is sent
+ * exclusively by astridr/engine/execution_tracker.py, which wraps EVERY
+ * tool call loop.py makes (origin "user_request" included, not just
+ * automation) — this insert was leaving a second, untagged toolExecutions
+ * row for every single Ástríðr tool call, alongside the correctly-tagged
+ * row `resolveToolExecutionRow` produces for the same call's "tool_executed"
+ * event. Untagged meant D-15's `excludeProvider: "astridr"` filter never
+ * caught it, so Ástríðr's tools were leaking into ToolExecutionPanel and
+ * PermissionDecisionsChart (confirmed live: one real weather induction
+ * bumped the Claude-Code-only successRate's "weather" count from 2 to 3).
+ * Tagged the same way, extracted for unit-test coverage per this file's
+ * established pure-function convention.
+ */
+export function resolveCommandExecutionToolRow(
+  d: any,
+  execStatus: string,
+  timestamp: number
+) {
+  return {
+    sessionId: d.profileId ?? d.profile_id ?? "unknown",
+    toolName: d.toolName ?? d.tool_name ?? "unknown",
+    durationMs: d.durationMs ?? d.duration_ms,
+    success: execStatus === "completed",
+    errorMessage: d.errorMessage ?? d.error_message ?? d.error,
+    provider: ASTRIDR_TOOL_PROVIDER,
+    timestamp,
+  };
+}
+
 /** The 4 kinds Ástríðr's `tool_policy_event` can send — see docs/astridr-contract.md §2.34. */
 export const TOOL_POLICY_EVENT_KINDS = [
   "malformed_policy_boot",
@@ -858,15 +888,10 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // Populate toolExecutions table on terminal states for the dashboard panel
           const terminalStates = ["completed", "failed", "timed_out", "cancelled"];
           if (terminalStates.includes(execStatus)) {
-            const toolName = d.toolName ?? d.tool_name ?? "unknown";
-            await ctx.runMutation(api.toolExecutions.insert, {
-              sessionId: d.profileId ?? d.profile_id ?? "unknown",
-              toolName,
-              durationMs: d.durationMs ?? d.duration_ms,
-              success: execStatus === "completed",
-              errorMessage: d.errorMessage ?? d.error_message ?? d.error,
-              timestamp,
-            });
+            await ctx.runMutation(
+              api.toolExecutions.insert,
+              resolveCommandExecutionToolRow(d, execStatus, timestamp)
+            );
           }
           // Populate executionModes for execution depth distribution
           if (d.roundsDepth ?? d.rounds_depth) {

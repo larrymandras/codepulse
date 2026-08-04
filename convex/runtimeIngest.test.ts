@@ -14,6 +14,7 @@ import {
   resolveGatewayTaskCompleted,
   parseToolPolicyEvent,
   resolveToolExecutionRow,
+  resolveCommandExecutionToolRow,
   TOOL_POLICY_EVENT_KINDS,
   TOOL_POLICY_ERROR_MAX_LEN,
   ASTRIDR_TOOL_PROVIDER,
@@ -479,6 +480,70 @@ describe("tool_executed → toolExecutions (Phase 105 D-01)", () => {
     const caseBody = caseMatch![0];
     expect(caseBody).toContain("api.callGraphEdges.upsertEdge");
     expect(caseBody).toContain("api.toolExecutions.insert");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 105-09 (live gate, 2026-08-04) — command_execution's toolExecutions
+// insert was a second, untagged row for every Ástríðr tool call (this event
+// is sent exclusively by astridr/engine/execution_tracker.py, which wraps
+// EVERY tool call loop.py makes, origin "user_request" included), silently
+// defeating D-15's excludeProvider: "astridr" filter. Confirmed live: one
+// real weather induction bumped the Claude-Code-only successRate's
+// "weather" count from 2 to 3.
+// ---------------------------------------------------------------------------
+
+describe("command_execution → toolExecutions (Phase 105-09 D-15 fix)", () => {
+  it("always tags provider: astridr, closing the D-15 leak (regression guard)", () => {
+    const row = resolveCommandExecutionToolRow(
+      { toolName: "weather", profileId: "astridr" },
+      "completed",
+      1000
+    );
+    expect(row.provider).toBe(ASTRIDR_TOOL_PROVIDER);
+    expect(row.provider).toBe("astridr");
+  });
+
+  it("maps execStatus to success: true only for 'completed'", () => {
+    expect(resolveCommandExecutionToolRow({}, "completed", 1000).success).toBe(true);
+    expect(resolveCommandExecutionToolRow({}, "failed", 1000).success).toBe(false);
+    expect(resolveCommandExecutionToolRow({}, "timed_out", 1000).success).toBe(false);
+    expect(resolveCommandExecutionToolRow({}, "cancelled", 1000).success).toBe(false);
+  });
+
+  it("defaults sessionId to 'unknown' when profileId is absent, defaults toolName to 'unknown'", () => {
+    const row = resolveCommandExecutionToolRow({}, "completed", 1000);
+    expect(row.sessionId).toBe("unknown");
+    expect(row.toolName).toBe("unknown");
+  });
+
+  it("uses profileId (or profile_id) as sessionId when present", () => {
+    expect(
+      resolveCommandExecutionToolRow({ profileId: "astridr" }, "completed", 1000).sessionId
+    ).toBe("astridr");
+    expect(
+      resolveCommandExecutionToolRow({ profile_id: "astridr" }, "completed", 1000).sessionId
+    ).toBe("astridr");
+  });
+
+  it("passes through durationMs and errorMessage (camel/snake fallback)", () => {
+    const row = resolveCommandExecutionToolRow(
+      { durationMs: 42, errorMessage: "boom" },
+      "failed",
+      1000
+    );
+    expect(row.durationMs).toBe(42);
+    expect(row.errorMessage).toBe("boom");
+  });
+
+  it("D-15 regression guard: the command_execution case's toolExecutions insert is tagged with provider (static source check)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const ingestSource = readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8");
+    const caseMatch = ingestSource.match(/case "command_execution": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("resolveCommandExecutionToolRow");
   });
 });
 
