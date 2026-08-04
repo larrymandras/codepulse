@@ -184,7 +184,7 @@ export default function ToolUsagePanel() {
                 <InfoTooltip text="Reads hourly aggregates, so this survives the 14-day raw-call prune. The source filter defaults to Ástríðr." />
               }
             />
-            <div className="h-[220px]">
+            <div className="h-[220px]" data-testid="tool-usage-frequency-chart">
               <FlexBarChart data={frequencyChartData} height="100%" />
             </div>
           </div>
@@ -195,7 +195,7 @@ export default function ToolUsagePanel() {
               title={`${WINDOW_LABEL[windowKey]} · hourly`}
               action={<InfoTooltip text="Every hour boundary in the window is shown, including hours with zero calls." />}
             />
-            <div className="h-[220px]">
+            <div className="h-[220px]" data-testid="tool-usage-over-time-chart">
               <FlexBarChart data={overTimeChartData} height="100%" />
             </div>
           </div>
