@@ -37,6 +37,7 @@ export interface LlmCallRow {
   cacheReadInputTokens?: number;
   cacheCreationInputTokens?: number;
   traceId?: string;
+  round?: number; // Phase 105 D-10 — per-round trace-waterfall join key
 }
 
 export type CacheBadgeState = "HIT" | "MISS" | "NO_DATA";
@@ -45,6 +46,27 @@ export interface TraceGroup {
   traceId: string | undefined;
   rows: LlmCallRow[];
   earliestTimestamp: number;
+}
+
+/** Row shape returned by api.toolExecutions.listBySession (convex/schema.ts toolExecutions). */
+export interface ToolExecRow {
+  _id?: string;
+  sessionId?: string;
+  toolName: string;
+  durationMs?: number;
+  success: boolean;
+  errorMessage?: string;
+  timestamp: number; // UNIX SECONDS (not ms)
+  provider?: string;
+  traceId?: string;
+  round?: number;
+}
+
+/** One round of a trace: the LLM call(s) that ran in it, then the tools they triggered. */
+export interface TraceRound {
+  round: number;
+  llmRows: LlmCallRow[];
+  toolRows: ToolExecRow[];
 }
 
 // ─── Pure helpers (Task 1 — the testable contract) ─────────────────────────
@@ -113,6 +135,124 @@ export function cacheBadge(row: {
  */
 export function costLabel(row: { cost?: number }): string {
   return typeof row.cost === "number" ? formatCost(row.cost) : "n/a";
+}
+
+/**
+ * Per-turn cache ratio (D-11) — the IDENTICAL read/(read+creation+prompt)
+ * denominator as this file's own `computeSummary` (session-wide) and
+ * `shapeCacheAcc` in convex/llm.ts:59-69 (server-side). This is deliberately
+ * the ONLY place that formula is re-typed a third time: if the
+ * "DENOMINATOR PARITY" test in TraceWaterfall.test.tsx ever fails, one of
+ * these three implementations has drifted and must be reconciled back to
+ * this one, not the other way around.
+ */
+export function groupCacheRatio(rows: LlmCallRow[]): number {
+  let cacheReadSum = 0;
+  let cacheCreationSum = 0;
+  let promptTokenSum = 0;
+
+  for (const row of rows) {
+    if (typeof row.cacheReadInputTokens === "number") {
+      cacheReadSum += row.cacheReadInputTokens;
+    }
+    if (typeof row.cacheCreationInputTokens === "number") {
+      cacheCreationSum += row.cacheCreationInputTokens;
+    }
+    promptTokenSum += row.promptTokens;
+  }
+
+  const denominator = cacheReadSum + cacheCreationSum + promptTokenSum;
+  return denominator > 0 ? cacheReadSum / denominator : 0;
+}
+
+/**
+ * Partitions a trace group's LLM rows and the session's tool rows into
+ * per-round buckets (D-09/D-10, finding F1). The second nesting level is the
+ * ROUND, not an individual LLM call: the reported join key is
+ * (traceId, round), and a single round can hold more than one `llm_call` row
+ * (a retry, an advisor pass) — attaching tool rows to ONE specific LLM row
+ * inside a multi-call round would be an inference D-10 explicitly forbids
+ * ("a wrong parent renders exactly as confidently as a right one with
+ * nothing on screen to signal doubt"). Do not "fix" this back into a
+ * per-call attachment.
+ *
+ * A tool row joins a round ONLY when its traceId equals this group's traceId
+ * AND its round is a real number matching that round — guarded with
+ * `typeof === "number"` throughout so round 0 is never mistaken for absent.
+ * A tool row whose traceId matches this group but whose round does not is
+ * scoped into `unattributedToolRows` for THIS group only; a tool row whose
+ * traceId does not match this group at all is ignored here entirely (it is
+ * some other group's concern, or the component-level "Untraced tool calls"
+ * bucket's, never guessed onto this one).
+ */
+export function groupRoundsForTrace(
+  group: TraceGroup,
+  toolRows: ToolExecRow[]
+): {
+  rounds: TraceRound[];
+  unroundedLlmRows: LlmCallRow[];
+  unattributedToolRows: ToolExecRow[];
+} {
+  const roundsMap = new Map<
+    number,
+    { llmRows: LlmCallRow[]; toolRows: ToolExecRow[] }
+  >();
+  const unroundedLlmRows: LlmCallRow[] = [];
+  const unattributedToolRows: ToolExecRow[] = [];
+
+  for (const row of group.rows) {
+    if (typeof row.round === "number") {
+      if (!roundsMap.has(row.round)) {
+        roundsMap.set(row.round, { llmRows: [], toolRows: [] });
+      }
+      roundsMap.get(row.round)!.llmRows.push(row);
+    } else {
+      unroundedLlmRows.push(row);
+    }
+  }
+
+  for (const row of toolRows) {
+    if (row.traceId !== group.traceId) continue; // not this group's concern
+
+    if (typeof row.round === "number") {
+      if (!roundsMap.has(row.round)) {
+        roundsMap.set(row.round, { llmRows: [], toolRows: [] });
+      }
+      roundsMap.get(row.round)!.toolRows.push(row);
+    } else {
+      unattributedToolRows.push(row);
+    }
+  }
+
+  const rounds: TraceRound[] = Array.from(roundsMap.entries())
+    .map(([round, data]) => ({
+      round,
+      llmRows: [...data.llmRows].sort((a, b) => a.timestamp - b.timestamp),
+      toolRows: [...data.toolRows].sort((a, b) => a.timestamp - b.timestamp),
+    }))
+    .sort((a, b) => a.round - b.round);
+
+  unroundedLlmRows.sort((a, b) => a.timestamp - b.timestamp);
+
+  return { rounds, unroundedLlmRows, unattributedToolRows };
+}
+
+/**
+ * Bar math for a single tool-execution row — mirrors `barMetrics`'s seconds
+ * domain exactly (width = durationMs / 1000, start = timestamp - width). When
+ * durationMs is not reported, returns a zero-width bar with hasDuration:false
+ * so the renderer can show the row without drawing a fake instantaneous span.
+ */
+export function toolBarMetrics(row: {
+  timestamp: number;
+  durationMs?: number;
+}): { start: number; width: number; hasDuration: boolean } {
+  if (typeof row.durationMs !== "number") {
+    return { start: row.timestamp, width: 0, hasDuration: false };
+  }
+  const width = row.durationMs / 1000;
+  const start = row.timestamp - width;
+  return { start, width, hasDuration: true };
 }
 
 // ─── Render-only helpers ────────────────────────────────────────────────────

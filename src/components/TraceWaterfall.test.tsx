@@ -21,8 +21,13 @@ import {
   cacheBadge,
   costLabel,
   computeSummary,
+  groupCacheRatio,
+  groupRoundsForTrace,
+  toolBarMetrics,
   TraceWaterfall,
   type LlmCallRow,
+  type ToolExecRow,
+  type TraceGroup,
 } from "./TraceWaterfall";
 
 const mockUseQuery = vi.mocked(useQuery);
@@ -41,6 +46,23 @@ function makeRow(overrides: Partial<LlmCallRow> = {}): LlmCallRow {
     latencyMs: 500,
     timestamp: 1_700_000_000,
     ...overrides,
+  };
+}
+
+function makeToolRow(overrides: Partial<ToolExecRow> = {}): ToolExecRow {
+  return {
+    toolName: "web_search",
+    success: true,
+    timestamp: 1_700_000_000,
+    ...overrides,
+  };
+}
+
+function makeGroup(traceId: string, rows: LlmCallRow[]): TraceGroup {
+  return {
+    traceId,
+    rows,
+    earliestTimestamp: Math.min(...rows.map((r) => r.timestamp)),
   };
 }
 
@@ -214,6 +236,189 @@ describe("computeSummary", () => {
     const summary = computeSummary(rows);
     expect(summary.totalCost).toBeCloseTo(0.03);
     expect(summary.callsWithoutCost).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 105 OBS-03 pure helpers — groupCacheRatio, groupRoundsForTrace, toolBarMetrics
+// ---------------------------------------------------------------------------
+
+describe("Phase 105 OBS-03 pure helpers", () => {
+  describe("groupCacheRatio", () => {
+    it("returns 0 for an empty array, never NaN", () => {
+      expect(groupCacheRatio([])).toBe(0);
+    });
+
+    it("returns 0 (not NaN) when all cache fields are undefined and promptTokens sum to 0", () => {
+      const rows: LlmCallRow[] = [
+        makeRow({
+          promptTokens: 0,
+          cacheReadInputTokens: undefined,
+          cacheCreationInputTokens: undefined,
+        }),
+      ];
+      expect(groupCacheRatio(rows)).toBe(0);
+    });
+
+    it("returns 0, not NaN, when cache fields are undefined but promptTokens is nonzero (denominator falls back to prompt tokens only)", () => {
+      const rows: LlmCallRow[] = [
+        makeRow({
+          promptTokens: 500,
+          cacheReadInputTokens: undefined,
+          cacheCreationInputTokens: undefined,
+        }),
+      ];
+      expect(groupCacheRatio(rows)).toBe(0);
+    });
+
+    it("DENOMINATOR PARITY: matches computeSummary.cacheRatio for a cache-creation + reads fixture", () => {
+      const rows: LlmCallRow[] = [
+        makeRow({
+          promptTokens: 100,
+          cacheReadInputTokens: 300,
+          cacheCreationInputTokens: 600,
+        }),
+      ];
+      expect(groupCacheRatio(rows)).toBeCloseTo(
+        computeSummary(rows).cacheRatio,
+        12
+      );
+    });
+
+    it("DENOMINATOR PARITY: matches computeSummary.cacheRatio for cache creation with zero reads", () => {
+      const rows: LlmCallRow[] = [
+        makeRow({
+          promptTokens: 200,
+          cacheReadInputTokens: 0,
+          cacheCreationInputTokens: 400,
+        }),
+      ];
+      expect(groupCacheRatio(rows)).toBeCloseTo(
+        computeSummary(rows).cacheRatio,
+        12
+      );
+    });
+
+    it("DENOMINATOR PARITY: matches computeSummary.cacheRatio across multiple rows with mixed undefined cache fields", () => {
+      const rows: LlmCallRow[] = [
+        makeRow({
+          _id: "a",
+          promptTokens: 50,
+          cacheReadInputTokens: 10,
+          cacheCreationInputTokens: 5,
+        }),
+        makeRow({
+          _id: "b",
+          promptTokens: 80,
+          cacheReadInputTokens: undefined,
+          cacheCreationInputTokens: undefined,
+        }),
+      ];
+      expect(groupCacheRatio(rows)).toBeCloseTo(
+        computeSummary(rows).cacheRatio,
+        12
+      );
+    });
+  });
+
+  describe("groupRoundsForTrace", () => {
+    it("partitions LLM rows and tool rows into ascending-ordered rounds, each internally timestamp-ordered", () => {
+      const group = makeGroup("trace-1", [
+        makeRow({ _id: "l2", traceId: "trace-1", round: 2, timestamp: 1_700_000_100 }),
+        makeRow({ _id: "l1", traceId: "trace-1", round: 1, timestamp: 1_700_000_000 }),
+      ]);
+      const toolRows: ToolExecRow[] = [
+        makeToolRow({ _id: "t2", traceId: "trace-1", round: 2, timestamp: 1_700_000_150 }),
+        makeToolRow({ _id: "t1", traceId: "trace-1", round: 1, timestamp: 1_700_000_050 }),
+      ];
+
+      const { rounds, unroundedLlmRows, unattributedToolRows } =
+        groupRoundsForTrace(group, toolRows);
+
+      expect(rounds.map((r) => r.round)).toEqual([1, 2]);
+      expect(rounds[0].llmRows.map((r) => r._id)).toEqual(["l1"]);
+      expect(rounds[0].toolRows.map((r) => r._id)).toEqual(["t1"]);
+      expect(rounds[1].llmRows.map((r) => r._id)).toEqual(["l2"]);
+      expect(unroundedLlmRows).toHaveLength(0);
+      expect(unattributedToolRows).toHaveLength(0);
+    });
+
+    it("puts a tool row whose round is undefined into unattributedToolRows, never the last round (D-10)", () => {
+      const group = makeGroup("trace-2", [
+        makeRow({ _id: "l1", traceId: "trace-2", round: 1, timestamp: 1_700_000_000 }),
+      ]);
+      const toolRows: ToolExecRow[] = [
+        makeToolRow({ _id: "t1", traceId: "trace-2", round: undefined, timestamp: 1_700_000_050 }),
+      ];
+
+      const { rounds, unattributedToolRows } = groupRoundsForTrace(group, toolRows);
+
+      expect(rounds).toHaveLength(1);
+      expect(rounds[0].toolRows).toHaveLength(0);
+      expect(unattributedToolRows.map((r) => r._id)).toEqual(["t1"]);
+    });
+
+    it("ignores a tool row whose traceId doesn't match this group at all (some other group's concern, or the component-level bucket's)", () => {
+      const group = makeGroup("trace-3", [
+        makeRow({ _id: "l1", traceId: "trace-3", round: 1, timestamp: 1_700_000_000 }),
+      ]);
+      const toolRows: ToolExecRow[] = [
+        makeToolRow({ _id: "t-other", traceId: "trace-other", round: 1, timestamp: 1_700_000_050 }),
+      ];
+
+      const { rounds, unattributedToolRows } = groupRoundsForTrace(group, toolRows);
+
+      expect(rounds[0].toolRows).toHaveLength(0);
+      expect(unattributedToolRows).toHaveLength(0);
+    });
+
+    it("puts an LLM row with round undefined into unroundedLlmRows, creating no synthetic round", () => {
+      const group = makeGroup("trace-4", [
+        makeRow({ _id: "l1", traceId: "trace-4", round: undefined, timestamp: 1_700_000_000 }),
+      ]);
+
+      const { rounds, unroundedLlmRows } = groupRoundsForTrace(group, []);
+
+      expect(rounds).toHaveLength(0);
+      expect(unroundedLlmRows.map((r) => r._id)).toEqual(["l1"]);
+    });
+
+    it("treats round 0 as a real round, not absent (no ?? or truthiness coalesce)", () => {
+      const group = makeGroup("trace-5", [
+        makeRow({ _id: "l1", traceId: "trace-5", round: 0, timestamp: 1_700_000_000 }),
+      ]);
+      const toolRows: ToolExecRow[] = [
+        makeToolRow({ _id: "t1", traceId: "trace-5", round: 0, timestamp: 1_700_000_050 }),
+      ];
+
+      const { rounds, unroundedLlmRows, unattributedToolRows } =
+        groupRoundsForTrace(group, toolRows);
+
+      expect(rounds.map((r) => r.round)).toEqual([0]);
+      expect(unroundedLlmRows).toHaveLength(0);
+      expect(unattributedToolRows).toHaveLength(0);
+    });
+  });
+
+  describe("toolBarMetrics", () => {
+    it("computes start/width in the seconds domain, mirroring barMetrics", () => {
+      const { start, width, hasDuration } = toolBarMetrics({
+        timestamp: 1_700_000_000,
+        durationMs: 2500,
+      });
+      expect(width).toBe(2.5);
+      expect(start).toBe(1_699_999_997.5);
+      expect(hasDuration).toBe(true);
+    });
+
+    it("returns a zero-width bar and hasDuration:false when durationMs is undefined", () => {
+      const { width, hasDuration } = toolBarMetrics({
+        timestamp: 1_700_000_000,
+        durationMs: undefined,
+      });
+      expect(width).toBe(0);
+      expect(hasDuration).toBe(false);
+    });
   });
 });
 
