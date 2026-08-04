@@ -5,6 +5,7 @@ import { getBillingType } from "./lib/providers";
 import { buildRateIndex } from "./modelPricing";
 import { deriveBucketDollars } from "./costDerived";
 import { evaluateBudgets } from "./costBudgetEval";
+import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
 
 // ---- Bounded llmMetrics window read --------------------------------------
 //
@@ -107,6 +108,124 @@ async function insertTokenSplitBuckets(
   const promptInserted = await insertMissing("tokens_prompt", promptByDim);
   const completionInserted = await insertMissing("tokens_completion", completionByDim);
   return { promptInserted, completionInserted };
+}
+
+// ---- D-04 (Phase 105) tool usage bucket helpers -------------------------
+//
+// convex/retention.ts prunes toolExecutions at 14 days and this phase
+// deliberately does NOT raise that (the 2026-07-21/22 tombstone-GC incident
+// on this self-hosted instance) — so OBS-01's "over time" tool-usage charts
+// must read these durable hourly buckets past 14 days, never the raw table.
+
+/**
+ * Bounded toolExecutions window read for the hourly tool usage buckets
+ * below. Mirrors fetchLlmRowsForWindow's shape exactly — an index-range +
+ * a hard row cap via .take(), never a paginate cursor loop (Convex permits
+ * exactly one paginated query per invocation). Exported so tests bind to the
+ * real cap value.
+ */
+export const TOOL_WINDOW_READ_CAP = 4000;
+
+export async function fetchToolRowsForWindow(
+  ctx: { db: any },
+  windowStart: number,
+  windowEnd: number
+): Promise<{ rows: Array<Doc<"toolExecutions">>; truncated: boolean }> {
+  const rows: Array<Doc<"toolExecutions">> = await ctx.db
+    .query("toolExecutions")
+    .withIndex("by_timestamp", (q: any) =>
+      q.gte("timestamp", windowStart).lt("timestamp", windowEnd)
+    )
+    .filter((q: any) => q.neq(q.field("archived"), true))
+    .take(TOOL_WINDOW_READ_CAP);
+  return { rows, truncated: rows.length >= TOOL_WINDOW_READ_CAP };
+}
+
+/**
+ * The 2-segment dimension key analog of reconstructTokenSplitKey — only
+ * {tool, provider} (not the 4-segment provider/model/billingType/goalId
+ * shape, which is meaningless for a per-tool-call row). The forward key
+ * built from a toolExecutions row (in insertToolUsageBuckets below) and this
+ * reconstruction from a stored aggregates row's `dimensions` MUST produce
+ * identical strings for the same logical dimension, or the idempotency
+ * guard silently re-inserts every hour.
+ */
+function reconstructToolUsageKey(dims: { tool?: string; provider?: string } | null | undefined): string {
+  return `${dims?.tool ?? "unknown"}::${dims?.provider ?? "unknown"}`;
+}
+
+/**
+ * D-04: four hourly tool-usage metric types per {tool, provider} dimension —
+ * tool_calls, tool_failures, tool_duration_ms, tool_duration_samples — each
+ * behind its OWN idempotency guard (a shared guard would let a partially-
+ * completed run double-count one metric type while correctly skipping
+ * another). Never patches or deletes an existing row — insert-only, per
+ * CLAUDE.md's self-hosted Convex rules.
+ *
+ * A dimension with zero failures still gets a tool_failures bucket (value 0)
+ * so the read path never has to guess whether an absent bucket means zero
+ * failures or means unknown. A dimension where no row reported a numeric
+ * durationMs gets NEITHER duration bucket — absent is not zero, and an
+ * average over zero samples must render "n/a", never "0ms".
+ */
+async function insertToolUsageBuckets(
+  ctx: { db: any },
+  hourStart: number,
+  toolRows: Array<Doc<"toolExecutions">>
+): Promise<{
+  callsInserted: number;
+  failuresInserted: number;
+  durationMsInserted: number;
+  durationSamplesInserted: number;
+}> {
+  const callsByDim: Record<string, number> = {};
+  const failuresByDim: Record<string, number> = {};
+  const durationSumByDim: Record<string, number> = {};
+  const durationCountByDim: Record<string, number> = {};
+
+  for (const r of toolRows) {
+    const key = `${r.toolName}::${(r as any).provider ?? "unknown"}`;
+    callsByDim[key] = (callsByDim[key] ?? 0) + 1;
+    if (!(key in failuresByDim)) failuresByDim[key] = 0;
+    if (!r.success) failuresByDim[key] += 1;
+
+    const durationMs = (r as any).durationMs;
+    if (typeof durationMs === "number") {
+      durationSumByDim[key] = (durationSumByDim[key] ?? 0) + durationMs;
+      durationCountByDim[key] = (durationCountByDim[key] ?? 0) + 1;
+    }
+  }
+
+  async function insertMissing(metricType: string, byDim: Record<string, number>): Promise<number> {
+    const existingRows = await ctx.db
+      .query("aggregates")
+      .withIndex("by_type_period_bucket", (q: any) =>
+        q.eq("metric_type", metricType).eq("period", "hourly").eq("bucket_start", hourStart)
+      )
+      .collect();
+    const existingKeys = new Set(existingRows.map((r: any) => reconstructToolUsageKey(r.dimensions)));
+    let count = 0;
+    for (const [dim, value] of Object.entries(byDim)) {
+      if (existingKeys.has(dim)) continue; // idempotency: skip already-aggregated dimension
+      const [tool, provider] = dim.split("::");
+      await ctx.db.insert("aggregates", {
+        metric_type: metricType,
+        period: "hourly",
+        bucket_start: hourStart,
+        value,
+        dimensions: { tool, provider },
+      });
+      count++;
+    }
+    return count;
+  }
+
+  const callsInserted = await insertMissing("tool_calls", callsByDim);
+  const failuresInserted = await insertMissing("tool_failures", failuresByDim);
+  const durationMsInserted = await insertMissing("tool_duration_ms", durationSumByDim);
+  const durationSamplesInserted = await insertMissing("tool_duration_samples", durationCountByDim);
+
+  return { callsInserted, failuresInserted, durationMsInserted, durationSamplesInserted };
 }
 
 // ---- Hourly aggregation (called by cron every hour) ----
@@ -221,6 +340,23 @@ export const computeHourly = internalMutation({
     // so the two paths cannot drift (Task 2).
     await insertTokenSplitBuckets(ctx, hourStart, llmRows);
 
+    // D-04 (Phase 105): tool_calls / tool_failures / tool_duration_ms /
+    // tool_duration_samples hourly buckets — a SECOND bounded read (this
+    // table is separate from llmMetrics), same cap-and-warn shape as the
+    // llmTruncated handling above.
+    const { rows: toolRows, truncated: toolTruncated } = await fetchToolRowsForWindow(
+      ctx,
+      hourStart,
+      hourEnd
+    );
+    if (toolTruncated) {
+      console.warn(
+        `[computeHourly] hour ${hourStart} hit the ${TOOL_WINDOW_READ_CAP}-row tool read cap — ` +
+          `its tool_* buckets undercount. Raise TOOL_WINDOW_READ_CAP or shorten the bucket.`
+      );
+    }
+    await insertToolUsageBuckets(ctx, hourStart, toolRows);
+
     // Phase 88 (D-02): the event-count ("events") and error-count ("errors")
     // aggregation branches were REMOVED here. Those metrics are now maintained
     // authoritatively at ingest time in events.ingest → incrementEventBucket /
@@ -259,6 +395,20 @@ export const computeHourly = internalMutation({
       console.log("[computeHourly] budget eval", result);
     } catch (err) {
       console.warn("[computeHourly] budget eval failed:", (err as Error).message);
+    }
+
+    // D-06 (Phase 105): tool-policy fail-open alert evaluation runs HERE
+    // too, at the tail of the same already-running cron, for the identical
+    // reason the budget evaluator above does — see this file's D-14 comment
+    // block for the full incident history (internal.alerts.evaluateInternal
+    // disabled 2026-07-14). A SEPARATE try/catch, not merged into the block
+    // above: one evaluator's failure must never suppress the other, and
+    // neither may fail computeHourly's whole execution.
+    try {
+      const policyResult = await evaluateToolPolicyAlerts(ctx, now);
+      console.log("[computeHourly] tool policy alert eval", policyResult);
+    } catch (err) {
+      console.warn("[computeHourly] tool policy alert eval failed:", (err as Error).message);
     }
   },
 });

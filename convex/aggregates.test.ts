@@ -1,6 +1,25 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { getBillingType } from "./lib/providers";
+
+// Phase 105 (D-04/D-06) tail-append tests need to observe call
+// count/order/rejection-handling for BOTH tail-appended evaluators without
+// convex-test — pass-through vi.mock spies (the exact pattern
+// costBudgetEval.test.ts's own Task 3 section establishes) wrap the REAL
+// implementations so the "tool usage buckets" describe block below (which
+// calls computeHourly's real handler on ordinary fixtures) is unaffected;
+// only the dedicated tail-append describe block clears/asserts on the spies.
+vi.mock("./costBudgetEval", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./costBudgetEval")>();
+  return { ...actual, evaluateBudgets: vi.fn(actual.evaluateBudgets) };
+});
+vi.mock("./toolPolicyAlertEval", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./toolPolicyAlertEval")>();
+  return { ...actual, evaluateToolPolicyAlerts: vi.fn(actual.evaluateToolPolicyAlerts) };
+});
+
 import { computeHourly, backfillTokenSplit, costByGoalPeriod, llmByGoal } from "./aggregates";
+import { evaluateBudgets } from "./costBudgetEval";
+import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
 
 // ---------------------------------------------------------------------------
 // Fake ctx for exercising the real mutation handlers via `._handler` (the raw
@@ -21,6 +40,15 @@ function makeAggregatesCtx(
     aggregates?: FakeDoc[];
     agentConfigs?: FakeDoc[];
     modelPricing?: FakeDoc[];
+    // Phase 105 (D-04/D-06): fixtures for the tool usage buckets and the
+    // tail-appended tool-policy alert evaluator. Optional and additive —
+    // every pre-Phase-105 test omits these and gets an empty table, which
+    // the real evaluateToolPolicyAlerts handler treats as "no events this
+    // hour" (skippedNoEvents, no writes, no scheduler call).
+    toolExecutions?: FakeDoc[];
+    costBudgets?: FakeDoc[];
+    toolPolicyEvents?: FakeDoc[];
+    alerts?: FakeDoc[];
   } = {}
 ) {
   const tables: Record<string, FakeDoc[]> = {
@@ -28,8 +56,13 @@ function makeAggregatesCtx(
     aggregates: [...(opts.aggregates ?? [])],
     agentConfigs: [...(opts.agentConfigs ?? [])],
     modelPricing: [...(opts.modelPricing ?? [])],
+    toolExecutions: [...(opts.toolExecutions ?? [])],
+    costBudgets: [...(opts.costBudgets ?? [])],
+    toolPolicyEvents: [...(opts.toolPolicyEvents ?? [])],
+    alerts: [...(opts.alerts ?? [])],
   };
   let nextId = 1;
+  const schedulerCalls: Array<{ delay: number; args: unknown }> = [];
   // Per-ctx paginate counter — each test builds a fresh ctx and invokes one
   // handler, so this scopes to a single function invocation the way Convex's own
   // limit does. See the throw in paginate() below.
@@ -137,7 +170,13 @@ function makeAggregatesCtx(
     },
   };
 
-  return { ctx: { db }, tables, patchCalls, deleteCalls };
+  const scheduler = {
+    async runAfter(delay: number, _fn: unknown, args: unknown) {
+      schedulerCalls.push({ delay, args });
+    },
+  };
+
+  return { ctx: { db, scheduler }, tables, patchCalls, deleteCalls, schedulerCalls };
 }
 
 /** Mirrors computeHourly's own `hourStart` derivation so fixtures land in-bucket. */
@@ -585,6 +624,169 @@ describe("aggregates", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Phase 105 (D-04): tool_calls / tool_failures / tool_duration_ms /
+  // tool_duration_samples hourly buckets, from a bounded toolExecutions
+  // window read alongside the existing llmMetrics one. Exercises the REAL
+  // computeHourly mutation handler via `._handler`, same convention as the
+  // "token split" block above.
+  // -------------------------------------------------------------------------
+  describe("tool usage buckets (Phase 105 D-04)", () => {
+    test("writes a tool_calls bucket per {toolName, provider} dimension with the row count as the value", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: true, timestamp: hourStart + 5, archived: false },
+          { toolName: "web_search", provider: "astridr", success: true, timestamp: hourStart + 15, archived: false },
+          { toolName: "Bash", provider: "claude-cli", success: true, timestamp: hourStart + 25, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const callRows = tables.aggregates.filter((r) => r.metric_type === "tool_calls");
+      expect(callRows).toHaveLength(2);
+      const webSearchRow = callRows.find((r) => r.dimensions.tool === "web_search");
+      const bashRow = callRows.find((r) => r.dimensions.tool === "Bash");
+      expect(webSearchRow!.value).toBe(2);
+      expect(webSearchRow!.dimensions).toEqual({ tool: "web_search", provider: "astridr" });
+      expect(bashRow!.value).toBe(1);
+      expect(bashRow!.dimensions).toEqual({ tool: "Bash", provider: "claude-cli" });
+    });
+
+    test("writes a tool_failures bucket for EVERY tool_calls dimension, including a zero-failure dimension (value 0, not absent)", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: true, timestamp: hourStart + 5, archived: false },
+          { toolName: "web_search", provider: "astridr", success: false, timestamp: hourStart + 15, archived: false },
+          { toolName: "cli_gateway", provider: "astridr", success: true, timestamp: hourStart + 25, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const failureRows = tables.aggregates.filter((r) => r.metric_type === "tool_failures");
+      expect(failureRows).toHaveLength(2); // one per tool_calls dimension, even the all-success one
+      const webSearchFailures = failureRows.find((r) => r.dimensions.tool === "web_search");
+      const gatewayFailures = failureRows.find((r) => r.dimensions.tool === "cli_gateway");
+      expect(webSearchFailures!.value).toBe(1);
+      expect(gatewayFailures!.value).toBe(0); // real zero, not an absent bucket
+    });
+
+    test("writes tool_duration_ms (sum) and tool_duration_samples (count) ONLY for dimensions with at least one numeric durationMs", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: true, durationMs: 120, timestamp: hourStart + 5, archived: false },
+          { toolName: "web_search", provider: "astridr", success: true, durationMs: 80, timestamp: hourStart + 15, archived: false },
+          // Bash rows report NO durationMs at all — must get neither duration bucket.
+          { toolName: "Bash", provider: "claude-cli", success: true, timestamp: hourStart + 25, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const durationMsRows = tables.aggregates.filter((r) => r.metric_type === "tool_duration_ms");
+      const durationSampleRows = tables.aggregates.filter((r) => r.metric_type === "tool_duration_samples");
+      expect(durationMsRows).toHaveLength(1);
+      expect(durationMsRows[0].dimensions).toEqual({ tool: "web_search", provider: "astridr" });
+      expect(durationMsRows[0].value).toBe(200); // 120 + 80
+      expect(durationSampleRows).toHaveLength(1);
+      expect(durationSampleRows[0].value).toBe(2);
+      // Bash reported no durations at all — absent, never a fabricated 0.
+      expect(durationMsRows.find((r) => r.dimensions.tool === "Bash")).toBeUndefined();
+      expect(durationSampleRows.find((r) => r.dimensions.tool === "Bash")).toBeUndefined();
+    });
+
+    test("a row with provider undefined lands in the 'unknown' provider dimension, not dropped", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "Read", success: true, timestamp: hourStart + 5, archived: false }, // provider omitted
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const callRows = tables.aggregates.filter((r) => r.metric_type === "tool_calls");
+      expect(callRows).toHaveLength(1);
+      expect(callRows[0].dimensions).toEqual({ tool: "Read", provider: "unknown" });
+      expect(callRows[0].value).toBe(1);
+    });
+
+    test("a bounded read at TOOL_WINDOW_READ_CAP+1 rows in one dimension caps at the read limit without throwing", async () => {
+      const hourStart = currentHourStart();
+      const rows = Array.from({ length: 4001 }, (_, i) => ({
+        toolName: "web_search",
+        provider: "astridr",
+        success: true,
+        timestamp: hourStart + (i % 3599),
+        archived: false,
+      }));
+      const { ctx, tables } = makeAggregatesCtx({ toolExecutions: rows });
+
+      await expect((computeHourly as any)._handler(ctx)).resolves.toBeUndefined();
+
+      const callRow = tables.aggregates.find((r) => r.metric_type === "tool_calls");
+      expect(callRow!.value).toBe(4000); // capped at TOOL_WINDOW_READ_CAP, never 4001
+    });
+
+    test("idempotency: re-running computeHourly for the same hour inserts nothing new for any of the four metric types", async () => {
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: false, durationMs: 50, timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+      const afterFirst = {
+        calls: tables.aggregates.filter((r) => r.metric_type === "tool_calls").length,
+        failures: tables.aggregates.filter((r) => r.metric_type === "tool_failures").length,
+        durationMs: tables.aggregates.filter((r) => r.metric_type === "tool_duration_ms").length,
+        durationSamples: tables.aggregates.filter((r) => r.metric_type === "tool_duration_samples").length,
+      };
+
+      await (computeHourly as any)._handler(ctx);
+      const afterSecond = {
+        calls: tables.aggregates.filter((r) => r.metric_type === "tool_calls").length,
+        failures: tables.aggregates.filter((r) => r.metric_type === "tool_failures").length,
+        durationMs: tables.aggregates.filter((r) => r.metric_type === "tool_duration_ms").length,
+        durationSamples: tables.aggregates.filter((r) => r.metric_type === "tool_duration_samples").length,
+      };
+
+      expect(afterFirst).toEqual({ calls: 1, failures: 1, durationMs: 1, durationSamples: 1 });
+      expect(afterSecond).toEqual(afterFirst); // no new rows on the re-run
+    });
+
+    test("a partially-completed prior run (tool_calls present, tool_failures absent) inserts only the missing tool_failures buckets on re-run", async () => {
+      const hourStart = currentHourStart();
+      const existingCalls = {
+        metric_type: "tool_calls",
+        period: "hourly",
+        bucket_start: hourStart,
+        value: 999, // deliberately different from what a fresh run would compute
+        dimensions: { tool: "web_search", provider: "astridr" },
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: true, timestamp: hourStart + 5, archived: false },
+        ],
+        aggregates: [existingCalls],
+      });
+
+      await (computeHourly as any)._handler(ctx);
+
+      const callRows = tables.aggregates.filter((r) => r.metric_type === "tool_calls");
+      const failureRows = tables.aggregates.filter((r) => r.metric_type === "tool_failures");
+      expect(callRows).toHaveLength(1);
+      expect(callRows[0].value).toBe(999); // untouched — no duplicate for that metric type
+      expect(failureRows).toHaveLength(1); // newly inserted by the independent guard
+      expect(failureRows[0].value).toBe(0);
+    });
+  });
+
   describe("backfill", () => {
     test("an invocation with maxHours: 2 processes exactly two hour buckets and no more", async () => {
       const hourStart = currentHourStart();
@@ -903,6 +1105,122 @@ describe("aggregates", () => {
       expect(aggregatesDeletes).toHaveLength(0);
       // Sanity: it DID operate on the events table.
       expect(new Set(deletedFromTables)).toEqual(new Set(["events"]));
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 105 (D-06): the tool-policy alert evaluator tail-append, mirroring
+  // costBudgetEval.test.ts's own "cron tail-append (D-14)" section exactly —
+  // pass-through vi.mock spies on BOTH evaluateBudgets and
+  // evaluateToolPolicyAlerts (declared at the top of this file) let this
+  // block assert invocation count, relative ORDER (via Vitest's global
+  // `mock.invocationCallOrder`, which is comparable across different mocked
+  // functions in the same test file), and rejection-swallowing — all against
+  // the REAL computeHourly handler, never a re-implementation.
+  // -------------------------------------------------------------------------
+  describe("computeHourly — tool policy alert tail-append (D-06)", () => {
+    test("evaluateToolPolicyAlerts is invoked exactly once per computeHourly invocation", async () => {
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+
+      const { ctx } = makeAggregatesCtx({});
+      await (computeHourly as any)._handler(ctx);
+
+      expect(vi.mocked(evaluateToolPolicyAlerts)).toHaveBeenCalledTimes(1);
+
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+    });
+
+    test("evaluateToolPolicyAlerts is called AFTER evaluateBudgets within the same invocation", async () => {
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+
+      const { ctx } = makeAggregatesCtx({});
+      await (computeHourly as any)._handler(ctx);
+
+      const budgetOrder = vi.mocked(evaluateBudgets).mock.invocationCallOrder[0];
+      const policyOrder = vi.mocked(evaluateToolPolicyAlerts).mock.invocationCallOrder[0];
+      expect(budgetOrder).toBeDefined();
+      expect(policyOrder).toBeDefined();
+      expect(policyOrder).toBeGreaterThan(budgetOrder);
+
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+    });
+
+    test("the timestamp passed to evaluateToolPolicyAlerts equals the same `now` passed to evaluateBudgets", async () => {
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+      const fixedNowMs = Date.UTC(2026, 7, 3, 15, 20, 0);
+      const dateSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs);
+
+      try {
+        const { ctx } = makeAggregatesCtx({});
+        await (computeHourly as any)._handler(ctx);
+
+        const [, budgetNowArg] = vi.mocked(evaluateBudgets).mock.calls[0];
+        const [, policyNowArg] = vi.mocked(evaluateToolPolicyAlerts).mock.calls[0];
+        expect(policyNowArg).toBe(fixedNowMs / 1000);
+        expect(policyNowArg).toBe(budgetNowArg); // cannot disagree by milliseconds
+      } finally {
+        dateSpy.mockRestore();
+        vi.mocked(evaluateBudgets).mockClear();
+        vi.mocked(evaluateToolPolicyAlerts).mockClear();
+      }
+    });
+
+    test("when evaluateToolPolicyAlerts throws, the handler still resolves and the tool/token/cost bucket inserts above it survive", async () => {
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockRejectedValueOnce(
+        new Error("simulated evaluateToolPolicyAlerts failure")
+      );
+
+      const hourStart = currentHourStart();
+      const { ctx, tables } = makeAggregatesCtx({
+        llmMetrics: [
+          {
+            provider: "anthropic_direct",
+            model: "claude-sonnet-5",
+            cost: 0.01,
+            promptTokens: 100,
+            completionTokens: 20,
+            totalTokens: 120,
+            billingType: "api",
+            timestamp: hourStart + 10,
+            archived: false,
+          },
+        ],
+        toolExecutions: [
+          { toolName: "web_search", provider: "astridr", success: true, timestamp: hourStart + 5, archived: false },
+        ],
+      });
+
+      await expect((computeHourly as any)._handler(ctx)).resolves.toBeUndefined();
+
+      const costRow = tables.aggregates.find((r) => r.metric_type === "cost");
+      const toolCallsRow = tables.aggregates.find((r) => r.metric_type === "tool_calls");
+      expect(costRow).toBeDefined();
+      expect(toolCallsRow).toBeDefined();
+      expect(toolCallsRow!.value).toBe(1);
+
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+    });
+
+    test("a rejection from evaluateBudgets does not suppress evaluateToolPolicyAlerts from still running (separate try/catch blocks)", async () => {
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
+      vi.mocked(evaluateBudgets).mockRejectedValueOnce(new Error("simulated evaluateBudgets failure"));
+
+      const { ctx } = makeAggregatesCtx({});
+      await expect((computeHourly as any)._handler(ctx)).resolves.toBeUndefined();
+
+      expect(vi.mocked(evaluateToolPolicyAlerts)).toHaveBeenCalledTimes(1);
+
+      vi.mocked(evaluateBudgets).mockClear();
+      vi.mocked(evaluateToolPolicyAlerts).mockClear();
     });
   });
 });
