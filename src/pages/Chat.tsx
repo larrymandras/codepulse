@@ -646,7 +646,13 @@ export default function Chat() {
   // fragment inside centerColumn (VoiceStatusPanel, panel f) — everything
   // else in these three columns is identical in both modes. ────────────────
   const chatColumn = (
-    <div className="flex flex-col min-h-0 rounded-xl border border-border/60 bg-card/20 overflow-hidden">
+    // 188-14 live finding: self-start + a bounded height stops this column
+    // from stretching to match whatever height centerColumn's content
+    // needs (grid's default align-items:stretch was pulling the input box
+    // far below the fold — chatColumn has almost no natural content when
+    // the transcript is empty, so it was inheriting a much taller box than
+    // it needed, and its composer sat at the bottom of THAT oversized box).
+    <div className="flex flex-col min-h-0 self-start h-[70vh] rounded-xl border border-border/60 bg-card/20 overflow-hidden">
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
@@ -715,10 +721,20 @@ export default function Chat() {
   );
 
   const centerColumn = (
-    <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-0.5">
+    <div className="flex flex-col gap-3 min-h-0 overflow-y-auto overflow-x-hidden pr-0.5">
       <div className="flex flex-col items-center rounded-xl border border-border/60 bg-card/20 pt-5 pb-4 px-3">
         <div
-          className={`w-full max-w-[340px] transition-[opacity,filter] duration-300 ${
+          // 188-14 live finding: shrunk unconditionally (both layouts), not
+          // just in command-center mode — the avatar's own aspect-ratio
+          // sizing overflows its column by ~35-55px at 340px in EITHER
+          // layout, and overflow-x-hidden on the ancestor above only
+          // suppresses the scrollbar affordance, it doesn't fix the actual
+          // oversize. Cut further (260px -> 190px) once Voice Status +
+          // Control Center's full row set (Brain/Voice/Strict/Focus/
+          // QuietHours/Screen) needed more of the column's height than the
+          // first pass reclaimed — this is the single lever that doesn't
+          // touch Control Center's own (intentionally legible) spacing.
+          className={`w-full max-w-[190px] transition-[opacity,filter] duration-300 ${
             listening ? "" : "opacity-45 saturate-50"
           }`}
         >
@@ -788,7 +804,23 @@ export default function Chat() {
         )}
       </div>
 
-      {/* Control Center (D-17) — now stacked under the aura in column ② */}
+      {/* Voice Status (188-13, panel f) — 188-14 live finding: moved ABOVE
+          Control Center (was below). Control Center's own row spacing is
+          intentionally generous (an earlier Larry pass called out cramped,
+          hard-to-read rows — shrinking it back down to fit Voice Status
+          underneath would reverse that fix). Voice Status pairs naturally
+          with the state pill right above it instead, and is now visible
+          without scrolling past the whole Control Center panel first.
+          Command-center mode only; bound to the SAME avatarState value
+          ControlCenterPanel receives as voiceState (188-UI-SPEC.md panel
+          table row f). */}
+      {commandCenter && (
+        <SectionErrorBoundary name="Voice Status">
+          <VoiceStatusPanel state={avatarState} />
+        </SectionErrorBoundary>
+      )}
+
+      {/* Control Center (D-17) — stacked under the aura in column ② */}
       <ControlCenterPanel
         disconnected={disconnected}
         micOff={!listening}
@@ -802,16 +834,6 @@ export default function Chat() {
         swapVoiceOverride={swapState.voiceOverride}
         lastTurnModel={lastTurnModel}
       />
-
-      {/* Voice Status (188-13, panel f) — inline subpanel directly beneath
-          Control Center, command-center mode only. Bound to the SAME
-          avatarState value ControlCenterPanel already receives as
-          voiceState (188-UI-SPEC.md panel table row f). */}
-      {commandCenter && (
-        <SectionErrorBoundary name="Voice Status">
-          <VoiceStatusPanel state={avatarState} />
-        </SectionErrorBoundary>
-      )}
     </div>
   );
 
@@ -826,10 +848,12 @@ export default function Chat() {
       {/* Phase 186-13 (D-07) "you're back" focus-exit digest toast now
           mounts app-level (App.tsx, checkpoint round 5 page-scoping fix)
           -- previously only fired while /chat happened to be mounted. */}
-      {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border">
-        <div>
-          <h1 className="font-mono font-bold tracking-[0.15em] text-lg">ÁSTRÍÐR</h1>
+      {/* Header — 188-14 live finding: trimmed vertical footprint (pb-4→pb-2,
+          the two-line title block condensed) so command-center mode has a
+          bit more room for Voice Status without needing to scroll to see it. */}
+      <div className="flex items-center justify-between pb-2 border-b border-border">
+        <div className="flex items-baseline gap-2">
+          <h1 className="font-mono font-bold tracking-[0.15em] text-base">ÁSTRÍÐR</h1>
           <p className="font-mono text-[10px] tracking-[0.12em] text-muted-foreground">
             {!listening
               ? "LISTENING OFF"
@@ -913,7 +937,7 @@ export default function Chat() {
         // min-h-0 (below) still governs the common case — Intelligence
         // Feed's internal scroll, not page scroll, handles a long item list
         // when there's enough vertical room.
-        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col">
           {/* ── 5-track command center (188-13, D-18) ───────────────────────
               LEFT RAIL / chat / center / RIGHT RAIL / vitals at ≥xl. The
               three calm tracks (chat/center/vitals) keep their EXACT
