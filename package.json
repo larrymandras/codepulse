@@ -42,7 +42,7 @@
     "lucide-react": "^1.23.0",
     "motion": "^12.38.0",
     "onnxruntime-web": "^1.27.0",
-    "radix-ui": "^1.4.3",
+    "radix-ui": "^1.6.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-easy-crop": "^6.1.0",
