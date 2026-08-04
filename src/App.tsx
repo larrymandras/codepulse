@@ -29,6 +29,9 @@ const Analytics = lazy(() => import("./pages/Analytics"));
 const Quality = lazy(() => import("./pages/Quality"));
 const QualityDetail = lazy(() => import("./pages/QualityDetail"));
 
+// Phase 105: Tool & Trace Observability (OBS-01/OBS-02)
+const Tools = lazy(() => import("./pages/Tools"));
+
 // Lazy-load command center pages (Phase 56)
 const Chat = lazy(() => import("./pages/Chat"));
 const LiveRun = lazy(() => import("./pages/LiveRun"));
@@ -107,6 +110,8 @@ export default function App() {
               {/* Phase 93: Quality KPI pages (EVAL-03) */}
               <Route path="/quality" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><Quality /></Suspense>} />
               <Route path="/quality/:profileId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><QualityDetail /></Suspense>} />
+              {/* Phase 105: Tool & Trace Observability (OBS-01/OBS-02) */}
+              <Route path="/tools" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tools...</div>}><Tools /></Suspense>} />
               <Route path="/infrastructure" element={<Infrastructure />} />
               <Route path="/profiles" element={<Navigate to="/hr/roster" replace />} />
               <Route path="/agents" element={<Navigate to="/hr/roster" replace />} />

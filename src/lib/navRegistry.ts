@@ -48,6 +48,7 @@ import {
   Hexagon,
   MessageSquareText,
   Gauge,
+  Wrench,
 } from "lucide-react";
 
 export const iconComponents: Record<string, React.ElementType> = {
@@ -90,6 +91,7 @@ export const iconComponents: Record<string, React.ElementType> = {
   hexagon: Hexagon,   // Phase 149 — Hive page
   "message-square-text": MessageSquareText,
   gauge: Gauge,   // Phase 93 — Quality page
+  wrench: Wrench,   // Phase 105 — Tools page
 };
 
 // A nav item is either a real route (has `to`) or a placeholder label for a
@@ -156,6 +158,7 @@ export const navGroups: NavGroupConfig[] = [
       { to: "/analytics", label: "Analytics", icon: "chart", group: "OBSERVE" },
       { to: "/alerts", label: "Alerts", icon: "bell", group: "OBSERVE" },
       { to: "/quality", label: "Quality", icon: "gauge", group: "OBSERVE" },
+      { to: "/tools", label: "Tools", icon: "wrench", group: "OBSERVE" },
       { to: "/infrastructure", label: "Infrastructure", icon: "server", group: "OBSERVE" },
       { to: "/security", label: "Security", icon: "shield", group: "OBSERVE" },
       { to: "/self-healing", label: "Self-Healing", icon: "refresh", group: "OBSERVE" },
