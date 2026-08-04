@@ -174,3 +174,9 @@ Both mutations produced the expected failure and were confirmed non-vacuous befo
 ---
 *Phase: 105-tool-trace-observability*
 *Completed: 2026-08-03*
+
+## Self-Check: PASSED
+
+All 3 key files confirmed present on disk (`src/components/TraceWaterfall.tsx`,
+`src/components/TraceWaterfall.test.tsx`, this SUMMARY); all 4 commit hashes
+(`e9cb561f`, `3442fe88`, `df1f4427`, `edb7d881`) confirmed present in git log.
