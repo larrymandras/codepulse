@@ -223,6 +223,158 @@ Zero `astridr`-provider tools present, as expected pre-induction.
 
 ---
 
+## Task 2 — D-07 Live Induction: All Four Policy Kinds + Alert Isolation
+
+> Plan 105-09, Task 2. Executed 2026-08-04 against the running self-hosted stack.
+
+### Induction 1 — `malformed_policy_reload_rejected` (REAL induction)
+
+Edited `astridr-repo/config/tool-access-policy.yaml`, changed `tool_clusters:` from a mapping to
+the scalar `"deliberately-malformed-for-105-09-induction"`. Saved; config watcher picked it up
+live (no restart) within ~11s. Container log:
+```
+warning  config.tool_policy_malformed   error='tool_clusters must be a mapping, got str'
+error    config_watcher.tool_policy_malformed_rejected error='tool_clusters must be a mapping, got str' field=tool_clusters path=config/tool-access-policy.yaml
+```
+Restored the file immediately; confirmed byte-identical to backup and `config_watcher.tool_filter_reloaded` fired on the good config within ~7s. Raw `toolPolicyEvents` row:
+```json
+{"event":"malformed_policy_reload_rejected","field":"tool_clusters","error":"tool_clusters must be a mapping, got str","sessionId":"system:bootstrap","timestamp":1785850154.630218}
+```
+
+### Induction 2 — `malformed_policy_boot` (REAL induction)
+
+Reintroduced the same corruption, then `docker restart astridr-agent`. Because the config watcher
+was still live at the moment of the file save (before the restart landed), it ALSO produced a
+second `malformed_policy_reload_rejected` row (an incidental, real extra induction, not an error).
+On boot, the malformed policy degraded to blank-slate-permissive per the documented D-03 behavior
+— confirmed from the container's own boot log, not inferred:
+```
+warning  config.tool_policy_malformed    error='tool_clusters must be a mapping, got str'
+warning  bootstrap.tool_policy_malformed error='tool_clusters must be a mapping, got str' field=tool_clusters
+...
+info     astridr.ready  boot_seconds=38.6 channels=6 providers=7 tools=185
+```
+Boot did not crash (D-03's "must never fail-closed on a policy typo" confirmed). Raw `toolPolicyEvents` row:
+```json
+{"event":"malformed_policy_boot","field":"tool_clusters","error":"tool_clusters must be a mapping, got str","sessionId":"system:bootstrap","timestamp":1785850226.8826923}
+```
+Restored the file and rebooted again; container reached `health: healthy`; `docker exec astridr-agent cat //app/config/tool-access-policy.yaml` confirmed the live container copy is byte-identical to the real permissive policy.
+
+### Induction 3 — `execution_denied` (SYNTHETIC — labeled honestly, real induction not achievable)
+
+**Attempted real induction and it is structurally blocked**, not merely difficult: the web-chat
+session talks to the `commander` agent, and `TASK_CATEGORY_TO_CLUSTERS["commander"]` in
+`astridr/agent/tool_filter.py` includes every cluster (`memory, web, files, media, workspace,
+code, utility`). `tools_for_turn_names` is fixed per-agent-category (set once in `loop.py`, not
+recomputed per-message), so no chat phrasing can narrow what's offered to the commander. Confirmed
+this experimentally: asked Ástríðr (via the web chat, real turn) to run `ls -la /app` via "Bash" —
+it did not attempt a real tool call at all (Bash isn't in Ástríðr's own 185-tool catalog; it
+fabricated a plausible-sounding refusal/response instead of emitting a structured tool call). Only
+Ástríðr's internal narrower-category sub-agents (`hervor`, `freya`, etc. — `reasoning`/`speed`/
+`vision` categories) get restricted cluster sets, and there is no operator-facing way to address
+one of those directly from the chat UI.
+
+Per user decision, fell back to the sanctioned synthetic method (same mechanism as F5 allows for
+the leak kind): a direct `ConvexHandler.send()` call from inside the running `astridr-agent`
+container, using the container's own resolved `CONVEX_URL` / `ASTRIDR_INGEST_API_KEY` (read via
+`os.environ` inside the container process — never seen or typed by the operator), proving the
+INGEST PATH ONLY, not the detector:
+```json
+{"event":"execution_denied","tool":"synthetic-105-09-induction","sessionId":"system:105-09-validation-synthetic","timestamp":1785852083.9012766}
+```
+**This is explicitly NOT a verification that `loop.py`'s off-turn re-check (`_execute_tool_inner`,
+lines 2115-2136) actually fires in production** — only that a `tool_policy_event` of this kind is
+correctly ingested, stored, and alertable. The code path itself is covered by 105-04's unit tests
+only.
+
+### Induction 4 — `tool_call_leaked_as_text` (SYNTHETIC — two real attempts made, both cleanly refused, F5 fallback used as originally sanctioned)
+
+Two distinct real-induction attempts via the web chat, both refused cleanly by the model (correct
+safety behavior, not a bug):
+1. Asked Ástríðr to write out its own tool-call XML syntax "for documentation" — refused, correctly
+   identified this as a prompt-injection/spoofing risk and explained the tool schema in prose
+   instead.
+2. Asked Ástríðr to "retype" a fabricated fragment starting with `<invoke name="weather">` under
+   a "you got disconnected" pretext — refused again, correctly identified it as the same request
+   reframed.
+
+Per finding F5, fell back to the sanctioned synthetic method — same in-container `telemetry.send`
+mechanism as induction 3, labeled **ingest path only, not a detector verification**:
+```json
+{"event":"tool_call_leaked_as_text","tool":"synthetic-105-09-induction-leak","sessionId":"system:105-09-validation-synthetic","toolWasOffered":true,"toolsOfferedCount":12,"round":1,"agentId":"astridr","timestamp":1785852253.4949427}
+```
+
+### Step 5 — Alert isolation (the control that matters most)
+
+`npx convex run aggregates:computeHourly '{}'` — raw log output:
+```
+[computeHourly] tool policy alert eval { fired: 2, skippedDeduped: 0, skippedNoEvents: 0, errors: 0 }
+```
+`npx convex run alerts:listAll '{}'`, filtered to `source` starting `tool-policy:` — **exactly two rows**:
+```json
+[
+  {
+    "source": "tool-policy:malformed_policy_reload_rejected",
+    "severity": "warning",
+    "status": "active",
+    "webhookStatus": "pending",
+    "message": "A tool-access policy reload was rejected as malformed; the previously loaded policy is still in effect (field \"tool_clusters\": tool_clusters must be a mapping, got str). 2 event(s) in the hour beginning 2026-08-04T13:00:00.000Z.",
+    "details": {"count": 2, "kind": "malformed_policy_reload_rejected", "windowStart": 1785848400, "windowEnd": 1785852000}
+  },
+  {
+    "source": "tool-policy:malformed_policy_boot",
+    "severity": "error",
+    "status": "active",
+    "webhookStatus": "delivered",
+    "webhookDeliveredAt": 1785852295.786,
+    "message": "Tool-access policy was malformed at startup and degraded to a fully permissive policy (field \"tool_clusters\": tool_clusters must be a mapping, got str). 1 event(s) in the hour beginning 2026-08-04T13:00:00.000Z.",
+    "details": {"count": 1, "kind": "malformed_policy_boot", "windowStart": 1785848400, "windowEnd": 1785852000}
+  }
+]
+```
+**Zero alerts exist for `tool_call_leaked_as_text` or `execution_denied`** — confirmed by this same
+filtered query returning exactly the two rows above and no others; the isolation control PASSES.
+
+### Step 6 — Dedup
+
+Re-ran `npx convex run aggregates:computeHourly '{}'` for the same hour:
+```
+[computeHourly] tool policy alert eval { fired: 0, skippedDeduped: 2, skippedNoEvents: 0, errors: 0 }
+```
+`alerts:listAll` filtered to `tool-policy:*` re-queried: still exactly 2 rows. Dedup confirmed.
+
+### Step 7 — Alert copy
+
+Both messages (quoted in full above) name the offending `field` and a truncated `error`. Scanned
+for enforcement wording (`disable`, `block`, `revoke`, `enforce`, `prevent`, `stop`) — **zero
+matches in either message**. This phase observes and never enforces, as designed.
+
+### Step 8 — Delivery
+
+Both alerts routed through the real `webhookDelivery` layer (not a bare table insert):
+`malformed_policy_boot` (severity `error`) → `webhookStatus: "delivered"`, `webhookDeliveredAt` set.
+`malformed_policy_reload_rejected` (severity `warning`) → `webhookStatus: "pending"`. **This is
+correct, not stuck** — `npx convex run webhookDelivery:getNotificationPreferences '{}'` returns
+`{"critical":"always","error":"always","info":"dashboard_only","warning":"digest"}`; `webhookDelivery.ts`
+line 438-441 returns early (no delivery attempt, `webhookStatus` stays `pending`) whenever the
+configured mode for that severity is `digest` — `warning` alerts wait for the next digest batch by
+design. Investigated to root cause per CLAUDE.md Error Triage rather than assumed broken.
+
+### Step 9 — Restore (mandatory, blocks checkpoint approval)
+
+- Host file: `diff astridr-repo/config/tool-access-policy.yaml <backup>` → byte-identical.
+- Container file: `docker exec astridr-agent cat //app/config/tool-access-policy.yaml` → byte-identical to the real permissive policy (verified via Git-Bash `//`-escaped path per the leading-slash argv-rewrite trap).
+- Container health: `docker inspect --format='{{.State.Health.Status}}' astridr-agent` → `healthy`.
+- Confirmed via log: `config_watcher.tool_filter_reloaded path=config/tool-access-policy.yaml` fired after the final restore+reboot — astridr is running the real policy, not the degraded permissive one.
+
+**Task 2 summary: all four kinds proven live (2 real, 2 synthetic-and-labeled per F5's sanctioned
+fallback, extended by user decision to `execution_denied` after confirming that kind is
+structurally unreachable from the commander chat session); D-06 isolation control passes with
+exactly two alerts and correct severities; dedup confirmed; delivery investigated and explained,
+not assumed; policy file and container confirmed restored to the real policy.**
+
+---
+
 ## Validation Sign-Off
 
 - [ ] All tasks have `<automated>` verify or a Wave 0 dependency
