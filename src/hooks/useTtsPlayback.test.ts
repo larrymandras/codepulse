@@ -27,10 +27,17 @@ function MockAudioClass(this: MockAudio, src: string) {
 describe("useTtsPlayback", () => {
   beforeEach(() => {
     vi.stubGlobal("Audio", MockAudioClass);
+    // Pin the API base URL for this suite regardless of the machine's real
+    // .env.local (e.g. a Tailscale hostname for local network access) —
+    // a unit test asserting the hook's DEFAULT-base-URL behavior must not
+    // depend on what a given developer's machine happens to be configured
+    // with for actual dev usage.
+    vi.stubEnv("VITE_ASTRIDR_API_URL", "http://localhost:8181");
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
   });
 
   it("play() sets isPlaying true and calls audio.play()", async () => {
@@ -67,7 +74,15 @@ describe("useTtsPlayback", () => {
   });
 
   it("play() constructs full URL from relative audio_url", async () => {
-    const { result } = renderHook(() => useTtsPlayback());
+    // ASTRIDR_API_URL is a module-level constant, read once at import time —
+    // stubbing the env var in beforeEach has no effect on the ALREADY-
+    // evaluated top-level import, since that import ran before this test
+    // (or any beforeEach) executed. Reset the module cache and re-import
+    // fresh so it re-evaluates against the now-stubbed env value, matching
+    // the real behavior an app restart would see with a different .env.
+    vi.resetModules();
+    const { useTtsPlayback: freshUseTtsPlayback } = await import("./useTtsPlayback");
+    const { result } = renderHook(() => freshUseTtsPlayback());
 
     await act(async () => {
       result.current.play("/api/audio/file.mp3");
