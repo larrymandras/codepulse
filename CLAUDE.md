@@ -59,7 +59,7 @@ React 19, Vite 7, TypeScript 5.9, Convex (database + backend), Tailwind CSS 4 (v
 
 ## Patterns
 
-**Adding a new page:** Create `src/pages/NewPage.tsx` → import in `App.tsx` → add `<Route>` → add nav entry in `src/layouts/DashboardLayout.tsx` (`navItems` array + `iconMap`).
+**Adding a new page:** Create `src/pages/NewPage.tsx` → lazy-import in `App.tsx` → add `<Route>` → add nav entry in `src/lib/navRegistry.ts` (`iconComponents` map + the relevant `navGroups` group's `items` array — NOT `DashboardLayout.tsx`, which only *consumes* the registry; the registry was extracted out at Phase 96's WR-02 so both `DashboardLayout` and `CommandPalette` can read it without importing each other).
 
 **Adding a Convex function:** Create/edit `convex/domain.ts` → export `query()` or `mutation()` with `v.` validators → consume via `useQuery(api.domain.fn)` or `useMutation(api.domain.fn)` in React.
 
