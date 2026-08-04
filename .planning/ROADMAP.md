@@ -758,7 +758,7 @@ Plans:
   8. The three existing tool panels keep working unchanged, proven by a control rather than by inspection.
 
 **UI hint**: yes
-**Plans:** 8/9 plans executed
+**Plans:** 9/9 plans executed — PHASE COMPLETE 2026-08-04
 
 Plans:
 **Wave 1**
@@ -786,7 +786,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 105-09-PLAN.md - live validation: deploy, D-07 induction of all four kinds, alert isolation, UI/theme pass, requirement markers
+- [x] 105-09-PLAN.md - live validation: deploy, D-07 induction of all four kinds, alert isolation, UI/theme pass, requirement markers
 
 ---
 
@@ -836,7 +836,7 @@ Plans:
 | 102. Address Tech Debt — Reminders Dead Code + Ástríðr Comment Cleanup | v12.0 | 3/3 | Complete | 2026-07-23 |
 | 103. Brain-Swap Control Surface | v13.0 | 18/18 | 🚧 Code-complete, live re-verification of 103-16/17/18 pending | — |
 | 104. Cost Intelligence | v13.0 | 11/11 | Complete    | 2026-08-03 |
-| 105. Tool & Trace Observability | v13.0 | 8/9 | In Progress|  |
+| 105. Tool & Trace Observability | v13.0 | 9/9 | Complete | 2026-08-04 |
 | 106. Consolidation & Hardening | v13.0 | — | Planned | — |
 
 *Last updated: 2026-07-27 — **v13.0 milestone OPENED via `/gsd-new-milestone`** (Phases 103-106: Brain-Swap Control Surface · Cost Intelligence · Tool & Trace Observability · Consolidation & Hardening). Requirements in REQUIREMENTS.md (BSC/COST/OBS/DEBT). Sequencing: 106 (tech-debt) is independent + low-risk; 103 gates on astridr's brain-swap backend being live end-to-end (BSC-05 integration gate, Phase-90 lesson); 104/105 are additive. Next: `/gsd-plan-phase 103` (after discuss/ui-spec prerequisites — 103 is a frontend surface). PRIOR: 2026-07-24 — **v11.0 Phase 100 COMPLETE (5/5 plans) — all 4 v11.0 phases now code-complete**: control-surface UX shipped — per-row scope-gated ⋯ menu (UX-01), Global/Project/Cold Storage drag lanes via `ScopeRail` + `resolveScopeDrop` (UX-02), commandId-reconciled optimistic pending-move state machine (UX-03), in-app Cold Storage restore with no `/manage-skills` dead-end (UX-04). Code review found 2 Critical + 1 Info; all fixed with regression tests (commit `5f68801`): CR-02 threaded the drag origin **lane** through SkillRow→context→ScopeRail/Skills so a shadowed Cold-Storage row no longer silently archives its live active copy; CR-01 match-gated `clearPending` by commandId. Verification 8/9 truths code-verified (tsc clean, 2528 tests pass, 0 failures); the 1 remaining truth — live-Forge-daemon drag round-trip + the CR-02 no-op gesture in a real browser — is tracked in `100-HUMAN-UAT.md` (same deferred category as Phase 98/99). v11.0 not yet formally milestone-closed (no MILESTONE-AUDIT.md / tag / handoff — separate ceremony). Prior: 2026-07-23 — **v12.0 Phase 102 COMPLETE — all v12.0 phases done**: tech-debt close-out — dead `dueSoon`/`overdue` queries + `by_dueAt` index removed from codepulse (index drop deployed to the live self-hosted backend), dead `CodePulsePoster` deleted + stale two-backend narrative swept in astridr-repo (commits on astridr `main`, merged into `feature/brain-swap`, prod + war-room rebuilt), one real calendar tick verified (pushed 75 / failed 0, events on /reminders); verification 10/10, code review 0 critical / 4 advisory warnings (102-REVIEW.md: orphaned `by_status` index, silent send_to failure counting, all-day strptime guard, snooze-after-done recurrence dupe — candidates for a future tech-debt phase). Prior: 2026-07-20 — **v12.0 Personal Productivity (Reminders & Calendar) — Phase 101 COMPLETE**: Plan 07 (gap closure, codepulse — UI-02/CAL-02) done, 7/7 plans; closed the sole `101-UAT.md` gap (test 8: undated reminders vanishing under a calendar day filter) via a RED-first regression test + one-line predicate fix. All v12.0 requirements complete. Live manual re-check (dev server, undated reminder stays visible under a day filter) recommended before milestone close. v11.0 (Phases 98-100) paused mid-milestone pending v12.0 close. Prior: 2026-07-19 — Plan 06 (Reminders command-center page, codepulse) done, 6/6 plans; all 9 v12.0 requirements complete. Earlier: 2026-07-17 — **v11.0 roadmap defined** via `/gsd-new-project` roadmapping: 4 phases (97-100), 22/22 requirements mapped (INTAKE-01..04, LIFE-01..06, LAUNCH-01..04, UX-01..04, DAEMON-01..04). Daemon-executor + real-intake foundation sequenced first (Phase 97); lifecycle mutations (Phase 98) build on it; launch/dispatch (Phase 99) is independent and can run in parallel; control-surface UX (Phase 100) wires the surface over both 98 and 99, sequenced last. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is folded into Phase 98 above — same scope, re-numbered, nothing dropped. v10.0 as shipped 2026-07-07 (+ Phase 96 addendum 2026-07-13): 4 phases (93-96), 28 plans, 9/9 requirements, archived to `milestones/v10.0-ROADMAP.md`. Next: `/gsd-plan-phase 97` (after discuss/ui-spec prerequisites).*
