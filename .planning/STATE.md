@@ -4,12 +4,12 @@ milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
 status: executing
 stopped_at: Phase 106 context gathered
-last_updated: "2026-08-04T19:50:26.973Z"
-last_activity: 2026-08-04 -- Phase 106 discuss-phase complete (CONTEXT.md + DISCUSSION-LOG.md captured, commit 2dc4e0d5); prior: Plan 105-09 complete (live validation, all 3 requirements SATISFIED)
+last_updated: "2026-08-04T20:47:55.798Z"
+last_activity: 2026-08-04 -- Phase 106 planning complete
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 38
+  total_plans: 46
   completed_plans: 38
   percent: 75
 ---
@@ -113,7 +113,7 @@ Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-cl
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-08-04 -- Plan 105-06 complete
+Last activity: 2026-08-04 -- Phase 106 planning complete
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 
