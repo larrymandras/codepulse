@@ -48,7 +48,7 @@ export interface TraceGroup {
   earliestTimestamp: number;
 }
 
-/** Row shape returned by api.toolExecutions.listBySession (convex/schema.ts toolExecutions). */
+/** Row shape returned by the tool-executions list-by-session query (convex/schema.ts toolExecutions table). */
 export interface ToolExecRow {
   _id?: string;
   sessionId?: string;
@@ -328,9 +328,37 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
   const truncated = result?.truncated ?? false;
   const cap = result?.cap;
 
+  // Second, supplementary feeder (D-09). An undefined tool result must NEVER
+  // block rendering the LLM lane — tool rows are additive detail, not a
+  // gate — so this is read with a safe default rather than an early return.
+  const toolResult = useQuery(api.toolExecutions.listBySession, {
+    sessionId,
+  }) as { rows: ToolExecRow[]; truncated: boolean; cap: number } | undefined;
+  const toolRows = toolResult?.rows ?? [];
+  const toolTruncated = toolResult?.truncated ?? false;
+  const toolCap = toolResult?.cap;
+
   const groups = useMemo(() => groupByTrace(rows ?? []), [rows]);
   const timeRange = useMemo(() => computeTimeRange(rows ?? []), [rows]);
   const summary = useMemo(() => computeSummary(rows ?? []), [rows]);
+  const tracedGroupIds = useMemo(
+    () =>
+      new Set(
+        groups
+          .filter((g): g is TraceGroup & { traceId: string } => g.traceId !== undefined)
+          .map((g) => g.traceId)
+      ),
+    [groups]
+  );
+  // Tool rows whose traceId matches no rendered LLM trace group at all —
+  // never dropped, rendered once at the bottom of the whole component.
+  const untracedToolRows = useMemo(
+    () =>
+      toolRows.filter(
+        (r) => r.traceId === undefined || !tracedGroupIds.has(r.traceId)
+      ),
+    [toolRows, tracedGroupIds]
+  );
 
   if (rows === undefined) {
     return null;
@@ -357,17 +385,29 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
   return (
     <TooltipProvider>
       <div className="flex flex-col gap-6">
-        {/* Truncation notice (D-12) — only rendered when the read cap was hit */}
-        {truncated && (
+        {/* Combined truncation notice (D-12) — one banner naming whichever
+            feeder(s) hit their read cap; never a fabricated total. */}
+        {(truncated || toolTruncated) && (
           <div
-            className="text-sm rounded-md px-3 py-2"
+            className="text-sm rounded-md px-3 py-2 flex flex-col gap-1"
             style={{
               color: "var(--status-warn)",
               border: "1px solid color-mix(in srgb, var(--status-warn) 40%, transparent)",
               backgroundColor: "color-mix(in srgb, var(--status-warn) 12%, transparent)",
             }}
           >
-            Showing the most recent {cap} calls — older calls in this session aren't loaded.
+            {truncated && (
+              <p>
+                Showing the most recent {cap} calls — older calls in this
+                session aren&apos;t loaded.
+              </p>
+            )}
+            {toolTruncated && (
+              <p>
+                Showing the most recent {toolCap} tool executions — older
+                tool calls in this session aren&apos;t loaded.
+              </p>
+            )}
           </div>
         )}
 
@@ -426,6 +466,8 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
 
             turnNumber += 1;
             const thisTurn = turnNumber;
+            const { rounds, unroundedLlmRows, unattributedToolRows } =
+              groupRoundsForTrace(group, toolRows);
 
             return (
               <Collapsible
@@ -437,25 +479,134 @@ export function TraceWaterfall({ sessionId }: { sessionId: string }) {
                   <span className="text-sm font-mono tracking-widest uppercase font-semibold">
                     Turn {thisTurn} · {group.rows.length} ·{" "}
                     {formatDurationMs(groupDurationMs)} ·{" "}
-                    {groupCostLabel(group.rows)}
+                    {groupCostLabel(group.rows)} ·{" "}
+                    {Math.round(groupCacheRatio(group.rows) * 100)}% cached
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
                 </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 flex flex-col gap-0.5">
-                  {group.rows.map((row, i) => (
-                    <TraceCallRow
-                      key={row._id ?? i}
-                      row={row}
+                <CollapsibleContent className="px-4 pb-4 flex flex-col gap-3">
+                  {rounds.map((round) => (
+                    <TraceRoundSection
+                      key={round.round}
+                      round={round}
                       toPercent={toPercent}
                     />
                   ))}
+                  {unroundedLlmRows.length > 0 && (
+                    <div className="flex flex-col gap-0.5">
+                      {unroundedLlmRows.map((row, i) => (
+                        <TraceCallRow
+                          key={row._id ?? `unrounded-${i}`}
+                          row={row}
+                          toPercent={toPercent}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {unattributedToolRows.length > 0 && (
+                    <div>
+                      <h4
+                        className="text-xs font-mono tracking-widest uppercase font-semibold"
+                        style={{ color: "var(--muted-foreground)" }}
+                      >
+                        Tool calls with no reported round ·{" "}
+                        {unattributedToolRows.length}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Ástríðr didn&apos;t report which round these ran in.
+                      </p>
+                      <div className="flex flex-col gap-0.5">
+                        {unattributedToolRows.map((row, i) => (
+                          <TraceToolRow
+                            key={row._id ?? `unattributed-${i}`}
+                            row={row}
+                            toPercent={toPercent}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </CollapsibleContent>
               </Collapsible>
             );
           })}
         </div>
+
+        {/* Tool rows whose traceId matches no rendered LLM group — never dropped. */}
+        {untracedToolRows.length > 0 && (
+          <div
+            className="rounded-lg border border-border p-4"
+            style={{ backgroundColor: "var(--muted)" }}
+          >
+            <h3
+              className="text-sm font-mono tracking-widest uppercase font-semibold"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              Untraced tool calls · {untracedToolRows.length}
+            </h3>
+            <div className="mt-2 flex flex-col gap-0.5">
+              {untracedToolRows.map((row, i) => (
+                <TraceToolRow
+                  key={row._id ?? `untraced-tool-${i}`}
+                  row={row}
+                  toPercent={toPercent}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </TooltipProvider>
+  );
+}
+
+// ─── Round section (second Collapsible level, D-09) ────────────────────────
+
+function TraceRoundSection({
+  round,
+  toPercent,
+}: {
+  round: TraceRound;
+  toPercent: (ts: number) => number;
+}) {
+  const llmCount = round.llmRows.length;
+  const label =
+    llmCount === 0
+      ? `Round ${round.round} · ${round.toolRows.length} tool call${
+          round.toolRows.length === 1 ? "" : "s"
+        }`
+      : llmCount === 1
+        ? `Round ${round.round} · ${round.llmRows[0].model} · ${costLabel(round.llmRows[0])}`
+        : `Round ${round.round} · ${llmCount} calls · ${groupCostLabel(round.llmRows)}`;
+
+  return (
+    <Collapsible defaultOpen className="pl-4">
+      <CollapsibleTrigger className="group flex w-full items-center justify-between py-1.5 text-left">
+        <span
+          className="text-xs font-mono tracking-widest uppercase font-semibold"
+          style={{ color: "var(--muted-foreground)" }}
+        >
+          {label}
+        </span>
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-0.5 pt-1">
+        {round.llmRows.map((row, i) => (
+          <TraceCallRow
+            key={row._id ?? `round-${round.round}-llm-${i}`}
+            row={row}
+            toPercent={toPercent}
+          />
+        ))}
+        {round.toolRows.map((row, i) => (
+          <TraceToolRow
+            key={row._id ?? `round-${round.round}-tool-${i}`}
+            row={row}
+            toPercent={toPercent}
+          />
+        ))}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -515,6 +666,61 @@ function TraceCallRow({
             creation: {row.cacheCreationInputTokens ?? "n/a"}
           </span>
           <span>Latency: {formatDurationMs(row.latencyMs)}</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// ─── Tool bar row (D-09) ─────────────────────────────────────────────────────
+
+function TraceToolRow({
+  row,
+  toPercent,
+}: {
+  row: ToolExecRow;
+  toPercent: (ts: number) => number;
+}) {
+  const { start, width, hasDuration } = toolBarMetrics(row);
+  const left = toPercent(start);
+  const barWidth = hasDuration
+    ? Math.max(toPercent(start + width) - left, 0.5)
+    : 0.5;
+  const barColor = row.success ? "var(--chart-2)" : "var(--status-error)";
+  const durationText = hasDuration
+    ? formatDurationMs(row.durationMs as number)
+    : "duration n/a";
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="relative w-full" style={{ height: ROW_HEIGHT }}>
+          <div
+            className="absolute inset-y-1.5 rounded-sm flex items-center px-2 text-xs whitespace-nowrap overflow-hidden"
+            style={{
+              left: `${left}%`,
+              width: `${barWidth}%`,
+              minWidth: "60px",
+              backgroundColor: barColor,
+            }}
+          >
+            <span className="truncate">
+              {row.toolName} · {durationText} ·{" "}
+              {row.success ? "ok" : "failed"}
+            </span>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <div className="flex flex-col gap-0.5 text-xs">
+          <span>Tool: {row.toolName}</span>
+          {row.provider && <span>Provider: {row.provider}</span>}
+          <span>Status: {row.success ? "ok" : "failed"}</span>
+          <span>
+            Duration: {hasDuration ? formatDurationMs(row.durationMs as number) : "n/a"}
+          </span>
+          {typeof row.round === "number" && <span>Round: {row.round}</span>}
+          {row.errorMessage && <span>Error: {row.errorMessage}</span>}
         </div>
       </TooltipContent>
     </Tooltip>
