@@ -98,6 +98,131 @@ not by a passing unit test on the parser.
 
 ---
 
+## Live Baseline
+
+> Plan 105-09, Task 1. Executed 2026-08-04. All raw command output below, no derived counts.
+
+### (a) Convex deployment target — proven before any write
+
+`npx convex function-spec` resolved deployment:
+```
+"url": "https://lmofficenew.tail5bb6b3.ts.net",
+```
+`docker ps --filter name=convex-backend`:
+```
+NAMES            PORTS                                                             STATUS
+convex-backend   0.0.0.0:3210-3211->3210-3211/tcp, [::]:3210-3211->3210-3211/tcp   Up 4 days (healthy)
+```
+The tailnet URL is the self-hosted backend's published address (per CLAUDE.md / `convex-topology-all-local` memory), NOT the retired cloud deployment (`tidy-whale-981`). Confirmed self-hosted target before proceeding.
+
+### (b) Schema push
+
+`docker stats convex-backend --no-stream` (before deploy): `39.82GiB / 64GiB` (62.22%)
+
+`npx convex deploy --yes` (raw output):
+```
+▌ Deploying code to deployment:
+▌ └─ http://127.0.0.1:3210
+- Deploying to http://127.0.0.1:3210...
+
+✔ No indexes are deleted by this push
+Uploading functions to Convex...
+Generating TypeScript bindings...
+Running TypeScript...
+Pushing code to your Convex deployment...
+Schema validation complete.
+Finalizing push...
+✔ Deployed Convex functions to http://127.0.0.1:3210
+```
+`docker stats convex-backend --no-stream` (after deploy): `39.7GiB / 64GiB` (62.03%) — no memory jump from the push.
+
+### (c) astridr container proven on plan 105-02's commit (finding F2)
+
+`docker ps --filter name=astridr` at start of task: `astridr-agent` showed `Up 15 hours` — pre-dated the rebuild, so grepped BEFORE trusting it:
+```
+docker exec astridr-agent grep -c "set_round_context" astridr/agent/loop.py  →  0
+docker exec astridr-agent grep -c "tool_was_offered" astridr/agent/loop.py   →  1
+```
+Stale — `set_round_context` absent entirely. Confirmed the checkout itself has the commits (`06f01d1a`, `5f90612f`, `c39bb6cc` all ancestors of `feature/brain-swap` HEAD `e11b0eff`), then rebuilt:
+```
+docker compose --profile prod up -d --build astridr
+```
+Build completed, `astridr-agent` recreated, reached `health: healthy` after ~35s. Re-grepped inside the freshly-built container:
+```
+docker exec astridr-agent grep -c "set_round_context" astridr/agent/loop.py  →  5
+docker exec astridr-agent grep -c "tool_was_offered" astridr/agent/loop.py   →  2
+```
+Both non-zero (the `tool_was_offered` count of 2 matches 105-02-SUMMARY.md's own grep acceptance criterion exactly: "logger call + telemetry payload"). Container proven live on 105-02's code, by content, not timestamp.
+
+### (d) Pre-induction baseline
+
+`npx convex run toolPolicyEvents:lastReceivedAt '{}'`:
+```json
+{ "timestamp": null }
+```
+
+`npx convex run toolPolicyEvents:countsByKind '{}'`:
+```json
+{
+  "counts": {
+    "execution_denied": 0,
+    "malformed_policy_boot": 0,
+    "malformed_policy_reload_rejected": 0,
+    "tool_call_leaked_as_text": 0
+  },
+  "truncated": false,
+  "windowSeconds": 604800
+}
+```
+`toolPolicyEvents` confirmed genuinely empty (`lastReceivedAt: null`, not `0`) — matches D-07's premise that this table has never held a row.
+
+`npx convex run toolExecutions:recentExecutions '{"limit": 500}'`, filtered to `provider === "astridr"`: **0 rows** (500 total scanned, 0 astridr).
+
+`npx convex run toolExecutions:successRate '{"excludeProvider": "astridr"}'` (D-15 baseline — will be re-run byte-for-byte in Task 3):
+```json
+{
+  "cap": 4000,
+  "truncated": false,
+  "tools": [
+    {"toolName":"Bash","success":1893,"failure":26,"total":1919,"rate":0.986451276706618},
+    {"toolName":"Write","success":154,"failure":0,"total":154,"rate":1},
+    {"toolName":"Edit","success":510,"failure":1,"total":511,"rate":0.9980430528375733},
+    {"toolName":"AskUserQuestion","success":24,"failure":0,"total":24,"rate":1},
+    {"toolName":"Skill","success":6,"failure":0,"total":6,"rate":1},
+    {"toolName":"Read","success":892,"failure":6,"total":898,"rate":0.9933184855233853},
+    {"toolName":"Agent","success":28,"failure":0,"total":28,"rate":1},
+    {"toolName":"Grep","success":225,"failure":0,"total":225,"rate":1},
+    {"toolName":"SendMessage","success":5,"failure":0,"total":5,"rate":1},
+    {"toolName":"PowerShell","success":23,"failure":7,"total":30,"rate":0.7666666666666667},
+    {"toolName":"TaskCreate","success":8,"failure":0,"total":8,"rate":1},
+    {"toolName":"TaskUpdate","success":7,"failure":0,"total":7,"rate":1},
+    {"toolName":"TaskGet","success":1,"failure":0,"total":1,"rate":1},
+    {"toolName":"TaskList","success":1,"failure":0,"total":1,"rate":1},
+    {"toolName":"conversation_recall","success":2,"failure":0,"total":2,"rate":1},
+    {"toolName":"memory_search","success":3,"failure":0,"total":3,"rate":1},
+    {"toolName":"obsidian","success":7,"failure":0,"total":7,"rate":1},
+    {"toolName":"Glob","success":30,"failure":0,"total":30,"rate":1},
+    {"toolName":"gateway:claude-cli","success":0,"failure":7,"total":7,"rate":0},
+    {"toolName":"gateway:codex","success":10,"failure":0,"total":10,"rate":1},
+    {"toolName":"gateway:antigravity","success":7,"failure":0,"total":7,"rate":1},
+    {"toolName":"gateway:claude-sdk","success":0,"failure":4,"total":4,"rate":0},
+    {"toolName":"ToolSearch","success":3,"failure":0,"total":3,"rate":1},
+    {"toolName":"mcp__claude-in-chrome__tabs_context_mcp","success":2,"failure":0,"total":2,"rate":1},
+    {"toolName":"mcp__claude-in-chrome__navigate","success":2,"failure":0,"total":2,"rate":1},
+    {"toolName":"mcp__claude-in-chrome__computer","success":2,"failure":0,"total":2,"rate":1},
+    {"toolName":"weather","success":2,"failure":0,"total":2,"rate":1},
+    {"toolName":"google_personal","success":4,"failure":0,"total":4,"rate":1}
+  ]
+}
+```
+Zero `astridr`-provider tools present, as expected pre-induction.
+
+### tsc/vitest gate (Task 1's automated verify)
+`npx tsc --noEmit`: clean, zero errors.
+`npx vitest run`: `273 passed | 17 skipped (290 files)`, `3393 passed | 193 todo (3586 tests)`, zero failures.
+
+---
+
 ## Validation Sign-Off
 
 - [ ] All tasks have `<automated>` verify or a Wave 0 dependency
