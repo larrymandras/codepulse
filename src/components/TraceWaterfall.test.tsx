@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 
 // ── Convex mocks (must precede the component import) ────────────────────────
 vi.mock("convex/react", () => ({
@@ -10,6 +10,9 @@ vi.mock("../../convex/_generated/api", () => ({
   api: {
     llm: {
       sessionCalls: "llm:sessionCalls",
+    },
+    toolExecutions: {
+      listBySession: "toolExecutions:listBySession",
     },
   },
 }));
@@ -64,6 +67,27 @@ function makeGroup(traceId: string, rows: LlmCallRow[]): TraceGroup {
     rows,
     earliestTimestamp: Math.min(...rows.map((r) => r.timestamp)),
   };
+}
+
+/**
+ * Dispatches useQuery by its first arg (the mocked query identifier), so a
+ * single test can control the LLM-calls feed and the tool-executions feed
+ * independently (finding F5 — the pre-105-05 mock was single-return, which
+ * cannot express "the LLM lane loaded but the tool feed is still loading" or
+ * two different truncation states per feeder).
+ */
+function mockUseQueryDispatch(
+  callsResult: unknown,
+  toolsResult: unknown = { rows: [], truncated: false, cap: 1000 }
+) {
+  mockUseQuery.mockImplementation(((
+    query: unknown,
+    ..._rest: unknown[]
+  ) => {
+    if (query === "llm:sessionCalls") return callsResult;
+    if (query === "toolExecutions:listBySession") return toolsResult;
+    return undefined;
+  }) as typeof useQuery);
 }
 
 // ---------------------------------------------------------------------------
@@ -432,7 +456,7 @@ describe("TraceWaterfall (component)", () => {
   });
 
   it('renders "No LLM calls yet" empty state when the session has zero rows', () => {
-    mockUseQuery.mockReturnValue({ rows: [], truncated: false, cap: 1000 });
+    mockUseQueryDispatch({ rows: [], truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -440,7 +464,7 @@ describe("TraceWaterfall (component)", () => {
   });
 
   it("renders nothing (loading) while useQuery returns undefined", () => {
-    mockUseQuery.mockReturnValue(undefined);
+    mockUseQueryDispatch(undefined);
 
     const { container } = render(<TraceWaterfall sessionId="session-1" />);
 
@@ -455,7 +479,7 @@ describe("TraceWaterfall (component)", () => {
       makeRow({ _id: "4", traceId: undefined, timestamp: 1_700_000_030 }),
       makeRow({ _id: "5", traceId: "trace-a", timestamp: 1_700_000_040 }),
     ];
-    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
+    mockUseQueryDispatch({ rows, truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -474,7 +498,7 @@ describe("TraceWaterfall (component)", () => {
       makeRow({ _id: "1", cost: 0.01, totalTokens: 100 }),
       makeRow({ _id: "2", cost: undefined, totalTokens: 200 }),
     ];
-    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
+    mockUseQueryDispatch({ rows, truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -491,7 +515,7 @@ describe("TraceWaterfall (component)", () => {
 
   it("does NOT render the truncation banner when truncated is false", () => {
     const rows: LlmCallRow[] = [makeRow({ _id: "1" })];
-    mockUseQuery.mockReturnValue({ rows, truncated: false, cap: 1000 });
+    mockUseQueryDispatch({ rows, truncated: false, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -502,7 +526,7 @@ describe("TraceWaterfall (component)", () => {
 
   it("renders the exact Task-2 truncation banner copy when truncated is true", () => {
     const rows: LlmCallRow[] = [makeRow({ _id: "1" })];
-    mockUseQuery.mockReturnValue({ rows, truncated: true, cap: 1000 });
+    mockUseQueryDispatch({ rows, truncated: true, cap: 1000 });
 
     render(<TraceWaterfall sessionId="session-1" />);
 
@@ -511,5 +535,218 @@ describe("TraceWaterfall (component)", () => {
         "Showing the most recent 1000 calls — older calls in this session aren't loaded."
       )
     ).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 105 OBS-03 rendering — nesting, attribution honesty, dual truncation
+// ---------------------------------------------------------------------------
+
+describe("Phase 105 OBS-03 rendering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("nests tool executions under their reported round; each tool name appears exactly once", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-x", round: 1, timestamp: 1_700_000_000 }),
+      makeRow({ _id: "l2", traceId: "trace-x", round: 2, timestamp: 1_700_000_100 }),
+    ];
+    const tools: ToolExecRow[] = [
+      makeToolRow({ _id: "t1", traceId: "trace-x", round: 1, toolName: "web_search", timestamp: 1_700_000_050 }),
+      makeToolRow({ _id: "t2", traceId: "trace-x", round: 2, toolName: "memory_search", timestamp: 1_700_000_150 }),
+    ];
+    mockUseQueryDispatch(
+      { rows, truncated: false, cap: 1000 },
+      { rows: tools, truncated: false, cap: 1000 }
+    );
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(screen.getByText(/Round 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Round 2/)).toBeInTheDocument();
+    expect(screen.getAllByText(/web_search/)).toHaveLength(1);
+    expect(screen.getAllByText(/memory_search/)).toHaveLength(1);
+  });
+
+  it("ATTRIBUTION-HONESTY CONTROL: a tool row with a round-less report never renders inside a Round section, and is labelled instead of guessed (D-10)", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-y", round: 1, timestamp: 1_700_000_000 }),
+    ];
+    const tools: ToolExecRow[] = [
+      makeToolRow({
+        _id: "t1",
+        traceId: "trace-y",
+        round: undefined,
+        toolName: "leaky_tool",
+        timestamp: 1_700_000_010,
+      }),
+    ];
+    mockUseQueryDispatch(
+      { rows, truncated: false, cap: 1000 },
+      { rows: tools, truncated: false, cap: 1000 }
+    );
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    // Labelled, not dropped.
+    expect(screen.getByText(/no reported round/)).toBeInTheDocument();
+    expect(screen.getByText(/leaky_tool/)).toBeInTheDocument();
+
+    // Scoped negative assertion: the round-1 section's own DOM subtree must
+    // NOT contain the leaked tool row. A whole-document match would pass
+    // even if the row were wrongly nested — this is the actual proof.
+    const roundTrigger = screen.getByText(/Round 1/);
+    const roundSection = roundTrigger.closest('[data-slot="collapsible"]');
+    expect(roundSection).not.toBeNull();
+    expect(
+      within(roundSection as HTMLElement).queryByText(/leaky_tool/)
+    ).toBeNull();
+  });
+
+  it("renders a tool row whose traceId matches no rendered group under 'Untraced tool calls', never dropped", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-known", round: 1, timestamp: 1_700_000_000 }),
+    ];
+    const tools: ToolExecRow[] = [
+      makeToolRow({
+        _id: "t1",
+        traceId: "trace-unknown",
+        round: 1,
+        toolName: "orphan_tool",
+        timestamp: 1_700_000_010,
+      }),
+    ];
+    mockUseQueryDispatch(
+      { rows, truncated: false, cap: 1000 },
+      { rows: tools, truncated: false, cap: 1000 }
+    );
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(screen.getByText(/Untraced tool calls · 1/)).toBeInTheDocument();
+    expect(screen.getByText(/orphan_tool/)).toBeInTheDocument();
+  });
+
+  it("renders LLM rows with no round flat, with no Round header anywhere in that group", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-z", round: undefined, timestamp: 1_700_000_000 }),
+      makeRow({ _id: "l2", traceId: "trace-z", round: undefined, timestamp: 1_700_000_010 }),
+    ];
+    mockUseQueryDispatch({ rows, truncated: false, cap: 1000 });
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(screen.queryByText(/Round \d/)).not.toBeInTheDocument();
+  });
+
+  it("renders 'duration n/a' (not '0ms') for a tool row with durationMs undefined", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-d", round: 1, timestamp: 1_700_000_000 }),
+    ];
+    const tools: ToolExecRow[] = [
+      makeToolRow({
+        _id: "t1",
+        traceId: "trace-d",
+        round: 1,
+        toolName: "no_duration_tool",
+        durationMs: undefined,
+        timestamp: 1_700_000_010,
+      }),
+    ];
+    mockUseQueryDispatch(
+      { rows, truncated: false, cap: 1000 },
+      { rows: tools, truncated: false, cap: 1000 }
+    );
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(screen.getByText(/duration n\/a/)).toBeInTheDocument();
+    expect(screen.queryByText(/\b0ms\b/)).not.toBeInTheDocument();
+  });
+
+  it("treats round: 0 as a real round, not unattributed", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({ _id: "l1", traceId: "trace-zero", round: 0, timestamp: 1_700_000_000 }),
+    ];
+    const tools: ToolExecRow[] = [
+      makeToolRow({
+        _id: "t1",
+        traceId: "trace-zero",
+        round: 0,
+        toolName: "zero_round_tool",
+        timestamp: 1_700_000_005,
+      }),
+    ];
+    mockUseQueryDispatch(
+      { rows, truncated: false, cap: 1000 },
+      { rows: tools, truncated: false, cap: 1000 }
+    );
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    expect(screen.getByText(/Round 0/)).toBeInTheDocument();
+    expect(screen.queryByText(/no reported round/)).not.toBeInTheDocument();
+  });
+
+  it("appends the cache-ratio suffix to the turn header using groupCacheRatio's value", () => {
+    const rows: LlmCallRow[] = [
+      makeRow({
+        _id: "l1",
+        traceId: "trace-c",
+        promptTokens: 100,
+        cacheReadInputTokens: 300,
+        cacheCreationInputTokens: 600,
+      }),
+    ];
+    mockUseQueryDispatch({ rows, truncated: false, cap: 1000 });
+
+    render(<TraceWaterfall sessionId="session-1" />);
+
+    // groupCacheRatio = 300 / (300 + 600 + 100) = 0.3 -> 30%
+    expect(screen.getByText(/30% cached/)).toBeInTheDocument();
+  });
+
+  describe("combined truncation banner (both feeders, D-12/F3)", () => {
+    it("renders only the calls sentence when only the calls feed is truncated", () => {
+      mockUseQueryDispatch(
+        { rows: [makeRow({ _id: "1" })], truncated: true, cap: 1000 },
+        { rows: [], truncated: false, cap: 500 }
+      );
+
+      render(<TraceWaterfall sessionId="session-1" />);
+
+      expect(screen.getByText(/most recent 1000 calls/)).toBeInTheDocument();
+      expect(screen.queryByText(/tool executions/)).not.toBeInTheDocument();
+    });
+
+    it("renders only the tool-executions sentence when only the tool feed is truncated", () => {
+      mockUseQueryDispatch(
+        { rows: [makeRow({ _id: "1" })], truncated: false, cap: 1000 },
+        { rows: [], truncated: true, cap: 500 }
+      );
+
+      render(<TraceWaterfall sessionId="session-1" />);
+
+      expect(
+        screen.getByText(/most recent 500 tool executions/)
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/most recent 1000 calls/)).not.toBeInTheDocument();
+    });
+
+    it("renders both sentences inside ONE banner element when both feeders are truncated", () => {
+      mockUseQueryDispatch(
+        { rows: [makeRow({ _id: "1" })], truncated: true, cap: 1000 },
+        { rows: [], truncated: true, cap: 500 }
+      );
+
+      render(<TraceWaterfall sessionId="session-1" />);
+
+      const callsSentence = screen.getByText(/most recent 1000 calls/);
+      const toolsSentence = screen.getByText(/most recent 500 tool executions/);
+      const banner = callsSentence.closest("div");
+      expect(banner).not.toBeNull();
+      expect(banner as HTMLElement).toContainElement(toolsSentence);
+    });
   });
 });
