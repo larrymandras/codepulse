@@ -179,6 +179,150 @@ export const cleanupSessionRecords = internalMutation({
 });
 
 /**
+ * Phase 105-09 (live gate, 2026-08-04): backfill `provider: "astridr"` onto historical
+ * `toolExecutions` rows left untagged by the `command_execution` case's pre-105-09 insert
+ * (fixed going forward in `runtimeIngest.ts`'s `resolveCommandExecutionToolRow`). Scoped to
+ * the exact two literal fallback sessionIds that case used (`profileId ?? "unknown"`, where
+ * `command_execution` payloads carry no `profileId` from a plain chat turn, matching the
+ * "astridr" and "unknown" values seen live) — these are genuine historical Ástríðr tool-call
+ * records (real toolName/duration data), not junk, so this PATCHES rather than deletes,
+ * unlike the neighboring `purgeUnknown*` migrations. Dry-run by default; `apply: true` writes.
+ * Only ~90 rows total as of 2026-08-04 (well under BATCH_SIZE) — a single invocation suffices,
+ * but batch-capped anyway per this file's own convention.
+ */
+export const backfillAstridrProviderTag = internalMutation({
+  args: { apply: v.optional(v.boolean()) },
+  handler: async (ctx, { apply }) => {
+    const targets = ["astridr", "unknown"];
+    let matched = 0;
+    let patched = 0;
+    const samples: { sessionId: string; toolName: string; timestamp: number }[] = [];
+
+    for (const sessionId of targets) {
+      const rows = await ctx.db
+        .query("toolExecutions")
+        .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+        .take(BATCH_SIZE);
+      const untagged = rows.filter((r) => r.provider === undefined);
+      matched += untagged.length;
+      for (const row of untagged.slice(0, 5 - samples.length)) {
+        samples.push({ sessionId, toolName: row.toolName, timestamp: row.timestamp });
+      }
+      if (apply) {
+        for (const row of untagged) {
+          await ctx.db.patch(row._id, { provider: "astridr" });
+          patched++;
+        }
+      }
+    }
+
+    return { matched, patched, dryRun: !apply, samples };
+  },
+});
+
+/**
+ * Phase 105-09 (live gate, 2026-08-04): D-12/unattributed-rows live verification could not be
+ * organically produced — no live session remotely approaches the 1000-row `SESSION_TOOLS_READ_CAP`,
+ * and no real session combines "has LLM calls" with "has an untraced tool row" (every post-105-02/03
+ * tool_executed row carries traceId/round). Seeds exactly `SESSION_TOOLS_READ_CAP` (1000) synthetic
+ * `toolExecutions` rows plus one `llmMetrics` row under a dedicated, clearly-fake test sessionId
+ * (`system:105-09-truncation-test`, NEVER a real Ástríðr session) so the TraceWaterfall's
+ * truncation banner and "Tool calls with no reported round" / component-level "Untraced calls"
+ * sections can be verified against real UI rendering, not reasoned about. Composition of the 1000:
+ * 998 correctly-attributed (matching traceId+round, trips the >= cap boundary exactly), 1 with a
+ * matching traceId but no round (unattributed-within-turn), 1 with no traceId at all (fully
+ * untraced). Labeled synthetic throughout `105-VALIDATION.md`; see `cleanupTruncationTestData` for
+ * teardown after verification.
+ */
+export const seedTruncationTestData = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const sessionId = "system:105-09-truncation-test";
+    const traceId = "test-trace-105-09-truncation";
+    const now = 1785900000; // fixed anchor, not wall-clock (repo convention: no Date.now() in scripts)
+
+    await ctx.db.insert("llmMetrics", {
+      sessionId,
+      traceId,
+      round: 1,
+      model: "synthetic-105-09-seed",
+      provider: "astridr",
+      promptTokens: 10,
+      completionTokens: 10,
+      totalTokens: 20,
+      cacheReadInputTokens: 0,
+      cacheCreationInputTokens: 0,
+      cost: 0,
+      latencyMs: 100,
+      billingType: "api",
+      timestamp: now,
+    });
+
+    let inserted = 0;
+    for (let i = 0; i < 998; i++) {
+      await ctx.db.insert("toolExecutions", {
+        sessionId,
+        toolName: `synthetic-105-09-seed-${i}`,
+        success: true,
+        durationMs: 10,
+        provider: "astridr",
+        traceId,
+        round: 1,
+        timestamp: now + i,
+      });
+      inserted++;
+    }
+    // Unattributed: matching traceId, no round — "Tool calls with no reported round".
+    await ctx.db.insert("toolExecutions", {
+      sessionId,
+      toolName: "synthetic-105-09-seed-unattributed",
+      success: true,
+      durationMs: 10,
+      provider: "astridr",
+      traceId,
+      timestamp: now + 998,
+    });
+    inserted++;
+    // Fully untraced: no traceId at all — component-level "Untraced calls" bucket.
+    await ctx.db.insert("toolExecutions", {
+      sessionId,
+      toolName: "synthetic-105-09-seed-untraced",
+      success: true,
+      durationMs: 10,
+      provider: "astridr",
+      timestamp: now + 999,
+    });
+    inserted++;
+
+    return { sessionId, toolRowsInserted: inserted, llmRowsInserted: 1 };
+  },
+});
+
+/**
+ * Teardown for `seedTruncationTestData` — deletes every row under the dedicated test sessionId
+ * from both `toolExecutions` and `llmMetrics`. Safe to re-run (no-ops once clean).
+ */
+export const cleanupTruncationTestData = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const sessionId = "system:105-09-truncation-test";
+    const toolRows = await ctx.db
+      .query("toolExecutions")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .collect();
+    for (const row of toolRows) await ctx.db.delete(row._id);
+
+    const llmRows = await ctx.db
+      .query("llmMetrics")
+      .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
+      .collect();
+    for (const row of llmRows) await ctx.db.delete(row._id);
+
+    return { toolRowsDeleted: toolRows.length, llmRowsDeleted: llmRows.length };
+  },
+});
+
+/**
  * Orchestrator: Purge all "unknown" session data and clean up.
  */
 export const runFullPurge = internalAction({

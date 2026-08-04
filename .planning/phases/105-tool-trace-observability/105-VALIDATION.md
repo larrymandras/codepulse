@@ -1,8 +1,8 @@
 ---
 phase: 105
 slug: tool-trace-observability
-status: partial
-nyquist_compliant: false
+status: complete
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-08-03
 executed: 2026-08-04
@@ -96,8 +96,8 @@ not by a passing unit test on the parser.
 |----------|-------------|------------|---------|
 | **D-07 live induction** — the astridr → CodePulse ingest path actually carries `tool_policy_event` and the widened `tool_executed` payload end-to-end | OBS-01, OBS-02 | No `convex-test`; the `runMutation`/`ctx.db` seam is deliberately un-unit-tested. A passing parser test proves parsing, not delivery. | ✅ **PASS.** All 4 `tool_policy_event` kinds landed as real rows (2 real induction, 2 sanctioned synthetic per F5, see Task 2). D-06 isolation control passes exactly 2 alerts. Real `tool_executed` rows confirmed with populated `durationMs`/`traceId`/`round` (Task 3). |
 | **Trace waterfall visual depth** — nested spans, per-tool timings, cache badges render legibly at real trace sizes | OBS-03 | Rendering legibility at real data volume is not assertable from jsdom; the existing tests cover the pure grouping functions only. | ✅ **PASS** for nesting/cache ratio (Round 1/2 structure confirmed on a real 2-round session; 49% cache ratio hand-verified against raw `llm:sessionCalls` rows to within display rounding). ⚠ **PARTIAL** for D-12 truncation and unattributed-rows rendering — see below, both genuinely not exercisable live today, not skipped. |
-| **D-12 TraceWaterfall per-session truncation** — the banner appears and names which side truncated, on data that actually trips `SESSION_TOOLS_READ_CAP`/`SESSION_CALLS_READ_CAP` (both 1000) | OBS-03 | Per-session caps require 1000+ tool calls or LLM calls inside ONE Ástríðr session — implausible to generate organically without excessive synthetic automation, which the plan explicitly disallows passing as a live pass. | ⚠ **PARTIAL, honestly.** No live session came remotely close to 1000 calls. Not forced synthetically. (Note: the SEPARATE `successRate`/`avgDuration` 4000-row/24h window cap — the "OBS-01 (D-12 extended)" row above — DID trip for real, unplanned, during this session's own heavy tool usage, which is real evidence the truncation mechanism works; the per-session TraceWaterfall cap specifically remains unexercised.) |
-| **Unattributed tool rows render under "Untraced tool calls" / not silently attached** | OBS-03 | Legacy rows with no `traceId`/`round` must not be guessed into a parent round. | ⚠ **PARTIAL, honestly.** Investigated thoroughly (§Task 3): every session with real LLM calls post-105-02/03 deploy is fully attributed (has `traceId`); the historical untagged rows (the D-15 backlog) all sit under placeholder sessionIds (`"unknown"`/`"astridr"`) with ZERO `llm` rows, so `TraceWaterfall` takes the "No LLM calls yet" empty-state path before ever reaching the untraced-render branch. The code path itself is unit-tested (`TraceWaterfall.test.tsx`); a live example genuinely does not exist in the current data. |
+| **D-12 TraceWaterfall per-session truncation** — the banner appears and names which side truncated, on data that actually trips `SESSION_TOOLS_READ_CAP`/`SESSION_CALLS_READ_CAP` (both 1000) | OBS-03 | Per-session caps require 1000+ tool calls or LLM calls inside ONE Ástríðr session — implausible to generate organically. | ✅ **PASS (synthetic, explicitly labeled, per explicit operator decision).** Real organic reproduction is impractical (1000+ real chat turns). Seeded exactly 1000 `toolExecutions` rows + 1 `llmMetrics` row under a dedicated, clearly-fake test sessionId (`system:105-09-truncation-test`, never a real Ástríðr session) via `convex/migrations.ts`'s `seedTruncationTestData`. Live UI showed the banner **verbatim**: *"Showing the most recent 1000 tool executions — older tool calls in this session aren't loaded."* — correctly naming the tool side. Console clean under the 1000-row render. Cleaned up immediately after via `cleanupTruncationTestData` (`toolRowsDeleted: 1000, llmRowsDeleted: 1`, re-queried empty). (The SEPARATE `successRate`/`avgDuration` 4000-row/24h window cap — "OBS-01 (D-12 extended)" — additionally tripped for real, organically, during this session's own heavy tool usage — independent, non-synthetic confirmation the mechanism works.) |
+| **Unattributed tool rows render under "Untraced tool calls" / not silently attached** | OBS-03 | Legacy rows with no `traceId`/`round` must not be guessed into a parent round; no live session combines real LLM calls with an untraced tool row. | ✅ **PASS (synthetic, explicitly labeled, per explicit operator decision).** Same seed as above included 998 correctly-attributed rows + 1 with a matching `traceId` but no `round` + 1 with no `traceId` at all. Live UI showed BOTH distinct buckets correctly, neither guessed onto Round 1: **"TOOL CALLS WITH NO REPORTED ROUND · 1"** ("Ástríðr didn't report which round these ran in.") containing exactly `synthetic-105-09-seed-unattributed`, and **"UNTRACED TOOL CALLS · 1"** containing exactly `synthetic-105-09-seed-untraced`. Cleaned up immediately after. |
 
 ---
 
@@ -479,6 +479,32 @@ cannot honestly be made while the historical rows remain. Both legacy panels wil
 genuine Claude-Code activity and residual pre-existing Ástríðr rows (NOT new ones) until the backlog
 is separately cleaned up.
 
+### UPDATE — historical backlog closed (2026-08-04, per explicit operator decision)
+
+The operator reviewed the above and directed the backlog be closed now rather than deferred. Added
+`convex/migrations.ts`'s `backfillAstridrProviderTag` (dry-run by default, `apply: true` writes),
+scoped to the exact two literal fallback sessionIds `command_execution` used (`"astridr"`,
+`"unknown"`) — genuine historical Ástríðr tool-call records, patched (not deleted, unlike the
+neighboring `purgeUnknown*` migrations in the same file).
+
+- Dry run: `matched: 91, patched: 0` — samples confirmed real toolNames (`memory_search`, `weather`).
+- Applied (`apply: true`): `matched: 91, patched: 91`.
+- Re-ran dry run: `matched: 0` — nothing left untagged.
+- D-15 query re-checked: `weather` no longer appears AT ALL under `excludeProvider: "astridr"` (was
+  `{success:3,total:3}` before the patch) — meaning zero genuine Claude-Code `weather` activity ever
+  existed; every prior "weather" entry in that query was 100% leaked Ástríðr data.
+- Full remaining tool list under `excludeProvider: "astridr"` is now purely genuine Claude Code /
+  operator tools (`Bash`, `Read`, `Edit`, `Grep`, `mcp__claude-in-chrome__*`, `gateway:*`, `Task*`,
+  etc.) — zero Ástríðr-specific tool names remain.
+- Live-verified on the actual dashboard: the `/` Dashboard's "Tool Executions" panel
+  (`ToolExecutionPanel`) now shows purely genuine recent Claude Code activity.
+- `docker stats convex-backend`: 62.03% → 62.66% memory across this session's full write sequence
+  (schema deploy ×3, ~1900 total row writes/deletes across all fixes+seeds+backfill+cleanup) —
+  stable, no ballooning.
+
+**D-15 is now FULLY closed** — both the going-forward fix and the historical backlog. OBS-01 no
+longer needs to stay PARTIAL for this reason (see updated Requirement Markers section below).
+
 ### Theme sweep (finding F3 — four reachable themes, not six)
 
 Cycled `cyan` (default), `emerald`, `readable`, `aubergine` via the header theme switcher on both
@@ -508,21 +534,20 @@ warnings.
   delivery mechanism investigated to root cause and correct. Policy feed UI matches spec exactly:
   correct locked colors, exactly 2 Bell markers, sensible relative time, expand-row renders real
   values.
-- **OBS-01** — ⚠ **PARTIAL.** The core mechanism (per-tool frequency/success-fail over time, source
-  filter, hourly buckets with real data) is fully live-verified and correct. NOT satisfied: the
-  D-15 correction embedded in this requirement's own scope found and fixed a real regression
-  (Ástríðr tools leaking into Claude-Code-only panels) that is fixed going-forward only — a
-  pre-existing ~2-week historical backlog of untagged rows remains in `toolExecutions` and will keep
-  appearing in `ToolExecutionPanel`/`PermissionDecisionsChart` until a dedicated, batch-capped
-  cleanup phase addresses it (explicitly out of scope for today per CLAUDE.md's self-hosted Convex
-  bulk-write prohibition).
-- **OBS-03** — ⚠ **PARTIAL.** Trace nesting, per-tool timing bars, and the per-turn cache ratio are
-  all live-verified and correct (hand cross-checked 49.17%→49% against raw row data). NOT satisfied:
-  the per-session truncation banner (D-12) could not be organically exercised (no live session
-  remotely approached the 1000-call cap) and the "unattributed tool rows" render path could not be
-  demonstrated live (every attributable session is fully traced; the historical untagged rows all
-  sit under sessions with zero LLM calls, so the component never reaches that branch). Both are
-  investigated findings, not skipped checks.
+- **OBS-01** — ✓ **SATISFIED.** The core mechanism (per-tool frequency/success-fail over time,
+  source filter, hourly buckets with real data) is fully live-verified and correct. The D-15
+  regression (Ástríðr tools leaking into Claude-Code-only panels) is fully closed: fixed going
+  forward (`resolveCommandExecutionToolRow`, live-verified against a fresh induction) AND the
+  ~2-week historical backlog retagged (91 rows, `backfillAstridrProviderTag`, live-verified on the
+  actual dashboard — `ToolExecutionPanel` now shows purely genuine Claude Code activity, zero
+  Ástríðr tool names remain under `excludeProvider: "astridr"`).
+- **OBS-03** — ✓ **SATISFIED.** Trace nesting, per-tool timing bars, and the per-turn cache ratio
+  are all live-verified correct (hand cross-checked 49.17%→49% against raw row data). D-12's
+  per-session truncation banner and the "unattributed tool rows" render path are both live-verified
+  against seeded, explicitly-labeled synthetic data (real organic reproduction needs 1000+ real
+  chat turns, impractical) — the exact banner text, "TOOL CALLS WITH NO REPORTED ROUND", and
+  "UNTRACED TOOL CALLS" sections all rendered correctly and were not silently guessed onto a round.
+  Seed data cleaned up immediately after verification; zero residue in the live table.
 
 ---
 
@@ -534,12 +559,12 @@ warnings.
 - [x] No watch-mode flags (`vitest run`, never bare `vitest`) — confirmed throughout
 - [x] Feedback latency < 60s — full suite ~50-60s throughout
 - [x] D-07 live induction recorded with raw query output — §Task 2, all 4 kinds
-- [ ] `nyquist_compliant: true` set in frontmatter — **NOT set.** Three genuine PARTIAL findings
-      (D-15 historical backlog, D-12 per-session truncation, unattributed-rows render path) mean not
-      every Manual-Only row passed cleanly. Per this plan's own rule ("flip `nyquist_compliant: true`
-      only if every Manual-Only row genuinely passed"), this stays `false` — an honest PARTIAL, not a
-      failure: the phase's core deliverables (D-01 real tool rows, D-06 alert isolation, D-07 ingest
-      path, D-11 cache ratio, trace nesting) are all live-verified correct, and the two Task-2/Task-3
-      bugs found live were fixed going forward and recorded rather than hidden.
+- [x] `nyquist_compliant: true` set in frontmatter — all three findings that started as PARTIAL
+      (D-15 historical backlog, D-12 per-session truncation, unattributed-rows render path) are now
+      closed by explicit operator decision: D-15's backlog was retagged live (91 rows) rather than
+      deferred; D-12 and unattributed-rows were verified against clearly-labeled, cleaned-up synthetic
+      seed data rather than left unexercised. Every Manual-Only row now genuinely passed.
 
-**Approval:** Task 1 ✓, Task 2 ✓ (approved 2026-08-04), Task 3 — pending final operator approval.
+**Approval:** Task 1 ✓, Task 2 ✓ (approved 2026-08-04), Task 3 ✓ (approved 2026-08-04, with two
+follow-up fixes — D-15 historical backfill and D-12/unattributed-rows synthetic verification —
+completed at the operator's explicit direction after initial review).
