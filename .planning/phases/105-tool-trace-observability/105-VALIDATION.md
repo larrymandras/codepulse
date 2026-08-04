@@ -1,10 +1,11 @@
 ---
 phase: 105
 slug: tool-trace-observability
-status: draft
+status: partial
 nyquist_compliant: false
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-08-03
+executed: 2026-08-04
 ---
 
 # Phase 105 — Validation Strategy
@@ -56,19 +57,19 @@ not by a passing unit test on the parser.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD | TBD | TBD | OBS-01 | — | `tool_executed` case writes a `toolExecutions` row tagged `provider: "astridr"` alongside the existing `callGraphEdges` upsert | unit (pure-fn extraction) | `npx vitest run convex/runtimeIngest.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-01 | — | Hourly aggregate buckets for tool call/failure/duration, keyed by tool + provider; reads are bounded (`.take(CAP)`), never unfiltered `.collect()` | unit | `npx vitest run convex/aggregates.test.ts` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | OBS-01 | — | Tools page usage panel renders per-tool frequency + success/fail from live query; query failure is contained by `SectionErrorBoundary` (a throwing Convex query unmounts the tree) | component | `npx vitest run src/pages/Tools.test.tsx` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-02 | T-105-01 | `tool_policy_event` case parses all 4 kinds and inserts into `toolPolicyEvents`; unknown kind is rejected, not silently dropped | unit | `npx vitest run convex/toolPolicyEvents.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-02 | T-105-01 | Alert fires ONLY for `malformed_policy_boot` / `malformed_policy_reload_rejected`; the other two kinds never alert (isolation control, mirroring `costBudgetEval.test.ts`) | unit | `npx vitest run convex/toolPolicyAlertEval.test.ts` | ❌ W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-03 | — | `TraceWaterfall` nests tool rows under the correct LLM-call parent when `round` is present | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | OBS-03 | — | `groupCacheRatio` denominator matches `shapeCacheAcc` exactly (D-11 "one formula" regression) | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ⬜ pending |
-| TBD | TBD | TBD | OBS-03 | — | Both feeder queries are capped AND the UI states truncation when the cap is hit | unit + component | `npx vitest run convex/llm.test.ts` / `src/components/TraceWaterfall.test.tsx` | ⚠ verify in W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-01 (D-15 corrected) | — | `ToolExecutionPanel` + `PermissionDecisionsChart` still show Claude-Code-only rankings after Ástríðr rows exist in `toolExecutions` — control: seed both providers, assert the panels' output is byte-identical to the single-provider baseline | unit | `npx vitest run convex/toolExecutions.test.ts` | ⚠ verify in W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-01 (D-12 extended) | — | `successRate` and `avgDuration` are capped and report truncation, matching `fetchLlmRowsForWindow`'s `{rows, truncated}` shape | unit | `npx vitest run convex/toolExecutions.test.ts` | ⚠ verify in W0 | ⬜ pending |
-| TBD | TBD | TBD | OBS-01/02/03 (cross-repo) | — | astridr payload widening (D-03 / D-08 / D-10) emits the added fields | unit (pytest) | astridr-repo: path TBD in Wave 0 | ⚠ verify in W0 | ⬜ pending |
+| T3 | 105-03 | 2 | OBS-01 | — | `tool_executed` case writes a `toolExecutions` row tagged `provider: "astridr"` alongside the existing `callGraphEdges` upsert | unit (pure-fn extraction) | `npx vitest run convex/runtimeIngest.test.ts` | ✅ | ✅ green (live: real `provider:"astridr"` rows confirmed, §Task 3) |
+| T2 | 105-04 | 3 | OBS-01 | — | Hourly aggregate buckets for tool call/failure/duration, keyed by tool + provider; reads are bounded (`.take(CAP)`), never unfiltered `.collect()` | unit | `npx vitest run convex/aggregates.test.ts` | ✅ | ✅ green (live: `computeHourly` real buckets confirmed non-zero, F6 timing noted) |
+| T1 | 105-06 | 4 | OBS-01 | — | Tools page usage panel renders per-tool frequency + success/fail from live query; query failure is contained by `SectionErrorBoundary` (a throwing Convex query unmounts the tree) | component | `npx vitest run src/pages/Tools.test.tsx` | ✅ | ✅ green (live: `/tools` renders real data, source filter switches ranking) |
+| T1 | 105-03 | 2 | OBS-02 | T-105-01 | `tool_policy_event` case parses all 4 kinds and inserts into `toolPolicyEvents`; unknown kind is rejected, not silently dropped | unit | `npx vitest run convex/toolPolicyEvents.test.ts` | ✅ | ✅ green (live: all 4 kinds landed as real rows, §Task 2) |
+| T1 | 105-04 | 3 | OBS-02 | T-105-01 | Alert fires ONLY for `malformed_policy_boot` / `malformed_policy_reload_rejected`; the other two kinds never alert (isolation control, mirroring `costBudgetEval.test.ts`) | unit | `npx vitest run convex/toolPolicyAlertEval.test.ts` | ✅ | ✅ green (live: exactly 2 alerts, correct severities, §Task 2 step 5) |
+| T2 | 105-05 | 3 | OBS-03 | — | `TraceWaterfall` nests tool rows under the correct LLM-call parent when `round` is present | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ✅ green (live: Round 1/2 nesting confirmed on a real 2-round session) |
+| T1 | 105-05 | 3 | OBS-03 | — | `groupCacheRatio` denominator matches `shapeCacheAcc` exactly (D-11 "one formula" regression) | unit | `npx vitest run src/components/TraceWaterfall.test.tsx` | ✅ | ✅ green (live: hand-computed 49.17%→49% matches display exactly) |
+| T1 | 105-01 | 1 | OBS-03 | — | Both feeder queries are capped AND the UI states truncation when the cap is hit | unit + component | `npx vitest run convex/llm.test.ts` / `src/components/TraceWaterfall.test.tsx` | ✅ | ⚠ PARTIAL — unit green; live cap-hit not organically exercised (D-12, see below) |
+| T2/T3 | 105-01 | 1 | OBS-01 (D-15 corrected) | — | `ToolExecutionPanel` + `PermissionDecisionsChart` still show Claude-Code-only rankings after Ástríðr rows exist in `toolExecutions` — control: seed both providers, assert the panels' output is byte-identical to the single-provider baseline | unit | `npx vitest run convex/toolExecutions.test.ts` | ✅ | ⚠ PARTIAL — unit green; live regression FOUND and FIXED going forward, 2-week historical backlog remains (see D-15 deviation above) |
+| T1 | 105-01 | 1 | OBS-01 (D-12 extended) | — | `successRate` and `avgDuration` are capped and report truncation, matching `fetchLlmRowsForWindow`'s `{rows, truncated}` shape | unit | `npx vitest run convex/toolExecutions.test.ts` | ✅ | ✅ green (live: `truncated: true` fired for REAL on the 4000-row/24h window during this session's own heavy tool usage — genuine, non-synthetic cap hit) |
+| T1-T3 | 105-02 | 1 | OBS-01/02/03 (cross-repo) | — | astridr payload widening (D-03 / D-08 / D-10) emits the added fields | unit (pytest) | astridr-repo `tests/unit/agent/test_loop_tool_executed_emit.py`, `tests/unit/agent/test_loop.py`, `tests/unit/test_round_context.py`, `tests/unit/providers/test_ollama.py` | ✅ | ✅ green (296+709+11 passed per 105-02-SUMMARY.md; live-confirmed via container grep, §Task 1) |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: ✅ green · ⚠ PARTIAL (reason inline) · ❌ red*
 
 ---
 
@@ -78,23 +79,25 @@ not by a passing unit test on the parser.
 > missing and `convex/llm.test.ts` as unconfirmed. Both **exist** (verified on disk). Extend them;
 > do not create parallel files.
 
-- [x] ~~`convex/runtimeIngest.test.ts` — does not exist~~ → **exists.** Add cases for the extended `tool_executed` case and the new `tool_policy_event` case alongside the existing `resolveGatewayTaskCompleted` / `processSwarmTaskEvent` pure-function tests.
-- [x] ~~Confirm whether `convex/llm.test.ts` exists~~ → **exists.** Extend for the D-12 `sessionCalls` cap.
-- [ ] `convex/toolPolicyEvents.test.ts` — new table + mutations, needs its own test file
-- [ ] `convex/toolPolicyAlertEval.test.ts` — D-06 alert evaluator, including the negative-kind isolation control
-- [ ] `src/pages/Tools.test.tsx` — new page, needs a component test scaffold
-- [ ] `convex/toolExecutions.test.ts` — confirm existence; needed for the D-15 provider-filter arg and the D-12-extended caps on `successRate` / `avgDuration`
-- [ ] **Confirm** astridr-repo's pytest path for `loop.py`'s `tool_executed` / leak-detector emits — research did not enumerate astridr-repo's test directory.
-- [ ] Extend `convex/aggregates.test.ts` (exists, 34 tests) rather than creating a parallel file.
+- [x] ~~`convex/runtimeIngest.test.ts` — does not exist~~ → **exists.** Extended with cases for `tool_executed`, `tool_policy_event`, and (105-09 deviation) `command_execution`'s `resolveCommandExecutionToolRow`.
+- [x] ~~Confirm whether `convex/llm.test.ts` exists~~ → **exists.** Extended for the D-12 `sessionCalls` cap.
+- [x] `convex/toolPolicyEvents.test.ts` — created, covers all 4 kinds + unknown-kind rejection.
+- [x] `convex/toolPolicyAlertEval.test.ts` — created, covers the D-06 isolation control.
+- [x] `src/pages/Tools.test.tsx` — created, component scaffold in place.
+- [x] `convex/toolExecutions.test.ts` — confirmed existing, extended for D-15 provider-filter and D-12-extended caps.
+- [x] **Confirmed** astridr-repo's pytest paths (105-02-SUMMARY.md): `tests/unit/agent/test_loop_tool_executed_emit.py`, `tests/unit/agent/test_loop.py`, `tests/unit/test_round_context.py`, `tests/unit/providers/test_ollama.py`.
+- [x] Extended `convex/aggregates.test.ts` (was 34 tests) rather than creating a parallel file.
 
 ---
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| **D-07 live induction** — the astridr → CodePulse ingest path actually carries `tool_policy_event` and the widened `tool_executed` payload end-to-end | OBS-01, OBS-02 | No `convex-test`; the `runMutation`/`ctx.db` seam is deliberately un-unit-tested. A passing parser test proves parsing, not delivery. | 1. Bring the self-hosted Convex backend + astridr stack up. 2. Induce a real `tool_policy_event` of each of the 4 kinds and at least one `tool_executed`. 3. Query the live `toolPolicyEvents` / `toolExecutions` tables and show the actual rows (raw output, not a count derived from a flag). 4. Confirm the alert fired for exactly the 2 alerting kinds and NOT for the other 2. Record the raw query output in `105-VERIFICATION.md`. |
-| **Trace waterfall visual depth** — nested spans, per-tool timings, cache badges render legibly at real trace sizes | OBS-03 | Rendering legibility at real data volume is not assertable from jsdom; the existing tests cover the pure grouping functions only. | Open the trace waterfall against a real multi-round session, confirm nesting depth, per-tool durations, and cache-hit badges are present and correct against the underlying rows. Confirm the truncation notice appears when the feeder cap is hit (must be exercised on data that actually trips the cap — a fixture that never hits it proves nothing). |
+| Behavior | Requirement | Why Manual | Outcome |
+|----------|-------------|------------|---------|
+| **D-07 live induction** — the astridr → CodePulse ingest path actually carries `tool_policy_event` and the widened `tool_executed` payload end-to-end | OBS-01, OBS-02 | No `convex-test`; the `runMutation`/`ctx.db` seam is deliberately un-unit-tested. A passing parser test proves parsing, not delivery. | ✅ **PASS.** All 4 `tool_policy_event` kinds landed as real rows (2 real induction, 2 sanctioned synthetic per F5, see Task 2). D-06 isolation control passes exactly 2 alerts. Real `tool_executed` rows confirmed with populated `durationMs`/`traceId`/`round` (Task 3). |
+| **Trace waterfall visual depth** — nested spans, per-tool timings, cache badges render legibly at real trace sizes | OBS-03 | Rendering legibility at real data volume is not assertable from jsdom; the existing tests cover the pure grouping functions only. | ✅ **PASS** for nesting/cache ratio (Round 1/2 structure confirmed on a real 2-round session; 49% cache ratio hand-verified against raw `llm:sessionCalls` rows to within display rounding). ⚠ **PARTIAL** for D-12 truncation and unattributed-rows rendering — see below, both genuinely not exercisable live today, not skipped. |
+| **D-12 TraceWaterfall per-session truncation** — the banner appears and names which side truncated, on data that actually trips `SESSION_TOOLS_READ_CAP`/`SESSION_CALLS_READ_CAP` (both 1000) | OBS-03 | Per-session caps require 1000+ tool calls or LLM calls inside ONE Ástríðr session — implausible to generate organically without excessive synthetic automation, which the plan explicitly disallows passing as a live pass. | ⚠ **PARTIAL, honestly.** No live session came remotely close to 1000 calls. Not forced synthetically. (Note: the SEPARATE `successRate`/`avgDuration` 4000-row/24h window cap — the "OBS-01 (D-12 extended)" row above — DID trip for real, unplanned, during this session's own heavy tool usage, which is real evidence the truncation mechanism works; the per-session TraceWaterfall cap specifically remains unexercised.) |
+| **Unattributed tool rows render under "Untraced tool calls" / not silently attached** | OBS-03 | Legacy rows with no `traceId`/`round` must not be guessed into a parent round. | ⚠ **PARTIAL, honestly.** Investigated thoroughly (§Task 3): every session with real LLM calls post-105-02/03 deploy is fully attributed (has `traceId`); the historical untagged rows (the D-15 backlog) all sit under placeholder sessionIds (`"unknown"`/`"astridr"`) with ZERO `llm` rows, so `TraceWaterfall` takes the "No LLM calls yet" empty-state path before ever reaching the untraced-render branch. The code path itself is unit-tested (`TraceWaterfall.test.tsx`); a live example genuinely does not exist in the current data. |
 
 ---
 
@@ -476,16 +479,67 @@ cannot honestly be made while the historical rows remain. Both legacy panels wil
 genuine Claude-Code activity and residual pre-existing Ástríðr rows (NOT new ones) until the backlog
 is separately cleaned up.
 
+### Theme sweep (finding F3 — four reachable themes, not six)
+
+Cycled `cyan` (default), `emerald`, `readable`, `aubergine` via the header theme switcher on both
+`/tools` and a real session's Trace tab. Confirmed live: the switcher itself exposes exactly these
+four options (screenshot-verified dropdown), matching F3 exactly. All four legible on both pages —
+badges, the per-tool chart, and policy-feed chips all recolor correctly, with the STATUS colors
+(error/warn/info on policy chips) correctly LOCKED across themes (unaffected by accent switching, as
+designed) and the chart's own `--chart-*` categorical token correctly independent of the primary
+accent (not a bug — separate token family per this project's charting convention). `amber` and the
+light `:root` are unreachable because `index.html`'s pre-paint script and `ThemeSwitcher` both
+hard-whitelist only the four shown; this is pre-existing since Phase 89, not a Phase 105 defect.
+Reset to Electric Cyan (default) after the sweep.
+
+### Console
+
+Kept the browser console open throughout Task 3 (Tools page, Session Detail Overview/Trace tabs, 4
+theme switches, source-filter toggles). Only message observed: a Clerk "development keys" warning —
+pre-existing, expected in local dev, unrelated to Phase 105. Zero errors, zero Phase-105-relevant
+warnings.
+
+---
+
+## Requirement Markers (`.planning/REQUIREMENTS.md`)
+
+- **OBS-02** — ✓ **SATISFIED.** All 4 `tool_policy_event` kinds proven live, D-06 isolation control
+  passes exactly 2 alerts with correct severities, dedup confirmed, zero enforcement wording,
+  delivery mechanism investigated to root cause and correct. Policy feed UI matches spec exactly:
+  correct locked colors, exactly 2 Bell markers, sensible relative time, expand-row renders real
+  values.
+- **OBS-01** — ⚠ **PARTIAL.** The core mechanism (per-tool frequency/success-fail over time, source
+  filter, hourly buckets with real data) is fully live-verified and correct. NOT satisfied: the
+  D-15 correction embedded in this requirement's own scope found and fixed a real regression
+  (Ástríðr tools leaking into Claude-Code-only panels) that is fixed going-forward only — a
+  pre-existing ~2-week historical backlog of untagged rows remains in `toolExecutions` and will keep
+  appearing in `ToolExecutionPanel`/`PermissionDecisionsChart` until a dedicated, batch-capped
+  cleanup phase addresses it (explicitly out of scope for today per CLAUDE.md's self-hosted Convex
+  bulk-write prohibition).
+- **OBS-03** — ⚠ **PARTIAL.** Trace nesting, per-tool timing bars, and the per-turn cache ratio are
+  all live-verified and correct (hand cross-checked 49.17%→49% against raw row data). NOT satisfied:
+  the per-session truncation banner (D-12) could not be organically exercised (no live session
+  remotely approached the 1000-call cap) and the "unattributed tool rows" render path could not be
+  demonstrated live (every attributable session is fully traced; the historical untagged rows all
+  sit under sessions with zero LLM calls, so the component never reaches that branch). Both are
+  investigated findings, not skipped checks.
+
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ / ⚠ references above
-- [ ] No watch-mode flags (`vitest run`, never bare `vitest`)
-- [ ] Feedback latency < 60s
-- [ ] D-07 live induction recorded with raw query output
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all ❌ / ⚠ references above (all Wave 0 test files created/extended, confirmed)
+- [x] No watch-mode flags (`vitest run`, never bare `vitest`) — confirmed throughout
+- [x] Feedback latency < 60s — full suite ~50-60s throughout
+- [x] D-07 live induction recorded with raw query output — §Task 2, all 4 kinds
+- [ ] `nyquist_compliant: true` set in frontmatter — **NOT set.** Three genuine PARTIAL findings
+      (D-15 historical backlog, D-12 per-session truncation, unattributed-rows render path) mean not
+      every Manual-Only row passed cleanly. Per this plan's own rule ("flip `nyquist_compliant: true`
+      only if every Manual-Only row genuinely passed"), this stays `false` — an honest PARTIAL, not a
+      failure: the phase's core deliverables (D-01 real tool rows, D-06 alert isolation, D-07 ingest
+      path, D-11 cache ratio, trace nesting) are all live-verified correct, and the two Task-2/Task-3
+      bugs found live were fixed going forward and recorded rather than hidden.
 
-**Approval:** pending
+**Approval:** Task 1 ✓, Task 2 ✓ (approved 2026-08-04), Task 3 — pending final operator approval.
