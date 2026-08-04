@@ -3,12 +3,12 @@ status: in-progress
 phase: 106-consolidation-hardening
 source: [106-CONTEXT.md, 98-HUMAN-UAT.md, 100-HUMAN-UAT.md]
 started: 2026-08-04T21:44:43Z
-updated: 2026-08-04T22:30:00Z
+updated: 2026-08-04T23:05:00Z
 ---
 
 ## Current Test
 
-[2026-08-04: Task 2 (live Clerk-signed-in session) complete. Larry performed the archive→restore round-trip on a real skill through the Skills page UI, which triggered the daemon rescan and registered all four `uat106-*` fixtures with their intended origin shapes (confirmed via `registry:listSkills`). All four numbered tests below were then exercised live and recorded. All four PASSED (Test 3 carries a documented discrepancy against the plan's acceptance-criteria wording — see its `notes:` — that is pre-existing stub behaviour, not a regression). Proceeding to Task 3 cleanup.]
+[2026-08-04: Plan 106-06 execution complete for this session. Task 1 (staging), Task 2 (live session, 4/4 pass), and Task 3 (unconditional cleanup + documented no-op on the code-fix branch) are all done — zero `uat106-*` residue on disk or in the live registry, confirmed by direct query. `status:` remains `in-progress` per the plan's own instruction (plans 106-07 and 106-08 extend this same artifact); only the last of them closes it.]
 
 ## Environment
 
@@ -104,3 +104,59 @@ documented wording discrepancy against this plan's own acceptance-criteria phras
 `notes:`) — pre-existing stub, not a regression, no code fix applied. Test 4 re-verifies the
 98-05 stale-project-origin fix holds against a real live rescan; no new regression, so Task 3's
 "fix a genuine regression" branch is a documented no-op.
+
+## Cleanup
+
+**A. Fixture removal (unconditional, per plan Task 3 §A).** All five staged directories were
+removed from disk via `rm -rf`, targeting exactly the paths recorded in `## Environment` above
+— no other path was touched:
+
+```
+rm -rf "C:\Users\mandr\.claude\skills\uat106-active-single"
+rm -rf "C:\Users\mandr\.claude\skills\uat106-lastout"          # moved here by Test 4's live move
+rm -rf "C:\Users\mandr\.claude\skills\uat106-multiscope"
+rm -rf "C:\Users\mandr\.claude\skills-available\uat106-dormant-plain"
+rm -rf "G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\uat106-multiscope"
+```
+
+Post-removal disk check (`ls` on each of the three parent directories, grep for `uat106`):
+zero matches in `.claude/skills`, zero in `.claude/skills-available`, zero in
+`drive-sync-test/.claude/skills`. No `uat106-*` directory remains anywhere on disk.
+
+**B. Registry reconciliation.** Deleting the directories does not by itself prune the
+registry — the daemon only re-syncs after a real lifecycle command (confirmed from its own
+log line: `[forge] skill rescan: enabled — auto-sync inventory to
+http://127.0.0.1:3211/scan after each install`). Immediately after the `rm -rf` step, a query
+confirmed the expected transient state (10 stale `uat106-*` rows still present, pending
+rescan) — recorded here as evidence the pre-cleanup baseline was captured, not skipped.
+Larry then performed one more real archive→restore round-trip on `enhance-prompt` through the
+Clerk-signed-in Skills page UI (the same safe, attributable mechanism used to stage the
+fixtures in Task 1 — CLI `--identity` impersonation was deliberately not used here either, for
+the same reason recorded in Task 1's Deviation note). This triggered the daemon rescan.
+
+**C. Post-cleanup verification query:**
+
+```
+npx convex run registry:listSkills '{}' | grep -c "uat106"
+=> 0
+```
+
+Confirmed independently by the executor (not just relayed) immediately before writing this
+section: zero `uat106-*` rows remain in the live registry, and zero `uat106-*` directories
+remain on disk. Matches Phase 98's own "zero residue" bar exactly.
+
+**D. Branch on Test 4's verdict (plan Task 3 §B).** Test 4 PASSED — the expected outcome — so
+per the plan, no change was made to `convex/skillSync.ts`, `convex/__tests__/skillSync.test.ts`,
+or `src/components/skills/SkillLifecycleMenu.tsx`. D-07's code-fix branch is a documented
+no-op: the 98-05 fix is present in the current source and held under this fresh live
+re-repro (before/after origin state recorded in Test 4's `result:` above). Proof no source
+was touched:
+
+```
+git status --porcelain convex src
+=> (empty)
+```
+
+No bulk/mass delete or patch was issued against the live self-hosted Convex instance at any
+point in this plan — every registry change was reconciled through the daemon's normal
+per-command rescan, per `CLAUDE.md` § "Self-Hosted Convex — Operational Rules".
