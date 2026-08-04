@@ -432,11 +432,37 @@ export const sendAlertWebhook = internalAction({
       targetType: "alert",
       targetId: args.alertId,
     });
-    if (muted) return;
+    if (muted) {
+      // A muted alert is never attempted, so it must not be left on the
+      // "pending" status WebhookStatusBadge renders as "Retrying (0/3)" —
+      // that implies an active retry loop when none is happening or ever
+      // will. Distinct terminal status: skipped.
+      await ctx.runMutation(internal.alerts.updateWebhookStatus, {
+        id: args.alertId,
+        status: "skipped",
+      });
+      return;
+    }
 
     // 5. Check delivery mode
     const mode = prefs[alert.severity] ?? "always";
-    if (mode === "dashboard_only" || mode === "disabled" || mode === "digest") {
+    if (mode === "dashboard_only" || mode === "disabled") {
+      // Same "Retrying (0/3)" trap as the mute case above — these severities
+      // will never be sent by webhook, by configuration, not by failure.
+      await ctx.runMutation(internal.alerts.updateWebhookStatus, {
+        id: args.alertId,
+        status: "skipped",
+      });
+      return;
+    }
+    if (mode === "digest") {
+      // Unlike "skipped" above, a digest-mode alert WILL be delivered later
+      // (batched by the digest job) — a distinct status so the badge can
+      // say so instead of implying either an active retry or "never sent".
+      await ctx.runMutation(internal.alerts.updateWebhookStatus, {
+        id: args.alertId,
+        status: "digest",
+      });
       return;
     }
 

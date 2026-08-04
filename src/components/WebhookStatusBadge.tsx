@@ -5,9 +5,19 @@
  *   delivered → green dot + "Delivered {relative time}"
  *   failed    → red dot + "Failed after 3 attempts"
  *   pending   → yellow dot + "Retrying ({attempts}/3)"
+ *   digest    → neutral dot + "Queued for digest"
+ *   skipped   → neutral dot + "Not sent (muted or dashboard-only)"
  *   undefined → renders nothing
  *
  * Phase 06-05: ALR-06 alert lifecycle UI
+ * Phase 105-09 (live gate, 2026-08-04): "pending" used to be the ONLY
+ * non-terminal status — every severity whose notification preference is
+ * "digest"/"dashboard_only"/"disabled", and every muted alert, was left on
+ * "pending" forever with zero delivery attempts, which this component then
+ * rendered as "Retrying (0/3)" — implying an active, failing retry loop
+ * that was never happening. Found live: a real digest-mode `warning` alert
+ * showed "Retrying (0/3)" indefinitely. `digest` and `skipped` are distinct
+ * terminal statuses so the badge can say what's actually true.
  */
 
 // Use the SHARED helper, which takes EPOCH SECONDS. This component previously
@@ -67,6 +77,28 @@ export function WebhookStatusBadge({
         <span className="w-2 h-2 rounded-full bg-[var(--status-warn)] shrink-0" />
         <span className="text-sm text-muted-foreground">
           Retrying ({attempts}/3)
+        </span>
+      </span>
+    );
+  }
+
+  if (status === "digest") {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground">
+          Queued for digest
+        </span>
+      </span>
+    );
+  }
+
+  if (status === "skipped") {
+    return (
+      <span className="inline-flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-muted-foreground shrink-0" />
+        <span className="text-sm text-muted-foreground">
+          Not sent (muted or dashboard-only)
         </span>
       </span>
     );

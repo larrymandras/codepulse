@@ -121,7 +121,7 @@ export default defineSchema({
     resolvedAt: v.optional(v.float64()),
     ruleId: v.optional(v.string()),           // static rule id or custom rule _id
     linkedTaskId: v.optional(v.id("tasks")),  // for escalation (D-11)
-    webhookStatus: v.optional(v.string()),    // "pending" | "delivered" | "failed"
+    webhookStatus: v.optional(v.string()),    // "pending" | "delivered" | "failed" | "digest" | "skipped"
     webhookDeliveredAt: v.optional(v.float64()),
     webhookAttempts: v.optional(v.float64()),
   })

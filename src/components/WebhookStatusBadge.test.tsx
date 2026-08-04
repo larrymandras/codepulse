@@ -68,3 +68,22 @@ describe("WebhookStatusBadge — delivered timestamp units", () => {
     expect(container.textContent).toContain("Retrying (2/3)");
   });
 });
+
+describe("WebhookStatusBadge — digest and skipped statuses (Phase 105-09 live-gate fix)", () => {
+  // Regression origin: a real digest-mode `warning` alert at the 105-09 live
+  // gate showed "Retrying (0/3)" indefinitely — "pending" was the only
+  // non-terminal status, so a never-attempted, never-to-be-retried alert
+  // (digest/dashboard_only/disabled severity mode, or a muted alert) rendered
+  // identically to an actively-failing retry loop.
+  it("renders a distinct, non-alarming label for digest-queued alerts, never 'Retrying'", () => {
+    render(<WebhookStatusBadge status="digest" attempts={0} />);
+    expect(screen.getByText("Queued for digest")).toBeInTheDocument();
+    expect(screen.queryByText(/Retrying/)).not.toBeInTheDocument();
+  });
+
+  it("renders a distinct, non-alarming label for skipped (muted/dashboard-only) alerts, never 'Retrying'", () => {
+    render(<WebhookStatusBadge status="skipped" attempts={0} />);
+    expect(screen.getByText("Not sent (muted or dashboard-only)")).toBeInTheDocument();
+    expect(screen.queryByText(/Retrying/)).not.toBeInTheDocument();
+  });
+});

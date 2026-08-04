@@ -373,6 +373,38 @@ structurally unreachable from the commander chat session); D-06 isolation contro
 exactly two alerts and correct severities; dedup confirmed; delivery investigated and explained,
 not assumed; policy file and container confirmed restored to the real policy.**
 
+### Deviation — fixed a real pre-existing UI bug found live (out of plan's declared file scope)
+
+While reviewing the two live alerts with the operator, found `WebhookStatusBadge.tsx` (built Phase
+06-05, before "digest" delivery-mode preferences existed) rendered the `warning`-severity
+`malformed_policy_reload_rejected` alert as **"Retrying (0/3)"** — implying an active, failing
+delivery retry loop. Root cause: `convex/schema.ts`'s `webhookStatus` only had 3 values
+(`pending`/`delivered`/`failed`); `webhookDelivery.ts`'s digest/dashboard_only/disabled/muted
+early-returns left the row on `pending` forever with zero attempts, and the badge treated any
+`pending` as "actively retrying." Per CLAUDE.md's Error Triage rule (fix, don't dismiss as
+pre-existing, when discovered live during a phase), fixed rather than deferred:
+
+- `convex/webhookDelivery.ts` — the mute early-return and the `dashboard_only`/`disabled` early-return
+  now write `webhookStatus: "skipped"`; the `digest` early-return now writes `webhookStatus: "digest"`
+  (distinct from `"skipped"` because a digest-mode alert genuinely WILL be delivered later, unlike the
+  other three).
+- `convex/schema.ts` — comment updated to `"pending" | "delivered" | "failed" | "digest" | "skipped"`
+  (no structural schema change; the field was already `v.optional(v.string())`).
+- `src/components/WebhookStatusBadge.tsx` — two new terminal-status branches with non-alarming,
+  accurate copy ("Queued for digest" / "Not sent (muted or dashboard-only)"), never "Retrying".
+- `src/components/WebhookStatusBadge.test.tsx` — 2 new tests asserting the digest/skipped labels
+  render and that neither ever renders "Retrying".
+
+Verified: `npx tsc --noEmit` clean, full suite `npx vitest run` → 273 files / 3395 tests passed (up
+from 3393 pre-fix), `npx convex deploy --yes` → `No indexes are deleted by this push`. Re-triggered
+`webhookDelivery:sendAlertWebhook` for the live `malformed_policy_reload_rejected` alert
+(`jn74bks1r903y7dtw16zkw5q018bt2qw`) to prove the fix against the actual row that exposed the bug:
+`webhookStatus` flipped from `pending` to `digest` live, confirmed by re-querying `alerts:listAll`.
+
+Out of plan 105-09's declared `files_modified` (which only lists `105-VALIDATION.md` and
+`REQUIREMENTS.md`) — recorded here as an in-session deviation per GSD convention, not silently
+folded in.
+
 ---
 
 ## Validation Sign-Off
