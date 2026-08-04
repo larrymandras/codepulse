@@ -795,7 +795,34 @@ Plans:
 **Goal**: Close out the outstanding debt — no remaining `anyApi` calls, the cloud Convex `tidy-whale-981` exported and cancelled (finishing the cloud→self-hosted migration), the >500 kB chunks code-split below the warning threshold, and the deferred manual UAT actually run.
 **Depends on**: Nothing — independent and low-risk; can run at any point in the milestone. DEBT-02 touches only the *cloud* instance; the live self-hosted backend is explicitly out of scope for any mass mutation.
 **Requirements**: DEBT-01, DEBT-02, DEBT-03, DEBT-04
-**Success Criteria**: derived at `/gsd-discuss-phase 106` / `/gsd-plan-phase 106`.
+**Success Criteria** (what must be TRUE):
+
+  1. Zero real `anyApi` usages remain in `src/` or `convex/` outside generated code, proven by a comment-filtered grep gate plus a clean `tsc --noEmit` — with the scope stated as codepulse-only (D-05/D-06).
+  2. A complete, readable archive of cloud Convex `tidy-whale-981` exists on local disk, proven by reading real rows out of it AND by a provenance check (newest `events` row frozen pre-2026-07-15) that it came from the cloud instance and not the live self-hosted one; neither repo has a functional reader of it; and Larry has the exact manual cancel step, which Claude never performs (D-01..D-04).
+  3. The `index-*.js` entry chunk — downloaded on every page view and 2.05 MB at baseline — is materially smaller: every page module loads as its own route chunk and the Tone.js synthesis library has left the entry bundle. Every chunk still over 500 kB is either fixed or documented with a byte-level reason and a file:line laziness proof — never silenced by raising `build.chunkSizeWarningLimit` (D-09).
+  4. Larry's laptop is on the tailnet and can actually open CodePulse over it with live data — verified against endpoints read off the running office PC, not assumed (D-10).
+  5. All three deferred manual UAT sequences are run live and recorded: the Phase-98 Test-4 menu sub-cases, the full wake → barge-in → re-arm voice sequence, and the Phase-100 Forge-daemon drag round-trip — plus Phase 100's genuinely-open CR-02 shadowed-row no-op, and a live re-verification that the 98-05 stale-origin fix still holds (D-07 as corrected, D-08).
+  6. Every stale planning claim found along the way is corrected in the session that found it, and every DEBT-0N marker in REQUIREMENTS.md is written from a cited artifact section rather than from a plan having run.
+
+**Plans:** 8 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 106-01-PLAN.md — DEBT-01 typed-api verify-and-close + DEBT-02 cross-repo cloud-Convex reference sweep (read-only, zero source changes)
+- [ ] 106-02-PLAN.md — DEBT-03 baseline: opt-in chunk-composition report plugin + measured module attribution for every chunk over 500 kB
+- [ ] 106-05-PLAN.md — DEBT-03 (D-10): laptop Tailscale checklist built from live office-PC endpoints + Larry-run verification
+- [ ] 106-06-PLAN.md — DEBT-04 UAT session A: Phase-98 Test-4 menu sub-cases + live re-verification of the stale project-origin fix
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 106-03-PLAN.md — DEBT-02: export `tidy-whale-981` to local scratch, verify the archive by reading it, correct AVATAR-HANDOFF.md, hand Larry the cancel step
+- [ ] 106-04-PLAN.md — DEBT-03 remediation: route-lazy every statically imported page, defer Tone.js, re-measure and resolve every remaining oversized chunk
+- [ ] 106-07-PLAN.md — DEBT-04 UAT session B: full "Hey Ástríðr" wake → "stop" barge-in → "goodbye" re-arm voice sequence (trace-first, no same-session patching)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 106-08-PLAN.md — DEBT-04 UAT session C: live Forge-daemon drag round-trip + the CR-02 shadowed-row no-op Phase 100 never ran; then stale-doc corrections, REQUIREMENTS.md markers, and UAT close-out
 
 ---
 
