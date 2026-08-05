@@ -529,3 +529,442 @@ requested. No shard values were sourced from a human observation.
 ```
 AFTER-WINDOW GATE: PASS — Task 2 measurement is valid to run.
 ```
+
+---
+
+## F — After-window measurement
+
+Mirrors plan 107-04 § A exactly. Every parameter is stated next to its baseline
+counterpart, because any deviation invalidates the comparison.
+
+```
+CAPTURE_UTC : 2026-08-05T19:26:36Z   (epoch 1785957996)
+DEPLOY_UTC  : 2026-08-05T16:26:33Z   (epoch 1785947193)
+ELAPSED     : 10803 s = 3.00 h
+```
+
+### F.1 Window validity gates
+
+All three must pass before any number below counts as evidence.
+
+**GATE 1 — equal window length: PASS**
+```
+WINDOW_HOURS (107-OCC-BASELINE.md § A) : 2
+W_after (this measurement)             : 2
+```
+A longer window was NOT used despite more time having elapsed. "Use a longer
+window since more time has passed" is precisely the arithmetic that manufactures
+a false improvement, and it was refused.
+
+**GATE 2 — container uptime covers the window, and was never recreated: PASS**
+```
+$ docker ps --filter name=convex-backend --format '{{.Status}}'
+Up 7 hours (healthy)
+
+$ docker inspect -f '{{.State.StartedAt}}' convex-backend
+2026-08-05T12:45:21.334055274Z          <- at capture
+2026-08-05T12:45:21.334055274Z          <- recorded in § D
+2026-08-05T12:45:21.334055274Z          <- final re-check, end of this plan
+```
+Uptime (7 h) ≥ `WINDOW_HOURS` (2), so `--since 2h` returns a full 2 hours and
+cannot silently truncate — the primary false-green this phase's method exists to
+prevent. `StartedAt` is identical to the nanosecond across the baseline, the
+deploy and this measurement, so both halves come from one continuous log stream.
+
+**GATE 3 — window contains no pre-deploy traffic: PASS**
+```
+window start = CAPTURE_UTC - WINDOW_HOURS = 2026-08-05T17:26:36Z
+DEPLOY_UTC                                = 2026-08-05T16:26:33Z
+17:26:36Z >= 16:26:33Z  (margin: 1 h 0 m 3 s)
+```
+Every OCC line counted below was emitted by the sharded code path.
+
+### F.2 Single capture, all numbers derived from it
+
+```
+$ docker logs convex-backend --since 2h 2>&1 | grep -Ei 'occ|conflict|retry' \
+    > <scratch>/107-06-occ-capture.log   # outside the repo; deleted after use
+```
+
+**Total matching lines:**
+```
+$ wc -l < <scratch>/107-06-occ-capture.log
+368
+```
+
+**Scoped to the `aggregates` table (headline metric, identical scope to § A):**
+```
+$ grep -c '"aggregates" table' <scratch>/107-06-occ-capture.log
+314
+```
+```
+AFTER_AGGREGATES_COUNT: 314
+```
+
+**Scoped-as-percentage-of-total** (D-02 visibility into out-of-scope noise):
+314 / 368 = **85.3%**, against the baseline's 290 / 298 = 97.3%. The out-of-scope
+remainder grew from 8 lines (2.7%) to 54 lines (14.7%). Full table breakdown,
+recorded so the scope change is visible rather than buried in a percentage:
+
+```
+$ grep -oE 'the "[a-zA-Z]+" table' <scratch>/107-06-occ-capture.log | sort | uniq -c | sort -rn
+    314 the "aggregates" table
+     66 the "dockerContainers" table
+      6 the "providerHealth" table
+```
+
+`dockerContainers` and `providerHealth` contention is out of OCC-01's scope and
+is excluded from every number below, exactly as the baseline excluded its own 8
+out-of-scope lines. Its growth is noted as an observation, not folded in.
+
+**Unscoped sanity re-check** (guard against a silently-empty scoped measurement):
+```
+$ grep -Eic 'occ|conflict|retry' <scratch>/107-06-occ-capture.log
+368
+```
+Matches `wc -l` exactly — capture and count pipeline are consistent.
+
+**Three hottest documents** (same pipeline as § A):
+```
+$ grep -oE '[a-z0-9]{32}' <scratch>/107-06-occ-capture.log | sort | uniq -c | sort -rn | head -3
+     20 td72b08wgysm62kn93npjaycgn8bw193
+     18 td7167271jgxgyvmzkdddkwwh18bxe2q
+     16 td70hvajzkxg80p6xddtcxr69x8bxw8r
+```
+
+**Hot-document share — this is the one metric that moved decisively in the right
+direction.** The top document accounts for 20 of 314 scoped lines = **6.4%**,
+against the baseline's 194 of 290 = **66.9%**. Contention is spread across **55
+distinct documents** in the after-window, versus a single row absorbing two
+thirds of it before. So the mechanism D-01 asked about is observable and it is
+working: writes are genuinely distributed across the 8 shards, and the hot
+document is gone.
+
+That the total nevertheless did not fall is the finding of this plan, and § G
+does not round it away.
+
+**Confirmation that the hot rows are the sharded rows** — the top documents were
+looked up in the live table rather than assumed:
+```
+{ "_id": "td72b08wgysm62kn93npjaycgn8bw193", "metric_type": "events",
+  "dimensions": {"event_type":"PreToolUse"}, "bucket_start": 1785952800,
+  "period": "hourly", "shard": 5, "value": 7 }
+{ "_id": "td7167271jgxgyvmzkdddkwwh18bxe2q", "metric_type": "sankey_edge",
+  "dimensions": {"source":"Other","target":"Read"}, "bucket_start": 1785952800,
+  "period": "hourly", "shard": 3, "value": 7 }
+```
+Both carry a `shard` field with a valid value and the exact two metric types
+107-03 sharded. The residual contention is landing **on the sharded rows
+themselves**, not on some unsharded metric type that the change missed.
+
+**Which mutation is retrying** (aggregates-scoped lines only):
+```
+$ grep '"aggregates" table' <capture> | grep -oE 'Udf\([a-zA-Z0-9_.:]+\)' | sort | uniq -c
+    157 Udf(events.js:ingest)
+```
+All of it is `events.ingest`. Nothing else contends on `aggregates`.
+
+**Line-structure note (applies identically to both halves, so the comparison is
+unaffected):** each OCC occurrence emits two lines — an `ERROR ... Caught occ
+error` and a `WARN ... retrying Udf(...)`. The after-window's 314 scoped lines
+are 157 ERROR + 157 WARN, i.e. **157 distinct OCC retries**; the baseline's 290
+are likewise ~145 retries. The headline metric is kept as the raw line count
+because § A defined it that way and changing the basis mid-comparison is exactly
+the kind of drift this method refuses. The 2:1 factor cancels in every ratio.
+
+**Verbatim sample lines** (ANSI codes stripped; scanned for token-shaped values
+per T-107-20 — `grep -icE 'sb_|eyJ|admin.?key|bearer'` returned `0`;
+`instance_name="codepulse"` is a deployment label, not a secret):
+```
+2026-08-05T17:41:17.309805Z ERROR isolate_worker_handle_request: common::errors: Caught occ error (RUST_BACKTRACE=1 RUST_LOG=info,common::errors=debug for full trace): Documents read from or written to the "aggregates" table changed while this mutation was being run and on every subsequent retry. Another call to this mutation changed the document with ID "td7a95p2dkg85z38cf2nw2z7f98bwkra". See https://docs.convex.dev/error#1 instance_name="codepulse"
+
+2026-08-05T17:41:17.309988Z  WARN isolate_worker_handle_request: application::application_function_runner: Optimistic concurrency control failed (Documents read from or written to the "aggregates" table changed while this mutation was being run and on every subsequent retry. Another call to this mutation changed the document with ID "td7a95p2dkg85z38cf2nw2z7f98bwkra". See https://docs.convex.dev/error#1), retrying Udf(events.js:ingest) after 99.681067ms instance_name="codepulse"
+```
+
+Scratch capture file deleted after these numbers were derived from it (`ls` of
+the scratch dir returns zero `107-06-*` files).
+
+### F.3 Per-hour rate
+
+```
+AFTER_AGGREGATES_COUNT (314) / WINDOW_HOURS (2) = 157.0
+AFTER_RATE_PER_HOUR: 157.0
+```
+Baseline counterpart: `BASELINE_RATE_PER_HOUR: 145.0`.
+
+### F.4 Traffic volume for the same window
+
+Identical command and fractional `lookbackDays` as baseline § B
+(`WINDOW_HOURS / 24 = 2/24`):
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.08333333333333333}'
+{
+  "PostToolUse": 97,
+  "PostToolUseFailure": 1,
+  "PreToolUse": 37,
+  "SessionStart": 3,
+  "Stop": 5,
+  "SubagentStop": 6,
+  "UserPromptSubmit": 6
+}
+```
+Sum: 97 + 1 + 37 + 3 + 5 + 6 + 6 = **155**
+```
+AFTER_INGEST_VOLUME: 155
+```
+Non-empty with a varied per-event-type breakdown, so the liveness guard (an
+empty or all-zero result is a failed measurement, not a real zero) is satisfied.
+
+**Deployment-target confirmation**, as in baseline § B — the identical query
+re-run with an explicit `--url` returned a byte-identical result:
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.08333333333333333}' --url http://127.0.0.1:3210
+{ "PostToolUse": 97, "PostToolUseFailure": 1, "PreToolUse": 37, "SessionStart": 3,
+  "Stop": 5, "SubagentStop": 6, "UserPromptSubmit": 6 }
+```
+Confirms the bare `npx convex run` resolved to the self-hosted `127.0.0.1:3210`
+instance and not a `.convex.cloud` host.
+
+### F.5 Traffic-normalized rate — the headline comparison
+
+A raw rate drop can be produced entirely by lower traffic; a raw rate *rise* can
+likewise be masked by higher traffic. Both halves are therefore normalized:
+
+```
+RETRIES_PER_1K_EVENTS = OCC count / (ingest volume / 1000)
+
+BASELINE_RETRIES_PER_1K: 1188.5      = 290 / (244 / 1000) = 290 / 0.244
+AFTER_RETRIES_PER_1K: 2025.8         = 314 / (155 / 1000) = 314 / 0.155
+```
+
+Neither ingest volume is 0, so the normalized figure is defined and the
+`UNDEFINED` / inconclusive branch does not apply.
+
+Normalization matters in the opposite direction from the one it was written to
+guard against: traffic **fell 36.5%** while the OCC count **rose 8.3%**. The raw
+per-hour rate understates the regression; the normalized figure is the honest
+one, and it is **70.5% worse**.
+
+### F.6 Comparison table
+
+| Metric | Baseline (pre-deploy) | After (post-deploy) | Absolute change | Percent change |
+|---|---|---|---|---|
+| OCC count, `aggregates`-scoped | 290 | 314 | +24 | +8.3% |
+| Rate per hour | 145.0 | 157.0 | +12.0 | +8.3% |
+| Ingest volume (same window) | 244 | 155 | −89 | −36.5% |
+| **Retries per 1,000 events** | **1188.5** | **2025.8** | **+837.3** | **+70.5%** |
+| Hottest-document share | 66.9% (194/290) | 6.4% (20/314) | −60.5 pp | −90.5% |
+
+Window length, grep pattern and table scope are identical across both columns.
+
+---
+
+## G — OCC-01 verdict
+
+### G.1 Final read-total spot-check
+
+Exact method from baseline § C, re-run one final time.
+
+```
+NOW = 1785958130   (2026-08-05T19:28:50Z)
+H0  = floor(NOW/3600)*3600 - 3600 = 1785952800   (2026-08-05T18:00:00Z)
+H1  = H0 + 3600                   = 1785956400   (2026-08-05T19:00:00Z)
+LOOKBACK_A = (NOW - (H0 - 60)) / 86400 = 0.062384259259259257
+LOOKBACK_B = (NOW - (H1 - 60)) / 86400 = 0.020717592592592593
+```
+
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.062384259259259257}'
+{ "PostToolUse": 108, "PostToolUseFailure": 1, "PreToolUse": 41, "SessionStart": 3,
+  "Stop": 5, "SubagentStop": 6, "UserPromptSubmit": 6 }              -> A = 170
+
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.020717592592592593}'
+{ "PostToolUse": 43, "PreToolUse": 12, "SessionStart": 1,
+  "UserPromptSubmit": 1 }                                            -> B = 57
+
+FINAL_BUCKET_TOTAL = A - B = 170 - 57 = 113
+```
+
+Raw count over the same hour, at `limit:1000` per 107-04's recorded finding that
+`limit:5000` exceeds the 16,777,216-byte read cap on this dataset:
+```
+$ npx convex run events:listRecent '{"limit":1000}'
+events returned: 1000
+min timestamp: 1785941628 (2026-08-05T14:53:48Z)
+coverage guard (min < H0 = 1785952800): PASS
+FINAL_RAW_EVENT_COUNT [H0,H1): 113
+```
+
+```
+FINAL_BUCKET_TOTAL: 113
+FINAL_RAW_EVENT_COUNT: 113
+FINAL_READ_TOTALS: MATCH
+```
+
+**This is the mixed-state proof § E.4 deferred to this plan, and it is not
+vacuous.** The `[18:00, 19:00)` bucket falls entirely after `DEPLOY_UTC`, so
+every row in it is sharded. A control was run to confirm the bucket genuinely
+requires a multi-row fold — otherwise a MATCH would prove nothing about summing
+across shards:
+
+```
+aggregates rows in the 18:00–19:00 bucket:            101
+distinct (metric_type, dimensions) keys in it:         23
+keys backed by MORE THAN ONE shard row:                20   <- 20 of 23
+  sankey_edge {source:AskUserQuestion,target:Success} -> shards 1,3,5,7
+  sankey_edge {source:Other,target:AskUserQuestion}   -> shards 1,3,5,7
+  events      {event_type:UserPromptSubmit}           -> shards 1,2,3,6
+  ...
+```
+
+So 20 of 23 logical keys in the measured hour are split across 2–4 shard rows,
+and the readers still fold them to exactly the raw event count. The read path is
+**correct under sharding** in live production data — the outcome plan 107-02's 7
+executable guards predicted, now confirmed against real mixed data rather than
+fixtures.
+
+### G.2 Verdict
+
+```
+OCC-01 VERDICT: FAIL
+```
+
+**Rule that fired:** *"`FAIL` if the traffic-normalized rate did not fall."*
+`AFTER_RETRIES_PER_1K` (2025.8) is **higher** than `BASELINE_RETRIES_PER_1K`
+(1188.5) — a 70.5% regression, not a fall.
+
+Every other branch was checked and none applies:
+
+| Branch | Applies? | Why |
+|---|---|---|
+| `PASS` | No | Requires `AFTER_RETRIES_PER_1K` ≥50% *below* baseline and `AFTER_RATE_PER_HOUR` below baseline. Both moved the wrong way. |
+| `PARTIAL` | No | Requires that the rate *fell*. It rose (145.0 → 157.0). A partial result cannot be claimed by pointing at the hot-document improvement alone. |
+| `INCONCLUSIVE` | No | All three window validity gates PASSED; both ingest volumes are non-zero so the normalized figure is defined; and Larry characterized traffic in § F0.4 as **normal**, not unusually quiet. |
+| `FAIL` | **Yes** | The traffic-normalized rate did not fall. |
+
+`FINAL_READ_TOTALS: MATCH`, so this is a clean contention failure with
+**correctness fully intact** — not the "lower count paired with a silently broken
+fold" outcome the method was built to catch. Nothing about the data is wrong;
+the fix simply did not reduce conflicts.
+
+### G.3 What the evidence actually shows
+
+Three findings, each backed by a measurement above rather than inference:
+
+1. **Sharding is applied and the write spread works.** All 8 shard values are in
+   use (§ E.1), one draw per ingest call holds in live data (§ E.1), and the
+   hot document is gone — top-document share fell 66.9% → 6.4% across 55 distinct
+   documents (§ F.2). D-01's question is answered: no single document dominates.
+
+2. **Spreading the writes did not reduce the conflicts.** OCC on `aggregates`
+   rose 290 → 314 lines (145 → 157 retries) while traffic fell 36.5%. All of it
+   is `Udf(events.js:ingest)`, and the contended documents are the sharded rows
+   themselves.
+
+3. **The most likely mechanism — the read set was never sharded.** Convex OCC
+   conflicts on documents *read from **or** written to*. Both write helpers in
+   `convex/analyticsRollup.ts` open the bucket with a `.collect()` over the whole
+   `(metric_type, period, bucket_start)` tuple and then match the dimension key
+   and shard in JS:
+
+   ```
+   convex/analyticsRollup.ts:43-54   incrementEventBucket
+   convex/analyticsRollup.ts:101-111 incrementSankeyEdge
+       ctx.db.query("aggregates")
+         .withIndex("by_type_period_bucket", q =>
+            q.eq("metric_type",…).eq("period","hourly").eq("bucket_start",hourStart))
+         .collect()
+   ```
+
+   107-03 narrowed the **write target** to one shard row but left the **read set**
+   as the entire bucket — all 8 shards and every dimension key in it. Any
+   concurrent `events.ingest` patching *any* row in that bucket invalidates this
+   mutation's read set and forces a retry, regardless of which shard it wrote.
+
+   This also explains the modest *increase*: sharding made each bucket ~8× wider
+   (101 rows across 23 keys in the measured hour), so every `.collect()` now
+   reads more documents and has more rows whose modification can invalidate it.
+
+   Stated at its true confidence: findings 1 and 2 are measurements; finding 3 is
+   a **strong hypothesis** consistent with the Convex OCC semantics quoted in the
+   error text itself and with the code above, but it has not been isolated by a
+   controlled experiment. Verifying it is the first task of the follow-up, not an
+   assumption to build on.
+
+### G.4 Next lever — handed to gap closure, NOT fixed here
+
+No rollback was performed and none is recommended. Reverting would re-create the
+single hot document that caused two multi-day incidents, and the read path is
+demonstrably correct under sharding. The change is a net structural improvement
+that has not yet paid off in contention.
+
+Per this plan's own instruction, no fix was attempted. Recommended levers, in
+priority order:
+
+1. **Narrow the read set to one shard (highest expected value).** Add `shard` to
+   the bucket index and range-bound the lookup to the caller's shard, so a
+   mutation reads only its own shard's rows. This is the lever that follows
+   directly from finding 3.
+   **Correction to record:** `convex/lib/aggregateShard.ts` states that widening
+   the shard range "needs no schema or index change" because `shard` is an
+   *unindexed* optional field. That is true for raising the count — but it is
+   exactly why this lever *does* require an index addition. The comment is
+   accurate as written and should not be read as covering this change.
+
+2. **Collapse the deferred `events.ingest` round-trip.** Fewer separate
+   read-patch cycles per ingest means a smaller read set and a shorter window in
+   which a conflict can occur.
+
+3. **Raising `AGGREGATE_SHARD_COUNT` beyond 8 — explicitly NOT recommended
+   first.** This plan named it as a candidate lever, and the evidence argues
+   against it: under finding 3 a higher shard count makes each bucket's
+   `.collect()` read *more* rows, which would likely make contention worse, not
+   better. It only becomes useful *after* lever 1 narrows the read set. Recording
+   this because the leading suggestion turned out to point the wrong way.
+
+D-03 observation, recorded as an observation and deliberately not folded into the
+verdict: no change to the ingest round-trip count was claimed or measured by this
+plan. The read-amplification effect described in finding 3 is a *hypothesis about
+why the verdict failed*, not a measured latency or round-trip result.
+
+### Method deviations from D-05 as written
+
+D-05's intent — a live before/after OCC-retry comparison against the running
+self-hosted backend — was honored in full. Only its arithmetic was corrected,
+in three places:
+
+1. **No `--since 24h`.** Carried forward from 107-04. A 24-hour window cannot
+   return 24 hours of data on a container with less uptime; it silently truncates
+   to the uptime window, which would manufacture a false improvement when re-run
+   later at a longer uptime. Both halves use the explicit, uptime-bounded
+   `WINDOW_HOURS = 2` instead.
+
+2. **No comparison against `1135/24h`.** Carried forward from 107-04. That figure
+   implies ~47/hour, while every live like-for-like measurement is far higher
+   (145.0/hour pre-deploy here; ~644/hour in the 2026-08-05 09:34 EDT reference
+   sample). Comparing a post-fix number against `1135` would have flattered the
+   result regardless of whether sharding worked — and in this case would have
+   converted a measured regression into a fictitious 3× improvement. The
+   comparison table in § F.6 uses the measured baseline only; this paragraph is
+   the sole place `1135` appears, which is its only correct use.
+
+3. **Normalization by ingest volume (introduced here).** D-05 specified a raw
+   count comparison. A raw count cannot distinguish a fix from a quiet period, so
+   both halves additionally record ingest volume and the headline metric is
+   retries per 1,000 ingested events. In this measurement the correction mattered
+   and changed the reading: traffic fell 36.5%, so the raw +8.3% understated a
+   +70.5% normalized regression.
+
+### Closing state
+
+```
+OCC-01: OPEN — FAIL recorded, no rollback, next lever named for gap closure.
+```
+
+`git status --porcelain convex src` — empty throughout this plan. No source file
+was modified, and no in-code retry counter or log statement was added (it could
+not reach `docker logs` anyway: `console.log` inside a UDF does not reach the
+container log on self-hosted Convex).
+
+Final `docker inspect -f '{{.State.StartedAt}}' convex-backend`:
+`2026-08-05T12:45:21.334055274Z` — unchanged from § D.
