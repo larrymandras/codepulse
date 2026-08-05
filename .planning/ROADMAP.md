@@ -829,10 +829,15 @@ Plans:
 **Goal:** Eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), which has caused repeated self-hosted Convex memory buildup and `events` table index-head query timeouts ("index rot") on 2026-07-30 and again 2026-08-05 — each incident only cleared by a full `convex-backend` container recreate, never root-caused.
 **Requirements**: OCC-01
 **Depends on:** Phase 106 (independent, but sequenced after per milestone convention)
-**Plans:** 0 plans
+**Plans:** 6 plans (5 waves)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 107 to break down)
+- [ ] 107-01-PLAN.md - Wave-0 write-path shard contract tests (explicit shard call sites, shard-split, legacy-unsharded row, pickShard range) - RED until 107-03
+- [ ] 107-02-PLAN.md - Wave-0 read-path multi-shard regression tests against the REAL exported folds and handlers - green immediately
+- [ ] 107-03-PLAN.md - Implement sharding: convex/lib/aggregateShard.ts, optional schema field, shard threaded through the write path, one draw per ingest call
+- [ ] 107-04-PLAN.md - Capture the pre-deploy OCC baseline (corrected window method) + traffic volume + read-total control - MUST run before 107-05
+- [ ] 107-05-PLAN.md - Deploy to the self-hosted instance with target and no-index-deletion assertions + post-deploy shard-presence and read-total check
+- [ ] 107-06-PLAN.md - After-window OCC measurement, traffic-normalized comparison, and the OCC-01 verdict (has a blocking human checkpoint)
 
 ---
 
