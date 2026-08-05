@@ -397,4 +397,145 @@ executed command.
 
 The archive was **not** deleted and remains on disk pending the cancel.
 
+---
+
+### Archive verification — read out of the archive, not inferred from the exit code
+
+All figures below come from reading bytes out of the archive with Python's `zipfile` +
+`json.loads`. The exporter's `EXIT=0` is recorded above but is **not** used as evidence of
+completeness anywhere in this section.
+
+#### 1. Integrity
+
+`zipfile.ZipFile.testzip()` over the whole archive — every entry's stored CRC recomputed against
+its decompressed bytes:
+
+```
+ZIP CRC integrity: OK (all 318 entries)
+```
+
+No truncated, corrupt, or unreadable member. This is a whole-archive check, not a sample.
+
+#### 2. Structure
+
+Both forms of the archive now exist:
+
+| Path | Form | Size |
+|---|---|---|
+| `C:\convex-cloud-archive\tidy-whale-981.zip` | original CRC-verified ZIP as written by the CLI | `617M` (`646,669,127` bytes) |
+| `C:\convex-cloud-archive\tidy-whale-981\` | extracted directory tree | `2.0G`, 318 entries |
+
+The extraction was done from the local ZIP — **no second export was run**, so the cloud
+deployment was read exactly once. Keeping both costs 2 GiB against 359 GB free and removes the
+single-point-of-failure of one ZIP header; the plan's own `test -d` check now passes.
+
+Cross-check that the extracted tree agrees with the ZIP:
+`wc -l < tidy-whale-981/events/documents.jsonl` → `263718`, identical to the count read from
+inside the ZIP.
+
+Top level: `README.md`, `_tables/`, `_storage/`, `_components/` (Convex's rate-limiter component:
+`_components/rateLimiter/rateLimits|_storage|_tables`), plus **143 table directories**, each
+holding `documents.jsonl` + `generated_schema.jsonl`.
+
+#### 3. Cross-check against `convex/schema.ts`
+
+`convex/schema.ts` declares **130** tables (`defineTable` count). Archive holds **143** table
+directories. Overlap: **124**.
+
+**In the archive but not in today's `schema.ts` (19)** — tables that existed on the cloud
+deployment and have since been dropped from the schema. Their data is captured:
+`agentStatusEvents`, `agentToolAssignments`, `canonicalEvents`, `complexityAssessments`,
+`contextPressure`, `dailyRhythmEntries`, `designProjects`, `designTemplates`, `llmGateEvents`,
+`networkEgressSummary`, `networkPolicyRules`, `pipelineStepEvents`, `promptAssembly`,
+`rateLimitEvents`, `rawMessages`, `scheduledWakeups`, `superLoopIterations`,
+`toolAssignmentChanges`, `toolClassifications`.
+
+**In `schema.ts` but absent from the archive (6):** `activeEngineSnapshots`, `costBudgets`,
+`inbox`, `kgAnswerSync`, `modelPricing`, `toolPolicyEvents`.
+
+**Correction to the plan's stated interpretation of absence.** The plan instructed that an absent
+table "means it held zero rows on the cloud instance". The archive itself disproves that reading:
+**63 tables are present with a 0-byte `documents.jsonl`**, so Convex exports a declared table even
+when it holds no rows. Absence therefore means something stricter and more useful — those six
+tables **did not exist on the cloud deployment at snapshot time**. They were added to
+`schema.ts` after `tidy-whale-981` was retired on 2026-07-15 and were only ever pushed to the
+self-hosted backend. Nothing is missing from the archive on their account.
+
+#### 4. Readability — first and last line of `documents.jsonl` parsed as JSON
+
+Eight tables checked (the plan requires five, including `events` and `sessions`). Both the first
+and the **last** line of each file were `json.loads`-parsed; a truncated export shows up as a
+final-line parse failure.
+
+| Table | Rows | First line | Last line |
+|---|---:|---|---|
+| `events` | 263,718 | OK (`kx70000mn80k…`) | OK (`kx7fzzpnztgx…`) |
+| `sessions` | 979 | OK (`nx7001x194wm…`) | OK (`nx7fzhbkn7v7…`) |
+| `graphSnapshotLinks` | 122,773 | OK | OK |
+| `graphSnapshotNodes` | 95,406 | OK | OK |
+| `aggregates` | 25,476 | OK | OK |
+| `llmMetrics` | 13,536 | OK | OK |
+| `advisorEvents` | 11,973 | OK | OK |
+| `episodicEvents` | 8,515 | OK | OK |
+
+Zero parse failures. Separately, all **263,718** `events` rows were parsed individually during the
+provenance pass below — `unparsable/no-timestamp: 0`. That is a full-table parse, not a sample.
+
+Census: **80 non-empty tables, 63 empty, 602,932 rows total.** Top tables by row count:
+`events` 263,718 · `graphSnapshotLinks` 122,773 · `graphSnapshotNodes` 95,406 · `aggregates`
+25,476 · `llmMetrics` 13,536 · `advisorEvents` 11,973 · `episodicEvents` 8,515 · `configChanges`
+8,216 · `promptSubmissions` 5,876 · `run_blocks` 5,381.
+
+#### 5. PROVENANCE PROOF — cloud, not the live self-hosted instance
+
+Computed over **all 263,718** `events` rows (not a sample):
+
+```
+rows: 263718   unit buckets: {'sec': 263718, 'ms': 0, 'other': 0}
+MIN raw 1779368855.0 -> 2026-05-21T13:07:35Z
+MAX raw 1784073865.0 -> 2026-07-15T00:04:25Z
+gate raw 1784160000.0 -> 2026-07-16T00:00:00Z
+PROVENANCE: PASS max<=gate
+```
+
+**Newest `events` row: `2026-07-15T00:04:25Z` — 21 days before today (2026-08-05), and inside the
+required pre-`2026-07-16T00:00Z` window.** Had this export come from the live self-hosted backend
+the newest row would be minutes old.
+
+Two independent corroborations:
+
+- Project memory `convex-topology-all-local` records the cloud deployment's telemetry as frozen
+  with its newest `events` row at approximately **`2026-07-15T00:04Z`**. The archive's measured
+  maximum matches that to the minute — a figure recorded before this export was taken.
+- `sessions.startedAt` spans **`2026-05-07T21:04:56Z` → `2026-07-14T22:59:43Z`** across all 979
+  rows, independently landing on the same freeze point from a different table and a different
+  field.
+
+*Unit note, since a wrong verdict was nearly recorded here:* the first pass divided `timestamp` by
+1000 assuming milliseconds and printed 1970 dates. It happened to still emit "PASS", which would
+have been a correct verdict reached by broken arithmetic. `timestamp` is **seconds** — all 263,718
+values fall in the seconds bucket with zero mixed-unit outliers — and the figures above are the
+re-derived ones.
+
+#### 6. History coverage
+
+Span captured: **`2026-05-21T13:07:35Z` → `2026-07-15T00:04:25Z`** (~55 days) in `events`, and
+back to **`2026-05-07`** in `sessions`. Pre-2026-07-15 history — DEBT-02's entire subject — **is
+present**, running right up to the retirement moment.
+
+#### 7. File storage
+
+`--include-file-storage` took effect. `_storage/` is present with **25 stored files** (PNG/JPEG)
+totalling **7,448,950** uncompressed bytes, plus `_storage/documents.jsonl` carrying **25**
+metadata rows — one per file, so no orphaned metadata and no unreferenced blob. The
+`_components/rateLimiter/_storage/` sub-entry is present as well.
+
+#### Verdict
+
+**ARCHIVE VERDICT: COMPLETE & READABLE** — 318 entries, all CRC-valid; 143 table directories (80
+non-empty, 63 empty) holding **602,932 rows**; 25 stored files; first *and* last `documents.jsonl`
+lines parse as JSON for 8 tables and all 263,718 `events` rows parse individually; provenance
+proven cloud-sourced by a newest-`events` timestamp of **2026-07-15T00:04:25Z**, matching the
+independently-recorded freeze point.
+
 No secret value appears anywhere in this section.
