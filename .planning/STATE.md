@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
 status: executing
-stopped_at: Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04)
-last_updated: "2026-08-04T22:46:19.000Z"
-last_activity: 2026-08-04 -- Phase 106 Plan 06 complete (skill-lifecycle manual UAT, 4/4 live tests pass)
+stopped_at: Phase 107 context gathered (aggregates rollup sharding)
+last_updated: "2026-08-05T13:10:11.772Z"
+last_activity: 2026-08-05 -- Phase 107 added + context gathered (aggregates rollup sharding, OCC contention fix); Phase 106 still at Plan 06 complete (skill-lifecycle UAT session A, DEBT-04), Wave 2 blocked on DEBT-02 NO-GO
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 3
   total_plans: 46
   completed_plans: 41
-  percent: 75
+  percent: 60
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -202,6 +202,7 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 - Phase 96 added (2026-07-13): UI deep-dive cleanup — IA restructure (dissolve CONSOLE cluster), command palette nav drift, fake header telemetry, hardcoded trust signals, orphaned pages, header/layout consistency. Full audit findings in `.planning/phases/96-ui-deep-dive-cleanup-ia-restructure-command-palette-drift-fa/FINDINGS.md`.
 - v11.0 roadmap created (2026-07-17): 4 phases (97-100) derived from the 22 v11.0 requirements. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is renumbered to Phase 98 — the daemon-executor + real-intake foundation (INTAKE-01..04, DAEMON-01/03/04) was sequenced first as Phase 97 per the dependency analysis (nothing mutates the host without the daemon executor existing). Phase 99 (Launch/Dispatch) is independent of the daemon work (rides existing chat/Forge/Ástríðr channels) and can run in parallel with 97/98. Phase 100 (Control-Surface UX) depends on both 98 and 99 and is sequenced last.
 - Phase 102 added: Address tech debt: reminders dead code + astridr comment cleanup
+- Phase 107 added (2026-08-05): Aggregates Rollup Sharding — eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), root-caused during the 2026-08-05 self-hosted Convex retention-health incident (2nd occurrence of this mechanism, also seen 2026-07-30, previously only mitigated by container recreate, never fixed).
 
 ### Decisions
 
@@ -785,16 +786,18 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 
 ## Session Continuity
 
-Last session: 2026-08-04T22:46:19.000Z
-Stopped at: Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue)
-Next action: Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
+Last session: 2026-08-05T13:10:11.756Z
+Stopped at: Phase 107 context gathered (aggregates rollup sharding — 107-CONTEXT.md written, 4 areas discussed: shard key & count, sharding scope, existing row migration, verification method)
+Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
+
+--- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
 
 --- Prior (superseded by the above) --- Execute Plan 105-02 (ingest prerequisites for D-01's Ástríðr tool volume) — depends on this plan's bounded-read guard now being in place. See `105-01-SUMMARY.md` for the full deviation record (read-direction fix, mutation-verification log) and two carried-forward items: `avgDuration`'s zero-consumer status (Phase-106 dead-code candidate) and `convex/ingest.ts:168`'s missing `provider` field on `PostToolUseFailure` (F6, deliberately unfixed — it's the baseline the D-15 control test depends on). [Phase 105 is now fully COMPLETE as of 105-09, 2026-08-04 — this line is retained as historical context only.]
 
 --- Prior (Phase 103, superseded by the above) --- Phase 103's gap-closure cycle is 18/18 plans CODE-complete (103-18 closed WR-01, 2026-07-29). Next step is an operator-attended LIVE re-verification against the running Ástríðr stack covering 103-16 (reselect gets a fresh confirm prompt), 103-17 (pinned-default count reads config), and 103-18 (revert survives navigating away from the Chat composer pill) — a green unit suite is explicitly not accepted as proof per this cycle's established pattern (see 103-VERIFICATION.md). Only after that should BSC-01..05 be re-marked complete in REQUIREMENTS.md and the phase checkbox flipped in ROADMAP.md.
 
 --- Historical (v11.0, closed 2026-07-25) --- Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This was the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/106-consolidation-hardening/106-CONTEXT.md
+Resume file: .planning/phases/107-aggregates-rollup-sharding/107-CONTEXT.md
 
 ## Operator Next Steps
 
