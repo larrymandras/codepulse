@@ -190,6 +190,99 @@ Two classes of finding change this from a clean "confirm and proceed" sweep to a
 1. **Three live CI workflows (one in codepulse, three in astridr-repo — `gitleaks-scan.yml` ×2, `kg-benchmark.yml`, `supabase-migration-check.yml`) POST real telemetry to `https://tidy-whale-981.convex.site/runtime-ingest` today**, on every push/PR to master plus a daily 7 AM UTC cron. This is a genuine **functional writer** to the cloud deployment, currently active — not documentation. Cancelling `tidy-whale-981` without first repointing or removing these `CODEPULSE_INGEST_URL` env values will make every one of these CI steps fail to deliver telemetry (most are written non-fatally — `|| echo "...non-fatal"` in gitleaks-scan.yml, and kg-benchmark.yml's telemetry step is explicitly NOT `continue-on-error`, meaning **that one would fail the job outright**).
 2. **The one variable that would definitively prove or disprove "does prod CodePulse read cloud Convex" — `VITE_CONVEX_URL`'s actual resolved value — is not machine-readable** (`.env.local` hook-blocked; Vercel dashboard env vars outside this sweep's reach). D-01 says Larry is confident this is already repointed to self-hosted and that pre-verification is not required to *plan* the export — but this sweep cannot independently confirm it, and the `deploy` npm script's actual target has the identical unresolved dependency.
 
-VERDICT: NO-GO — a functional writer to `tidy-whale-981` exists today (3 CI workflow files across both repos hardcoding `CODEPULSE_INGEST_URL`/telemetry POSTs), and the frontend's actual `VITE_CONVEX_URL` cannot be confirmed by this sweep (2 doc-only references, 5 manual `.env*` checks pending). Plan 106-03 must not run until: (a) Larry completes the 5 manual `.env*` checks above, and (b) the CI workflow `CODEPULSE_INGEST_URL` values are either repointed to the self-hosted deployment's ingest URL or the export/cancel plan explicitly accounts for updating them as part of its own scope.
+VERDICT (2026-08-04 — **SUPERSEDED**, see § DEBT-02 pre-flight amendment below): NO-GO — a functional writer to `tidy-whale-981` exists today (3 CI workflow files across both repos hardcoding `CODEPULSE_INGEST_URL`/telemetry POSTs), and the frontend's actual `VITE_CONVEX_URL` cannot be confirmed by this sweep (2 doc-only references, 5 manual `.env*` checks pending). Plan 106-03 must not run until: (a) Larry completes the 5 manual `.env*` checks above, and (b) the CI workflow `CODEPULSE_INGEST_URL` values are either repointed to the self-hosted deployment's ingest URL or the export/cancel plan explicitly accounts for updating them as part of its own scope.
 
 No secret value appears anywhere in this artifact.
+
+---
+
+## DEBT-02 pre-flight amendment (2026-08-05)
+
+The 2026-08-04 `NO-GO` above is superseded. It is retained verbatim because one of its two
+load-bearing factual claims turned out to be **wrong**, and that matters more than the verdict
+flip: it was asserted from a workflow's own inline comment rather than from the code path.
+
+### Correction 1 — `kg-benchmark.yml` would NOT have hard-failed
+
+The original verdict states that `kg-benchmark.yml`'s telemetry step is "explicitly not
+`continue-on-error`, so it would hard-fail the job once tidy-whale-981 is cancelled."
+
+**This is false.** The step's *step-level* `continue-on-error` is indeed absent, but that step
+runs `scripts/kg_benchmark_ci.py`, and the exit code is the script's, not curl's:
+
+- `scripts/kg_benchmark_ci.py:126` — `os.environ.get("CODEPULSE_INGEST_URL")`, documented
+  `None => ConvexHandler local-only (D-11)`. An unset URL is a supported state, not an error.
+- `scripts/kg_benchmark_ci.py:158-167` — the entire emit path, *including* `ConvexHandler`
+  construction, sits inside `try/except Exception` whose handler only logs a warning
+  (`# noqa: BLE001 — telemetry must never break the job`).
+- `scripts/kg_benchmark_ci.py:178` — `sys.exit(0 if verdict == "pass" else 1)`, where `verdict`
+  derives from RESULTS.json freshness plus the pytest exit code. Telemetry cannot reach it.
+
+The original claim was taken from the step's inline comment. The comment's own next line
+("Telemetry-send failures are non-fatal inside the wrapper (D-11)") already contradicted the
+conclusion drawn from it. Per this repo's CLAUDE.md: comments are claims, not evidence.
+
+The other three workflows each terminate their POST with `|| echo "CodePulse notification
+failed (non-fatal)"`, so all four were non-fatal all along. **Cancelling `tidy-whale-981` would
+not have broken a single CI job.** The real cost was always silent telemetry loss, not breakage.
+
+### Correction 2 — `VITE_CONVEX_URL` is confirmed, and the one cloud reference is inert
+
+The original verdict called this "the single most load-bearing unresolved check". It is resolved.
+Larry supplied the contents of the hook-blocked `codepulse/.env.local` directly:
+
+- `VITE_CONVEX_URL=https://lmofficenew.tail5bb6b3.ts.net` — the self-hosted tailnet host. **Not cloud.**
+- `# CONVEX_SITE_URL=https://tidy-whale-981.convex.site` — present but **commented out, and provably
+  inert**: every reader matches it with the `^`-anchored regex `/^CONVEX_SITE_URL\s*=\s*(.+)$/m`
+  (`hooks/codepulse-hook.mjs:185`, `hooks/scanner.mjs:271`, `hooks/test-connection.mjs:32`), which
+  a `# `-prefixed line cannot satisfy. `resolveUrl()` therefore falls through to `VITE_CONVEX_URL`
+  (the tailnet) and the hardcoded `ideal-sandpiper-297` fallback at `hooks/codepulse-hook.mjs:193`
+  is unreachable while that var is set.
+
+`astridr-repo/.env` also confirmed clean: `CONVEX_URL=http://convex-backend:3211` (self-hosted),
+`CODEPULSE_ORIGIN` pointing at the Vercel host, and no `CODEPULSE_CONVEX_URL` key at all.
+
+### Gate conditions — disposition
+
+**(a) The five manual `.env*` checks.** Two live files checked and clean (above). The remaining
+two — `astridr-repo/.env.bak.20260730-173554` and `.env.bak.20260731-081147` — were **accepted
+as low-risk without inspection**, on Larry's explicit decision (2026-08-05): they are inert
+backup files loaded by no process, and the runtime question they existed to answer is already
+settled by the live `.env` being clean. Recorded as an accepted residual, not as a passed check.
+(Note: the original verdict says "5 manual checks" while its own table lists 4 hook-blocked
+files; the count in the prose was off by one.)
+
+**(b) CI workflows repointed or accounted for.** Repointing was found to be **impossible**, not
+merely unattractive: `tailscale funnel status` on the office PC shows every published endpoint
+marked `(tailnet only)` — nothing is exposed to the public internet — so GitHub-hosted runners
+cannot reach the self-hosted backend without adding Tailscale auth to CI. Larry chose removal
+over that. The dead telemetry is now gone from all four workflows:
+
+- `astridr-repo` — commit `22027c71` (3 files; `gitleaks-scan.yml` −48, `supabase-migration-check.yml`
+  −47, `kg-benchmark.yml` URL env line only, D-10 gate step deliberately preserved).
+- `codepulse` — commit `7d4a0439` (`gitleaks-scan.yml`).
+- `grep -rn "tidy-whale-981|CODEPULSE_INGEST_URL" .github/workflows/` returns zero hits in both
+  repos; all four files re-validated as parseable YAML.
+
+**Caveat, stated rather than glossed:** `22027c71` is on astridr-repo's `feature/brain-swap`
+branch, not its default `origin/main`. GitHub runs `schedule:` triggers from the **default
+branch**, so `supabase-migration-check.yml`'s daily 07:00 UTC cron will keep POSTing to the dead
+host until that branch merges. This is harmless (non-fatal, per Correction 1) but it means the
+cleanup is **not yet live on main**.
+
+### Follow-up found during this amendment (reported, not fixed)
+
+`astridr/channels/web.py:973` — `os.environ.get("CODEPULSE_ORIGIN", "https://tidy-whale-981.convex.site")`
+defaults the CORS allowlist to the decommissioned host. Not reached in Larry's deployment
+(`CODEPULSE_ORIGIN` is set explicitly), but any deploy relying on the default would allowlist a
+dead origin. Out of scope here; flagged for a later phase.
+
+### Amended verdict
+
+Both original blocking conditions are resolved: no CI job can break on cancel (Correction 1,
+plus removal), and the frontend provably reads the self-hosted backend (Correction 2). Plan
+106-03 is cleared to run.
+
+VERDICT: GO — superseding the 2026-08-04 NO-GO. Cleared on evidence, not on re-running the sweep.
+
+No secret value appears anywhere in this amendment.
