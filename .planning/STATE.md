@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
 status: executing
-stopped_at: "Completed 107-02-PLAN.md (read-path shard regression guards, all GREEN, zero production changes); next: plan 107-03"
-last_updated: "2026-08-05T14:51:08.351Z"
+stopped_at: "Completed 107-03-PLAN.md (sharded write path shipped, all 8 wave-1 tests GREEN, 7 read-path guards still GREEN); next: plan 107-04 (pre-deploy OCC baseline capture, must run before 107-05 deploys)"
+last_updated: "2026-08-05T16:07:00.457Z"
 last_activity: 2026-08-05
 progress:
   total_phases: 5
   completed_phases: 3
   total_plans: 52
-  completed_plans: 44
+  completed_plans: 46
   percent: 60
 ---
 
@@ -44,7 +44,7 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 107 (aggregates-rollup-sharding) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 
 **Phase 105 (Tool & Trace Observability) — CONTEXT GATHERED 2026-08-03** (`105-CONTEXT.md`, commit `db5c763d`; no plans yet). 4 gray areas discussed, 16 decisions locked (D-01..D-16). Counters unchanged (105 has no plans). Headlines, each grounded on a LIVE query against the running self-hosted Convex rather than assumption: **`toolExecutions` contains ZERO Ástríðr agent tools** — it is Claude Code hook rows (`Bash` 594/16 err, `Edit`, `Read`, `mcp__github__*`) plus gateway pseudo-tools only, while Ástríðr's real tools (`web_search` 125, `telegram_tool` 58/3, `cli_gateway` 103/43, `memory_search`) live in `callGraphEdges` as **cumulative counters with no per-call history**, so OBS-01's "over time" is impossible from either table today; **`tool_policy_event` has no `case` and no `default`** in `convex/runtimeIngest.ts`'s switch, so all four kinds (`tool_call_leaked_as_text`, `execution_denied`, `malformed_policy_boot`, `malformed_policy_reload_rejected`) are **silently discarded at the ingest boundary**; `toolExecutions` carries no `traceId`, so tool spans cannot nest under a turn; and both `TraceWaterfall` feeder queries (`llm.sessionCalls`, `toolExecutions.listBySession`) are unbounded `.collect()`. Decisions: Ástríðr tool calls land as per-call `toolExecutions` rows via the existing `tool_executed` case (D-01), `provider`-tagged with the default view scoped to Ástríðr so a mixed ranking is never shown by accident (D-02); **one astridr-repo commit** adds `durationMs` + `traceId` to `tool_executed` (D-03), widens the leak payload with `tool_was_offered`/`tools_offered_count`/`round`/`agentId` — all already local variables the telemetry send drops (D-08) — and introduces a per-round ContextVar so trace nesting is **reported, not inferred** (D-10, needed because `llm_call` is emitted from inside each provider, which has no access to the loop's `round_num`); a new `toolPolicyEvents` table (D-05) alerting on the **fail-open kinds only** through Phase 104's existing `alerts` + `sendAlertWebhook` path with **no new cron** (D-06), proven by inducing real events live rather than shipping into an unprovable empty view (D-07); hourly aggregate buckets so "over time" survives the 14-day `toolExecutions` prune without raising retention (D-04); tool rows nested under their LLM call with a per-trace cache ratio and **capped reads that state truncation on screen** (D-09/D-11/D-12, the `3b31c9f4` lesson); a new Tools page under `OBSERVE`, stacked sections not tabs, with the three existing tool panels left in place and cross-linked (D-13..D-16). Next: `/gsd-plan-phase 105`.
 
@@ -759,6 +759,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 107]: 107-01 encodes D-04's strict-equality shard match (r.shard === shard, not (r.shard ?? 0) === shard) directly in the legacy-unsharded-row test — a pre-existing row is retired, never patched, by a sharded write
 - [Phase 107]: 107-02: left the two pre-existing false-green rollupDaily/eventCountsByPeriod tests untouched, superseded by new _handler-based tests
 - [Phase 107]: 107-02: all 7 new multi-shard read-path regression tests went GREEN on first run with zero production changes, confirming CONTEXT.md's no-read-side-change premise before 107-03 lands the sharded write path
+- [Phase 107]: Threaded shard through incrementBatch (analyticsRollup.ts), a 4th write call site the plan itself flagged as unnamed in any planning doc — One pickShard() draw per event inside the batch loop, shared across that event's two helper calls, mirroring events.ingest's one-draw-per-call rule
+- [Phase 107]: Reworded 3 doc comments in analyticsRollup.ts that tripped their own Task-2 acceptance-criteria greps (literal r.shard === shard / r.shard ?? 0 / pickShard text inside prose comments) — Same comment-trips-own-grep class Phase 105 plans hit 5 separate times; reworded to describe behavior without repeating the literal grepped pattern, re-verified all counts
 
 ### Pending Todos
 
@@ -790,11 +792,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 105 P01 | 40min | 3 tasks | 10 files |
 | Phase 107 P01 | 12min | 3 tasks | 2 files |
 | Phase 107 P02 | 9min | 2 tasks | 2 files |
+| Phase 107 P03 | 18min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-05T14:51:08.336Z
-Stopped at: Completed 107-02-PLAN.md (read-path shard regression guards, all GREEN, zero production changes); next: plan 107-03
+Last session: 2026-08-05T16:07:00.442Z
+Stopped at: Completed 107-03-PLAN.md (sharded write path shipped, all 8 wave-1 tests GREEN, 7 read-path guards still GREEN); next: plan 107-04 (pre-deploy OCC baseline capture, must run before 107-05 deploys)
 Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
 
 --- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
