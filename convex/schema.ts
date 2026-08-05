@@ -956,6 +956,7 @@ export default defineSchema({
     bucket_start: v.float64(),    // Unix epoch seconds, truncated to hour/day boundary
     value: v.float64(),           // Numeric aggregate value
     dimensions: v.optional(v.any()), // { provider?, model?, event_type?, error_category? }
+    shard: v.optional(v.float64()), // Phase 107 / D-01: missing value reads as shard 0
   })
     .index("by_type_period_bucket", ["metric_type", "period", "bucket_start"])
     .index("by_period_bucket", ["period", "bucket_start"]),
