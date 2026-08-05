@@ -220,3 +220,7 @@ None. No new network endpoint, auth path, file-access pattern, or schema change 
 | `npx tsc --noEmit` | exit 0 |
 | `npm run build` | exit 0 |
 | `npx vitest run` | **3430 passed**, 193 todo, 0 failed (baseline 3401) — three consecutive clean runs |
+
+## Self-Check: PASSED
+
+All 9 files claimed as created/modified exist on disk; all 4 commit hashes resolve in `git log --all`.
