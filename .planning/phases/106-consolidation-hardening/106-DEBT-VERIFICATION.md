@@ -538,4 +538,81 @@ lines parse as JSON for 8 tables and all 263,718 `events` rows parse individuall
 proven cloud-sourced by a newest-`events` timestamp of **2026-07-15T00:04:25Z**, matching the
 independently-recorded freeze point.
 
+---
+
+### Cancel handoff
+
+D-04 is satisfied: Claude issued **no** cancel, delete, or billing call at any point. Larry
+performed both actions himself in the Convex dashboard on 2026-08-05.
+
+#### Larry's reply, verbatim
+
+> tidy-whale-981 deployment deleted
+
+#### Billing follow-up
+
+His reply named only the deployment. Deleting a deployment and cancelling the plan are separate
+actions, and the former does not necessarily stop billing, so it was asked explicitly:
+
+> **Q:** "Did you also cancel the subscription under account Billing?"
+> **A:** "Yes, plan cancelled too."
+
+Both D-04 actions therefore complete: **deployment deleted AND subscription cancelled.**
+
+#### Independent verification of the deletion
+
+A self-report is a claim; these probes are the evidence. Run 2026-08-05T15:54Z, after his
+confirmation:
+
+```
+404  https://tidy-whale-981.convex.site/health
+404  https://tidy-whale-981.convex.site/
+404  https://tidy-whale-981.convex.cloud/instance_name
+```
+
+`GET /health` is a real route on this codebase — `convex/http.ts:37`,
+`http.route({ path: "/health", method: "GET", handler: healthCheck })` — so a 404 there is not a
+missing-route artifact.
+
+**Control, because 404 alone is ambiguous.** A slug that never existed returns exactly the same
+thing:
+
+```
+404  https://definitely-not-a-real-deployment-9x7q2.convex.site/health
+404  https://definitely-not-a-real-deployment-9x7q2.convex.cloud/instance_name
+```
+
+So the 404 proves "no deployment answers at this host" — it does not by itself distinguish
+*deleted* from *never existed*. What closes that gap is a first-hand liveness baseline from
+earlier the same day: **the Task 1 export pulled 602,932 rows out of this exact deployment
+between 14:24Z and 14:30Z**, and it 404s at 15:54Z. That is a proven state change over ~85
+minutes, from the strongest possible evidence of liveness (a full data read) to nothing.
+
+*Attribution note:* the pre-deletion baseline is the export itself, not a `/health` probe. No live
+`/health` response from `tidy-whale-981` was ever captured while it was up, so none is quoted here.
+
+**DNS still resolves — this is not evidence the deployment survived.** `nslookup
+tidy-whale-981.convex.site` returns `104.18.10.59`, `104.18.11.59`, `2606:4700::6812:a3b`,
+`2606:4700::6812:b3b`. Those are **Cloudflare wildcard addresses for `*.convex.site`**, returned
+for any slug at all — the control hostname above resolves the same way. A future reader repeating
+this nslookup should not read a successful resolution as a live deployment; the HTTP status is the
+signal, not the A/AAAA records.
+
+#### Disposition of the `.env*` manual checks
+
+These were settled **before** this checkpoint, not by it — see
+`## DEBT-02 pre-flight amendment (2026-08-05)` § "Gate conditions — disposition" above for the
+evidence. In short: the two live files were supplied and confirmed clean, and the two `.bak`
+backups were accepted as an inert residual on Larry's explicit decision rather than inspected.
+They were deliberately **not** re-asked at this checkpoint. Not restated here so there is one
+place to correct if it ever changes.
+
+#### DEBT-02 status
+
+**SATISFIED / CLOSED.** Archive exported and verified by reading rows out of it; provenance proven
+cloud-sourced; deployment deleted; subscription cancelled; the one stale doc corrected.
+
+The archive at `C:\convex-cloud-archive\` is now the **only** copy of that history. D-02 permits
+deleting it at Larry's discretion; nothing in this phase deletes it.
+
 No secret value appears anywhere in this section.
