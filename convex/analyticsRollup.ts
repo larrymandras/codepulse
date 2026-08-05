@@ -20,6 +20,7 @@ import type { PaginationResult } from "convex/server";
 import { categoryOf, outcomeOf } from "./lib/sankeyClassify";
 import { getBillingType } from "./lib/providers";
 import { pickShard } from "./lib/aggregateShard";
+import { dimensionKeyFor, sankeyDimensionKey } from "./lib/aggregateDimensionKey";
 
 // ---- Ingest-time increment helpers (called inside events.ingest) ----
 
@@ -40,18 +41,25 @@ export async function incrementEventBucket(
 ): Promise<void> {
   const hourStart = Math.floor(timestamp / 3600) * 3600;
 
-  const bucketRows = await ctx.db
+  // Phase 107 plan 07: point lookup, not a bucket scan. Every field is pinned
+  // with eq(), so this transaction's READ SET is one row. The previous version
+  // .collect()ed the whole (metric_type, period, bucket_start) bucket and matched
+  // the dimension in JS, which put every row in the hour into the read set —
+  // and Convex OCC conflicts on documents read from OR written to, so every
+  // concurrent ingest in the same hour retried no matter which row it wrote.
+  // That is the half of OCC-01 that 107-03 left open and 107-06 measured as a
+  // +70.5% regression.
+  const existing = await ctx.db
     .query("aggregates")
-    .withIndex("by_type_period_bucket", (q) =>
-      q.eq("metric_type", "events").eq("period", "hourly").eq("bucket_start", hourStart)
+    .withIndex("by_type_period_bucket_key_shard", (q) =>
+      q
+        .eq("metric_type", "events")
+        .eq("period", "hourly")
+        .eq("bucket_start", hourStart)
+        .eq("dimension_key", eventType)
+        .eq("shard", shard)
     )
-    .collect();
-  // JS-side dimension match (Pitfall 3) — never an object-equality filter on the
-  // dimensions field; collect the bucket rows and match in JS instead.
-  const existing = bucketRows.find((r) => {
-    const dims = r.dimensions as { event_type?: string } | null;
-    return dims?.event_type === eventType && r.shard === shard;
-  });
+    .first();
 
   if (existing) {
     await ctx.db.patch(existing._id, { value: existing.value + 1 });
@@ -62,6 +70,7 @@ export async function incrementEventBucket(
       bucket_start: hourStart,
       value: 1,
       dimensions: { event_type: eventType },
+      dimension_key: eventType,
       shard,
     });
   }
@@ -98,17 +107,20 @@ async function incrementSankeyEdge(
   target: string,
   shard: number
 ): Promise<void> {
-  const bucketRows = await ctx.db
+  // Phase 107 plan 07: point lookup — see incrementEventBucket's header for why
+  // the whole-bucket .collect() this replaces was the unfixed half of OCC-01.
+  const dimensionKey = sankeyDimensionKey(source, target);
+  const existing = await ctx.db
     .query("aggregates")
-    .withIndex("by_type_period_bucket", (q) =>
-      q.eq("metric_type", "sankey_edge").eq("period", "hourly").eq("bucket_start", hourStart)
+    .withIndex("by_type_period_bucket_key_shard", (q) =>
+      q
+        .eq("metric_type", "sankey_edge")
+        .eq("period", "hourly")
+        .eq("bucket_start", hourStart)
+        .eq("dimension_key", dimensionKey)
+        .eq("shard", shard)
     )
-    .collect();
-  // JS-side dimension match (Pitfall 3).
-  const existing = bucketRows.find((r) => {
-    const dims = r.dimensions as { source?: string; target?: string } | null;
-    return dims?.source === source && dims?.target === target && r.shard === shard;
-  });
+    .first();
 
   if (existing) {
     await ctx.db.patch(existing._id, { value: existing.value + 1 });
@@ -119,6 +131,7 @@ async function incrementSankeyEdge(
       bucket_start: hourStart,
       value: 1,
       dimensions: { source, target },
+      dimension_key: dimensionKey,
       shard,
     });
   }
@@ -300,6 +313,12 @@ export const insertBucketsBatch = internalMutation({
         bucket_start: b.bucket_start,
         value: b.value,
         dimensions: b.dimensions,
+        // Phase 107 plan 07: derived through the SAME function the live write
+        // path uses, so the two can never disagree about a key's spelling. This
+        // is uniformity, not a bug fix — the backfill only rebuilds hours before
+        // cutoffHour while live ingest owns the current hour forward, so the two
+        // writers are already disjoint and never look up each other's rows.
+        dimension_key: dimensionKeyFor(args.metric_type, b.dimensions),
       });
     }
     return { inserted: args.buckets.length };

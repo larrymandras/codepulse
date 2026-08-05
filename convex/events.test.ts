@@ -32,10 +32,57 @@ function makeEventsStore() {
 
   const db = {
     query: (table: string) => ({
-      withIndex: (_name: string, _fn?: any) => ({
-        collect: async () => tableOf(table).slice(),
-        first: async () => tableOf(table)[0] ?? null,
-      }),
+      // Phase 107 plan 07: honours the index constraints.
+      //
+      // This previously ignored both the index name and the filter callback,
+      // so `first()` returned the table's first row whatever was asked for.
+      // That was always wrong; it was merely harmless while the write path
+      // used .collect() plus a JS .find(), which re-did the matching itself.
+      // Once plan 107-07 narrowed the lookup to a point query, `first()` began
+      // handing back an unrelated row and the ingest patched it instead of
+      // inserting — so the bug surfaced as two failures here. Modelled on the
+      // constraint-applying fakes this repo already uses in forge.test.ts,
+      // swarmTasks.test.ts, subagentJobs.test.ts, warRoom.test.ts and
+      // v6Mutations.test.ts.
+      withIndex: (_name: string, fn?: (q: any) => any) => {
+        const eqs: Record<string, unknown> = {};
+        const ranges: { field: string; op: "lt" | "lte" | "gt" | "gte"; value: any }[] = [];
+        if (typeof fn === "function") {
+          const q: any = {
+            eq: (field: string, value: unknown) => {
+              eqs[field] = value;
+              return q;
+            },
+            lt: (field: string, value: any) => (ranges.push({ field, op: "lt", value }), q),
+            lte: (field: string, value: any) => (ranges.push({ field, op: "lte", value }), q),
+            gt: (field: string, value: any) => (ranges.push({ field, op: "gt", value }), q),
+            gte: (field: string, value: any) => (ranges.push({ field, op: "gte", value }), q),
+          };
+          fn(q);
+        }
+        const matches = (r: Row) =>
+          Object.entries(eqs).every(([field, value]) => r[field] === value) &&
+          ranges.every(({ field, op, value }) =>
+            op === "lt"
+              ? r[field] < value
+              : op === "lte"
+                ? r[field] <= value
+                : op === "gt"
+                  ? r[field] > value
+                  : r[field] >= value
+          );
+        const scan = () => tableOf(table).filter(matches);
+        return {
+          collect: async () => scan(),
+          first: async () => scan()[0] ?? null,
+          unique: async () => {
+            const rows = scan();
+            if (rows.length > 1) throw new Error("unique() matched multiple rows");
+            return rows[0] ?? null;
+          },
+          take: async (n: number) => scan().slice(0, n),
+        };
+      },
     }),
     insert: async (table: string, data: Row) => {
       const _id = String(nextId++);

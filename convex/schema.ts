@@ -956,9 +956,36 @@ export default defineSchema({
     bucket_start: v.float64(),    // Unix epoch seconds, truncated to hour/day boundary
     value: v.float64(),           // Numeric aggregate value
     dimensions: v.optional(v.any()), // { provider?, model?, event_type?, error_category? }
-    shard: v.optional(v.float64()), // Phase 107 / D-01: missing value reads as shard 0
+    // Phase 107 / D-01. A missing value does NOT read as shard 0: the write path
+    // matches with STRICT equality, so a pre-sharding legacy row (no `shard`
+    // field) never matches an explicit shard and is never patched again. Readers
+    // are unaffected — they sum every row in the bucket and never branch on
+    // shard. (Corrected plan 107-07: this comment previously claimed "missing
+    // value reads as shard 0", which contradicts the code 107-03 shipped.)
+    shard: v.optional(v.float64()),
+    // Phase 107 plan 07: `dimensions` is v.any() and cannot be indexed, so the
+    // dimension is denormalised into an indexable string by
+    // lib/aggregateDimensionKey.ts. Set only by the `events` / `sankey_edge`
+    // ingest write path; absent on rows the hourly cron writes (cost, tokens,
+    // tool_*), which key their own idempotency differently.
+    dimension_key: v.optional(v.string()),
   })
+    // Wide bucket index — READERS ONLY. 10 modules fold across it, summing all
+    // shards and all dimension keys. Do not narrow it: correctness of every
+    // rollup total depends on it returning the whole bucket.
     .index("by_type_period_bucket", ["metric_type", "period", "bucket_start"])
+    // Phase 107 plan 07 — WRITE PATH ONLY. Pins every field with eq() so an
+    // ingest's read set is a single row instead of the whole bucket, which is
+    // what 107-06 identified as the unfixed half of OCC-01: Convex OCC conflicts
+    // on documents read from OR written to, so a wide read collided with every
+    // concurrent ingest in the same hour regardless of which row it wrote.
+    .index("by_type_period_bucket_key_shard", [
+      "metric_type",
+      "period",
+      "bucket_start",
+      "dimension_key",
+      "shard",
+    ])
     .index("by_period_bucket", ["period", "bucket_start"]),
 
   // ============================================================

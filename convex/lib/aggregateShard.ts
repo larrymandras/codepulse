@@ -5,9 +5,19 @@
  * `ingest` mutation and `analyticsRollup.ts`'s increment helpers import from
  * here — never hardcode the shard count at a call site.
  *
- * Raising this count later needs no schema or index change: `shard` is an
- * unindexed optional integer field on `aggregates` (see schema.ts), so
- * widening the range is a one-line change here.
+ * Raising this count later still needs no schema or index change — widening the
+ * range stays a one-line change here. (Corrected plan 107-07: `shard` is no
+ * longer "an unindexed optional integer field" as this header used to say. It is
+ * now the last field of `by_type_period_bucket_key_shard`, which the write path
+ * pins with eq() so an ingest reads one row instead of the whole bucket. A wider
+ * range simply means more distinct index values, not a migration.)
+ *
+ * Sequencing note carried forward from 107-06: do NOT raise this count as a
+ * contention lever while the read set is wide. A higher count widens each bucket,
+ * and 107-06 measured exactly that effect — sharding alone took retries per 1k
+ * events from 1188.5 to 2025.8 (+70.5%) because the read set was never narrowed.
+ * Narrow the read set first (plan 107-07 does), then re-measure before touching
+ * this number, so each cycle moves one variable.
  */
 
 export const AGGREGATE_SHARD_COUNT: number = 8;

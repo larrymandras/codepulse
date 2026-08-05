@@ -22,19 +22,87 @@ import { categoryOf, outcomeOf } from "./lib/sankeyClassify";
 // --- in-memory aggregates + events store (mirrors convex/llm.test.ts:7-14) ---
 type Row = Record<string, any>;
 
+// Phase 107 plan 07: withIndex() now HONOURS the index constraints.
+//
+// It previously ignored both the index name and the filter callback and returned
+// the whole table, which made the read-set WIDTH untestable: a point lookup and a
+// whole-bucket scan produced identical results, so a wrong implementation stayed
+// green. That is exactly the property OCC-01 turns on, so the fake has to model
+// it. Each query records what index it used, which fields it pinned with eq(),
+// and how many rows it actually returned — `queryLog` is the read set, and it is
+// what the narrowing tests assert against.
+//
+// Range ops are modelled too (lt/lte/gt/gte) because clearHistoricalBucketsPage
+// uses lt() on bucket_start. Absent fields compare as `undefined`, matching both
+// real Convex index semantics and the strict-equality shard matching 107-03
+// shipped: a legacy row with no `shard` does NOT match an explicit .eq("shard", 0).
+type QueryRecord = { index: string; pinned: Record<string, unknown>; returned: number };
+
 function makeStore() {
   const aggregates: Row[] = [];
   const events: Row[] = [];
+  const queryLog: QueryRecord[] = [];
   let nextId = 0;
 
   const tableOf = (name: string) => (name === "events" ? events : aggregates);
 
   const db = {
     query: (table: string) => ({
-      withIndex: (_name: string, _fn?: any) => ({
-        collect: async () => tableOf(table).slice(),
-        first: async () => tableOf(table)[0] ?? null,
-      }),
+      withIndex: (name: string, fn?: any) => {
+        const eqs: Record<string, unknown> = {};
+        const ranges: { field: string; op: "lt" | "lte" | "gt" | "gte"; value: any }[] = [];
+        if (typeof fn === "function") {
+          const q: any = {
+            eq: (field: string, value: unknown) => {
+              eqs[field] = value;
+              return q;
+            },
+            lt: (field: string, value: any) => {
+              ranges.push({ field, op: "lt", value });
+              return q;
+            },
+            lte: (field: string, value: any) => {
+              ranges.push({ field, op: "lte", value });
+              return q;
+            },
+            gt: (field: string, value: any) => {
+              ranges.push({ field, op: "gt", value });
+              return q;
+            },
+            gte: (field: string, value: any) => {
+              ranges.push({ field, op: "gte", value });
+              return q;
+            },
+          };
+          fn(q);
+        }
+        const matches = (r: Row) =>
+          Object.entries(eqs).every(([field, value]) => r[field] === value) &&
+          ranges.every(({ field, op, value }) =>
+            op === "lt"
+              ? r[field] < value
+              : op === "lte"
+                ? r[field] <= value
+                : op === "gt"
+                  ? r[field] > value
+                  : r[field] >= value
+          );
+        const scan = () => tableOf(table).filter(matches);
+        const record = (rows: Row[]) => {
+          queryLog.push({ index: name, pinned: { ...eqs }, returned: rows.length });
+          return rows;
+        };
+        return {
+          collect: async () => record(scan()).slice(),
+          first: async () => record(scan())[0] ?? null,
+          unique: async () => {
+            const rows = record(scan());
+            if (rows.length > 1) throw new Error("unique() matched multiple rows");
+            return rows[0] ?? null;
+          },
+          take: async (n: number) => record(scan()).slice(0, n),
+        };
+      },
     }),
     insert: async (table: string, data: Row) => {
       const _id = String(nextId++);
@@ -49,7 +117,7 @@ function makeStore() {
     },
   };
 
-  return { aggregates, events, db };
+  return { aggregates, events, db, queryLog };
 }
 
 // Filter helper: find the single "events" rollup bucket for an eventType.
@@ -253,6 +321,146 @@ describe("analyticsRollup", () => {
   // whole aggregates array), so the production code's own JS .find() is what
   // does the real matching (107-PATTERNS.md section 3).
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // Phase 107 plan 07 — OCC read-set narrowing (RED until plan 107-07 lands).
+  //
+  // 107-06's FAIL verdict: 107-03 narrowed the WRITE target to one row but left
+  // the READ set as the entire (metric_type, period, bucket_start) bucket, and
+  // Convex OCC conflicts on documents read from OR written to. So every ingest
+  // still collided with every other ingest in the same hour, and sharding made
+  // the bucket ~4.4x wider (23 -> 101 rows), which is why retries per 1k ROSE
+  // 1188.5 -> 2025.8 instead of falling.
+  //
+  // These tests assert the READ SET, not the write result — the write result was
+  // already correct and passing while OCC-01 was failing. `queryLog[].returned`
+  // is the number of rows the lookup actually pulled into the transaction's read
+  // set, which is the quantity that decides whether a concurrent ingest conflicts.
+  // -------------------------------------------------------------------------
+  describe("shard read-set narrowing (OCC-01)", () => {
+    // Seeds a realistic bucket: several dimension keys, several shards, all in
+    // the same hour and metric_type — i.e. exactly the rows 107-06 measured.
+    function seedBucket(store: ReturnType<typeof makeStore>, hourStart: number) {
+      for (const eventType of ["llm_call", "tool_use", "file_write"]) {
+        for (const shard of [0, 3, 5]) {
+          store.aggregates.push({
+            _id: `seed-${eventType}-${shard}`,
+            metric_type: "events",
+            period: "hourly",
+            bucket_start: hourStart,
+            value: 7,
+            dimensions: { event_type: eventType },
+            dimension_key: eventType,
+            shard,
+          });
+        }
+      }
+    }
+
+    test("shard: an events increment reads ONE row, not the whole bucket", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementEventBucket !== "function") {
+        throw new Error("incrementEventBucket not implemented");
+      }
+      const hourStart = 1_700_000_000 - (1_700_000_000 % 3600);
+      seedBucket(store, hourStart);
+      store.queryLog.length = 0;
+
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 3);
+
+      expect(store.queryLog).toHaveLength(1);
+      const q = store.queryLog[0];
+      // The read set is ONE row. Under the pre-107-07 whole-bucket .collect()
+      // this is 9 — every seeded row — which is the defect.
+      expect(q.returned).toBe(1);
+      // And it is narrow because BOTH discriminators are pinned in the index
+      // range, not filtered in JS after the fact.
+      expect(q.pinned).toMatchObject({
+        metric_type: "events",
+        period: "hourly",
+        bucket_start: hourStart,
+        dimension_key: "llm_call",
+        shard: 3,
+      });
+      // The write itself must still be correct: the matching seeded row patched.
+      const patched = store.aggregates.find(
+        (r) => r.dimension_key === "llm_call" && r.shard === 3
+      );
+      expect(patched?.value).toBe(8);
+    });
+
+    test("shard: a sankey_edge increment reads ONE row per edge, not the whole bucket", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementSankeyBuckets !== "function") {
+        throw new Error("incrementSankeyBuckets not implemented");
+      }
+      const hourStart = 1_700_000_000 - (1_700_000_000 % 3600);
+      // Seed unrelated sankey rows in the same bucket across shards.
+      for (const [source, target] of [
+        ["LLM", "gpt"],
+        ["gpt", "Success"],
+        ["Tool Use", "bash"],
+      ]) {
+        for (const shard of [0, 3, 5]) {
+          store.aggregates.push({
+            _id: `seed-${source}-${target}-${shard}`,
+            metric_type: "sankey_edge",
+            period: "hourly",
+            bucket_start: hourStart,
+            value: 4,
+            dimensions: { source, target },
+            dimension_key: `${source} ${target}`,
+            shard,
+          });
+        }
+      }
+      store.queryLog.length = 0;
+
+      await rollup.incrementSankeyBuckets(ctx as any, "llm_call", undefined, 1_700_000_000, 3);
+
+      // Two edges → exactly two lookups, each reading exactly one row.
+      expect(store.queryLog).toHaveLength(2);
+      for (const q of store.queryLog) {
+        expect(q.returned).toBeLessThanOrEqual(1);
+        expect(Object.keys(q.pinned).sort()).toEqual(
+          ["bucket_start", "dimension_key", "metric_type", "period", "shard"].sort()
+        );
+      }
+    });
+
+    test("shard: a concurrent write to a different key or shard is OUTSIDE the read set", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementEventBucket !== "function") {
+        throw new Error("incrementEventBucket not implemented");
+      }
+      const hourStart = 1_700_000_000 - (1_700_000_000 % 3600);
+      seedBucket(store, hourStart);
+      store.queryLog.length = 0;
+
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 3);
+      const { pinned } = store.queryLog[0];
+
+      // This is the OCC property restated as a predicate: any row a *different*
+      // concurrent ingest would touch must fail at least one pinned field, so it
+      // cannot be in this transaction's read set. Under the whole-bucket read
+      // every one of these WAS in the read set — which is why they all retried.
+      const wouldConflict = (row: Row) =>
+        Object.entries(pinned).every(([field, value]) => row[field] === value);
+
+      const differentKeySameShard = store.aggregates.find(
+        (r) => r.dimension_key === "tool_use" && r.shard === 3
+      )!;
+      const sameKeyDifferentShard = store.aggregates.find(
+        (r) => r.dimension_key === "llm_call" && r.shard === 5
+      )!;
+
+      expect(wouldConflict(differentKeySameShard)).toBe(false);
+      expect(wouldConflict(sameKeyDifferentShard)).toBe(false);
+    });
+  });
+
   describe("shard", () => {
     test("same explicit shard patches the same row", async () => {
       const store = makeStore();
