@@ -3,20 +3,29 @@ status: in-progress
 phase: 106-consolidation-hardening
 source: [106-CONTEXT.md, 98-HUMAN-UAT.md, 100-HUMAN-UAT.md]
 started: 2026-08-04T21:44:43Z
-updated: 2026-08-05T15:15:00Z
+updated: 2026-08-05T16:25:00Z
 ---
 
 ## Current Test
 
-[2026-08-05: **Plan 106-07 (UAT session B — voice) is at Task 2, awaiting the live
-session.** Task 1 is complete: both halves of the stack are proven live (dev server 200
-on `localhost`/`127.0.0.1`/`[::1]`; authenticated Ástríðr `GET /api/agents` → **200**
+[2026-08-05 (later): **Plan 106-07 (UAT session B — voice) Task 2 is COMPLETE. Tests 5, 6
+and 7 all PASS.** The wake → barge-in → re-arm sequence was run live in one continuous
+session, 16:16:12 → 16:20:53 — the first time DEBT-04's full sequence has been exercised
+end to end in a single pass. Barge-in is judged on the media element (`tts.audio.teardown
+{cause:"stop:interrupt:barge-in", currentTime:4.47, duration:10.82}` — cut 41 % through),
+not on the `barged` flag, with three un-interrupted replies in the same session ending at
+`currentTime == duration` as a within-session control. Verbatim trace is in `## Voice
+trace`, together with a capture-method finding (the raw console omits all `tts.audio.*`
+events; COPY TRACE is authoritative) and one unexplained, non-reproducing anomaly from an
+earlier 15:57 attempt. Zero source files modified — `git diff --quiet -- src/hooks
+src/pages/Chat.tsx` passes. `status:` stays `in-progress`; plan 106-08 (session C) closes
+this file. Task 3 (trace-based root-cause routing) is a no-op: nothing failed.]
+
+[2026-08-05: Plan 106-07 Task 1 complete — both halves of the stack proven live (dev server
+200 on `localhost`/`127.0.0.1`/`[::1]`; authenticated Ástríðr `GET /api/agents` → **200**
 against an unauthenticated control of **401**; Convex reached over
-`wss://lmofficenew.tail5bb6b3.ts.net/api/1.42.1/sync`), voice tracing is proven actually
-emitting with a captured verbatim trace, and tests **5, 6, 7** below are staged with
-code-derived expectations and empty `result:` lines. Next: run the wake → barge-in →
-re-arm sequence live in one continuous session at `http://localhost:5173/chat` with the
-console open, then fill 5/6/7 and `## Voice trace`. No source file was touched.]
+`wss://lmofficenew.tail5bb6b3.ts.net/api/1.42.1/sync`), voice tracing proven actually
+emitting, and tests 5-7 staged with code-derived expectations. No source file touched.]
 
 [2026-08-04: Plan 106-06 execution complete for this session. Task 1 (staging), Task 2 (live session, 4/4 pass), and Task 3 (unconditional cleanup + documented no-op on the code-fix branch) are all done — zero `uat106-*` residue on disk or in the live registry, confirmed by direct query. `status:` remains `in-progress` per the plan's own instruction (plans 106-07 and 106-08 extend this same artifact); only the last of them closes it.]
 
@@ -212,8 +221,18 @@ Known failure shape to watch for rather than infer: `wake.ignored {"state":"…"
 (`src/hooks/useAstridrVoice.ts:1479`) means a wake WAS detected but dropped because
 `voiceState` was not `idle` — a previous turn never closed. That is a different defect
 from "the wake word was not heard at all", and only the trace distinguishes them.
-result:
-notes:
+result: **PASS** — live session 2026-08-05 16:17-16:20. Wake fired cleanly on three
+separate occasions with no click: `wake.worker.wake-detected {score:0.564}` at 16:17:02.613,
+`{score:0.639}` at 16:17:46.933, `{score:0.332}` at 16:20:02.774. Each was followed within
+1 ms by `wake → conversation open` and `recognizer.start {trigger:"wake"}` — the latter being
+the browser's real `onstart`, so the recognizer provably began rather than merely being asked
+to. Larry confirmed the header flipped `WAKE-WORD ARMED` → `IN CONVERSATION`. The 16:17:46
+wake went straight on to transcribe a full spoken question.
+notes: No `wake.ignored` occurred at any point. Detection scores ranged 0.332-0.639, i.e. the
+lowest successful detection was ~half the highest — worth watching, but every one of the three
+crossed threshold and armed a turn. Chrome's ~8s recognizer lifetime cap fired repeatedly
+(`recognizer.end {lifetimeMs:8036-8040}` → `recognizer.restart` → `recognizer.start
+{trigger:"keepalive-restart"}`); this is the keepalive working as designed, not a fault.
 
 ### 6. Barge-in mid-reply ("stop") — DEBT-04 leg 2 of 3
 expected: While `voiceState` is `speaking` and her TTS audio is actually playing, saying
@@ -246,8 +265,24 @@ should show in the trace are `final.barge-swallowed`
 (`src/hooks/useAstridrVoice.ts:1089`) or `final.ignored-while-speaking`
 (`src/hooks/useAstridrVoice.ts:1061`); the observable to record is what appeared in the
 transcript, with the trace as corroboration.
-result:
-notes:
+result: **PASS** — and passed on the media element, not on a flag. Saying "stop" 0.6 s into a
+10.82 s reply produced, all within the same millisecond at 16:18:06.148:
+`onresult {isFinal:false, text:" stop", state:"speaking"}` → `interim.barge-in` →
+`barge-in.fired` → `tts.audio.stop.called {reason:"interrupt:barge-in", playbackId:1,
+currentTime:4.47, duration:10.82, paused:false, ended:false}` →
+`tts.audio.teardown {cause:"stop:interrupt:barge-in", currentTime:4.47, duration:10.82}`.
+**Playback was cut at 4.47 s of 10.82 s — 41 % through** — which is precisely the assertion
+`useTtsPlayback.ts:63-64` names as decisive ("currentTime far below duration on a teardown
+means playback was CUT, whatever the cause claims"). Compare the un-interrupted replies in the
+same session, which end `tts.audio.ended` at currentTime == duration (6.04/6.04, 2.18/2.18,
+5.9/5.9). The self-answering loop did NOT occur: `final.barge-swallowed {text:"Sta."}` at
+16:18:06.561 — the garbled final was swallowed, never dispatched as a user message.
+notes: Two things worth recording. (1) The barge-in fired on the INTERIM (" stop"), not the
+final — the final came back garbled as "Sta." 412 ms later, so a final-only implementation
+would have missed this barge-in entirely. That is the 2026-07-20 fix demonstrably earning its
+keep. (2) `tts.end {barged:true}` was also emitted, but is NOT what this result rests on, per
+the 2026-07-30 lesson; the `currentTime`/`duration` pair is the evidence and the flag is
+merely consistent with it.
 
 ### 7. Re-arm after "goodbye" — DEBT-04 leg 3 of 3
 expected: "goodbye" is an end-phrase, not a barge-in (`END_PHRASES`,
@@ -268,8 +303,26 @@ and reopen a fresh turn. A second wake that logs `wake.ignored`
 (`src/hooks/useAstridrVoice.ts:1479`) instead means the first turn never returned to
 `idle` — that is the known intermittent-re-arm suspect and is a FAIL for this leg even
 if the first turn looked perfect.
-result:
-notes:
+result: **PASS** — exercised with "Thank you.", which `END_PHRASES`
+(`src/components/voice/voiceState.ts:86`) treats identically to "goodbye"; "stop" is
+deliberately excluded from that list and correctly behaved as a barge-in in test 6 rather than
+a close. At 16:19:40.740 `final.end-phrase → graceful close {text:"Thank you."}` +
+`flushSend {closing:true}` — sent, not swallowed, so she closed warmly. Her closing reply ran
+to completion (`tts.audio.ended {playbackId:3, currentTime:2.18, duration:2.18}`), then at
+16:19:46.952 `close.graceful → re-arm after her goodbye` → `conversation.teardown {mode:"stop"}`
+→ `duplex.session_end {seconds:33.928}`. **The cycle then proved repeatable:** a second
+"Hey Ástríðr" at 16:20:02.774 produced `wake → conversation open` + `recognizer.start
+{trigger:"wake"}`, and that fresh turn carried a complete new question ("Are there any events
+on my calendar, personal calendar, today?") through transcription, `flushSend`, and a spoken
+answer ending `tts.audio.ended {currentTime:5.9, duration:5.9}`. No `wake.ignored` at any point.
+notes: Her own TTS echo was rejected twice on the way through, so she never answered herself:
+`interim.ignored-while-speaking {" you're"/" you're welcome"}` during playback, then
+`final.noise-rejected {" you're welcome", confidence:0.748}` at 16:19:47.053 once state had
+returned to `idle`. One cosmetic deviation from the expected line: the 16:20:02 wake logged
+`recognizer.start {trigger:"wake", state:"listening"}` rather than `state:"idle"` — the prior
+turn had fully torn down 16 s earlier, the wake and the fresh turn both worked, and nothing
+downstream misbehaved, so this is recorded as an observation, not a defect. A separate
+`followup.expire → re-arm` at 16:20:53.833 closed the final turn cleanly.
 
 ## Voice trace
 
@@ -278,20 +331,124 @@ summarised) via the **COPY TRACE** chip in the /chat header. Event ordering is t
 evidence and must be left intact; any incidental personal content is redacted as
 `<redacted>` in place (T-106-24).
 
-_(pending — filled during the plan 106-07 Task 2 live session)_
+Captured 2026-08-05, one continuous session 16:16:12 → 16:20:53. No personal content
+appeared; nothing required redaction. Non-`[voice]` console lines (Vite HMR, wakeWordWorker
+model-load banners) are omitted as they are not part of the lifecycle trace.
+
+**Capture-method finding, recorded because it nearly cost a false verdict:** the raw browser
+console does **not** show `tts.audio.*` events. `ttsTrace` (`src/hooks/useTtsPlayback.ts:53-82`)
+pushes to the shared `window.__astridrVoiceTrace` ring buffer but deliberately never calls
+`console.log`, unlike `trace()` (`src/hooks/useAstridrVoice.ts:138-146`) which does both. A
+console-copied trace therefore omits exactly the media-element evidence test 6 depends on, and
+an intermediate reading of one such paste wrongly concluded there was an instrumentation gap in
+duplex mode. There is none. **COPY TRACE is authoritative; a console paste is not.** Future
+sessions should use the chip.
+
+```
+16:17:02.613 wake.worker.wake-detected {"score":0.563963770866394}
+16:17:02.613 wake → conversation open
+16:17:02.614 recognizer.start {"trigger":"wake","state":"idle"}
+16:17:03.148 duplex.ears_switch {"active":"duplex"}
+16:17:32.614 silence.timeout → re-arm
+16:17:32.614 conversation.teardown {"mode":"stop","state":"listening"}
+
+16:17:46.933 wake.worker.wake-detected {"score":0.6390392184257507}
+16:17:46.933 wake → conversation open
+16:17:46.934 recognizer.start {"trigger":"wake","state":"idle"}
+16:17:51.688 final {"text":"A two-sentence summary of what you can do.","state":"transcribing"}
+16:17:51.688 final.accepted {"text":"A two-sentence summary of what you can do.","warm":false,"debounceMs":2000}
+16:17:53.690 flushSend {"message":"A two-sentence summary of what you can do.","closing":false}
+16:18:01.597 run.tts.received {"sessionMatches":true,"eventSession":"9ca4490e-…","activeSession":"9ca4490e-…","willPlay":true}
+16:18:01.606 tts.audio.play.request {"playbackId":1,"mode":"analysed","currentTime":0,"duration":null}
+16:18:01.639 tts.start {"state":"processing"}
+16:18:05.580 duplex.speech_started {"state":"speaking"}
+16:18:06.148 onresult {"isFinal":false,"text":" stop","state":"speaking"}
+16:18:06.148 interim.barge-in {"text":" stop"}
+16:18:06.148 barge-in.fired
+16:18:06.148 tts.audio.stop.called {"reason":"interrupt:barge-in","playbackId":1,"currentTime":4.47,"duration":10.82,"paused":false,"ended":false}
+16:18:06.148 tts.audio.teardown {"cause":"stop:interrupt:barge-in","playbackId":1,"currentTime":4.47,"duration":10.82,"paused":false,"ended":false}
+16:18:06.183 tts.end {"state":"transcribing","barged":true}
+16:18:06.560 final {"text":"Sta.","state":"transcribing"}
+16:18:06.561 final.echo-tail-checked-no-match {"text":"Sta."}
+16:18:06.561 final.barge-swallowed {"text":"Sta."}
+16:18:36.641 silence.timeout → re-arm
+
+16:19:12.453 wake.worker.wake-detected {"score":0.5162388682365417}
+16:19:12.454 wake → conversation open
+16:19:20.756 final {"text":"What's the weather in Cumming, Georgia?","state":"transcribing"}
+16:19:30.323 tts.audio.play.request {"playbackId":2,"mode":"analysed"}
+16:19:36.434 tts.audio.ended {"playbackId":2,"currentTime":6.04,"duration":6.04,"ended":true}
+16:19:36.434 tts.audio.teardown {"cause":"ended","playbackId":2,"currentTime":6.04,"duration":6.04}
+16:19:36.488 tts.end {"state":"speaking","barged":false}
+16:19:36.488 followup.open {"ms":30000,"askedQuestion":false}
+16:19:40.740 final {"text":"Thank you.","state":"transcribing"}
+16:19:40.740 final.end-phrase → graceful close {"text":"Thank you."}
+16:19:40.740 flushSend {"message":"Thank you.","closing":true}
+16:19:44.651 tts.audio.play.request {"playbackId":3,"mode":"analysed"}
+16:19:45.552 interim.ignored-while-speaking {"text":" you're"}
+16:19:45.740 interim.ignored-while-speaking {"text":" you're welcome"}
+16:19:46.914 tts.audio.ended {"playbackId":3,"currentTime":2.18,"duration":2.18,"ended":true}
+16:19:46.952 tts.end {"state":"speaking","barged":false}
+16:19:46.952 close.graceful → re-arm after her goodbye
+16:19:46.953 conversation.teardown {"mode":"stop","state":"speaking"}
+16:19:46.954 duplex.session_end {"seconds":33.928}
+16:19:47.053 final.noise-rejected {"text":" you're welcome","warm":false,"followUpOpen":false}
+
+16:20:02.774 wake.worker.wake-detected {"score":0.3316728174686432}
+16:20:02.774 wake → conversation open
+16:20:02.816 recognizer.start {"trigger":"wake","state":"listening"}
+16:20:08.456 final {"text":"Are there any events on my calendar, personal calendar, today?","state":"transcribing"}
+16:20:10.457 flushSend {"message":"Are there any events on my calendar, personal calendar, today?","closing":false}
+16:20:17.794 tts.audio.play.request {"playbackId":4,"mode":"analysed"}
+16:20:21.235 interim.ignored-while-speaking {"text":" Larry"}
+16:20:23.794 tts.audio.ended {"playbackId":4,"currentTime":5.9,"duration":5.9,"ended":true}
+16:20:23.833 tts.end {"state":"speaking","barged":false}
+16:20:53.833 followup.expire → re-arm
+16:20:53.835 duplex.session_end {"seconds":50.576}
+```
+
+### Unexplained earlier anomaly (recorded, not reproducing)
+
+An earlier attempt at 15:57 produced a COPY TRACE with a 13-second hole: `wake.status
+{"to":"ready"}` at 15:57:41.847 followed directly by `run.tts.received` at 15:57:54.779 with
+`{"sessionMatches":false,"activeSession":null}` and `tts.start {"state":"idle"}`, containing
+**zero** wake, conversation-open or recognizer events — yet Larry reported the header had
+flipped to `IN CONVERSATION` and that he had asked by voice. The audio then ran to completion
+(`currentTime 9.2 == duration 9.2`) and "stop" did nothing, consistent with no recognizer
+running. A multi-tab explanation was hypothesised (a second tab holding no session receiving
+the broadcast TTS — the `188-09-14` false-alarm shape) and **refuted**: Larry confirmed one tab
+only. The 500-entry ring buffer was ruled out as a cause (14 entries used, no eviction possible).
+It did not reproduce across the full 16:16-16:20 session, in which every wake traced correctly.
+Recorded as an open anomaly rather than chased, since all three legs subsequently passed and
+guessing at this subsystem has a documented cost here.
 
 ## Summary
 
 total: 7
-passed: 4
+passed: 7
 issues: 0
-pending: 3
+pending: 0
 skipped: 0
 blocked: 0
 
-Tests 1-4 (plan 106-06, session A) are closed. Tests 5-7 (plan 106-07, session B —
-wake / barge-in / re-arm) are staged with code-derived expectations and are pending
-the live session; their `result:` lines are deliberately empty until then.
+Tests 1-4 (plan 106-06, session A) are closed. **Tests 5-7 (plan 106-07, session B —
+wake / barge-in / re-arm) are now closed too: all three PASS**, run live 2026-08-05
+16:16-16:20 in one continuous session, which is the first time DEBT-04's full sequence has
+been exercised end to end in a single pass (the 2026-07-27 check covered only a basic
+speech→tool→speech round trip).
+
+Barge-in was judged on the media element itself — `tts.audio.teardown
+{cause:"stop:interrupt:barge-in", currentTime:4.47, duration:10.82}`, i.e. playback cut 41 %
+through — and **not** on the `barged` flag, per the 2026-07-30 lesson. Un-interrupted replies
+in the same session terminate at `currentTime == duration` (6.04/6.04, 2.18/2.18, 5.9/5.9),
+giving a within-session control for the interrupted case. The self-answering loop did not
+occur: `final.barge-swallowed` caught the interrupted text, and her own TTS echo was rejected
+twice more via `interim.ignored-while-speaking` / `final.noise-rejected`.
+
+Zero source files were modified by plan 106-07 — `git diff --quiet -- src/hooks
+src/pages/Chat.tsx` passes. One open anomaly from an earlier 15:57 attempt is recorded under
+`## Voice trace`; it did not reproduce and is explicitly NOT counted as an issue above,
+because every leg of the recorded session passed.
 
 All four Phase-98-pending sub-cases are closed. Test 3 passed on behavior but carries a
 documented wording discrepancy against this plan's own acceptance-criteria phrasing (see its
