@@ -1,10 +1,51 @@
 /**
- * Tone.js Sound Engine for CodePulse
+ * Sound Engine for CodePulse
  *
  * Provides ambient soundscapes, alert tones, event sounds, and transition
  * effects that respond to system health state.
+ *
+ * ISOLATION RULE: This is the ONLY file permitted to load the synthesis
+ * library at runtime, and it does so through the memoised dynamic import
+ * below rather than a module-level namespace import. `AmbientProvider` is
+ * mounted unconditionally by `src/main.tsx`, so a static load from here --
+ * or from any other file statically reachable from main -- would put the
+ * whole synthesis library back into the entry chunk that every visitor
+ * downloads, whether or not they ever switch ambient audio on
+ * (Phase 106 Plan 04, DEBT-03).
  */
-import * as Tone from "tone";
+import type * as ToneNS from "tone";
+
+// ---------------------------------------------------------------------------
+// Deferred synthesis-library load
+// ---------------------------------------------------------------------------
+
+type ToneModule = typeof import("tone");
+
+/** Assigned once the deferred load resolves; only read after `loadTone()`. */
+let Tone!: ToneModule;
+
+/** In-flight or settled module promise. Null means "never requested". */
+let tonePromise: Promise<ToneModule> | null = null;
+
+/**
+ * Load the synthesis library, at most once per page. Exported so tests can
+ * assert the memoisation directly -- a second call must hand back the very
+ * same promise, not a fresh one.
+ */
+export function loadTone(): Promise<ToneModule> {
+  tonePromise ??= import("tone")
+    .then((mod) => {
+      Tone = mod;
+      return mod;
+    })
+    .catch((err) => {
+      // Do not memoise a failed fetch: one transient network error would
+      // otherwise leave ambient audio permanently unable to start.
+      tonePromise = null;
+      throw err;
+    });
+  return tonePromise;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,8 +114,8 @@ const DEFAULT_CATEGORY_VOLUMES: Record<Category, number> = {
 
 export class SoundEngine {
   // ---- Routing ----
-  private masterVolume!: Tone.Volume;
-  private channels!: Record<Category, Tone.Volume>;
+  private masterVolume!: ToneNS.Volume;
+  private channels!: Record<Category, ToneNS.Volume>;
 
   // ---- State ----
   private _running = false;
@@ -90,6 +131,11 @@ export class SoundEngine {
 
   async start(): Promise<void> {
     if (this._running) return;
+
+    // Fetch the synthesis library on the first real init, never on mount.
+    // A rejection here propagates to the caller exactly like a rejected
+    // Tone.start() always has.
+    await loadTone();
 
     await Tone.start();
 
