@@ -93,6 +93,7 @@ import type * as integrations from "../integrations.js";
 import type * as kg from "../kg.js";
 import type * as kgBenchmark from "../kgBenchmark.js";
 import type * as kits from "../kits.js";
+import type * as lib_aggregateDimensionKey from "../lib/aggregateDimensionKey.js";
 import type * as lib_aggregateShard from "../lib/aggregateShard.js";
 import type * as lib_providers from "../lib/providers.js";
 import type * as lib_sankeyClassify from "../lib/sankeyClassify.js";
@@ -254,6 +255,7 @@ declare const fullApi: ApiFromModules<{
   kg: typeof kg;
   kgBenchmark: typeof kgBenchmark;
   kits: typeof kits;
+  "lib/aggregateDimensionKey": typeof lib_aggregateDimensionKey;
   "lib/aggregateShard": typeof lib_aggregateShard;
   "lib/providers": typeof lib_providers;
   "lib/sankeyClassify": typeof lib_sankeyClassify;

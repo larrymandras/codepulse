@@ -968,3 +968,143 @@ container log on self-hosted Convex).
 
 Final `docker inspect -f '{{.State.StartedAt}}' convex-backend`:
 `2026-08-05T12:45:21.334055274Z` — unchanged from § D.
+
+---
+
+## § H — Plan 107-07: read-set narrowing (deployed, window OPEN)
+
+### H.1 What shipped
+
+Commit `db7d9c9a`. `dimensions` is `v.any()` and cannot be indexed, so the dimension is
+denormalised into an indexed string (`convex/lib/aggregateDimensionKey.ts`) and a new index
+`by_type_period_bucket_key_shard` pins every field with `eq()`. Ingest read set: **101 rows
+→ 1**. `by_type_period_bucket` deliberately unchanged — Convex confirmed at deploy time
+`No indexes are deleted by this push`, so all 10 reader modules still fold the whole bucket.
+`AGGREGATE_SHARD_COUNT` left at 8 so this cycle moves exactly one variable.
+
+Test evidence: the pre-existing fake `withIndex()` ignored the index name AND the filter
+callback and returned the whole table, so read-set WIDTH was untestable and a wrong
+implementation would have stayed green. The fake was rewritten to apply eq/range constraints
+and record what each query pinned and how many rows it returned. 3 new tests fail against the
+old code (`expected 9 to be less than or equal to 1`); both mutation proofs pass. The same
+defect in `events.test.ts` surfaced as 2 failures and was fixed. Suite 3459 pass / 0 fail.
+
+### H.2 The measurement instrument is NOT trustworthy by default — three traps found
+
+**Trap 1 — `docker logs --since` returns 0 lines for every window after container start.**
+`--since 10m/30m/1h/2h` → 0; `--since 4h` → 2472; `--since 6h` → 9025. Absolute timestamps
+→ 0 even for times before container start. All three clocks (host, container, WSL) agree
+exactly and docker's metadata timestamp matches the in-message timestamp, so this is NOT
+clock skew; root cause not established and deliberately not chased further.
+**`--since` must not be used as the window selector on this host.**
+
+**Trap 2 — a large `--tail` silently serves the ROTATED log file.** Measured:
+
+```
+--tail  1000 ->  1000 lines | 22:53:02 -> 23:03:53  CURRENT
+--tail 10000 -> 10000 lines | 20:43:52 -> 23:04:16  CURRENT
+--tail 15000 ->  2722 lines | 18:57:51 -> 19:49:08  ROTATED (stale)
+--tail 50000 -> 29675 lines | 12:45:21 -> 19:49:08  ROTATED (stale)
+(no flag)    -> 29675 lines | 12:45:21 -> 19:49:08  ROTATED (stale)
+```
+
+Asking for more lines than the current file holds returns the PREVIOUS container instance's
+logs — with plausible timestamps and real content. A window measurement using a large
+`--tail` would silently report 107-06-era logs as current. Driver is `json-file` with
+default rotation.
+
+**Trap 3 — a gap exists between segments.** The rotated file ends 19:49:08Z and the current
+file's reachable start is ~20:45Z, so roughly 19:49–20:45 is unreachable via `docker logs`.
+
+### H.3 The method that IS validated
+
+Window on the **in-message RFC3339 timestamp**, never on `--since`:
+
+```
+docker logs convex-backend --tail 10000 2>&1 | sed 's/\x1b\[[0-9;]*m//g' > cur.log
+awk -v s="<WINDOW_START>" 'substr($0,1,19) >= s' cur.log > window.log
+grep -c '"aggregates" table' window.log
+```
+
+Two controls are mandatory before believing any number:
+
+1. **Coverage** — the capture's earliest timestamp must be ≤ WINDOW_START, else the window
+   was truncated. If `--tail 10000` no longer reaches back far enough, raise it, but
+   re-check it has not flipped to the rotated file per Trap 2.
+2. **Positive control** — the method reproduced 107-06's published numbers EXACTLY from the
+   rotated segment over its own window (17:26:36–19:26:36Z): **368 total / 314 aggregates**,
+   with an identical table breakdown (314 aggregates / 66 dockerContainers / 6
+   providerHealth). 107-06's `--since 2h` capture and this timestamp-filter capture agree
+   byte-for-byte, so 107-06's raw counts are independently confirmed and this method is
+   calibrated against a known-good answer.
+
+### H.4 Pre-deploy baseline for 107-07 (NOT reusing 107-06's, and why)
+
+```
+CAPTURE_UTC          : 2026-08-05T23:05:16Z
+WINDOW_START         : 2026-08-05T21:05:16Z     (WINDOW_HOURS: 2)
+COVERAGE CONTROL     : PASS (capture starts 20:45:17Z <= 21:05:16Z)
+PRE_OCC_TOTAL        : 74
+PRE_AGGREGATES_COUNT : 72          (breakdown: 72 aggregates, 2 events)
+PRE_INGEST_VOLUME    : 632         (8 distinct event types — liveness guard satisfied)
+PRE_RETRIES_PER_1K   : 113.9       = 72 / (632/1000)
+```
+
+107-06's `BASELINE_RETRIES_PER_1K: 1188.5` is NOT reused as this plan's baseline: it was
+measured on a different container instance (`StartedAt 12:45:21Z`; the current instance
+started 19:53:26Z), and a container recreate is exactly the intervention this project's
+incident history says clears the degradation being measured. Comparing across it would
+confound the code change with a container restart.
+
+### H.5 A variance problem that changes how the verdict must be read
+
+Per-clock-hour aggregates-scoped OCC counts across the **previous** container instance, on
+IDENTICAL code within each side of its deploy:
+
+```
+13:00Z  542      16:00Z  172      19:00Z   32
+14:00Z  238      17:00Z  116
+15:00Z   46      18:00Z  184
+```
+
+A **17x swing (32–542)** hour to hour; against a total-log-line proxy the normalized rate
+still swings ~8x. 107-06's baseline and after figures were each a single 2 h sample drawn
+from this distribution, so its **+70.5% difference is not clearly separable from
+window-to-window noise**. This does NOT show 107-06's verdict is wrong — its raw counts
+reproduce exactly (§ H.3) — it shows that a single 2 h window cannot support that confidence.
+
+**Consequence for 107-07's verdict:** a single 2 h after-window is not sufficient evidence.
+Take several non-overlapping windows and compare distributions, and treat any difference
+smaller than the observed noise band as INCONCLUSIVE rather than PASS or FAIL.
+
+### H.6 Deploy record
+
+```
+DEPLOY_UTC          : 2026-08-05T23:06:55Z
+Index added         : aggregates.by_type_period_bucket_key_shard
+                      (metric_type, period, bucket_start, dimension_key, shard, _creationTime)
+Indexes deleted     : none (Convex: "No indexes are deleted by this push")
+Container restarted : NO — StartedAt still 2026-08-05T19:53:26Z, RestartCount 0
+Container health    : 17.51 GiB / 64 GiB (27.36%), CPU 0.07%
+```
+
+Live confirmation that the new path is writing, from real post-deploy traffic (the separator
+renders as ` ` in CLI output):
+
+```
+dimension_key "Stop Success"   dimensions {source:Stop,  target:Success}  shard 2
+dimension_key "Other Stop"     dimensions {source:Other, target:Stop}     shard 2
+dimension_key "Stop"                dimensions {event_type:Stop}               shard 2
+dimension_key "Bash Success"   dimensions {source:Bash,  target:Success}  shard 4
+```
+
+One ingest's three writes share one shard (the three `shard 2` rows), so 107-03's
+one-draw-per-ingest contract still holds under the narrowed lookup.
+
+### H.7 After-window procedure (earliest valid read: 2026-08-06T01:07Z)
+
+Settle ≥ 1 h after `DEPLOY_UTC` so no counted line predates the deploy, then take
+**multiple** non-overlapping 2 h windows per § H.5. For each: run § H.3's capture, assert the
+coverage control, count aggregates-scoped lines, run `PRE_INGEST_VOLUME`'s query with
+`lookbackDays` = WINDOW_HOURS/24, and compute retries per 1k. Compare the distribution
+against `PRE_RETRIES_PER_1K: 113.9` — not against 107-06's cross-container figures.
