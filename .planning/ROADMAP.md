@@ -832,7 +832,7 @@ Plans:
 **Plans:** 6 plans (5 waves)
 
 Plans:
-- [ ] 107-01-PLAN.md - Wave-0 write-path shard contract tests (explicit shard call sites, shard-split, legacy-unsharded row, pickShard range) - RED until 107-03
+- [ ] 107-01-PLAN.md - Wave-0 write-path shard contract tests (explicit shard call sites, shard-split, legacy-unsharded row, pickShard range) + new convex/events.test.ts asserting one shard per ingest call - RED until 107-03
 - [ ] 107-02-PLAN.md - Wave-0 read-path multi-shard regression tests against the REAL exported folds and handlers - green immediately
 - [ ] 107-03-PLAN.md - Implement sharding: convex/lib/aggregateShard.ts, optional schema field, shard threaded through the write path, one draw per ingest call
 - [ ] 107-04-PLAN.md - Capture the pre-deploy OCC baseline (corrected window method) + traffic volume + read-total control - MUST run before 107-05
