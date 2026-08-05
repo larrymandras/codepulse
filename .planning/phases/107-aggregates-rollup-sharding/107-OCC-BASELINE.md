@@ -132,4 +132,174 @@ Unchanged from the value recorded at the start of this task.
 
 `git status --porcelain convex src` — empty. No source file was modified. Nothing was deployed.
 
-*(Sections B and C — pre-deploy traffic volume and the read-total control — are added by Task 2.)*
+---
+
+## B — Pre-deploy traffic volume
+
+Using the same `WINDOW_HOURS = 2` from Section A, `lookbackDays = 2/24 = 0.08333333333333333`.
+
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.08333333333333333}'
+{
+  "PostToolUse": 189,
+  "PostToolUseFailure": 2,
+  "PreToolUse": 23,
+  "Stop": 9,
+  "SubagentStart": 4,
+  "SubagentStop": 11,
+  "UserPromptSubmit": 6
+}
+```
+
+Sum: 189 + 2 + 23 + 9 + 4 + 11 + 6 = **244**
+
+```
+BASELINE_INGEST_VOLUME: 244
+```
+
+Non-empty, non-zero, varied per-event-type breakdown — no liveness guard needed, but the
+deployment-target check below was run anyway per the plan's explicit instruction.
+
+**Deployment-target confirmation:** the plan requires confirming a bare `npx convex run` resolves
+to the self-hosted instance at `http://127.0.0.1:3210`, not a `.convex.cloud` host. Re-ran the
+identical query with an explicit `--url` immediately after:
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.08333333333333333}' --url http://127.0.0.1:3210
+{
+  "PostToolUse": 190,
+  "PostToolUseFailure": 2,
+  "PreToolUse": 23,
+  "Stop": 9,
+  "SubagentStart": 4,
+  "SubagentStop": 11,
+  "UserPromptSubmit": 6
+}
+```
+190 vs 189 (+1 `PostToolUse`, ~40 seconds apart) is consistent with ordinary live-traffic drift
+between the two calls, not a different backend. Confirms the bare `npx convex run` used above
+resolved to the same self-hosted `127.0.0.1:3210` instance — no STOP condition triggered.
+
+---
+
+## C — Pre-deploy read-total control
+
+Same `WINDOW_HOURS = 2`, but this control targets the single most recent **complete** hour rather
+than the full window, per the plan's method (isolates one hour via two `eventCountsByPeriod`
+calls whose difference cancels out everything before `H0`).
+
+```
+NOW = 1785946310   (2026-08-05T16:11:50Z, epoch seconds at time of this calculation)
+H0  = floor(NOW/3600)*3600 - 3600 = 1785942000   (2026-08-05T15:00:00Z)
+H1  = H0 + 3600                   = 1785945600   (2026-08-05T16:00:00Z)
+LOOKBACK_A = (NOW - (H0 - 60)) / 86400 = 0.0505787037037037
+LOOKBACK_B = (NOW - (H1 - 60)) / 86400 = 0.008912037037037038
+```
+
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.0505787037037037}'
+{
+  "PostToolUse": 192,
+  "PostToolUseFailure": 2,
+  "PreToolUse": 23,
+  "Stop": 9,
+  "SubagentStart": 4,
+  "SubagentStop": 11,
+  "UserPromptSubmit": 6
+}
+```
+A = 192 + 2 + 23 + 9 + 4 + 11 + 6 = **247**
+
+```
+$ npx convex run aggregates:eventCountsByPeriod '{"period":"hourly","lookbackDays":0.008912037037037038}'
+{
+  "PostToolUse": 86,
+  "PostToolUseFailure": 2,
+  "PreToolUse": 4,
+  "Stop": 3,
+  "SubagentStart": 1,
+  "SubagentStop": 4,
+  "UserPromptSubmit": 1
+}
+```
+B = 86 + 2 + 4 + 3 + 1 + 4 + 1 = **101**
+
+```
+BUCKET_TOTAL = A - B = 247 - 101 = 146
+```
+
+Not negative, not implausible — no re-run needed.
+
+### Raw event count for the same hour
+
+**Deviation encountered and resolved:** the plan's literal `{"limit":5000}` call **failed**, not
+a plan-text assumption but a directly observed error — recorded here because plan 107-06 must
+reuse a working limit, not this one:
+```
+$ npx convex run events:listRecent '{"limit":5000}'
+✖ Failed to run function "events:listRecent":
+Error: [Request ID: 8eb9e89c9a911670] Server Error
+Uncaught Error: Too many bytes read in a single function execution (limit: 16777216 bytes).
+```
+Retried at descending limits: `3000` and `2000` failed identically; `1500` returned only a `WARN`
+(13,565,764 of 16,777,216 bytes — near the cap, response not cleanly parseable); `1000` succeeded
+cleanly:
+```
+$ npx convex run events:listRecent '{"limit":1000}'
+[ ...1000 event documents... ]
+```
+
+**Coverage guard:** minimum `timestamp` among the 1000 returned rows is **1785938190**
+(2026-08-05T14:16:30Z), which is strictly less than `H0` (1785942000 / 15:00:00Z) — **guard
+PASSED** on the first working limit (1000); no further retry needed once `5000`→`1000` resolved.
+
+Counting rows with `H0 <= timestamp < H1`:
+```
+RAW_EVENT_COUNT: 146
+```
+
+### Comparison
+
+```
+BUCKET_TOTAL   = 146
+RAW_EVENT_COUNT = 146
+```
+
+**Exact match.** The read-total spot-check technique is proven working pre-deploy: the two
+independent derivations (aggregate-bucket arithmetic vs. a raw scan of `events` rows) agree
+exactly for the same hour. Two caveats recorded explicitly, not left implicit:
+- `listRecent` excludes rows with `archived === true` — nothing should be archived within the
+  last complete hour, and the exact match confirms nothing was.
+- `events.ingest` deduplicates on `idempotencyKey`, so one aggregate bucket increment corresponds
+  to exactly one stored `events` row — this is why a 1:1 match (rather than some multiple) is the
+  expected honest outcome, not a coincidence.
+
+Since they match pre-deploy, there is no discrepancy to record for plan 107-06 to account for —
+a future mismatch post-deploy would be attributable to the sharding change or a genuine bug, not
+to a pre-existing measurement artifact.
+
+---
+
+## Machine-readable summary
+
+```
+WINDOW_HOURS: 2
+BASELINE_AGGREGATES_COUNT: 290
+BASELINE_RATE_PER_HOUR: 145.0
+BASELINE_INGEST_VOLUME: 244
+BUCKET_TOTAL: 146
+RAW_EVENT_COUNT: 146
+```
+
+## Final container-uptime re-check (end of plan)
+
+```
+$ docker inspect -f '{{.State.StartedAt}}' convex-backend
+2026-08-05T12:45:21.334055274Z
+```
+Unchanged from the value recorded at the start of Task 1 — the container was not restarted or
+recreated at any point during this plan's execution.
+
+`git status --porcelain convex src` — empty throughout. No source file was modified. Nothing was
+deployed.
+
+BASELINE COMPLETE — safe to deploy (plan 107-05)
