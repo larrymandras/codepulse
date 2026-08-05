@@ -118,7 +118,7 @@ describe("analytics", () => {
   // These tests exercise the real exported derivation functions.
   // -------------------------------------------------------------------------
   describe("aggregates-backed query derivation", () => {
-    type AggBucket = { bucket_start: number; value: number; dimensions: unknown };
+    type AggBucket = { bucket_start: number; value: number; dimensions: unknown; shard?: number };
     type AnalyticsModule = {
       heatmapFromAggregates?: (b: AggBucket[]) => {
         cells: Array<{ day: number; hour: number; count: number }>;
@@ -246,6 +246,62 @@ describe("analytics", () => {
       expect(typeof opus.value).toBe("number");
       const gpt4 = openai.children.find((m) => m.name === "gpt-4")!;
       expect(gpt4.value).toBe(200);
+    });
+
+    // -----------------------------------------------------------------------
+    // Phase 107 Plan 02 (OCC-01) — multi-shard summing regression guards.
+    //
+    // D-01/D-04 of 107-CONTEXT.md: the write path (107-03) will draw
+    // `shard = Math.floor(Math.random() * 8)` per write and add it as an
+    // OPTIONAL field on `aggregates` rows. These three folds already sum every
+    // row sharing a group key regardless of `shard` (verified by code read —
+    // see 107-RESEARCH.md's "Priority Question"), so no production change is
+    // required for these to pass. Each fixture below includes one row with NO
+    // `shard` key at all, proving the ~1.94M pre-existing unsharded rows keep
+    // participating in the totals with no bulk rewrite (D-04).
+    // -----------------------------------------------------------------------
+
+    test("heatmapFromAggregates sums across shards into one cell", () => {
+      const bucketStart = 1_700_000_000;
+      const cell = bucketToCell(bucketStart);
+      const result = analytics!.heatmapFromAggregates!([
+        { bucket_start: bucketStart, value: 3, dimensions: { event_type: "tool_use" } }, // no shard (legacy)
+        { bucket_start: bucketStart, value: 5, dimensions: { event_type: "tool_use" }, shard: 0 },
+        { bucket_start: bucketStart, value: 2, dimensions: { event_type: "tool_use" }, shard: 3 },
+        { bucket_start: bucketStart, value: 1, dimensions: { event_type: "tool_use" }, shard: 7 },
+      ]);
+      const target = result.cells.find((c) => c.day === cell.day && c.hour === cell.hour);
+      expect(target?.count).toBe(11); // 3 + 5 + 2 + 1
+      expect(result.maxCount).toBe(11);
+    });
+
+    test("errorRateTrendFromAggregates accumulates two shards in the same hour slot", () => {
+      const dayAgo = 1_700_000_000;
+      const slots = analytics!.errorRateTrendFromAggregates!(dayAgo, [
+        { bucket_start: dayAgo + 2 * 3600, value: 4, dimensions: { event_type: "Error" }, shard: 0 },
+        { bucket_start: dayAgo + 2 * 3600, value: 6, dimensions: { event_type: "Error" }, shard: 5 },
+        { bucket_start: dayAgo + 2 * 3600, value: 1, dimensions: { event_type: "Error" } }, // no shard (legacy)
+        { bucket_start: dayAgo + 2 * 3600, value: 99, dimensions: { event_type: "tool_use" }, shard: 2 }, // non-error, excluded
+      ]);
+      expect(slots).toHaveLength(24);
+      expect(slots.find((s) => s.hour === 2)?.errors).toBe(11); // 4 + 6 + 1, the 99 excluded
+      expect(slots.find((s) => s.hour === 5)?.errors).toBe(0); // untouched slot still 0
+    });
+
+    test("sankeyFromAggregates sums one edge across shards", () => {
+      const { nodes, links } = analytics!.sankeyFromAggregates!([
+        { bucket_start: 1_700_000_000, value: 3, dimensions: { source: "Tool Use", target: "Read" } }, // no shard (legacy)
+        { bucket_start: 1_700_000_000, value: 2, dimensions: { source: "Tool Use", target: "Read" }, shard: 1 },
+        { bucket_start: 1_700_000_000, value: 4, dimensions: { source: "Tool Use", target: "Read" }, shard: 6 },
+        { bucket_start: 1_700_000_000, value: 4, dimensions: { source: "Read", target: "Success" }, shard: 1 },
+      ]);
+      expect(links).toHaveLength(2);
+      const nodeNames = new Set(nodes.map((n) => n.name));
+      expect(nodeNames).toEqual(new Set(["Tool Use", "Read", "Success"])); // sharding did not multiply nodes
+      const tuRead = links.find(
+        (l) => nodes[l.source].name === "Tool Use" && nodes[l.target].name === "Read"
+      );
+      expect(tuRead?.value).toBe(9); // 3 + 2 + 4
     });
   });
 });
