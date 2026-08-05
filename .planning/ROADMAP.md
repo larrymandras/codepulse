@@ -827,7 +827,7 @@ Plans:
 ### Phase 107: Aggregates Rollup Sharding
 
 **Goal:** Eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), which has caused repeated self-hosted Convex memory buildup and `events` table index-head query timeouts ("index rot") on 2026-07-30 and again 2026-08-05 — each incident only cleared by a full `convex-backend` container recreate, never root-caused.
-**Requirements**: TBD (discuss-phase to assign, likely a new OCC-0x family or DEBT-05 under `REQUIREMENTS.md`)
+**Requirements**: OCC-01
 **Depends on:** Phase 106 (independent, but sequenced after per milestone convention)
 **Plans:** 0 plans
 
