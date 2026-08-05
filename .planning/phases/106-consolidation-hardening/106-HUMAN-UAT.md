@@ -3,10 +3,24 @@ status: in-progress
 phase: 106-consolidation-hardening
 source: [106-CONTEXT.md, 98-HUMAN-UAT.md, 100-HUMAN-UAT.md]
 started: 2026-08-04T21:44:43Z
-updated: 2026-08-05T16:25:00Z
+updated: 2026-08-05T17:05:00Z
 ---
 
 ## Current Test
+
+[2026-08-05 (latest): **Plan 106-08 (UAT session C — drag round-trip + shadowed-row
+no-op) Task 1 is complete; Task 2 is a BLOCKING checkpoint AWAITING LARRY.** The Forge
+daemon is proven live by an ADVANCING heartbeat (not merely a listening socket), and
+three fixture directories are staged on disk: `uat106-drag` (plain active global) and
+the two halves of `uat106-shadow` (active + dormant, which a rescan must merge into the
+project's first-ever shadowed-merged row — the live catalog holds **0** today, which is
+the exact reason Phase 100 could not run its Test 2). Tests **8** and **9** are staged
+below with code-derived expectations; both `result:` lines are deliberately EMPTY and
+must be filled only from what Larry actually observes. Two deviations are recorded under
+`### Session C deviations` — fixture registration is deferred to the session's first
+authenticated action (the 106-06 precedent), and the plan's own round-trip leg ORDER was
+corrected because it contradicts `resolveScopeDrop`. `status:` stays `in-progress`;
+plan 106-08 Task 3 closes this file after the session.]
 
 [2026-08-05 (later): **Plan 106-07 (UAT session B — voice) Task 2 is COMPLETE. Tests 5, 6
 and 7 all PASS.** The wake → barge-in → re-arm sequence was run live in one continuous
@@ -177,6 +191,159 @@ relayed: every line was measured this session.
 - No source file was modified to obtain any of the above:
   `git status --porcelain src convex` → empty.
 
+### Session C environment (plan 106-08, 2026-08-05) — live Forge daemon + drag fixtures
+
+Recorded before any drag, per plan 106-08 Task 1 §A/§B. Every line below was measured
+this session; nothing is relayed from a previous plan.
+
+- **Dev server:** `http://localhost:5173` — HTTP **200** on all three probes
+  (`localhost` → 200, `127.0.0.1` → 200, `[::1]` → 200). Both stacks checked per this
+  project's LESSONS (Vite has bound `::1` only on this host before, producing a false
+  "server is DOWN" report).
+- **Convex backend:** self-hosted, all-local. `http://127.0.0.1:3210/version` → **200**
+  and `http://127.0.0.1:3211/version` → **200**. `VITE_CONVEX_URL`'s literal value was
+  not read (it lives in `.env.local`, which this project's CLAUDE.md forbids reading).
+
+**Forge daemon: proven live by an ADVANCING heartbeat, not by a listening socket.**
+
+A socket that accepts a connection proves a process exists; it does not prove the daemon
+is still doing work. Plan 106-08 Task 1 §A explicitly demands the stronger evidence,
+because a dead-but-listening daemon would let the optimistic overlay paint and never
+reconcile — which looks like a pass at a glance. What was measured:
+
+- `http://127.0.0.1:57328/health` → `{"status":"ok"}`.
+- Process identity resolved from the listening socket rather than assumed:
+  - PID **33616** — `node.exe "C:\Users\mandr\forge\dist\index.js"` — the **daemon**,
+    owns TCP 57328 (API) and 57329 (artifacts).
+  - PID **33516** — `node.exe "C:\Users\mandr\forge\dist\tray\tray.js"` — the **tray
+    supervisor**, matching `~/.forge/tray.lock` (which contains `33516`).
+  - Note `~/.forge/tray.lock` and `forge.db-shm` both carry a **2026-07-29** mtime, so
+    file timestamps would have suggested a week-stale daemon. They are not evidence
+    either way and were not used as any.
+- **The actual liveness proof — two samples of `forge:listHosts`, showing the heartbeat
+  move forward while nothing else happened:**
+
+  ```
+  npx convex run forge:listHosts '{}'
+  → hostId "lmofficenew", lastSeenAt 1785947919550   (2026-08-05T16:38:39.550Z, age 12.0 s)
+  … 21 s later …
+  → hostId "lmofficenew", lastSeenAt 1785947933753   (2026-08-05T16:38:53.753Z)
+  ```
+
+  `lastSeenAt` advanced by 14.2 s between samples, so the daemon is actively writing its
+  heartbeat to Convex right now. A frozen row would have returned the same value twice.
+
+- **No unauthenticated rescan trigger exists on the daemon.** Probed
+  `GET`/`POST` against `/`, `/health`, `/status`, `/scan`, `/rescan`, `/skills`, `/api`,
+  `/routes` on `:57328`. Every `GET` except `/health` returns the daemon's own SPA shell
+  (identical HTML for `/rescan` and for a deliberately bogus `/nonexistent-xyz`, so these
+  are a catch-all, not real routes), and every `POST` returns
+  `{"error":"Unauthorized","detail":"Invalid or missing bearer token"}`. This is why
+  fixture registration is deferred — see `### Session C deviations` below.
+
+**Baseline registry census (before staging anything) — `npx convex run registry:listSkills '{}'`:**
+
+- **695** rows / **488** distinct skill names. (The table stores one row per
+  `name`+`origin` pair; the UI merges them into a single row carrying an `origins[]`
+  array, which is what `isShadowing` reads.)
+- Origin breakdown: `claude-code` **185**, `native` **204**, `bridge` **204**,
+  `claude-code:available` **80**, plus **4** distinct `claude-code:project:*` origins
+  (`…1fa1797dd9db` = `C:\Users\mandr\Mandras` ×19, `…5b1caabbdf8f` =
+  `C:\Users\mandr\homeassistant`, `…a3dd52ddc6ab` = `C:\Users\mandr\claudeclaw-os`,
+  `…789c222cb6b9` = `C:\Users\mandr\forge`).
+- **Shadowed-merged rows: 0.** Names carrying `claude-code:available` *and* some other
+  origin: **zero**. Dormant-only names: **80**. This independently re-confirms, on
+  2026-08-05, the precise condition `100-HUMAN-UAT.md` Test 2 recorded on 2026-07-25 —
+  "the live catalog contains 0 shadowed-merged skills (every cold skill is dormant-only)"
+  — and is why `uat106-shadow` has to be fabricated for test 9 to exist at all.
+- **`uat106-*` rows: 0.** Clean start; plan 106-06's cleanup left no residue.
+
+**Staged fixtures (disk-backed, created this session, all confirmed present on disk):**
+
+- `C:\Users\mandr\.claude\skills\uat106-drag\SKILL.md` (567 bytes) — plain active global
+  skill, the subject of test 8's round-trip. Expected origin after rescan: `claude-code`.
+- `C:\Users\mandr\.claude\skills\uat106-shadow\SKILL.md` (888 bytes) — the **active** half
+  of the shadowed pair. Expected origin: `claude-code`. **This is the copy test 9 must
+  prove survives.**
+- `C:\Users\mandr\.claude\skills-available\uat106-shadow\SKILL.md` (859 bytes) — the
+  **dormant** half. Expected origin: `claude-code:available` (`DORMANT_ORIGIN`,
+  `src/lib/skills.ts:3`). Together with the active half this should satisfy
+  `isShadowing()` (`src/lib/skills.ts:26-29`) and merge into ONE shadowed row.
+
+**Project workspace for test 8's move leg (reused, not created):** `drive-sync-test` —
+`workspaceId` `01KV34ZEQEYMJMXMPNZMAMR7P2`, `class: "synced"`, `rootPath`
+`G:\My Drive\forge-workspaces\drive-sync-test`. Confirmed present on disk and confirmed
+to hold **zero** registered skills right now (plan 106-06 emptied it), so the move leg
+starts from a known-empty destination. It is offered in `MoveToProjectDialog`'s picker,
+which applies no `class` filter (`MoveToProjectDialog.tsx:60-66`). Because this plan did
+not create it, Task 3 must NOT delete it — only the `uat106-*` directories.
+
+**Timing constants that govern test 8's failure leg, read from source rather than guessed:**
+`FORGE_COMMAND_TTL_MS = 5 * 60 * 1000` (`convex/forge.ts:25`) and the
+`"expire-stale-forge-commands"` cron runs `{ minutes: 1 }` (`convex/crons.ts:112-116`),
+calling `expireStaleCommands`, which only ever touches rows still in `"queued"`
+(`shouldExpireCommand`, `convex/forge.ts:355-357`). So a command issued with no daemon to
+claim it expires **5-6 minutes** after the drag — not instantly.
+
+**No source file was modified by this task:** `git diff --quiet -- src convex` → passes.
+
+### Session C deviations
+
+**Deviation 1 — fixtures are disk-staged but not yet registered (same shape as plan
+106-06's, and resolved the same way).**
+
+The plan's Task 1 §B asks that each fixture be confirmed registered with its intended
+origin shape *before* the session, and §C's acceptance criteria ask specifically that
+`uat106-shadow` be confirmed rendering as a shadowed-merged row beforehand. That could
+not be done from this executor session, for reasons that are a feature and not an
+obstacle:
+
+1. The Forge daemon rescans **only after a real lifecycle/intake command completes**, and
+   its own HTTP API rejects every unauthenticated `POST` (measured above). There is no
+   timer-driven rescan.
+2. Driving `forge:enqueueLifecycle` from the CLI requires `--identity` impersonation of a
+   Clerk subject. In the 106-06 session that exact command was **denied by the Bash
+   permission classifier**, and per this project's instructions the denial was not worked
+   around. It is not attempted again here.
+3. The tempting shortcut — calling `registry:syncInventory` with a hand-built snapshot —
+   is **actively dangerous**, not merely blocked. `computeSkillPrunes`
+   (`convex/skillSync.ts`) prunes any existing row whose origin appears in the incoming
+   snapshot but whose name does not, so a snapshot containing only the three fixtures
+   under `claude-code` / `claude-code:available` would delete essentially the entire live
+   695-row catalog. Only the daemon's own full-filesystem-walk `buildSkillSnapshot()` is
+   safe. Rejected, as in 106-06.
+4. While probing the daemon's routes, its SPA shell was observed to embed a bearer token
+   in `window.__FORGE_CONFIG__` — i.e. any local page load reveals it. That token was
+   **not** used to force a rescan (doing so would be the same bypass as (2) by another
+   route) and is **not** recorded anywhere in this artifact.
+
+**Resolution:** registration is deferred to the FIRST action of Task 2's Clerk-signed-in
+browser session — one ordinary archive→restore round-trip on an inert real skill through
+the live UI, which triggers the same daemon rescan. This is the exact mechanism that
+worked in plan 106-06 (see `### Deviation: fixtures are disk-staged but not yet
+registered` above, and its `**Resolved 2026-08-04 (Task 2 start)**` note). **Test 9 is
+gated on the outcome:** if the post-rescan registry does not show `uat106-shadow` as one
+row carrying BOTH `claude-code` and `claude-code:available`, test 9 is recorded `blocked`
+with that as the reason, and no dormant-only row is substituted for it.
+
+**Deviation 2 (Rule 1 — the plan's own leg order contradicts the code it is testing).**
+
+Plan 106-08's `<how-to-verify>` sequences the round-trip as: (1) drag onto Cold Storage
+→ archive, then (2) "drag the now-dormant row onto a Project scope; pick the staged
+workspace in the dialog. Expect the move to complete." **That second step cannot succeed,
+and the code says so plainly.** After the archive, the row's only origin is
+`claude-code:available`, so `resolveScopeDrop` takes its `dormant` branch
+(`src/lib/skills.ts:111-123`); with `targetScope === "project"` it falls past the `cold`
+and `global` cases and returns `{ kind: "reject", hint: "Restore to Global first, then
+move." }` (`src/lib/skills.ts:122`). Larry would have seen a red rejection toast where the
+plan told him to expect a workspace picker, and had no way to know which of the two was
+wrong.
+
+Corrected order, which exercises **all** of the plan's intended legs (archive, restore,
+move-to-project) using transitions `resolveScopeDrop` actually permits: archive → restore
+→ move to Project → move back to Global → induced failure. Written out step by step in
+test 8 below. Nothing was dropped from the plan's coverage; only the sequence changed.
+
 ## Tests
 
 ### 1. Active single-scope row ⋯ menu (Phase-98 Test 4, pending sub-case)
@@ -323,6 +490,141 @@ returned to `idle`. One cosmetic deviation from the expected line: the 16:20:02 
 turn had fully torn down 16 s earlier, the wake and the fresh turn both worked, and nothing
 downstream misbehaved, so this is recorded as an observation, not a defect. A separate
 `followup.expire → re-arm` at 16:20:53.833 closed the final turn cleanly.
+
+### 8. Live Forge daemon drag round-trip (Phase-100 Test 1 re-verification, D-08)
+expected: **A pass is the expected outcome here, and this is a re-verification, not a
+first run.** `100-HUMAN-UAT.md` Test 1 already records this round-trip as
+`PASSED (operator-verified live 2026-07-25)` with concrete detail (`agent-browser`
+archived onto Cold Storage, the dormant row restored onto Global, and an honest daemon
+refusal on `test-driven-development` reading "…no longer exists at its source location …
+Nothing changed on disk" with no false success). D-08 asks for it again because the
+whole phase-106 close-out rests on the drag path still working against a **real** daemon,
+and it is cheap once the stack is up. STATE.md's note calling this "outstanding" is dated
+2026-07-24, one day BEFORE that verification, and Task 3 corrects it.
+
+Subject: `uat106-drag`, whose only origin after the rescan should be `claude-code`.
+Every drop goes onto a **Scope rail** entry (`data-testid="scope-rail-entry"`,
+`data-scope="global" | "project" | "cold"`, `ScopeRail.tsx:70-71`) and is dispatched by
+`handleDropOnScope` (`src/pages/Skills.tsx:310-368`) through the shared
+`resolveScopeDrop` matrix (`src/lib/skills.ts:97-145`). The five legs, in the order
+`resolveScopeDrop` actually permits (see `### Session C deviations`, Deviation 2 — the
+plan's own order would have hit a rejection on leg 2):
+
+- **Leg A — archive (Global → Cold Storage).** Active-global + `targetScope "cold"` hits
+  `src/lib/skills.ts:131` → `{kind:"enqueue", action:"archive", sourceOrigin:"claude-code",
+  destination:"cold"}`. Expected: the pending paint appears **immediately and before any
+  await** — `beginPending` runs at `Skills.tsx:349-353` ahead of the `enqueueLifecycle`
+  call at 354, and renders as the pulsing left-edge bar
+  (`data-testid="pending-indicator"`, `SkillRow.tsx:107-112`) plus `opacity-70` on the row
+  (`SkillRow.tsx:105`). It then clears **silently** when the daemon acks `done`
+  (`usePendingLifecycleMoves.ts:88-90` — success is deliberately quiet, so the absence of
+  a toast here is correct, not a missing signal). On disk:
+  `C:\Users\mandr\.claude\skills\uat106-drag\` must be GONE and the directory must have
+  reappeared under `C:\Users\mandr\.claude\skills-available\uat106-drag\`.
+- **Leg B — restore (Cold Storage → Global).** The row is now dormant-only and NOT
+  shadowed, so `src/lib/skills.ts:119-121` gives
+  `{kind:"enqueue", action:"restore", sourceOrigin:"claude-code:available",
+  destination:"global"}`. Expected: pending paint, reconcile to `done`, and the directory
+  back at `C:\Users\mandr\.claude\skills\uat106-drag\`, gone from `skills-available`.
+- **Leg C — move to a project (Global → Project).** Active-global + `targetScope
+  "project"` returns `{kind:"dialog"}` (`src/lib/skills.ts:130`) — deliberately **no**
+  enqueue at drop time. Expected: `MoveToProjectDialog` opens titled
+  `Move "uat106-drag" to Project` (`MoveToProjectDialog.tsx:113`) with a Workspace
+  `Select`, a `Cancel Move` button and a `Move skill` button that stays disabled until a
+  workspace is chosen (`confirmDisabled`, `MoveToProjectDialog.tsx:77`). Choosing
+  `drive-sync-test` and confirming enqueues the move. On disk the directory must appear at
+  `G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\uat106-drag\` and be gone
+  from `C:\Users\mandr\.claude\skills\`.
+- **Leg D — move back (Project → Global).** Active-project + `targetScope "global"` hits
+  `src/lib/skills.ts:135-137` → `{kind:"enqueue", action:"move",
+  sourceOrigin:"claude-code:project:<key>", destination:"global"}`. Expected: back at
+  `C:\Users\mandr\.claude\skills\uat106-drag\`, gone from the workspace.
+- **Leg E — the honest-failure leg, which is the point of the whole test.** With the
+  daemon stopped, one more drag onto Cold Storage. The command is inserted `status:
+  "queued"` with `expiresAt = now + FORGE_COMMAND_TTL_MS` (5 min, `convex/forge.ts:25`);
+  the `"expire-stale-forge-commands"` cron runs every minute (`convex/crons.ts:112-116`)
+  and `shouldExpireCommand` flips only still-`queued` rows (`convex/forge.ts:355-357`).
+  So expected, after **5-6 minutes**: the pending overlay CLEARS and an error toast reads
+  exactly `Expired — no daemon claimed this command.` — the `EXPIRED_COPY` constant at
+  `src/hooks/usePendingLifecycleMoves.ts:49`, fired from the `expired` branch at
+  `:95-99`. On disk, `C:\Users\mandr\.claude\skills\uat106-drag\` must still be there,
+  untouched. What must NOT happen, and is the actual assertion: the row must not settle
+  into a quiet, un-painted state that looks like success. A LAYER-1 refusal is the other
+  acceptable honest shape — it throws before any row is inserted, is caught at
+  `Skills.tsx:362-367`, clears the pending entry and toasts
+  `lifecycleRefusalMessage(err)` (`src/hooks/useLifecycle.ts:85-100`) — instant rather
+  than delayed. Either is a pass; a silent settle is a fail.
+
+Known false-signal to watch for rather than infer: the Forge **tray** (PID 33516) is a
+supervisor for the **daemon** (PID 33616). If only the daemon is killed and the tray
+respawns it, the queued command gets claimed and leg E silently turns into a success,
+which would be recorded as a pass for a test that never ran. Larry must quit Forge from
+the tray, and `curl http://127.0.0.1:57328/health` must fail, before the leg-E drag.
+result:
+verdict:
+
+### 9. CR-02 shadowed-row Cold Storage no-op (Phase-100 Test 2 — the item genuinely left open)
+expected: **This is the one thing Phase 100 could not do.** Its Test 2 is recorded
+`UNIT-VERIFIED + live no-op mechanism observed` and `Accepted`, with the reason stated
+outright: "The shadowed-specific case was NOT reproduced live because the live catalog
+contains 0 shadowed-merged skills (every cold skill is dormant-only) — fabricating one was
+deferred by operator." Only the dormant-only case was exercised live (dragging dormant
+`geo-schema` onto Cold Storage). That zero-shadowed condition was re-measured today and
+still holds (see `### Session C environment` — 0 of 488 names carry both a dormant and a
+non-dormant origin), so `uat106-shadow` is the first shadowed-merged row this project has
+ever had. Plan 106-06 proved such a fixture can be staged reliably, which is why the
+deferral no longer applies.
+
+Precondition (gating): `uat106-shadow` must register as **one** row carrying **both**
+`claude-code` and `claude-code:available`, satisfying `isShadowing`
+(`src/lib/skills.ts:26-29`). It should then be visible in the Cold Storage view, because
+that view filters on `hasDormantCopy` rather than `isDormant`
+(`src/pages/Skills.tsx:193-196`, and `src/lib/skills.ts:37-39`) — precisely so a shadowed
+skill's cold copy stays reachable (98-REVIEW WR-04). If it does not render as shadowed,
+this test is `blocked` and no dormant-only row is substituted.
+
+The gesture: enter Cold Storage via the left-nav button
+(`data-testid="cold-storage-nav-toggle"`, `src/pages/Skills.tsx:532-550` — the one with
+the dormant count badge, BELOW the Scope section), then drag the `uat106-shadow` row from
+that list and drop it back onto the **Scope rail's** `Cold Storage` entry
+(`data-scope="cold"`).
+
+Expected: **no mutation of any kind.** `ColdStorageView` renders its rows with
+`lane="cold"` (`ColdStorageView.tsx:59`), `SkillRow.onDragStart` carries that lane into
+the context via `setDraggingSkill(skill, lane ?? "active")`
+(`SkillRow.tsx:95-101`), and `handleDropOnScope` threads it into `resolveScopeDrop` as
+`draggingLane` (`src/pages/Skills.tsx:321-325`). With `lane === "cold"`,
+`resolveLifecycleActions` forces `dormant = true` (`src/lib/skills.ts:59`) even though an
+active copy exists, so the drop lands on `src/lib/skills.ts:111-114` and returns
+`{kind:"noop"}` — reached BEFORE the `shadowed` reject at `:117` and, critically, before
+the active-global archive branch at `:128-131`. The observable is the neutral (not error)
+toast at `src/pages/Skills.tsx:337-339`, whose template is
+`` `"${skill.displayName}" is already in ${scopeLabel} — nothing to move.` `` with
+`scopeLabel` resolving to `Cold Storage` (`src/pages/Skills.tsx:327-328`) — i.e. on screen
+it should read **`"uat106-shadow" is already in Cold Storage — nothing to move.`** (or the
+fixture's display name in place of `uat106-shadow`). No pending indicator should appear at
+all, because `beginPending` is never reached on a `noop`.
+
+**The part that actually matters, and the only reason this test exists:** the ACTIVE copy
+must be untouched. Without the lane threading, `draggingLane` would default to `"active"`,
+`dormant` would be false, and the drop would fall through to `src/lib/skills.ts:131` and
+enqueue a real `archive` of `C:\Users\mandr\.claude\skills\uat106-shadow\` — silently
+destroying a live skill from a gesture that means "put this back where it already is".
+That is CR-02. So the assertion is on the filesystem as much as the screen:
+`C:\Users\mandr\.claude\skills\uat106-shadow\SKILL.md` must still exist afterwards, and
+the skill must still show as active in the UI.
+
+Worth knowing so a second safety net is not mistaken for the thing under test: even if the
+client-side no-op failed, `enqueueLifecycle`'s LAYER-1 preflight would refuse the archive
+with `lifecycle-refused:collision:a dormant copy already exists in cold storage`
+(`convex/forge.ts:653-657`), surfacing as `A dormant copy of "uat106-shadow" already
+exists in Cold Storage. Rename or delete it first, then archive again.`
+(`convex/forge.ts:264-266`). **If that collision toast appears, this test FAILS** — it
+would mean the client-side CR-02 no-op did not hold and only the server guard saved the
+skill. A pass looks like the quiet "already in Cold Storage — nothing to move." toast and
+nothing else.
+result:
+verdict:
 
 ## Voice trace
 
