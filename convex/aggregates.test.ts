@@ -17,7 +17,14 @@ vi.mock("./toolPolicyAlertEval", async (importOriginal) => {
   return { ...actual, evaluateToolPolicyAlerts: vi.fn(actual.evaluateToolPolicyAlerts) };
 });
 
-import { computeHourly, backfillTokenSplit, costByGoalPeriod, llmByGoal } from "./aggregates";
+import {
+  computeHourly,
+  backfillTokenSplit,
+  costByGoalPeriod,
+  llmByGoal,
+  eventCountsByPeriod,
+  rollupDaily,
+} from "./aggregates";
 import { evaluateBudgets } from "./costBudgetEval";
 import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
 
@@ -1221,6 +1228,112 @@ describe("aggregates", () => {
 
       vi.mocked(evaluateBudgets).mockClear();
       vi.mocked(evaluateToolPolicyAlerts).mockClear();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Phase 107 Plan 02 (OCC-01) — multi-shard summing guards that call the REAL
+  // exported eventCountsByPeriod/rollupDaily handlers via `._handler`, never a
+  // re-implementation of the grouping loop (that anti-pattern is exactly what
+  // the two pre-existing tests above at "eventCountsByPeriod groups by
+  // event_type" and "sums hourly rows into daily by metric_type+dimensions"
+  // do — they pass unconditionally regardless of what production does, so
+  // they are NOT the shard-safety evidence; these are). D-01/D-04 of
+  // 107-CONTEXT.md: `shard` is an optional top-level field, never part of
+  // `dimensions`, so grouping by dimensions collapses shard rows correctly.
+  // Every fixture includes at least one row with NO `shard` key, proving the
+  // pre-existing unsharded rows keep summing correctly (D-04).
+  // -------------------------------------------------------------------------
+  describe("shard-spanning reads", () => {
+    test("eventCountsByPeriod sums an event type across shards including a legacy unsharded row", async () => {
+      const hourStart = Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
+      const { ctx } = makeAggregatesCtx({
+        aggregates: [
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 10, dimensions: { event_type: "tool_use" } }, // no shard (legacy)
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 4, dimensions: { event_type: "tool_use" }, shard: 0 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 3, dimensions: { event_type: "tool_use" }, shard: 2 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 1, dimensions: { event_type: "tool_use" }, shard: 7 },
+        ],
+      });
+
+      const result = await (eventCountsByPeriod as any)._handler(ctx, { period: "hourly", lookbackDays: 1 });
+
+      expect(result.tool_use).toBe(18); // 10 + 4 + 3 + 1
+    });
+
+    test("eventCountsByPeriod keeps event types separate while summing each type's shards", async () => {
+      const hourStart = Math.floor(Date.now() / 1000 / 3600) * 3600 - 3600;
+      const { ctx } = makeAggregatesCtx({
+        aggregates: [
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 10, dimensions: { event_type: "tool_use" } }, // no shard (legacy)
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 4, dimensions: { event_type: "tool_use" }, shard: 0 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 3, dimensions: { event_type: "tool_use" }, shard: 2 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 1, dimensions: { event_type: "tool_use" }, shard: 7 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 5, dimensions: { event_type: "llm_call" }, shard: 1 },
+          { metric_type: "events", period: "hourly", bucket_start: hourStart, value: 6, dimensions: { event_type: "llm_call" }, shard: 4 },
+        ],
+      });
+
+      const result = await (eventCountsByPeriod as any)._handler(ctx, { period: "hourly", lookbackDays: 1 });
+
+      expect(result.tool_use).toBe(18);
+      expect(result.llm_call).toBe(11);
+      expect(Object.keys(result)).toHaveLength(2);
+    });
+
+    test("rollupDaily collapses shard rows into one daily row per dimension key", async () => {
+      const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+      const { ctx, tables, patchCalls, deleteCalls } = makeAggregatesCtx({
+        aggregates: [
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 3600, value: 7, dimensions: { event_type: "tool_use" } }, // no shard (legacy)
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 3600, value: 2, dimensions: { event_type: "tool_use" }, shard: 0 },
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 7200, value: 1, dimensions: { event_type: "tool_use" }, shard: 5 },
+          { metric_type: "sankey_edge", period: "hourly", bucket_start: dayStart + 3600, value: 4, dimensions: { source: "Tool Use", target: "Read" }, shard: 3 },
+          { metric_type: "sankey_edge", period: "hourly", bucket_start: dayStart + 7200, value: 5, dimensions: { source: "Tool Use", target: "Read" }, shard: 6 },
+        ],
+      });
+
+      await (rollupDaily as any)._handler(ctx);
+
+      const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
+      expect(dailyRows).toHaveLength(2);
+      const eventsDaily = dailyRows.find((r) => r.metric_type === "events");
+      const sankeyDaily = dailyRows.find((r) => r.metric_type === "sankey_edge");
+      expect(eventsDaily?.value).toBe(10); // 7 + 2 + 1
+      expect(sankeyDaily?.value).toBe(9); // 4 + 5
+      expect(dailyRows.every((r) => !("shard" in r))).toBe(true);
+      expect(patchCalls).toHaveLength(0);
+      expect(deleteCalls).toHaveLength(0);
+    });
+
+    test("rollupDaily idempotency guard still holds for sharded hourly rows", async () => {
+      const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+      const preSeededDaily = {
+        metric_type: "events",
+        period: "daily",
+        bucket_start: dayStart,
+        value: 999, // deliberately different from what a fresh sum would compute
+        dimensions: { event_type: "tool_use" },
+      };
+      const { ctx, tables } = makeAggregatesCtx({
+        aggregates: [
+          preSeededDaily,
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 3600, value: 7, dimensions: { event_type: "tool_use" } }, // no shard (legacy)
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 3600, value: 2, dimensions: { event_type: "tool_use" }, shard: 0 },
+          { metric_type: "events", period: "hourly", bucket_start: dayStart + 7200, value: 1, dimensions: { event_type: "tool_use" }, shard: 5 },
+          { metric_type: "sankey_edge", period: "hourly", bucket_start: dayStart + 3600, value: 4, dimensions: { source: "Tool Use", target: "Read" }, shard: 3 },
+          { metric_type: "sankey_edge", period: "hourly", bucket_start: dayStart + 7200, value: 5, dimensions: { source: "Tool Use", target: "Read" }, shard: 6 },
+        ],
+      });
+
+      await (rollupDaily as any)._handler(ctx);
+
+      const eventsDailyRows = tables.aggregates.filter((r) => r.period === "daily" && r.metric_type === "events");
+      const sankeyDailyRows = tables.aggregates.filter((r) => r.period === "daily" && r.metric_type === "sankey_edge");
+      expect(eventsDailyRows).toHaveLength(1);
+      expect(eventsDailyRows[0].value).toBe(999); // unchanged — not re-summed
+      expect(sankeyDailyRows).toHaveLength(1); // still inserted
+      expect(sankeyDailyRows[0].value).toBe(9);
     });
   });
 });
