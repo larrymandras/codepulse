@@ -150,6 +150,11 @@ const CONVERTED_ROUTES: Array<{
   { path: '/ideation', fallback: 'Loading Ideation...', heading: 'Ideation' },
 ];
 
+// Each case really does transform and import a whole page tree on demand, which
+// under a loaded full-suite run comfortably exceeds testing-library's 1s default
+// wait. The window is widened; the assertion itself is unchanged.
+const LAZY_ROUTE_WAIT_MS = 20_000;
+
 describe('App lazy routes (Phase 106 Plan 04, DEBT-03)', () => {
   it.each(CONVERTED_ROUTES)(
     'resolves $path past its lazy boundary and renders the page',
@@ -157,11 +162,16 @@ describe('App lazy routes (Phase 106 Plan 04, DEBT-03)', () => {
       window.history.pushState({}, '', path);
       render(<App />);
       expect(
-        await screen.findByRole('heading', { level: 1, name: heading }),
+        await screen.findByRole(
+          'heading',
+          { level: 1, name: heading },
+          { timeout: LAZY_ROUTE_WAIT_MS },
+        ),
       ).toBeInTheDocument();
       // A boundary that resolved is a boundary that is no longer showing.
       expect(screen.queryByText(fallback)).not.toBeInTheDocument();
     },
+    LAZY_ROUTE_WAIT_MS + 5_000,
   );
 });
 
@@ -177,23 +187,31 @@ describe('App smoke test', () => {
     expect(container.innerHTML.length).toBeGreaterThan(0);
     // Dashboard is lazy now; wait it out so the assertion above cannot be
     // satisfied by a Suspense fallback alone.
-    await waitFor(() =>
-      expect(screen.queryByText('Loading Dashboard...')).not.toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(
+          screen.queryByText('Loading Dashboard...'),
+        ).not.toBeInTheDocument(),
+      { timeout: LAZY_ROUTE_WAIT_MS },
     );
     expect(container.innerHTML.length).toBeGreaterThan(0);
-  });
+  }, LAZY_ROUTE_WAIT_MS + 5_000);
 
   it('still renders the Dashboard page at /', async () => {
     render(<App />);
-    await waitFor(() =>
-      expect(screen.queryByText('Loading Dashboard...')).not.toBeInTheDocument(),
-    );
     // The page's own <h1> -- the sidebar's "Dashboard" nav link is an anchor,
     // so a heading query cannot be satisfied by the app shell alone.
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+      await screen.findByRole(
+        'heading',
+        { level: 1, name: 'Dashboard' },
+        { timeout: LAZY_ROUTE_WAIT_MS },
+      ),
     ).toBeInTheDocument();
-  });
+    expect(
+      screen.queryByText('Loading Dashboard...'),
+    ).not.toBeInTheDocument();
+  }, LAZY_ROUTE_WAIT_MS + 5_000);
 });
 
 describe('App source shape (DEBT-03 regression guard)', () => {

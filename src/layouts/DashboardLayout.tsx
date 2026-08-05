@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { NavLink, Outlet } from "react-router";
 import { useConvexConnectionState } from "convex/react";
 import AlertBanner from "../components/AlertBanner";
@@ -18,7 +18,11 @@ import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { BrainHeaderBadge } from "../components/brains/BrainHeaderBadge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import AvatarUploader from "../components/AvatarUploader";
+// Phase 106 Plan 04 (DEBT-03): AvatarUploader pulls react-easy-crop (36,362
+// bytes) and only ever renders inside the avatar dialog below, which is closed
+// on every page load. A static import here put the cropper in the entry chunk
+// for every visitor. Module-level lazy declaration, per CodeVaultGraph.tsx.
+const AvatarUploader = lazy(() => import("../components/AvatarUploader"));
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
@@ -306,10 +310,12 @@ function SidebarContent({
             <DialogTitle className="text-primary font-mono uppercase tracking-widest">Update Operator Avatar</DialogTitle>
           </DialogHeader>
           <div className="mt-4">
-            <AvatarUploader 
-              onUpload={handleAvatarUpload} 
-              onCancel={() => setIsAvatarUploadOpen(false)} 
-            />
+            <Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Avatar Uploader...</div>}>
+              <AvatarUploader
+                onUpload={handleAvatarUpload}
+                onCancel={() => setIsAvatarUploadOpen(false)}
+              />
+            </Suspense>
           </div>
         </DialogContent>
       </Dialog>

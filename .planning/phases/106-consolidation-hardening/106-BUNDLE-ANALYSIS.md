@@ -174,3 +174,204 @@ Listed in descending estimated-byte order. None implemented in this plan.
 ## Next
 
 Plan 106-04 (remediation) should treat the entry chunk's static-import pages (#2) as the lowest-risk, highest-confidence win (measured bytes, established `lazy()` pattern already used by 27 sibling pages in the same file, zero UX tradeoff since those pages are not the landing route), the `refractor`/Prism full-bundle issue (#1) as the second target (measured, well-evidenced, but requires picking a language allowlist), and the `Dashboard`/`@xyflow` lazy conversion (#3) as a discretionary call given its landing-page loading-spinner tradeoff.
+
+---
+
+## After remediation
+
+**Measured:** 2026-08-05
+**Reproduction command:** `ANALYZE_BUNDLE=1 npm run build`, then read `dist/chunk-composition.json`.
+
+Every figure in this section is `renderedBytes` / `renderedLength` taken from a
+`chunk-composition.json` run — never from eye-reading Vite's kB column, which
+rounds and disagrees with the JSON in the third significant figure.
+
+### Measurement provenance
+
+The `## Baseline` section above was written by plan 106-02 against commit
+`b0b905b3`. Its raw JSON was not retained, so the before-numbers here were
+**re-measured** by checking out the pre-plan-106-04 tree (`1c26a69a`) for
+`src/App.tsx` and `src/lib/audioEngine.ts`, rebuilding, and saving that run's
+`chunk-composition.json`. That reproduction gives the entry chunk as **2,042,353
+bytes** against 106-02's recorded **2,042,261** — a +92-byte (0.005%) drift from
+the four commits that landed between the two measurements (Phase 106 plan 05 and
+the 188-14 command-strip change). The re-measured figure is used throughout,
+because it is the only before-number that shares a build with the after-numbers.
+
+Three builds were taken, so the two deferrals can be attributed separately
+rather than jointly:
+
+| Build | Tree | Entry chunk `renderedBytes` | Delta vs. baseline |
+|---|---|---|---|
+| Baseline | `1c26a69a` | 2,042,353 | — |
+| After Task 1 (page routes lazy) | `127a0291` | 837,729 | −1,204,624 (−59.0%) |
+| After Task 2 (synthesis library deferred) | `ca52b923` | 590,788 | −1,451,565 (−71.1%) |
+| After Task 3 (`AvatarUploader` deferred) | final | **563,616** | **−1,478,737 (−72.4%)** |
+
+The Task-1 build also settles a question the baseline report could not: its entry
+chunk still contains `node_modules/tone/…` modules, which proves the synthesis
+library really was in the entry chunk at baseline. The baseline report never
+showed this, because tone's modules fell outside the plugin's 30-module cap and
+sat in the entry chunk's 1,560-module uncaptured tail.
+
+### 1. Before / after — every baseline chunk over 500 kB, plus the entry chunk
+
+| Chunk | Baseline bytes | Now bytes | Delta bytes | Delta % |
+|---|---|---|---|---|
+| `index-*.js` (**entry**) | 2,042,353 | 563,616 | −1,478,737 | **−72.4%** |
+| `react-force-graph-3d-*.js` | 1,293,892 | 1,293,907 | +15 | +0.0% |
+| `useSpeechRecognition-*.js` | 635,332 | 635,483 | +151 | +0.0% |
+
+`WarRoom-*.js` was under the threshold at baseline (484,990) and still is
+(485,300, +0.06%); per D-09 no plan was spent on it. The two sub-0.1% movements
+above are incidental re-minification noise from neighbouring module boundaries,
+not remediation — neither chunk was touched.
+
+### 2. Where the bytes went — new chunks
+
+**The relocated bytes are relocated, not deleted.** Across the whole build,
+total emitted JS went from 6,647,495 bytes in 111 chunks to 6,766,860 bytes in
+188 chunks — i.e. roughly 119 kB *more* total, because splitting adds per-chunk
+boilerplate and duplicates a little shared glue. A user who visits every single
+route therefore downloads slightly more than before, not less. What changed is
+**who pays**: a visitor who opens one route no longer downloads the other
+thirteen pages, the ambient-audio synthesis stack, and an image cropper they
+never open. No reader should take the −72.4% entry delta as a net reduction in
+total download across all routes; it is a reduction in what is downloaded
+*unconditionally*.
+
+Fourteen new page chunks, one per converted route (all `isDynamicEntry: true`):
+
+| Page chunk | Bytes | | Page chunk | Bytes |
+|---|---|---|---|---|
+| `Dashboard-*.js` | 74,606 | | `Settings-*.js` | 66,617 |
+| `Alerts-*.js` | 49,168 | | `Capabilities-*.js` | 42,444 |
+| `SessionDetail-*.js` | 40,509 | | `Infrastructure-*.js` | 33,250 |
+| `Memory-*.js` | 29,273 | | `Automation-*.js` | 23,779 |
+| `Security-*.js` | 18,271 | | `Executions-*.js` | 14,255 |
+| `SelfHealing-*.js` | 12,065 | | `BuildProgress-*.js` | 9,591 |
+| `Ideation-*.js` | 7,602 | | `Briefings-*.js` | 3,389 |
+
+Sum of the fourteen page chunks: **424,819 bytes**.
+
+Other new chunks pulled out behind those pages and the two sub-component
+boundaries:
+
+| Chunk | Bytes | `isDynamicEntry` | What it is / who fetches it |
+|---|---|---|---|
+| `esm-*.js` (synthesis library) | 340,276 | `true` | Tone.js + `standardized-audio-context`. Fetched only by `loadTone()` at audio-init time — never on page load. |
+| `CartesianChart-*.js` | 313,390 | `false` | Recharts' cartesian chart graph, now shared between the chart-bearing page chunks instead of riding in the entry chunk. |
+| `style-*.js` | 123,397 | `false` | Shared style/token graph split out behind the page chunks. |
+| `dagre-*.js` | 80,254 | `false` | Graph layout, reached from `Dashboard`'s topology panel. |
+| `prop-types-*.js` | 75,462 | `false` | Transitive dep of the chart stack. |
+| `sortable.esm-*.js` | 48,493 | `false` | `@dnd-kit` — confirms baseline candidate #4: it left the entry chunk as a side effect of lazying `Settings`. |
+| `AvatarUploader-*.js` | 27,311 | `false` | `react-easy-crop` (36,426 pre-min) + the uploader. Fetched only when the avatar dialog is opened. |
+| `select-*.js` | 15,324 | `false` | Part of the Radix select graph now shared across page chunks. |
+
+### 3. Residual entry composition — every module at or above 30,000 bytes
+
+Entry chunk is now `assets/index-tkqab9Gx.js`, **563,616 bytes**, 30 captured
+modules plus a 182-module / 238,239-byte tail (down from 1,560 modules /
+2,670,284 bytes at baseline).
+
+| Pre-min bytes | Module | Deferrable? |
+|---|---|---|
+| 452,138 | `react-dom/cjs/react-dom-client.production.js` | **No.** The React DOM runtime. Nothing can render, including a Suspense fallback, until it has executed. |
+| 53,145 | `@clerk/clerk-react/dist/index.mjs` | **No.** `AuthGuard` (`src/App.tsx:3`, mounted at `src/App.tsx:110`) wraps the entire `<Routes>` tree in `SignedIn`/`SignedOut`. The auth decision has to resolve before any route may render, so deferring it would only move the wait, not remove it. |
+| 51,597 | `sonner/dist/index.mjs` | **No.** Three app-shell headless listeners mounted *outside* the route outlet import `toast` directly — `ProactiveAlertListener.tsx:33`, `inbox/FocusExitDigest.tsx:23`, `hooks/useNotificationToasts.ts:3` — alongside the `Toaster` host at `layouts/DashboardLayout.tsx:12`. Any of them can fire before a route has mounted, so a lazy boundary would have to resolve on the critical path anyway. |
+| 42,988 | `@radix-ui/react-select/dist/index.mjs` | **No.** `ThemeSwitcher` (`layouts/DashboardLayout.tsx:9`, rendered at `:603`) is an always-visible header control built on the Radix select primitive. Lazying a control that is on screen at first paint trades bytes for a visible layout flash. |
+| 32,587 | `@clerk/clerk-react/dist/chunk-THNCS7QR.mjs` | **No.** Same reason as the Clerk entry above; this is its internal split chunk. |
+
+Everything at or above 30,000 bytes in the entry chunk is therefore accounted
+for, and each has a concrete before-first-paint reason. The floor is: the React
+runtime, the Clerk auth gate, the app-wide toast host, and the header's own
+controls.
+
+`react-easy-crop` (36,362 bytes) was on this list before Task 3 and is not any
+more — see the accepted-exceptions discussion below.
+
+### 4. The shared voice-stack chunk — resolution
+
+`assets/useSpeechRecognition-BXp7LXTE.js`, 635,483 bytes post-min
+(824,921 bytes pre-min across 337 modules).
+
+**It is not reachable from the entry chunk.** Asserted from the composition JSON,
+not inferred: no module in the entry chunk has an id matching
+`useSpeechRecognition`, `ChatInput`, `refractor`, or `react-syntax-highlighter`.
+Both consumer routes are lazy — `const Chat = lazy(() => import("./pages/Chat"))`
+at `src/App.tsx:44` and `const InsightsChat = lazy(() => import("./pages/InsightsChat"))`
+at `src/App.tsx:53` — and `src/components/ChatInput.tsx`, the only non-test
+consumer of `useSpeechRecognition`, is imported solely from those two pages
+(`src/pages/InsightsChat.tsx:14`). Rollup created this as a **shared chunk
+between two lazy routes**, downloaded only by a visitor who opens `/chat` or
+`/insights`. That is a different class of problem from the entry chunk, and
+D-09's framing of it as "the real actionable target" was measuring size, not
+load timing.
+
+**What actually occupies the 635 kB:** not the voice stack. Of the 283,495 bytes
+in the 30 captured modules, **269,643 (95%)** are `refractor` language grammars
+and `react-syntax-highlighter` internals; the 307-module, 541,426-byte tail is
+dominated by more `refractor/lang/*.js`. Top contributors:
+
+| Pre-min bytes | Module |
+|---|---|
+| 33,668 | `refractor/lang/sqf.js` |
+| 14,568 | `refractor/lang/factor.js` |
+| 14,371 | `refractor/lang/vim.js` |
+| 14,276 | `react-syntax-highlighter/dist/esm/styles/prism/one-dark.js` |
+| 13,706 | `react-syntax-highlighter/dist/esm/highlight.js` |
+| 10,734 | `refractor/lang/cmake.js` |
+| 10,385 | `refractor/lang/csharp.js` |
+| 10,340 | `refractor/lang/opencl.js` |
+| 10,005 | `refractor/lang/sas.js` |
+| 9,055 | `refractor/lang/autohotkey.js` |
+
+**Resolution: accepted exception, with a named open opportunity.** No code change
+was made here, for two stated reasons rather than one:
+
+1. The plan's action branch is scoped to "a genuinely deferrable heavy dependency
+   … only needed once voice is engaged". The weight is not voice-related at all —
+   it is code-block syntax highlighting, needed whenever a transcript contains a
+   fenced code block. Applying a lazy boundary "for voice" would be a fabricated
+   split.
+2. The plan's action branch also assumes "its single import site". There are two:
+   `src/components/blocks/CodeBlock.tsx:11` and `src/components/ChatBubble.tsx:23`,
+   both doing `import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"`.
+
+The **real** fix remains baseline remediation candidate #1: switch both sites to
+`react-syntax-highlighter/dist/esm/prism-light` and register an explicit language
+allowlist, removing the ~774,578 bytes of grammars for languages this dashboard
+never renders (`sqf`, `factor`, `vim`, `cmake`, `opencl`, `sas`, `autohotkey`, …).
+That is a behavioural change — it decides which languages stop highlighting — so
+it needs an allowlist decision, and it is not an entry-chunk defect. It is left
+open and unclaimed by this plan, not silently dropped.
+
+### 5. Accepted exceptions — every chunk still over 512,000 bytes
+
+| Chunk | Bytes | Laziness proof (`file:line`) | Top contributor | Why irreducible here |
+|---|---|---|---|---|
+| `react-force-graph-3d-*.js` | 1,293,907 | `src/components/graph/CodeVaultGraph.tsx:67` (`const LazyForceGraph3D = lazy(() => …`), `src/components/skills/vault/SkillVaultView.tsx:28` (`const SkillVaultScene = lazy(() => import("./SkillVaultScene"))`) | `three/build/three.webgpu.js` (1,040,274 pre-min) | Both import sites are behind opt-in 3D-mode toggles; the chunk is fetched only when a user switches into 3D. It is essentially 100% three.js — there is no non-3D subset to split off. D-09 already accepts this. |
+| `useSpeechRecognition-*.js` | 635,483 | `src/App.tsx:44` (`const Chat = lazy(…)`), `src/App.tsx:53` (`const InsightsChat = lazy(…)`) | `refractor` language grammars (95% of captured bytes) | Shared chunk between two lazy routes, not entry-reachable (proved from the composition JSON above). Reducible in principle via the Prism-light allowlist, but that is a behavioural change out of this plan's scope — see §4. |
+| `index-*.js` (**entry**) | 563,616 | n/a — this is the entry chunk | `react-dom` (452,138 pre-min) | Every remaining module at or above 30,000 bytes is enumerated in §3 with a concrete before-first-paint reason. |
+
+**`build.chunkSizeWarningLimit` was not raised, and no `manualChunks` band-aid
+was added.** `grep -cE 'chunkSizeWarningLimit|manualChunks' vite.config.ts`
+returns `0`. Raising the threshold would remove the warning without removing a
+byte, and would blind the next regression — including a future re-growth of the
+entry chunk, which is the exact defect this plan just spent three tasks fixing.
+The build still prints its over-500-kB warning for the three chunks above, and
+that is the intended end state.
+
+### 6. Verdict
+
+**DEBT-03 CHUNK VERDICT: entry chunk `assets/index-tkqab9Gx.js` is 563,616 bytes — NOT under 512,000 bytes.**
+
+It is 72.4% smaller than the 2,042,353-byte baseline (−1,478,737 bytes), but it
+retains a residual of 51,616 bytes over the threshold. That residual is made of,
+in full: the React DOM runtime (452,138 pre-min), the Clerk auth gate that wraps
+every route (53,145 + 32,587), the app-wide toast host every headless listener
+publishes to (51,597), and the Radix select primitive behind the always-visible
+header theme switcher (42,988). Getting under 512,000 from here would require
+deferring something that must execute before first paint — which moves the wait
+rather than removing it — or removing a dependency outright, which is a product
+decision, not an import-shape one.
