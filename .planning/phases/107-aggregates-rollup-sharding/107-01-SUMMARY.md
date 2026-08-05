@@ -94,6 +94,10 @@ This plan produces **no live evidence**. All tests here are in-memory unit tests
 - Tests 1 and 2 in `events.test.ts` and all 6 tests in `analyticsRollup.test.ts`'s new `shard` describe block are confirmed RED for the correct reason (missing `shard` field / not-yet-implemented `incrementSankeyBuckets`/`pickShard`) — ready for plan 107-03 to turn them GREEN by landing the sharded production code (`convex/lib/aggregateShard.ts` with `AGGREGATE_SHARD_COUNT`/`pickShard`, the 4th/5th `shard` params on `incrementEventBucket`/`incrementSankeyBuckets`, and the `events.ts` `ingest` mutation drawing one shard per call)
 - No blockers. `npx tsc --noEmit` clean; `git status --porcelain convex/analyticsRollup.ts convex/events.ts convex/schema.ts convex/lib` empty (zero production files touched)
 
+## Self-Check: PASSED
+
+All created files and all 4 commit hashes verified present.
+
 ---
 *Phase: 107-aggregates-rollup-sharding*
 *Completed: 2026-08-05*
