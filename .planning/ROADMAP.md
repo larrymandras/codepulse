@@ -824,6 +824,16 @@ Plans:
 
 - [ ] 106-08-PLAN.md — DEBT-04 UAT session C: live Forge-daemon drag round-trip + the CR-02 shadowed-row no-op Phase 100 never ran; then stale-doc corrections, REQUIREMENTS.md markers, and UAT close-out
 
+### Phase 107: Aggregates Rollup Sharding
+
+**Goal:** Eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), which has caused repeated self-hosted Convex memory buildup and `events` table index-head query timeouts ("index rot") on 2026-07-30 and again 2026-08-05 — each incident only cleared by a full `convex-backend` container recreate, never root-caused.
+**Requirements**: TBD (discuss-phase to assign, likely a new OCC-0x family or DEBT-05 under `REQUIREMENTS.md`)
+**Depends on:** Phase 106 (independent, but sequenced after per milestone convention)
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 107 to break down)
+
 ---
 
 ## Progress
