@@ -286,3 +286,115 @@ plus removal), and the frontend provably reads the self-hosted backend (Correcti
 VERDICT: GO — superseding the 2026-08-04 NO-GO. Cleared on evidence, not on re-running the sweep.
 
 No secret value appears anywhere in this amendment.
+
+---
+
+## DEBT-02 — Export & verification
+
+**Session:** 2026-08-05 · Plan 106-03 · Read-only against Convex. Zero write commands issued to
+either the cloud or the self-hosted deployment.
+
+### Gate
+
+The operative verdict is the `## DEBT-02 pre-flight amendment (2026-08-05)` section above, verbatim:
+
+```
+VERDICT: GO — superseding the 2026-08-04 NO-GO. Cleared on evidence, not on re-running the sweep.
+```
+
+The 2026-08-04 `NO-GO` at line ~193 is explicitly self-marked **SUPERSEDED** and was not acted on.
+(The `VERDICT: PASS` earlier in this file belongs to DEBT-01, a different requirement.)
+
+### Pre-flight — free space on `C:`
+
+Command: `df -h /c` (Git Bash), before the export:
+
+```
+Filesystem      Size  Used Avail Use% Mounted on
+C:              931G  565G  366G  61% /c
+```
+
+**366 GB free** — above the 120 GB floor the plan requires. Cleared to start.
+
+### Export command
+
+Run from **Git Bash** (not PowerShell — PS 5.1 *deletes* a variable assigned `''` rather than
+emptying it, project memory `feedback-ps51-empty-env-var-deletes`), with both self-hosted
+variables emptied on the invocation so the CLI could not resolve to the live backend:
+
+```
+CONVEX_SELF_HOSTED_URL= CONVEX_SELF_HOSTED_ADMIN_KEY= npx convex export \
+  --deployment tidy-whale-981 \
+  --include-file-storage \
+  --path /c/convex-cloud-archive/tidy-whale-981
+```
+
+CLI version: `npx convex --version` → `1.42.1`. No package was installed; this is the
+already-present `convex@1.42.1` from `node_modules`.
+
+### Verbatim CLI output — target proof
+
+```
+- Creating snapshot export
+
+✔ Created snapshot export at timestamp 1785939855853263751
+✔ Export is available at https://dashboard.convex.dev/d/tidy-whale-981/settings/snapshot-export
+- Downloading snapshot export to C:/convex-cloud-archive/tidy-whale-981
+
+✔ Downloaded snapshot export to C:/convex-cloud-archive/tidy-whale-981
+EXIT=0
+```
+
+**Target proven from the CLI's own output.** Line 3 names the deployment explicitly —
+`dashboard.convex.dev/d/`**`tidy-whale-981`**`/settings/snapshot-export`. That is a
+`dashboard.convex.dev` *cloud* URL. It is not a tailnet host, not `127.0.0.1:3210`, not
+`convex-backend`, and not `lmofficenew.tail5bb6b3.ts.net`. No abort condition was triggered.
+
+No authentication error occurred — `npx convex login` was **not** needed and was not run. No
+API-key fallback was introduced or considered.
+
+### Timing and resulting size
+
+| Measure | Value |
+|---|---|
+| Started (UTC) | `2026-08-05T14:24:10Z` |
+| Completed (UTC) | `2026-08-05T14:30:13Z` (archive mtime `2026-08-05 10:30:13.547 -0400`) |
+| Wall clock | **~6 min 03 s** |
+| Output | a single **ZIP file** at `C:\convex-cloud-archive\tidy-whale-981`, `646,669,127` bytes |
+| `du -sh` | `617M` |
+| Free space after (`df -h /c`) | `359G` avail (`572G` used) — 7 GB consumed incl. the Task-2 extraction |
+
+### Deviation — output is a ZIP file, not a directory tree
+
+The plan's `<interfaces>` block and its automated `test -d` check both anticipated a directory
+tree. `npx convex export --path <p>` writes a **ZIP** unless `<p>` already exists as a directory;
+the given path did not exist, so the CLI produced a single extension-less ZIP at exactly that
+path. Reconciled during Task 2 (renamed to `tidy-whale-981.zip`, then extracted alongside it) —
+see § Structure below. Both forms are now on disk; nothing was re-exported.
+
+### Deviation — the archive is 617 MB, not the ~56 GB the plan budgeted
+
+`106-CONTEXT.md` D-02 describes "~56 GB pre-2026-07-15 cloud history". **That figure does not
+belong to this deployment.** It traces to the *self-hosted* Convex incident of 2026-07-17 to
+-07-22, where a full snapshot export peaked at ~56 GB of scratch on a ~1M-document DB — a
+different instance, and a transient peak rather than an archive size.
+
+The real cloud archive is **617 MB compressed / 2.0 GiB uncompressed / 602,932 rows**. A
+2%-of-expected result is exactly the shape of a truncated export, so it was **not** taken on
+faith: it is corroborated independently in Task 2 by a full-archive CRC pass, an 80-table row
+census, and an events span covering 2026-05-21 → 2026-07-15 with the newest row landing on the
+recorded freeze minute. `106-CONTEXT.md` D-02 has been annotated in place with a dated correction
+so a later reader does not mistake a complete archive for a failed one.
+
+### Convex-write check
+
+No `convex import`, `convex deploy`, `convex run`, `--replace-all`, bulk delete, or bulk patch was
+executed at any point. Every Convex command issued in this plan is read-only:
+`npx convex --version`, `npx convex --help`, `npx convex export --help`,
+`npx convex dashboard --help`, and the single `npx convex export` above. Every occurrence of the
+words `import`/`deploy`/`--replace-all` in this file is a prohibition or a citation, never an
+executed command.
+
+The archive was **not** deleted and remains on disk pending the cancel.
+
+No secret value appears anywhere in this section.
