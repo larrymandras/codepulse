@@ -92,5 +92,12 @@ export default defineConfig({
     // restarts (106-05, Tailscale laptop checklist) -- verified live via
     // `curl http://<tailnet-ip>:5173/` returning 200 from the office PC.
     host: true,
+    // `host: true` alone is not enough: Vite's DNS-rebinding guard rejects any
+    // request whose Host header is a name it doesn't recognise, so reaching the
+    // dev server over MagicDNS returned 403 "Blocked request" while the raw
+    // tailnet IP returned 200 (106-05, verified live). Allow only this machine's
+    // own tailnet name -- IP literals and localhost stay allowed by default, and
+    // no other host is granted access.
+    allowedHosts: ["lmofficenew.tail5bb6b3.ts.net"],
   },
 });
