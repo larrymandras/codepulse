@@ -1,0 +1,16 @@
+{
+  "phase": 107,
+  "phaseName": "aggregates-rollup-sharding",
+  "created": "2026-08-05T12:58:26.749Z",
+  "history": [
+    {
+      "timestamp": "2026-08-05T12:58:26.750Z",
+      "command": "discuss-phase",
+      "ready": true,
+      "missing": []
+    }
+  ],
+  "lastCheck": "2026-08-05T12:58:26.750Z",
+  "isFrontend": false,
+  "artifacts": {}
+}

@@ -804,14 +804,14 @@ Plans:
   5. All three deferred manual UAT sequences are run live and recorded: the Phase-98 Test-4 menu sub-cases, the full wake → barge-in → re-arm voice sequence, and the Phase-100 Forge-daemon drag round-trip — plus Phase 100's genuinely-open CR-02 shadowed-row no-op, and a live re-verification that the 98-05 stale-origin fix still holds (D-07 as corrected, D-08).
   6. Every stale planning claim found along the way is corrected in the session that found it, and every DEBT-0N marker in REQUIREMENTS.md is written from a cited artifact section rather than from a plan having run.
 
-**Plans:** 3/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 **Wave 1**
 
 - [x] 106-01-PLAN.md — DEBT-01 typed-api verify-and-close + DEBT-02 cross-repo cloud-Convex reference sweep (read-only, zero source changes) — DEBT-01 PASS; DEBT-02 NO-GO (real CI-workflow writer found, blocks Wave 2's 106-03), see `106-DEBT-VERIFICATION.md`
 - [x] 106-02-PLAN.md — DEBT-03 baseline: opt-in chunk-composition report plugin + measured module attribution for every chunk over 500 kB
-- [ ] 106-05-PLAN.md — DEBT-03 (D-10): laptop Tailscale checklist built from live office-PC endpoints + Larry-run verification
+- [x] 106-05-PLAN.md — DEBT-03 (D-10): laptop Tailscale checklist built from live office-PC endpoints + Larry-run verification — **D-10 SATISFIED**, 7/7 steps PASS (run 2026-08-05). Load-bearing step 5 passed: the CodePulse dashboard rendered on the laptop with LIVE data and the Sessions figure matched the office PC's at the same moment. Blocker A (Vite DNS-rebinding guard) fixed in-plan via a single-host `server.allowedHosts`; two defects recorded and deliberately not fixed — Blocker B (`VITE_ASTRIDR_WS_URL=ws://127.0.0.1:8181`, a hook-blocked `.env` edit that is Larry's) and a Clerk secure-context cookie-hashing failure on any non-localhost HTTP origin. See `106-05-SUMMARY.md`
 - [x] 106-06-PLAN.md — DEBT-04 UAT session A: Phase-98 Test-4 menu sub-cases + live re-verification of the stale project-origin fix — all 4 live tests PASS (executed out of wave order, independent of 106-03/04/05), see `106-06-SUMMARY.md`
 
 **Wave 2** *(blocked on Wave 1 completion)*
