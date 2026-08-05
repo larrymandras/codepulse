@@ -12,9 +12,6 @@ permissions:
   # accessible by integration") BEFORE it ever scans — a job error, not a secret.
   pull-requests: read
 
-env:
-  CODEPULSE_INGEST_URL: https://tidy-whale-981.convex.site
-
 jobs:
   scan:
     name: Secret Scan
@@ -64,51 +61,6 @@ jobs:
             echo "result=scan_error" >> "$GITHUB_OUTPUT"
             echo "reason=Scan ERRORED before finishing (permissions / rate-limit / network) — NOT a detected secret. No secret was found; the job failed to run gitleaks." >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Notify CodePulse Dashboard
-        if: always()
-        run: |
-          RESULT="${{ steps.classify.outputs.result }}"
-          REASON="${{ steps.classify.outputs.reason }}"
-
-          # Map the classification to a CodePulse conclusion. This is the string
-          # the Ástríðr tooling-status summary reads, so the three states must be
-          # distinguishable here, not collapsed to a single "failure".
-          case "$RESULT" in
-            secret_found) CONCLUSION="failure" ;;   # real security incident
-            scan_error)   CONCLUSION="neutral" ;;    # infra/permissions, NOT a secret
-            *)            CONCLUSION="success" ;;     # clean
-          esac
-
-          curl -sf -X POST "${CODEPULSE_INGEST_URL}/runtime-ingest" \
-            -H "Content-Type: application/json" \
-            -d "$(jq -n \
-              --arg wf "Gitleaks Secret Scan" \
-              --arg repo "codepulse" \
-              --arg status "completed" \
-              --arg conclusion "$CONCLUSION" \
-              --arg url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-              --argjson run_id "${{ github.run_id }}" \
-              --argjson ts "$(date +%s)" \
-              --arg scan_result "$RESULT" \
-              --arg detail "$REASON" \
-              '{
-                eventType: "github_workflow_run",
-                sessionId: "github-actions",
-                data: {
-                  workflowName: $wf,
-                  repo: $repo,
-                  status: $status,
-                  conclusion: $conclusion,
-                  runUrl: $url,
-                  runId: $run_id,
-                  triggeredAt: $ts,
-                  completedAt: $ts,
-                  scanResult: $scan_result,
-                  detail: $detail
-                }
-              }'
-            )" || echo "CodePulse notification failed (non-fatal)"
 
       - name: Enforce scan result
         if: always()
