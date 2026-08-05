@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Mock Clerk — AuthGuard reads VITE_CLERK_PUBLISHABLE_KEY from import.meta.env.
 // With no key set, AuthGuard renders children directly (dev mode).
@@ -16,6 +18,17 @@ vi.mock('convex/react', () => ({
   useConvexConnectionState: vi.fn(() => ({ isWebSocketConnected: true })),
   ConvexProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ConvexReactClient: vi.fn(),
+  // Phase 106 Plan 04: routes are now actually navigated to in this file, so
+  // every convex/react hook the page tree reaches has to exist. These two are
+  // the remaining exports used anywhere in src/ -- an absent one surfaces as a
+  // page-level TypeError, not as a missing-mock message.
+  usePaginatedQuery: vi.fn(() => ({
+    results: [],
+    status: 'Exhausted',
+    isLoading: false,
+    loadMore: vi.fn(),
+  })),
+  useAction: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../convex/_generated/api', () => ({
@@ -105,11 +118,129 @@ vi.mock('@xyflow/react', () => ({
 
 import App from './App';
 
+// Phase 106 Plan 04 (DEBT-03): the fourteen pages that used to be plain
+// top-level imports are now lazy routes. `heading` is the page's own <h1>,
+// which only exists once the lazy chunk has resolved and the real page has
+// mounted -- the app shell renders no <h1> of its own.
+//
+// The transient Suspense fallback is deliberately NOT asserted at runtime: in
+// vitest the dynamic import often resolves inside the act() flush that
+// render() already performs, so whether the fallback is ever committed is a
+// race against module-cache state and fails intermittently on a different
+// route each run. The boundary's existence is instead asserted deterministically
+// against the source in the "App source shape" block below.
+const CONVERTED_ROUTES: Array<{
+  path: string;
+  fallback: string;
+  heading: string;
+}> = [
+  { path: '/', fallback: 'Loading Dashboard...', heading: 'Dashboard' },
+  { path: '/sessions/abc123', fallback: 'Loading Session Detail...', heading: 'Session Detail' },
+  { path: '/capabilities', fallback: 'Loading Capabilities...', heading: 'Capabilities Registry' },
+  { path: '/alerts', fallback: 'Loading Alerts...', heading: 'Alerts' },
+  { path: '/infrastructure', fallback: 'Loading Infrastructure...', heading: 'Infrastructure' },
+  { path: '/security', fallback: 'Loading Security...', heading: 'Security Dashboard' },
+  { path: '/self-healing', fallback: 'Loading Self-Healing...', heading: 'Self-Healing' },
+  { path: '/build', fallback: 'Loading Build Progress...', heading: 'Build Progress' },
+  { path: '/settings', fallback: 'Loading Settings...', heading: 'Settings' },
+  { path: '/memory', fallback: 'Loading Memory...', heading: 'Memory' },
+  { path: '/briefings', fallback: 'Loading Briefings...', heading: 'Briefings' },
+  { path: '/automation', fallback: 'Loading Automation...', heading: 'Automation' },
+  { path: '/executions', fallback: 'Loading Executions...', heading: 'Execution History' },
+  { path: '/ideation', fallback: 'Loading Ideation...', heading: 'Ideation' },
+];
+
+describe('App lazy routes (Phase 106 Plan 04, DEBT-03)', () => {
+  it.each(CONVERTED_ROUTES)(
+    'resolves $path past its lazy boundary and renders the page',
+    async ({ path, fallback, heading }) => {
+      window.history.pushState({}, '', path);
+      render(<App />);
+      expect(
+        await screen.findByRole('heading', { level: 1, name: heading }),
+      ).toBeInTheDocument();
+      // A boundary that resolved is a boundary that is no longer showing.
+      expect(screen.queryByText(fallback)).not.toBeInTheDocument();
+    },
+  );
+});
+
 describe('App smoke test', () => {
-  it('renders without crashing', () => {
+  beforeEach(() => {
+    window.history.pushState({}, '', '/');
+  });
+
+  it('renders without crashing', async () => {
     const { container } = render(<App />);
     expect(container).toBeTruthy();
     // The app should have rendered something inside the container
     expect(container.innerHTML.length).toBeGreaterThan(0);
+    // Dashboard is lazy now; wait it out so the assertion above cannot be
+    // satisfied by a Suspense fallback alone.
+    await waitFor(() =>
+      expect(screen.queryByText('Loading Dashboard...')).not.toBeInTheDocument(),
+    );
+    expect(container.innerHTML.length).toBeGreaterThan(0);
+  });
+
+  it('still renders the Dashboard page at /', async () => {
+    render(<App />);
+    await waitFor(() =>
+      expect(screen.queryByText('Loading Dashboard...')).not.toBeInTheDocument(),
+    );
+    // The page's own <h1> -- the sidebar's "Dashboard" nav link is an anchor,
+    // so a heading query cannot be satisfied by the app shell alone.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Dashboard' }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('App source shape (DEBT-03 regression guard)', () => {
+  // Read from disk, not via import: this test guards the *source shape* of
+  // App.tsx, which a module import would erase.
+  const appSource = readFileSync(
+    resolve(process.cwd(), 'src/App.tsx'),
+    'utf8',
+  );
+
+  it('statically imports zero page modules', () => {
+    const staticPageImports =
+      appSource.match(/^import .+ from "\.\/pages\/.+";$/gm) ?? [];
+    expect(staticPageImports).toEqual([]);
+  });
+
+  it('wraps every converted route element in a Suspense boundary', () => {
+    // Deterministic counterpart to the runtime route tests: a lazy component
+    // rendered without a Suspense ancestor throws at runtime, and the runtime
+    // tests cannot observe the transient fallback reliably (see note above).
+    for (const { fallback } of CONVERTED_ROUTES) {
+      expect(appSource).toContain(
+        `<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">${fallback}</div>}>`,
+      );
+    }
+  });
+
+  it('declares a lazy loader for every converted route', () => {
+    for (const name of [
+      'Dashboard',
+      'SessionDetail',
+      'Capabilities',
+      'Alerts',
+      'Infrastructure',
+      'Security',
+      'SelfHealing',
+      'BuildProgress',
+      'Settings',
+      'Memory',
+      'Briefings',
+      'Automation',
+      'Executions',
+      'Ideation',
+    ]) {
+      expect(appSource).toContain(
+        `const ${name} = lazy(() => import("./pages/${name}"));`,
+      );
+    }
   });
 });

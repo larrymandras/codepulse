@@ -2,25 +2,33 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import AuthGuard from "./components/AuthGuard";
 import DashboardLayout from "./layouts/DashboardLayout";
-import Dashboard from "./pages/Dashboard";
-import SessionDetail from "./pages/SessionDetail";
-import Capabilities from "./pages/Capabilities";
-// Analytics is lazy-loaded below
-import Alerts from "./pages/Alerts";
-import Infrastructure from "./pages/Infrastructure";
-import Security from "./pages/Security";
-import SelfHealing from "./pages/SelfHealing";
-import BuildProgress from "./pages/BuildProgress";
-import Settings from "./pages/Settings";
-import Memory from "./pages/Memory";
-import Briefings from "./pages/Briefings";
-import Automation from "./pages/Automation";
-import Executions from "./pages/Executions";
-import Ideation from "./pages/Ideation";
 import { AstridrWSProvider } from "./contexts/AstridrWSContext";
 import { ProactiveAlertListener } from "./components/ProactiveAlertListener";
 import { FocusExitDigest } from "./components/inbox/FocusExitDigest";
 import { BrainsWsRegistrar } from "./components/brains/BrainsWsRegistrar";
+
+// Phase 106 Plan 04 (DEBT-03): these fourteen pages used to be plain top-level
+// imports, which pulled their whole component graphs -- Recharts, @xyflow,
+// @dnd-kit and the rest -- into the entry chunk every visitor downloads
+// regardless of which route they open. They now follow the same route-level
+// lazy convention as every other page in this file. Dashboard is included
+// deliberately: leaving the landing route eager kept its entire panel graph in
+// the entry bundle, which was the specific defect. Re-introducing a top-level
+// page import here is guarded by a source-shape test in App.test.tsx.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const SessionDetail = lazy(() => import("./pages/SessionDetail"));
+const Capabilities = lazy(() => import("./pages/Capabilities"));
+const Alerts = lazy(() => import("./pages/Alerts"));
+const Infrastructure = lazy(() => import("./pages/Infrastructure"));
+const Security = lazy(() => import("./pages/Security"));
+const SelfHealing = lazy(() => import("./pages/SelfHealing"));
+const BuildProgress = lazy(() => import("./pages/BuildProgress"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Memory = lazy(() => import("./pages/Memory"));
+const Briefings = lazy(() => import("./pages/Briefings"));
+const Automation = lazy(() => import("./pages/Automation"));
+const Executions = lazy(() => import("./pages/Executions"));
+const Ideation = lazy(() => import("./pages/Ideation"));
 
 // Lazy-load heavy pages
 const Analytics = lazy(() => import("./pages/Analytics"));
@@ -102,32 +110,32 @@ export default function App() {
         <AuthGuard>
           <Routes>
             <Route element={<DashboardLayout />}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/sessions/:id" element={<SessionDetail />} />
-              <Route path="/capabilities" element={<Capabilities />} />
+              <Route path="/" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Dashboard...</div>}><Dashboard /></Suspense>} />
+              <Route path="/sessions/:id" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Session Detail...</div>}><SessionDetail /></Suspense>} />
+              <Route path="/capabilities" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Capabilities...</div>}><Capabilities /></Suspense>} />
               <Route path="/analytics" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Analytics...</div>}><Analytics /></Suspense>} />
-              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/alerts" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Alerts...</div>}><Alerts /></Suspense>} />
               {/* Phase 93: Quality KPI pages (EVAL-03) */}
               <Route path="/quality" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><Quality /></Suspense>} />
               <Route path="/quality/:profileId" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Quality...</div>}><QualityDetail /></Suspense>} />
               {/* Phase 105: Tool & Trace Observability (OBS-01/OBS-02) */}
               <Route path="/tools" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Tools...</div>}><Tools /></Suspense>} />
-              <Route path="/infrastructure" element={<Infrastructure />} />
+              <Route path="/infrastructure" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Infrastructure...</div>}><Infrastructure /></Suspense>} />
               <Route path="/profiles" element={<Navigate to="/hr/roster" replace />} />
               <Route path="/agents" element={<Navigate to="/hr/roster" replace />} />
-              <Route path="/security" element={<Security />} />
-              <Route path="/ideation" element={<Ideation />} />
-              <Route path="/self-healing" element={<SelfHealing />} />
-              <Route path="/build" element={<BuildProgress />} />
+              <Route path="/security" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Security...</div>}><Security /></Suspense>} />
+              <Route path="/ideation" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Ideation...</div>}><Ideation /></Suspense>} />
+              <Route path="/self-healing" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Self-Healing...</div>}><SelfHealing /></Suspense>} />
+              <Route path="/build" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Build Progress...</div>}><BuildProgress /></Suspense>} />
               {/* Phase 79: Forge job viewer */}
               <Route path="/forge" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Forge...</div>}><ForgePage /></Suspense>} />
               {/* Phase 149: Hive swarm observability */}
               <Route path="/hive" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Hive...</div>}><HivePage /></Suspense>} />
-              <Route path="/memory" element={<Memory />} />
-              <Route path="/briefings" element={<Briefings />} />
-              <Route path="/automation" element={<Automation />} />
-              <Route path="/executions" element={<Executions />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/memory" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Memory...</div>}><Memory /></Suspense>} />
+              <Route path="/briefings" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Briefings...</div>}><Briefings /></Suspense>} />
+              <Route path="/automation" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Automation...</div>}><Automation /></Suspense>} />
+              <Route path="/executions" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Executions...</div>}><Executions /></Suspense>} />
+              <Route path="/settings" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Settings...</div>}><Settings /></Suspense>} />
               {/* Phase 56: Command Center pages */}
               <Route path="/chat" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Chat...</div>}><Chat /></Suspense>} />
               <Route path="/skills" element={<Suspense fallback={<div className="text-muted-foreground text-base p-8 text-center">Loading Skills...</div>}><Skills /></Suspense>} />
