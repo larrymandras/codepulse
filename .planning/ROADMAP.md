@@ -804,7 +804,7 @@ Plans:
   5. All three deferred manual UAT sequences are run live and recorded: the Phase-98 Test-4 menu sub-cases, the full wake → barge-in → re-arm voice sequence, and the Phase-100 Forge-daemon drag round-trip — plus Phase 100's genuinely-open CR-02 shadowed-row no-op, and a live re-verification that the 98-05 stale-origin fix still holds (D-07 as corrected, D-08).
   6. Every stale planning claim found along the way is corrected in the session that found it, and every DEBT-0N marker in REQUIREMENTS.md is written from a cited artifact section rather than from a plan having run.
 
-**Plans:** 7/8 plans executed
+**Plans:** 8/8 plans executed — **PHASE COMPLETE 2026-08-05**. DEBT-01/02/04 SATISFIED; DEBT-03 **PARTIAL** — its D-10 laptop-Tailscale half is satisfied, but the entry chunk is 563,616 bytes against a 512,000-byte threshold, recorded honestly rather than silenced by raising `chunkSizeWarningLimit`.
 
 Plans:
 **Wave 1**
@@ -822,7 +822,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 106-08-PLAN.md — DEBT-04 UAT session C: live Forge-daemon drag round-trip + the CR-02 shadowed-row no-op Phase 100 never ran; then stale-doc corrections, REQUIREMENTS.md markers, and UAT close-out
+- [x] 106-08-PLAN.md — DEBT-04 UAT session C: live Forge-daemon drag round-trip + the CR-02 shadowed-row no-op Phase 100 never ran; then stale-doc corrections, REQUIREMENTS.md markers, and UAT close-out — **both tests PASS; `106-HUMAN-UAT.md` closed at 9/9 across three sessions**. Test 8's five legs evidenced from `forgeCommands` rows (4 full claim→execute→complete chains + 1 genuinely `expired`, never claimed, subject untouched on disk); leg E's honest-failure surfaced as a persistent `Expired` row badge rather than the predicted transient toast — prediction recorded as corrected. Test 9 closed **Phase 100's genuinely-open CR-02 item** using the first shadowed-merged row this catalog has ever held, with an accidental wrong-lane trial supplying a control proving the client-side no-op fired without the LAYER-1 backstop being reached. Zero residue (rescan delta exactly 3), zero source files modified. DEBT-01/02/04 → SATISFIED; DEBT-03 → PARTIAL, blocker named (entry chunk 563,616 B vs a 512,000 threshold). See `106-08-SUMMARY.md`
 
 ### Phase 107: Aggregates Rollup Sharding
 

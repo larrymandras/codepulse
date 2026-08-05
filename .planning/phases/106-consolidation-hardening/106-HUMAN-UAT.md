@@ -1,14 +1,41 @@
 ---
-status: in-progress
+status: passed
 phase: 106-consolidation-hardening
 source: [106-CONTEXT.md, 98-HUMAN-UAT.md, 100-HUMAN-UAT.md]
 started: 2026-08-04T21:44:43Z
-updated: 2026-08-05T17:05:00Z
+updated: 2026-08-05T21:45:00Z
 ---
 
 ## Current Test
 
-[2026-08-05 (latest): **Plan 106-08 (UAT session C — drag round-trip + shadowed-row
+[2026-08-05 (FINAL — this file is CLOSED): **Plan 106-08 Task 2 and Task 3 are complete.
+All three UAT sessions are done: 9 tests, 9 pass, 0 issues, 0 blocked**, reconciled
+against every `### N.` section in this file. `status:` flipped `in-progress` → `passed`.
+
+Session C's two tests both PASS. Test 8's five-leg round-trip ran against a daemon proven
+live by an advancing heartbeat, evidenced from `forgeCommands` rows rather than from the
+optimistic overlay — four full claim→execute→complete chains plus a fifth that aged out
+`expired` with `claimedAt:null`, subject skill untouched on disk. Its honest-failure
+surfacing arrived as a **persistent `Expired` row badge**, not the transient toast this
+file predicted; the prediction is recorded as corrected in test 8's `result:` rather than
+quietly reconciled, and the substituted signal is the stronger of the two.
+
+Test 9 closes **Phase 100's genuinely-open item**. `uat106-shadow` is the first
+shadowed-merged row this catalog has ever held — the fixture whose absence was the stated
+reason Phase 100 accepted CR-02 as unit-verified only. An invalid first trial (dragged
+from Overview/All, i.e. `lane="active"`) accidentally produced a within-session control:
+same skill, same drop target, one variable changed, two different toasts — which
+distinguishes a client-side no-op from a server-side rescue in a way the zero-row count
+cannot, and proves the CR-02 no-op fired without the LAYER-1 backstop being reached.
+
+Cleanup is verified to zero residue on disk and in the registry, with the rescan's row
+delta measured as **exactly 3** so the prune is shown to have removed this plan's fixtures
+and nothing else. A separate ~56-row reconciliation the daemon performed during the
+session was investigated, proven safe by set-diffing registry against filesystem, and
+recorded under `### Session C cleanup` § B rather than absorbed silently into the pass.
+`git status --porcelain convex src` is empty — zero source files modified.]
+
+[2026-08-05 (superseded): **Plan 106-08 (UAT session C — drag round-trip + shadowed-row
 no-op) Task 1 is complete; Task 2 is a BLOCKING checkpoint AWAITING LARRY.** The Forge
 daemon is proven live by an ADVANCING heartbeat (not merely a listening socket), and
 three fixture directories are staged on disk: `uat106-drag` (plain active global) and
@@ -560,8 +587,57 @@ supervisor for the **daemon** (PID 33616). If only the daemon is killed and the 
 respawns it, the queued command gets claimed and leg E silently turns into a success,
 which would be recorded as a pass for a test that never ran. Larry must quit Forge from
 the tray, and `curl http://127.0.0.1:57328/health` must fail, before the leg-E drag.
-result:
-verdict:
+result: **PASS — all five legs.** Run live 2026-08-05 21:10-21:17 UTC. Larry's report for
+legs A-D was "a-d worked fine"; because that is a summary rather than the verbatim per-leg
+text the acceptance criteria ask for, the legs are evidenced primarily from the
+`forgeCommands` rows read directly out of the live self-hosted Convex by the executor,
+which carry a full claim→execute→complete chain per leg and cannot be produced by an
+optimistic overlay:
+
+| Leg | Created (UTC) | Action | Origin → dest | Claim latency | Status |
+|---|---|---|---|---|---|
+| A | 21:10:03 | archive | `claude-code` → cold | 5.33 s | **done** |
+| B | 21:10:33 | restore | `claude-code:available` → global | 3.54 s | **done** |
+| C | 21:11:31 | move | `claude-code` → project | 1.09 s | **done** |
+| D | 21:11:44 | move | `claude-code:project:559ce8ebf812` → global | 2.16 s | **done** |
+| E | 21:12:14 | archive | `claude-code` → cold | **never claimed** | **expired** |
+
+Two independent corroborations of leg C that do not rely on the UI: (1) its row carries
+`workspaceId: "01KV34ZEQEYMJMXMPNZMAMR7P2"`, byte-identical to the `drive-sync-test`
+workspaceId recorded in `## Environment` before the session; (2) leg D's `sourceOrigin` is
+`claude-code:project:559ce8ebf812` — a **fifth** project origin, absent from the
+pre-session 4-origin census, which the registry could only have minted if the skill
+genuinely came to live in that workspace.
+
+**Scope of what the executor verified directly, stated so it is not over-read:** the disk
+was checked before the session and after leg E, not between each leg. The final state is
+confirmed by hand — `uat106-drag` present at `C:\Users\mandr\.claude\skills\`, absent from
+`skills-available\`, absent from `G:\My Drive\forge-workspaces\drive-sync-test\.claude\skills\`.
+Leg C's *transient* on-disk presence inside the workspace was therefore **not** directly
+observed by the executor, and is recorded as inferred from the two corroborations above
+rather than claimed as measured.
+
+**Leg E — the honest-failure leg — passed on a STRONGER observable than the one predicted.**
+The command row is unambiguous: `status:"expired"`, `claimedAt:null`, `executedAt:null`,
+`completedAt:null`, `error:null`, `expiresAt` 21:17:14 — it aged out untouched, and
+`C:\Users\mandr\.claude\skills\uat106-drag\` was still in place afterwards. This section's
+`expected:` predicted the surfacing would be the transient `Expired — no daemon claimed
+this command.` toast (`usePendingLifecycleMoves.ts:49`). What was actually observed
+(screenshot, 17:26 local) is a **persistent row badge** reading `Expired` with a Clock
+icon — `RowStatusBadge`'s `expired` case, `IntakeStatusBadge.tsx:91-94`. The toast may
+also have fired and auto-dismissed before the screenshot; that was not established either
+way and is not claimed. The prediction is recorded as **corrected**, not quietly
+reconciled. It errs in the right direction: the assertion was that the pending state must
+not settle silently into something resembling success, and a persistent badge is harder to
+miss than a toast that disappears — so the test is satisfied by a better signal than it
+asked for.
+
+Daemon identity across the test: legs A-D ran against daemon PID 33616 (tray 33516). Larry
+quit Forge from the tray before leg E, and the executor confirmed
+`http://127.0.0.1:57328/health` was refusing connections. So the known false-signal — tray
+respawns daemon, queued command silently claimed, a never-run leg recorded as a pass — is
+excluded by measurement rather than by assumption.
+verdict: pass
 
 ### 9. CR-02 shadowed-row Cold Storage no-op (Phase-100 Test 2 — the item genuinely left open)
 expected: **This is the one thing Phase 100 could not do.** Its Test 2 is recorded
@@ -623,8 +699,53 @@ exists in Cold Storage. Rename or delete it first, then archive again.`
 would mean the client-side CR-02 no-op did not hold and only the server guard saved the
 skill. A pass looks like the quiet "already in Cold Storage — nothing to move." toast and
 nothing else.
-result:
-verdict:
+result: **PASS — and with a within-session control that arrived by accident and is worth
+more than the bare pass.** Run live 2026-08-05 ~21:33 UTC.
+
+**The gating precondition was met for the first time in this project's history.**
+`registry:listSkills` returned `uat106-shadow` as TWO rows carrying `claude-code` AND
+`claude-code:available` — the exact origin pair that makes `isShadowing()`
+(`src/lib/skills.ts:26-29`) true and `isDormant()` false. The Cold Storage view's own count
+badge corroborated it independently: **81**, against a pre-session census of 80 dormant-only
+names, i.e. the shadowed row's cold copy is reachable there via the `hasDormantCopy` filter
+(98-REVIEW WR-04). Test 9 is therefore **not** blocked, and no dormant-only row was
+substituted.
+
+**Trial 1 (INVALID — wrong source lane, recorded rather than discarded).** The first
+attempt dragged the row from the **Overview / All** list, not from the Cold Storage view —
+visible in the screenshot, where `OVERVIEW / ALL` is the highlighted nav item and
+`COLD STORAGE 81` sits below it unselected. That path is a materially different gesture:
+`SkillRow.tsx:99` reads `setDraggingSkill(skill, lane ?? "active")`, and only
+`ColdStorageView.tsx:59` ever passes `lane="cold"`. With `lane="active"` and `isDormant()`
+false, `skills.ts:59` leaves `dormant` false, so the drop falls through to `skills.ts:131`
+and enqueues a genuine `archive` — which is the *correct* intent from that view. The
+server's LAYER-1 preflight then refused it, surfacing the red toast **`a dormant copy
+already exists in cold storage`** (`convex/forge.ts:653-657`). Nothing was harmed: both
+copies survived on disk and **zero** command rows were written, confirming the preflight
+throws before insert.
+
+**Trial 2 (the actual test) — PASS.** Dragging the same row from inside the Cold Storage
+view onto the Cold Storage rail entry produced the neutral toast, verbatim from the
+screenshot: **`"Uat106 Shadow" is already in Cold Storage — nothing to move.`** No pending
+indicator, no error icon.
+
+**Why trial 1 makes this result stronger rather than messier.** The two trials differ in
+exactly one variable — the source lane — with the same skill and the same drop target, and
+they produce different toasts. That distinguishes the two ways this test could "pass" on a
+zero-row count, which the row count alone cannot: the collision message can only exist if
+`enqueueLifecycle` was actually **called**, whereas the quiet message is emitted at
+`src/pages/Skills.tsx:337-339` on the `noop` branch, which returns before `beginPending`
+and before any mutation call. Trial 2 therefore proves the **client-side CR-02 no-op fired
+on its own** — the server backstop was never reached, rather than having silently covered
+for a broken client. Per this section's own `expected:`, a collision toast on the real
+gesture would have been a FAIL; it appeared only on the invalid one.
+
+**The assertion that actually matters, verified on the filesystem by the executor after
+the gesture:** `C:\Users\mandr\.claude\skills\uat106-shadow\SKILL.md` **survived** (888 b),
+as did the dormant half (859 b), and `forge:listLifecycleCommands` shows **0** rows for
+`uat106-shadow` across both trials. The live active copy was never at risk of the silent
+archive CR-02 describes.
+verdict: pass
 
 ## Voice trace
 
@@ -726,12 +847,35 @@ guessing at this subsystem has a documented cost here.
 
 ## Summary
 
-total: 7
-passed: 7
+total: 9
+passed: 9
 issues: 0
 pending: 0
 skipped: 0
 blocked: 0
+
+Counts reconcile against every `### N.` section in this file across all three sessions:
+tests 1-4 (session A, plan 106-06), 5-7 (session B, plan 106-07), 8-9 (session C, plan
+106-08) — 9 sections, 9 `verdict: pass` lines, no section carrying `issue` or `blocked`.
+
+**Tests 8-9 (plan 106-08, session C) are now closed: both PASS**, run live 2026-08-05
+21:10-21:33 UTC against a Forge daemon proven live by an *advancing* heartbeat rather than
+a listening socket. Test 8's five-leg round-trip is evidenced from `forgeCommands` rows
+read out of the live backend — four full claim→execute→complete chains, plus a fifth that
+aged out `expired` with `claimedAt:null`, never claimed, with the subject skill still in
+place on disk. Leg E's honest-failure surfacing turned out to be a **persistent `Expired`
+row badge** rather than the transient toast this file predicted; the prediction is recorded
+as corrected in test 8's `result:`, and the substituted signal is the stronger of the two.
+
+**Test 9 closes the item Phase 100 genuinely left open.** `uat106-shadow` is the first
+shadowed-merged row this project's live catalog has ever held, which is the precondition
+Phase 100 could not obtain and the sole reason its CR-02 check was accepted as
+unit-verified. An invalid first trial — dragged from Overview/All, i.e. `lane="active"` —
+accidentally supplied a within-session control: same skill, same drop target, one variable
+changed, two different toasts. That distinguishes a client-side no-op from a server-side
+rescue, which the zero-row count alone cannot, and it proves the CR-02 no-op fired on its
+own without the LAYER-1 backstop being reached. Both trials wrote **0** command rows and
+the live active copy survived on disk.
 
 Tests 1-4 (plan 106-06, session A) are closed. **Tests 5-7 (plan 106-07, session B —
 wake / barge-in / re-arm) are now closed too: all three PASS**, run live 2026-08-05
@@ -813,3 +957,91 @@ git status --porcelain convex src
 No bulk/mass delete or patch was issued against the live self-hosted Convex instance at any
 point in this plan — every registry change was reconciled through the daemon's normal
 per-command rescan, per `CLAUDE.md` § "Self-Hosted Convex — Operational Rules".
+
+### Session C cleanup (plan 106-08, 2026-08-05)
+
+**A. Fixture removal.** The three staged directories were enumerated first rather than
+assumed — a sweep for `*uat106*` across all three scan roots returned exactly the three
+paths recorded in `### Session C environment`, and nothing else — then removed:
+
+```
+Remove-Item -Recurse -Force "C:\Users\mandr\.claude\skills\uat106-drag"
+Remove-Item -Recurse -Force "C:\Users\mandr\.claude\skills\uat106-shadow"
+Remove-Item -Recurse -Force "C:\Users\mandr\.claude\skills-available\uat106-shadow"
+```
+
+Post-removal sweep of the same three roots: **0** `uat106-*` directories in each.
+`drive-sync-test` was deliberately NOT deleted — this plan reused it, did not create it
+(plan Task 3 §A), and it was already confirmed empty of `uat106-*` content.
+
+**B. An unplanned but legitimate registry reconciliation, recorded rather than absorbed
+into the pass.** The pre-session census (`### Session C environment`) counted **695** rows
+with `claude-code` at **185**. After the session the totals are **646** rows with
+`claude-code` at **131** (129 real + the 2 stale fixture rows below). The ~56-row drop was
+**not** caused by this plan issuing any delete: it is the Forge daemon's own
+`computeSkillPrunes` reconciliation, running on the rescans that our own test drags
+triggered, removing rows for names that no longer had a directory on disk. This is the
+same manifest-driven per-origin pruning that test 4 (session A) verified deliberately.
+
+It was verified as safe rather than assumed, by set-diffing the registry against the
+filesystem instead of comparing counts:
+
+```
+registry claude-code names: 131   disk directories: 131
+IN REGISTRY, NOT ON DISK  -> uat106-drag, uat106-shadow      (this plan's fixtures, pending rescan)
+ON DISK, NOT IN REGISTRY  -> _archived, mandras_made_skills  (neither has a SKILL.md — container
+                                                              folders, correctly excluded by the
+                                                              daemon's snapshot walk)
+```
+
+So **no name that exists on disk was pruned**, and the only divergence is this plan's own
+residue. Recording it explicitly because a close-out that claimed "zero residue" while
+silently having changed 56 rows in the live registry would misrepresent the session.
+
+**C. Registry reconciliation of this plan's own residue.** Deleting directories does not
+prune the registry; only a daemon rescan does, and the daemon rescans only after a real
+lifecycle command completes. The transient post-`rm` state was captured as evidence the
+baseline was measured and not skipped:
+
+```
+npx convex run registry:listSkills '{}'  ->  646 rows, 3 stale uat106 rows still present
+    uat106-drag    origin=claude-code
+    uat106-shadow  origin=claude-code
+    uat106-shadow  origin=claude-code:available
+```
+
+Neither available shortcut was used to force the rescan, for the reasons already recorded
+in `### Session C deviations`: CLI `--identity` impersonation (denied by the permission
+classifier in session A, not worked around), and the bearer token observed in the daemon's
+own `window.__FORGE_CONFIG__` (using it would be the same bypass by another route). The
+rescan was triggered the same way session A's was — one ordinary archive→restore
+round-trip on an inert real skill through the Clerk-signed-in UI.
+
+**D. Post-cleanup verification — confirmed by the executor, not relayed.** Larry ran one
+archive→restore round-trip on `enhance-prompt` through the Clerk-signed-in Skills UI. The
+skill was chosen deliberately rather than at random: it was checked beforehand to carry a
+single `claude-code` origin with **no** dormant copy, so the archive could not trip the
+LAYER-1 collision guard that trial 1 of test 9 hit, and it is the same skill session A used.
+
+```
+npx convex run registry:listSkills '{}'
+  before rescan: 646 rows, 3 uat106 rows
+  after  rescan: 643 rows, 0 uat106 rows        <- delta is exactly 3
+```
+
+The **delta of exactly 3** is the useful part: the rescan removed this plan's residue and
+nothing else, which a bare "0 uat106 rows" would not have shown.
+
+Disk sweep of all three scan roots after the rescan: **0** `uat106-*` directories in each.
+
+The trigger skill was verified returned to its original state rather than left half-moved:
+`enhance-prompt` carries a single `claude-code` origin, is present at
+`C:\Users\mandr\.claude\skills\enhance-prompt\`, and has **no** leftover copy in
+`skills-available\`.
+
+Zero residue on disk and in the registry — matching Phase 98's own bar, and session A's.
+
+**E. Source untouched.** `git status --porcelain convex src` → empty. No source file was
+modified by plan 106-08; test 9's PASS means the CR-02 lane-threading fix already in
+`SkillRow.tsx`/`skills.ts` held under its first-ever live shadowed-row exercise, so there
+was nothing to fix.
