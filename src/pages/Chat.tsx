@@ -35,6 +35,7 @@ import {
 import { AvatarAura } from "@/components/voice/AvatarAura";
 import { ChatBubble } from "@/components/ChatBubble";
 import { ControlCenterPanel } from "@/components/control-center/ControlCenterPanel";
+import { CompactControlStrip } from "@/components/control-center/CompactControlStrip";
 import { IntelligenceFeedPanel } from "@/components/control-center/IntelligenceFeedPanel";
 import { ActiveAgentsPanel } from "@/components/control-center/ActiveAgentsPanel";
 import { MissionTimelinePanel } from "@/components/control-center/MissionTimelinePanel";
@@ -642,9 +643,14 @@ export default function Chat() {
   // reused byte-identically by both the calm branch and the command-center
   // branch below (never duplicated markup — the regression guard is the
   // "with the mode off" Chat.test.tsx assertion on the calm grid's own
-  // className string). Command-center mode adds ONE additive conditional
-  // fragment inside centerColumn (VoiceStatusPanel, panel f) — everything
-  // else in these three columns is identical in both modes. ────────────────
+  // className string). Command-center mode adds TWO additive conditional
+  // fragments inside centerColumn: VoiceStatusPanel (panel f), and — 188-14
+  // live finding — swapping the full stacked ControlCenterPanel for the
+  // single-row CompactControlStrip (same five controls/click targets, see
+  // its own docstring), since Control Center's ~230px stacked height was
+  // crowding Voice Status out of the viewport in grid mode. The calm
+  // branch's ControlCenterPanel is untouched. Everything else in these
+  // three columns is identical in both modes. ─────────────────────────────
   const chatColumn = (
     // 188-14 live finding: self-start + a bounded height stops this column
     // from stretching to match whatever height centerColumn's content
@@ -820,20 +826,38 @@ export default function Chat() {
         </SectionErrorBoundary>
       )}
 
-      {/* Control Center (D-17) — stacked under the aura in column ② */}
-      <ControlCenterPanel
-        disconnected={disconnected}
-        micOff={!listening}
-        voiceState={avatarState}
-        strictMode={strictMode}
-        onStrictModeChange={handleStrictModeChange}
-        screenShareState={screenShare.state}
-        onScreenShareStart={screenShare.start}
-        onScreenShareStop={screenShare.stop}
-        swapModelOverride={swapState.modelOverride}
-        swapVoiceOverride={swapState.voiceOverride}
-        lastTurnModel={lastTurnModel}
-      />
+      {/* Control Center (D-17) — stacked under the aura in column ②.
+          188-14 live finding: command-center mode swaps this for the
+          single-row CompactControlStrip (same five controls/click targets)
+          so grid mode reclaims the ~185px Control Center's stacked layout
+          cost. The calm layout below keeps ControlCenterPanel exactly as
+          approved. */}
+      {commandCenter ? (
+        <CompactControlStrip
+          swapModelOverride={swapState.modelOverride}
+          swapVoiceOverride={swapState.voiceOverride}
+          lastTurnModel={lastTurnModel}
+          strictMode={strictMode}
+          onStrictModeChange={handleStrictModeChange}
+          screenShareState={screenShare.state}
+          onScreenShareStart={screenShare.start}
+          onScreenShareStop={screenShare.stop}
+        />
+      ) : (
+        <ControlCenterPanel
+          disconnected={disconnected}
+          micOff={!listening}
+          voiceState={avatarState}
+          strictMode={strictMode}
+          onStrictModeChange={handleStrictModeChange}
+          screenShareState={screenShare.state}
+          onScreenShareStart={screenShare.start}
+          onScreenShareStop={screenShare.stop}
+          swapModelOverride={swapState.modelOverride}
+          swapVoiceOverride={swapState.voiceOverride}
+          lastTurnModel={lastTurnModel}
+        />
+      )}
     </div>
   );
 
@@ -954,8 +978,20 @@ export default function Chat() {
                 lets Intelligence Feed's own flex-1 scroll region actually
                 bound to the grid row height instead of growing to fit its
                 full unbounded item list (188-14 live finding: without this,
-                Active Agents rendered 13000px+ below the fold, invisible). */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 min-h-0">
+                Active Agents rendered 13000px+ below the fold, invisible).
+                188-14 live finding #2: at xl this rail shares a grid ROW
+                with chatColumn/centerColumn/RIGHT RAIL/vitals, and CSS
+                grid's default align-items:stretch means the row's height is
+                the TALLEST column's natural content height — an unbounded
+                column here (or in vitals/RIGHT RAIL below) silently pushes
+                the footer band (Mission Timeline/Quick Commands) far below
+                the fold even though this rail's own content is short.
+                xl:max-h-[70vh] xl:overflow-y-auto caps this rail at the
+                SAME reference height chatColumn already uses (self-start
+                h-[70vh]), so it can never be the column that stretches the
+                row past that. Only at xl — at lg this rail is its own
+                full-width strip (col-span-3), never row-mates with vitals. */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 min-h-0 xl:max-h-[70vh] xl:overflow-y-auto">
               <SectionErrorBoundary name="Intelligence Feed">
                 <IntelligenceFeedPanel />
               </SectionErrorBoundary>
@@ -972,8 +1008,10 @@ export default function Chat() {
                 calm row (chat/center/vitals) stays intact as one row, with
                 this rail rendering as its own strip below it; xl:order-none
                 restores the natural leftrail/chat/center/rightrail/vitals
-                column sequence. */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 lg:order-5 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 xl:order-none">
+                column sequence. Same xl:max-h-[70vh] xl:overflow-y-auto cap
+                as the LEFT RAIL above — see its comment; only relevant at
+                xl, where this rail row-shares with chat/center/vitals. */}
+            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 lg:order-5 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 xl:order-none xl:max-h-[70vh] xl:overflow-y-auto">
               <SectionErrorBoundary name="LLM Status">
                 <LlmStatusPanel />
               </SectionErrorBoundary>
@@ -982,7 +1020,23 @@ export default function Chat() {
               </SectionErrorBoundary>
             </div>
 
-            <div className="min-h-0 lg:order-4 xl:order-none">{vitalsColumn}</div>
+            {/* 188-14 live finding #2: unlike the two rails above, vitals
+                row-shares with chat/center at BOTH lg and xl (it joins the
+                still-3-column calm row at lg — see the RIGHT RAIL comment
+                above), so its cap applies from lg upward, not xl-only.
+                VitalsRail itself already carries its own `overflow-y-auto`
+                (calm layout relies on ITS ancestor — the calm grid's own
+                `flex-1 min-h-0` — to bound that scroll region); this wrapper
+                gives it the same self-contained bound IntelligenceFeedPanel
+                already has for the SAME reason: command-center mode's outer
+                scroll container never bounds the grid row's height, so
+                nothing here was actually capping VitalsRail's growth. Before
+                this, Container Health's live docker-container list alone
+                pushed the whole row (and the footer band below it) to
+                ~1900px, most of it blank space under the shorter columns. */}
+            <div className="min-h-0 lg:order-4 xl:order-none lg:max-h-[70vh] lg:overflow-y-auto">
+              {vitalsColumn}
+            </div>
           </div>
 
           {/* FOOTER BAND — (c) Mission Timeline (~60%), (g) Quick Commands

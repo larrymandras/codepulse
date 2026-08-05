@@ -37,6 +37,13 @@
  * @see 186-UI-SPEC.md "Control Center (D-17)" — BrainControl row
  * @see codepulse/src/components/reminders/ReminderList.tsx (SnoozeMenu/
  *   EditPopover Popover idiom this component follows)
+ *
+ * `variant="chip"` (188-14 live finding, compact control strip): a trigger-
+ * only visual swap for command-center mode's single-row strip — a narrow
+ * icon+value chip instead of the full-width labeled row. The popover
+ * (catalogue fetch, filter, `swap.set` dispatch) is byte-identical; only the
+ * `PopoverTrigger` button's markup differs. Default `variant="row"` keeps
+ * `ControlCenterPanel`'s existing call site (and its tests) untouched.
  */
 
 import { useCallback, useMemo, useState } from "react";
@@ -58,6 +65,10 @@ export interface BrainControlProps {
   override?: string | null;
   /** The resolved model of the last completed turn — shown when no override is active. */
   lastTurnModel?: string | null;
+  /** Trigger visual: full labeled row (default, calm layout) or a compact
+   * icon+value chip (command-center strip). Popover/dispatch logic is
+   * identical in both. */
+  variant?: "row" | "chip";
 }
 
 /** Vendor slug (OpenRouter's leading id segment, or "anthropic" for the
@@ -121,7 +132,11 @@ export function groupByVendor(entries: CatalogueEntry[]): CatalogueGroup[] {
   return groups;
 }
 
-export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
+export function BrainControl({
+  override,
+  lastTurnModel,
+  variant = "row",
+}: BrainControlProps) {
   const { sendCommand } = useAstridrWS();
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<CatalogueEntry[] | null>(null);
@@ -189,28 +204,45 @@ export function BrainControl({ override, lastTurnModel }: BrainControlProps) {
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Choose brain"
-          className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
-            override ? "border-primary/30 bg-primary/10" : "border-border/60 bg-muted/30"
-          }`}
-        >
-          <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
-            <Brain className="w-4 h-4" aria-hidden="true" />
-            BRAIN
-          </span>
-          <span className="flex items-center gap-1">
-            <span
-              className={`font-mono text-sm ${
-                override ? "text-primary font-semibold" : "text-foreground/90"
-              }`}
-            >
-              {label}
+        {variant === "chip" ? (
+          <button
+            type="button"
+            aria-label="Choose brain"
+            title="Brain"
+            className={`flex items-center gap-1.5 h-7 px-2 rounded-md border font-mono text-sm whitespace-nowrap ${
+              override
+                ? "border-primary/30 bg-primary/10 text-primary font-semibold"
+                : "border-border/60 bg-muted/30 text-foreground/90"
+            }`}
+          >
+            <Brain className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            {label}
+            <ChevronDown className="h-2.5 w-2.5 text-muted-foreground shrink-0" aria-hidden="true" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Choose brain"
+            className={`flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+              override ? "border-primary/30 bg-primary/10" : "border-border/60 bg-muted/30"
+            }`}
+          >
+            <span className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
+              <Brain className="w-4 h-4" aria-hidden="true" />
+              BRAIN
             </span>
-            <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
-          </span>
-        </button>
+            <span className="flex items-center gap-1">
+              <span
+                className={`font-mono text-sm ${
+                  override ? "text-primary font-semibold" : "text-foreground/90"
+                }`}
+              >
+                {label}
+              </span>
+              <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
+            </span>
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96 p-2">
         <div className="flex flex-col gap-2">
