@@ -1,5 +1,5 @@
 ---
-status: pending
+status: passed
 phase: 106-consolidation-hardening
 requirement: DEBT-03 (D-10)
 written: 2026-08-04
@@ -183,50 +183,115 @@ Work through these on the **laptop**. Compare each result against its `expected:
 ### 1. Confirm the laptop is on the tailnet
 Run `tailscale status` on the laptop. Install from `https://tailscale.com/download` and sign in to the same account first *only if* Tailscale is genuinely not present — per `## Discovered endpoints`, a Windows device named `LMLaptop` (100.64.160.94) is already a member of this tailnet and was last seen 2026-08-05 13:40 UTC.
 expected: the laptop's `tailscale status` lists `lmofficenew` at `100.93.234.6`, and the laptop's own line shows `100.64.160.94` (or a new IP, if this is a different machine than the `LMLaptop` already registered — say which).
-result:
+result: **PASS** (Larry, 2026-08-05, reported for steps 1-5 collectively as "1-5 passed"). Laptop is on the tailnet and sees the office PC.
 
 ### 2. Confirm the device is approved, not pending
 Open `https://login.tailscale.com/admin/machines`.
 expected: the laptop appears in the Machines list as connected, with no "Needs approval" / "Expired" badge against it.
-result:
+result: **PASS** (same collective report). Device shows as connected/approved in the admin console — no "Needs approval" or "Expired" badge blocked any later step.
 
 ### 3. Reach the self-hosted Convex backend from the laptop
 Open `https://lmofficenew.tail5bb6b3.ts.net/instance_name` and `https://lmofficenew.tail5bb6b3.ts.net:8443/health` in a browser (or `curl` them).
 expected: the first returns HTTP 200 with the exact body `codepulse` (probe P6). The second returns HTTP 200 with a JSON body beginning `{"status":"ok","timestamp":` and containing `"version":"0.1.0"` (probe P9) — the `sessions` and `activeAlerts` numbers will differ from P9's, that is fine and expected; what must hold is `"status":"ok"`, not an error page and not a TLS warning.
-result:
+result: **PASS** (same collective report). Convex reachable from the laptop on both origins. Independently re-probed from the office PC minutes before the run: `/instance_name` returned the exact body `codepulse` and `:8443/health` returned HTTP 200 with `{"status":"ok"...}`.
 
 ### 4. Reach the Ástríðr API from the laptop
 Open `http://lmofficenew.tail5bb6b3.ts.net:8181/api/health`, then `http://lmofficenew.tail5bb6b3.ts.net:8181/api/status`.
 expected: `/api/health` returns HTTP 200 with the exact body `{"status":"ok","channel":"web"}` (probe P12). `/api/status` returns HTTP **401** with body `{"detail":"Unauthorized"}` (probe P14) — **that 401 is a pass**: it proves the request crossed the tailnet and reached Ástríðr's auth gate. A connection timeout or "site can't be reached" on either is the failure to record.
-result:
+result: **PASS** (same collective report). Ástríðr reachable across the tailnet. Office-PC control probe at the same time: `/api/health` → `{"status":"ok","channel":"web"}`. The 401 on `/api/status` is the designed pass condition (proves the request crossed the tailnet and hit the auth gate).
 
 ### 5. Open the CodePulse UI on the laptop and confirm it shows live data
 Go to `http://lmofficenew.tail5bb6b3.ts.net:5173/`. (If that fails, also try `http://100.93.234.6:5173/` and say which of the two worked — the IP form was already proven at P20, the hostname form was fixed today at P21.)
 expected: the Dashboard renders, and the **Hero Stats Bar** ("Live Metrics") **Sessions** tile shows a number in the hundreds — it read **279** with a `493 agents` sub-label when this was written. The load-bearing check: open the same Dashboard on the office PC at `http://localhost:5173/` at the same moment; **both machines must show the same Sessions number**, because both read the same self-hosted Convex. A laptop showing `0`, `—`, or a blank tile while the office PC shows a live number is a FAIL, not a slow load.
-result:
+result: **PASS** — the load-bearing step. The CodePulse dashboard rendered on the laptop **with live data**, and the Sessions figure matched the office PC's when both were open at the same time. This is the step that distinguishes "Tailscale says Connected" from "the app actually works", and it passed.
 
 ### 6. Check the Ástríðr connection indicator in the header
 With the Dashboard open on the laptop, look at the connection status in the header/`ConnectionPopover`.
 expected: **this is expected to read `Disconnected` today** — Blocker B above, `VITE_ASTRIDR_WS_URL` is still `ws://127.0.0.1:8181`. Record what it actually says. If it reads `Connected`, Blocker B was fixed before you ran this and you should say so. If it reads `Disconnected`, that is the known cause and does **not** invalidate Steps 3-5.
-result:
+result: **PASS**, against a CORRECTED expectation — see the Deviation note below. Larry: "LAT chip shows on the PC, not on the laptop". Present on the office PC, absent on the laptop, which is the exact expected signature of Blocker B: `ws://127.0.0.1:8181` resolves to a real Ástríðr on the office PC and to the laptop itself on the laptop. A clean differential — same page, same build, two machines.
 
 ### 7. Confirm the browser console shows no *unexpected* connection errors
 Open DevTools → Console on the laptop's Dashboard tab and reload. This step is scored on the **host each error names**, not on the error count — sort what you see into these three buckets before marking it.
 
 expected: mark this step **PASS** if the only connection errors name `127.0.0.1:8181` (or `localhost:8181`) — those are the known Blocker B, a config bug in `VITE_ASTRIDR_WS_URL`, and they say nothing about Tailscale. Mark it **FAIL** if any error names `lmofficenew.tail5bb6b3.ts.net` — that is the Convex/tailnet path and it must be clean (no failed queries, no websocket reconnect loop against that host). An error naming any **third** host is a new finding: copy its exact text and mark FAIL. A console with no connection errors at all is also a PASS and means Blocker B was fixed before you ran this.
-result:
+result: **PASS**. Seven red console errors, **every one** of them `WebSocket connection to 'ws://127.0.0.1:8181/ws/telemetry' failed` (`AstridrWSContext.tsx:240`) — i.e. Blocker B, the known config bug. **Zero** connection errors name `lmofficenew.tail5bb6b3.ts.net`, which is the actual pass condition for this step: the tailnet/Convex path is clean. Non-connection noise present and correctly ignored: React DevTools suggestion, Clerk development-keys warning, and 4x `[React Flow]: The parent container needs a width and a height` (a layout warning, not a connection error). One NEW finding surfaced here that is not Blocker B — see "New finding: Clerk secure-context" below.
 
 ## Result
 
+Run 2026-08-05 by Larry, on the laptop, against the office PC `lmofficenew`.
+
 | Step | Pass/Fail | Note |
 |---|---|---|
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 4 | | |
-| 5 | | |
-| 6 | | |
-| 7 | | |
+| 1 | **PASS** | Laptop on the tailnet, sees `lmofficenew`. Reported collectively with steps 2-5. |
+| 2 | **PASS** | Device approved; nothing blocked later steps. |
+| 3 | **PASS** | Convex reachable on both origins (`/instance_name` → `codepulse`, `:8443/health` → 200). |
+| 4 | **PASS** | Ástríðr reachable; the 401 on `/api/status` is the designed pass condition. |
+| 5 | **PASS** | **The load-bearing step** — dashboard rendered with LIVE data and the Sessions figure matched the office PC's simultaneously. |
+| 6 | **PASS** | Against a corrected expectation (see Deviation 1). `LAT:` chip present on the office PC, absent on the laptop — the exact Blocker B signature. |
+| 7 | **PASS** | All 7 connection errors name `127.0.0.1:8181` (Blocker B). **Zero** name `lmofficenew.tail5bb6b3.ts.net`. One new non-connection finding surfaced — see below. |
+
+**D-10 VERDICT: SATISFIED.** The laptop is on the tailnet and can reach the same
+self-hosted stack the office PC reaches — proven by the app rendering live data whose
+values match the office PC's, not merely by Tailscale reporting "Connected". Two
+defects were surfaced along the way; neither blocks D-10 (both are config/doc issues
+on the CodePulse side, not tailnet reachability), and both are recorded below rather
+than absorbed into the pass.
+
+### Deviation 1 — step 6 named a UI element that does not exist
+
+As written, step 6 said to read the Ástríðr connection status from
+`ConnectionPopover`. Two things were wrong with that, both found live when Larry could
+not locate the control:
+
+1. **`ConnectionPopover` is dead code.** `grep -rn "ConnectionPopover" src` returns only
+   its own test file plus a passing mention in a comment at
+   `src/layouts/DashboardLayout.tsx:407`. It is never imported into the rendered app,
+   so there is no popover to open.
+2. **There is no "Disconnected" label anywhere in the header.** The only rendered
+   consequence of the Ástríðr socket status is the `LAT: <n>ms` chip
+   (`src/layouts/DashboardLayout.tsx:570`), gated on
+   `showLat = wsStatus === "connected" && headerLatencyMs != null`
+   (`DashboardLayout.tsx:445`). **The indicator is an absence, not a message** — when the
+   socket is down, nothing renders at all.
+
+Step 6 was therefore re-specified live as a two-machine differential: the `LAT:` chip
+must be PRESENT on the office PC and ABSENT on the laptop. That is a strictly better
+test than the original — it controls for "the chip is missing because the header
+changed" by requiring the same build to show it on the other machine in the same
+minute. Result recorded against the corrected form.
+
+### New finding: Clerk fails its cookie hashing on the laptop (secure-context)
+
+Surfaced in step 7's console output. Verbatim:
+
+```
+Suffixed cookie failed due to Cannot read properties of undefined (reading 'digest')
+(secure-context: false, url: http://lmofficenew.tail5bb6b3.ts.net:5173/)
+```
+
+**This is NOT Blocker B and NOT a tailnet fault.** `crypto.subtle` is only exposed in a
+secure context — HTTPS, or `localhost`, which browsers special-case. The laptop reaches
+Vite over **plain HTTP on a non-localhost hostname**, so `crypto.subtle` is `undefined`
+and Clerk's cookie-suffix hashing throws. The office PC never hits it because
+`http://localhost:5173` is a secure context by specification.
+
+Impact: authentication worked well enough for the session (step 5 rendered live data
+behind `AuthGuard`), but Clerk's suffixed-cookie mechanism is silently degraded on any
+non-localhost HTTP origin — the class of defect that later presents as unexplained
+session or multi-tab behaviour rather than as an obvious failure.
+
+Not fixed here (out of this plan's scope — this plan writes a checklist and records its
+run). The available fix is to publish port 5173 over HTTPS via `tailscale serve`; the
+tailnet already terminates TLS for Convex on 443 and 8443, so the capability exists and
+only 5173 is published as plain HTTP.
+
+### Also observed, not a defect of this plan
+
+`[React Flow]: The parent container needs a width and a height to render the graph`
+(x4, `@xyflow/react`) appeared on the laptop. A layout warning, not a connection error;
+step 7 is scored on which host connection errors name, so it does not affect the
+verdict. Whether it is laptop-viewport-specific or also present on the office PC was
+not established, and is not claimed either way.
 
 ## Troubleshooting
 
