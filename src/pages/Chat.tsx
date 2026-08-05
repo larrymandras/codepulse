@@ -730,17 +730,35 @@ export default function Chat() {
     <div className="flex flex-col gap-3 min-h-0 overflow-y-auto overflow-x-hidden pr-0.5">
       <div className="flex flex-col items-center rounded-xl border border-border/60 bg-card/20 pt-5 pb-4 px-3">
         <div
-          // 188-14 live finding: shrunk unconditionally (both layouts), not
-          // just in command-center mode — the avatar's own aspect-ratio
-          // sizing overflows its column by ~35-55px at 340px in EITHER
-          // layout, and overflow-x-hidden on the ancestor above only
-          // suppresses the scrollbar affordance, it doesn't fix the actual
-          // oversize. Cut further (260px -> 190px) once Voice Status +
-          // Control Center's full row set (Brain/Voice/Strict/Focus/
-          // QuietHours/Screen) needed more of the column's height than the
-          // first pass reclaimed — this is the single lever that doesn't
-          // touch Control Center's own (intentionally legible) spacing.
-          className={`w-full max-w-[190px] transition-[opacity,filter] duration-300 ${
+          // No local width cap here on purpose. `AvatarAura` already self-sizes
+          // with `aspect-[4/5] w-full max-w-[340px]` (AvatarAura.tsx:340), so
+          // `w-full` alone makes her fluid up to that designed 340px and
+          // strictly bounded by this card below it — she cannot overflow
+          // horizontally.
+          //
+          // History (do not re-add a cap without re-reading this): 188-14
+          // earlier cut this to 260px and then 190px, described as fixing an
+          // "overflow". That overflow was VERTICAL, not horizontal — at 4:5,
+          // 340px wide is 425px tall, and the stacked ControlCenterPanel
+          // (~230px) plus Voice Status did not fit under it in the
+          // command-center column. Shrinking width was only a lever to buy
+          // height. Command-center mode now renders CompactControlStrip
+          // (~44px) instead of that stacked panel, which returns ~185px of
+          // column height — so the lever is no longer needed and cost her
+          // ~44% of her rendered size in BOTH layouts, including calm, where
+          // 340px had shipped fine since 188-13. Measured live at 1920px:
+          // this card offers 372px of inner width against the 190px cap,
+          // i.e. 182px of headroom sitting unused.
+          //
+          // Mode-aware, because the two layouts have genuinely different
+          // budgets: calm has no footer band, so she runs at her full
+          // designed 340px as the page's hero. Command-center mode also has
+          // to fit Mission Timeline + Quick Commands below the grid, and at
+          // 340px (425px tall) the footer band's bottom measured 29px below
+          // the fold — so grid mode caps at 260px (325px tall), which buys
+          // back the ~100px that puts the band fully on screen. Both numbers
+          // are measured, not guessed; re-measure before changing either.
+          className={`w-full ${commandCenter ? "max-w-[260px]" : ""} transition-[opacity,filter] duration-300 ${
             listening ? "" : "opacity-45 saturate-50"
           }`}
         >
