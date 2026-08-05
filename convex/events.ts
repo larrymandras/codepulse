@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { incrementEventBucket, incrementSankeyBuckets } from "./analyticsRollup";
+import { pickShard } from "./lib/aggregateShard";
 
 // ---- NEW events table functions ----
 
@@ -42,8 +43,14 @@ export const ingest = mutation({
 
     // D-01/D-02: maintain ingest-time rollup buckets inside the SAME OCC mutation
     // so the hourly cron no longer scans raw events for these counts (Pitfall 1).
-    await incrementEventBucket(ctx, args.eventType, args.timestamp);
-    await incrementSankeyBuckets(ctx, args.eventType, args.toolName, args.timestamp);
+    // Phase 107: one shard is drawn ONCE per ingest call, here, and passed
+    // explicitly to both helpers below — never drawn inside them — so
+    // concurrent ingest calls spread across shards, which is where the
+    // contention actually occurs (the three writes below are sequential
+    // awaits inside one transaction and never OCC-collide with each other).
+    const shard = pickShard();
+    await incrementEventBucket(ctx, args.eventType, args.timestamp, shard);
+    await incrementSankeyBuckets(ctx, args.eventType, args.toolName, args.timestamp, shard);
   },
 });
 
