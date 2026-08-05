@@ -829,7 +829,7 @@ Plans:
 **Goal:** Eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), which has caused repeated self-hosted Convex memory buildup and `events` table index-head query timeouts ("index rot") on 2026-07-30 and again 2026-08-05 — each incident only cleared by a full `convex-backend` container recreate, never root-caused.
 **Requirements**: OCC-01
 **Depends on:** Phase 106 (independent, but sequenced after per milestone convention)
-**Plans:** 5/6 plans executed
+**Plans:** 6/6 plans executed — **but the goal was NOT achieved: `OCC-01 VERDICT: FAIL`. OCC-01 remains OPEN and needs a gap-closure plan.**
 
 Plans:
 - [x] 107-01-PLAN.md - Wave-0 write-path shard contract tests (explicit shard call sites, shard-split, legacy-unsharded row, pickShard range) + new convex/events.test.ts asserting one shard per ingest call - RED until 107-03
@@ -837,7 +837,9 @@ Plans:
 - [x] 107-03-PLAN.md - Implement sharding: convex/lib/aggregateShard.ts, optional schema field, shard threaded through the write path, one draw per ingest call
 - [x] 107-04-PLAN.md - Capture the pre-deploy OCC baseline (corrected window method) + traffic volume + read-total control - MUST run before 107-05
 - [x] 107-05-PLAN.md - Deploy to the self-hosted instance with target and no-index-deletion assertions + post-deploy shard-presence and read-total check - DEPLOY_UTC 2026-08-05T16:26:33Z, both assertions PASS, SHARD_PRESENCE OBSERVED (all 8 values), READ_TOTALS MATCH
-- [ ] 107-06-PLAN.md - After-window OCC measurement, traffic-normalized comparison, and the OCC-01 verdict (has a blocking human checkpoint)
+- [x] 107-06-PLAN.md - After-window OCC measurement, traffic-normalized comparison, and the OCC-01 verdict - **OCC-01 VERDICT: FAIL**. All 3 window validity gates PASS. BASELINE_RETRIES_PER_1K 1188.5 -> AFTER_RETRIES_PER_1K 2025.8 (+70.5%) while traffic fell 36.5%, so the raw +8.3% understated the regression. FINAL_READ_TOTALS: MATCH (113==113), proven non-vacuous (20 of 23 keys split across 2-4 shard rows) - correctness intact. Write distribution DID work: hot-doc share 66.9% -> 6.4% across 55 docs, all 8 shards live. It did not reduce conflicts because the READ set was never sharded (analyticsRollup.ts:43-54, :101-111 collect() the whole bucket; Convex OCC conflicts on documents read OR written). No fix, no rollback.
+
+**Next lever for OCC-01 gap closure:** index `shard` and range-bound the bucket lookup to the caller's shard. Do NOT raise `AGGREGATE_SHARD_COUNT` beyond 8 first - the plan named it as the leading candidate but the measurement argues against it, since a higher count widens each `.collect()` and would likely worsen contention until the read set is narrowed. Secondary lever: collapse the deferred `events.ingest` round-trip.
 
 ---
 
