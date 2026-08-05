@@ -20,6 +20,7 @@ import { join, dirname } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { execSync, spawn } from "child_process";
 import { tmpdir } from "os";
+import { buildIdempotencyKey } from "./idempotency.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -98,6 +99,13 @@ async function worker(payloadFile) {
     payload: data,
     timestamp: Math.floor(Date.now() / 1000),
   };
+
+  // Producer dedup key — see hooks/idempotency.mjs. Only set when the payload
+  // carries a tool_use_id; un-keyed events stay always-counted per D-05.
+  // NB: `timestamp` above is per-process and differs between two deliveries of
+  // the same event, so it must never be part of the identity.
+  const idempotencyKey = buildIdempotencyKey(data);
+  if (idempotencyKey) ingestBody.idempotencyKey = idempotencyKey;
 
   const ingestHeaders = { "Content-Type": "application/json" };
   if (ingestKey) ingestHeaders["Authorization"] = `Bearer ${ingestKey}`;
