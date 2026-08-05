@@ -401,3 +401,131 @@ all 8 values and no contract violation in live data, existing-data totals
 unchanged across the deploy, and no regression against the pre-deploy control.
 It is explicitly NOT a claim about OCC contention — that verdict is plan
 107-06's, and OCC-01 remains open.
+
+---
+
+## F0 — After-window gate
+
+Blocking human-verify checkpoint (plan 107-06, Task 1). Executed **inline in the
+main session**, not via a subagent: the gate turns on Larry's live observation of
+the running dashboard and his characterization of traffic, and that approval is
+native to this session rather than relayable second-hand.
+
+No `docker logs --since` measurement command was run in this task. The
+after-window measurement is Task 2 and did not begin until this gate cleared.
+
+### F0.1 Elapsed time since deploy
+
+```
+DEPLOY_UTC : 2026-08-05T16:26:33Z   (epoch 1785947193, from section D.4)
+NOW        : 2026-08-05T19:22:48Z   (epoch 1785957768, `date -u`)
+ELAPSED    : 1785957768 - 1785947193 = 10575 s = 2.9375 h  (2h 56m 15s)
+WINDOW_HOURS (from 107-OCC-BASELINE.md § A): 2
+```
+
+**Unit sanity line** (a threshold check that passes by accident reads identically
+to one that passes correctly): the two epoch values format to 19:22:48Z and
+16:26:33Z, whose wall-clock difference is 2h56m15s — exactly the 10,575 s the
+subtraction gives. These are epoch **seconds**, and the comparison is against
+today's date, not a 1970 artifact.
+
+```
+ELAPSED (2.94 h) >= WINDOW_HOURS (2)  →  GATE 1: PASS
+```
+
+Earliest valid measurement time was `DEPLOY_UTC + WINDOW_HOURS` =
+**2026-08-05T18:26:33Z**, which passed ~56 minutes before this gate was
+evaluated. No shortfall to report.
+
+A 2 h window measured at 19:22:48Z starts at **17:22:48Z**, which is after
+`DEPLOY_UTC` (16:26:33Z) — so the window carries no pre-deploy traffic. That
+condition is re-asserted as a formal validity gate in section F.
+
+### F0.2 Container was not recreated — `State.StartedAt` comparison
+
+```
+$ docker inspect -f '{{.State.StartedAt}}' convex-backend
+2026-08-05T12:45:21.334055274Z
+
+$ docker ps --filter name=convex-backend --format '{{.Status}}'
+Up 7 hours (healthy)
+```
+
+Recorded in section D (and originally in 107-04 § A): `2026-08-05T12:45:21.334055274Z`.
+
+```
+StartedAt now      : 2026-08-05T12:45:21.334055274Z
+StartedAt in § D   : 2026-08-05T12:45:21.334055274Z
+COMPARISON: MATCH (identical to the nanosecond)
+```
+
+The container was never restarted or recreated across the baseline, the deploy,
+and the after-window. The log stream carrying the baseline is continuous, so the
+before/after comparison is recoverable. Uptime (7 h) also exceeds `WINDOW_HOURS`
+(2), so a `--since 2h` capture cannot silently truncate — the primary false-green
+this phase's method exists to prevent.
+
+### F0.3 Dashboard health — CONFIRMED by Larry
+
+Larry loaded the CodePulse Analytics page and confirmed all four widgets render
+with plausible non-zero data: **Total Events card, activity heatmap, tool-flow
+Sankey, and error-rate trend.**
+
+Provenance stated precisely rather than over-claimed. Larry supplied a screenshot
+of the upper portion of the page, which *directly* evidences:
+
+- `TOTAL EVENTS: 144338`
+- `LLM CALLS: 25`, `TOTAL TOKENS: 109,796`, `CACHE HIT RATE (24H): 55.4%`
+- `API SPEND: $17.3509`; Cost Forecast populated (daily/weekly/monthly)
+- SDK Daily Cap sparkline rendering, and the "Prompt cache by model — last 24h"
+  table populated with per-model rows
+
+The heatmap, Sankey and error-rate trend sit below the fold in that capture and
+are recorded **on Larry's explicit confirmation**, not on anything observed in
+the screenshot.
+
+No dashboard-wide "no data / all zeros / reconnect loop" state was present, so
+the `CLAUDE.md` rule — that such a state is index rot or memory starvation until
+proven otherwise — does not apply, and `docker stats` was not needed.
+
+Two cosmetic items visible in the capture were noted and deliberately **not**
+folded into this gate, because neither is an OCC, index or memory signal:
+a "1 models need pricing rates" banner, and `claude-haiku-4-5` showing a 0.0%
+cache hit rate over 11 calls. Both are out of scope for OCC-01.
+
+### F0.4 Traffic characterization — CONFIRMED by Larry
+
+```
+TRAFFIC_LEVEL: NORMAL
+```
+
+Larry characterized Ástríðr agent activity over the ~2.94 h since the deploy as
+**roughly normal**, not an unusually quiet stretch.
+
+This value is load-bearing and is carried into Task 2 verbatim: had it been
+`unusually quiet`, section G's verdict would be forced to `INCONCLUSIVE`
+regardless of how far the OCC rate fell (T-107-18). It is recorded here rather
+than re-derived later so the verdict rule cannot silently override it.
+
+### F0.5 Shard presence — not deferred
+
+`SHARD_PRESENCE` in section E.1 reads
+`OBSERVED 8 distinct values 0,1,2,3,4,5,6,7`, captured from
+`npx convex data aggregates` and parsed with a real JSON parser. It is **not**
+`DEFERRED`, so the conditional branch of this checkpoint — asking Larry to read
+shard values off the self-hosted Convex dashboard — does not apply and was not
+requested. No shard values were sourced from a human observation.
+
+### F0.6 Gate result
+
+| # | Condition | Result |
+|---|-----------|--------|
+| 1 | Elapsed (2.94 h) ≥ `WINDOW_HOURS` (2) | PASS |
+| 2 | Traffic over the window was real, not idle | PASS — Larry: normal |
+| 3 | `State.StartedAt` unchanged from § D | PASS — identical to the nanosecond |
+| 4 | Analytics page renders non-zero across all four widgets | PASS — Larry confirmed |
+| 5 | Shard values off the dashboard (only if `SHARD_PRESENCE: DEFERRED`) | N/A — already OBSERVED in § E.1 |
+
+```
+AFTER-WINDOW GATE: PASS — Task 2 measurement is valid to run.
+```
