@@ -69,7 +69,19 @@ function eventBucket(aggregates: Row[], eventType: string): Row | undefined {
 // guards below (`typeof rollup.incrementEventBucket !== "function"`) provide the
 // real safety; the dependent tests RED until the module lands.
 type RollupModule = {
-  incrementEventBucket?: (ctx: any, eventType: string, timestamp: number) => Promise<void>;
+  incrementEventBucket?: (
+    ctx: any,
+    eventType: string,
+    timestamp: number,
+    shard: number
+  ) => Promise<void>;
+  incrementSankeyBuckets?: (
+    ctx: any,
+    eventType: string,
+    toolName: string | undefined,
+    timestamp: number,
+    shard: number
+  ) => Promise<void>;
   accumulateEvent?: (
     eventsAcc: Map<string, any>,
     sankeyAcc: Map<string, any>,
@@ -103,13 +115,35 @@ beforeAll(async () => {
   }
 });
 
+// --- Wave-0 shard-constant module guard (Phase 107, plan 107-03) -----------
+// Dynamically load convex/lib/aggregateShard.ts. It does not exist until plan
+// 107-03, so this must degrade to `shardLib = null` (RED tests) rather than
+// erroring the file — same non-literal-specifier + @vite-ignore convention as
+// the `rollup` guard above.
+type ShardLib = { AGGREGATE_SHARD_COUNT?: number; pickShard?: () => number } | null;
+let shardLib: ShardLib = null;
+beforeAll(async () => {
+  try {
+    const spec = "./lib/aggregateShard" + "";
+    shardLib = (await import(/* @vite-ignore */ spec)) as ShardLib;
+  } catch {
+    shardLib = null;
+  }
+});
+
 // Mirrors the idempotencyKey dedup path planned for convex/events.ts ingest
 // (88-PATTERNS.md "events.ts" section). Used to exercise the D-04/D-05 invariant
 // independently of Convex codegen. Returns true if the insert happened.
 async function ingestWithDedup(
   ctx: { db: ReturnType<typeof makeStore>["db"] },
   store: ReturnType<typeof makeStore>,
-  args: { eventType: string; toolName?: string; timestamp: number; idempotencyKey?: string }
+  args: {
+    eventType: string;
+    toolName?: string;
+    timestamp: number;
+    idempotencyKey?: string;
+    shard?: number; // Phase 107: explicit shard, defaults to 0 (D-01)
+  }
 ): Promise<boolean> {
   if (args.idempotencyKey) {
     const existing = store.events.find((e) => e.idempotencyKey === args.idempotencyKey);
@@ -124,7 +158,7 @@ async function ingestWithDedup(
   if (!rollup || typeof rollup.incrementEventBucket !== "function") {
     throw new Error("incrementEventBucket not implemented (Wave 1 / Plan 02)");
   }
-  await rollup.incrementEventBucket(ctx as any, args.eventType, args.timestamp);
+  await rollup.incrementEventBucket(ctx as any, args.eventType, args.timestamp, args.shard ?? 0);
   return true;
 }
 
@@ -197,11 +231,15 @@ describe("analyticsRollup", () => {
       if (!rollup || typeof rollup.incrementEventBucket !== "function") {
         throw new Error("incrementEventBucket not implemented (Wave 1 / Plan 02)");
       }
-      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000);
+      // Phase 107: shard is pinned to 0 deliberately. Once incrementEventBucket
+      // draws its own shard via Math.random() (plan 107-03), an implicit draw at
+      // these two call sites would land on different shards about 7 times in 8,
+      // and this test would flake (two separate rows instead of one patched row).
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
       expect(store.aggregates).toHaveLength(1);
       expect(eventBucket(store.aggregates, "llm_call")?.value).toBe(1);
 
-      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000);
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
       expect(store.aggregates).toHaveLength(1); // patched, not a second row
       expect(eventBucket(store.aggregates, "llm_call")?.value).toBe(2);
     });
@@ -221,7 +259,10 @@ describe("analyticsRollup", () => {
         { eventType: "file_write", timestamp: 1_700_000_100 },
       ];
       for (const e of seeded) {
-        await rollup.incrementEventBucket(ctx as any, e.eventType, e.timestamp);
+        // Phase 107: explicit shard 0 — this test asserts the pre-existing
+        // count-equality invariant, not the shard split, so every write is
+        // pinned to the same shard.
+        await rollup.incrementEventBucket(ctx as any, e.eventType, e.timestamp, 0);
       }
       const sum = store.aggregates
         .filter((r) => r.metric_type === "events")
