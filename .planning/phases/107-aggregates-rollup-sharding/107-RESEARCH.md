@@ -279,14 +279,16 @@ expect(tuRead?.value).toBe(5); // 3 + 2 — proves cross-row summing on identica
 | A2 | The `@convex-dev/sharded-counter` component's design summary (shard-count-per-key, read-loses-sharding-benefit tradeoff) | Convex-Native Prior Art | LOW — this section is explicitly informational only, not used to justify any implementation decision; D-01/D-02/D-03/D-04 are locked regardless of this component's exact design |
 | A3 | `.env.local`'s `CONVEX_SELF_HOSTED_URL`/`CONVEX_SELF_HOSTED_ADMIN_KEY` currently resolve `npx convex deploy --yes` to `http://127.0.0.1:3210` by default | Schema Change / Deploy invocation | LOW-MEDIUM — this research could not read `.env.local` (env-file-guard blocks it); the claim is inferred from 5+ independent prior-phase SUMMARY/VALIDATION docs in this same repo all showing that exact target resolving without extra flags, not from reading the env file directly. If the env file has since changed, the implementer's own required "verify the printed target line" step (already mandated above) catches it before any live write. |
 
-## Open Questions
+## Open Questions (RESOLVED — both closed during planning, 2026-08-05)
 
-1. **Should shard be drawn once per `events.ingest` call, or once per each of the 3 sub-writes?**
+1. **RESOLVED — Should shard be drawn once per `events.ingest` call, or once per each of the 3 sub-writes?**
+   **Resolution:** one draw per `events.ingest` call, passed as an explicit parameter to both helpers. Encoded in `107-03-PLAN.md` (which additionally asserts structurally that `pickShard` is never called *inside* the three increment helpers) and guarded by `107-01-PLAN.md`'s explicit-shard tests. This also avoids making the existing patch-or-insert test (`analyticsRollup.test.ts:193-208`) 7/8 flaky.
    - What we know: D-01's "per write" wording is compatible with either reading; correctness and contention-spreading are identical either way since the 3 sub-writes never OCC-collide with each other (single transaction, sequential awaits).
    - What's unclear: whether "Claude's Discretion" implicitly covers this (CONTEXT.md doesn't list it explicitly under that heading).
    - Recommendation: one draw per `ingest` call, passed as a parameter to both helpers (see Architecture Patterns above). Simpler, cheaper, no correctness difference. Planner should state this choice explicitly in the plan rather than leave it implicit.
 
-2. **Does the live self-hosted schema push for this exact diff actually print "No indexes are deleted"?**
+2. **RESOLVED (as a planned assertion, not yet a live observation) — Does the live self-hosted schema push for this exact diff actually print "No indexes are deleted"?**
+   **Resolution:** not assumed. `107-05-PLAN.md`'s deploy task captures the deploy output and asserts the literal `No indexes are deleted by this push` string as an acceptance criterion, so a push that *would* delete an index fails the task instead of passing silently. The question is closed as "must be proven at execution time", not as "expected to be fine".
    - What we know: Convex's documented semantics say additive optional fields never touch indexes; this repo has 5+ precedents of similar additive-field pushes confirming exactly that output.
    - What's unclear: this research did not run the actual deploy (out of scope — read-only constraint), so this is a strong expectation, not a live-observed fact for this specific diff.
    - Recommendation: the plan's deploy task must capture and assert the literal `✔ No indexes are deleted by this push` string in its own verification step, matching this repo's established pattern — do not assume it silently.

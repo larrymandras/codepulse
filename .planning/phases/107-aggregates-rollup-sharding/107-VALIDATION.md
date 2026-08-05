@@ -1,8 +1,8 @@
 ---
 phase: 107
 slug: aggregates-rollup-sharding
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-05
 ---
@@ -137,12 +137,16 @@ Task IDs are placeholders until plans are written; the planner owns final number
 
 ## Validation Sign-Off
 
-- [ ] All tasks have automated verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all ❌ MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] Live baseline captured with window length + uptime + count + rate + traffic volume, **before** deploy
-- [ ] `nyquist_compliant: true` set in frontmatter
+Checked items were independently re-evaluated against the six plans by `gsd-plan-checker`
+(2026-08-05), not inferred from this file's own frontmatter flag.
 
-**Approval:** pending
+- [x] All tasks have automated verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all ❌ MISSING references (107-01 write-path, 107-02 read-path)
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
+- [ ] **Execution-time gate:** live baseline captured with window length + uptime + count + rate + traffic volume, **before** deploy — owned by `107-04-PLAN.md`, which `107-05` refuses to run without
+
+**Approval:** approved 2026-08-05 for execution. The single unchecked box is an execution-time
+gate, not a planning gap — it cannot be satisfied until the phase runs.
