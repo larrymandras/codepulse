@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v13.0
 milestone_name: Brain-Swap Control, Cost Intelligence & Consolidation — 🚧 IN PROGRESS
 status: executing
-stopped_at: Phase 106 Plan 04 complete (entry-chunk remediation, DEBT-03)
-last_updated: "2026-08-05T16:35:00.000Z"
-last_activity: 2026-08-05 -- Phase 106 Plan 04 complete (DEBT-03 entry-chunk remediation, 2,042,353 -> 563,616 bytes, -72.4%); earlier same day, Phase 107 added + context gathered (aggregates rollup sharding, OCC contention fix); Wave 2's Plan 03 still blocked on DEBT-02 NO-GO
+stopped_at: "Completed 107-01-PLAN.md (Wave-0 write-path shard contract, RED as designed); next: plan 107-02"
+last_updated: "2026-08-05T14:38:39.283Z"
+last_activity: 2026-08-05
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 46
-  completed_plans: 42
+  total_plans: 52
+  completed_plans: 43
   percent: 60
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 106 — consolidation-hardening
+**Current focus:** Phase 107 — aggregates-rollup-sharding
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,8 +43,8 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 106 (consolidation-hardening) — EXECUTING
-Plan: 4 of 8 COMPLETE (01, 02, 04, 06 — 06 executed out of wave order, same precedent as Plan 104-10) — next Plan 03 (still blocked NO-GO) or Plan 05
+Phase: 107 (aggregates-rollup-sharding) — EXECUTING
+Plan: 2 of 6
 
 **Phase 105 (Tool & Trace Observability) — CONTEXT GATHERED 2026-08-03** (`105-CONTEXT.md`, commit `db5c763d`; no plans yet). 4 gray areas discussed, 16 decisions locked (D-01..D-16). Counters unchanged (105 has no plans). Headlines, each grounded on a LIVE query against the running self-hosted Convex rather than assumption: **`toolExecutions` contains ZERO Ástríðr agent tools** — it is Claude Code hook rows (`Bash` 594/16 err, `Edit`, `Read`, `mcp__github__*`) plus gateway pseudo-tools only, while Ástríðr's real tools (`web_search` 125, `telegram_tool` 58/3, `cli_gateway` 103/43, `memory_search`) live in `callGraphEdges` as **cumulative counters with no per-call history**, so OBS-01's "over time" is impossible from either table today; **`tool_policy_event` has no `case` and no `default`** in `convex/runtimeIngest.ts`'s switch, so all four kinds (`tool_call_leaked_as_text`, `execution_denied`, `malformed_policy_boot`, `malformed_policy_reload_rejected`) are **silently discarded at the ingest boundary**; `toolExecutions` carries no `traceId`, so tool spans cannot nest under a turn; and both `TraceWaterfall` feeder queries (`llm.sessionCalls`, `toolExecutions.listBySession`) are unbounded `.collect()`. Decisions: Ástríðr tool calls land as per-call `toolExecutions` rows via the existing `tool_executed` case (D-01), `provider`-tagged with the default view scoped to Ástríðr so a mixed ranking is never shown by accident (D-02); **one astridr-repo commit** adds `durationMs` + `traceId` to `tool_executed` (D-03), widens the leak payload with `tool_was_offered`/`tools_offered_count`/`round`/`agentId` — all already local variables the telemetry send drops (D-08) — and introduces a per-round ContextVar so trace nesting is **reported, not inferred** (D-10, needed because `llm_call` is emitted from inside each provider, which has no access to the loop's `round_num`); a new `toolPolicyEvents` table (D-05) alerting on the **fail-open kinds only** through Phase 104's existing `alerts` + `sendAlertWebhook` path with **no new cron** (D-06), proven by inducing real events live rather than shipping into an unprovable empty view (D-07); hourly aggregate buckets so "over time" survives the 14-day `toolExecutions` prune without raising retention (D-04); tool rows nested under their LLM call with a per-trace cache ratio and **capped reads that state truncation on screen** (D-09/D-11/D-12, the `3b31c9f4` lesson); a new Tools page under `OBSERVE`, stacked sections not tabs, with the three existing tool panels left in place and cross-linked (D-13..D-16). Next: `/gsd-plan-phase 105`.
 
@@ -110,14 +110,14 @@ Queued post-v11.0 (operator-confirmed order) — **ALL DONE 2026-07-26** (ad-hoc
 - **② Ástríðr bridge coverage** ✅ FULLY DONE — safe-7 (`.claude-alt` plugin re-root + vault `.agents/skills` junction targets) AND the deferred-3 project-repo skills (spike-findings-forge / add-migration / home-assistant-manager, each repo's `.claude/skills` mounted read-only + added to `bridge.yaml`). **All 10 previously-unbridged skills now have cc_ twins — 202 total, live-verified astridr→forge→Convex.** astridr commits 82ead1fe + 46873c84. They load under `skill_auto_approve` (own repos; `blocked_skills` gate applies). Detail: HANDOFF-post-v11.0.md item ②.
 - **③ Chat command-center** ✅ — 3-column HUD (chat · real AvatarAura + Control Center · new VitalsRail from existing Convex tables + one lean `getRecentlyUsedSkills` query); mockup→sign-off→build→~6 live iterations. Bonus: Inbox Enter-key AND R-key phantom-expand both fixed (Enter marks-read; R opens the reject input via a new InboxCard `rejectSignal` prop). codepulse commits 565cef36 / 2fac593.
 
-Status: Executing Phase 106
+Status: Ready to execute
 
 Phase 103 ✅ **COMPLETE 2026-07-30** — 18/18 plans + a post-UAT inline gap-closure round (6 fix commits, no plan artifacts by direction). Live UAT done (`103-UAT.md`, 16/16 resolved); Convex ingest guard deployed + proven; 93 sentinel rows pruned. BSC-02/04/05 SATISFIED, BSC-01 PARTIAL by design (astridr 184.1 per-profile deferral). Remaining for the milestone: Phases 105-106 (not yet planned).
 
 <!-- The two lines above were RESTORED by hand 2026-07-31: `gsd-sdk query state.planned-phase` overwrote the whole Phase 103 completion narrative with the bare string "Ready to execute" (the documented state.* narrative-clobber defect). Its numeric counters were checked against ground truth and WERE correct this time (total_plans 18+11=29, completed_plans 18, completed_phases 1/4 = 25%) — only the prose was clobbered. -->
 
 **v12.0 (Personal Productivity — Reminders & Calendar) SHIPPED & ARCHIVED 2026-07-23** — Phases 101 (7/7, done 2026-07-20) + 102 (3/3 tech-debt close-out, live-verified 2026-07-23); 9/9 requirements; tagged `v12.0`; milestone audit `tech_debt` (0 blockers, 2 flagged items closed by Phase 102). Archived to `milestones/v12.0-{ROADMAP,REQUIREMENTS,MILESTONE-AUDIT}.md`. Closed by hand (no `gsd-sdk milestone.complete`) — REQUIREMENTS.md kept live with only the v12.0 section extracted.
-Last activity: 2026-08-04 -- Phase 106 Plan 02 complete (DEBT-03 bundle baseline)
+Last activity: 2026-08-05
 
 **v11.0 resumed** (HISTORICAL mid-execution snapshot — SUPERSEDED by the "v11.0 SHIPPED & CLOSED 2026-07-25" status above; Phases 99/100 were subsequently completed and the milestone shipped): Phase 97 (Real Skill Intake & Daemon Foundation) COMPLETE (6/6 plans, operator-verified live 2026-07-19, commit 495946f). Phase 98 (Lifecycle Mutations) PLANNED 2026-07-21 (4 plans, 3 waves, checker passed); Plan 98-01 EXECUTED 2026-07-21 (Convex substrate — see 98-01-SUMMARY.md); Plan 98-02 EXECUTED 2026-07-21 (Forge daemon executor — see 98-02-SUMMARY.md); Plan 98-03 EXECUTED 2026-07-21 (lifecycle UI building blocks — see 98-03-SUMMARY.md); Plan 98-04 EXECUTED 2026-07-21 (lifecycle menu assembly — see 98-04-SUMMARY.md). Live UAT session (2026-07-21) found 1 real gap (stale-origin prune on move/delete of the last skill in a workspace) alongside 2 passed checks and 2 blocked-on-Clerk-auth checks; gap-closure Plan 98-05 PLANNED + EXECUTED 2026-07-22 (see 98-05-SUMMARY.md) — closes the gap cross-repo (forge `scannedOrigins` manifest + codepulse `computeSkillPrunes` manifest-aware pruning). Daemon code lives in C:\Users\mandr\forge, ROADMAP's "astridr-repo" note is stale. Phase 98 is now 5/5 plans code-complete; the 98-05 fix's own MANUAL verification steps (live G: repro + transient-unmount negative check) remain outstanding. Phases 99 (Launch/Dispatch) + 100 (Control-Surface UX) were subsequently completed — v11.0 shipped & closed 2026-07-25 (tag v11.0).
 
@@ -755,6 +755,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 102]: Phase 102 Plan 01: self-hosted Convex codegen needed a freshly-generated admin key (docker exec convex-backend ./generate_admin_key.sh) passed as inline shell env vars for a single command, since the stored local admin key was stale and secret config files cannot be read or written per project security policy
 - [Phase 102-02]: Deleted dead CodePulsePoster class + orphaned constants from calendar_cache.py, switched cron_dispatcher.py's _run_calendar_cache_refresh to pass self._telemetry (shared ConvexHandler), and swept the stale two-backend/404/transitional narrative out of tools/reminders.py's comment block to state the current single-local-backend truth. Live cron-tick proof deferred to plan 102-03. AUDIT-TD-02.
 - [Phase 103]: 103-18: hoisted GlobalSwapModal ownership into a new GlobalSwapContext (GlobalSwapProvider/useGlobalSwap), mounted once in DashboardLayout above the router outlet, closing WR-01 (revert toast firing into an unmounted page-scoped picker).
+- [Phase 107]: Wave-0 shard tests (107-01) follow D-01: shard is an explicit test param, no Math.random() dependency in the test file; production draws it once per ingest (107-03)
+- [Phase 107]: 107-01 encodes D-04's strict-equality shard match (r.shard === shard, not (r.shard ?? 0) === shard) directly in the legacy-unsharded-row test — a pre-existing row is retired, never patched, by a sharded write
 
 ### Pending Todos
 
@@ -784,11 +786,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 102 P02 | 25min | 2 tasks | 4 files |
 | Phase 103 P18 | 55min | 2 tasks | 6 files |
 | Phase 105 P01 | 40min | 3 tasks | 10 files |
+| Phase 107 P01 | 12min | 3 tasks | 2 files |
 
 ## Session Continuity
 
-Last session: 2026-08-05T13:10:11.756Z
-Stopped at: Phase 107 context gathered (aggregates rollup sharding — 107-CONTEXT.md written, 4 areas discussed: shard key & count, sharding scope, existing row migration, verification method)
+Last session: 2026-08-05T14:38:39.269Z
+Stopped at: Completed 107-01-PLAN.md (Wave-0 write-path shard contract, RED as designed); next: plan 107-02
 Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
 
 --- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
@@ -798,7 +801,7 @@ Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Ro
 --- Prior (Phase 103, superseded by the above) --- Phase 103's gap-closure cycle is 18/18 plans CODE-complete (103-18 closed WR-01, 2026-07-29). Next step is an operator-attended LIVE re-verification against the running Ástríðr stack covering 103-16 (reselect gets a fresh confirm prompt), 103-17 (pinned-default count reads config), and 103-18 (revert survives navigating away from the Chat composer pill) — a green unit suite is explicitly not accepted as proof per this cycle's established pattern (see 103-VERIFICATION.md). Only after that should BSC-01..05 be re-marked complete in REQUIREMENTS.md and the phase checkbox flipped in ROADMAP.md.
 
 --- Historical (v11.0, closed 2026-07-25) --- Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This was the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/107-aggregates-rollup-sharding/107-CONTEXT.md
+Resume file: None
 
 ## Operator Next Steps
 
