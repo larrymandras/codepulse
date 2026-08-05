@@ -245,6 +245,134 @@ describe("analyticsRollup", () => {
     });
   });
 
+  // -------------------------------------------------------------------------
+  // Phase 107 Wave-0 — write-path shard contract (RED until plan 107-03).
+  // Every test name below contains "shard" so `-t "shard"` selects this whole
+  // set. Fixtures stay inside a SINGLE hour and metric_type per test — the fake
+  // makeStore() withIndex() ignores the index predicate entirely (returns the
+  // whole aggregates array), so the production code's own JS .find() is what
+  // does the real matching (107-PATTERNS.md section 3).
+  // -------------------------------------------------------------------------
+  describe("shard", () => {
+    test("same explicit shard patches the same row", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementEventBucket !== "function") {
+        throw new Error("incrementEventBucket shard param not implemented (plan 107-03)");
+      }
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
+      expect(store.aggregates).toHaveLength(1);
+      expect(store.aggregates[0].value).toBe(2);
+      expect(store.aggregates[0].shard).toBe(0);
+    });
+
+    test("different explicit shards insert separate rows that still sum to the full count", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementEventBucket !== "function") {
+        throw new Error("incrementEventBucket shard param not implemented (plan 107-03)");
+      }
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 3);
+      expect(store.aggregates).toHaveLength(2);
+      const shards = new Set(store.aggregates.map((r) => r.shard));
+      expect(shards).toEqual(new Set([0, 3]));
+      for (const row of store.aggregates) {
+        expect(row.value).toBe(1);
+      }
+      // Assert the SUM, not just the count — a count assertion alone is a
+      // false-green once a bucket can span multiple rows (VALIDATION.md #4).
+      const sum = store.aggregates.reduce((acc, r) => acc + (r.value as number), 0);
+      expect(sum).toBe(2);
+    });
+
+    test("a legacy row with no shard field is not patched by a sharded write (D-04, shard-aware)", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementEventBucket !== "function") {
+        throw new Error("incrementEventBucket shard param not implemented (plan 107-03)");
+      }
+      // Pre-existing unsharded history row — NO shard key at all (D-04).
+      store.aggregates.push({
+        _id: "legacy",
+        metric_type: "events",
+        period: "hourly",
+        bucket_start: 1_700_000_000,
+        value: 42,
+        dimensions: { event_type: "llm_call" },
+      });
+      await rollup.incrementEventBucket(ctx as any, "llm_call", 1_700_000_000, 0);
+      const legacy = store.aggregates.find((r) => r._id === "legacy");
+      // Strict shard match (r.shard === shard, not (r.shard ?? 0) === shard):
+      // the legacy row is retired, not patched — it keeps absorbing writes
+      // otherwise, and the read side stays correct regardless because every
+      // reader sums across all matching rows irrespective of shard.
+      expect(legacy?.value).toBe(42); // unchanged
+      expect(store.aggregates).toHaveLength(2);
+      const newRow = store.aggregates.find((r) => r._id !== "legacy");
+      expect(newRow?.shard).toBe(0);
+      expect(newRow?.value).toBe(1);
+      const sum = store.aggregates.reduce((acc, r) => acc + (r.value as number), 0);
+      expect(sum).toBe(43);
+    });
+
+    test("one incrementSankeyBuckets call writes exactly two edges carrying the passed shard", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementSankeyBuckets !== "function") {
+        throw new Error("incrementSankeyBuckets shard param not implemented (plan 107-03)");
+      }
+      await rollup.incrementSankeyBuckets(ctx as any, "tool_use", "Read", 1_700_000_000, 2);
+      const edges = store.aggregates.filter((r) => r.metric_type === "sankey_edge");
+      expect(edges).toHaveLength(2);
+      for (const e of edges) {
+        expect(e.shard).toBe(2);
+      }
+      const pairs = edges.map((e) => `${e.dimensions.source}>${e.dimensions.target}`);
+      expect(pairs).toContain(`${categoryOf("tool_use")}>Read`);
+      expect(pairs).toContain(`Read>${outcomeOf("tool_use")}`);
+    });
+
+    test("different shards split each sankey edge without changing the edge totals", async () => {
+      const store = makeStore();
+      const ctx = { db: store.db };
+      if (!rollup || typeof rollup.incrementSankeyBuckets !== "function") {
+        throw new Error("incrementSankeyBuckets shard param not implemented (plan 107-03)");
+      }
+      await rollup.incrementSankeyBuckets(ctx as any, "tool_use", "Read", 1_700_000_000, 1);
+      await rollup.incrementSankeyBuckets(ctx as any, "tool_use", "Read", 1_700_000_000, 5);
+      const edges = store.aggregates.filter((r) => r.metric_type === "sankey_edge");
+      expect(edges).toHaveLength(4);
+      const byPair = new Map<string, number>();
+      for (const e of edges) {
+        const key = `${e.dimensions.source}::${e.dimensions.target}`;
+        byPair.set(key, (byPair.get(key) ?? 0) + (e.value as number));
+      }
+      expect(byPair.size).toBe(2);
+      for (const total of byPair.values()) {
+        expect(total).toBe(2);
+      }
+    });
+
+    test("pickShard returns an integer within AGGREGATE_SHARD_COUNT across 200 draws", () => {
+      if (!shardLib || typeof shardLib.pickShard !== "function") {
+        throw new Error("pickShard not implemented (plan 107-03)");
+      }
+      expect(shardLib.AGGREGATE_SHARD_COUNT).toBe(8);
+      const count = shardLib.AGGREGATE_SHARD_COUNT as number;
+      // No assertion on the DISTRIBUTION of draws — only the range. A
+      // distribution assertion would be genuinely flaky (VALIDATION.md #5/#6
+      // analog for this file: don't assert statistics on a random draw).
+      for (let i = 0; i < 200; i++) {
+        const v = shardLib.pickShard();
+        expect(Number.isInteger(v)).toBe(true);
+        expect(v).toBeGreaterThanOrEqual(0);
+        expect(v).toBeLessThan(count);
+      }
+    });
+  });
+
   describe("backfill count-equality", () => {
     test("N seeded events across types/hours → sum of 'events' bucket values === N", async () => {
       const store = makeStore();
