@@ -90,7 +90,12 @@ export interface UseDuplexEarsOptions {
    * phase. */
   persona?: string;
   onSpeechStart: () => void;
-  onFinalTranscript: (text: string) => void;
+  /** durationMs is the elapsed ms between the speech_started/speech_stopped
+   * pair that produced this final, measured locally via Date.now() deltas —
+   * never a value read from the remote payload (T-188.1-03). undefined when
+   * no matching speech_started preceded this transcript (never 0 — 0 would
+   * read as "impossibly short" rather than "unknown", 188.1-02 D-03). */
+  onFinalTranscript: (text: string, durationMs?: number) => void;
   /** Interim/partial text. Never persisted, never treated as final (D-15). */
   onInterimTranscript?: (text: string) => void;
   /** Fires at most once per start() cycle (latched — never a storm). */
@@ -154,6 +159,13 @@ export function useDuplexEars(options: UseDuplexEarsOptions): UseDuplexEarsRetur
   const streamRef = useRef<MediaStream | null>(null);
   const secretRef = useRef<string | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
+  // 188.1-02 (D-05): utterance duration plumbing. speechStartedAtRef records
+  // when the CURRENT utterance began; lastUtteranceDurationMsRef holds the
+  // computed elapsed ms once speech_stopped arrives, consumed-and-cleared by
+  // the transcript.completed branch so a later transcript with no fresh
+  // speech pair cannot inherit a stale value.
+  const speechStartedAtRef = useRef<number | null>(null);
+  const lastUtteranceDurationMsRef = useRef<number | undefined>(undefined);
 
   // Synchronous re-entry guard for start() — a state-only check can race a
   // second start() call within the same async window (same pattern as
@@ -312,21 +324,37 @@ export function useDuplexEars(options: UseDuplexEarsOptions): UseDuplexEarsRetur
           const type = data?.type;
           if (type === DUPLEX_EVENT_SPEECH_STARTED) {
             trace("speech_started");
+            speechStartedAtRef.current = Date.now();
             onSpeechStartRef.current();
             return;
           }
           if (type === DUPLEX_EVENT_SPEECH_STOPPED) {
-            // Trace only -- no handler wired to this yet. Added for the tail-hallucination
-            // repro: read against duplex.transcript's timestamp for the SAME utterance to see
-            // OpenAI's own server_vad + inference + WebRTC round-trip latency, and against the
-            // nearest tts.end to see whether it lands inside or outside ECHO_TAIL_MS.
-            trace("speech_stopped");
+            // 188.1-02 (D-05): computes the real elapsed ms for the utterance
+            // that just stopped and hands it to the transcript branch below.
+            // Also still serves the tail-hallucination repro this trace was
+            // originally added for (2026-07-31): read against duplex.transcript's
+            // timestamp for the SAME utterance to see OpenAI's own server_vad +
+            // inference + WebRTC round-trip latency, and against the nearest
+            // tts.end to see whether it lands inside or outside ECHO_TAIL_MS.
+            const startedAt = speechStartedAtRef.current;
+            speechStartedAtRef.current = null; // clear so the pair cannot be double-consumed
+            let durationMs: number | undefined;
+            if (startedAt !== null) {
+              const elapsed = Date.now() - startedAt;
+              // Never clamp to zero and never pass a negative value -- undefined
+              // means "unknown", 0 would read as "impossibly short" (D-03).
+              durationMs = elapsed >= 0 ? elapsed : undefined;
+            }
+            lastUtteranceDurationMsRef.current = durationMs;
+            trace("speech_stopped", { durationMs });
             return;
           }
           if (type === DUPLEX_EVENT_TRANSCRIPT_COMPLETED) {
             const text = data?.transcript ?? "";
-            trace("transcript", { length: text.length });
-            onFinalTranscriptRef.current(text);
+            const durationMs = lastUtteranceDurationMsRef.current;
+            lastUtteranceDurationMsRef.current = undefined; // consume-and-clear (D-03)
+            trace("transcript", { length: text.length, durationMs });
+            onFinalTranscriptRef.current(text, durationMs);
             return;
           }
           if (type === DUPLEX_EVENT_TRANSCRIPT_DELTA) {
