@@ -52,6 +52,7 @@ import {
   matchedBargePhrase,
   phraseAppearsIn,
   isPureBargeInPhrase,
+  stripWakePhrase,
   isStrictModeCommand,
   decideVisionIntent,
   runVisionRefusal,
@@ -107,6 +108,21 @@ const RECOGNIZER_MIN_HEALTHY_MS = 2_000;
 /** Echo-tail anchor expiry: if Chrome abandons the tail utterance without a
  *  final, the anchor must not keep stripping later, unrelated speech. */
 const ECHO_ANCHOR_MAX_MS = 5_000;
+/**
+ * 188.1-04 (D-03): the duration-plausibility gate's floor, in ms. A
+ * duplex-sourced final measuring shorter than this is dropped rather than
+ * dispatched. Derived in `188.1-CALIBRATION.md` § "Duration Floor
+ * Derivation" from the single archived junk sample (241ms, "Kulitnya.") —
+ * NOT picked, NOT rounded here. That derivation is explicitly marked
+ * PROVISIONAL: the corpus held one duration sample and zero real-utterance
+ * samples, so the floor is biased far below the one known junk value (÷5
+ * margin) rather than anchored to a measured "shortest real utterance" —
+ * the correct constraint under D-03's fail-toward-sending mandate is
+ * unmeasurable until Plan 07's live-mic session supplies a real sample.
+ * Do not treat this value as settled; re-derive per the calibration doc's
+ * own reproducibility recipe when that session runs.
+ */
+const DURATION_FLOOR_MS = 50;
 
 // ─── Live-repro instrumentation ──────────────────────────────────────────────
 // Ring buffer + console lines; the Chat page shows a COPY TRACE chip while
@@ -362,6 +378,11 @@ export interface UseAstridrVoiceReturn {
    *  speech-start signal already dispatch through — no second interrupt
    *  mechanism (188-UI-SPEC.md Part 3 §1). */
   triggerBargeIn: () => void;
+  /** 188.1-04 (D-04): session-scoped count of finals the plausibility gate
+   *  dropped (wake-phrase-only utterances + sub-floor-duration bursts) —
+   *  disclosed quietly in VoiceStatusPanel, never in the chat transcript.
+   *  Resets on mount; no persistence. */
+  filteredCount: number;
 }
 
 // ─── Hook ────────────────────────────────────────────────────────────────────
@@ -400,6 +421,10 @@ export function useAstridrVoice({
   const [showInterruptFlash, setShowInterruptFlash] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [followUpMs, setFollowUpMs] = useState(FOLLOW_UP_WINDOW_MS);
+  // 188.1-04 (D-04): session-scoped filtered-drop count. State, not a ref —
+  // VoiceStatusPanel must actually re-render when it changes (188.1-UI-SPEC.md
+  // Part 5).
+  const [filteredCount, setFilteredCount] = useState(0);
   // D-04: "Looking…" — set the instant a vision-triggered capture starts,
   // cleared the moment the model's answer begins streaming or TTS_START
   // fires, whichever comes first (184-UI-SPEC.md).
@@ -745,26 +770,19 @@ export function useAstridrVoice({
     [endConversation]
   );
 
-  // ─── Turn end (her reply finished — with or without audio) ─────────────────
-  // Shared by the TTS-end path and the silent-turn watchdog. Opens the
-  // follow-up window (strict off), stay-hot-extended when she asked a question.
-  // If the turn was a graceful close (user said an end-phrase, she replied),
-  // the conversation re-arms HERE — after her goodbye, never silently.
+  // ─── Follow-up window open (188.1-04, D-02) ────────────────────────────────
+  // Extracted from onTurnEnd's inline block so the wake-only-drop case below
+  // (a bare "Hey Astrid." mid-conversation) can call the SAME implementation
+  // to REFRESH a window that handleInterimResultRef already consumed for
+  // this utterance — one implementation, not two copies (the same
+  // one-implementation principle D-06 applies to the concat sites). Behavior
+  // preserved byte-for-byte from the pre-188.1-04 inline block: the
+  // strictModeRef guard, the askedQuestion / QUESTION_FOLLOW_UP_MS vs
+  // FOLLOW_UP_WINDOW_MS choice, the followup.open trace, resetSilenceTimer,
+  // setFollowUpMs/setFollowUpOpen, and the expiry timeout's
+  // followup.expire → re-arm / FOLLOW_UP_EXPIRE / teardownConversation.
 
-  const onTurnEnd = useCallback(() => {
-    if (voiceStateRef.current === "idle") return; // typed-turn TTS while armed
-
-    if (closePendingRef.current) {
-      closePendingRef.current = false;
-      trace("close.graceful → re-arm after her goodbye");
-      endConversation();
-      return;
-    }
-
-    // Fresh restart budget: it's the user's turn now — a deaf window because
-    // EARLIER turns spent the keep-alive cap is never acceptable.
-    restartTimesRef.current = [];
-
+  const openFollowUpWindow = useCallback(() => {
     if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
     if (!strictModeRef.current) {
       const reply = chatRef.current.streamingReplyRef.current;
@@ -788,7 +806,30 @@ export function useAstridrVoice({
       setFollowUpOpen(false);
       teardownConversation("stop");
     }
-  }, [resetSilenceTimer, teardownConversation, endConversation]);
+  }, [resetSilenceTimer, teardownConversation]);
+
+  // ─── Turn end (her reply finished — with or without audio) ─────────────────
+  // Shared by the TTS-end path and the silent-turn watchdog. Opens the
+  // follow-up window (strict off), stay-hot-extended when she asked a question.
+  // If the turn was a graceful close (user said an end-phrase, she replied),
+  // the conversation re-arms HERE — after her goodbye, never silently.
+
+  const onTurnEnd = useCallback(() => {
+    if (voiceStateRef.current === "idle") return; // typed-turn TTS while armed
+
+    if (closePendingRef.current) {
+      closePendingRef.current = false;
+      trace("close.graceful → re-arm after her goodbye");
+      endConversation();
+      return;
+    }
+
+    // Fresh restart budget: it's the user's turn now — a deaf window because
+    // EARLIER turns spent the keep-alive cap is never acceptable.
+    restartTimesRef.current = [];
+
+    openFollowUpWindow();
+  }, [openFollowUpWindow, endConversation]);
 
   // ─── Send (end-of-turn flush) ──────────────────────────────────────────────
 
@@ -1102,6 +1143,36 @@ export function useAstridrVoice({
     setInterimText("");
     resetSilenceTimer();
 
+    // Wake-phrase strip (188.1-04, D-01/D-02/D-05): placed after the interim/
+    // silence reset above but BEFORE every fast-path below, so a stripped
+    // remainder still reaches vision-intent detection ("Hey Ástríðr, what's
+    // on my screen?") and the pure-barge reflex ("Hey Astrid, stop") exactly
+    // as if the wake phrase had never been spoken. This closes the live
+    // defect where "Hey Astrid." was transcribed by the duplex ear, accepted
+    // as content, and dispatched as a chat message — answered by a full LLM
+    // turn plus TTS synthesis — three times in one recorded session
+    // (2026-08-05 evidence todo). Lands in THIS shared sink, not the wake
+    // worker's onWake (D-05): onWake never sees transcript text, so it is
+    // structurally incapable of catching a wake phrase transcribed as
+    // content by the duplex ear.
+    const wakeStrip = stripWakePhrase(text);
+    if (wakeStrip.matched !== null) {
+      if (wakeStrip.stripped === "") {
+        // D-02: the WHOLE utterance was the wake phrase — drop it and
+        // REFRESH (not close) the follow-up window, so saying her name
+        // mid-conversation keeps her listening instead of ending the turn.
+        // handleInterimResultRef already called clearFollowUpWindow() for
+        // this same utterance ("a new interim consumes the window"), so this
+        // genuinely re-opens a consumed window rather than a no-op.
+        trace("final.wake-phrase-only-dropped", { text });
+        setFilteredCount((c) => c + 1);
+        openFollowUpWindow();
+        return;
+      }
+      trace("final.wake-phrase-stripped", { from: text, to: wakeStrip.stripped });
+      text = wakeStrip.stripped;
+    }
+
     // Vision-intent fast-path (D-01/D-02/D-03/D-04): a share-context question
     // bypasses the normal accumulate/debounce pipeline entirely — it's a
     // direct command, not banter. An active share captures a FRESH frame and
@@ -1224,6 +1295,23 @@ export function useAstridrVoice({
       accumulatedRef.current = text.trim();
       setFinalText(accumulatedRef.current);
       void flushSend(); // no debounce — the goodbye goes out immediately
+      return;
+    }
+
+    // Duration plausibility gate (188.1-04, D-03): placed immediately BEFORE
+    // shouldReject so every fast-path above it (vision-intent, pure-barge,
+    // strict-mode command, swap, end-phrase) can never be dropped for being
+    // short — only an utterance that survives all of those reaches this
+    // check. Fails toward sending: durationMs is undefined for EVERY
+    // recognizer-sourced final, structurally and permanently
+    // (188.1-CALIBRATION.md §d — the Web Speech API surfaces no start/stop
+    // timestamps at all) — that is not a temporary gap, so an undefined
+    // duration is a pass-through, never a trace-worthy decision. Separate
+    // and complementary to shouldReject's own word-count/confidence axes,
+    // deliberately not folded into it (188.1-04 plan, D-03).
+    if (durationMs !== undefined && durationMs < DURATION_FLOOR_MS) {
+      trace("final.duration-rejected", { text, durationMs, floorMs: DURATION_FLOOR_MS });
+      setFilteredCount((c) => c + 1);
       return;
     }
 
@@ -1559,5 +1647,6 @@ export function useAstridrVoice({
     speechAvailable,
     isLooking,
     triggerBargeIn: handleBargeIn,
+    filteredCount,
   };
 }

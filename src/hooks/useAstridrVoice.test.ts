@@ -588,6 +588,152 @@ describe("useAstridrVoice", () => {
     expect(result.current.voiceState).toBe("idle");
   });
 
+  // ─── 188.1-04: plausibility gate on the shared final sink ─────────────────
+  // Fixtures quoted byte-for-byte from 188.1-CALIBRATION.md's Fixture Corpus
+  // (D-15) — every input string is copied verbatim (casing/punctuation
+  // intact) from the archived evidence record. All four fire on the DUPLEX
+  // ear (onDuplexFinalTranscriptCallback), matching the real defect: the
+  // duplex ear, not the 183 recognizer, transcribed and dispatched these.
+
+  /** Wake, then complete one full turn (TTS on → off) so the hook is
+   *  `listening` inside an OPEN follow-up window — the exact state every
+   *  188.1-CALIBRATION.md fixture fires in ("warm:true", "followUpOpen"). */
+  function warmAndOpenFollowUp(
+    chat: AstridrChat,
+    rerender: (props: { chat: AstridrChat; enabled: boolean }) => void
+  ): AstridrChat {
+    wake();
+    chat = setTtsPlaying(rerender, chat, true);
+    chat = setTtsPlaying(rerender, chat, false);
+    return chat;
+  }
+
+  describe("VOICE-DISPATCH-01: wake-phrase leak", () => {
+    it('WAKE-1: duplex final "Hey Astrid." (wake-phrase-only) is NOT dispatched and the follow-up window is refreshed, not closed', async () => {
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+      expect(result.current.followUpOpen).toBe(true);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Hey Astrid.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(chat.sendMessage).not.toHaveBeenCalled();
+      // D-02: the window is REFRESHED (still open), not merely left alone —
+      // the interim handler already consumed it for this same utterance, so
+      // an open value here proves a genuine re-open, not a no-op.
+      expect(result.current.followUpOpen).toBe(true);
+      expect(result.current.filteredCount).toBe(1);
+    });
+
+    it('WAKE-2: duplex final "Hey Astrid. What\'s the weather like tomorrow in Cumming, Georgia?" dispatches with the wake phrase stripped, question verbatim', async () => {
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.(
+          "Hey Astrid. What's the weather like tomorrow in Cumming, Georgia?"
+        );
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "What's the weather like tomorrow in Cumming, Georgia?",
+        { interruptedReply: undefined, voice: true }
+      );
+      expect(result.current.filteredCount).toBe(0);
+    });
+  });
+
+  describe("VOICE-DISPATCH-01: duration plausibility", () => {
+    it('NOISE-1: duplex final "Kulitnya." with a sub-floor duration is rejected by the duration gate', async () => {
+      // 188.1-CALIBRATION.md's ARCHIVED sample for this text measured
+      // durationMs:241 — but under the derived (PROVISIONAL) floor of 50ms,
+      // 241ms is explicitly documented as an ACCEPTED, uncaught gap (§c):
+      // "The Kulitnya. case is NOT caught by DURATION_FLOOR_MS alone under
+      // this derivation." This fixture instead uses a synthetic duration
+      // constructed to be below the floor (per the plan's own <behavior>
+      // requirement — "carrying a durationMs below DURATION_FLOOR_MS") to
+      // prove the gate MECHANISM; it does not claim to reproduce the
+      // archived 241ms case, which the calibration document itself concedes
+      // this floor cannot catch. See 188.1-04-SUMMARY.md for the disclosure.
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Kulitnya.", 20);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(chat.sendMessage).not.toHaveBeenCalled();
+      expect(result.current.filteredCount).toBe(1);
+    });
+
+    it("fail-open (D-03, 188.1-CALIBRATION.md §d): a final with durationMs undefined passes the duration gate untouched", async () => {
+      // The SAME "Kulitnya." text, but with durationMs undefined — the Web
+      // Speech / 183 recognizer ear's PERMANENT structural condition (it
+      // cannot supply a duration at all). The gate must never guess: an
+      // undefined duration is a pass-through, not a rejection.
+      let chat = makeChat();
+      const { result, rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Kulitnya.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(chat.sendMessage).toHaveBeenCalledWith("Kulitnya.", {
+        interruptedReply: undefined,
+        voice: true,
+      });
+      expect(result.current.filteredCount).toBe(0);
+    });
+
+    it('CTRL-SHORT: a legitimately short real utterance ("Yes.") with a plausible above-floor duration in an open follow-up window is STILL dispatched verbatim', async () => {
+      // Guards against T-188.1-10 (D-16): a gate that drops on length/word-
+      // count alone rather than the calibrated duration floor would fail
+      // this control even though it turns every other fixture in this
+      // describe block green — that is a FAILED fix, not a passing one.
+      let chat = makeChat();
+      const { rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+
+      act(() => {
+        // durationMs well above the 50ms floor — illustrative per
+        // 188.1-CALIBRATION.md's Over-Block Controls table (no measured
+        // real-utterance sample exists in this corpus; the property under
+        // test is durationMs > DURATION_FLOOR_MS, not the specific number).
+        onDuplexFinalTranscriptCallback?.("Yes.", 350);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+
+      // D-16 requires this control to be green BOTH before and after the fix
+      // (proving the fix didn't over-block) — deliberately asserting ONLY
+      // the dispatch outcome here, not filteredCount, since that field does
+      // not exist pre-fix and would make the "green before" half of the
+      // requirement impossible to satisfy by construction.
+      expect(chat.sendMessage).toHaveBeenCalledWith("Yes.", {
+        interruptedReply: undefined,
+        voice: true,
+      });
+    });
+  });
+
   // ─── 12+. Trace-driven fixes (2026-07-20 live repro) ──────────────────────
 
   it("recognizer keep-alive: unexpected end mid-conversation restarts recognition", () => {
