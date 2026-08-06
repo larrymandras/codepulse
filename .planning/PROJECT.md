@@ -8,22 +8,45 @@ Multi-provider operational command center for Ástríðr AI assistant. React 19 
 
 Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard. And now: take action on it.
 
-## Current Milestone: v13.0 Brain-Swap Control, Cost Intelligence & Consolidation
+## Current Milestone: v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board
+
+**Goal:** Finish the per-agent half of brain-swap that v13.0 deliberately deferred, make the self-hosted Convex instance durable rather than nightly-restarted, and turn the leftover jobs surface into a real mission board. Formalized 2026-08-06 via `/gsd-new-milestone`.
+
+**Target features:**
+
+- **Per-agent engine visibility (cross-repo, astridr-first)** — astridr emits genuine per-profile active-engine telemetry and `swap.set` gains a profile scope; CodePulse's already-built "This profile" picker scope, header badge and confirm-modal current-engine column light up on real rows instead of `{profileId:"unknown"}` sentinels. Closes **BSC-01**, v13.0's one PARTIAL requirement.
+- **Convex durability** — bound `aggregates` (defined at `convex/schema.ts:953`, absent from `RETENTION_DAYS`, grows unbounded), fix the retention cron's tombstone self-defeat so tables past index `[0]` are actually pruned, and pursue the memory-growth root cause currently only masked by `ConvexNightlyRestart`.
+- **Mission board (frontend-only)** — upgrade `src/components/JobsPanel.tsx` + `subagentJobs` (`convex/schema.ts:1028`, both leftovers of astridr Phase 168) into a real mission board on data that streams today: humanized tool labels, duration, status, honest orphan recovery.
+- **Telemetry coverage** — Group A (5 never-emitted contract kinds) fixed as an astridr contract-doc correction, not a build; Group B (7 real emitters) domain routes justified per-kind, starting with `control_verb_swap` because per-agent visibility needs it.
+- **Small-debt sweep** — skill-registry prune churn (a transient scan drops ~56 live plugin skills), the intermittent `Chat.test.tsx` brain-pill failure `D-106-04-01`, and putting `convex-selfhost/` under version control.
+
+**Key context / constraints:**
+
+- **Cross-repo, astridr is the critical path for per-agent visibility.** Evidence gathered at scoping (2026-08-06): `SwapSetCommand` (`astridr/api/ws_commands.py:235-247`) has **no** profile/scope field, and `grep -rn "active_engine\|activeEngine"` across astridr-repo returns **zero hits** — no per-profile engine telemetry emitter exists. What does exist is config only (`astridr/engine/bootstrap/core.py:1356-1359` pushes `modelPreferences`), which BSC-01 explicitly forbids as the source. Same shape as v11.0's Forge-daemon phase; the integration gate closes *during* execution per the BSC-05 / Phase-90 lesson.
+- **The "astridr Phase 184.1" pointer inherited from v13.0 is stale** — `grep -rn "184\.1"` across astridr's `.planning/` returns nothing. The brain-swap backend actually shipped as astridr **Phases 185/186** (`ws_commands.py:417-420`). Nothing was ever scheduled to deliver the per-profile axis.
+- **No mass mutation of the live self-hosted Convex.** Bounding `aggregates` must be batch-capped like `convex/retention.ts`, never a bulk delete — that is what caused the 2026-07-21/22 tombstone incident.
+- **SEED-002 stays partly planted.** Its astridr half (SEED-023) is `dormant`, `scope: Large`, and none of its runtime exists (`grep -rln "stream-json\|stream_json" --include=*.py astridr/` returns nothing). Per-mission cost, confirm cards and squad grouping are therefore **out of scope**; only the surface buildable on today's data is in.
+- Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
+
+> **Formalized 2026-08-06 via `/gsd-new-milestone`.** Requirements + roadmap in REQUIREMENTS.md + ROADMAP.md.
+
+## Prior Milestone (shipped 2026-08-06, tagged `v13.0`): v13.0 Brain-Swap Control, Cost Intelligence & Consolidation
 
 **Goal:** Give operators live control over Ástríðr's reasoning engine, deeper cost + tool/trace observability, and close out accumulated tech-debt. Formalized 2026-07-27 via `/gsd-new-milestone`.
 
-**Phases (103–106):**
+**Phases (103–107):**
 - **103 — Brain-Swap Control Surface** — CodePulse UI to switch Ástríðr's engine (keyed API models + subscription CLIs) on the fly: live per-agent/global current-engine status, scoped swap with confirm, server-confirmed result. The CodePulse half of the astridr brain-swap thread (astridr Phase 184.1, which scopes "+ CodePulse controls"). ⚠️ **BSC-05 integration gate**: verify astridr's brain-swap endpoints live end-to-end *before* building the UI (Phase-90 "endpoint exists ≠ integration works" lesson).
 - **104 — Cost Intelligence** — per-model/provider cost breakdown over time + configurable budget thresholds + anomaly/budget alerts through the existing routing layer.
 - **105 — Tool & Trace Observability** — per-tool usage analytics, surfacing the astridr `tool_call_leaked_as_text` / tool-filter signals (detector shipped astridr `b7e4a534`), and a deeper trace waterfall (nested spans, tool timings, cache-hit per turn).
 - **106 — Consolidation & Hardening** — typed-api sweep (kill `anyApi`), retire cloud Convex `tidy-whale-981` (export→cancel), build/chunk code-splitting, laptop Tailscale, finish deferred manual UAT.
+- **107 — Aggregates Rollup Sharding** — added mid-milestone; closed OCC-01 on the second attempt after 107-06 measured the first fix as worse.
 
-**Key context / constraints:**
-- **Cross-repo for Phase 103** — consumes astridr's brain-swap *backend* (owned by astridr Phase 184.1); BSC-05 closes the integration gate *during* execution, not after.
-- **No mass mutation of the live self-hosted Convex** — DEBT-02 exports/cancels the retired *cloud* instance (`tidy-whale-981`) only.
-- Continues phase numbering from v12.0 (101–102) → **Phases 103–106**.
+**Outcome:** 5 phases, 53 plans, **14/15 requirements satisfied**. The exception is **BSC-01 ⚠ PARTIAL** — global axis satisfied and live-verified, per-agent axis deliberately deferred as scope, not rounded up. That deferred half is v14.0's first feature. Audit: `milestones/v13.0-MILESTONE-AUDIT.md`.
 
-> **Formalized 2026-07-27 via `/gsd-new-milestone`.** Requirements + roadmap in REQUIREMENTS.md + ROADMAP.md. Next: `/gsd-plan-phase 103` (after discuss/ui-spec prerequisites).
+**Key context / constraints (as scoped):**
+- **Cross-repo for Phase 103** — consumed astridr's brain-swap *backend*; BSC-05 closed the integration gate *during* execution, not after. ⚠ The "owned by astridr Phase 184.1" attribution written here at scoping was never real — see the v14.0 constraints above.
+- **No mass mutation of the live self-hosted Convex** — DEBT-02 exported/cancelled the retired *cloud* instance (`tidy-whale-981`) only.
+- Continued phase numbering from v12.0 (101–102) → **Phases 103–107**.
 
 ## Prior Milestone (shipped 2026-07-25, tagged `v11.0`): v11.0 Skills Command Center — Full Lifecycle & Launch
 
@@ -291,6 +314,11 @@ This document evolves at phase transitions and milestone boundaries.
 </details>
 
 ---
+*Last updated: 2026-08-06 — **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board started** via `/gsd-new-milestone`. Scope: BSC-01's deferred per-agent axis (cross-repo, astridr emitter + scoped `swap.set` owned from this roadmap), Convex durability (`aggregates` never pruned, retention tombstone self-defeat, memory-growth root cause), a frontend-only mission board on today's `subagentJobs` data, astridr telemetry-coverage closure (Group A doc fix / Group B per-kind routes), and a small-debt sweep. Continues phase numbering from v13.0 → **Phases 108+**. Prior: **v13.0 SHIPPED & ARCHIVED 2026-08-06** (5 phases 103–107, 53 plans, 14/15 requirements, tagged `v13.0`; the one PARTIAL is BSC-01, picked up here).*
+
+<details>
+<summary>Prior footer — 2026-07-23 (v12.0 shipped)</summary>
+
 *Last updated: 2026-07-23 — **v12.0 Personal Productivity (Reminders & Calendar) SHIPPED & ARCHIVED** (2 phases 101-102, 10 plans, 9/9 requirements REM-01..05/CAL-01..02/UI-01..02; tagged `v12.0`, archived to `milestones/v12.0-*`). Milestone audit `tech_debt` (0 blockers; 2 flagged items closed by Phase 102). `101-REVIEW-FIX` closed 8/8 findings (incl. snooze/nudge dedupe + edit-popover UTC shift). Executed as an interleaved side-quest — the active milestone remains **v11.0 Skills Command Center** (Phase 97/98 done; resumes at Phase 99 Skill Launch/Dispatch; 99/100 not started). REQUIREMENTS.md kept live (only the v12.0 section extracted to the archive). Prior: 2026-07-20 — v12.0 Phase 101 complete; 2026-07-21 — v11.0 Phase 98 complete.*
 
 <details>
@@ -304,5 +332,7 @@ This document evolves at phase transitions and milestone boundaries.
 <summary>Prior footer — 2026-07-13 (v10.0 closed)</summary>
 
 *Last updated: 2026-07-13 after Phase 96 (UI deep-dive cleanup) completion*
+
+</details>
 
 </details>

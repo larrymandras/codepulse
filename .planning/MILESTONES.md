@@ -1,5 +1,29 @@
 # Milestones
 
+## v13.0 Brain-Swap Control, Cost Intelligence & Consolidation (Shipped: 2026-08-06)
+
+> **Record added 2026-08-06 at v14.0 scoping.** The v13.0 hand-close wrote the audit and the archives but never appended this entry, so `MILESTONES.md` skipped from v11.0 straight to nothing. Reconstructed from `milestones/v13.0-MILESTONE-AUDIT.md`, not from memory.
+
+**Phases completed:** 5 phases (103–107), 53 plans / 53 summaries, cross-repo (codepulse + astridr-repo)
+**Timeline:** 2026-07-27 → 2026-08-06 | 166 planning commits | suite 3506 passing / 0 failing
+**Requirements:** **14/15** (BSC-01..05, COST-01..03, OBS-01..03, DEBT-01..04) — the exception is **BSC-01 ⚠ PARTIAL**
+**Verification:** 5/5 phases verified. See `milestones/v13.0-MILESTONE-AUDIT.md`; closed BY HAND per the standing rule (no `gsd-sdk milestone.complete`), every figure re-derived from disk and git rather than copied from `STATE.md`.
+**Milestone audit:** 7 carried-forward items, **none blocking** — headed by convex-backend memory growth (root cause OPEN, but provably *not* data volume: `db.sqlite3` byte-identical across a ~4x climb; mitigated by a nightly health-gated restart).
+
+**Key accomplishments:**
+
+- **103 Brain-Swap Control Surface (18 plans):** global engine swap live end-to-end with server-confirmed results — 331 real engines in the picker, D-15 confirm gate, dispatch → readback → revert. The BSC-05 integration gate closed *during* execution per the Phase-90 lesson. An operator-attended live UAT (16/16) found and fixed four further honesty defects, including a picker that crashed from 2 of its 3 entry points.
+- **104 Cost Intelligence (11 plans):** per-model/provider spend, budgets and alerts through the existing routing layer with no new channel plumbing. The model-mix attribution was the genuinely broken part — sonnet-5/opus-5/fable-5 had no pricing entries and fell to a default that under-priced Opus-class calls ~5x.
+- **105 Tool & Trace Observability (9 plans):** per-call tool rows, `toolPolicyEvents`, trace-waterfall nesting. Found and closed a real leak dating to 2026-07-22 — a pre-existing `command_execution` case double-inserted untagged rows, leaking Ástríðr activity into Claude-Code-only panels; 91 historical rows retagged.
+- **106 Consolidation & Hardening (8 plans):** `anyApi` swept, cloud Convex `tidy-whale-981` exported (602,932 rows, verified by *reading rows out of the archive*) then deleted and unsubscribed, entry chunk −73.8%, laptop Tailscale, and all three deferred manual UAT sequences run live — including the CR-02 shadowed-row no-op **Phase 100 could never run**, closed here against the first shadowed-merged row this catalog has ever held.
+- **107 Aggregates Rollup Sharding (7 plans):** OCC-01 closed on the second attempt — read set narrowed 101 rows → 1, contention to zero.
+
+**The failure worth recording — 107 took two tries.** 107-03 sharded the WRITE target; 107-06 measured the result as *worse*. The diagnosis was right and the fix incomplete: Convex OCC conflicts on documents read **or** written, and the read set was still the whole bucket. Two lessons generalise: **the test harness was the real defect** (a fake `withIndex()` ignored index name and filter and returned the whole table, so read-set *width* was physically untestable and a wrong fix stayed green), and **the measuring instrument lied three ways** (`docker logs --since` returns zero lines after container start; a large `--tail` silently serves the *rotated* file; a gap exists between segments) — the replacement method was calibrated against a known-good answer before being trusted.
+
+**Known deferred at close:** BSC-01's per-agent axis, deliberately deferred as scope and **not rounded up** — picked up as the first feature of v14.0.
+
+---
+
 ## v11.0 Skills Command Center — Full Lifecycle & Launch (Shipped: 2026-07-25)
 
 **Phases completed:** 4 phases (97-100), 23 plans, cross-repo (codepulse + forge daemon)
