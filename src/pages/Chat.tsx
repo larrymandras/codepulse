@@ -658,7 +658,10 @@ export default function Chat() {
     // far below the fold — chatColumn has almost no natural content when
     // the transcript is empty, so it was inheriting a much taller box than
     // it needed, and its composer sat at the bottom of THAT oversized box).
-    <div className="flex flex-col min-h-0 self-start h-[70vh] rounded-xl border border-border/60 bg-card/20 overflow-hidden">
+    <div
+      data-testid="cc-chat-column"
+      className="flex flex-col min-h-0 self-start h-[70vh] rounded-xl border border-border/60 bg-card/20 overflow-hidden"
+    >
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {messages.length === 0 ? (
@@ -727,7 +730,10 @@ export default function Chat() {
   );
 
   const centerColumn = (
-    <div className="flex flex-col gap-3 min-h-0 overflow-y-auto overflow-x-hidden pr-0.5">
+    <div
+      data-testid="cc-center-column"
+      className="flex flex-col gap-3 min-h-0 overflow-y-auto overflow-x-hidden pr-0.5"
+    >
       <div className="flex flex-col items-center rounded-xl border border-border/60 bg-card/20 pt-5 pb-4 px-3">
         <div
           // No local width cap here on purpose. `AvatarAura` already self-sizes
@@ -758,6 +764,7 @@ export default function Chat() {
           // the fold — so grid mode caps at 260px (325px tall), which buys
           // back the ~100px that puts the band fully on screen. Both numbers
           // are measured, not guessed; re-measure before changing either.
+          data-testid="cc-aura-wrapper"
           className={`w-full ${commandCenter ? "max-w-[260px]" : ""} transition-[opacity,filter] duration-300 ${
             listening ? "" : "opacity-45 saturate-50"
           }`}
@@ -991,7 +998,10 @@ export default function Chat() {
               everything stacks in reading order: left rail, chat, center,
               right rail, vitals — the DOM order below already matches this,
               so no reordering is needed at that breakpoint. */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4">
+          <div
+            data-testid="cc-grid"
+            className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_clamp(320px,27vw,400px)_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.1fr)_clamp(320px,27vw,400px)_240px_minmax(0,1fr)] gap-4 pt-4"
+          >
             {/* LEFT RAIL — (a) Intelligence Feed, (b) Active Agents. min-h-0
                 lets Intelligence Feed's own flex-1 scroll region actually
                 bound to the grid row height instead of growing to fit its
@@ -1009,7 +1019,10 @@ export default function Chat() {
                 h-[70vh]), so it can never be the column that stretches the
                 row past that. Only at xl — at lg this rail is its own
                 full-width strip (col-span-3), never row-mates with vitals. */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 min-h-0 xl:max-h-[70vh] xl:overflow-y-auto">
+            <div
+              data-testid="cc-left-rail"
+              className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 min-h-0 xl:max-h-[70vh] xl:overflow-y-auto"
+            >
               <SectionErrorBoundary name="Intelligence Feed">
                 <IntelligenceFeedPanel />
               </SectionErrorBoundary>
@@ -1029,7 +1042,10 @@ export default function Chat() {
                 column sequence. Same xl:max-h-[70vh] xl:overflow-y-auto cap
                 as the LEFT RAIL above — see its comment; only relevant at
                 xl, where this rail row-shares with chat/center/vitals. */}
-            <div className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 lg:order-5 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 xl:order-none xl:max-h-[70vh] xl:overflow-y-auto">
+            <div
+              data-testid="cc-right-rail"
+              className="flex flex-col gap-2 lg:flex-row lg:overflow-x-auto lg:gap-3 lg:col-span-3 lg:order-5 xl:flex-col xl:overflow-visible xl:gap-2 xl:col-span-1 xl:order-none xl:max-h-[70vh] xl:overflow-y-auto"
+            >
               <SectionErrorBoundary name="LLM Status">
                 <LlmStatusPanel />
               </SectionErrorBoundary>
@@ -1052,14 +1068,17 @@ export default function Chat() {
                 this, Container Health's live docker-container list alone
                 pushed the whole row (and the footer band below it) to
                 ~1900px, most of it blank space under the shorter columns. */}
-            <div className="min-h-0 lg:order-4 xl:order-none lg:max-h-[70vh] lg:overflow-y-auto">
+            <div
+              data-testid="cc-vitals"
+              className="min-h-0 lg:order-4 xl:order-none lg:max-h-[70vh] lg:overflow-y-auto"
+            >
               {vitalsColumn}
             </div>
           </div>
 
           {/* FOOTER BAND — (c) Mission Timeline (~60%), (g) Quick Commands
               (~40%), command-center mode only. */}
-          <div className="mt-4 flex flex-col lg:flex-row gap-4">
+          <div data-testid="cc-footer-band" className="mt-4 flex flex-col lg:flex-row gap-4">
             <div className="min-w-0 lg:w-[60%]">
               <SectionErrorBoundary name="Mission Timeline">
                 <MissionTimelinePanel />
