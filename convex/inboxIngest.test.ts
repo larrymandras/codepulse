@@ -128,6 +128,7 @@ describe("inboxIngest httpAction (T-186-02-01)", () => {
         heldReason: "focus",
         intentId: "intent-abc-123",
         source: "watch_pulse",
+        sourceId: "gmail-msg-abc123",
       },
       { Authorization: "Bearer k" }
     );
@@ -139,6 +140,7 @@ describe("inboxIngest httpAction (T-186-02-01)", () => {
     expect(args.itemType).toBe("held");
     expect(args.heldReason).toBe("focus");
     expect(args.intentId).toBe("intent-abc-123");
+    expect(args.sourceId).toBe("gmail-msg-abc123");
     const body = await readJson(res);
     expect(body.ok).toBe(true);
     vi.unstubAllEnvs();
@@ -553,6 +555,55 @@ describe("inbox.ts raiseHandler + listByProfileHandler (D-10)", () => {
     const rows = await listByProfileHandler({ db }, "personal");
     expect(rows).toHaveLength(1);
     expect(rows[0].title).toBe("Personal card");
+  });
+
+  it("round-trips sourceId from raiseHandler through the stored document (D-08)", async () => {
+    const db = makeFakeDb();
+
+    await raiseHandler(
+      { db },
+      {
+        profileId: "personal",
+        emitter: "watch_pulse",
+        priority: "normal",
+        title: "GBS Enterprises LLC Activity Notification",
+        body: "Activity detected",
+        spoken: false,
+        itemType: "card",
+        sourceId: "gmail-msg-abc123",
+      },
+      1000
+    );
+
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].sourceId).toBe("gmail-msg-abc123");
+  });
+
+  it("leaves sourceId undefined when omitted from raiseHandler args (back-compat)", async () => {
+    const db = makeFakeDb();
+
+    await raiseHandler(
+      { db },
+      {
+        profileId: "personal",
+        emitter: "reminder_nudge",
+        priority: "normal",
+        title: "Water plants",
+        body: "Due now",
+        spoken: false,
+        itemType: "card",
+        // sourceId intentionally absent — matches every pre-existing emitter.
+      },
+      1000
+    );
+
+    const rows = await listByProfileHandler({ db }, "personal");
+    expect(rows).toHaveLength(1);
+    expect(rows[0].sourceId).toBeUndefined();
+    expect(rows[0].title).toBe("Water plants");
+    expect(rows[0].body).toBe("Due now");
+    expect(rows[0].itemType).toBe("card");
   });
 });
 
