@@ -1265,3 +1265,111 @@ window has yet reached that. So the fix is now measured across 20-270 ingest/hr 
 and exceeding the band where the old code demonstrably contended — and remains inferred
 only above ~270/hr. That is a materially smaller gap than § I.5 recorded, and the verdict
 stands unchanged.
+
+---
+
+## § J — The memory buildup is NOT data volume (2026-08-06), and what was done about it
+
+Phase 107's goal statement names two symptoms: OCC write contention (closed, § I) and
+"repeated self-hosted Convex memory buildup ... never root-caused". This section records a
+measurement that narrows the second one, and the mitigation put in place. **The root cause
+remains open.**
+
+### J.1 The measurement that rules out data volume
+
+```
+2026-08-05 23:06   mem 17.51 GiB
+2026-08-06 11:42   mem 24.37 GiB
+2026-08-06 17:47   mem 31.02 GiB    db.sqlite3  6,364,078,080 bytes
+2026-08-06 17:51   mem 15.64 GiB    db.sqlite3  6,364,078,080 bytes   (recreate)
+2026-08-06 18:30   mem  7.63 GiB    db.sqlite3  6,364,078,080 bytes   (restart)
+```
+
+**`db.sqlite3` is BYTE-IDENTICAL across the whole range.** The data did not grow at all
+while memory went from ~7.6 GiB to 31 GiB and back. The growth is accumulated runtime
+working set, not row count.
+
+Two corrections to earlier readings in this file's own narrative, recorded rather than
+silently fixed:
+- The 15.64 GiB figure was taken ~20 min after a recreate and was still warming. The true
+  settled baseline is **~7.8 GiB**, which matches `docker-compose.yml`'s own note that the
+  "lean working set is ~9g". So the observed climb is **~4x**, not the ~2x a naive
+  before/after would suggest.
+- The climb happened **with** 107-07's OCC fix deployed. Narrowing the read set closed the
+  contention; it did **not** slow the memory growth. These are separate problems and should
+  not be conflated because they share a symptom (a wedged-feeling backend).
+
+### J.2 Retention was considered and REJECTED — including by an existing guard
+
+The intuitive read of "the `aggregates` table is never pruned" is that it explains the
+growth. **It does not** — see J.1; the file does not grow. Adding retention would have
+reclaimed approximately none of it.
+
+An attempt to add `aggregates: 365` as cheap far-future insurance was made and **reverted**,
+because `convex/retention.test.ts` carries a deliberate guard:
+
+```
+it("still keeps the cost/trend tables forever - pruning these would break dashboards")
+  -> "aggregates must NOT be pruned"
+```
+
+with a real functional rationale, not a stylistic one: **Phase 104 (D-04) re-derives dollar
+costs from `aggregates` token buckets on every read**, so pruning at any horizon silently
+destroys re-priceable history. Combined with J.1 showing retention buys nothing for the
+actual problem, the change would have traded a real capability for no benefit. `aggregates`
+stays kept-forever. Shortening it further would ALSO generate the tombstone burst that
+`convex/retention.ts` exists to avoid.
+
+### J.3 Mitigation in place: nightly restart (D1)
+
+Not a fix. A restart is what has cleared every one of these incidents to date, so it is now
+scheduled instead of reactive.
+
+```
+Task        : ConvexNightlyRestart      (Windows Task Scheduler)
+Schedule    : 02:00 local, daily
+Script      : C:\Users\mandr\convex-selfhost\restart-convex.ps1
+Launcher    : C:\Users\mandr\convex-selfhost\run-restart-hidden.vbs
+Log         : C:\Users\mandr\convex-selfhost\restart-convex.log
+```
+
+Design notes, each pinned to a known failure mode:
+- Uses `docker restart`, NOT `compose up --force-recreate` — the project's own escalation
+  order is restart first, recreate only on failure. The script logs the escalation command
+  if restart fails.
+- Launched via a `.vbs` with `SW_HIDE` at creation. `powershell -WindowStyle Hidden` does
+  NOT hide when Windows Terminal is the default terminal, and closing the resulting console
+  console-kills the task's process tree.
+- ASCII-only `.ps1` (verified: 0 bytes > 127). PS 5.1 parses a UTF-8 em-dash as a curly
+  quote and dies with "missing terminator", which in a scheduled task fails silently.
+- `$ErrorActionPreference` is `Continue`, never `Stop`: a native tool writing to stderr
+  would otherwise become terminating and abort before the log is written.
+- **Health-gated.** It polls `:3210/version` for up to 150s and logs a loud FAILED line if
+  the backend does not come back, so a restart that leaves it wedged cannot report success.
+- Timing chosen against the existing schedule: `ConvexBackup` 03:00 local,
+  `ConvexRetentionHealthCheck` 05:30, `ConvexRetentionRootCause` 05:45, and the Convex
+  `retention-prune` cron at 09:00 UTC (05:00 local, runs ~30 min). 02:00 collides with none.
+
+**Verified by running the task itself**, not just by registering it — an unrun scheduled
+task is an unverified one:
+
+```
+last result : 0
+2026-08-06 14:30:03  --- nightly convex-backend restart ---
+2026-08-06 14:30:04  memory before : 16753 MiB
+2026-08-06 14:30:32  memory after  : 7815 MiB  (reclaimed 8938 MiB)
+2026-08-06 14:30:32  OK: healthy after 25s
+```
+
+Post-restart health confirmed independently: `:3210/version` 200, `instance_name` codepulse,
+`db.sqlite3` byte-identical, 695 registry rows.
+
+### J.4 Still open
+
+The root cause. Candidates, none tested: tombstone GC window vs. the nightly prune's own
+churn, in-memory index growth, or isolate/cache accumulation. The useful new constraint for
+whoever picks it up is that **the data file does not move while memory quadruples** — so any
+hypothesis resting on row count or table size is already excluded.
+
+Note `C:\Users\mandr\convex-selfhost\` is NOT a git repo, so the compose `logging:` block
+(§ H.2) and these two scripts exist only on disk and are not versioned anywhere.
