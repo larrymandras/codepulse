@@ -48,3 +48,63 @@ here per the Scope Boundary rule rather than fixed inline.
 event kinds against `runtimeIngest.ts`'s switch coverage, and either building the
 missing domain routes or updating the contract doc to mark them "generic-table only
 by design."
+
+### Scoping investigation 2026-08-06 — the list is ~half real, and 5 entries are doc drift
+
+Investigated during the post-v13.0 debt sweep, ahead of any build work. The suggested
+next step above ("audit all contract event kinds against the switch, then either build
+the missing routes or mark them generic-table-by-design") was carried out for these
+kinds specifically. **Result: the work is roughly half the size this item implies, and
+the split is not where you would guess.**
+
+Method — two independent checks, because neither alone is sufficient:
+1. **Live arrival.** Sampled `runtime_events` and counted distinct `eventType`. Useful
+   but WEAK on its own: 800 rows covered only **0.66 hours** (16:37→17:17Z), which
+   cannot establish absence for a rare event. Recorded here so nobody repeats it as if
+   it were conclusive.
+2. **Emitter existence in astridr** (`feature/brain-swap`, the deployed branch). This is
+   the decisive check: an event kind with no emitter cannot arrive in any window.
+
+**Group A — NEVER EMITTED (0 occurrences anywhere under `astridr/`, not just 0 telemetry
+calls — constants and f-strings included):**
+
+```
+instructions_loaded      loop_lifecycle      worktree_lifecycle
+batch_execution          auto_memory
+```
+
+These five are described in `docs/astridr-contract.md` but **no code emits them**. The
+contract is aspirational here, not a description of behaviour. Building CodePulse
+ingest for them would be handling data that cannot arrive — a domain table that is
+provably always empty. **The correct action for this group is to fix the contract doc,
+not to build routes.** This is the same class of defect as §2.25's already-recorded
+"contract doc claims a route that doesn't exist in this repo".
+
+**Group B — REAL EMITTERS (`await ctx.telemetry.send(...)`), 7 kinds:**
+
+```
+message_routed               prompt_assembly           structured_output_exhausted
+vision.capture               control_verb_swap         control_verb_focus
+governor_decision
+```
+
+Verified by shape against a **positive control**: `governor_decision` emits via
+`astridr/automation/governor.py:459` and was observed arriving live (6 rows in the
+sampled window), proving that an emitter of this shape does reach CodePulse. The other
+six use the identical `ctx.telemetry.send(<kind>, <payload>)` form — e.g.
+`astridr/engine/control_verbs/swap_model.py:444,472` for `control_verb_swap`. None of
+the other six appeared in the 0.66 h sample, which given that window says nothing about
+whether they fire in practice.
+
+**Correction to this item's own header:** it says "11 kinds". `governor_decision` was
+listed in 105-03's summary as a twelfth and belongs here too — and it is the one kind in
+the whole list confirmed live, so it is the strongest candidate if a domain route is
+ever built.
+
+**Recommended scoping if this becomes a phase:**
+- Group A (5): documentation fix in astridr-repo. No CodePulse work.
+- Group B (7): domain routes only where a consumer actually wants a dashboard. Nothing
+  is being lost today — all of these are captured verbatim in `runtime_events` and
+  bounded by its 14-day retention — so this is a queryability/UI improvement, not a data
+  loss fix, and should be justified per-kind by a real UI need rather than built
+  wholesale for switch-coverage symmetry.
