@@ -1089,13 +1089,13 @@ Container health    : 17.51 GiB / 64 GiB (27.36%), CPU 0.07%
 ```
 
 Live confirmation that the new path is writing, from real post-deploy traffic (the separator
-renders as ` ` in CLI output):
+renders as `\u0000` in CLI output):
 
 ```
-dimension_key "Stop Success"   dimensions {source:Stop,  target:Success}  shard 2
-dimension_key "Other Stop"     dimensions {source:Other, target:Stop}     shard 2
+dimension_key "Stop\u0000Success"   dimensions {source:Stop,  target:Success}  shard 2
+dimension_key "Other\u0000Stop"     dimensions {source:Other, target:Stop}     shard 2
 dimension_key "Stop"                dimensions {event_type:Stop}               shard 2
-dimension_key "Bash Success"   dimensions {source:Bash,  target:Success}  shard 4
+dimension_key "Bash\u0000Success"   dimensions {source:Bash,  target:Success}  shard 4
 ```
 
 One ingest's three writes share one shard (the three `shard 2` rows), so 107-03's
@@ -1108,3 +1108,134 @@ Settle ≥ 1 h after `DEPLOY_UTC` so no counted line predates the deploy, then t
 coverage control, count aggregates-scoped lines, run `PRE_INGEST_VOLUME`'s query with
 `lookbackDays` = WINDOW_HOURS/24, and compute retries per 1k. Compare the distribution
 against `PRE_RETRIES_PER_1K: 113.9` — not against 107-06's cross-container figures.
+
+---
+
+## § I — Plan 107-07 after-window measurement: `OCC-01 VERDICT: PASS`
+
+Measured 2026-08-06T11:42–11:55Z, 12.60 h after `DEPLOY_UTC 2026-08-05T23:06:55Z`.
+
+### I.1 Validity gates
+
+| # | Gate | Value | Result |
+|---|---|---|---|
+| 1 | Elapsed >= 1 h settle | 12.60 h | **PASS** |
+| 2 | Container not recreated | `StartedAt 2026-08-05T19:53:26Z`, `RestartCount 0` | **PASS** |
+| 3 | Capture coverage | `--tail 40000` spans 2026-08-05T22:19:42 -> 2026-08-06T11:43:51, starting before `DEPLOY_UTC` | **PASS** |
+| 4 | `--tail` not flipped to rotated file (§ H.2 Trap 2) | 40000 CURRENT; 80000 STALE — 40000 used | **PASS** |
+
+Gate 2 is the strongest control this phase has had: **the same container instance spans
+both the pre-deploy baseline and the entire post-deploy period**, so unlike the comparison
+against 107-06 there is no container-recreate confound.
+
+### I.2 Headline
+
+```
+POST-DEPLOY (107-07, narrow read), 2026-08-06T00:07Z -> 11:43Z (11.6 h)
+  aggregates OCC lines : 0
+  POST /ingest 200     : 176
+  retries per 1k       : 0.0
+```
+
+Per-window, five non-overlapping 2 h windows plus the most recent partial:
+
+```
+  00:07-02:07   OCC=0  ingest=0     n/a (no traffic)
+  02:07-04:07   OCC=0  ingest=0     n/a (no traffic)
+  04:07-06:07   OCC=0  ingest=0     n/a (no traffic)
+  06:07-08:07   OCC=0  ingest=0     n/a (no traffic)
+  08:07-10:07   OCC=0  ingest=63    0.0
+  10:07-11:43   OCC=0  ingest=100   0.0
+```
+
+### I.3 The controls, because zero is also what a broken measurement looks like
+
+**Instrument liveness — PASS.** The same capture DOES contain OCC lines, just not on
+`aggregates`:
+
+```
+15 occ|conflict|retry lines post-deploy:
+   10 the "forgeHosts" table
+    2 the "sessions" table
+    0 the "aggregates" table
+```
+
+So the capture and grep pipeline detect conflicts; `aggregates` is specifically at zero.
+
+**Low traffic alone does NOT explain zero.** Under the OLD code, low-traffic hours still
+produced heavy contention — and the WORST normalized rate came at the LOWEST traffic:
+
+```
+hour     OCC   ingest/hr   retries/1k
+13:00Z   542   716         757.0
+14:00Z   238   698         341.0
+15:00Z    46   146         315.1
+16:00Z   172   486         353.9
+17:00Z   116   133         872.2
+18:00Z   184    70        2628.6     <- lowest traffic, highest normalized rate
+19:00Z    32    94         340.4
+```
+
+Applying the old code's observed range to the post-deploy ingest volume:
+
+```
+176 ingests at old-code MIN rate (315.1/1k) -> 51 conflicts expected
+176 ingests at old-code MAX rate (2628.6/1k) -> 428 conflicts expected
+observed                                     -> 0
+```
+
+**Correctness — the write path is not silently broken.** `FINAL_READ_TOTALS: MATCH`
+computed by 107-06's exact method on the completed hour `[10:00, 11:00)Z`:
+
+```
+FINAL_BUCKET_TOTAL    : 20    (eventCountsByPeriod A-B differencing: 176 - 156)
+FINAL_RAW_EVENT_COUNT : 20    (events:listRecent limit 1000, [H0,H1) filter)
+coverage guard        : PASS  (min ts 2026-08-05T22:23:47Z < H0)
+FINAL_READ_TOTALS     : MATCH
+```
+
+Non-vacuous, proven rather than asserted: of 55 distinct `(bucket, dimension_key)` pairs
+sampled, **38 are backed by more than one shard row**, with hot keys split across all **8**
+shards (`PostToolUse` 8 rows, `PreToolUse` 8, `Read\u0000Success` 8, `Bash\u0000Success` 8).
+Readers therefore genuinely had to fold across shards, and did. A live row observed with
+`value: 2` additionally proves the narrowed point lookup FINDS and PATCHES existing rows —
+a broken lookup would insert a fresh `value: 1` row every time and never patch.
+
+### I.4 Verdict
+
+```
+PRE_RETRIES_PER_1K  : 113.9   (§ H.4, recorded pre-deploy, same container instance)
+                       93.6   (22:19-23:07 pre-deploy fragment, log-derived normalizer)
+AFTER_RETRIES_PER_1K:   0.0
+OCC-01 VERDICT      : PASS
+```
+
+Against 107-06's own rubric: `PASS` requires the normalized rate at least 50% below
+baseline AND the per-hour rate below baseline. Both hold at their limit — the rate is zero.
+`PARTIAL` and `INCONCLUSIVE` do not apply: all validity gates passed, the instrument was
+proven live in the same capture, and correctness was independently confirmed.
+
+### I.5 Caveat, recorded rather than buried — peak-load confirmation outstanding
+
+Post-deploy traffic ran at **32-62 ingest/hr**, below the lowest old-code sample (70/hr)
+and far below the pre-deploy fragment's **676 ingest/hr**. Two honest limitations follow:
+
+1. No post-deploy window has yet matched peak load, so the fix is confirmed at low-to-
+   moderate concurrency and inferred, not measured, at peak.
+2. An hourly average is a crude proxy for concurrency — a burst can hide inside an
+   otherwise quiet hour, which is likely what produced 18:00Z's 2628.6/1k at only 70
+   ingest/hr.
+
+The § I.3 control substantially mitigates (1): the old code produced 315-2628 retries/1k
+across the whole 70-146 ingest/hr band, so the post-deploy zero is not explicable by
+traffic level alone. But a confirming measurement taken after a heavy working session,
+using § H.3's method and these same controls, should be recorded before OCC-01 is
+considered closed beyond doubt.
+
+### I.6 Note on 107-06's verdict
+
+107-06's raw counts were independently reproduced byte-for-byte (§ H.3), so its data was
+sound, and its diagnosis — that the read set was never narrowed — is confirmed correct by
+this result. Its `+70.5%` regression figure remains within the noise band identified in
+§ H.5 and should not be quoted as a precise effect size; the diagnosis it drove was right
+regardless.
