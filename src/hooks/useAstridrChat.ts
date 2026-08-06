@@ -365,7 +365,25 @@ export function useAstridrChat() {
       // The current value now comes from a ref, and the side effect runs
       // once, outside any updater.
       const current = ttsEnabledRef.current;
-      const willPlay = current && !ttsSuppressedRef.current;
+      // 188.1 UAT finding (live 2026-08-06 21:35:39.784): this gate used to be
+      // `current && !ttsSuppressedRef.current` — it never consulted the session
+      // at all, even though the comparison was already being computed one block
+      // below FOR THE TRACE ONLY. A superseded turn's audio therefore played:
+      //   run.tts.received {"sessionMatches":false,"activeSession":"f2a1cc4d…","willPlay":true}
+      //   tts.audio.replace {"currentTime":0.41,"duration":4.88}
+      // — she began a stale reply and was cut 0.41s in when the real one landed.
+      //
+      // Compared against lastSessionRef, NOT activeSessionRef: activeSessionRef
+      // is nulled by run.completed, and TTS synthesis is slower than text
+      // delivery, so the NORMAL case is run.tts arriving after that null. Gating
+      // on activeSessionRef would suppress nearly every ordinary reply — the
+      // "DOES play audio for the active session" control test pins this.
+      //
+      // FAILS OPEN on an absent session_id: the sole emitter
+      // (astridr wiring.py:244) always sets it, so this branch should be
+      // unreachable — but silence is a worse failure than a stale clip.
+      const sessionOk = !data.session_id || data.session_id === lastSessionRef.current;
+      const willPlay = current && !ttsSuppressedRef.current && sessionOk;
       if (typeof window !== "undefined") {
         const buf = ((window as unknown as { __astridrVoiceTrace?: unknown[] })
           .__astridrVoiceTrace ??= []);

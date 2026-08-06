@@ -1650,14 +1650,25 @@ export function useAstridrVoice({
     // in full. Moving the gate alone was NOT sufficient to fix this; the
     // exemption is the actual fix, and CTRL-SALVAGE is what proves it.
     //
-    // FLOOR: 880ms, DERIVED (not picked) from the 2026-08-06 live-mic session —
-    // six real utterances measured 1763/2207/2847/2905/3041/3764ms and two junk
-    // bursts measured 258ms ("部屋", a hallucinated Japanese noun) and 489ms
-    // ("Huh."). 1763 ÷ 2 = 881 → 880, which sits 2x below the shortest real
-    // utterance and ~1.8x above the longest junk burst. The prior 50ms value was
-    // PROVISIONAL, derived from a corpus with ONE junk sample and ZERO real
-    // ones; it never fired once in a 388-second live session and let both junk
-    // bursts through to a full LLM turn + TTS.
+    // FLOOR: 320ms — see DURATION_FLOOR_MS at :171, which is the single source
+    // of truth. Derived from the 2026-08-06 live-mic corpus of 11 real
+    // utterances (645-3764ms): shortest real 645 ÷ 2 = 322.5 → 320. The prior
+    // 50ms value was PROVISIONAL, derived from a corpus with ONE junk sample and
+    // ZERO real ones; it never fired once in a 388-second live session and let
+    // both junk bursts through to a full LLM turn + TTS.
+    //
+    // 880ms was CONSIDERED AND REJECTED. It is tempting because it clears the
+    // junk in the first session's sample, but it turns CTRL-SHORT red: it would
+    // reject the real 645ms "Thanks." The 188.1 UAT then confirmed the rejection
+    // empirically — live 2026-08-06 21:35, a real cough transcribed as "咳咳"
+    // measured 802ms while a genuine spoken "Yes." measured only 741ms. Junk ran
+    // LONGER than speech, so an 880ms floor would have eaten the "Yes." and a
+    // 320ms floor cannot catch the cough. Do NOT raise this number to chase junk.
+    //
+    // KNOWN CEILING: the two classes OVERLAP in duration, so no threshold
+    // separates them. This gate is necessary but not sufficient; suppressing
+    // that junk class needs a different signal (script/language mismatch,
+    // confidence, semantic plausibility), not a bigger number here.
     //
     // FAILS OPEN: durationMs is undefined for EVERY recognizer-sourced final,
     // permanently — the Web Speech API surfaces no start/stop timestamps

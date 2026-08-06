@@ -270,6 +270,62 @@ describe("useAstridrChat — run.tts sessionMatches trace (2026-07-31 live findi
 
     expect(lastTtsTraceEntry().sessionMatches).toBe(false);
   });
+
+  // ─── 188.1 UAT finding (2026-08-06 live, 21:35:39.784) ───────────────────
+  // The two tests above assert only the TRACE FIELD. They passed the whole
+  // time while a foreign session's audio played anyway, because `willPlay`
+  // (useAstridrChat.ts:368) never included the session comparison that the
+  // line below it already computes for the trace. Live evidence:
+  //   run.tts.received {"sessionMatches":false,"activeSession":"f2a1cc4d…","willPlay":true}
+  //   tts.audio.replace {"currentTime":0.41,"duration":4.88}
+  // — a superseded turn's reply started speaking and was cut 0.41s in.
+  //
+  // These two assert the BEHAVIOR (playAudio called / not called), not the
+  // diagnostic. A test that only checks the trace field cannot catch this.
+  it("does NOT play audio when run.tts belongs to a DIFFERENT (stale/foreign) session", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    // ttsEnabled defaults to false (useAstridrChat.ts:58), which would make
+    // `willPlay` false for EVERY session and this assertion vacuous. Turn it
+    // on so the only thing under test is the session comparison.
+    act(() => {
+      result.current.setTtsEnabled(true);
+    });
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    act(() => {
+      getHandler("run.tts")?.({ data: { session_id: "sess-999-foreign", audio_url: "http://a/foreign.mp3" } });
+    });
+
+    expect(mockTtsPlay).not.toHaveBeenCalled();
+  });
+
+  // The control that keeps the fix from over-blocking: the NORMAL case is
+  // run.tts arriving after run.completed already nulled activeSessionRef.
+  // If the gate compared against activeSessionRef instead of lastSessionRef
+  // it would suppress every ordinary reply — this test fails loudly if so.
+  it("DOES play audio for the active session even when run.tts lands after run.completed", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    act(() => {
+      result.current.setTtsEnabled(true);
+    });
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    act(() => {
+      getHandler("run.tts")?.({ data: { session_id: "sess-1", audio_url: "http://a/reply.mp3" } });
+    });
+
+    expect(mockTtsPlay).toHaveBeenCalledWith("http://a/reply.mp3");
+  });
 });
 
 // ─── 186-01 follow-up (Defect A, fresh live trace, 186-09 swap testing) ──────
