@@ -2122,4 +2122,134 @@ describe("useAstridrVoice", () => {
       expect(mockReportRealtimeUsage).toHaveBeenCalledWith(7);
     });
   });
+
+  // ─── VOICE-GLUE-01: glue dedupe (188.1-06, D-06/D-07/D-08/D-09/D-16) ───────
+  // Every string quoted byte-for-byte from 188.1-CALIBRATION.md's Fixture
+  // Corpus / Over-Block Controls tables. See
+  // .planning/todos/pending/2026-08-05-voice-transcript-glue-and-wake-phrase-leak.md
+  // for the underlying evidence record.
+
+  describe("VOICE-GLUE-01: glue dedupe", () => {
+    it('GLUE-A: an accumulator subsume dispatches ONE non-duplicated message ("what does my business calendar look like? " + "...today")', async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.("What does my business calendar look like?");
+        onFinalResultCallback?.("what does my business calendar look like today");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "what does my business calendar look like today",
+        { interruptedReply: undefined, voice: true }
+      );
+    });
+
+    it('GLUE-B: a rejoin trim dispatches the shared span exactly once ("do you have access to higgsfield" + "Access to Higgs Field CLI")', async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onInterimResultCallback?.("do you have access to higgsfield");
+        onFinalResultCallback?.("Access to Higgs Field CLI");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "do you have Access to Higgs Field CLI",
+        { interruptedReply: undefined, voice: true }
+      );
+    });
+
+    it("GLUE-COMPOUND: the accepted clause followed by a self-glued rejoin product dispatches the opening clause exactly once, never the observed triple", async () => {
+      // 16:28:21-25 live trace: "Is there anything on my" was accepted into
+      // the accumulator; a mid-utterance Chrome reset then orphaned the
+      // interim "is there anything on my Consulting calendar for", and the
+      // tail final "Consulting calendar today?" triggered the rejoin --
+      // pre-fix, the RAW rejoin re-glued "Consulting calendar" and the outer
+      // accumulator join then re-glued "Is there anything on my" AGAIN,
+      // producing the observed triple: "Is there anything on my is there
+      // anything on my Consulting calendar for Consulting calendar today?"
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.("Is there anything on my");
+        onInterimResultCallback?.("is there anything on my Consulting calendar for");
+        onFinalResultCallback?.("Consulting calendar today?");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      expect(dispatched).toBe("is there anything on my Consulting calendar for today?");
+      // No 3-or-more-word span appears twice in the dispatched string --
+      // the property the observed-wrong triple violated three separate
+      // ways (the opening clause, the connective, AND "Consulting calendar"
+      // all repeated).
+      const words = dispatched
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter(Boolean);
+      const seenSpans = new Set<string>();
+      let duplicatedSpan = false;
+      for (let i = 0; i <= words.length - 3; i++) {
+        const span = words.slice(i, i + 3).join(" ");
+        if (seenSpans.has(span)) duplicatedSpan = true;
+        seenSpans.add(span);
+      }
+      expect(duplicatedSpan).toBe(false);
+    });
+
+    it("CTRL-REPEAT: a genuine short emphatic repeat straddling the accumulator boundary dispatches with BOTH copies intact", async () => {
+      // Fired as TWO separate finals (the shape 188.1-CALIBRATION.md pins) --
+      // never as one final already containing both copies, which would never
+      // reach the accumulator's append helper at all and would prove nothing.
+      // Needs a warm/open-follow-up context: "Right now." is 2 words, below
+      // the COLD noise floor (3 words) -- unrelated to the glue fix itself.
+      let chat = makeChat();
+      const { rerender } = renderVoice(chat);
+      wake();
+      chat = setTtsPlaying(rerender, chat, true);
+      chat = setTtsPlaying(rerender, chat, false);
+      act(() => {
+        onFinalResultCallback?.("Right now.");
+        onFinalResultCallback?.("Right now.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "Right now. Right now.",
+        { interruptedReply: undefined, voice: true }
+      );
+    });
+
+    it("existing regression: does NOT send the question twice when both ears finalize it (both-ears dedup is upstream of this helper)", async () => {
+      duplexStatusValue = "connected";
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("what did we work on today");
+        onFinalResultCallback?.("what did we work on today", 0.97);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "what did we work on today",
+        expect.objectContaining({ voice: true })
+      );
+    });
+  });
 });

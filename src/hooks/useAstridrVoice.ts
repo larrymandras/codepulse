@@ -1080,8 +1080,9 @@ export function useAstridrVoice({
       !chatRef.current.ttsIsPlaying;
 
     if (continuing) {
-      const merged = `${prev.text} ${message}`;
-      trace("flushSend.merged-continuation", { merged });
+      const mergedResult = appendWithOverlapCheck(prev.text, message);
+      const merged = mergedResult.text;
+      trace("flushSend.merged-continuation", { merged, decision: mergedResult.decision });
       chatRef.current.interrupt("continuation-merge"); // cancel the half-question turn
       interruptedReplyRef.current = ""; // our own continuation, not her reply
       lastSentRef.current = { text: merged, at: Date.now() };
@@ -1566,7 +1567,7 @@ export function useAstridrVoice({
       const dist = approxSubstringDistance(needle, squash(text));
       if (dist > Math.max(1, Math.floor(needle.length * 0.2))) {
         trace("final.rejoined-lost-interim", { lostInterim, final: text });
-        text = `${lostInterim} ${text.trim()}`;
+        text = appendWithOverlapCheck(lostInterim, text).text;
       }
     } else if (lostInterim && lostInterimFromSpeaking) {
       trace("final.lost-interim-discarded-speaking-era", { lostInterim });
@@ -1594,7 +1595,15 @@ export function useAstridrVoice({
     // warm conversation ("no", "yes", "the second one") goes out in 800ms —
     // human turn-gaps are sub-second; only open-ended clauses need the full
     // 2s mid-thought allowance.
-    accumulatedRef.current = `${accumulatedRef.current} ${text}`.trim();
+    const accumulatedResult = appendWithOverlapCheck(accumulatedRef.current, text);
+    if (accumulatedResult.decision !== "joined") {
+      trace("glue.accumulator", {
+        decision: accumulatedResult.decision,
+        before: accumulatedRef.current,
+        after: accumulatedResult.text,
+      });
+    }
+    accumulatedRef.current = accumulatedResult.text;
     setFinalText(accumulatedRef.current);
 
     const words = accumulatedRef.current.split(/\s+/).filter(Boolean).length;
