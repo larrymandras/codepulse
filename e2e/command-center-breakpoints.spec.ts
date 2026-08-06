@@ -143,8 +143,28 @@ test.describe('Command-center breakpoints — in-page proof (D-17)', () => {
       }
 
       // ── Seven panels present at every tier ────────────────────────────────────────────────
+      // Matcher is anchored at BOTH ends -- deliberately not `exact: false`,
+      // because the Intelligence Feed renders arbitrary briefing prose and an
+      // unanchored substring match could satisfy this assertion from feed text
+      // rather than from a real panel header.
+      //
+      // The optional trailing group exists for exactly one known case: 188.1-04
+      // (D-04) nests the "N FILTERED" disclosure INSIDE the same <span> as the
+      // VOICE STATUS label (VoiceStatusPanel.tsx), so that element's text
+      // content is "VOICE STATUS 0 FILTERED" and a bare `exact: true` finds no
+      // element. That is correct per 188.1-UI-SPEC.md Part 5; this spec was
+      // written before 188.1-04 landed and never validated against a real
+      // render (the Clerk gate skipped every tier), so the assertion -- not the
+      // component -- is the stale side. Caught 2026-08-06 on the first genuine
+      // render of the command center.
+      // NOTE the \s* (not \s+) between label and count: the live DOM's
+      // textContent is literally "VOICE STATUS0 FILTERED" with NO separating
+      // whitespace -- JSX drops it between the bare text node and the sibling
+      // <span>. Verified 2026-08-06 by dumping textContent from inside the real
+      // page; a \s+ matcher looks obviously right and never matches.
       for (const label of PANEL_HEADERS) {
-        await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+        const headerMatcher = new RegExp(`^${label}(?:\\s*\\d+\\s*FILTERED)?$`);
+        await expect(page.getByText(headerMatcher).first()).toBeVisible();
       }
 
       // ── D-14: CompactControlStrip confirmed at render, five controls in declared order ────
