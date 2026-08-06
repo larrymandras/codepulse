@@ -18,8 +18,13 @@ for (const theme of THEMES) {
       // Set theme in localStorage before page navigation to avoid FOUC in test.
       // addInitScript runs before the page load, so the pre-paint inline script
       // (Plan 03) will see the correct codepulse-theme value from localStorage.
+      // Also suppress OnboardingGuide's full-screen `fixed inset-0 z-50` overlay:
+      // it is gated purely on localStorage (OnboardingGuide.tsx:39, no auth
+      // dependency) and otherwise covers the page, so the contrast scan measures
+      // the modal instead of the page under test.
       await page.addInitScript((t: string) => {
         localStorage.setItem("codepulse-theme", t);
+        localStorage.setItem("codepulse_onboarding_complete", "true");
       }, theme);
 
       await page.goto(pg.path);

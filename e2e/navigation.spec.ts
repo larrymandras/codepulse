@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Sidebar navigation', () => {
+  // OnboardingGuide renders a full-screen `fixed inset-0 z-50` overlay whenever
+  // localStorage `codepulse_onboarding_complete` is unset, and it intercepts every
+  // pointer event -- so every click here failed with `locator.click: Test timeout`.
+  // The modal is gated PURELY on localStorage (OnboardingGuide.tsx:39) with no auth
+  // dependency, so this was failing independently of any Clerk configuration.
+  // Suppressed the same way e2e/command-center-breakpoints.spec.ts does.
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      window.localStorage.setItem('codepulse_onboarding_complete', 'true');
+    });
+  });
+
   test('loads the dashboard page', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL('/');
