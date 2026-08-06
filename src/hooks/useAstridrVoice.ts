@@ -1537,9 +1537,38 @@ export function useAstridrVoice({
 
     // Noise/banter gate (CONV-03): reject cold fragments <3 words; warm
     // conversations accept short replies. Zero UI trace on reject.
-    if (shouldReject(text, conversationWarmRef.current || followUpOpen, confidence)) {
-      trace("final.noise-rejected", { text, warm: conversationWarmRef.current, followUpOpen });
-      return;
+    const isFollowUpWindowOpenForGate = conversationWarmRef.current || followUpOpen;
+    if (shouldReject(text, isFollowUpWindowOpenForGate, confidence)) {
+      // D-09/188.1-06 (GLUE-LOSS): a fragment that fails ONLY the word-count
+      // floor, while an accumulation is genuinely pending (a previous final
+      // was already accepted and its send timer is armed), is a
+      // MID-UTTERANCE continuation, not cold noise -- the captured loss case
+      // was `shouldReject` dropping a 1-word fragment ("On") that sat
+      // between two accepted finals of the same sentence. Scoped narrowly:
+      // shouldReject's own confidence floor and barge-in bypass are
+      // untouched (this only widens the word-count axis, and only in this
+      // specific context), and Plan 04's wake-strip/duration gates above
+      // this block already ran and would have dropped a wake-phrase-only or
+      // sub-floor-duration utterance before ever reaching here -- so this
+      // leniency cannot reopen that seam. With an EMPTY accumulator or a
+      // cold conversation, accumulationPending is false and the fragment is
+      // rejected exactly as it is today.
+      const accumulationPending =
+        accumulatedRef.current.trim() !== "" && sendTimerRef.current !== null;
+      const minWords = isFollowUpWindowOpenForGate ? 1 : 3;
+      const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+      const confidenceRejected =
+        confidence !== undefined && confidence > 0 && confidence < 0.01;
+      const failedOnlyWordFloor =
+        accumulationPending && !confidenceRejected && wordCount < minWords;
+      if (!failedOnlyWordFloor) {
+        trace("final.noise-rejected", { text, warm: conversationWarmRef.current, followUpOpen });
+        return;
+      }
+      trace("final.fragment-preserved", { text, accumulated: accumulatedRef.current });
+      // Fall through to the normal accept path below -- the fragment
+      // reaches the SAME accumulator call already routed through
+      // appendWithOverlapCheck (D-06), never a raw join.
     }
 
     // Rejoin a lost interim: Chrome sometimes resets mid-utterance and the

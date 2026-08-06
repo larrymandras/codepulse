@@ -2252,4 +2252,92 @@ describe("useAstridrVoice", () => {
       );
     });
   });
+
+  // ─── VOICE-GLUE-01 (D-09): the fragment-LOSS case, folded in per the ──────
+  // amended ROADMAP criterion 2. 16:29:07-14 live trace: "Is there anything"
+  // was accepted, "On" was noise-rejected (dropped before ever reaching the
+  // accumulator), then "The news wire about Anthropic today." was accepted --
+  // dispatching "Is there anything The news wire about Anthropic today.",
+  // the middle of the sentence simply gone.
+
+  describe("VOICE-GLUE-01: fragment-LOSS (GLUE-LOSS, D-09)", () => {
+    it("GLUE-LOSS: a mid-accumulation 1-word fragment survives instead of being noise-rejected", async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.("Is there anything"); // starts accumulation, arms the send timer
+        onFinalResultCallback?.("On"); // fails only the word-count floor, mid-accumulation
+        onFinalResultCallback?.("The news wire about Anthropic today.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      // Property assertion per 188.1-CALIBRATION.md (the exact wording a fix
+      // produces depends on which mechanism recovers "On", which is
+      // implementation work, not calibration scope): the middle token "on"
+      // is present, positioned between "anything" and "the news wire", and
+      // no 3-or-more-word span repeats.
+      expect(/\banything\b[^]*\bon\b[^]*\bnews wire\b/i.test(dispatched)).toBe(true);
+      const words = dispatched
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter(Boolean);
+      const seenSpans = new Set<string>();
+      let duplicatedSpan = false;
+      for (let i = 0; i <= words.length - 3; i++) {
+        const span = words.slice(i, i + 3).join(" ");
+        if (seenSpans.has(span)) duplicatedSpan = true;
+        seenSpans.add(span);
+      }
+      expect(duplicatedSpan).toBe(false);
+    });
+
+    it("scoping: a cold 1-word fragment with NO accumulation pending is still rejected", async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("On");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).not.toHaveBeenCalled();
+      const trace = window.__astridrVoiceTrace ?? [];
+      expect(trace.some((entry) => entry.ev === "final.noise-rejected")).toBe(true);
+    });
+
+    it("ordering: Plan 04's wake-strip and duration gates still fire while an accumulation is pending", async () => {
+      const chat = makeChat();
+      const { result } = renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.("Is there anything"); // starts accumulation, arms the send timer
+      });
+      act(() => {
+        // A wake-phrase-only utterance mid-accumulation is still dropped by
+        // the wake-strip gate, which runs BEFORE this task's leniency.
+        onDuplexFinalTranscriptCallback?.("Hey Astrid.");
+      });
+      act(() => {
+        // A sub-floor-duration burst mid-accumulation is still dropped by
+        // the duration gate, for the same reason.
+        onDuplexFinalTranscriptCallback?.("Kulitnya.", 20);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2100);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "Is there anything",
+        { interruptedReply: undefined, voice: true }
+      );
+      expect(result.current.filteredCount).toBe(2);
+    });
+  });
 });
