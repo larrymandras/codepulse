@@ -54,12 +54,32 @@ export const ingest = mutation({
   },
 });
 
+/**
+ * Hard ceiling on `listRecent`'s `limit` (Phase 107 follow-up).
+ *
+ * `events` rows carry payloads, so this query's cost is dominated by bytes
+ * read, not row count, and the `archived` filter runs AFTER the index scan —
+ * it can walk well past `limit` rows to find `limit` unarchived ones. Measured
+ * on live data 2026-08-06: `limit: 1000` read **13,492,918 bytes against
+ * Convex's 16,777,216-byte per-execution cap (80%)**, and 107-04 recorded that
+ * `limit: 5000` exceeds it outright and throws.
+ *
+ * Clamping rather than validating: an over-large request is silently reduced to
+ * a working read instead of failing the caller. The only production consumer
+ * (`OrbitalStatusRings.tsx`) asks for 1, so this ceiling exists to protect
+ * ad-hoc/CLI callers — which is exactly who hit the cap.
+ *
+ * 80% headroom is thin. Anything needing more than this must use
+ * `listRecentPaginated`, which pages instead of widening a single read.
+ */
+export const LIST_RECENT_MAX_LIMIT = 1000;
+
 export const listRecent = query({
   args: {
     limit: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 50;
+    const limit = Math.min(args.limit ?? 50, LIST_RECENT_MAX_LIMIT);
     // Range-bound (last 48h, seconds) — see listRecentUnified comment.
     const nowSec = Date.now() / 1000;
     return await ctx.db

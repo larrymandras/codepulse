@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { ingest } from "./events";
+import { ingest, listRecent, LIST_RECENT_MAX_LIMIT } from "./events";
 
 // ---------------------------------------------------------------------------
 // Phase 107 Wave-0 — events.ingest shard contract.
@@ -185,5 +185,59 @@ describe("events.ingest — shard contract", () => {
     // the dedup early return.
     expect(store.events).toHaveLength(1);
     expect(store.aggregates).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// events.listRecent read-cap clamp (Phase 107 follow-up).
+//
+// Convex enforces a 16,777,216-byte per-execution read cap. `events` rows carry
+// payloads, so this query is bytes-bound, not row-bound: limit:1000 measured
+// 13,492,918 bytes (80% of the cap) on live data, and 107-04 recorded that
+// limit:5000 exceeds it and throws. The clamp turns an over-large ad-hoc
+// request into a working read instead of a failure.
+//
+// Asserted on the observable — how many rows the take() actually asked for —
+// rather than on the constant, so a future edit that raises the ceiling but
+// forgets to apply it is caught.
+// ---------------------------------------------------------------------------
+describe("events.listRecent — read-cap clamp", () => {
+  function makeTakeSpy() {
+    const takeCalls: number[] = [];
+    const db = {
+      query: () => ({
+        withIndex: () => ({
+          order: () => ({
+            filter: () => ({
+              take: async (n: number) => {
+                takeCalls.push(n);
+                return [];
+              },
+            }),
+          }),
+        }),
+      }),
+    };
+    return { takeCalls, ctx: { db } as any };
+  }
+
+  test("an over-large limit is clamped to LIST_RECENT_MAX_LIMIT", async () => {
+    const { takeCalls, ctx } = makeTakeSpy();
+    await (listRecent as any)._handler(ctx, { limit: 5000 });
+    expect(takeCalls).toEqual([LIST_RECENT_MAX_LIMIT]);
+    // 5000 is not merely "reduced" — it is the exact value 107-04 saw throw.
+    expect(takeCalls[0]).toBeLessThan(5000);
+  });
+
+  test("a limit under the ceiling is passed through untouched", async () => {
+    const { takeCalls, ctx } = makeTakeSpy();
+    await (listRecent as any)._handler(ctx, { limit: 25 });
+    expect(takeCalls).toEqual([25]);
+  });
+
+  test("the default (no limit supplied) is unchanged at 50", async () => {
+    const { takeCalls, ctx } = makeTakeSpy();
+    await (listRecent as any)._handler(ctx, {});
+    expect(takeCalls).toEqual([50]);
   });
 });
