@@ -113,6 +113,15 @@ const BARGE_IN_PHRASES = [
   "astridr",
   "astrid",
   "hey astridr",
+  // 188.1-04 (D-01/D-02) deliberate widening: "hey astrid" (no trailing "r")
+  // was missing here entirely. 188.1-RESEARCH.md confirms Chrome's STT
+  // actually produces "Astrid", not "Astridr" — its absence was precisely
+  // why isPureBargeInPhrase("Hey Astrid.") returned false and the wake
+  // phrase leaked past this file into a dispatched chat message three times
+  // in one recorded session (2026-08-05 evidence todo). Inserted after the
+  // existing "hey astridr" entry rather than reordering any prior entry, so
+  // every pre-existing matchedBargePhrase() identity is unchanged.
+  "hey astrid",
   "stop",
   "wait",
   "hold on",
@@ -121,6 +130,19 @@ const BARGE_IN_PHRASES = [
   "one sec",
   "pause",
 ];
+
+// The address/name subset consumed by stripWakePhrase (188.1-04, D-01/D-02).
+// Deliberately NOT identical to BARGE_IN_PHRASES's raw string list: normalize()
+// strips diacritics (its `[^\w\s']` class is ASCII-only), so "ástríðr" alone
+// normalizes to two tokens ("str", "r") — matching it as a stand-alone entry
+// after a leading "hey" requires an explicit combined "hey ástríðr" entry,
+// since token-count differs from the ASCII "hey astridr"/"hey astrid" forms.
+// stripWakePhrase compares against each entry's OWN normalize()'d token list
+// (see WAKE_PHRASE_TOKENS below), not the raw string, so this list only needs
+// to be human-readable and exhaustive of the address forms — it is not read
+// by any other matcher in this file. Order does not matter here; matching
+// order is derived by sorting on normalized token count (longest-first).
+const WAKE_PHRASES = ["hey ástríðr", "hey astridr", "hey astrid", "ástríðr", "astridr", "astrid"];
 
 /**
  * Returns true if the transcript is a barge-in phrase — a name/attention-getter
@@ -174,6 +196,91 @@ export function isPureBargeInPhrase(text: string): boolean {
   const norm = normalize(text);
   if (!norm) return false;
   return BARGE_IN_PHRASES.includes(norm);
+}
+
+// ─── Wake-phrase strip (188.1-04, D-01/D-02) ─────────────────────────────────
+//
+// Closes the live defect where the duplex ear transcribed "Hey Astrid." as
+// content and dispatched it as a chat message — answered by a full LLM turn
+// plus TTS synthesis — three times in one recorded session on 2026-08-05
+// (see the evidence todo `.planning/todos/pending/2026-08-05-voice-transcript-
+// glue-and-wake-phrase-leak.md`). A fourth occurrence prefixed a real question
+// ("Hey Astrid. What's the weather like tomorrow in Cumming, Georgia?"). D-01
+// requires stripping a LEADING wake-phrase match before the final reaches the
+// send accumulator; D-02 requires the caller to treat a whole-utterance match
+// (remainder empty) as a drop-and-refresh-the-follow-up-window case rather
+// than a normal dispatch — that refresh behavior lives in useAstridrVoice.ts,
+// not here, since this file stays pure/side-effect-free.
+
+/** Same character-for-character substitution normalize() applies (lowercase,
+ *  every non-word/non-space/non-apostrophe char replaced by a single space),
+ *  but WITHOUT collapsing whitespace runs — so each resulting token's index
+ *  still lines up 1:1 with the corresponding position in the original,
+ *  un-normalized `text`. This is what lets stripWakePhrase compute a cut
+ *  point in the ORIGINAL string from a match found in the normalized one. */
+function maskPreservingIndices(text: string): string {
+  return text.toLowerCase().replace(/[^\w\s']/g, " ");
+}
+
+// Each WAKE_PHRASES entry's own normalize()'d token list, precomputed once
+// and sorted longest-first (by normalized token count) so a longer address
+// is always tried — and matched — before a shorter one that is its own
+// leading prefix (e.g. "hey astridr" before "astridr"). Diacritic forms are
+// intentionally normalized here too (not compared as raw strings): normalize()
+// strips accents, so comparing against a symmetrically-normalized phrase is
+// what lets "Ástríðr" actually match despite the ASCII-only \w class — see
+// the WAKE_PHRASES comment above.
+const WAKE_PHRASE_TOKENS: { raw: string; tokens: string[] }[] = WAKE_PHRASES.map((phrase) => ({
+  raw: phrase,
+  tokens: normalize(phrase).split(" ").filter(Boolean),
+})).sort((a, b) => b.tokens.length - a.tokens.length);
+
+/**
+ * Strips a LEADING wake-phrase address (e.g. "Hey Astrid.", "Hey Ástríðr,")
+ * from `text`, if present. Pure — no normalization leaks into the return
+ * value: the remainder preserves the ORIGINAL casing and punctuation of
+ * everything after the wake phrase, because the remainder is what gets
+ * dispatched to Ástríðr as the user's actual message.
+ *
+ * Returns `{ stripped, matched }` rather than a bare string so the caller
+ * can distinguish three outcomes that a bare string return cannot express:
+ * no wake phrase found (`matched === null`, `stripped === text`), a wake
+ * phrase found with real content after it (`matched` set, `stripped`
+ * non-empty), and a wake-phrase-ONLY utterance (`matched` set, `stripped ===
+ * ""`) — the D-02 case the caller must drop-and-refresh rather than dispatch.
+ *
+ * Deliberately LEADING-only (never matches mid-sentence or trailing): a wake
+ * name appearing elsewhere in the utterance is content ("What did Astrid say
+ * about the roadmap?"), not an address, and stripping it there would corrupt
+ * a real question. "stop"/"wait"/"hold on"/etc. are barge-in interrupt
+ * phrases, not wake/address phrases, and are deliberately absent from
+ * WAKE_PHRASES — stripping them here would silently break the barge-in
+ * reflex those phrases exist for.
+ */
+export function stripWakePhrase(text: string): { stripped: string; matched: string | null } {
+  if (!text || !text.trim()) return { stripped: text, matched: null };
+
+  const masked = maskPreservingIndices(text);
+  const tokenRe = /\S+/g;
+  const spanTokens: { word: string; end: number }[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = tokenRe.exec(masked)) !== null) {
+    spanTokens.push({ word: match[0], end: match.index + match[0].length });
+  }
+  if (spanTokens.length === 0) return { stripped: text, matched: null };
+
+  for (const { raw, tokens } of WAKE_PHRASE_TOKENS) {
+    if (tokens.length === 0 || tokens.length > spanTokens.length) continue;
+    const isLeadingMatch = tokens.every((t, j) => spanTokens[j].word === t);
+    if (!isLeadingMatch) continue;
+    const cutIndex = spanTokens[tokens.length - 1].end;
+    // Trim any punctuation/whitespace immediately following the wake phrase
+    // (the comma in "Hey Astrid, ...", the period in "Hey Astrid.") so the
+    // remainder never starts with orphaned punctuation.
+    const remainder = text.slice(cutIndex).replace(/^[\s,.;:!?'"—–-]+/, "");
+    return { stripped: remainder, matched: raw };
+  }
+  return { stripped: text, matched: null };
 }
 
 // ─── Spoken strict-mode toggle command (D-05) ────────────────────────────────

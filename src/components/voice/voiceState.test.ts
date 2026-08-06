@@ -26,6 +26,7 @@ import {
   isEndPhrase,
   isBargeInPhrase,
   isPureBargeInPhrase,
+  stripWakePhrase,
   isStrictModeCommand,
   isVisionIntentPhrase,
   decideVisionIntent,
@@ -252,6 +253,73 @@ describe("isBargeInPhrase", () => {
 
   it("empty string → false", () => {
     expect(isBargeInPhrase("")).toBe(false);
+  });
+});
+
+describe("stripWakePhrase", () => {
+  it('"Hey Astrid." → whole utterance is the wake phrase: stripped is empty, matched is non-null', () => {
+    const result = stripWakePhrase("Hey Astrid.");
+    expect(result.stripped).toBe("");
+    expect(result.matched).not.toBeNull();
+  });
+
+  it('WAKE-2 corpus string strips to the exact question text (188.1-CALIBRATION.md, verbatim)', () => {
+    const result = stripWakePhrase(
+      "Hey Astrid. What's the weather like tomorrow in Cumming, Georgia?"
+    );
+    expect(result.stripped).toBe("What's the weather like tomorrow in Cumming, Georgia?");
+    expect(result.matched).not.toBeNull();
+  });
+
+  it('"Hey Ástríðr, what\'s on my screen?" → the diacritic spelling is matched and stripped', () => {
+    const result = stripWakePhrase("Hey Ástríðr, what's on my screen?");
+    expect(result.stripped).toBe("what's on my screen?");
+    expect(result.matched).not.toBeNull();
+  });
+
+  it('"stop" → returned UNCHANGED, no wake match (interrupt phrase, not a wake phrase)', () => {
+    const result = stripWakePhrase("stop");
+    expect(result.stripped).toBe("stop");
+    expect(result.matched).toBeNull();
+  });
+
+  it('"wait" → returned UNCHANGED, no wake match (interrupt phrase, not a wake phrase)', () => {
+    const result = stripWakePhrase("wait");
+    expect(result.stripped).toBe("wait");
+    expect(result.matched).toBeNull();
+  });
+
+  it('"What did Astrid say about the roadmap?" → returned UNCHANGED (mid-sentence, not an address)', () => {
+    const result = stripWakePhrase("What did Astrid say about the roadmap?");
+    expect(result.stripped).toBe("What did Astrid say about the roadmap?");
+    expect(result.matched).toBeNull();
+  });
+
+  it("empty string → returned unchanged, no throw", () => {
+    expect(() => stripWakePhrase("")).not.toThrow();
+    const result = stripWakePhrase("");
+    expect(result.stripped).toBe("");
+    expect(result.matched).toBeNull();
+  });
+
+  it("whitespace-only string → returned unchanged, no throw", () => {
+    expect(() => stripWakePhrase("   ")).not.toThrow();
+    const result = stripWakePhrase("   ");
+    expect(result.stripped).toBe("   ");
+    expect(result.matched).toBeNull();
+  });
+
+  it("return shape distinguishes 'no match' from 'matched, remainder empty'", () => {
+    const noMatch = stripWakePhrase("What did Astrid say about the roadmap?");
+    const wholeMatch = stripWakePhrase("Hey Astrid.");
+    // no-match branch: matched is null, stripped is the untouched original text
+    expect(noMatch.matched).toBeNull();
+    expect(noMatch.stripped).toBe("What did Astrid say about the roadmap?");
+    // matched-but-empty branch: matched is non-null, stripped is empty —
+    // a bare string return could never distinguish this from "no match" if
+    // the original text itself happened to be empty.
+    expect(wholeMatch.matched).not.toBeNull();
+    expect(wholeMatch.stripped).toBe("");
   });
 });
 
