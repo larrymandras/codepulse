@@ -45,6 +45,7 @@ export interface RaiseArgs {
   heldReason?: string; // "focus" | "quiet-hours" (D-07, held items only)
   intentId?: string; // Supabase intents lifecycle row — set inline here only (Blocker 3)
   source?: string;
+  sourceId?: string; // Phase 188.2 D-08 — stable per-item id, forwarded unchanged
   createdAt?: number;
 }
 
@@ -70,6 +71,7 @@ export async function raiseHandler(
     heldReason: args.heldReason,
     intentId: args.intentId,
     source: args.source,
+    sourceId: args.sourceId,
     createdAt: args.createdAt ?? now,
     ackedAt: undefined,
   });
@@ -87,6 +89,7 @@ export const raise = mutation({
     heldReason: v.optional(v.string()),
     intentId: v.optional(v.string()),
     source: v.optional(v.string()),
+    sourceId: v.optional(v.string()),
     createdAt: v.optional(v.float64()),
   },
   handler: async (ctx, args) => raiseHandler(ctx, args, Date.now() / 1000),

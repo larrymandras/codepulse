@@ -60,6 +60,7 @@ export const inboxIngest = httpAction(async (ctx, request) => {
         heldReason: body.heldReason as string | undefined,
         intentId: body.intentId as string | undefined,
         source: body.source as string | undefined,
+        sourceId: body.sourceId as string | undefined,
         createdAt: body.createdAt as number | undefined,
       });
     } else if (op === "ack") {

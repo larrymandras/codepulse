@@ -2032,6 +2032,7 @@ export default defineSchema({
     heldReason: v.optional(v.string()), // "focus" | "quiet-hours" (D-07, held items only)
     intentId: v.optional(v.string()), // Supabase intents lifecycle row, set inline on raise only
     source: v.optional(v.string()),
+    sourceId: v.optional(v.string()), // Phase 188.2 D-08 — stable per-item id for future dedup audits; forwarded unchanged, never backfilled
     createdAt: v.float64(),
     ackedAt: v.optional(v.float64()),
   })
