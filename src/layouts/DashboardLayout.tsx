@@ -6,14 +6,30 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import OnboardingGuide from "../components/OnboardingGuide";
 import UserMenu from "../components/UserMenu";
 import PrivacyShield from "../components/PrivacyShield";
-import { ThemeSwitcher } from "../components/ThemeSwitcher";
+// DEBT-03 (plan 108-01): ThemeSwitcher is the entry chunk's only consumer of
+// @radix-ui/react-select (42,988 bytes rendered). It is a header control, not a
+// first-paint requirement — and critically the THEME itself is already applied
+// before paint by the inline script in index.html, so deferring this defers the
+// control only, never the colours. A fixed-size placeholder holds its slot so
+// the header does not reflow when it arrives.
+const ThemeSwitcher = lazy(() =>
+  import("../components/ThemeSwitcher").then((m) => ({ default: m.ThemeSwitcher }))
+);
 import AmbientAudioPlayer from "../components/AmbientAudioPlayer";
 import { useAudioEvents } from "../hooks/useAudioEvents";
 import { Toaster } from "sonner";
 import NotificationBell from "../components/NotificationBell";
 import { useNotificationToasts } from "../hooks/useNotificationToasts";
 import { EStopButton } from "../components/EStopButton";
-import { CommandPalette } from "../components/CommandPalette";
+// DEBT-03 (plan 108-01): CommandPalette is the entry chunk's only consumer of
+// cmdk (14,920 bytes rendered). Nothing of it is visible until Ctrl+K opens it,
+// and the hotkey listener lives in THIS file, not in the palette — so deferring
+// the component cannot cost a keystroke. Kept mounted (rather than gated on
+// paletteOpen) so its open/close animation and internal state behave exactly as
+// before; only the chunk boundary moves.
+const CommandPalette = lazy(() =>
+  import("../components/CommandPalette").then((m) => ({ default: m.CommandPalette }))
+);
 import SectionErrorBoundary from "../components/SectionErrorBoundary";
 import { BrainHeaderBadge } from "../components/brains/BrainHeaderBadge";
 import { Separator } from "@/components/ui/separator";
@@ -600,7 +616,9 @@ export default function DashboardLayout() {
             </SectionErrorBoundary>
             <NotificationBell />
             <PrivacyShield />
-            <ThemeSwitcher />
+            <Suspense fallback={<div className="w-9 h-9" aria-hidden="true" />}>
+              <ThemeSwitcher />
+            </Suspense>
             <CrtToggle crtEnabled={crtEnabled} setCrtEnabled={setCrtEnabled} />
             <AmbientAudioPlayer />
             <div className="w-px h-4 bg-primary/20 mx-1" />
@@ -625,7 +643,9 @@ export default function DashboardLayout() {
       <Toaster position="bottom-right" richColors visibleToasts={3} />
 
       {/* Global Command Palette — Cmd+K / Ctrl+K */}
-      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <Suspense fallback={null}>
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      </Suspense>
     </div>
     </GlobalSwapProvider>
   );
