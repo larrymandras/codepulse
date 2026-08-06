@@ -998,6 +998,35 @@ So **no name that exists on disk was pruned**, and the only divergence is this p
 residue. Recording it explicitly because a close-out that claimed "zero residue" while
 silently having changed 56 rows in the live registry would misrepresent the session.
 
+> ### ⚠ CORRECTION 2026-08-06 — the conclusion above is WRONG, and the set-diff that
+> produced it was scoped to the wrong roots
+>
+> **The 56 pruned rows were REAL skills.** They are plugin skills — `vercel-storage`,
+> `vercel-cli`, `turbopack`, `shadcn`, `workflow`, `verification`, … — which live under
+> `C:\Users\mandr\.claude\plugins\cache\…\skills\` (**339 `SKILL.md` files** there), not
+> under `C:\Users\mandr\.claude\skills`. The set-diff above compared the registry's
+> `claude-code` origin against that ONE root, so every plugin skill looked like a
+> registry row with no disk backing.
+>
+> **Why the check looked convincing and was not.** It reported `131 registry names ==
+> 131 disk dirs` with only this plan's fixtures diverging. That match was a coincidence
+> of timing: the registry had *just been pruned down to* that root's contents, so the
+> two sides agreed precisely because the prune had already happened. A control that
+> agrees because the damage is already done is not a control.
+>
+> **What actually occurred**, from the numbers observed across 2026-08-05/06:
+> `claude-code` rows went **185 → 131 → 185** while `.claude\skills` held constant at
+> 131 dirs / 129 with a `SKILL.md`. The daemon transiently pruned the 56 plugin rows and
+> a later, fuller scan restored them. Nothing was permanently lost.
+>
+> **The real finding, which is worth more than the correction:** `computeSkillPrunes`
+> deletes registry rows for any name absent from an incoming snapshot under a matching
+> origin. So a scan that transiently fails to enumerate the plugin cache silently
+> removes 56 live skills from the registry until the next full scan re-adds them. That
+> is registry churn against real data, not fixture noise, and it is invisible unless
+> someone happens to census the table mid-cycle — which is only how it was noticed here.
+> Logged as a follow-up candidate; NOT fixed by this plan.
+
 **C. Registry reconciliation of this plan's own residue.** Deleting directories does not
 prune the registry; only a daemon rescan does, and the daemon rescans only after a real
 lifecycle command completes. The transient post-`rm` state was captured as evidence the
