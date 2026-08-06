@@ -144,11 +144,24 @@ const ECHO_ANCHOR_MAX_MS = 5_000;
  * ambiguous sample resolves toward sending. It therefore remains an accepted,
  * documented pass-through, exactly as the 241ms case was before it.
  *
- * STILL PROVISIONAL. The missing measurement is the duration of a real one-word
- * affirmation; until a live session supplies one, the true lower bound on real
- * speech is unknown and this floor is the conservative choice rather than the
- * derived one. Raising it is NOT free — see the salvage exemption at the gate
- * site, and treat a red CTRL-SHORT or CTRL-SALVAGE as a veto, not a test to fix.
+ * CONFIRMED DERIVED (no longer merely conservative), second live session
+ * 2026-08-06 19:34: the missing one-word-affirmation sample was captured —
+ * "Thanks." measured durationMs:645, the shortest REAL utterance on record.
+ * 645 ÷ 2 = 322 → 320, so this value now satisfies D-03's "strictly below the
+ * shortest observed real utterance, with stated headroom" rule on its own terms
+ * rather than by caution. It also retires the rejected 880ms candidate for good:
+ * 880 would have dropped "Thanks." outright, exactly the over-block CTRL-SHORT
+ * predicted.
+ *
+ * Full corpus after two sessions —
+ *   real: 645 / 1627 / 1763 / 2207 / 2847 / 2905 / 3041 / 3764 ms
+ *   junk: 258 ms (unambiguous) · 489 ms (ambiguous, treated as real per D-03)
+ * Floor sits above the unambiguous junk (258) and 2.0x below the shortest real
+ * (645). The 489ms case is uncatchable without risking real short words, and is
+ * an accepted documented gap.
+ *
+ * Raising this is NOT free — see the salvage exemption at the gate site, and
+ * treat a red CTRL-SHORT or CTRL-SALVAGE as a veto, not a test to fix.
  */
 const DURATION_FLOOR_MS = 320;
 
