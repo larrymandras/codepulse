@@ -153,12 +153,17 @@ const ECHO_ANCHOR_MAX_MS = 5_000;
  * 880 would have dropped "Thanks." outright, exactly the over-block CTRL-SHORT
  * predicted.
  *
- * Full corpus after two sessions —
- *   real: 645 / 1627 / 1763 / 2207 / 2847 / 2905 / 3041 / 3764 ms
- *   junk: 258 ms (unambiguous) · 489 ms (ambiguous, treated as real per D-03)
- * Floor sits above the unambiguous junk (258) and 2.0x below the shortest real
- * (645). The 489ms case is uncatchable without risking real short words, and is
- * an accepted documented gap.
+ * Full corpus after three sessions —
+ *   real: 645 / 1002 / 1627 / 1949 / 1763 / 2207 / 2563 / 2847 / 2905 / 3041 / 3764 ms
+ *   junk: 258 ms ("部屋") · 303 ms ("Claro.") — both unambiguous hallucinations
+ *         489 ms ("Huh.") — ambiguous, treated as real per D-03
+ * The floor brackets cleanly: 258 / 303 junk BELOW it, 645 shortest real 2.0x
+ * ABOVE it. The 489ms case is uncatchable without risking real short words and
+ * is an accepted, documented gap.
+ *
+ * "Claro." is also the defense-in-depth datum: it was an echo of her own TTS
+ * caught by final.ignored-while-speaking first, but at 303ms this floor would
+ * have caught it independently had she been idle.
  *
  * Raising this is NOT free — see the salvage exemption at the gate site, and
  * treat a red CTRL-SHORT or CTRL-SALVAGE as a veto, not a test to fix.
