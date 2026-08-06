@@ -26,6 +26,41 @@ whatever earlier test in the run mutates the brain-selection state this
 assertion reads. It was not investigated here because the fix belongs to the
 Chat/brains surface, not to DEBT-03's import-shape work.
 
+### Investigation 2026-08-06 — STILL OPEN, but three hypotheses are now RULED OUT
+
+Investigated during the post-v13.0 debt sweep. **No fix applied, deliberately**: the
+failure did not reproduce in ~8 full-suite runs that day (all green, 3478/3478 at the
+end), and every mechanism proposed for it was disproved. Applying a `waitFor` to stop it
+flaking would mask a defect that has not been identified — which is worse than leaving it
+open. Recording the refutations so the next investigator does not repeat them:
+
+1. **Shared-fixture contamination of the brain mocks — REFUTED.** The enclosing
+   `describe`'s own `beforeEach` (`Chat.test.tsx:515-518`) resets **both**
+   `mockActiveEngineMap = {}` and `lastBrainPickerProps = null`, alongside
+   `vi.clearAllMocks()`. The deferred item's stated first suspect does not hold; neither
+   variable can leak between tests in this block.
+
+2. **Async catalogue changing the label mid-assertion — REFUTED.** `baseLabel` comes from
+   `resolveModelDisplayName(resolved.model, catalogue, globalModelNames)` (`Chat.tsx:184`),
+   and `catalogue` is loaded by an async `brainsApi.getCatalogue()` effect — a plausible
+   race, since `findByTestId` resolves as soon as the element EXISTS, not once its content
+   settles. But the mock is `mockGetCatalogue.mockResolvedValue([])` (line 155, re-applied
+   at 519), and `resolveModelDisplayName` only rewrites the label when
+   `catalogue.length > 0` (`brainsApi.ts:256`). An empty catalogue can never change it.
+
+3. **`useGlobalModelNames` (the `fallbackNames` argument) — REFUTED.** It early-returns
+   unless `status === "connected"` on the Ástríðr WebSocket (`useResolvedBrain.ts:170`),
+   which never occurs under test, so it returns `{}` permanently.
+
+With both async label sources inert, the rendered label is **deterministic** in this test,
+which is what makes the single observed failure genuinely puzzling rather than a routine
+race. The recorded symptom — the element was FOUND but its text differed — is consistent
+with a stale element surviving from an earlier render (i.e. RTL cleanup not having run),
+but that was not demonstrated and `findByTestId` would normally throw on a duplicate match
+instead. **Next step for whoever picks this up:** capture the ACTUAL `textContent` on
+failure (the run that failed did not record it), since knowing what it said instead of
+`anthropic-sonnet-5` would discriminate the remaining candidates immediately.
+
 ## D-106-04-02: `react-syntax-highlighter` full Prism bundle (~774,578 bytes)
 
 Baseline remediation candidate #1 from `106-BUNDLE-ANALYSIS.md`. Deliberately not
