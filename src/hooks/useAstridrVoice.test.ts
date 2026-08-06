@@ -1023,6 +1023,41 @@ describe("useAstridrVoice", () => {
     );
   });
 
+  // CTRL-SALVAGE (D-10/D-16, 188.1-CALIBRATION.md § Over-Block Controls) — the
+  // duplex-sourced variant, which is the one that actually exercises the
+  // ordering hazard. The 188.1-04 duration gate sits in handleFinalResultRef
+  // BEFORE the rejoin block, so a final dropped for being sub-floor never
+  // reaches the salvage that would have recovered it. Recognizer-sourced finals
+  // are structurally immune (durationMs is permanently undefined there, so the
+  // gate fails open), which is exactly why the test above cannot detect this —
+  // only a final carrying a real duration can.
+  //
+  // This control is load-bearing going FORWARD, not just today: DURATION_FLOOR_MS
+  // is PROVISIONAL at 50ms, derived from a corpus with zero real-utterance
+  // samples, and 188.1-07's live-mic session is expected to re-derive it upward
+  // (the observed junk burst was 241ms). At a higher floor a genuine short tail
+  // final CAN fall below it, and this test is what fails when that happens.
+  it("CTRL-SALVAGE: a duplex tail final still rejoins its lost interim and is dispatched, not dropped by the duration gate", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" do I have any");
+      // Chrome resets mid-utterance; the tail arrives on the DUPLEX ear, so it
+      // carries a real durationMs and is subject to the gate. Above the floor
+      // here — the assertion is that salvage survives the gate's presence, and
+      // it is what breaks if the floor is later raised past this value.
+      onDuplexFinalTranscriptCallback?.(" on my personal account", 320);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "do I have any on my personal account",
+      { interruptedReply: undefined, voice: true }
+    );
+  });
+
   it("a final that already contains the interim is NOT double-prepended", async () => {
     const chat = makeChat();
     renderVoice(chat);
