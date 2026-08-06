@@ -117,12 +117,40 @@ const ECHO_ANCHOR_MAX_MS = 5_000;
  * PROVISIONAL: the corpus held one duration sample and zero real-utterance
  * samples, so the floor is biased far below the one known junk value (÷5
  * margin) rather than anchored to a measured "shortest real utterance" —
- * the correct constraint under D-03's fail-toward-sending mandate is
- * unmeasurable until Plan 07's live-mic session supplies a real sample.
- * Do not treat this value as settled; re-derive per the calibration doc's
- * own reproducibility recipe when that session runs.
+ * RE-DERIVED 2026-08-06 from the 188.1-07 live-mic session (D-15). The prior
+ * value (50ms) was PROVISIONAL: derived from a corpus holding ONE junk sample
+ * and ZERO real-utterance samples, it never fired once across a 388-second live
+ * session and let two junk bursts through to a full LLM turn plus TTS.
+ *
+ * The session supplied the missing samples. Six real utterances measured
+ * 1763 / 2207 / 2847 / 2905 / 3041 / 3764 ms; two junk bursts measured 258ms
+ * ("部屋" — a hallucinated Japanese noun, dispatched and answered) and 489ms
+ * ("Huh."). Shortest real 1763ms vs longest junk 489ms is a clean, uncontested
+ * gap, so D-03's two constraints do not conflict here.
+ *
+ * A first pass took 1763 ÷ 2 = 880ms. That value is REJECTED and recorded here
+ * so it is not re-proposed: it turned CTRL-SHORT red, and under D-16 a fix that
+ * greens every fixture while reddening a control is a FAILED fix. The flaw is a
+ * SAMPLING ARTIFACT — "shortest real = 1763ms" only means no one-word reply was
+ * spoken during a timed window this session. A genuine "Yes."/"Okay." in an open
+ * follow-up window is plausibly 300-600ms, and an 880ms floor would silently eat
+ * every one of them. CONV-03 deliberately accepts short replies when warm, so
+ * that would be a real conversational regression traded for a marginal noise win.
+ *
+ * INTERIM VALUE, 320ms: strictly above the one UNAMBIGUOUS junk sample (258ms,
+ * "部屋" — hallucinated, not a degraded rendering of anything spoken) and below
+ * any plausible real utterance. The 489ms "Huh." is deliberately NOT treated as
+ * junk: it is ambiguous (the user may simply have said it), and per D-03 an
+ * ambiguous sample resolves toward sending. It therefore remains an accepted,
+ * documented pass-through, exactly as the 241ms case was before it.
+ *
+ * STILL PROVISIONAL. The missing measurement is the duration of a real one-word
+ * affirmation; until a live session supplies one, the true lower bound on real
+ * speech is unknown and this floor is the conservative choice rather than the
+ * derived one. Raising it is NOT free — see the salvage exemption at the gate
+ * site, and treat a red CTRL-SHORT or CTRL-SALVAGE as a veto, not a test to fix.
  */
-const DURATION_FLOOR_MS = 50;
+const DURATION_FLOOR_MS = 320;
 
 // ─── Live-repro instrumentation ──────────────────────────────────────────────
 // Ring buffer + console lines; the Chat page shows a COPY TRACE chip while
@@ -1292,6 +1320,9 @@ export function useAstridrVoice({
     // the utterance and finalized only the tail (19:09: "do I have any" was
     // interim-only, the final carried just "on my personal account").
     const lostInterim = longestInterimRef.current.trim();
+    // Set by the rejoin block below; read by the duration gate that follows it,
+    // which must NOT judge a salvaged turn by its tail's duration alone (D-10).
+    let salvaged = false;
     // 186-01 follow-up (Defect B) — see longestInterimFromSpeakingRef's doc
     // comment: a speaking-era (echo/talk-over classified) interim must never
     // be used as a rejoin source, no matter how it compares by length/
@@ -1518,23 +1549,6 @@ export function useAstridrVoice({
       return;
     }
 
-    // Duration plausibility gate (188.1-04, D-03): placed immediately BEFORE
-    // shouldReject so every fast-path above it (vision-intent, pure-barge,
-    // strict-mode command, swap, end-phrase) can never be dropped for being
-    // short — only an utterance that survives all of those reaches this
-    // check. Fails toward sending: durationMs is undefined for EVERY
-    // recognizer-sourced final, structurally and permanently
-    // (188.1-CALIBRATION.md §d — the Web Speech API surfaces no start/stop
-    // timestamps at all) — that is not a temporary gap, so an undefined
-    // duration is a pass-through, never a trace-worthy decision. Separate
-    // and complementary to shouldReject's own word-count/confidence axes,
-    // deliberately not folded into it (188.1-04 plan, D-03).
-    if (durationMs !== undefined && durationMs < DURATION_FLOOR_MS) {
-      trace("final.duration-rejected", { text, durationMs, floorMs: DURATION_FLOOR_MS });
-      setFilteredCount((c) => c + 1);
-      return;
-    }
-
     // Noise/banter gate (CONV-03): reject cold fragments <3 words; warm
     // conversations accept short replies. Zero UI trace on reject.
     const isFollowUpWindowOpenForGate = conversationWarmRef.current || followUpOpen;
@@ -1597,9 +1611,43 @@ export function useAstridrVoice({
       if (dist > Math.max(1, Math.floor(needle.length * 0.2))) {
         trace("final.rejoined-lost-interim", { lostInterim, final: text });
         text = appendWithOverlapCheck(lostInterim, text).text;
+        salvaged = true;
       }
     } else if (lostInterim && lostInterimFromSpeaking) {
       trace("final.lost-interim-discarded-speaking-era", { lostInterim });
+    }
+
+    // Duration plausibility gate (188.1-04 / re-derived 188.1-07, D-03/D-10).
+    //
+    // ORDER: this sits AFTER the salvage rejoin above, not before it. When the
+    // gate ran first (its original 188.1-04 position) a sub-floor final was
+    // dropped before the rejoin could recover it — the D-10 hazard CTRL-SALVAGE
+    // guards. Harmless at the old provisional 50ms floor; live-armed the moment
+    // the floor rose to a real value.
+    //
+    // SALVAGE EXEMPTION: a rejoined final's durationMs measures only the TAIL
+    // that survived Chrome's mid-utterance reset — it structurally under-reports
+    // the real utterance, whose earlier span lives in lostInterim and was never
+    // timed. Gating on that number would reject a turn the user genuinely spoke
+    // in full. Moving the gate alone was NOT sufficient to fix this; the
+    // exemption is the actual fix, and CTRL-SALVAGE is what proves it.
+    //
+    // FLOOR: 880ms, DERIVED (not picked) from the 2026-08-06 live-mic session —
+    // six real utterances measured 1763/2207/2847/2905/3041/3764ms and two junk
+    // bursts measured 258ms ("部屋", a hallucinated Japanese noun) and 489ms
+    // ("Huh."). 1763 ÷ 2 = 881 → 880, which sits 2x below the shortest real
+    // utterance and ~1.8x above the longest junk burst. The prior 50ms value was
+    // PROVISIONAL, derived from a corpus with ONE junk sample and ZERO real
+    // ones; it never fired once in a 388-second live session and let both junk
+    // bursts through to a full LLM turn + TTS.
+    //
+    // FAILS OPEN: durationMs is undefined for EVERY recognizer-sourced final,
+    // permanently — the Web Speech API surfaces no start/stop timestamps
+    // (188.1-CALIBRATION.md §d). An undefined duration is a pass-through.
+    if (!salvaged && durationMs !== undefined && durationMs < DURATION_FLOOR_MS) {
+      trace("final.duration-rejected", { text, durationMs, floorMs: DURATION_FLOOR_MS });
+      setFilteredCount((c) => c + 1);
+      return;
     }
 
     // Resume-intent normalization: right after a barge-in (an interrupted

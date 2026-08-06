@@ -795,22 +795,18 @@ describe("useAstridrVoice", () => {
 
   describe("VOICE-DISPATCH-01: duration plausibility", () => {
     it('NOISE-1: duplex final "Kulitnya." with a sub-floor duration is rejected by the duration gate', async () => {
-      // 188.1-CALIBRATION.md's ARCHIVED sample for this text measured
-      // durationMs:241 — but under the derived (PROVISIONAL) floor of 50ms,
-      // 241ms is explicitly documented as an ACCEPTED, uncaught gap (§c):
-      // "The Kulitnya. case is NOT caught by DURATION_FLOOR_MS alone under
-      // this derivation." This fixture instead uses a synthetic duration
-      // constructed to be below the floor (per the plan's own <behavior>
-      // requirement — "carrying a durationMs below DURATION_FLOOR_MS") to
-      // prove the gate MECHANISM; it does not claim to reproduce the
-      // archived 241ms case, which the calibration document itself concedes
-      // this floor cannot catch. See 188.1-04-SUMMARY.md for the disclosure.
+      // Now fires on the REAL ARCHIVED MEASUREMENT, 241ms — no longer a
+      // synthetic stand-in. Under the old PROVISIONAL 50ms floor this exact
+      // case was documented as an accepted, uncaught gap, so the fixture had to
+      // fake a 20ms duration to exercise the mechanism at all. The 320ms floor
+      // re-derived from the 2026-08-06 live session actually catches it, so the
+      // fixture now reproduces the defect as it was really captured.
       let chat = makeChat();
       const { result, rerender } = renderVoice(chat);
       chat = warmAndOpenFollowUp(chat, rerender);
 
       act(() => {
-        onDuplexFinalTranscriptCallback?.("Kulitnya.", 20);
+        onDuplexFinalTranscriptCallback?.("Kulitnya.", 241);
       });
       await act(async () => {
         vi.advanceTimersByTime(3000);
@@ -818,6 +814,47 @@ describe("useAstridrVoice", () => {
 
       expect(chat.sendMessage).not.toHaveBeenCalled();
       expect(result.current.filteredCount).toBe(1);
+    });
+
+    it('NOISE-2 (live 2026-08-06): the hallucinated "部屋" burst at its real 258ms is NOT dispatched', async () => {
+      // Captured verbatim from the 188.1-07 live-mic session. "部屋" is Japanese
+      // for "room" — nothing remotely like it was spoken; it is a pure STT
+      // hallucination off ambient noise. Under the old 50ms floor it was
+      // dispatched, answered by a full LLM turn, and spoken back over TTS:
+      //   final    {"text":"部屋","durationMs":258,"state":"listening"}
+      //   flushSend {"message":"部屋","closing":false}
+      // It then compounded — the follow-up "Huh." merged with it and sent
+      // "部屋 Huh." as a second turn.
+      //
+      // This is the regression that justifies the floor change, pinned at the
+      // REAL measured duration rather than a synthetic one.
+      // SCOPE, stated honestly: this asserts the OUTCOME (not dispatched), not
+      // which gate produced it. A controlled pair (258ms vs 1500ms, text held
+      // constant) was tried first and showed filteredCount staying 0 in BOTH
+      // runs -- so in this harness "部屋" never reaches the duration gate at all.
+      // CONV-03's noise gate claims it first, because "部屋" normalizes to zero
+      // ASCII word characters. That gate now runs BEFORE the duration gate, as a
+      // consequence of moving the duration check after the salvage rejoin.
+      //
+      // Live, this text WAS accepted (`final.accepted {"warm":true}`) and
+      // dispatched, so the warm state here does not faithfully reproduce that
+      // turn. The duration gate's own proof therefore lives in NOISE-1, which
+      // uses ASCII text ("Kulitnya.", 241ms) that does reach it and does
+      // increment filteredCount. This test guards the user-visible regression --
+      // that this exact hallucination no longer becomes a chat turn -- and
+      // deliberately claims nothing more.
+      let chat = makeChat();
+      const { rerender } = renderVoice(chat);
+      chat = warmAndOpenFollowUp(chat, rerender);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("部屋", 258);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(chat.sendMessage).not.toHaveBeenCalled();
     });
 
     it("fail-open (D-03, 188.1-CALIBRATION.md §d): a final with durationMs undefined passes the duration gate untouched", async () => {
@@ -1185,10 +1222,17 @@ describe("useAstridrVoice", () => {
     act(() => {
       onInterimResultCallback?.(" do I have any");
       // Chrome resets mid-utterance; the tail arrives on the DUPLEX ear, so it
-      // carries a real durationMs and is subject to the gate. Above the floor
-      // here — the assertion is that salvage survives the gate's presence, and
-      // it is what breaks if the floor is later raised past this value.
-      onDuplexFinalTranscriptCallback?.(" on my personal account", 320);
+      // carries a real durationMs and IS subject to the gate.
+      //
+      // 200ms is deliberately BELOW DURATION_FLOOR_MS (320). That is the whole
+      // point: the tail of a reset utterance is short precisely BECAUSE it is a
+      // fragment, so the gate's salvage exemption is the only thing that saves
+      // it. An earlier version of this control used a value equal to the floor,
+      // which made it pass vacuously (`320 < 320` is false, so the gate never
+      // fired and the exemption was never exercised) — a control that cannot
+      // fail proves nothing. Mutation-verified: deleting `!salvaged &&` from the
+      // gate turns this red.
+      onDuplexFinalTranscriptCallback?.(" on my personal account", 200);
     });
     await act(async () => {
       vi.advanceTimersByTime(2100);
