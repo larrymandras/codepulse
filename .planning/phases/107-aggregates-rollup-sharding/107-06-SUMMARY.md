@@ -48,6 +48,32 @@ duration: ~20 min
 
 # Plan 107-06 — After-window OCC measurement and the OCC-01 verdict
 
+> ## ⚠ CORRECTION added 2026-08-06 by plan 107-07 — read before quoting any number below
+>
+> **The verdict recorded here (`FAIL`) is superseded: `OCC-01 VERDICT: PASS`** (107-07,
+> `107-OCC-EVIDENCE.md` § I). This document is kept intact as the historical record; nothing
+> below has been rewritten.
+>
+> **1. The raw counts in this document are CONFIRMED.** 107-07 independently reproduced them
+> from the rotated container log by a completely different capture method (in-message
+> timestamp filtering rather than `docker logs --since`) and got **368 total / 314
+> aggregates** with an identical table breakdown (314 / 66 / 6) — byte-for-byte. The data
+> collection here was sound.
+>
+> **2. The `+70.5%` figure should NOT be quoted as a precise effect size.** It appears at
+> lines 22, 59, 73 and 79 below, including as "the honest figure". 107-07 measured
+> per-clock-hour OCC counts on *identical* code and found them swinging **17x (32–542)**;
+> even normalized against a traffic proxy the rate swings ~8x. Both sides of this
+> comparison were single 2 h samples drawn from that distribution, so the difference between
+> them is **not clearly separable from window-to-window noise** — in either direction.
+>
+> **3. The DIAGNOSIS in this document was correct and is what mattered.** Its identification
+> of the unsharded READ set as the unfixed half of OCC-01 (`analyticsRollup.ts:43-54` and
+> `:101-111` collecting the whole bucket, with Convex conflicting on documents read *or*
+> written) is exactly what 107-07 fixed, taking the read set from 101 rows to 1 and
+> contention to zero. Its refusal to raise `AGGREGATE_SHARD_COUNT` first was also right.
+
+
 ```
 OCC-01 VERDICT: FAIL
 ```
