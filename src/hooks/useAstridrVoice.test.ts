@@ -1758,8 +1758,16 @@ describe("useAstridrVoice", () => {
         vi.advanceTimersByTime(2000);
       });
       const trace = window.__astridrVoiceTrace ?? [];
+      // MUST match ONLY the shared sink's own "final" trace (useAstridrVoice.ts
+      // handleFinalResultRef). Accepting "duplex.transcript" here would be a
+      // confound: that entry is emitted at onDuplexFinalTranscript one line
+      // BEFORE the value is forwarded to the sink, so the assertion would pass
+      // with the forwarding call severed and prove nothing about the boundary
+      // this test exists to cross. Verified 2026-08-06 by mutation: dropping
+      // durationMs from the handleFinalResultRef call left the old two-event
+      // predicate green.
       const entry = trace.find(
-        (e) => (e.ev === "duplex.transcript" || e.ev === "final") &&
+        (e) => e.ev === "final" &&
           (e.d as { durationMs?: number } | undefined)?.durationMs !== undefined
       );
       expect(entry).toBeDefined();
