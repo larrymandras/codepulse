@@ -145,7 +145,7 @@ vi.mock("@/hooks/useSpeechRecognition", () => ({
 // second edit to this harness.
 
 let onDuplexSpeechStartCallback: (() => void) | null = null;
-let onDuplexFinalTranscriptCallback: ((text: string) => void) | null = null;
+let onDuplexFinalTranscriptCallback: ((text: string, durationMs?: number) => void) | null = null;
 let onDuplexUnavailableCallback: ((reason: string) => void) | null = null;
 let onDuplexSessionEndCallback: ((info: { seconds: number }) => void) | null = null;
 const mockDuplexStart = vi.fn();
@@ -156,7 +156,7 @@ vi.mock("@/hooks/useDuplexEars", () => ({
   useDuplexEars: vi.fn(
     (options: {
       onSpeechStart: () => void;
-      onFinalTranscript: (text: string) => void;
+      onFinalTranscript: (text: string, durationMs?: number) => void;
       onUnavailable: (reason: string) => void;
       onSessionEnd: (info: { seconds: number }) => void;
       enabled: boolean;
@@ -1741,6 +1741,29 @@ describe("useAstridrVoice", () => {
       });
       const trace = window.__astridrVoiceTrace ?? [];
       expect(trace.some((entry) => entry.ev.startsWith("duplex."))).toBe(true);
+    });
+
+    // 188.1-02 (D-03/D-05): proves durationMs physically REACHES the shared
+    // sink's trace -- not merely that a parameter was declared somewhere
+    // upstream. Threshold-free: this plan makes no gate decision on the value.
+    it("durationMs fired at the duplex ear reaches the shared sink's trace", async () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("what's the weather like tomorrow", 1800);
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(2000);
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const entry = trace.find(
+        (e) => (e.ev === "duplex.transcript" || e.ev === "final") &&
+          (e.d as { durationMs?: number } | undefined)?.durationMs !== undefined
+      );
+      expect(entry).toBeDefined();
+      expect((entry?.d as { durationMs?: number }).durationMs).toBe(1800);
     });
   });
 

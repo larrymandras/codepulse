@@ -239,9 +239,54 @@ describe("useDuplexEars", () => {
       });
     });
 
+    // 188.1-02 (D-03): no speech_started preceded this transcript, so
+    // durationMs is explicitly undefined -- never 0.
     expect(options.onFinalTranscript).toHaveBeenCalledWith(
-      "where are my children today"
+      "where are my children today",
+      undefined
     );
+  });
+
+  it("188.1-02 (D-05): a speech_started/speech_stopped pair computes a real durationMs on the following transcript", async () => {
+    const options = baseOptions();
+    const { result } = renderHook(() => useDuplexEars(options));
+    await driveToConnected(result);
+
+    // Date.now() is called exactly once in the speech_started handler and
+    // once in speech_stopped -- pin both so the elapsed math is exact and
+    // reproducible rather than timing-flaky.
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValueOnce(1_000_000); // speech_started
+    act(() => {
+      lastDc?.triggerMessage({ type: "input_audio_buffer.speech_started" });
+    });
+    nowSpy.mockReturnValueOnce(1_000_500); // speech_stopped, 500ms later
+    act(() => {
+      lastDc?.triggerMessage({ type: "input_audio_buffer.speech_stopped" });
+    });
+    nowSpy.mockRestore();
+
+    act(() => {
+      lastDc?.triggerMessage({
+        type: "conversation.item.input_audio_transcription.completed",
+        transcript: "where are my children today",
+      });
+    });
+
+    expect(options.onFinalTranscript).toHaveBeenCalledWith(
+      "where are my children today",
+      500
+    );
+
+    // Consume-and-clear: a SECOND transcript with no fresh speech pair must
+    // not inherit the previous utterance's duration.
+    act(() => {
+      lastDc?.triggerMessage({
+        type: "conversation.item.input_audio_transcription.completed",
+        transcript: "second one",
+      });
+    });
+    expect(options.onFinalTranscript).toHaveBeenLastCalledWith("second one", undefined);
   });
 
   it("mint 503 resolves to unavailable with mint_unavailable and creates no peer connection", async () => {

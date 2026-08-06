@@ -542,9 +542,9 @@ export function useAstridrVoice({
   // ─── Recognition (declared before teardown/handlers that reference it) ─────
 
   const handleInterimResultRef = useRef<(text: string) => void>(() => {});
-  const handleFinalResultRef = useRef<(text: string, confidence?: number) => void>(
-    () => {}
-  );
+  const handleFinalResultRef = useRef<
+    (text: string, confidence?: number, durationMs?: number) => void
+  >(() => {});
 
   // Duplex ears start/stop, ref-indirected for the same reason as the two
   // refs above: useDuplexEars is composed further down (after handleBargeIn/
@@ -1013,12 +1013,20 @@ export function useAstridrVoice({
 
   // Fed by both the 183 recognizer and the duplex ears —
   // do not special-case by source. (RESEARCH Pitfall 5's named mitigation, D-13.)
-  handleFinalResultRef.current = (rawText: string, confidence?: number) => {
+  handleFinalResultRef.current = (
+    rawText: string,
+    confidence?: number,
+    durationMs?: number
+  ) => {
     let text = rawText;
     // Canonical onresult line (186-01 D-16) — see handleInterimResultRef's
     // twin above; isFinal:true here, always fires before any branch below.
     trace("onresult", { isFinal: true, text: rawText, confidence, state: voiceStateRef.current });
-    trace("final", { text, confidence, state: voiceStateRef.current });
+    // durationMs (188.1-02, D-03): populated for duplex-sourced finals only,
+    // undefined for recognizer-sourced ones -- the recognizer structurally
+    // cannot carry this signal (188.1-CONTEXT.md D-05). Threshold-free: no
+    // gate reads this field yet, it is disclosure-only until Plan 04.
+    trace("final", { text, confidence, durationMs, state: voiceStateRef.current });
     // Capture the salvage buffer — the accept path rejoins it if Chrome reset
     // the utterance and finalized only the tail (19:09: "do I have any" was
     // interim-only, the final carried just "on my personal account").
@@ -1336,19 +1344,22 @@ export function useAstridrVoice({
     trace("duplex.speech_started", { state: voiceStateRef.current });
   }, []);
 
-  const onDuplexFinalTranscript = useCallback((text: string) => {
+  const onDuplexFinalTranscript = useCallback((text: string, durationMs?: number) => {
     // Never trace transcript text, only length (T-188-31/T-188-60).
     // msSinceTtsEnd/insideTailWindow added 2026-07-31 for the tail-hallucination repro (garbage
     // tokens like "Twing."/"bentuk" observed right after her TTS ends) -- diagnostic only, does
     // not change routing. Lets a live trace show directly whether hallucinated finals land inside
     // ECHO_TAIL_MS (where the fuzzy echo match at least gets a chance to run) or after it expires
     // (where today NOTHING defends against them at all).
+    // durationMs (188.1-02, D-03/D-05) is threaded through unchanged from useDuplexEars --
+    // this hook makes no accept/reject decision on it, it is plumbing only.
     trace("duplex.transcript", {
       length: text.length,
+      durationMs,
       msSinceTtsEnd: echoTailUntilRef.current ? Date.now() - (echoTailUntilRef.current - ECHO_TAIL_MS) : null,
       insideTailWindow: Date.now() < echoTailUntilRef.current,
     });
-    handleFinalResultRef.current(text);
+    handleFinalResultRef.current(text, undefined, durationMs);
   }, []);
 
   const onDuplexUnavailable = useCallback((reason: string) => {

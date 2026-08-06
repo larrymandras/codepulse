@@ -1239,3 +1239,29 @@ sound, and its diagnosis — that the read set was never narrowed — is confirm
 this result. Its `+70.5%` regression figure remains within the noise band identified in
 § H.5 and should not be quoted as a precise effect size; the diagnosis it drove was right
 regardless.
+
+### I.8 Peak-load follow-up (2026-08-06T12:00Z) — § I.5's caveat substantially narrowed
+
+§ I.5 recorded that the PASS was measured at 32-62 ingest/hr, below the lowest old-code
+sample (70/hr) and far below the pre-deploy peak (676/hr). Traffic rose during the
+following working session, so the same § H.3 method was re-run:
+
+```
+hour     aggregates-OCC   ingest   retries/1k
+09:00Z   0                43       0.0
+10:00Z   0                20       0.0
+11:00Z   0                270      0.0     <- 4-6x the § I.2 rate
+12:00Z   0                8        0.0
+```
+
+**11:00Z ran at 270 ingest/hr with ZERO aggregates OCC.** That rate is now *above* the
+entire old-code band that produced heavy contention (70-146 ingest/hr -> 315-2628.6
+retries/1k), and above the 146 ingest/hr hour that produced 46 conflicts. Applying the old
+code's mildest observed normalized rate (315.1/1k) to 270 ingests predicts ~85 conflicts;
+0 were observed.
+
+Residual caveat, still honest: the pre-deploy peak was 676 ingest/hr and no post-deploy
+window has yet reached that. So the fix is now measured across 20-270 ingest/hr — spanning
+and exceeding the band where the old code demonstrably contended — and remains inferred
+only above ~270/hr. That is a materially smaller gap than § I.5 recorded, and the verdict
+stands unchanged.
