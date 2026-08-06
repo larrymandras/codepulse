@@ -1067,10 +1067,26 @@ export default function Chat() {
                 nothing here was actually capping VitalsRail's growth. Before
                 this, Container Health's live docker-container list alone
                 pushed the whole row (and the footer band below it) to
-                ~1900px, most of it blank space under the shorter columns. */}
+                ~1900px, most of it blank space under the shorter columns.
+                188.1-03 live finding: below `lg` the grid becomes
+                `grid-cols-1`, so no row-sharing/stretch risk exists by
+                construction (Part 3 of 188.1-UI-SPEC.md is correct about
+                that) — but that observation only covers the STRETCH
+                mechanism, not this column's own raw content height, which
+                is independent of stretch. The cap above was `lg:`-prefixed,
+                so it silently stopped applying below 1024px — measured live
+                at 900x900, VitalsRail's uncapped natural height is 1283px,
+                ballooning the whole single-column stack to ~3587px and
+                pushing the footer band to y=3213 (188.1-03-SUMMARY.md /
+                188.1-SMOKE.md have the full measurement). Dropping the
+                `lg:` prefix so the same 70vh cap + internal scroll applies
+                at EVERY tier (matching how this column already behaves at
+                lg/xl) removes ~650px of unnecessary scroll distance and
+                brings this column in line with every other self-bounding
+                column in the grid. */}
             <div
               data-testid="cc-vitals"
-              className="min-h-0 lg:order-4 xl:order-none lg:max-h-[70vh] lg:overflow-y-auto"
+              className="min-h-0 lg:order-4 xl:order-none max-h-[70vh] overflow-y-auto"
             >
               {vitalsColumn}
             </div>

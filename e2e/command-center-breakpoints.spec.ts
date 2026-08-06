@@ -197,19 +197,53 @@ test.describe('Command-center breakpoints — in-page proof (D-17)', () => {
         `document.documentElement.scrollWidth (${overflow.scrollWidth}) must not exceed window.innerWidth (${overflow.clientWidth})`
       ).toBeLessThanOrEqual(overflow.clientWidth);
 
-      // ── Self-bounding contract: footer band is not pushed below the fold ──────────────────
-      const footerBox = await page.getByTestId('cc-footer-band').boundingBox();
-      const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+      // ── Self-bounding contract: footer band is REACHABLE, not merely present ──────────────
+      // 188.1-03 live-render correction: `presence-ambient` (Chat.tsx:896) is a fixed
+      // `h-full` column with NO document-level scroll by design (Chat.tsx:975-989's own
+      // comment: "The page itself has no scroll"). The command-center content region
+      // (grid + footer band) scrolls INSIDE its own `flex-1 min-h-0 overflow-y-auto`
+      // wrapper. Comparing footerBox.y against `document.documentElement.scrollHeight`
+      // therefore compares against a value that structurally can never grow past the
+      // viewport — it does not measure reachability, only whether the *document* scrolls,
+      // which this layout deliberately does not do. That produced two false failures on
+      // the first genuine render (footer top 1516.5/3213 vs a document scrollHeight
+      // pinned at 900) even though the vitals-column self-bound gap was a real, separate
+      // defect (see below-lg-specific comment).
+      //
+      // The real observable a user experiences is: can the footer band be scrolled into
+      // view at all, using the actual scrollable ancestor? `scrollIntoViewIfNeeded()`
+      // exercises exactly that — the same mechanism a real scroll gesture would eventually
+      // reach — then the assertion re-measures the footer's viewport-relative rect and
+      // requires it to actually intersect the viewport. A footer that's merely far down an
+      // internally-scrollable region is not "broken" (that's ordinary nested-scroll UX,
+      // confirmed live: scrolling with the cursor over most of the grid content reaches it);
+      // a footer that CANNOT be scrolled into view at all — e.g. clipped by an ancestor with
+      // `overflow: hidden` instead of `auto` — would fail this assertion for real.
+      const footerLocator = page.getByTestId('cc-footer-band');
+      const footerBoxBeforeScroll = await footerLocator.boundingBox();
+      const docScrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+      await footerLocator.scrollIntoViewIfNeeded();
+      const footerBox = await footerLocator.boundingBox();
       // eslint-disable-next-line no-console
       console.log(
-        `FOOTER-BAND-EVIDENCE ${JSON.stringify({ tier: name, footerBox, scrollHeight })}`
+        `FOOTER-BAND-EVIDENCE ${JSON.stringify({
+          tier: name,
+          footerBoxBeforeScroll,
+          docScrollHeight,
+          footerBoxAfterScrollIntoView: footerBox,
+          viewportHeight: height,
+        })}`
       );
-      expect(footerBox).not.toBeNull();
+      expect(footerBox, 'footer band must have a bounding box').not.toBeNull();
       if (footerBox) {
         expect(
           footerBox.y,
-          `footer band top (${footerBox.y}) must be well within the document's scroll height (${scrollHeight})`
-        ).toBeLessThan(scrollHeight);
+          `footer band top (${footerBox.y}) must be within the ${height}px viewport after scrollIntoViewIfNeeded — a footer that cannot be scrolled into view is genuinely unreachable`
+        ).toBeLessThan(height);
+        expect(
+          footerBox.y + footerBox.height,
+          `footer band bottom (${footerBox.y + footerBox.height}) must be greater than 0 after scrollIntoViewIfNeeded — confirms it is not scrolled fully past the viewport in the other direction`
+        ).toBeGreaterThan(0);
       }
 
       // ── Tier-specific layout contract (188.1-UI-SPEC.md Part 3) ───────────────────────────
