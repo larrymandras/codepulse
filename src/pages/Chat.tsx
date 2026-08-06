@@ -847,7 +847,7 @@ export default function Chat() {
           table row f). */}
       {commandCenter && (
         <SectionErrorBoundary name="Voice Status">
-          <VoiceStatusPanel state={avatarState} />
+          <VoiceStatusPanel state={avatarState} filteredCount={voice.filteredCount} />
         </SectionErrorBoundary>
       )}
 

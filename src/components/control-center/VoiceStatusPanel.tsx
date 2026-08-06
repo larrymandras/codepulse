@@ -35,6 +35,11 @@ import type { VoiceState } from "@/components/voice/voiceState";
 export interface VoiceStatusPanelProps {
   /** The current avatar/voice state — the exact same value Chat.tsx computes. */
   state: VoiceState;
+  /** 188.1-04 (D-04): session-scoped count of finals the plausibility gate
+   *  dropped (wake-phrase-only utterances + sub-floor-duration bursts) —
+   *  `useAstridrVoice`'s `filteredCount`. Rendered ALWAYS, including at zero
+   *  (188.1-UI-SPEC.md Part 5) — never conditionally hidden. */
+  filteredCount: number;
   className?: string;
 }
 
@@ -61,7 +66,7 @@ const CHIP_BASE =
 const CHIP_ACTIVE = `${CHIP_BASE} bg-primary/10 border-primary/30 text-primary`;
 const CHIP_INACTIVE = `${CHIP_BASE} border-transparent text-muted-foreground`;
 
-export function VoiceStatusPanel({ state, className }: VoiceStatusPanelProps) {
+export function VoiceStatusPanel({ state, filteredCount, className }: VoiceStatusPanelProps) {
   // Fire the aria-live announcement once per transition, not per render
   // (ReadinessPill.tsx:82-90 pattern).
   const [announcement, setAnnouncement] = useState(STATE_LABELS[state]);
@@ -78,6 +83,20 @@ export function VoiceStatusPanel({ state, className }: VoiceStatusPanelProps) {
       <span className="font-mono text-sm tracking-[0.1em] text-muted-foreground flex items-center gap-2">
         <AudioLines className="w-4 h-4" aria-hidden="true" />
         VOICE STATUS
+        {/* 188.1-04 (D-04): the quiet "N FILTERED" disclosure — same flex
+            row as the label above, right-aligned via `ml-auto` (the ONE
+            utility added beyond the label span's own typography/color
+            classes, which are reused byte-identically otherwise). Always
+            rendered, including at zero; never inside the aria-live span
+            below (188.1-UI-SPEC.md Part 5: [DEFAULT: excluded] — announcing
+            every filtered-junk increment would be noisy for a screen-reader
+            user in an otherwise-silent feature). text-muted-foreground
+            always, never a status-warn/error token: D-03's fail-toward-
+            sending posture means a low nonzero count is expected and
+            correct, not an alert. */}
+        <span className="font-mono text-sm tracking-[0.1em] text-muted-foreground ml-auto">
+          {filteredCount} FILTERED
+        </span>
       </span>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Voice status">
         {CHIP_ORDER.map((chipState) => (
