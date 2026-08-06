@@ -108,7 +108,7 @@ Its raw counts reproduce byte-for-byte and its diagnosis was correct. Its `+70.5
 
 - Two now-false comments fixed in the same commit (Stale Docs rule): `schema.ts` claimed a missing `shard` "reads as shard 0", contradicting 107-03's strict equality; `aggregateShard.ts` called `shard` "unindexed".
 - **`aggregates` is absent from `retention.ts` entirely — it is never pruned and grows unbounded.** Out of scope here, but directly relevant to this phase's stated motivation (memory buildup). Recommended as a follow-up.
-- `analyticsRollup.ts` embeds literal NUL bytes as Map-key separators, which makes ripgrep treat the file as binary and silently return zero matches — this defeated a repo-wide search during investigation. New code uses the ` ` escape instead. The same contamination was twice introduced into and then cleaned from the evidence file.
+- `analyticsRollup.ts` embeds literal NUL bytes as Map-key separators, which makes ripgrep treat the file as binary and silently return zero matches — this defeated a repo-wide search during investigation. New code uses the `\u0000` escape instead. The same contamination was twice introduced into and then cleaned from the evidence file.
 
 ## Verification
 

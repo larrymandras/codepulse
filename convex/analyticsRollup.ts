@@ -211,7 +211,7 @@ export function accumulateEvent(
   const hour = Math.floor(e.timestamp / 3600) * 3600;
   if (hour >= cutoffHour) return;
 
-  const ek = `${hour} ${e.eventType}`;
+  const ek = `${hour}\u0000${e.eventType}`;
   const ev = eventsAcc.get(ek);
   if (ev) ev.value += 1;
   else eventsAcc.set(ek, { bucket_start: hour, dimensions: { event_type: e.eventType }, value: 1 });
@@ -224,7 +224,7 @@ export function accumulateEvent(
     [tool, outcome],
   ];
   for (const [source, target] of edges) {
-    const sk = `${hour} ${source} ${target}`;
+    const sk = `${hour}\u0000${source}\u0000${target}`;
     const sv = sankeyAcc.get(sk);
     if (sv) sv.value += 1;
     else sankeyAcc.set(sk, { bucket_start: hour, dimensions: { source, target }, value: 1 });

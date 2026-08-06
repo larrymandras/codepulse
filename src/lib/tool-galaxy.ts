@@ -355,14 +355,14 @@ export function buildGalaxy(inputArg: ToolGalaxyInput): GalaxyGraph {
   const edgePairCount = new Map<string, number>();
   for (const e of inputArg.edges) {
     if (!isRealAgent(e.agentId)) continue;
-    const key = `${e.agentId} ${e.toolName}`;
+    const key = `${e.agentId}\u0000${e.toolName}`;
     edgePairCount.set(key, (edgePairCount.get(key) ?? 0) + e.callCount);
   }
   for (const e of inputArg.edges) {
     if (!isRealAgent(e.agentId)) continue;
     const src = agentId(e.agentId);
     const tgt = toolId(e.toolName);
-    const key = `${src} ${tgt}`;
+    const key = `${src}\u0000${tgt}`;
     if (agentToolSeen.has(key)) continue;
     if (!nodeIds.has(src) || !nodeIds.has(tgt)) continue;
     agentToolSeen.add(key);
@@ -370,7 +370,7 @@ export function buildGalaxy(inputArg: ToolGalaxyInput): GalaxyGraph {
       source: src,
       target: tgt,
       kind: "agent-tool",
-      callCount: edgePairCount.get(`${e.agentId} ${e.toolName}`) ?? 0,
+      callCount: edgePairCount.get(`${e.agentId}\u0000${e.toolName}`) ?? 0,
     });
   }
 

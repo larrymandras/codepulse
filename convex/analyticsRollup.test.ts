@@ -410,7 +410,7 @@ describe("analyticsRollup", () => {
             bucket_start: hourStart,
             value: 4,
             dimensions: { source, target },
-            dimension_key: `${source} ${target}`,
+            dimension_key: `${source}\u0000${target}`,
             shard,
           });
         }
