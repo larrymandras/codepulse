@@ -22,7 +22,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useAstridrVoice, isEchoOfReply, stripEchoPrefix, isResidualEcho } from "./useAstridrVoice";
+import {
+  useAstridrVoice,
+  isEchoOfReply,
+  stripEchoPrefix,
+  isResidualEcho,
+  appendWithOverlapCheck,
+} from "./useAstridrVoice";
 import type { AstridrChat } from "./useAstridrChat";
 
 // ─── Echo fingerprint units (16:41 live-trace regressions) ───────────────────
@@ -85,6 +91,141 @@ describe("isResidualEcho", () => {
 
   it("longer remainders are trusted to the prefix-stripper", () => {
     expect(isResidualEcho("emails in your personal inbox please", HER)).toBe(false);
+  });
+});
+
+// ─── appendWithOverlapCheck (188.1-06, D-06/D-07/D-08) ────────────────────────
+
+describe("appendWithOverlapCheck", () => {
+  it("subsume, forward: a longer incoming piece that contains the existing one is returned verbatim", () => {
+    const result = appendWithOverlapCheck(
+      "what does my business calendar look like today",
+      "business calendar"
+    );
+    expect(result).toEqual({
+      text: "what does my business calendar look like today",
+      decision: "subsumed",
+    });
+  });
+
+  it("subsume, reverse: when the incoming piece contains the existing one, the longer incoming is returned verbatim (the compounding-case shape)", () => {
+    const result = appendWithOverlapCheck(
+      "Is there anything on my",
+      "is there anything on my Consulting calendar for"
+    );
+    expect(result).toEqual({
+      text: "is there anything on my Consulting calendar for",
+      decision: "subsumed",
+    });
+  });
+
+  it("subsume tolerates STT casing/punctuation variation via the squashed comparison", () => {
+    const result = appendWithOverlapCheck(
+      "What does my business calendar look like?",
+      "what does my business calendar look like today"
+    );
+    expect(result).toEqual({
+      text: "what does my business calendar look like today",
+      decision: "subsumed",
+    });
+  });
+
+  it("subsumes on the GLUE-COMPOUND row's outer containment (188.1-CALIBRATION.md Measured Subsume Surpluses)", () => {
+    // Subsume table row `GLUE-COMPOUND`: containing side = final2 as OBSERVED
+    // PRE-FIX (still carrying its own inner duplication), contained side =
+    // final1 -- proving the outer subsume branch alone, independent of
+    // whether the inner rejoin trim has already run.
+    const result = appendWithOverlapCheck(
+      "Is there anything on my",
+      "is there anything on my Consulting calendar for Consulting calendar today?"
+    );
+    expect(result.decision).toBe("subsumed");
+    expect(result.text).toBe(
+      "is there anything on my Consulting calendar for Consulting calendar today?"
+    );
+  });
+
+  it("CTRL-REPEAT: two verbatim equal finals both survive (188.1-CALIBRATION.md Over-Block Controls)", () => {
+    const result = appendWithOverlapCheck("Right now.", "Right now.");
+    expect(result).toEqual({ text: "Right now. Right now.", decision: "repeat-preserved" });
+  });
+
+  it("general identity: for a sample string s, appendWithOverlapCheck(s, s).text equals `${s} ${s}`", () => {
+    const s = "Access to the calendar";
+    const result = appendWithOverlapCheck(s, s);
+    expect(result.text).toBe(`${s} ${s}`);
+    expect(result.decision).toBe("repeat-preserved");
+  });
+
+  it("repeat preserved on near-equal squashed forms (casing/punctuation differ, zero surplus)", () => {
+    const result = appendWithOverlapCheck("Today.", "today");
+    expect(result).toEqual({ text: "Today. today", decision: "repeat-preserved" });
+  });
+
+  it("trims a genuine tail-of-existing/head-of-incoming overlap, keeping the span exactly once", () => {
+    const result = appendWithOverlapCheck(
+      "I need to go to the store",
+      "the store today"
+    );
+    expect(result).toEqual({ text: "I need to go to the store today", decision: "trimmed" });
+    const matches = result.text.toLowerCase().match(/the store/g) ?? [];
+    expect(matches.length).toBe(1);
+  });
+
+  it("trims the GLUE-B rejoin overlap (188.1-CALIBRATION.md Measured Overlaps)", () => {
+    const result = appendWithOverlapCheck(
+      "do you have access to higgsfield",
+      "Access to Higgs Field CLI"
+    );
+    expect(result).toEqual({
+      text: "do you have Access to Higgs Field CLI",
+      decision: "trimmed",
+    });
+  });
+
+  it("trims the GLUE-COMPOUND-inner rejoin overlap even with a trailing existing-side word after the match (188.1-CALIBRATION.md Measured Overlaps)", () => {
+    const result = appendWithOverlapCheck(
+      "is there anything on my Consulting calendar for",
+      "Consulting calendar today?"
+    );
+    expect(result).toEqual({
+      text: "is there anything on my Consulting calendar for today?",
+      decision: "trimmed",
+    });
+  });
+
+  it("an overlap shorter than MIN_OVERLAP_WORDS is NOT trimmed -- decision joined, both pieces intact", () => {
+    const result = appendWithOverlapCheck("I want to go", "go home now");
+    expect(result.decision).toBe("joined");
+    expect(result.text).toBe("I want to go go home now");
+  });
+
+  it("plain join fallback: no containment and no qualifying overlap", () => {
+    const result = appendWithOverlapCheck("what's on my calendar", "remind me at noon");
+    expect(result).toEqual({
+      text: "what's on my calendar remind me at noon",
+      decision: "joined",
+    });
+  });
+
+  it("degenerate inputs: empty/whitespace-only existing or incoming never throw", () => {
+    expect(appendWithOverlapCheck("", "hello there")).toEqual({
+      text: "hello there",
+      decision: "joined",
+    });
+    expect(appendWithOverlapCheck("   ", "hello there")).toEqual({
+      text: "hello there",
+      decision: "joined",
+    });
+    expect(appendWithOverlapCheck("hello there", "")).toEqual({
+      text: "hello there",
+      decision: "joined",
+    });
+    expect(appendWithOverlapCheck("hello there", "   ")).toEqual({
+      text: "hello there",
+      decision: "joined",
+    });
+    expect(() => appendWithOverlapCheck("", "")).not.toThrow();
   });
 });
 

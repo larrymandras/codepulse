@@ -302,6 +302,225 @@ export function stripEchoPrefix(heard: string, reply: string): string {
   return words.slice(k).join(" ");
 }
 
+// ─── Overlap-aware append (188.1-06, D-06/D-07/D-08) ─────────────────────────
+
+/** MIN_OVERLAP_WORDS / MIN_OVERLAP_CHARS — the Trim floor. Below this, a
+ *  measured tail-of-existing/head-of-incoming overlap is NOT trimmed: a
+ *  1-word shared filler ("is"/"to"/"on") recurs at ordinary utterance
+ *  boundaries and must never be eaten. Derived in `188.1-CALIBRATION.md`
+ *  § Overlap Floor Derivation from the two genuine trim-overlap cases in the
+ *  evidence corpus (`GLUE-B` / `GLUE-COMPOUND-inner`, both 18 squashed chars;
+ *  `GLUE-COMPOUND-inner` is the smallest at 2 words) — do not change without
+ *  re-deriving there. `MIN_OVERLAP_WORDS` is the primary implementation
+ *  unit; `MIN_OVERLAP_CHARS` is a secondary corroborating guard (the
+ *  calibration doc notes it as too small a sample to trust alone). */
+const MIN_OVERLAP_WORDS = 2;
+const MIN_OVERLAP_CHARS = 18;
+
+/** MIN_SUBSUME_SURPLUS_WORDS / _CHARS — the Subsume floor. A containment
+ *  (one squashed side fully inside the other) collapses to the longer side
+ *  ONLY when the containing side exceeds the contained side by at least
+ *  this much. Below it — including surplus 0, an exact/near-equal repeat —
+ *  both sides are the SAME utterance arriving twice and must be preserved
+ *  verbatim (`CTRL-REPEAT`). Derived in `188.1-CALIBRATION.md` §
+ *  "Derivation (subsume surplus)" from `GLUE-A`'s measured surplus
+ *  ("today", 1 word / 5 chars) — the smallest real surplus in the corpus,
+ *  already > 0. Do not change without re-deriving there. */
+const MIN_SUBSUME_SURPLUS_WORDS = 1;
+const MIN_SUBSUME_SURPLUS_CHARS = 1;
+
+/** Bounds on the Trim branch's search space, protecting `approxSubstringDistance`
+ *  ("small inputs only" per its own comment, O(m·n) on squashed characters):
+ *  only the last `TRIM_TAIL_WINDOW_WORDS` words of `existing` are searched
+ *  for a matching tail (so a long accumulated transcript cannot make every
+ *  final quadratic), the matched span may sit at most
+ *  `TRIM_MAX_TRAILING_SLACK_WORDS` words short of `existing`'s true end (the
+ *  `GLUE-COMPOUND-inner` case has exactly 1 trailing word, "for", after its
+ *  match), and the incoming-side candidate is capped at
+ *  `TRIM_MAX_HEAD_WORDS` words. */
+const TRIM_TAIL_WINDOW_WORDS = 20;
+const TRIM_MAX_TRAILING_SLACK_WORDS = 5;
+const TRIM_MAX_HEAD_WORDS = 15;
+
+function wordsOf(text: string): string[] {
+  return text.trim().split(/\s+/).filter(Boolean);
+}
+
+/** Standard (fully anchored) edit distance — unlike `approxSubstringDistance`,
+ *  there is no free start/end here: both strings are compared in their
+ *  entirety. The Trim search below uses this (not `approxSubstringDistance`)
+ *  to test whether a candidate span is approximately the SAME text as
+ *  another, not merely contained somewhere within a larger one —
+ *  `approxSubstringDistance`'s free-end semantics would otherwise let a
+ *  genuinely SHORTER real overlap that happens to be a prefix of a larger,
+ *  spurious candidate match at distance 0 for the wrong (too-long) `k`.
+ *  Small inputs only, same bound as `approxSubstringDistance`. */
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev: number[] = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur: number[] = new Array<number>(n + 1);
+    cur[0] = i;
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(
+        prev[j] + 1,
+        cur[j - 1] + 1,
+        prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+export interface AppendWithOverlapCheckResult {
+  text: string;
+  decision: "subsumed" | "repeat-preserved" | "trimmed" | "joined";
+}
+
+/**
+ * One shared overlap-aware append helper (D-06) — every concatenation site
+ * that joins an already-accepted piece of transcript with a newly-arrived
+ * one (the accumulator, the continuation merge, the rejoin) calls THIS
+ * instead of a raw template-literal join, so a later concatenation can
+ * never re-glue what an earlier one already fixed.
+ *
+ * D-07: subsume-or-trim.
+ *   1. Subsume — if one squashed side fully contains the other AND the
+ *      surplus (how much longer the containing side is) clears
+ *      `MIN_SUBSUME_SURPLUS_WORDS`, the longer ORIGINAL string (not the
+ *      squashed form — this is what gets dispatched to Ástríðr) is returned
+ *      verbatim, decision `"subsumed"`. This is the fix for the compounding
+ *      case, where an incoming rejoin product already contained the
+ *      accumulated clause.
+ *   2. Below the surplus floor — including surplus 0, an equal-string
+ *      repeat — the two pieces are the SAME utterance arriving twice, not
+ *      one re-covering the other: a plain join is returned, decision
+ *      `"repeat-preserved"`, and the function returns IMMEDIATELY. This
+ *      guard is terminal by design (D-08): falling through to Trim would
+ *      hand it an overlap spanning the entire string, and Trim would eat
+ *      the repeat from the other side just the same.
+ *   3. Trim — if neither side contains the other, search for the longest
+ *      tail-of-`existing`/head-of-`incoming` fuzzy match clearing
+ *      `MIN_OVERLAP_WORDS`/`MIN_OVERLAP_CHARS`. On a match, splice: keep
+ *      `existing`'s non-overlapping prefix, `incoming`'s wording of the
+ *      overlap (finals are generally the more reliable capture), then
+ *      whatever trails the match on EITHER side — `existing`'s own leftover
+ *      continuation first, then `incoming`'s. The overlapping span survives
+ *      exactly once. Decision `"trimmed"`.
+ *   4. Otherwise, today's behavior: a plain single-space join, decision
+ *      `"joined"`.
+ *
+ * D-08: both floors gate their own branch, and neither is skippable — a
+ * genuine short emphatic repeat must join verbatim with its repetition
+ * intact whichever branch it would otherwise have reached.
+ */
+export function appendWithOverlapCheck(
+  existing: string,
+  incoming: string
+): AppendWithOverlapCheckResult {
+  const existingTrimmed = existing.trim();
+  const incomingTrimmed = incoming.trim();
+  if (!existingTrimmed) return { text: incomingTrimmed, decision: "joined" };
+  if (!incomingTrimmed) return { text: existingTrimmed, decision: "joined" };
+
+  const squashedExisting = squash(existingTrimmed);
+  const squashedIncoming = squash(incomingTrimmed);
+
+  // 1/2. Subsume — gated on surplus, terminal either way.
+  if (
+    squashedExisting.includes(squashedIncoming) ||
+    squashedIncoming.includes(squashedExisting)
+  ) {
+    const existingIsLonger = squashedExisting.length >= squashedIncoming.length;
+    const containingOriginal = existingIsLonger ? existingTrimmed : incomingTrimmed;
+    const containedOriginal = existingIsLonger ? incomingTrimmed : existingTrimmed;
+    const surplusWords = wordsOf(containingOriginal).length - wordsOf(containedOriginal).length;
+    if (surplusWords >= MIN_SUBSUME_SURPLUS_WORDS) {
+      return { text: containingOriginal, decision: "subsumed" };
+    }
+    return {
+      text: `${existingTrimmed} ${incomingTrimmed}`.trim(),
+      decision: "repeat-preserved",
+    };
+  }
+
+  // 3. Trim — longest fuzzy tail-of-existing/head-of-incoming overlap.
+  const existingWords = wordsOf(existingTrimmed);
+  const incomingWords = wordsOf(incomingTrimmed);
+  const maxK = Math.min(incomingWords.length, TRIM_MAX_HEAD_WORDS);
+  const tailWindowStart = Math.max(0, existingWords.length - TRIM_TAIL_WINDOW_WORDS);
+
+  let best: { s: number; L: number; k: number } | null = null;
+
+  // MIN_OVERLAP_CHARS is deliberately NOT a hard gate here (per
+  // 188.1-CALIBRATION.md: "MIN_OVERLAP_WORDS is the primary implementation
+  // unit; the char-based number should not be trusted to generalize the way
+  // the word-based one is reasoned to") — MIN_OVERLAP_WORDS alone (the k/L
+  // lower bounds below) already guarantees a lone shared filler word can
+  // never qualify. The tolerance below is intentionally tight (capped at 3
+  // squashed chars) so approximate matching absorbs STT spelling variance
+  // (an extra/missing character) without also absorbing an entire extra
+  // WORD — every genuine overlap in the evidence corpus is an exact
+  // squashed match (distance 0) once k/L are correctly aligned.
+  for (let k = maxK; k >= MIN_OVERLAP_WORDS; k--) {
+    const incomingHeadSquashed = squash(incomingWords.slice(0, k).join(" "));
+
+    let localBest: {
+      s: number;
+      L: number;
+      matchedChars: number;
+      slack: number;
+      dist: number;
+    } | null = null;
+    for (let L = Math.max(1, k - 1); L <= k + 1; L++) {
+      if (L < MIN_OVERLAP_WORDS || L > existingWords.length) continue;
+      for (let s = tailWindowStart; s <= existingWords.length - L; s++) {
+        const slack = existingWords.length - (s + L);
+        if (slack > TRIM_MAX_TRAILING_SLACK_WORDS) continue;
+        const candidateSquashed = squash(existingWords.slice(s, s + L).join(" "));
+        const tol = Math.min(
+          3,
+          Math.max(1, Math.ceil(Math.max(candidateSquashed.length, incomingHeadSquashed.length) * 0.1))
+        );
+        const dist = editDistance(candidateSquashed, incomingHeadSquashed);
+        if (dist > tol) continue;
+        if (
+          !localBest ||
+          dist < localBest.dist ||
+          (dist === localBest.dist && slack < localBest.slack) ||
+          (dist === localBest.dist &&
+            slack === localBest.slack &&
+            candidateSquashed.length > localBest.matchedChars)
+        ) {
+          localBest = { s, L, matchedChars: candidateSquashed.length, slack, dist };
+        }
+      }
+    }
+    if (localBest) {
+      best = { s: localBest.s, L: localBest.L, k };
+      break; // k descends from the max — the first hit is the longest incoming-side overlap.
+    }
+  }
+
+  if (best) {
+    const existingPrefix = existingWords.slice(0, best.s).join(" ");
+    const existingSuffix = existingWords.slice(best.s + best.L).join(" ");
+    const incomingOverlap = incomingWords.slice(0, best.k).join(" ");
+    const incomingSuffix = incomingWords.slice(best.k).join(" ");
+    const text = [existingPrefix, incomingOverlap, existingSuffix, incomingSuffix]
+      .filter((part) => part.length > 0)
+      .join(" ");
+    return { text, decision: "trimmed" };
+  }
+
+  // 4. Plain join fallback — today's behavior.
+  return { text: `${existingTrimmed} ${incomingTrimmed}`.trim(), decision: "joined" };
+}
+
 // ─── Noise/banter gate (CONV-03, D-07/D-08/D-09/D-10) ────────────────────────
 
 function shouldReject(
