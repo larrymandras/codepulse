@@ -254,6 +254,155 @@ file`), confirmed byte-identical via `git diff --stat` returning empty before co
   (`convex/controlVerbSwaps.test.ts`, `convex/schema.ts`)
 - Docs commit recording this section + the Gap 1 frontmatter fix follows separately.
 
+## Second post-execution gap closure (2026-08-07, same day — adversarial mutation-testing pass)
+
+A second, independent mutation-testing pass over this already-committed plan found two further
+zero-coverage gaps in `e63ac2de`'s own output, both missing tests, not behavioral defects.
+Production behavior of `listByScope`, `record`, `isBrainSwap`, `SWAP_HISTORY_CAP`, and every
+`RETENTION_DAYS` value is unchanged — neither fix below touches them. Code commit: `b778d99b`
+(`test(108-02): guard listByScope scope filter and retention entries`).
+
+### Gap 4 — `listByScope`'s scope filter had zero coverage
+
+`convex/controlVerbSwaps.ts:86`'s `.withIndex("by_scope", (q) => q.eq("scope", args.profileId))`
+had no test exercising it: a mutation replacing it with `.withIndex("by_timestamp")` — dropping
+the per-profile scope filter entirely, so every caller would receive every profile's swap
+history (a cross-profile leak in a feature whose whole point is per-profile isolation) — left
+all 11 (at the time) tests in `convex/controlVerbSwaps.test.ts` passing. No test called
+`listByScope`, referenced `by_scope` outside a `describe()` label, or checked the
+`.withIndex(...)` argument.
+
+**Fix (per explicit operator decision, no alternative considered):** added a source-level regex
+guard to `convex/controlVerbSwaps.test.ts` asserting `listByScope`'s body contains both
+`.withIndex("by_scope"` and `q.eq("scope", args.profileId)`, following this file's existing
+`stripCommentLines` + sanity-check idiom (same shape as the CR-01 guard above it). No new
+dependency installed — `convex-test` was explicitly declined.
+
+**Honesty in the guard's own comment:** the test block's header comment states plainly that this
+is source-level only (defeatable by rewording, e.g. renaming the index while preserving
+semantics) and that the real behavioral proof of per-profile isolation — seeding two profiles'
+rows and asserting `listByScope("personal")` never returns a `"business"` row — is deferred to
+plan 108-07 Step 4(b), which reads `listByScope` for two profiles against the live self-hosted
+backend.
+
+**Mutation-check** (changed `.withIndex("by_scope", (q) => q.eq("scope", args.profileId))` →
+`.withIndex("by_timestamp")` in `convex/controlVerbSwaps.ts`, restored via backup-copy at
+`<scratchpad>/controlVerbSwaps.ts.bak`, confirmed byte-identical via `git diff --stat` returning
+empty before committing):
+
+```
+FAIL  convex/controlVerbSwaps.test.ts > listByScope — scope filter present (source-level guard,
+not behavioral proof) > scopes the read to args.profileId via the by_scope index (not
+by_timestamp or an unfiltered read)
+AssertionError: expected 'export const listByScope = query({\n …' to match /\.withIndex\(\s*"by_scope"/
+
+- Expected:
+/\.withIndex\(\s*"by_scope"/
+
++ Received:
+"export const listByScope = query({
+  args: {
+    profileId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query(\"controlVerbSwaps\")
+      .withIndex(\"by_timestamp\")
+      .order(\"desc\")
+      .take(SWAP_HISTORY_CAP);
+  },
+});
+"
+ ❯ convex/controlVerbSwaps.test.ts:163:18
+```
+
+Restored `controlVerbSwaps.ts` from backup; re-ran → 12/12 passed in the file (11 prior + 1 new
+guard).
+
+### Gap 5 — `RETENTION_DAYS` entries for `controlVerbSwaps`/`activeEngineSnapshots` had zero
+coverage
+
+`convex/retention.test.ts` only asserted generic properties of `RETENTION_DAYS` (every key is a
+real schema table, every window is a positive integer, `gatewayQuotaSnapshots === 30`, a fixed
+keep-forever list) — it never asserted these two specific tables are present. Deleting the
+`controlVerbSwaps: 30` entry from `RETENTION_DAYS` outright was caught by nothing: the table
+would silently become unbounded, the exact class of defect this repo's own CLAUDE.md records as
+having caused a real OOM crash-loop on this self-hosted instance.
+
+**Fix:** this gap is fully behaviorally testable with no new infra — `RETENTION_DAYS` is a plain
+object. Added `expect(RETENTION_DAYS).toHaveProperty("controlVerbSwaps", 30)` and the equivalent
+for `activeEngineSnapshots` to `convex/retention.test.ts`, reading the live exported map rather
+than duplicating it as a second hardcoded literal.
+
+**Mutation-check** (deleted the `controlVerbSwaps: 30` entry — and its preceding comment block —
+from `RETENTION_DAYS` in `convex/retention.ts`, restored via backup-copy at
+`<scratchpad>/retention.ts.bak`, confirmed byte-identical via `git diff --stat` returning empty
+before committing):
+
+```
+FAIL  convex/retention.test.ts > RETENTION_DAYS > bounds controlVerbSwaps (D-14) and
+activeEngineSnapshots (D-10) at 30 days — Phase 108 tables must not silently become unbounded
+AssertionError: expected { runtime_events: 14, …(16) } to have property "controlVerbSwaps" with value 30
+
+- Expected:
+30
+
++ Received:
+undefined
+ ❯ convex/retention.test.ts:66:28
+```
+
+Restored `retention.ts` from backup; re-ran → 7/7 passed in the file (5 prior + 1 new + the
+pre-existing `gatewayQuotaSnapshots` assertion; net +1 test, +1 net assertion pair covering two
+tables).
+
+### Recorded, not fixed — `.take(SWAP_HISTORY_CAP)` behavioral bound (deferred to 108-07)
+
+The same mutation-testing pass separately observed that `.take(SWAP_HISTORY_CAP)` is caught only
+by the pre-existing source-level regex guard in `convex/controlVerbSwaps.test.ts` (asserts
+`.take(SWAP_HISTORY_CAP)` appears and `.collect(` does not) — no behavioral test seeds more than
+20 rows and asserts the returned array length is actually capped at 20. This is a known, accepted
+limit of this repo having no `convex-test` harness (the same boundary Gap-3-adjacent language in
+the first gap-closure pass above already named for `record`'s internal-only boundary). Not
+attempted here — out of this pass's explicit scope. Deferred to plan 108-07's live proof against
+the running backend, alongside Gap 4's per-profile isolation proof.
+
+### Test counts
+
+- Targeted files: `convex/controlVerbSwaps.test.ts` → **12/12 passed**; `convex/retention.test.ts`
+  → **7/7 passed** (18 total, up from 16 before this pass).
+- Full suite, run in a **fresh isolated git worktree** (`git worktree add --detach`) **pinned to
+  this pass's own commit `b778d99b`**, with `node_modules` junctioned in from the main checkout
+  via `New-Item -ItemType Junction` (the `cmd.exe /c mklink /J` form silently no-op'd in this
+  session's Bash tool — PowerShell's `New-Item` succeeded), removed via `git worktree remove
+  --force` immediately after: **278 passed / 17 skipped test files (295 total), 3533 passed / 193
+  todo tests (3726 total) — 0 failed.** This is fully green, an improvement over the first
+  gap-closure pass's reported 1-failed-file state (`Chat.test.tsx`, attributed to concurrent
+  session 188.3-06 work in progress at the time) — that file's fixtures were subsequently repaired
+  by the concurrent session itself (commit `aa5989e7`, `test(188.3-06): repair Chat.test.tsx
+  fixtures`, already an ancestor of `b778d99b` per `git log`), so no discrepancy remains to
+  reconcile.
+- `npx tsc --noEmit` clean, run from the main checkout after restoring both mutated files.
+
+### Shared-checkout disclosure
+
+This pass ran in the main `codepulse` checkout (`.git` is a directory, branch `master`) while
+`.planning/REQUIREMENTS.md` sat modified by a concurrent/prior session throughout — confirmed
+present in `git status --short` *before* this pass touched anything, never staged, read for
+editing, or reverted here. Only `convex/controlVerbSwaps.test.ts` and `convex/retention.test.ts`
+were staged (`git add` by explicit path, never `-A`/`.`); `git show --stat HEAD` after the commit
+confirmed exactly those two files landed. No `git stash`, `git checkout -- <file>`, `git clean`,
+`--amend`, or branch switch was used anywhere in this pass; both production-code mutations (Gap 4
+and Gap 5's mutation-checks) were applied and reverted via backup-copy (`cp file
+<scratchpad>/file.bak` → mutate → test → `cp <scratchpad>/file.bak file`), each confirmed
+byte-identical via `git diff --stat` returning empty before committing the test-only changes.
+
+### Commits
+
+- `b778d99b` — `test(108-02): guard listByScope scope filter and retention entries`
+  (`convex/controlVerbSwaps.test.ts`, `convex/retention.test.ts`)
+- Docs commit recording this section follows separately.
+
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
 *Completed: 2026-08-07*
