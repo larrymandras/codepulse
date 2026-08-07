@@ -71,6 +71,10 @@ React 19, Vite 7, TypeScript 5.9, Convex (database + backend), Tailwind CSS 4 (v
 
 Tailwind CSS 4 + **shadcn/ui (New York)** — 30 primitives in `src/components/ui/` (Radix-backed); compose these, don't hand-roll. The UI is **token-driven with a runtime theme switcher** (`ThemeSwitcher.tsx`, resolved via `useThemeColors()`; v9.0 Phase 89). Theme is a `<html data-theme="...">` attribute persisted in `localStorage["codepulse-theme"]` and applied by a no-flash pre-paint script in `index.html`. Dark themes (defined as `[data-theme="…"]` blocks in `src/index.css`): **`cyan` — Electric Cyan `#06b6d4` (the default)**, `emerald` — Matrix Emerald `#10b981`, `readable` — Readable Dark (WCAG-AA, glow/CRT/matrix effects suppressed), `aubergine` — Midnight Aubergine (editorial). (`amber` `#f59e0b` is defined in CSS but not exposed in the switcher.) The light `:root` is a true-monochrome oklch "Paperclip" palette. All accents/status/glow read from CSS vars — never hardcode hex: use `--primary`/`--status-*`/`--info`/`--glow-xs…lg`/`--chart-*`. Neutrals are zinc (`#09090b/#141416/#27272a`); effective radius is `0.5rem`. Fonts: **Geist (body + headings), JetBrains Mono (code)** — Cinzel is retired. Icons: **Lucide only**.
 
+## Design Findings (v15.0 overhaul)
+
+- **Sketch findings for codepulse** (validated "Borealis Console" design decisions, CSS patterns, visual direction for the v15.0 premium UI overhaul) → `Skill("sketch-findings-codepulse")`. Load before any UI build work on the overhaul. Sequencing: the entire overhaul incl. quick-wins is held for milestone v15.0 — do not pull pieces into v14.0 phases.
+
 ## Ástríðr API Integration
 
 All `fetch()` calls to the Ástríðr backend (`ASTRIDR_API_BASE`) MUST include the `Authorization: Bearer` header using `VITE_ASTRIDR_API_KEY`. The Ástríðr web channel rejects unauthenticated `/api/*` requests with 401.
