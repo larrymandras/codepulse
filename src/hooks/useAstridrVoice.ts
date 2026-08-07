@@ -1630,6 +1630,40 @@ export function useAstridrVoice({
         trace("final.rejoined-lost-interim", { lostInterim, final: text });
         text = appendWithOverlapCheck(lostInterim, text).text;
         salvaged = true;
+
+        // D-01: the rejoin above MUTATES `text` by prepending `lostInterim`,
+        // but the wake-strip at :1427 already INSPECTED `text` ~200 lines
+        // earlier and cannot re-run — so a wake phrase carried at the HEAD of
+        // a rejoined lostInterim (Chrome resets mid-utterance right after
+        // "Hey Astrid, ...") would otherwise survive, unjudged, into the
+        // dispatched text (see WAKE-REJOIN-1). Gated on `salvaged === true`
+        // so the direct (non-rejoined) path above stays byte-for-byte
+        // identical — this is the only new call site; no second phrase list,
+        // no new regex, same exported `stripWakePhrase` helper reused verbatim.
+        if (salvaged) {
+          const rejoinedWakeStrip = stripWakePhrase(text);
+          if (rejoinedWakeStrip.matched !== null) {
+            if (rejoinedWakeStrip.stripped === "") {
+              // Defensive-only, unreachable as of 2026-08-07: WAKE_PHRASES'
+              // longest entry is 2 tokens ("hey astrid" / "hey astridr" /
+              // "hey ástríðr", voiceState.ts:145) and the rejoin's own
+              // eligibility gate above already requires lostInterim to carry
+              // >= 3 tokens, so stripping at most 2 leading tokens off a
+              // rejoined string always leaves >= 1 token behind. Kept for
+              // parity with the direct path's D-02 behavior in case
+              // WAKE_PHRASES ever grows a 3+-token entry.
+              trace("final.rejoined-wake-phrase-only-dropped", { text });
+              setFilteredCount((c) => c + 1);
+              openFollowUpWindow();
+              return;
+            }
+            trace("final.rejoined-wake-phrase-stripped", {
+              from: text,
+              to: rejoinedWakeStrip.stripped,
+            });
+            text = rejoinedWakeStrip.stripped;
+          }
+        }
       }
     } else if (lostInterim && lostInterimFromSpeaking) {
       trace("final.lost-interim-discarded-speaking-era", { lostInterim });

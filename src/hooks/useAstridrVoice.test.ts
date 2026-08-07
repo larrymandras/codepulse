@@ -1350,6 +1350,44 @@ describe("useAstridrVoice", () => {
     );
   });
 
+  // ─── WAKE-REJOIN-1 (188.3-02, D-01) ────────────────────────────────────────
+  // The rejoin at :1631 MUTATES `text` by prepending `lostInterim`, but the
+  // wake-strip at :1427 INSPECTS `text` and already ran ~200 lines earlier —
+  // it cannot re-run and so never judges anything the rejoin re-introduces.
+  // If the lostInterim itself begins with a wake phrase (Chrome resets
+  // mid-utterance right after "Hey Astrid, ..."), the direct-path strip sees
+  // only the short duplex tail (no wake phrase in it) and passes it clean;
+  // the wake phrase then survives, unjudged, into the rejoined dispatch.
+  it("WAKE-REJOIN-1: a wake phrase carried in the rejoined lostInterim is stripped from the dispatched text, not just the raw final (D-01)", async () => {
+    const chat = makeChat();
+    renderVoice(chat);
+    wake();
+    act(() => {
+      onInterimResultCallback?.(" hey astrid what does my calendar");
+      // Chrome resets mid-utterance; the tail arrives on the DUPLEX ear, so it
+      // carries a real durationMs and is subject to the (post-rejoin) duration
+      // gate. 200ms is below DURATION_FLOOR_MS (320) — the same salvage
+      // exemption CTRL-SALVAGE proves — so the rejoin actually fires and this
+      // fixture exercises the real mutate-after-inspect ordering defect.
+      onDuplexFinalTranscriptCallback?.(" look like tonight", 200);
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(2100);
+    });
+    // Exact dispatched string: the wake phrase must be gone AND the rescued
+    // head ("what does my calendar") must survive — an assertion that only
+    // checked the wake phrase was gone would also pass if the whole rejoin
+    // had been dropped instead of correctly re-stripped.
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what does my calendar look like tonight",
+      { interruptedReply: undefined, voice: true }
+    );
+    const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as string | undefined;
+    expect(dispatched).not.toContain("hey astrid");
+    expect(dispatched).toContain("what does my calendar");
+  });
+
   // ─── 22:07 live-trace regression (186-01 follow-up, Defect B) ─────────────
   // A talk-over interim misclassified during active TTS ("I couldn't find"
   // — Defect A's own failure mode, same live trace) never finalized and sat
