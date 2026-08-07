@@ -679,7 +679,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 108-01-PLAN.md — astridr: profile ContextVar lifecycle repair (both live set-points) + `_emit_model_routing` profileId / refuse-to-emit / `selectedModel`→`model` rename + `mode` derivation + emit-on-change (ENGINE-01; D-01, D-02, D-09, D-11, D-12)
+- [x] 108-01-PLAN.md — astridr: profile ContextVar lifecycle repair (both live set-points) + `_emit_model_routing` profileId / refuse-to-emit / `selectedModel`→`model` rename + `mode` derivation + emit-on-change (ENGINE-01; D-01, D-02, D-09, D-11, D-12)
 - [ ] 108-02-PLAN.md — codepulse: `controlVerbSwaps` table + internal-only domain module + bounded read + `RETENTION_DAYS` entries for both engine-axis tables (TELE-02; D-10, D-13, D-14)
 
 **Wave 2**
@@ -784,7 +784,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 0/TBD | Not started | - |
+| 108. Per-Profile Engine Telemetry (astridr backend) | 1/7 | In Progress|  |
 | 109. Per-Agent Engine UI | 0/TBD | Not started | - |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |

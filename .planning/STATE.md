@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Phase 108 PLANNED 2026-08-07 (7 plans, 4 waves, commit 6a2aeaae) — NOT yet executing; next: /gsd-plan-phase is done, run /gsd-execute-phase 108. Gates: REQ 4/4 (ENGINE-01/02/05, TELE-02), decision coverage 16/16 with skipped=false and total=16 cross-checked against CONTEXT.md's D-01..D-16, plan-checker VERIFICATION PASSED. Research + pattern map changed the shape of the work in two ways worth carrying forward: (a) D-01's ContextVar already exists — _current_profile_id at astridr telemetry.py:95, already set per message at channels/agent_processor.py:117 — so the phase reads it rather than building one, but reset_profile_context() is called nowhere in astridr-repo and becomes load-bearing the moment providers/router.py reads it; (b) chat.send has no profile set-point at all (wiring.py:332 computes a profile for the security context only), which under D-02 would have silenced the axis on CodePulse's own chat surface and made ENGINE-05 unreachable without an inbound WhatsApp/Telegram/email message. Both are fixed in 108-01. NOTE: this stopped_at was rewritten by hand after `gsd-sdk query state.planned-phase` regressed it to a stale Phase 107 entry ('Completed 107-04-PLAN.md ... next: plan 107-05') — the documented clobber signature; only total_plans 0->7 from that verb was kept. Phase 108 context gathered 2026-08-07 (108-CONTEXT.md + 108-DISCUSSION-LOG.md, commit adb36cf6) — 4 gray areas, 16 decisions D-01..D-16. Two stale claims in this file's own Current Position item 1 were corrected from code read during that discussion: the per-profile emitter DOES exist as model_routing (router.py:399-427) and is missing profileId + sends selectedModel where the consumer reads model; and the retention tombstone self-defeat was already fixed 2026-07-30. v14.0 opened 2026-08-06 via /gsd-new-milestone. v13.0 closed 2026-08-06 (5 phases 103-107, 53/53 plans, 14/15 requirements, tagged v13.0) — its full close narrative is preserved in milestones/v13.0-MILESTONE-AUDIT.md and the per-phase SUMMARYs under milestones/v13.0-phases/, and the prior contents of this field are preserved verbatim under Current Position > v13.0 close (archived narrative) below rather than discarded. v14.0 scope: BSC-01 per-agent axis (cross-repo, astridr emitter + scoped swap.set owned from this roadmap), Convex durability (aggregates never pruned, retention tombstone self-defeat, memory-growth root cause), frontend-only mission board on today's subagentJobs data, astridr telemetry-coverage closure, small-debt sweep. Continues phase numbering -> Phases 108+."
-last_updated: "2026-08-07T09:53:29.394Z"
-last_activity: 2026-08-07 — Phase 108 planning complete
+stopped_at: "Completed 108-01-PLAN.md (model_routing telemetry now carries profileId/model/mode with refuse-to-emit + emit-on-change); next: plan 108-02"
+last_updated: "2026-08-07T10:33:11.674Z"
+last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 107 — aggregates-rollup-sharding
+**Current focus:** Phase 108 — per-profile-engine-telemetry-astridr-backend
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,10 +43,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 108 (per-profile-engine-telemetry-astridr-backend) — PLANNED 2026-08-07, 7 plans in 4 waves
-Plan: — (none started)
-Status: Ready to execute (`/gsd-execute-phase 108`)
-Last activity: 2026-08-07 — Phase 108 planned (7 plans, REQ 4/4, decisions 16/16, plan-checker passed)
+Phase: 108 (per-profile-engine-telemetry-astridr-backend) — EXECUTING
+Plan: 2 of 7
+Status: Executing Phase 108 (Plan 01 complete)
+Last activity: 2026-08-07 -- Plan 108-01 complete (model_routing telemetry: profileId/model/mode, refuse-to-emit, emit-on-change)
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
@@ -797,6 +797,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 107]: Reworded 3 doc comments in analyticsRollup.ts that tripped their own Task-2 acceptance-criteria greps (literal r.shard === shard / r.shard ?? 0 / pickShard text inside prose comments) — Same comment-trips-own-grep class Phase 105 plans hit 5 separate times; reworded to describe behavior without repeating the literal grepped pattern, re-verified all counts
 - [Phase 107]: 107-04: Split the OCC baseline artifact across two task commits (Section A, then Sections B/C) matching the plan's task boundary.
 - [Phase 107]: 107-04: events:listRecent {limit:5000} exceeds the self-hosted instance's 16MB single-execution read cap and errors; limit:1000 works and satisfies the coverage guard - plan 107-06 must reuse limit:1000.
+- [Phase 108]: 108-01: wrapped every existing chat()-driven telemetry test in a profile_context() helper and rewrote test_model_routing_default into test_model_routing_default_refuses_to_emit — D-02's refuse-to-emit guard makes the plan's literal 4-line-rename instruction incomplete for the default rung, and breaks all pre-existing telemetry tests unless they set a profile in context
 
 ### Pending Todos
 
@@ -830,11 +831,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 107 P02 | 9min | 2 tasks | 2 files |
 | Phase 107 P03 | 18min | 3 tasks | 4 files |
 | Phase 107 P04 | 20min | 2 tasks | 1 files |
+| Phase 108 P01 | 25min | 3 tasks | 5 files |
 
 ## Session Continuity
 
-Last session: 2026-08-05T16:21:41.446Z
-Stopped at: Completed 107-04-PLAN.md (pre-deploy OCC baseline captured: WINDOW_HOURS=2, BASELINE_RATE_PER_HOUR=145.0, BASELINE COMPLETE - safe to deploy); next: plan 107-05 (deploy)
+Last session: 2026-08-07T10:33:11.660Z
+Stopped at: Completed 108-01-PLAN.md (model_routing telemetry now carries profileId/model/mode with refuse-to-emit + emit-on-change); next: plan 108-02
 Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
 
 --- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
