@@ -1556,3 +1556,222 @@ ENGINE-03 will bind to currently do nothing to normalize.
 **Sign-off recorded. Requirements ENGINE-05, ENGINE-01, ENGINE-02 are marked Complete in
 `REQUIREMENTS.md` in the same commit that adds this section.**
 
+---
+
+## WR-01 fix and re-proof (2026-08-07, continuation)
+
+**Finding closed:** code-review finding WR-01 (`108-REVIEW.md`) — the restore-emission path
+(`_emit_restore_routing` → `_emit_profile_model_routing_seed`, bootstrap/core.py) emits its honest
+"inherited" row directly via `telemetry.send(...)`, deliberately bypassing
+`ModelRouter._emit_model_routing` so the seed itself is never deduped against D-09's emit-on-change
+memo (`_last_routing_emit`). That bypass never invalidated the *pre-restore* memo entry either, so a
+pin → restore → re-pin-to-the-SAME-model sequence computed an `emit_key` identical to the original
+pin's, matched the stale memo at `router.py:542`, and was silently suppressed —
+`activeEngineSnapshots` kept showing the honest `inherited` row the restore emitted while the profile
+was actually pinned again.
+
+**Fix:** astridr-repo commit `ad77aa20b422be9748f6a12d9e977baedf9ad45b` (branch `feature/brain-swap`).
+New `ModelRouter.clear_last_routing_emit(profile_id)` accessor (mirrors the `clear_profile_override`
+no-op-safe idiom); `swap_model._emit_restore_routing` calls it for every profile it emits a restore
+seed row for, right after the seed call. D-09 suppression and D-02's refuse-to-emit guard are both
+untouched — verified by a control test (below).
+
+### Tests
+
+New `TestWR01RestoreInvalidatesEmitMemo` class in `tests/unit/engine/test_swap_model.py`, using a
+REAL `ModelRouter` instance (not `FakeRouter`, which never modeled `_last_routing_emit` at all — the
+gap the review named as the reason no prior test caught this):
+
+- `test_pin_restore_repin_same_model_emits_new_pinned_row` — drives the exact sequence named in the
+  review: pin → assert a `pinned` emit fires → restore → assert the `inherited` emit fires → re-pin to
+  the SAME model → assert a NEW `pinned` emit actually fires (asserted on the real captured telemetry
+  payload, not a mock call count).
+- `test_control_identical_consecutive_resolutions_still_suppressed` — the control: two genuinely
+  identical consecutive resolutions with NO restore in between must still be suppressed, proving the
+  fix invalidates the memo only on the restore-emission path, not on every resolution.
+- `FakeRouter` gained a matching `clear_last_routing_emit` no-op recorder so every pre-existing restore
+  test in the file keeps passing, with wiring assertions added to five of those existing tests
+  confirming the memo is cleared for exactly the profile(s) a given restore emits a seed row for (and
+  left untouched for profiles that keep their own live pin, or when no seed row was emitted at all).
+
+**Mutation verification (both RED, pasted raw):**
+
+1. Reverted the fix (commented out the `clear_last_routing_emit` call loop in
+   `_emit_restore_routing`) — `test_pin_restore_repin_same_model_emits_new_pinned_row` failed:
+   ```
+   AssertionError: re-pin to the same model was silently suppressed by the stale D-09 memo left
+   over from step 1's pin -- WR-01 regression
+   assert 2 == (2 + 1)
+   ```
+   with the log line `router.model_routing_skipped reason=unchanged selection_path=profile-swap-override`
+   directly confirming the suppression mechanism. Restored via `cp router.py.bak router.py` after.
+2. Broke D-09 suppression itself (`if False and self._last_routing_emit.get(...) == emit_key:` in
+   `router.py`) — `test_control_identical_consecutive_resolutions_still_suppressed` failed:
+   ```
+   AssertionError: identical consecutive resolution was NOT suppressed -- D-09 was weakened, not
+   just fixed for the restore gap
+   assert 2 == 1
+   ```
+   Restored via `cp swap_model.py.bak swap_model.py` after (both backup/restore round-trips confirmed
+   byte-identical via `git diff` showing no `MUTATION-TEST` markers and the diff matching exactly the
+   intended fix).
+
+**Real test counts:**
+- `tests/unit/engine/test_swap_model.py`: 59 passed
+- `tests/unit/providers/test_router.py`: 96 passed (unchanged, run as a regression check on the shared
+  `ModelRouter`/`_last_routing_emit` surface)
+- Full astridr-repo suite (ground truth): **9888 passed, 112 skipped, 5 deselected, 1 xpassed, 0
+  failed** (282.98s). The named known flake
+  (`tests/unit/automation/test_pipes.py::TestPipeManagerScan::test_scan_updates_changed_pipes`) did
+  not fail in this run; confirmed independently passing when run standalone.
+
+### Rebuild and in-container freshness proof
+
+```bash
+COMPOSE_PROFILES=prod,war-room docker compose up --build -d
+```
+All targeted services rebuilt/recreated; `astridr-agent` reported Healthy.
+
+In-container symbol probes (not timestamp inference):
+```bash
+docker exec astridr-agent python -c "
+import astridr.providers.router as m, inspect
+print('clear_last_routing_emit_present:', 'clear_last_routing_emit' in inspect.getsource(m))"
+```
+Raw output: `clear_last_routing_emit_present: True`
+
+```bash
+docker exec astridr-agent python -c "
+import astridr.engine.control_verbs.swap_model as m, inspect
+print('wr01_call_site_present:', '_router.clear_last_routing_emit' in inspect.getsource(m))"
+```
+Raw output: `wr01_call_site_present: True`
+
+```bash
+docker inspect --format '{{.State.StartedAt}} {{.State.Health.Status}}' astridr-agent
+```
+Raw output: `2026-08-07T19:17:21.4310194Z healthy`
+
+### Live re-proof — the exact failing sequence, quoted rows first, verdict after
+
+All `npx convex` calls carried `--url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"` (key captured via
+`MSYS_NO_PATHCONV=1 docker exec convex-backend /convex/generate_admin_key.sh`, never echoed). WS
+commands were driven via a `websockets`-based Python client run **inside** `astridr-agent`
+(`docker exec -i astridr-agent python - <args>`), reading `ASTRIDR_WEB_API_KEY` from
+`os.environ` inside the container — never printed. Profile `consulting` was used throughout (chosen so
+`business`/`personal` serve as untouched controls); the reconciled model chosen was `"opus"` →
+`claude-opus-4-8`, distinct from the `claude-sonnet-5` default, matching the 108-07 proof's convention.
+
+**Baseline (fresh D-03 boot seed, immediately post-rebuild):**
+```json
+[
+  {"_id": "m97hg1h6y6r9sb4xc4hb24p79x8c09yy", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "boot-seed"},
+  {"_id": "m97yh73b3myjkccx7mwgcqcykx8c1ny9", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "business", "selectionPath": "boot-seed"},
+  {"_id": "m97jnw50vqf8bv45w3wf1t3kd98c1yda", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "boot-seed"}
+]
+```
+**Verdict:** clean boot state, no sentinel values, `business`/`personal` are the untouched-throughout
+controls (their `_id`s recur byte-identical at every read below).
+
+**Step 1 — an initial restore-to-baseline for `consulting`** (defensive normalization before the
+sequence below; not part of the assertion) landed **`ID_BASELINE = m97kh7g5900wqg66z7h4bz09fs8c068c`**
+(`mode: "inherited"`, `selectionPath: "restore-to-default"`).
+
+**Step 2 — PIN `consulting` → `opus`.** WS ack: `{"status":"ok","handled":true,"spoken_reply":"Switching to Claude Opus 4 8."}`.
+A profiled turn (`chat.send`, profile `consulting`) was then driven to force the resolution (a pin
+alone only writes the override; the emit fires on the next real resolution). Live `run.completed`:
+`{"final_text":"OK","model":"claude-opus-4-8"}` — turn ran on the swapped model. Live `model_routing`
+WS frame (direct fan-out, not inferred): `{"status":"success","profileId":"consulting","model":"claude-opus-4-8","selectionPath":"profile-swap-override","mode":"pinned"}`.
+
+Read-back:
+```json
+{"_id": "m97n5c7f5hcwny8472pfd636d58c0zvw", "mode": "pinned", "model": "claude-opus-4-8", "profileId": "consulting", "selectionPath": "profile-swap-override", "timestamp": 1786130624.9380467}
+```
+**Verdict — PASS.** **`ID_PIN1 = m97n5c7f5hcwny8472pfd636d58c0zvw`**, `mode: "pinned"`, distinct from
+`ID_BASELINE`.
+
+**Step 3 — RESTORE `consulting`.** WS ack: `{"status":"ok","handled":true,"spoken_reply":"Back to my usual brain."}`.
+
+Read-back (after waiting past the 5s telemetry batch interval):
+```json
+{"_id": "m97rw5vke6y32c3e9n9qh9w8hn8c1tbk", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "restore-to-default", "timestamp": 1786130650.6455276}
+```
+**Verdict — PASS.** **`ID_RESTORE = m97rw5vke6y32c3e9n9qh9w8hn8c1tbk`**, `mode: "inherited"`, distinct
+from `ID_PIN1`. The honest inherited row landed, exactly as the original ENGINE-05 fix intends.
+
+**Step 4 — RE-PIN `consulting` → `opus` (the SAME model as Step 2). THE ASSERTION THIS FIX EXISTS FOR.**
+WS ack: `{"status":"ok","handled":true,"spoken_reply":"Switching to Claude Opus 4 8."}`. A profiled turn
+was driven again. Live `model_routing` WS frame — its mere presence is direct proof the emit fired at
+all (without the fix, `router.py:542`'s suppression returns before any `telemetry.send` call, so this
+frame would never exist):
+```json
+{"status":"success","profileId":"consulting","model":"claude-opus-4-8","selectionPath":"profile-swap-override","mode":"pinned","session_id":"591cd870-8e87-4448-a05a-0e614aa59b0e"}
+```
+Live `run.completed`: `{"final_text":"...OK","model":"claude-opus-4-8"}` — turn ran on the re-pinned
+model.
+
+Read-back:
+```json
+{"_id": "m97z688zwnzqntq5khsxqxbe698c0r0p", "mode": "pinned", "model": "claude-opus-4-8", "profileId": "consulting", "selectionPath": "profile-swap-override", "timestamp": 1786130684.548369}
+```
+**Verdict — PASS, by ID inequality across the whole chain.** **`ID_PIN2 = m97z688zwnzqntq5khsxqxbe698c0r0p`**,
+`mode: "pinned"`, `model: "claude-opus-4-8"`. All four ids in this sequence are pairwise distinct:
+
+| Stage | `_id` | `mode` | `selectionPath` |
+|---|---|---|---|
+| Baseline restore | `m97kh7g5900wqg66z7h4bz09fs8c068c` | inherited | restore-to-default |
+| Pin 1 | `m97n5c7f5hcwny8472pfd636d58c0zvw` | pinned | profile-swap-override |
+| Restore | `m97rw5vke6y32c3e9n9qh9w8hn8c1tbk` | inherited | restore-to-default |
+| **Pin 2 (re-pin, same model)** | **`m97z688zwnzqntq5khsxqxbe698c0r0p`** | **pinned** | **profile-swap-override** |
+
+`ID_PIN2 ≠ ID_PIN1` and `ID_PIN2 ≠ ID_RESTORE` — a genuinely new row was written for the re-pin, not a
+silently-suppressed no-op that left `ID_RESTORE` as the latest row. This is the exact regression WR-01
+named, reproduced live pre-fix in the review and now proven closed post-fix.
+
+Throughout Steps 1–4, `business` (`_id: m97yh73b3myjkccx7mwgcqcykx8c1ny9`) and `personal`
+(`_id: m97jnw50vqf8bv45w3wf1t3kd98c1yda`) never changed `_id` across any read — confirmed untouched
+controls.
+
+### Stack restored
+
+```bash
+docker exec -i astridr-agent python - <<< '{"type": "swap.set", "request_id": "wr01-final-restore", "target": "brain", "restore": true, "profile_id": "consulting"}'
+```
+Ack: `{"status":"ok","handled":true,"spoken_reply":"Back to my usual brain."}`.
+
+**Proven by a real turn, not the ack alone:**
+```json
+{"event_type": "run.completed", "data": {"final_text": "OK", "model": "claude-sonnet-5"}}
+```
+`consulting` now runs on `claude-sonnet-5` — the pre-test/pre-phase default (the model-id format split
+between `inherited`'s provider-prefixed and `pinned`'s bare form is pre-existing and unrelated,
+documented in Task 4's sign-off above).
+
+`swap.get_state` confirms no lingering global override: `{"model_override": null, "model_source": null}`.
+
+Final `activeEngine:latestByProfile` read:
+```json
+[
+  {"_id": "m97t8s983yxfz9tpdtevr8d5nh8c0g4a", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "restore-to-default"},
+  {"_id": "m97yh73b3myjkccx7mwgcqcykx8c1ny9", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "business", "selectionPath": "boot-seed"},
+  {"_id": "m97jnw50vqf8bv45w3wf1t3kd98c1yda", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "boot-seed"}
+]
+```
+**VERDICT — PASS. No profile left pinned to a test model. `business`/`personal` byte-identical to the
+pre-proof baseline throughout (same `_id`s, never touched). Stack fully restored, proven by real turns.**
+
+### Summary — WR-01 closure
+
+| Assertion | Result |
+|---|---|
+| Memo invalidated on the restore-emission path; D-09 suppression still works; D-02 guard untouched | **PASS** |
+| Sequence test uses a REAL `ModelRouter` and asserts the re-pin emit actually fires | **PASS** |
+| Control test proves identical consecutive resolutions are still suppressed | **PASS** |
+| Both mutation-verified with pasted RED output | **PASS** |
+| Live re-proof of pin → restore → re-pin-same-model with row `_id`s proving a new row | **PASS** (4 distinct ids) |
+| Stack restored, proven by real turns | **PASS** |
+| `108-REVIEW.md` WR-01 marked resolved, `status: clean` (only open finding) | **PASS** |
+| Real test counts; commits verified via `git show --stat HEAD` | **PASS** — `ad77aa20`, 3 files, +259/-0 |
+
+**Commit:** astridr-repo `ad77aa20b422be9748f6a12d9e977baedf9ad45b`.
+
