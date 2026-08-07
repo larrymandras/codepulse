@@ -2779,4 +2779,122 @@ describe("useAstridrVoice", () => {
       expect(result.current.filteredCount).toBe(2);
     });
   });
+
+  // ─── 188.3-04 Nyquist gap fill: D-14 accumulator-discarded traces ─────────
+  //
+  // Plan 04 added three additive `final.accumulator-discarded-*` traces (D-14)
+  // at the vision-intent, swap, and end-phrase fast-paths, verified only by a
+  // -U0 diff showing no removed lines — no fixture ever drove one to fire.
+  // These six fixtures (3 signal + 3 control) pin that each trace actually
+  // fires with the right payload when a pending accumulator is discarded, and
+  // does NOT fire when the accumulator is already empty — the anti-vacuity
+  // control that proves the fixture measures the `if
+  // (accumulatedRef.current.trim())` guard, not merely fast-path reachability.
+  //
+  // Scope discipline (explicit per D-14, do not read past this): whether
+  // discarding a pending accumulator at these three sites is the CORRECT
+  // behavior is left UNDECIDED by Plan 04 and stays undecided here. These
+  // fixtures assert only that the trace fires with the right payload, never
+  // that discarding is right.
+  describe("D-14: accumulator-discarded traces fire with the right payload (188.3-04)", () => {
+    // "hello there friend" is a plain 3-word utterance: clears the cold
+    // noise-gate floor, matches none of vision-intent / swap / end-phrase /
+    // strict-mode / pure-barge, so it lands on the normal accumulate path and
+    // arms the send timer. Firing a SECOND final in the same act() (no timer
+    // advance) reaches a fast-path with accumulatedRef.current still holding
+    // this pending text — un-flushed, not yet sent.
+    const PENDING_TEXT = "hello there friend";
+
+    it("SIGNAL vision-intent: a pending accumulator is traced as discarded when the vision refusal fast-path fires", () => {
+      const chat = makeChat({ appendLocalAssistantMessage: vi.fn() } as Partial<AstridrChat>);
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.(PENDING_TEXT); // accepted, pending — send timer armed, not advanced
+      });
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        // No active screenShare (default NOOP_SCREEN_SHARE) + a strong vision
+        // phrase => the refuse branch, which still passes through the D-14
+        // guard before returning.
+        onFinalResultCallback?.("what's on my screen");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const ev = trace.find((e) => e.ev === "final.accumulator-discarded-vision-intent");
+      expect(ev).toBeDefined();
+      expect((ev?.d as { discarded?: string } | undefined)?.discarded).toBe(PENDING_TEXT);
+    });
+
+    it("CONTROL vision-intent: with no pending accumulator, the discard trace does not fire", () => {
+      const chat = makeChat({ appendLocalAssistantMessage: vi.fn() } as Partial<AstridrChat>);
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("what's on my screen");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      expect(trace.some((e) => e.ev === "final.accumulator-discarded-vision-intent")).toBe(false);
+    });
+
+    it("SIGNAL swap: a pending accumulator is traced as discarded when the swap-dispatch fast-path fires", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.(PENDING_TEXT);
+      });
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("try on grok");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const ev = trace.find((e) => e.ev === "final.accumulator-discarded-swap");
+      expect(ev).toBeDefined();
+      expect((ev?.d as { discarded?: string } | undefined)?.discarded).toBe(PENDING_TEXT);
+    });
+
+    it("CONTROL swap: with no pending accumulator, the discard trace does not fire", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("try on grok");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      expect(trace.some((e) => e.ev === "final.accumulator-discarded-swap")).toBe(false);
+    });
+
+    it("SIGNAL end-phrase: a pending accumulator is traced as discarded (with the replacing text) when the graceful-close fast-path fires", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.(PENDING_TEXT);
+      });
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("goodbye");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      const ev = trace.find((e) => e.ev === "final.accumulator-discarded-end-phrase");
+      expect(ev).toBeDefined();
+      const d = ev?.d as { discarded?: string; replacing?: string } | undefined;
+      expect(d?.discarded).toBe(PENDING_TEXT);
+      expect(d?.replacing).toBe("goodbye");
+    });
+
+    it("CONTROL end-phrase: with no pending accumulator, the discard trace does not fire", () => {
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      window.__astridrVoiceTrace = [];
+      act(() => {
+        onFinalResultCallback?.("goodbye");
+      });
+      const trace = window.__astridrVoiceTrace ?? [];
+      expect(trace.some((e) => e.ev === "final.accumulator-discarded-end-phrase")).toBe(false);
+    });
+  });
 });
