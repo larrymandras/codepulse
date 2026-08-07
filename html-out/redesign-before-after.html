@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodePulse Redesign — Before / After</title>
+<style>
+:root {
+  --fg: #0f172a; --muted: #475569; --bg-color: #f4f7fb;
+  --surface: rgba(255,255,255,0.75); --surface-border: rgba(255,255,255,1);
+  --glass-shadow: 0 8px 32px 0 rgba(15,23,42,0.06);
+  --accent: #2563eb; --border: #cbd5e1; --radius-md: 0.5rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #f8fafc; --muted: #94a3b8; --bg-color: #0b1120;
+    --surface: rgba(30,41,59,0.4); --surface-border: rgba(255,255,255,0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0,0,0,0.3);
+    --accent: #60a5fa; --border: rgba(255,255,255,0.1);
+  }
+}
+* { box-sizing: border-box; }
+body {
+  font-family: Inter, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--fg); background: var(--bg-color);
+  max-width: 74rem; margin: 0 auto; padding: 3rem 1.5rem 5rem; line-height: 1.6;
+}
+h1 { font-size: 2.1rem; letter-spacing: -0.03em; margin: 0 0 0.2em; }
+h2 { font-size: 1.3rem; margin: 2.2em 0 0.6em; letter-spacing: -0.01em; }
+p.sub { color: var(--muted); margin-top: 0; }
+.hint { font-size: 0.85rem; color: var(--muted); }
+a { color: var(--accent); font-weight: 500; }
+
+/* ── Slider ── */
+.compare {
+  position: relative; border-radius: var(--radius-md); overflow: hidden;
+  border: 1px solid var(--border); box-shadow: var(--glass-shadow);
+  aspect-ratio: 16 / 9; background: #000; user-select: none;
+}
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.compare .after-img { clip-path: inset(0 calc(100% - var(--pos, 50%)) 0 0); }
+.compare .divider {
+  position: absolute; top: 0; bottom: 0; left: var(--pos, 50%); width: 2px;
+  background: #fff; box-shadow: 0 0 12px rgba(0,0,0,0.6); pointer-events: none;
+  transform: translateX(-1px);
+}
+.compare .divider::after {
+  content: "◂ ▸"; position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff; color: #111; font-size: 11px; font-weight: 700;
+  padding: 6px 8px; border-radius: 999px; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+}
+.compare input[type=range] {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; cursor: ew-resize; margin: 0;
+}
+.tag {
+  position: absolute; top: 12px; z-index: 5; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: rgba(0,0,0,0.65); color: #fff; padding: 4px 10px; border-radius: 999px;
+  pointer-events: none;
+}
+.tag.before { left: 12px; }
+.tag.after { right: 12px; color: #67e8f9; }
+
+/* ── Grid ── */
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.shot { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--glass-shadow); background: #000; }
+.shot img { width: 100%; display: block; cursor: zoom-in; transition: transform .2s ease; }
+.shot img:hover { transform: scale(1.015); }
+.shot figcaption { padding: 10px 14px; font-size: 0.85rem; color: var(--muted); background: var(--surface); border-top: 1px solid var(--border); }
+.shot figcaption b { color: var(--fg); }
+figure { margin: 0; }
+
+/* zoom lightbox */
+#zoom { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.88); display: none; place-items: center; cursor: zoom-out; padding: 2vh 2vw; }
+#zoom.open { display: grid; }
+#zoom img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+
+.cta {
+  display: inline-block; margin-top: 8px; background: var(--accent); color: #fff;
+  padding: 0.55em 1.1em; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 0.95rem;
+}
+.cta:hover { filter: brightness(1.1); }
+ul.changes { padding-left: 1.3em; }
+ul.changes li { margin: 0.35em 0; }
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<h1>CodePulse Redesign — Before / After</h1>
+<p class="sub">Current live dashboard vs the "Quiet Control Room" mockup · 2026-08-07 · both captured at 1600×900, cyan theme</p>
+
+<h2>Drag to compare</h2>
+<p class="hint">Left of the handle = today's live dashboard. Right = redesign Variant A (Signal Horizon). Drag anywhere.</p>
+<div class="compare" id="cmp" style="--pos:50%">
+  <span class="tag before">Before — current</span>
+  <span class="tag after">After — Variant A</span>
+  <img src="redesign-assets/current-dashboard.png" alt="Current dashboard">
+  <img src="redesign-assets/after-variant-a.png" alt="Redesign variant A" class="after-img">
+  <div class="divider"></div>
+  <input type="range" min="0" max="100" value="50" step="0.1"
+         oninput="this.parentElement.style.setProperty('--pos', this.value + '%')">
+</div>
+
+<h2>What changed (the unanimous 3-model verdict, made visible)</h2>
+<ul class="changes">
+  <li><b>Header:</b> twelve competing controls → three zones; E-Stop fixed-width (it wrapped to two lines before); purple search pill → neutral command bar; telemetry pill deleted.</li>
+  <li><b>Signal Horizon:</b> a 2px live line under the header replaces the CRT scanline + matrix background — events travel it as light; it turns crimson when E-Stop arms.</li>
+  <li><b>Pulse hero:</b> the misleading "SYSTEM LOAD 100%" gradient bar → a live ECG of real events (cyan = machine, violet = Ástríðr, red = errors).</li>
+  <li><b>Instrument cluster:</b> bordered glow-cards → one surface with hairline dividers, thin mono numerals, sparklines — and an honest "no signal yet" state instead of "—".</li>
+  <li><b>Quiet badges:</b> filled cyan DONE pills → whisper-quiet dots; only <i>Failed</i> is filled, so failure actually pops.</li>
+  <li><b>Sidebar:</b> 31 glowing uppercase mono items → sentence-case Geist in four collapsible domains, count badges, 2px active rail, no glow.</li>
+  <li><b>Truth line:</b> one plain-language sentence answers "does anything need me?" (Variant B sets it in Ástríðr's serif voice).</li>
+</ul>
+
+<h2>More states</h2>
+<div class="grid">
+  <figure class="shot"><img src="redesign-assets/after-variant-b.png" alt="Variant B">
+    <figcaption><b>Variant B — Borealis blend.</b> Aurora resting texture on the horizon, Ástríðr's serif voice for the truth sentence, aurora wash behind the Pulse.</figcaption></figure>
+  <figure class="shot"><img src="redesign-assets/after-estop-armed.png" alt="E-Stop armed">
+    <figcaption><b>The signature moment — E-Stop armed.</b> The horizon goes crimson shell-wide, agents gray out, her line rewrites: "I have stopped everything, as you asked."</figcaption></figure>
+  <figure class="shot"><img src="redesign-assets/after-estop-dialog.png" alt="E-Stop confirm dialog">
+    <figcaption><b>Destructive confirm done right.</b> A real dialog — not a 5-second auto-expiring toast (the current Tasks-page pattern).</figcaption></figure>
+  <figure class="shot"><img src="redesign-assets/current-dashboard.png" alt="Current dashboard full">
+    <figcaption><b>Before, for reference.</b> Distributed glow, dead "—" metrics, fabricated integrations row, wrapping E-Stop.</figcaption></figure>
+</div>
+
+<h2>Feel it live</h2>
+<p>Screenshots undersell it — the mockup is fully interactive (live event stream, E-Stop arming, state cycling, density toggle):</p>
+<a class="cta" href="../.planning/sketches/001-dashboard-quiet-control-room/index.html">Open the interactive mockup →</a>
+<p class="hint" style="margin-top:14px">Full proposals &amp; verdict: <a href="ui-premium-redesign-comparison.html">ui-premium-redesign-comparison.html</a></p>
+
+<div id="zoom" onclick="this.classList.remove('open')"><img id="zoom-img" src="" alt=""></div>
+<script>
+document.querySelectorAll('.shot img').forEach(img => {
+  img.addEventListener('click', () => {
+    document.getElementById('zoom-img').src = img.src;
+    document.getElementById('zoom').classList.add('open');
+  });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') document.getElementById('zoom').classList.remove('open'); });
+</script>
+</body>
+</html>

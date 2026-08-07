@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodePulse Premium Redesign — 3-Model Comparison</title>
+<style>
+/* Shared style for Claude Code HTML deliverables.
+   Referenced via <link rel="stylesheet" href="style.css"> or pandoc --css.
+   Clean, readable, print-friendly. Edit to taste — every deliverable inherits it. */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Crisp Blue Tech Theme (Antigravity/DeepMind inspired) */
+  --fg: #0f172a;
+  --muted: #475569;
+  --bg-color: #f4f7fb;
+  --bg-glow1: rgba(37, 99, 235, 0.05);
+  --bg-glow2: rgba(59, 130, 246, 0.04);
+  
+  /* Glass Variables */
+  --surface: rgba(255, 255, 255, 0.75);
+  --surface-border: rgba(255, 255, 255, 1);
+  --glass-blur: blur(16px);
+  --glass-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.04);
+  
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  --border: #cbd5e1;
+  --code-bg: rgba(226, 232, 240, 0.6);
+  --code-fg: #0f172a;
+  
+  --bg-wash: linear-gradient(rgba(244, 247, 251, 0.92), rgba(244, 247, 251, 0.92));
+  
+  --max-width: 48rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark Blue Tech Theme */
+    --fg: #f8fafc;
+    --muted: #94a3b8;
+    --bg-color: #0b1120;
+    --bg-glow1: rgba(59, 130, 246, 0.08);
+    --bg-glow2: rgba(96, 165, 250, 0.05);
+    
+    /* Glass Variables */
+    --surface: rgba(30, 41, 59, 0.4);
+    --surface-border: rgba(255, 255, 255, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    
+    --accent: #60a5fa;
+    --accent-hover: #93c5fd;
+    --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+    --border: rgba(255, 255, 255, 0.1);
+    --code-bg: rgba(15, 23, 42, 0.8);
+    --code-fg: #f8fafc;
+    --bg-wash: linear-gradient(rgba(11, 17, 32, 0.88), rgba(11, 17, 32, 0.88));
+  }
+}
+
+html { font-size: 16px; -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--fg);
+  /* Ethereal Abstract Core with Wash */
+  background-color: var(--bg-color);
+  background-image: 
+    var(--bg-wash),
+    radial-gradient(circle at 20% 20%, var(--bg-glow1), transparent 50%),
+    radial-gradient(circle at 80% 80%, var(--bg-glow2), transparent 50%);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  line-height: 1.7;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 4rem 1.5rem 6rem;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Crisp Sans-Serif Headings */
+h1, h2, h3, h4 { 
+  line-height: 1.25; 
+  font-weight: 700; 
+  margin: 2em 0 0.75em; 
+  color: var(--fg);
+  letter-spacing: -0.02em;
+}
+h1 { 
+  font-size: 3rem; 
+  margin-top: 0; 
+  letter-spacing: -0.04em; 
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+}
+h2 { 
+  font-size: 1.75rem; 
+  padding-bottom: 0.4em; 
+  border-bottom: 1px solid var(--border); 
+}
+h3 { font-size: 1.25rem; font-weight: 600; }
+h4 { font-size: 1.1rem; color: var(--muted); font-weight: 600; }
+
+p, ul, ol, blockquote, table, pre { margin: 0 0 1.5em; }
+
+a { 
+  color: var(--accent); 
+  text-decoration: none; 
+  font-weight: 500;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+a:hover { 
+  color: var(--accent-hover); 
+  text-decoration-color: var(--accent-hover);
+}
+
+ul, ol { padding-left: 1.5em; }
+li { margin: 0.5em 0; }
+li::marker { color: var(--accent); font-weight: 700; }
+
+/* Modern Blockquotes with Glassmorphism */
+blockquote {
+  margin: 2em 0;
+  padding: 1.2em 1.5em;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--surface-border);
+  border-left: 4px solid var(--accent);
+  color: var(--muted);
+  font-size: 1.1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  box-shadow: var(--glass-shadow);
+  font-weight: 500;
+}
+
+/* Crisp Code Blocks */
+code {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--code-bg);
+  color: var(--accent);
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  border: 1px solid var(--surface-border);
+  font-weight: 500;
+}
+
+/* Pre blocks with Glassmorphism */
+pre {
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  padding: 1.5em;
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--glass-shadow);
+  margin: 2em 0;
+}
+pre code { 
+  background: none; 
+  padding: 0; 
+  font-size: 0.85em; 
+  color: var(--code-fg);
+  border: none;
+  font-weight: 400;
+}
+
+/* Data Tables with Glassmorphism */
+table { 
+  border-collapse: collapse; 
+  width: 100%; 
+  font-size: 0.95em; 
+  margin: 2em 0;
+  background: var(--surface);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+}
+th, td { 
+  text-align: left; 
+  padding: 1em 1.2em; 
+  border-bottom: 1px solid var(--border); 
+}
+th { 
+  background: rgba(0,0,0,0.03); 
+  font-weight: 600; 
+  color: var(--fg);
+  text-transform: uppercase;
+  font-size: 0.85em;
+  letter-spacing: 0.05em;
+}
+@media (prefers-color-scheme: dark) {
+  th { background: rgba(255,255,255,0.03); }
+}
+
+/* Sharp Dividers */
+hr { 
+  border: none; 
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 3.5em 0; 
+}
+
+/* Image Handling */
+img { 
+  max-width: 100%; 
+  height: auto; 
+  border-radius: var(--radius-md);
+  box-shadow: var(--glass-shadow);
+  display: block;
+  margin: 2em auto;
+}
+
+@media print {
+  body { max-width: none; padding: 0; color: #000; background: #fff; }
+  h1 { background: none; -webkit-text-fill-color: #000; color: #000; }
+  h2 { border-color: #ccc; }
+  a { color: #000; text-decoration: underline; }
+  pre, table, blockquote, img { box-shadow: none; border: 1px solid #ddd; filter: none; backdrop-filter: none; background: #fff; }
+}
+
+
+/* ── Comparison-page overrides ─────────────────────────────── */
+body { max-width: 62rem; padding-top: 2.5rem; }
+.page-head h1 { font-size: 2.2rem; margin-bottom: 0.2em; }
+.page-head p.sub { color: var(--muted); margin-top: 0; }
+.method { font-size: 0.9rem; color: var(--muted); background: var(--surface); border: 1px solid var(--surface-border); border-radius: var(--radius-md); padding: 0.9em 1.2em; box-shadow: var(--glass-shadow); }
+.method code { font-size: 0.8em; }
+
+.tabbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+  padding: 0.75rem 0 0.6rem;
+  margin: 1.5rem 0 0;
+  background: var(--bg-color);
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  appearance: none; cursor: pointer;
+  font: inherit; font-size: 0.92rem; font-weight: 600;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: 999px;
+  padding: 0.45em 1.1em;
+  transition: color .15s, border-color .15s, box-shadow .15s;
+}
+.tab:hover { color: var(--fg); border-color: var(--tab-accent); }
+.tab[aria-selected="true"] {
+  color: var(--fg);
+  border-color: var(--tab-accent);
+  box-shadow: inset 0 -2px 0 var(--tab-accent), var(--glass-shadow);
+}
+.tab:focus-visible { outline: 2px solid var(--tab-accent); outline-offset: 2px; }
+
+.panel { animation: panefade .25s ease-out; padding-top: 0.5rem; }
+@keyframes panefade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .panel { animation: none; } }
+
+.model-meta {
+  display: flex; align-items: center; gap: 0.6em; flex-wrap: wrap;
+  font-size: 0.85rem; color: var(--muted);
+  margin: 1.2rem 0 0.4rem;
+}
+.model-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tab-accent); flex-shrink: 0; }
+.concept-chip {
+  font-weight: 600; color: var(--fg);
+  border: 1px solid var(--tab-accent); border-radius: 999px;
+  padding: 0.1em 0.8em; font-size: 0.85em;
+}
+
+article h2 { margin-top: 1.6em; }
+article pre { font-size: 0.9rem; }
+article table { display: block; overflow-x: auto; }
+kbd { font-family: 'JetBrains Mono', monospace; font-size: 0.8em; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0.05em 0.4em; background: var(--code-bg); }
+.hint { font-size: 0.8rem; color: var(--muted); margin-left: auto; align-self: center; }
+</style>
+</head>
+<body>
+  <div class="page-head">
+    <h1>CodePulse Premium Redesign</h1>
+    <p class="sub">Three independent proposals — same brief, same repo, same screenshots · 2026-08-07</p>
+  </div>
+  <div class="method">
+    <strong>Method.</strong> Each model received an identical grounding brief (product context, token system,
+    nav IA, and 8 factual observations from live 1600×900 screenshots of the running app) and read-only access
+    to the CodePulse repo, then produced a proposal in a fixed 9-section format: Diagnosis → Direction →
+    Color/Type → Layout/IA → Components → Effects/Motion → Usability → Roadmap → Signature Moment.
+    Switch tabs with <kbd>&larr;</kbd>/<kbd>&rarr;</kbd> or <kbd>1</kbd>–<kbd>4</kbd>.
+  </div>
+
+  <div class="tabbar" role="tablist" aria-label="Model proposals">
+      <button class="tab" role="tab" id="tab-claude" aria-controls="panel-claude" aria-selected="true" style="--tab-accent:#d97757">Claude Fable 5</button>
+      <button class="tab" role="tab" id="tab-gpt" aria-controls="panel-gpt" aria-selected="false" style="--tab-accent:#10a37f">GPT-5.6 Sol (Codex)</button>
+      <button class="tab" role="tab" id="tab-kimi" aria-controls="panel-kimi" aria-selected="false" style="--tab-accent:#6d5dfc">Kimi K3</button>
+      <button class="tab" role="tab" id="tab-verdict" aria-controls="panel-verdict" aria-selected="false" style="--tab-accent:#64748b">Side-by-Side & Verdict</button>
+  </div>
+
+    <section class="panel" id="panel-claude" role="tabpanel" aria-labelledby="tab-claude" >
+      <div class="model-meta" style="--tab-accent:#d97757">
+        <span class="model-dot"></span>
+        <span>claude-fable-5 · this session · repo access + live screenshots</span>
+        <span class="concept-chip">“Borealis Console”</span>
+      </div>
+      <article><h2>1. Diagnosis</h2>
+<p><strong>What works.</strong> The bones are genuinely good: a disciplined token architecture (<code>--primary</code>, <code>--status-*</code>, <code>--glow-*</code> routed through <code>data-theme</code>), shadcn/New York primitives, real-time Convex data, a command palette, and one surface — the <code>/chat</code> presence page — that already shows what this product could feel like: atmosphere in service of a persona, motion that carries meaning (the streaming cursor, the luminous rail on her messages).</p>
+<p><strong>What reads as template.</strong> The default cyan theme is the stock &quot;AI dashboard&quot; look: near-black + electric cyan + glow on everything. Worse, the glow is <em>distributed</em> instead of <em>orchestrated</em> — every nav item, icon, dot, and tooltip carries a drop-shadow, so nothing is special. Glitch-text on the logo, a CRT scanline bar, a <code>matrix-bg</code> dot grid, and <code>hover:scale-[1.01]</code> on ~15 dashboard cards are four separate atmosphere systems running at once. Premium products have one.</p>
+<p><strong>The five worst offenders (rendered, today):</strong></p>
+<ol>
+<li><strong>The header</strong> — eight competing elements at four different heights; the E-Stop label wraps to two lines (&quot;E-&quot;/&quot;Stop&quot;), which is disqualifying for a safety control; the search pill is purple in a cyan theme.</li>
+<li><strong>Dead metrics presented as live</strong> — &quot;—&quot; and &quot;0&quot; cards (Memory Hit Rate, Durable Facts, Advisor Savings) sit at equal visual weight with real numbers, and &quot;SYSTEM LOAD 100%&quot; beside &quot;MEMORY 0% / 100%&quot; is semantically incoherent at a glance.</li>
+<li><strong>Loading and empty states</strong> — bare &quot;Loading…&quot; text in a hero card, dashed &quot;Drop tasks here&quot; voids across four empty kanban columns. First-paint is the most-seen frame of the product and it&#39;s the least designed.</li>
+<li><strong>Sidebar noise + a real bug</strong> — 31 uppercase mono glowing items in 5 groups; at 900px height the AGENTS group collides with the pinned Settings item.</li>
+<li><strong>Status shouting</strong> — filled cyan DONE pills on every Executions row make the <em>least</em> actionable state the <em>loudest</em> element on the page.</li>
+</ol>
+<h2>2. Design Direction</h2>
+<p><strong>Borealis Console.</strong> Ástríðr is Norse; her telemetry deserves the northern sky, not a Hong Kong arcade. The thesis: <em>calm is the luxury</em>. Matte near-black surfaces, hairline structure, instrument-grade numerals — and exactly one living element: an <strong>aurora ribbon</strong> across the top of the viewport whose color and drift are bound to real system health. Ambient monitoring becomes literal: you can read the room from across the room. Everything decorative that doesn&#39;t carry information dies; everything that carries information gets craft.</p>
+<p><strong>The one aesthetic risk:</strong> Ástríðr&#39;s <em>voice</em> — her chat replies, briefing narratives, insight summaries — is set in an editorial italic serif (Instrument Serif) against the instrument sans/mono of the telemetry. The machine speaks in a human register; the instruments stay instruments. It threads her persona through all 35 pages without a single extra pixel of chrome.</p>
+<h2>3. Color &amp; Typography</h2>
+<p><strong>Palette evolution (cyan theme shown; each theme gets the same structural tokens):</strong></p>
+<pre><code class="language-css">[data-theme=&quot;cyan&quot;] {
+  /* layered matte surfaces replace one flat black + glass */
+  --surface-0: #05060a;   /* page */
+  --surface-1: #0b0d12;   /* card */
+  --surface-2: #12151c;   /* raised / popover */
+  --hairline:  #1c2029;   /* all structural borders */
+  --primary:   #22d3ee;   /* reserved: interactive + live-now only */
+  --ink:       #e7eaf0;
+  --ink-data:  #d9f4fa;   /* numerals, faint cyan cast */
+  --ink-dim:   #8b93a3;
+  /* aurora system — the only glow left */
+  --aurora-a: #14b8a6;  --aurora-b: #6366f1;  --aurora-c: #22c55e;
+}
+</code></pre>
+<p>Rules: <code>--primary</code> at full saturation appears only on things that are interactive or live <em>right now</em>. Status colors keep their hues but drop to 12–16% tint fills with 100% dots. <code>--glow-*</code> shrinks to two tokens used by exactly two components (aurora, E-Stop armed).</p>
+<p><strong>Type roles:</strong></p>
+<ul>
+<li><strong>Geist</strong> — all UI labels/body, sentence case. Nav items lose mono and uppercase.</li>
+<li><strong>JetBrains Mono</strong> — <em>data only</em>: ids, durations, numerals, code, kbd. Hero metrics at 40–44px, weight 300, <code>tabular-nums</code> — thin mono numerals read as instrumentation.</li>
+<li><strong>One eyebrow level</strong> — 11px mono uppercase, +0.08em, <code>--ink-dim</code> — for section headers only. Today&#39;s everything-is-an-eyebrow flattens hierarchy.</li>
+<li><strong>Instrument Serif italic</strong> — Ástríðr&#39;s voice surfaces only (chat replies, briefing prose, insight answers), 17–19px, <code>--ink</code> at 92%.</li>
+</ul>
+<h2>4. Layout &amp; Information Architecture</h2>
+<p><strong>Header → instrument strip (48px).</strong> Left: page title + breadcrumb (moves out of the content column, giving every page a consistent identity). Center: the command bar — the single hero control, <code>⌘K</code>, subtle <code>--surface-2</code> with hairline, no purple. Right: one <strong>System popover</strong> (SYS %, LAT, WS state, Convex state, brain — the five stray readouts collapse into a dot + word: &quot;Nominal&quot;), then E-Stop, then overflow menu holding bell/privacy/theme/CRT/audio/avatar. Three visible clusters instead of twelve elements.</p>
+<p><strong>E-Stop redesign.</strong> Fixed-width, never wraps: octagon glyph + &quot;E-STOP&quot;, outline crimson at rest (<code>--status-error</code> at 70%), filled + aurora-goes-red when armed. A safety control should look <em>armed</em>, not <em>alarmed</em>.</p>
+<p><strong>Sidebar.</strong> 232px. Sentence-case Geist labels, 16px Lucide, active item = 2px <code>--primary</code> left rail + 6% tint (kill the inset glow utilities). Groups become collapsible with persisted state; live count badges (Inbox 3, Tasks 1) replace pulse dots. Footer (Settings, collapse, connection) sits <em>inside</em> the scroll container&#39;s flex column so it can never overlap items — fixes the AGENTS clip. IA regroups 5 → 4: <strong>Command</strong> (Chat, Live Run, Inbox, Tasks, Reminders), <strong>Observe</strong> (Dashboard, Hive, Executions, Analytics, Quality, Alerts…), <strong>Agents</strong> (Roster, Teams, Skills, Forge…), <strong>System</strong> (Infrastructure, Security, Memory, Config, Graphs…). Graphs pages fold under System/Observe — &quot;GRAPHS&quot; is a render-tech grouping, not a user intent.</p>
+<p><strong>Density strategy.</strong> Two densities via a root token (<code>--density: 1 | 0.85</code>): comfortable (default) and compact (operator mode). All paddings/rows derive from it.</p>
+<p><strong>Page header system.</strong> One <code>PageHeader</code> contract on every route: title (Geist 20/semibold), context line (mono, e.g. <code>500 executions · last 08/06 18:17</code>), right-aligned actions, optional live dot. Settings&#39; plainness and Dashboard&#39;s neon converge to one register.</p>
+<h2>5. Premium Components</h2>
+<ul>
+<li><strong>Instrument cluster (MetricCard v2).</strong> Metrics live in a shared container with internal hairline dividers — no per-card borders, no per-card hover scale. Each cell: eyebrow label, 40px thin mono numeral, delta chip (<code>▲ 12%</code> in 12px mono, tinted), 24h sparkline (24×64px, <code>--primary</code> at 60%). <strong>Null state is designed:</strong> &quot;no signal yet&quot; in <code>--ink-dim</code> italic + a dotted baseline where the sparkline would be, and the <em>cell</em> dims to 60% — dead metrics stop impersonating live ones.</li>
+<li><strong>Status badges.</strong> Terminal states (done, cancelled) = quiet: dot + sentence-case text, no fill. Active states (running) = tinted pill + subtle pulse. Failure = the only filled pill on the page. Attention now scales with actionability.</li>
+<li><strong>Table v2 (Executions pattern).</strong> Sticky header with eyebrow-style column labels, right-aligned mono numerals, id/command in mono, hover reveals row actions, one-line filter bar with overflow &quot;+ filters&quot; popover instead of three wrapping chip rows. Row density obeys <code>--density</code>.</li>
+<li><strong>Skeletons.</strong> Kill every literal &quot;Loading…&quot;: shimmer skeletons shaped like the real content (numeral block + sparkline for metrics; row ghosts for tables), 1.2s shimmer, <code>--surface-2</code> on <code>--surface-1</code>.</li>
+<li><strong>Empty states.</strong> Per-surface, three lines max: what this is, how data arrives (&quot;Tasks appear when Ástríðr enqueues work or you press ⌘K → New task&quot;), one action. Kanban empty columns lose the dashed voids — a single faint baseline row instead.</li>
+<li><strong>Toasts.</strong> <code>--surface-2</code> glass, hairline border, 2px status rail on the left, max-width 380px, stacked with 8px offsets, never overlapping content it references. The white-bordered default dies.</li>
+<li><strong>Command palette as centerpiece.</strong> Sectioned results with agent avatars, kbd hints on actions, recents, and an &quot;ask Ástríðr&quot; fallback row (frees the header of the Insights entry point).</li>
+</ul>
+<h2>6. Signature Effects &amp; Motion</h2>
+<p><strong>Remove:</strong> glitch-text, matrix-bg, CRT scanline bar (demote to a hidden easter egg if kept at all), all <code>nav-*-shadow</code> glows, all <code>hover:scale-[1.01]</code>, icon drop-shadows, cyan scrollbar glow (keep a plain <code>--hairline</code> thumb).</p>
+<p><strong>Motion tokens:</strong></p>
+<pre><code class="language-css">:root {
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+</code></pre>
+<p><strong>The aurora ribbon</strong> — the one persistent effect. 3px at rest along the top edge; on the Dashboard it breathes to a ~96px soft field behind the hero cluster.</p>
+<pre><code class="language-css">.aurora {
+  position: fixed; inset: 0 0 auto 0; height: 3px; z-index: 60;
+  background: linear-gradient(90deg,
+    var(--aurora-a), var(--aurora-b) 40%, var(--aurora-c) 75%, var(--aurora-a));
+  background-size: 300% 100%;
+  animation: aurora-drift 90s linear infinite;
+  filter: saturate(0.9);
+}
+@keyframes aurora-drift { to { background-position: 300% 0; } }
+/* health binding: JS sets data-health on &lt;html&gt; */
+[data-health=&quot;warn&quot;] .aurora { --aurora-a:#f59e0b; --aurora-c:#f97316; }
+[data-health=&quot;critical&quot;] .aurora {
+  --aurora-a:#ef4444; --aurora-b:#dc2626; --aurora-c:#ef4444;
+  animation-duration: 12s; height: 4px;
+}
+@media (prefers-reduced-motion: reduce) { .aurora { animation: none; } }
+[data-theme=&quot;readable&quot;] .aurora { display: none; }
+</code></pre>
+<p>Cost: one fixed element, one <code>background-position</code> animation — GPU-trivial for a 35-page SPA.</p>
+<p><strong>Live-data grammar.</strong> One rule everywhere: <em>new data enters as light and settles.</em> The existing <code>slide-in-entry</code> keeps its blur+rise but tightens to 320ms <code>--ease-out</code>; the live flash becomes a 2px <code>--primary</code> left-rail sweep (600ms) instead of a background wash. Charts draw in once (stroke-dashoffset, 500ms) on mount, never on update.</p>
+<p><strong>Dashboard load sequence (once per session, 600ms total):</strong> aurora brightens ~40% and settles (300ms) → hero numerals count up from 0 (280ms, tabular-nums so nothing shifts) → grid staggers in at 20ms intervals, 4px rise + fade. Reduced-motion: everything appears settled.</p>
+<h2>7. Usability &amp; Ease of Use</h2>
+<ol>
+<li><strong>Glanceable truth sentence.</strong> Top of Dashboard, plain language, Ástríðr&#39;s serif voice: &quot;All quiet — 3 agents idle, 319 sessions today, last event 2m ago.&quot; One line answers the question the whole page exists for.</li>
+<li><strong>Fix the incoherent instruments.</strong> System Load bar gets labeled segments (CPU / RAM) with real numbers at the ends; a gradient bar reading &quot;100%&quot; next to &quot;0% / 100%&quot; never ships again.</li>
+<li><strong>Wayfinding.</strong> 4-group sidebar + persistent page header + breadcrumb = you always know where you are; collapsible groups cut visible items from 31 to ~12 for the common case.</li>
+<li><strong>Keyboard.</strong> <code>?</code> opens a shortcut overlay; <code>g d / g e / g t</code> go-to navigation; palette gets every action the header lost. Existing m/p/⌘K keep working.</li>
+<li><strong>State honesty.</strong> Dead metrics dim and say why; empty pages teach how data arrives; toasts stop covering the data they announce; stale kanban cards (47d) get an age tint after 7 days.</li>
+<li><strong>Consistency contract.</strong> PageHeader + section eyebrow + EntityRow + badge system used on every route — Settings, Chat, and Dashboard finally feel like one product.</li>
+<li><strong>Accessibility.</strong> The quiet-badge system fixes cyan-on-black contrast failures; readable theme keeps its guarantee (aurora hidden, serif voice stays but at 100% opacity ink).</li>
+</ol>
+<h2>8. Prioritized Roadmap</h2>
+<p><strong>Quick wins (a day):</strong></p>
+<ul>
+<li>Kill list: glitch-text, matrix-bg, CRT bar, nav glows, hover scales, purple search pill.</li>
+<li>E-Stop fixed-width redesign; header right-cluster → overflow menu.</li>
+<li>Badge quiet-down (outline terminal states); toast restyle; sidebar footer flex fix (the AGENTS clip).</li>
+<li>Replace all literal &quot;Loading…&quot; with shimmer skeletons (shared component exists — <code>Skeleton.tsx</code>).</li>
+</ul>
+<p><strong>Medium (a week):</strong></p>
+<ul>
+<li>Instrument cluster + designed null states across Dashboard/Analytics.</li>
+<li>PageHeader contract on all 35 routes; motion tokens + live-data grammar sweep.</li>
+<li>Sidebar IA regroup (4 groups, collapsible, count badges); System popover consolidation.</li>
+<li>Empty-state system for Tasks/Analytics/Inbox.</li>
+</ul>
+<p><strong>Deep (multi-week):</strong></p>
+<ul>
+<li>Aurora ribbon + health binding (<code>data-health</code> derived from alerts/error-rate/WS state) + dashboard load sequence.</li>
+<li>Ástríðr serif voice across chat/briefings/insights; truth sentence on Dashboard.</li>
+<li>Surface-token migration (<code>--surface-0/1/2</code>, <code>--hairline</code>) through all themes; density toggle.</li>
+<li>Executions Table v2 pattern rolled to every data table.</li>
+</ul>
+<h2>9. The Signature Moment</h2>
+<p><strong>The sky answers the switch.</strong> You arm E-Stop: the confirm dialog is calm and precise — but the moment you commit, the aurora across the top of every page shifts crimson and its drift accelerates, the truth sentence rewrites to &quot;Emergency stop armed — all agents halting,&quot; and status dots settle to gray as agents wind down. Disarm, and the ribbon slowly eases back through amber to teal over ~8 seconds, like dawn. Nobody who sees the sky change forgets that this dashboard is <em>connected to something real</em> — and it&#39;s pure CSS variables on one fixed element, driven by state the app already has.</p>
+</article>
+    </section>
+
+    <section class="panel" id="panel-gpt" role="tabpanel" aria-labelledby="tab-gpt" hidden>
+      <div class="model-meta" style="--tab-accent:#10a37f">
+        <span class="model-dot"></span>
+        <span>gpt-5.6-sol via Codex CLI 0.147 · reasoning effort high · read-only sandbox · repo access. Plain “gpt-5.6” is rejected on ChatGPT-plan Codex; the Sol variant works.</span>
+        <span class="concept-chip">“Quiet Reactor”</span>
+      </div>
+      <article><h2>1. Diagnosis</h2>
+<p>CodePulse already has strong raw material: a coherent token architecture, real-time data, excellent domain depth, resilient section boundaries, and one genuinely distinctive surface in <code>/chat</code>. The problem is not insufficient styling; it is insufficient restraint. Nearly every element currently asks for attention, so important state loses authority.</p>
+<p>The five worst offenders:</p>
+<ol>
+<li><p><strong>The shell has no hierarchy.</strong> The header combines identity, telemetry, search, emergency control, brain state, notifications, privacy, theme, CRT, audio, help, and user controls. The sidebar exposes roughly forty destinations at once. Both behave like component inventories instead of operator tools.</p>
+</li>
+<li><p><strong>Glow is used as decoration rather than meaning.</strong> Navigation labels, icons, cards, avatars, scrollbars, dots, and hover states all glow. <code>hover:scale-[1.01]</code> is repeated across Dashboard and Analytics, making the interface feel buoyant and template-like. A mission-control product should feel physically stable.</p>
+</li>
+<li><p><strong>Typography overplays the terminal motif.</strong> Uppercase JetBrains Mono, letterspacing, and tiny labels appear almost everywhere. This reduces scanning speed and makes ordinary controls sound equally urgent. <code>/chat</code> succeeds because it uses the motif narratively—transmissions, rails, cursor—not indiscriminately.</p>
+</li>
+<li><p><strong>Data states undermine trust.</strong> Bare “Loading…”, ambiguous em dashes, zero-filled analytics, dead integrations, and mixed real/unavailable metrics make it hard to distinguish loading, no activity, missing instrumentation, and failure. “System Load” is currently derived from error rate while “Memory” displays cache hit rate; the visual confidence exceeds the semantic confidence.</p>
+</li>
+<li><p><strong>Density is unmanaged.</strong> Analytics is an undifferentiated wall of panels, Executions spends three rows on chips, sparse Tasks still reserves a full board, and toasts cover content. Meanwhile, the carefully designed <code>/chat</code> experience feels like another product.</p>
+</li>
+</ol>
+<p>What should survive: the dark-room orientation, live presence, theme system, transmission rail, restrained orbital avatar, command palette, privacy controls, and semantic status tokens. What should die: universal uppercase, universal glow, universal card lift, decorative integrations, glitch logo, cyan scrollbar glow, CRT as a first-class header control, and animated pulse dots that do not indicate an actual changing state.</p>
+<h2>2. Design Direction</h2>
+<p><strong>Quiet Reactor</strong> — a cinematic operations environment built from matte depth, precise typography, and scarce luminous energy. Most of the interface is calm graphite: stable planes, hairline dividers, generous alignment, and high-information layouts. Color appears only when it carries identity, selection, freshness, or risk. Ástríðr’s presence remains atmospheric, but the rest of CodePulse feels like the instrument panel around her rather than thirty-five competing cyberpunk scenes. The personality is intelligent, nocturnal, deliberate, and slightly uncanny—not “hacker terminal.”</p>
+<p>The aesthetic risk is becoming another tasteful dark SaaS dashboard. Prevent that by preserving one authored language: live telemetry arrives as a <strong>signal</strong>, represented consistently by luminous rails, traveling traces, and short-lived energy—not generic gradients or glowing boxes.</p>
+<h2>3. Color &amp; Typography</h2>
+<p>Keep every theme, but separate <strong>brand</strong>, <strong>status</strong>, and <strong>surface</strong>. Cyan must stop meaning both “selected” and “healthy.” Introduce shared semantic layers, overridden per theme:</p>
+<pre><code class="language-css">[data-theme=&quot;cyan&quot;] {
+  --surface-0: oklch(0.105 0.008 270);
+  --surface-1: oklch(0.135 0.010 270);
+  --surface-2: oklch(0.165 0.012 270);
+  --surface-raised: oklch(0.190 0.014 270);
+  --text-strong: oklch(0.965 0.006 250);
+  --text-default: oklch(0.875 0.012 250);
+  --text-subtle: oklch(0.650 0.018 250);
+  --primary: oklch(0.770 0.135 205);
+  --accent: oklch(0.700 0.165 300);
+  --status-ok: oklch(0.735 0.165 155);
+  --status-warn: oklch(0.805 0.155 85);
+  --status-error: oklch(0.665 0.215 25);
+  --status-info: oklch(0.700 0.140 245);
+  --border-subtle: oklch(0.30 0.012 270 / 0.55);
+  --border-strong: oklch(0.48 0.020 250 / 0.55);
+  --shadow-raised: 0 16px 40px oklch(0 0 0 / 0.34);
+  --signal-glow: 0 0 18px
+    color-mix(in oklab, var(--primary) 24%, transparent);
+}
+</code></pre>
+<p>Map these into existing shadcn tokens rather than creating a parallel system. Emerald, Readable, Aubergine, and Paperclip retain their identities by changing token values, not component rules. <code>readable</code> sets blur to <code>0px</code>, all glow tokens to transparent, and uses stronger borders. Remove every component-level hex currently present in <code>HeroStatsBar</code>, <code>ExecutionTable</code>, <code>MetricCard</code>, and the secondary avatar ring.</p>
+<p>Typography should use four roles:</p>
+<ul>
+<li><strong>Display:</strong> Geist 32/36, weight 600, page-level moments only.</li>
+<li><strong>Heading:</strong> Geist 20/26 and 16/22, weight 600.</li>
+<li><strong>Body/UI:</strong> Geist 14/20, weight 450–550.</li>
+<li><strong>Telemetry:</strong> JetBrains Mono 12/16 or 13/18, tabular numerals.</li>
+</ul>
+<p>Mono belongs on timestamps, IDs, commands, model names, live values, keyboard hints, and transmission metadata. It does not belong on navigation labels, section headings, empty-state prose, buttons, or every KPI label. Use sentence case by default; uppercase only for compact state codes such as <code>LIVE</code>, <code>FAILED</code>, or <code>P95</code>.</p>
+<h2>4. Layout &amp; Information Architecture</h2>
+<p>Replace the current shell with three stable zones:</p>
+<ul>
+<li><strong>56px global bar:</strong> current page/breadcrumb at left; compact command trigger in the center; connection state, notifications, emergency stop, and operator menu at right.</li>
+<li><strong>64px collapsed rail / 224px expanded sidebar:</strong> four primary destinations remain permanently visible: Chat, Tasks, Live Run, Dashboard.</li>
+<li><strong>Context navigation:</strong> secondary destinations appear beneath four collapsible domains: Operate, Observe, Intelligence, System. Show the active domain expanded; retain Favorites and Recent above it.</li>
+</ul>
+<p>Move theme, privacy, CRT, audio, help, avatar, and connection details into a Quick Settings sheet opened from the operator menu. Keep E-Stop visible as a fixed-width <code>Stop</code> button with an icon; it must never wrap. “No brain reported” becomes a quiet absent-state inside a brain popover, not permanent header cargo.</p>
+<p>Navigation should map as follows:</p>
+<ul>
+<li><strong>Operate:</strong> Inbox, Tasks, Config, Skills, Reminders, Doc Review, Forge.</li>
+<li><strong>Observe:</strong> Executions, Build, Analytics, Alerts, Quality, Infrastructure, Security, Self-Healing.</li>
+<li><strong>Intelligence:</strong> Graphs, Hive, Tool Galaxy, MCP Inventory, Knowledge Graph, Capabilities, Memory, Insights.</li>
+<li><strong>System:</strong> Agents, Briefings, Automation, Ideation, Dreaming, Channels, War Room, Meeting Bot, Settings.</li>
+</ul>
+<p>At 900px height, only the navigation region scrolls; identity and footer never overlap it.</p>
+<p>Create one <code>PageHeader</code> contract: eyebrow/breadcrumb, title, optional one-line purpose, live/freshness metadata, primary action, and overflow menu. It should be shared by every page, including Analytics and Chat. Use a content max-width of <code>1600px</code>, 24px desktop gutters, 16px compact gutters, and page-controlled density: <code>comfortable</code> for Chat/Settings, <code>compact</code> for tables/boards.</p>
+<h2>5. Premium Components</h2>
+<ul>
+<li><p><strong>Surface:</strong> Replace <code>GlassPanel</code>, <code>.glow-card</code>, and ad hoc card classes with a shared <code>Surface</code> using <code>quiet</code>, <code>raised</code>, <code>interactive</code>, and <code>critical</code> variants. Quiet is the default. Interactive surfaces change border and background on hover; they do not scale.</p>
+</li>
+<li><p><strong>MetricTile:</strong> Label, primary value, unit, comparison, freshness, and optional sparkline. Every tile must explicitly render one state: <code>loading</code>, <code>ready</code>, <code>empty</code>, <code>stale</code>, <code>unavailable</code>, or <code>error</code>. Remove unavailable KPIs from the default Dashboard and offer “Customize metrics” instead.</p>
+</li>
+<li><p><strong>System Integrity:</strong> Keep Operator Score, but make it a compact summary row once loaded. During backfill, render its actual geometry as skeletons. Clarify that it is a nightly composite score and show “Updated 02:14” rather than implying continuous telemetry.</p>
+</li>
+<li><p><strong>StatusBadge:</strong> Use a 6px semantic dot plus low-chroma text and border. Filled badges are reserved for active risk or current execution. Hundreds of completed rows should read as quiet <code>Done</code>, not cyan buttons.</p>
+</li>
+<li><p><strong>DataTable:</strong> Standardize on the shadcn table primitive with sticky header, 40px rows, optional density toggle, column visibility, keyboard row navigation, and an expandable detail drawer. Replace <code>gray-*</code>, <code>red-*</code>, and <code>indigo-*</code> utilities with semantic tokens.</p>
+</li>
+<li><p><strong>FilterToolbar:</strong> Replace Execution’s chip wall with Search, Status, Profile, and <code>More filters</code> popovers. Display active filters as removable chips on one secondary line and provide <code>Clear all</code>.</p>
+</li>
+<li><p><strong>Kanban:</strong> Auto-collapse empty columns immediately, not only after they transition from populated to empty. When fewer than three tasks exist, offer a compact list as the default view. Empty columns become 40px labeled rails; the active drop target expands during drag. Surface “47d 23h” as a warning: “Stale · 47d,” with an archive action.</p>
+</li>
+<li><p><strong>EmptyState:</strong> Icon, plain-language explanation, one primary action, one optional link. Distinguish “No data yet” from “Source not connected” and “No results for these filters.”</p>
+</li>
+<li><p><strong>LoadingState:</strong> Skeletons matching final geometry, with a delayed 600ms “Still loading telemetry…” message. Never render bare “Loading…”.</p>
+</li>
+<li><p><strong>Toasts:</strong> Maximum width 360px, opaque raised surface, 8px inset from the global bar on desktop, bottom sheet on mobile. Routine success lasts 2.5s; actionable confirmations persist until acted on. Add an Activity Center so missed notifications remain recoverable.</p>
+</li>
+</ul>
+<h2>6. Signature Effects &amp; Motion</h2>
+<p>Motion should explain causality:</p>
+<ul>
+<li>Hover/focus: <code>140ms cubic-bezier(.2,.8,.2,1)</code>.</li>
+<li>Popover/sheet entry: <code>180ms</code>; exit: <code>120ms</code>.</li>
+<li>Page content reveal: <code>220ms</code>, opacity plus 6px translation.</li>
+<li>Live value update: <code>420ms</code> background wash, no scale.</li>
+<li>Drag lift: <code>120ms</code>, <code>translateY(-2px)</code> and raised shadow.</li>
+<li>Critical pulse: two cycles over <code>900ms</code>, then static.</li>
+<li>Avatar orbit: retain 26s/34s only on <code>/chat</code>; remove floating bobbing because it makes the portrait feel weightless.</li>
+</ul>
+<pre><code class="language-css">.telemetry-updated {
+  animation: signal-arrival 420ms cubic-bezier(.2,.8,.2,1);
+}
+
+@keyframes signal-arrival {
+  0% {
+    box-shadow: inset 2px 0 var(--primary);
+    background: color-mix(in oklab, var(--primary) 12%, var(--surface-1));
+  }
+  100% {
+    box-shadow: inset 0 0 transparent;
+    background: var(--surface-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .telemetry-updated { animation: none; }
+}
+</code></pre>
+<p>Coalesce rapid Convex updates and animate a region at most once per second. Animate only <code>transform</code>, <code>opacity</code>, and localized paint effects. Do not add WebGL or continuous full-screen shaders.</p>
+<p>Remove the logo glitch, card hover scaling, glowing scrollbar, decorative integration dots, global scanline bar, constant navigation pulses, entry springs with <code>bounce: 0.4</code>, and glow from inactive controls. Keep CRT as an optional novelty in Quick Settings, disabled by default and unavailable in Readable.</p>
+<h2>7. Usability &amp; Ease of Use</h2>
+<ul>
+<li>Give every page a clear question: Dashboard answers “Does anything need me?” Analytics answers “Where are cost and performance changing?” Executions answers “What ran, and what failed?”</li>
+<li>Split Analytics into Overview, Cost, Performance, Agents, and Advanced tabs. Load each expensive section only when opened.</li>
+<li>Let Dashboard show six operator-selected metrics, not eight fixed cards containing unknown values.</li>
+<li>Replace “System Load” with accurately named measures: Health score, CPU load, memory utilization, cache hit rate, and data freshness must never share semantics.</li>
+<li>Add freshness labels such as <code>Live</code>, <code>Updated 14s ago</code>, and <code>Stale</code> beside the source, not as decorative dots.</li>
+<li>Preserve <code>Ctrl/Cmd+K</code>; add <code>G then D/T/E/A</code> navigation shortcuts and surface them in the palette. Add <code>/</code> to focus local table search and <code>?</code> for shortcuts.</li>
+<li>Maintain focus when data updates. Announce only consequential state changes through polite live regions.</li>
+<li>Remember table density, visible columns, sidebar state, favorite routes, and Dashboard metrics locally for the single operator.</li>
+<li>Use one vocabulary across pages: <code>Running</code>, <code>Succeeded</code>, <code>Failed</code>, <code>Cancelled</code>; avoid mixing <code>Done</code>, <code>Completed</code>, and <code>Healthy</code> without defined meanings.</li>
+</ul>
+<h2>8. Prioritized Roadmap</h2>
+<p><strong>Quick wins — one day</strong></p>
+<ul>
+<li>Simplify the header and prevent E-Stop wrapping.</li>
+<li>Remove card scale, logo glitch, non-semantic pulses, glowing scrollbar, and decorative integrations.</li>
+<li>Normalize <code>PageHeader</code> across the five reviewed pages.</li>
+<li>Replace hardcoded component colors with existing semantic variables.</li>
+<li>Reposition and resize Sonner toasts.</li>
+<li>Correct System Load/Memory labels and hide unsupported KPI cards.</li>
+</ul>
+<p><strong>Medium — one week</strong></p>
+<ul>
+<li>Build shared <code>Surface</code>, <code>MetricTile</code>, <code>DataState</code>, <code>StatusBadge</code>, <code>FilterToolbar</code>, and premium skeleton primitives.</li>
+<li>Rebuild sidebar navigation around Favorites, Recent, and four collapsible domains.</li>
+<li>Convert Executions to the shared table and compact filter toolbar.</li>
+<li>Add sparse-board behavior and stale-task actions to Tasks.</li>
+<li>Split Analytics into lazy tabs and establish page density settings.</li>
+<li>Add visual regression coverage for all five themes, 1600×900, 1280×800, and reduced motion.</li>
+</ul>
+<p><strong>Deep — multi-week</strong></p>
+<ul>
+<li>Create a user-configurable Dashboard with saved metric layout and provenance/freshness.</li>
+<li>Audit all 200+ components, replacing legacy glass/glow and hardcoded neutrals through shared primitives.</li>
+<li>Establish semantic contracts for loading, empty, unavailable, stale, and error across every Convex subscription.</li>
+<li>Bring Chat’s transmission language into approvals, live runs, alerts, and execution detail without copying its full atmosphere.</li>
+<li>Add the global signal system below, with event coalescing, performance budgets, and instrumentation.</li>
+</ul>
+<h2>9. The Signature Moment</h2>
+<p><strong>The Signal Horizon</strong> is a single 2px line beneath the global bar representing Ástríðr’s live state. At rest it is nearly invisible. When a meaningful event arrives, a bright 48px segment travels left-to-right over 620ms, then the destination surface receives the 420ms signal-arrival wash. Execution starts travel in primary; completion resolves to status-ok; warnings and approvals use status-warn; failures terminate in status-error. Routine metric chatter is coalesced, while operator-relevant events are always shown.</p>
+<p>The horizon also acts as an ambient health summary at a distance: steady hairline means connected and calm; a short amber notch means attention is waiting; a red stationary break means a blocking failure; disconnected becomes a dashed neutral line. Hovering reveals “Connected · 24ms · updated 3s ago.” Clicking opens the Activity Center.</p>
+<p>Implement it as one shell-level element driven by a tiny event reducer—not one animation per card:</p>
+<pre><code class="language-tsx">&lt;SignalHorizon
+  tone={pendingApproval ? &quot;warn&quot; : blockingError ? &quot;error&quot; : &quot;primary&quot;}
+  state={connected ? &quot;live&quot; : &quot;offline&quot;}
+  eventKey={coalescedEventKey}
+/&gt;
+</code></pre>
+<p>In reduced-motion and Readable modes, the traveling segment becomes an instantaneous color change plus text update. This is the memorable image of CodePulse: Ástríðr’s intelligence entering the system as a controlled pulse—beautiful because it means something.</p>
+</article>
+    </section>
+
+    <section class="panel" id="panel-kimi" role="tabpanel" aria-labelledby="tab-kimi" hidden>
+      <div class="model-meta" style="--tab-accent:#6d5dfc">
+        <span class="model-dot"></span>
+        <span>kimi-code/k3 (effort high) via Kimi Code CLI 0.34 · repo access</span>
+        <span class="concept-chip">“Quiet Control Room”</span>
+      </div>
+      <article><h2>1. Diagnosis</h2>
+<p>CodePulse has a real design system under the noise — token-driven themes, <code>color-mix</code> derivations, a genuinely authored <code>/chat</code> presence page, and disciplined conventions (no hardcoded hex, lazy entry chunks, reduced-motion support). The bones are premium. The skin is not.</p>
+<p><strong>What works:</strong> the <code>/chat</code> transmission treatment (<code>.bubble-her</code> luminous rail, <code>msg-materialize</code> easing at <code>cubic-bezier(0.22,1,0.36,1)</code>, orbital rings) is the strongest design language in the repo — authored, thematic, token-derived. The <code>readable</code> theme and <code>prefers-reduced-motion</code> blanket are mature. <code>navRegistry.ts</code> as a leaf module is clean IA infrastructure.</p>
+<p><strong>What reads as template/noise:</strong> the &quot;cyberpunk terminal&quot; layer — uppercase tracked mono on <em>everything</em>, pulse dots on every label, glow drop-shadows on every icon, <code>hover:scale-[1.01]</code> on every card (Dashboard.tsx applies it to nine separate wrappers). Every element shouting means nothing is heard. At a distance — the stated ambient use case — the dashboard is unreadable because 31 nav items, 8 KPI cards, and a neon load bar all have equal visual weight.</p>
+<p><strong>The 5 worst offenders:</strong></p>
+<ol>
+<li><strong>The header</strong> (<code>DashboardLayout.tsx:559-628</code>) — telemetry pill + SYS/LAT readouts + violet-accent search pill + E-Stop + brain badge + 6 icon controls inside a <em>second</em> nested bordered pill (<code>bg-primary/5 border border-primary/10</code>). It&#39;s chrome wearing chrome. The E-Stop — the one control that must be unmissable — wraps its own label to two lines.</li>
+<li><strong><code>HeroStatsBar</code></strong> (<code>HeroStatsBar.tsx:124-170</code>) — a &quot;SYSTEM LOAD&quot; bar that actually computes <code>100 - errorRate*2</code>, a cyan-to-red gradient implying danger at full health, a &quot;MEMORY 0% / 100%&quot; readout, and a <strong>hardcoded fake integrations row</strong> (GITHUB/LINEAR/SLACK/CONVEX/VERCEL with permanent green dots). Fabricated data is the opposite of premium.</li>
+<li><strong>The sidebar</strong> — 31 mono uppercase items with pulse-dot group labels, glow on hover <em>and</em> active <em>and</em> icons, and a real collision at 900px where AGENTS clips under pinned Settings. Decoration density exceeds information density.</li>
+<li><strong>Dead states rendered as real cards</strong> — &quot;—&quot; placeholders (MEMORY HIT RATE, DURABLE FACTS, ADVISOR SAVINGS) and bare &quot;Loading…&quot; text in the hero <code>OperatorScoreCard</code>. Empty kanban columns render dashed &quot;Drop tasks here&quot; zones that advertise emptiness.</li>
+<li><strong>Toasts</strong> — sonner bottom-right, <code>richColors</code>, wide white borders, overlapping content on every page. The confirm-before-WS-command pattern in <code>Tasks.tsx:145</code> puts a <em>destructive confirmation</em> in an auto-expiring toast.</li>
+</ol>
+<h2>2. Design Direction</h2>
+<p><strong>Concept: &quot;Quiet Control Room.&quot;</strong> Thesis: CodePulse is mission control for one operator in a dark room — so it should behave like the room, not the arcade. Today it borrows its language from sci-fi terminals (glitch, scanlines, everything-glows); the proposal is to borrow from <em>actual</em> control rooms — NASA MOCR, aviation glass cockpits, Linear/Raycast&#39;s restraint — where the surface is calm and dark, hierarchy comes from light and typography rather than decoration, and <strong>color is spent only on state</strong>. Cyan stops being wallpaper and becomes a signal: when you see the accent, something needs you. The <code>/chat</code> presence page already proves this team can write that language — we extend its vocabulary (luminous rails, <code>color-mix</code> tinting, one authored moment per surface) across the app and retire the arcade layer.</p>
+<p><strong>Personality:</strong> composed, precise, quietly alive. The system breathes (live flashes, streaming cursors, orbital rings) but never performs.</p>
+<p><strong>The one aesthetic risk:</strong> restraint reads as &quot;generic SaaS dashboard&quot; if we strip the character with the noise. The defense is keeping three authored signatures — the presence page, one ambient hero treatment, and the Ástríðr brand moment — at full intensity while everything else goes quiet. Breathtaking through contrast, not uniformity.</p>
+<h2>3. Color &amp; Typography</h2>
+<p><strong>Palette evolution</strong> — keep every theme, rebalance the roles:</p>
+<ul>
+<li><strong><code>--primary</code> stays <code>#06b6d4</code></strong> but its <em>usage budget</em> drops ~80%: no more <code>bg-primary/10</code> pill farms, no glow on static chrome. Cyan = interactive, live, or attention-worthy. Everything else goes neutral zinc (<code>--card #0a0a0c</code>, <code>--border #1e1e24</code> are already right).</li>
+<li><strong>Kill the violet collision.</strong> The search pill renders violet (<code>--accent #8b5cf6</code>) against cyan chrome. Reserve <code>--accent</code> exclusively for Ástríðr-the-entity (her bubbles, her rings, brain-swap states) — she gets a color; the machine gets cyan; states get <code>--status-*</code>. Three hue owners, zero overlap.</li>
+<li><strong>Status semantics fix:</strong> <code>--status-ok</code> is currently <code>#06b6d4</code> — identical to primary, so &quot;healthy&quot; and &quot;interactive&quot; are indistinguishable. Change cyan theme&#39;s <code>--status-ok</code> to <code>oklch(0.72 0.14 175)</code> (a desaturated sea-green, distinct from both cyan and emerald-theme primary), keep error <code>#ef4444</code>, warn <code>#eab308</code>.</li>
+<li><strong>New tokens</strong> (additive, all themes must define them):<pre><code class="language-css">--surface-raised: color-mix(in oklab, var(--card) 60%, var(--background)); /* card-on-card */
+--text-dim: color-mix(in oklab, var(--muted-foreground) 70%, transparent); /* tertiary labels */
+--live-flash: color-mix(in oklab, var(--primary) 12%, transparent);
+--danger-surface: color-mix(in oklab, var(--destructive) 14%, var(--card));
+</code></pre>
+</li>
+<li>Retire <code>--glow-lg</code> (violet rgba literal) entirely; cap chrome at <code>--glow-xs</code>. Glow becomes a <em>state</em>, not a style.</li>
+</ul>
+<p><strong>Typography.</strong> Geist stays, and it gets to actually lead:</p>
+<ul>
+<li><strong>Scale:</strong> display 30/600 (page titles), heading 17/600, body 14/400, label 12/500, micro 11/500. Currently <code>PageHeader</code> is <code>text-2xl font-bold</code> — drop to semibold; bold + glow + mono was doing the shouting.</li>
+<li><strong>Mono is demoted to data.</strong> JetBrains Mono for: numbers (with <code>tabular-nums</code>, already used well), timestamps, durations, code, IDs. <strong>Removed from:</strong> nav items, group labels, buttons, badges, KPI labels, dialog titles. UI text in Geist. The current <code>font-mono tracking-wider</code> on 31 nav items is the single loudest template tell in the app.</li>
+<li>Uppercase tracking-widest survives in exactly one place: the 12px section-label/eyebrow role (<code>text-xs uppercase tracking-[0.12em] text-(--text-dim)</code>) — as used in the <code>/chat</code> eyebrows. That&#39;s the whole trick: one ceremonial style, used sparingly.</li>
+</ul>
+<h2>4. Layout &amp; Information Architecture</h2>
+<p><strong>Header — split into identity / action / control zones.</strong> Strip it to: left = page-context breadcrumb (moves <em>out</em> of pages into the shell); center = the command palette trigger, restyled as neutral (<code>bg-muted border-border</code>, no violet); right = E-Stop, brain badge, bell, one &quot;…&quot; overflow menu. The telemetry pill (&quot;ASTRIDR RUNTIME TELEMETRY&quot;) is deleted — it states the obvious at the costliest real estate. SYS/LAT collapse into a single 3-dot status cluster (Convex WS · Ástríðr WS · CPU) with a popover for numbers; the 30s ping logic already exists. CRT toggle, audio, privacy, theme, tags, help move into the overflow menu — they&#39;re session-level preferences, not per-minute controls. <strong>E-Stop gets fixed geometry</strong>: min-width so &quot;E-STOP&quot; never wraps, <code>bg-(--danger-surface) border-destructive/50</code>, always rightmost, physically separated from icon buttons.</p>
+<p><strong>Sidebar — three fixes.</strong></p>
+<ol>
+<li><strong>Collapse OBSERVE.</strong> 13 items is not a group, it&#39;s a sitemap. OBSERVE splits into <strong>MONITOR</strong> (Dashboard, Executions, Analytics, Alerts, Infrastructure) and <strong>INSIGHT</strong> (Memory, Insights, Quality, Security, Self-Healing, Hive, Build, Tools) — 6 groups of 4–7. No route changes; pure <code>navRegistry.ts</code> regrouping.</li>
+<li><strong>Kill the per-item glow.</strong> Nav items become Geist 13px, sentence case, <code>--text-dim</code>; active state = <code>--sidebar-active-bar</code> 2px left rail + <code>text-foreground</code> + <code>bg-(--surface-raised)</code>. No pulse dots, no icon drop-shadows. Hover is a 100ms background fade. The <code>nav-active-shadow</code>/<code>nav-hover-shadow</code> inset-glow utilities get deleted from <code>index.css</code>.</li>
+<li><strong>Fix the 900px collision:</strong> group labels become sticky (<code>sticky top-0 bg-sidebar z-10</code>) inside the ScrollArea, and the footer (Settings/collapse/status) stops overlaying — it already has <code>border-t</code>; give the nav <code>pb</code> clearance equal to footer height.</li>
+</ol>
+<p><strong>Page header system.</strong> Promote <code>PageHeader</code> into a real system: eyebrow (group name, the one ceremonial uppercase style) + 30px semibold title + optional live-status chip + right-aligned actions. Every page gets it — Analytics currently hand-rolls its own <code>&lt;h1&gt;</code> (<code>Analytics.tsx:91</code>), Executions has its own heading style inside cards. One component, one look.</p>
+<p><strong>Density strategy.</strong> Content max-width dies (it&#39;s a control room, not a blog), but the grid tightens: <code>p-6</code> main padding → <code>p-5</code>, card padding standardized to <code>p-4</code>, KPI values 28px tabular. Kanban empty columns stop rendering dashed &quot;Drop tasks here&quot; billboards — columns with zero tasks render at 60% opacity with a hairline header only.</p>
+<h2>5. Premium Components</h2>
+<p>All upgrades land in <code>src/components/ui/</code> + the two shared card wrappers, so 200+ components inherit them without per-page rewrites.</p>
+<ul>
+<li><strong><code>&lt;GlassPanel&gt;</code> / <code>.glow-card</code> unification.</strong> Today cards are built three ways (<code>.glow-card</code> CSS, <code>GlassPanel</code>, ad-hoc <code>bg-card border</code>). One component: <code>--surface-raised</code> background, 1px <code>--border</code>, <code>--radius-lg</code>, <code>box-shadow: 0 1px 2px rgb(0 0 0 / 0.4)</code>. The <code>::before</code> radial-gradient bloom on <code>.glow-card</code> (<code>index.css:389</code>) is deleted — it&#39;s why every card has a muddy halo. <strong>Delete <code>hover:scale-[1.01]</code> everywhere</strong> (9 instances in Dashboard.tsx alone); cards are not buttons. Only genuinely clickable KPI cards get <code>hover:border-primary/40 transition-colors duration-150</code>.</li>
+<li><strong><code>&lt;MetricCard&gt;</code></strong> gains three states, rendered distinctly: <strong>loading</strong> → skeleton shimmer on the value slot (there&#39;s a <code>skeleton.tsx</code> primitive sitting unused); <strong>no data</strong> → the card renders at 50% opacity with a micro &quot;no source&quot; caption instead of a bare &quot;—&quot;; <strong>live</strong> → value counts with the existing <code>AnimatedNumber</code> plus a 600ms <code>--live-flash</code> background wash (replacing the current invisible <code>live-update-pulse</code>, which animates a near-black tint nobody can see).</li>
+<li><strong>Status badge (kills the DONE-pill domination).</strong> Filled saturated pills → quiet outlined chips: <code>border border-current/30 bg-current/5</code> with a 6px status dot, text in <code>--status-*</code> at 12px medium. DONE/ok states go to <code>--text-dim</code> — success should whisper; only RUNNING (cyan pulse dot) and FAILED (red, the only filled badge in the app) draw the eye.</li>
+<li><strong>Empty states.</strong> One <code>&lt;EmptyState&gt;</code> primitive: 32px Lucide icon in <code>--text-dim</code>, one sentence of Geist body, one quiet action. Replaces &quot;No LLM calls recorded yet&quot; ad-hoc strings, the kanban dashed zones, and Analytics&#39; zero-grids. Empty charts render a 24px-height ghost sparkline outline instead of &quot;0&quot;.</li>
+<li><strong>Toasts.</strong> sonner reconfigured: <code>position=&quot;top-center&quot;</code> is wrong for a control room — keep bottom-right but <code>offset</code> above content, <code>visibleToasts={2}</code>, neutral theme (drop <code>richColors</code> white borders; use <code>--popover</code> + status dot), <code>gap: 8</code>. <strong>Destructive confirmations leave toasts entirely</strong>: the <code>Tasks.tsx:145</code> confirm-to-move pattern becomes an <code>alert-dialog</code> (the primitive exists) — a command to the agent fleet should not expire in 5 seconds.</li>
+<li><strong>Tables.</strong> Executions table: sticky header, 40px rows, row hover <code>bg-(--surface-raised)</code>, monospace only in the duration/ID columns, and the 3-row filter chip stack collapses into one row with a &quot;Filters (3)&quot; popover past overflow.</li>
+<li><strong>Loading everywhere.</strong> &quot;Loading…&quot; bare text (OperatorScoreCard hero — the largest card on the dashboard!) → skeleton blocks shaped like the final content.</li>
+</ul>
+<h2>6. Signature Effects &amp; Motion</h2>
+<p>Motion budget: one ambient moment per screen, everything else ≤200ms functional.</p>
+<p><strong>Keep / elevate:</strong></p>
+<ul>
+<li><strong><code>msg-materialize</code></strong> (<code>0.34s cubic-bezier(0.22,1,0.36,1)</code>) — adopt this easing app-wide as <code>--ease-out-expo</code>; it&#39;s the best motion decision in the codebase.</li>
+<li><strong>Orbital rings + aura-float on /chat</strong> — untouched; they <em>are</em> the brand.</li>
+<li><strong>Live flash</strong> — rebuilt as a real wash:<pre><code class="language-css">@keyframes live-wash {
+  0% { background-color: var(--live-flash); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent); }
+  100% { background-color: transparent; box-shadow: inset 0 0 0 1px transparent; }
+}
+.live-flash { animation: live-wash 900ms var(--ease-out-expo) forwards; }
+</code></pre>
+900ms, fires on WS <code>metric_delta</code> (the wiring already exists in Dashboard.tsx). This is the ambient &quot;the room is alive&quot; cue — visible from across the room, gone before it nags.</li>
+<li><strong>Command palette</strong>: 120ms scale-from-98% + fade, <code>cubic-bezier(0.16,1,0.3,1)</code>. cmdk is already lazy-loaded; cost is zero.</li>
+<li><strong>Page transitions</strong>: crossfade 150ms on <code>&lt;Outlet/&gt;</code> — nothing fancier; a 35-page SPA must never animate layout.</li>
+</ul>
+<p><strong>Remove (the kill list):</strong></p>
+<ul>
+<li><strong>CRT scanline bar</strong> — the fixed <code>mix-blend-overlay</code> overlay repaints a composited layer over every scroll frame on a realtime dashboard. Delete the toggle, the overlay, and the <code>codepulse-crt-toggle</code> event bus. <code>readable</code>/<code>aubergine</code> already suppress it; finish the job.</li>
+<li><strong>Glitch-text on the logo</strong> (<code>glitch-anim-1/2</code>, 12 keyframes each) — arcade costume on the product&#39;s name. The logo becomes still, set in Geist semibold.</li>
+<li><strong>All <code>animate-pulse</code> decorative dots</strong> (sidebar group labels, telemetry pill, logo operator line) — pulse is reserved for <em>live connection state</em> only.</li>
+<li><strong><code>hover:scale-[1.01]</code></strong> — everywhere (see §5).</li>
+<li><strong>Cyan scrollbar</strong> → <code>var(--border)</code> thumb, no glow-on-hover box-shadow.</li>
+<li><strong>The striped animated gradient load bar</strong> in HeroStatsBar (<code>bg-[length:20px_20px]</code> stripes + orange glow) — replaced by the signature moment below.</li>
+<li>All removals stay gated behind the existing <code>prefers-reduced-motion</code> blanket for what survives; <code>readable</code> keeps <code>--glow-*</code> as no-ops.</li>
+</ul>
+<h2>7. Usability &amp; Ease of Use</h2>
+<ul>
+<li><strong>Wayfinding:</strong> the shell header shows the current page eyebrow+title, so the 31-item sidebar no longer carries orientation alone. Active nav is a persistent rail, not a glow you must decode.</li>
+<li><strong>Glanceability (ambient mode):</strong> the Dashboard&#39;s top row becomes exactly three numbers at 44px — Health, Active Sessions, Errors/hr — visible from 3 meters. Everything else falls below the fold of the hero. &quot;SYSTEM LOAD 100%&quot; next to &quot;MEMORY 0%/100%&quot; (two bars, two meanings, one row) is the current anti-pattern; one metric, one bar, one label.</li>
+<li><strong>Honest data:</strong> delete the fabricated GITHUB/LINEAR/SLACK/CONVEX/VERCEL integrations row, and any KPI whose query returns undefined renders the &quot;no source&quot; state — never &quot;—&quot; as a value, never 100% as a default.</li>
+<li><strong>Keyboard:</strong> ⌘K exists; add <code>g</code>-then-letter nav (g d → Dashboard, g e → Executions…) using the existing global keydown handler pattern in <code>DashboardLayout.tsx:468</code>, <code>?</code> opens the shortcuts dialog (the help icon&#39;s job today). Every kanban card is already keyboard-sortable via dnd-kit&#39;s KeyboardSensor — surface that in the shortcuts dialog.</li>
+<li><strong>Consistency:</strong> one PageHeader, one card, one badge, one empty state, one toast — the five primitives above absorb the per-page drift (Analytics hand-rolled h1, Executions&#39; bespoke stat cards, Settings&#39; plain forms get the same GlassPanel).</li>
+<li><strong>States:</strong> every async surface gets loading→empty→error→data as four designed states, delivered by the primitives — no page writes its own &quot;Loading…&quot; ever again.</li>
+</ul>
+<h2>8. Prioritized Roadmap</h2>
+<p><strong>Quick wins (a day):</strong></p>
+<ol>
+<li>Header strip: remove telemetry pill, move CRT/audio/privacy/tags into an overflow dropdown, fix E-Stop min-width (<code>DashboardLayout.tsx</code> only).</li>
+<li>Delete <code>hover:scale-[1.01]</code> repo-wide + remove <code>.glow-card::before</code> bloom + neutral scrollbar (<code>index.css</code> + mechanical grep).</li>
+<li>Toast reconfig (<code>Toaster</code> props) + neutral palette restyle of the search trigger.</li>
+<li>navRegistry regroup OBSERVE → MONITOR/INSIGHT; nav items to Geist sentence case; delete pulse dots (registry + <code>NavGroup</code>).</li>
+<li>Hide <code>undefined</code>-backed KPIs behind a no-source state in <code>MetricCard</code>; delete the fake integrations row from <code>HeroStatsBar</code>.</li>
+</ol>
+<p><strong>Medium (a week):</strong>
+6. New token set (<code>--surface-raised</code>, <code>--text-dim</code>, <code>--live-flash</code>, <code>--danger-surface</code>) across all 5 themes; <code>--status-ok</code> decoupled from primary; mono-demotion pass over nav, badges, KPI labels, dialog titles.
+7. PageHeader v2 (eyebrow + title + status chip + actions) and migrate Analytics/Settings/Executions off hand-rolled headings.
+8. Badge + EmptyState + skeleton-loading primitives; re-skin Executions table (sticky header, quiet status chips, collapsible filters).
+9. <code>live-wash</code> flash replacing <code>live-update-pulse</code>; adopt <code>--ease-out-expo</code> globally; remove glitch-text, CRT overlay, decorative pulses.
+10. Fix sidebar 900px collision (sticky group labels, footer clearance).</p>
+<p><strong>Deep (multi-week):</strong>
+11. Kanban 2.0: collapsed empty columns, alert-dialog confirmations, per-agent WIP limits surfaced in column headers.
+12. Analytics information architecture: fold 20+ panels into tabbed sections (Cost / Usage / Quality) with one <code>&lt;EmptyState&gt;</code> system; kill the orphaned 5th metric card via a 4-col max grid.
+13. Settings redesign: same panel/section language as the rest of the app; theme picker becomes a visual swatch grid (it&#39;s currently the lazy-loaded Radix select).
+14. Ambient-mode audit at 1600×900 and 3-meter distances: type-size floor 12px, contrast pass against WCAG AA for <code>--text-dim</code> in every theme.</p>
+<h2>9. The Signature Moment</h2>
+<p><strong>&quot;The Pulse&quot; — a live system heartbeat rendered as the Dashboard hero.</strong></p>
+<p>Replace the misleading &quot;SYSTEM LOAD&quot; gradient bar with a single full-width strip, 56px tall, that <em>is</em> the health of Ástríðr: a thin 1px baseline across the card, and on it, a live ECG-style trace fed by the existing WS <code>metric_delta</code>/<code>execution_start</code>/<code>agent_status_change</code> events — each event lands as a soft cyan blip that travels left-to-right and decays. Execution errors land as red downward spikes; agent activity as violet (her color) ticks. When the system is calm, the line is nearly flat with a slow 4s breathing opacity (0.5→0.8). The trace is a 90-line <code>&lt;canvas&gt;</code> component (no Recharts, no SVG-per-frame — entry-chunk discipline holds), drawing only on event, idling at zero cost otherwise.</p>
+<pre><code class="language-tsx">// PulseTrace.tsx — one canvas, event-driven, ~zero idle cost
+useEffect(() =&gt; {
+  const unsubs = [
+    subscribeEvent(&quot;execution_start&quot;, () =&gt; pushBlip(0.6, &quot;primary&quot;)),
+    subscribeEvent(&quot;execution_error&quot;, () =&gt; pushBlip(-1.0, &quot;error&quot;)),
+    subscribeEvent(&quot;metric_delta&quot;,   () =&gt; pushBlip(0.25, &quot;primary&quot;)),
+    subscribeEvent(&quot;agent_status_change&quot;, () =&gt; pushBlip(0.4, &quot;accent&quot;)),
+  ];
+  return () =&gt; unsubs.forEach((u) =&gt; u());
+}, [subscribeEvent]);
+</code></pre>
+<p>Colors resolve once per theme change from <code>getComputedStyle</code> (<code>--primary</code>, <code>--status-error</code>, <code>--accent</code>) — never hardcoded, so emerald/aubergine/readable each get their own heartbeat; <code>readable</code> and <code>prefers-reduced-motion</code> render a static 24h sparkline instead of the live trace. At ambient distance, the room-glance story is total: flat calm line = all is well; a red spike = walk over. At the desk, hovering the strip scrubs the last 5 minutes with tooltips. It is one component, one canvas, one idea — and it turns the dashboard&#39;s most broken widget into the thing a visitor photographs.</p>
+</article>
+    </section>
+
+    <section class="panel" id="panel-verdict" role="tabpanel" aria-labelledby="tab-verdict" hidden>
+      <div class="model-meta" style="--tab-accent:#64748b">
+        <span class="model-dot"></span>
+        <span>Synthesis by Claude Fable 5 — convergence map, divergences, recommended path</span>
+        
+      </div>
+      <article><h2>How to read this</h2>
+<p>Three models, one brief, one repo. A disclosure up front: this synthesis is written by Claude Fable 5, which is also one of the three contestants — read the &quot;verdict&quot; as a structured comparison plus a recommendation, and discount for home-team bias accordingly. (The GPT entry is the gpt-5.6-sol re-run at high reasoning effort, replacing an earlier gpt-5.5 pass whose &quot;Quiet Command Glass&quot; proposal is kept on disk.)</p>
+<p>The headline: <strong>the three proposals converge hard — down to the names.</strong> &quot;Borealis Console&quot; (thesis: <em>calm is the luxury</em>), &quot;Quiet Reactor,&quot; &quot;Quiet Control Room.&quot; All three independently diagnosed the same disease (distributed glow — &quot;everything glows, so nothing glows&quot;; GPT&#39;s phrasing: &quot;the visual confidence exceeds the semantic confidence&quot;) and prescribed the same cure: calm matte surfaces, color spent only on state, mono demoted to data, and the <code>/chat</code> presence page promoted from outlier to design north star. When three differently-trained models land on the same answer from the same evidence, that answer is probably right.</p>
+<h2>Convergence map — treat these as settled</h2>
+<table>
+<thead>
+<tr>
+<th>Everyone agrees on</th>
+<th>Claude</th>
+<th>GPT-5.6 Sol</th>
+<th>Kimi K3</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kill list: <code>hover:scale-[1.01]</code>, glitch logo, CRT-by-default, decorative glow/pulse dots, cyan scrollbar glow</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>E-Stop: fixed geometry, never wraps, visually separated from cosmetic controls</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Header → 3 stable zones; secondary controls into an overflow / Quick Settings menu</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Command bar becomes the hero control; the clashing violet search pill dies</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Mono demoted to data (ids, numerals, timestamps); Geist sentence case for nav/UI</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Uppercase tracking survives only as one eyebrow/state-code style</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Quiet status badges — Done whispers; only failure/running carry color weight</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Skeletons shaped like content; designed empty states; no bare &quot;Loading…&quot; / &quot;—&quot;</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Shared primitives (Surface/Panel, MetricCard/Tile states, EmptyState, PageHeader) over per-page rewrites</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Sidebar: regroup the 31-item IA, kill per-item glow, fix the 900px Settings collision</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Toast restyle (dark raised surface, ≤380px, stop covering content)</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td><code>/chat</code> presence language is the north star to extend, not an outlier</td>
+<td>✔</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+<tr>
+<td>Decouple &quot;healthy&quot; from &quot;interactive&quot; — <code>--status-ok</code> must stop being cyan</td>
+<td>(implicit)</td>
+<td>✔</td>
+<td>✔</td>
+</tr>
+</tbody></table>
+<p>That table <strong>is</strong> the quick-win roadmap. It requires no further deliberation.</p>
+<h2>Head-to-head</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Claude Fable 5</strong></th>
+<th><strong>GPT-5.6 Sol (Codex)</strong></th>
+<th><strong>Kimi K3</strong></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Concept</td>
+<td>Borealis Console</td>
+<td>Quiet Reactor</td>
+<td>Quiet Control Room</td>
+</tr>
+<tr>
+<td>Signature</td>
+<td>Aurora health ribbon across the shell; arming E-Stop turns the sky red</td>
+<td>&quot;Signal Horizon&quot; — 2px line under the global bar; events travel it as luminous segments, click opens an Activity Center</td>
+<td>&quot;The Pulse&quot; — live ECG canvas hero fed by real WS events</td>
+</tr>
+<tr>
+<td>Color strategy</td>
+<td>Layered surface tokens (<code>--surface-0/1/2</code>, <code>--hairline</code>); primary reserved for interactive + live-now</td>
+<td>Full oklch re-derivation separating brand / status / surface; maps into existing shadcn tokens</td>
+<td>Sharpest governance: <strong>three hue owners</strong> — cyan = machine, violet = Ástríðr only, <code>--status-*</code> = state</td>
+</tr>
+<tr>
+<td>Boldest idea</td>
+<td>Ástríðr speaks in an editorial italic serif across the whole app — persona typography</td>
+<td>Operator-configurable Dashboard + Favorites/Recent nav + Activity Center — the shell as a personal cockpit</td>
+<td>Delete CRT entirely (not even a toggle); fabricated-data purge</td>
+</tr>
+<tr>
+<td>Sharpest diagnosis</td>
+<td>Attention scales with actionability (badge inversion)</td>
+<td>&quot;Visual confidence exceeds semantic confidence&quot;; every page must answer one question (&quot;Does anything need me?&quot;)</td>
+<td>Real code defects with file:line receipts (see below)</td>
+</tr>
+<tr>
+<td>Relative weakness</td>
+<td>Aurora is atmosphere-first; needs its health binding to earn its keep</td>
+<td>Largest migration surface (4-domain IA + favorites + density system) — most work before it shows</td>
+<td>Spends its boldness on one hero widget; shell stays fairly plain</td>
+</tr>
+</tbody></table>
+<h2>What each model uniquely contributed</h2>
+<p><strong>Claude Fable 5</strong> — the brand thread: Norse framework → aurora borealis as the one ambient layer, bound to real health state (<code>data-health</code> on <code>&lt;html&gt;</code>), so ambient monitoring is literal — you read the room from across the room. The serif &quot;voice of Ástríðr&quot; is the only proposal that gives the persona a presence on all 35 pages for zero pixels of chrome. Also: density token, truth-sentence glanceability (&quot;All quiet — 3 agents idle…&quot;), disarm-easing-like-dawn.</p>
+<p><strong>GPT-5.6 Sol</strong> — the systems designer&#39;s version: six explicit MetricTile states (<code>loading/ready/empty/stale/unavailable/error</code>), freshness labels (&quot;Live · Updated 14s ago · Stale&quot;) as first-class UI, event <strong>coalescing budgets</strong> (animate a region at most once per second), a unified status vocabulary (Running/Succeeded/Failed/Cancelled — no more Done vs Completed vs Healthy), per-page &quot;question&quot; framing, an Activity Center so missed toasts are recoverable, and visual regression across all five themes + reduced motion. Its Signal Horizon is the best-specified signature on the table: one shell element driven by an event reducer, degrading gracefully for reduced-motion and the readable theme.</p>
+<p><strong>Kimi K3</strong> — the auditor&#39;s version. It read the deepest and came back with receipts, verified against the live code:</p>
+<ul>
+<li><code>HeroStatsBar.tsx:161-168</code> — the Integrations row (GITHUB/LINEAR/SLACK/CONVEX/VERCEL) is a hardcoded array, comment literally says <em>&quot;Integrations row simulation&quot;</em>, permanent green dots. <strong>Fabricated data on the dashboard hero.</strong> ✔ verified</li>
+<li><code>Tasks.tsx:144-145</code> — a <em>destructive</em> fleet command is confirmed via a toast that auto-expires in 5 seconds. ✔ verified (GPT-5.6 flagged the same class: actionable confirmations must persist until acted on)</li>
+<li><code>index.css:139/165</code> — cyan theme defines <code>--status-ok: #06b6d4</code> — identical to <code>--primary</code>, so &quot;healthy&quot; and &quot;interactive&quot; are indistinguishable by design. ✔ verified</li>
+<li>&quot;SYSTEM LOAD&quot; computes <code>100 − errorRate×2</code> — a synthetic score dressed as a hardware gauge (as-reported by K3 and independently by GPT-5.6; spot-check the exact formula before acting).</li>
+</ul>
+<h2>Recommended path</h2>
+<ol>
+<li><strong>Ship the convergence table as-is</strong> (the unanimous kill list + header/sidebar/toast/badge/state fixes). Three-model agreement on a factual diagnosis is as close to certainty as this method gets. Fold Kimi&#39;s verified defect fixes into the same pass — deleting fabricated data and moving destructive confirms out of toasts are correctness fixes wearing design clothes.</li>
+<li><strong>Adopt Kimi&#39;s three-hue ownership rule as law</strong> (cyan = machine, violet = Ástríðr, status = state), implemented via GPT&#39;s token re-derivation — the two compose cleanly and both fix the <code>--status-ok</code> collision.</li>
+<li><strong>Pick two signature layers, not three.</strong> The shell-level &quot;system is alive&quot; niche is contested between Claude&#39;s aurora ribbon and GPT&#39;s Signal Horizon — and honestly, the Horizon wins it: it does everything the ribbon does at rest (ambient health color at a distance) <em>plus</em> carries discrete events and opens the Activity Center on click. Recommended combination: <strong>GPT&#39;s Signal Horizon on the shell + Kimi&#39;s Pulse ECG hero on the Dashboard</strong> — one line you feel, one instrument you study. Keep Claude&#39;s E-Stop coupling by feeding the armed state into the Horizon&#39;s tone (the line goes crimson shell-wide), and the aurora&#39;s slow hue-drift can live on as the Horizon&#39;s resting texture if the flat hairline feels too austere.</li>
+<li><strong>Trial Claude&#39;s serif voice on one surface</strong> (Briefings or Insights answers) before committing app-wide. Highest-variance idea on the table: if it lands, it&#39;s the most distinctive thing in the product; if not, it cost one page.</li>
+<li><strong>Steal GPT&#39;s contracts regardless</strong>: six-state MetricTile, freshness labels, status vocabulary unification, coalescing budgets, and five-theme visual regression as the guardrail while all of this ships.</li>
+</ol>
+<p>Execution note: this decomposes cleanly into GSD phases — (a) unanimous quick wins + verified defect fixes, (b) tokens + primitives, (c) shell/IA, (d) signature layers (Horizon, Pulse hero, serif trial). The quick-wins phase alone would visibly change how premium the product feels.</p>
+</article>
+    </section>
+
+<script>
+(() => {
+  const tabs = [...document.querySelectorAll('.tab')];
+  const panels = [...document.querySelectorAll('.panel')];
+  function select(i) {
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)));
+    panels.forEach((p, j) => p.hidden = i !== j);
+    history.replaceState(null, '', '#' + tabs[i].id.replace('tab-', ''));
+    tabs[i].focus({ preventScroll: true });
+    window.scrollTo({ top: 0 });
+  }
+  tabs.forEach((t, i) => t.addEventListener('click', () => select(i)));
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea')) return;
+    const cur = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+    if (e.key === 'ArrowRight') select((cur + 1) % tabs.length);
+    else if (e.key === 'ArrowLeft') select((cur + tabs.length - 1) % tabs.length);
+    else if (/^[1-4]$/.test(e.key)) select(Number(e.key) - 1);
+  });
+  const hash = location.hash.slice(1);
+  const idx = tabs.findIndex(t => t.id === 'tab-' + hash);
+  if (idx > 0) select(idx);
+})();
+</script>
+</body>
+</html>
