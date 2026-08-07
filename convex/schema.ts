@@ -2069,4 +2069,40 @@ export default defineSchema({
   })
     .index("by_profileId", ["profileId", "timestamp"])
     .index("by_timestamp", ["timestamp"]),
+
+  // ============================================================
+  // CONTROL VERB SWAPS (Phase 108, TELE-02/D-13/D-14) — per-profile
+  // swap-history audit trail, append-only.
+  // ============================================================
+
+  // astridr/engine/control_verbs/swap_model.py and swap_voice.py emit one
+  // `control_verb_swap` event per swap attempt (restore/unresolved/
+  // affinity-refused/success). D-13: every emit is stored here, INCLUDING
+  // refusals — the refusal path is exactly where the affinity guard and the
+  // resolver fail, and a history that stores only successes would claim
+  // every swap worked. D-14: one table holds BOTH brain (verb:"swap_model")
+  // and voice (verb:"swap_voice") swaps, discriminated by `verb`, because
+  // both verbs emit the same event name on the same channel — the D-15
+  // readout filters to verb:"swap_model"; voice rows are captured but not
+  // yet surfaced (deferred, not dropped). `scope` is the one new column this
+  // phase adds: the explicit profileId when a swap was scoped, absent when
+  // global. `verb`/`path` are kept v.string() (not Literal unions) to match
+  // this schema's defensive-boundary convention — validated at the ingest
+  // edge (convex/controlVerbSwaps.ts), not the schema, so an unexpected
+  // astridr value is stored and diagnosable rather than poisoning the batch.
+  controlVerbSwaps: defineTable({
+    verb: v.string(), // "swap_model" | "swap_voice"
+    target: v.optional(v.string()), // raw utterance/tag target; absent on restore
+    resolved: v.optional(v.string()), // resolved model id (swap_model) or voice display name (swap_voice)
+    providerAffinity: v.optional(v.string()), // swap_model only
+    voiceId: v.optional(v.string()), // swap_voice only
+    path: v.string(), // "claude-native" | "openrouter" | "refused" | "restore" | "swap"
+    reason: v.optional(v.string()), // swap_model refusal discriminator only
+    scope: v.optional(v.string()), // D-13: explicit profileId when scoped, absent when global
+    sessionId: v.optional(v.string()),
+    channel: v.string(),
+    timestamp: v.float64(),
+  })
+    .index("by_scope", ["scope", "timestamp"])
+    .index("by_timestamp", ["timestamp"]),
 });

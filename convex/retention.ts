@@ -63,6 +63,18 @@ export const RETENTION_DAYS: Record<string, number> = {
   // incident; 14 would age the signal out faster than an operator would
   // notice it.
   toolPolicyEvents: 90,
+  // Phase 108 D-10 — new table, bounded BEFORE it can ever grow (same
+  // pre-emptive move as gatewayQuotaSnapshots/toolPolicyEvents above). Only
+  // the latest row per profile is ever read via activeEngine.latestByProfile,
+  // so any window is pure headroom, not a functional limit.
+  activeEngineSnapshots: 30,
+  // Phase 108 D-14 — new table, same tier as activeEngineSnapshots above
+  // (keeps the mental model simple: both are Phase 108's new per-profile
+  // engine-axis tables). Swap-history is a manual/rare operator action
+  // (D-15's "what did I last switch this to"), so 30 days is ample without
+  // reaching for the 90-day build/history tier reserved for higher-value
+  // long-horizon tables.
+  controlVerbSwaps: 30,
 };
 
 const PRUNED_TABLES = Object.keys(RETENTION_DAYS);
