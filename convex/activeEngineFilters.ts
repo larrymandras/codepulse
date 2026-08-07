@@ -35,13 +35,29 @@ export const UNRESOLVED_SENTINEL = "unknown";
  * absence of a reading rather than a reading. Checked on both the write and the read path, so a
  * sentinel already sitting in `activeEngineSnapshots` (there is one in production as of
  * 2026-07-29) is inert even before it is deleted.
+ *
+ * TOTAL over its declared input type by contract, not just by the type signature: TypeScript
+ * types are erased at runtime, and `runtimeIngest.ts` calls this with a raw, untrusted ingest
+ * payload cast through `data as any` — so `row.profileId`/`row.model` can arrive as any JSON
+ * type (number, boolean, object, array), not just `string | null | undefined`. A non-string
+ * truthy value used to reach `row.profileId?.trim()` and throw `TypeError: ... .trim is not a
+ * function`, which — because the `model_routing` case has no per-event try/catch — aborted every
+ * remaining event in the batch (the exact WR-06/168-06 class this file's own header and
+ * `runtimeIngest.ts:736-742`'s comment claim immunity to). A non-string value is treated as
+ * unresolved (returns `true`), never thrown on, so the caller's existing `break` skips just that
+ * one event.
  */
 export function isUnresolvedRouting(row: {
-  profileId?: string | null;
-  model?: string | null;
+  profileId?: unknown;
+  model?: unknown;
 }): boolean {
-  const profileId = row.profileId?.trim();
-  const model = row.model?.trim();
+  const rawProfileId = row.profileId;
+  const rawModel = row.model;
+  if (typeof rawProfileId !== "string" || typeof rawModel !== "string") {
+    return true;
+  }
+  const profileId = rawProfileId.trim();
+  const model = rawModel.trim();
   return (
     !profileId ||
     !model ||
