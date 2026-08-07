@@ -53,6 +53,20 @@ describe("RETENTION_DAYS", () => {
     expect(RETENTION_DAYS.gatewayQuotaSnapshots).toBe(30);
   });
 
+  // Post-execution gap closure (adversarial mutation-testing pass, 2026-08-07): deleting the
+  // `controlVerbSwaps: 30` entry from RETENTION_DAYS outright was caught by nothing above — the
+  // existing tests only assert generic properties (every key is a real schema table, every
+  // window is positive, gatewayQuotaSnapshots specifically, a fixed keep-forever list) and never
+  // asserted these two Phase 108 tables are present at all. A table silently becoming unbounded
+  // is the exact class of defect CLAUDE.md records as having caused a real OOM crash-loop on
+  // this self-hosted instance. Unlike the CR-01/scope-filter guards elsewhere in this repo, this
+  // one needs no source-level regex workaround — RETENTION_DAYS is a plain object, so this is a
+  // full behavioral assertion against the live values, not a stand-in for one.
+  it("bounds controlVerbSwaps (D-14) and activeEngineSnapshots (D-10) at 30 days — Phase 108 tables must not silently become unbounded", () => {
+    expect(RETENTION_DAYS).toHaveProperty("controlVerbSwaps", 30);
+    expect(RETENTION_DAYS).toHaveProperty("activeEngineSnapshots", 30);
+  });
+
   it("still keeps the cost/trend tables forever — pruning these would break dashboards", () => {
     // Phase 104 derives dollars from `aggregates` token buckets on every read, so
     // pruning aggregates or llmMetrics would silently destroy re-priceable history

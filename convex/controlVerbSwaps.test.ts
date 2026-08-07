@@ -131,3 +131,36 @@ describe("bounded read — listByScope never .collect()s", () => {
     expect(SWAP_HISTORY_CAP).toBe(20);
   });
 });
+
+// Post-execution gap closure (adversarial mutation-testing pass, 2026-08-07): a mutation
+// replacing `.withIndex("by_scope", (q) => q.eq("scope", args.profileId))` with
+// `.withIndex("by_timestamp")` — dropping the per-profile scope filter entirely, so every
+// caller receives every profile's swap history — left all prior tests in this file passing.
+// No test called listByScope, referenced "by_scope" outside a describe() label, or checked
+// the .withIndex(...) argument.
+//
+// SOURCE-LEVEL GUARD ONLY — be honest about what this proves. This is a regex match against
+// the source text of listByScope's body, defeatable by rewording (e.g. renaming the index
+// while preserving its semantics, or restructuring the query builder call) without this test
+// noticing. It does NOT prove per-profile isolation behaviorally — this repo has no
+// convex-test harness to seed two profiles' rows and assert listByScope("personal") never
+// returns a "business" row. That real behavioral proof is deferred to plan 108-07 Step 4(b),
+// which reads listByScope for two profiles against the live self-hosted backend.
+describe("listByScope — scope filter present (source-level guard, not behavioral proof)", () => {
+  const controlVerbSwapsPath = path.resolve(__dirname, "./controlVerbSwaps.ts");
+
+  it("scopes the read to args.profileId via the by_scope index (not by_timestamp or an unfiltered read)", () => {
+    const source = stripCommentLines(readFileSync(controlVerbSwapsPath, "utf-8"));
+    // Sanity check on the slice itself: prove the text this test matches against is actually
+    // present and non-empty, so the assertions below can't pass vacuously against an empty or
+    // mismatched slice (same idiom as the CR-01 block's raw/stripped sanity check above).
+    const listByScopeStart = source.indexOf("export const listByScope");
+    expect(listByScopeStart).toBeGreaterThan(-1);
+    const body = source.slice(listByScopeStart, listByScopeStart + 400);
+    expect(body.length).toBeGreaterThan(0);
+    expect(body).toContain(".withIndex(");
+
+    expect(body).toMatch(/\.withIndex\(\s*"by_scope"/);
+    expect(body).toMatch(/q\.eq\(\s*"scope"\s*,\s*args\.profileId\s*\)/);
+  });
+});
