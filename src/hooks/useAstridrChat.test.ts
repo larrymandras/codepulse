@@ -513,6 +513,96 @@ describe("useAstridrChat — correctAssistantMessage (186-09 deferred item)", ()
   });
 });
 
+// ─── D-08 (188.3-05): continuation-merge supersedes the prior user bubble ───
+// Live trace, 22:16:51.639 / 22:16:56.437: two utterances produced TWO user
+// bubbles ("Right now." / "Right now. Right now.") and THREE assistant
+// replies. flushSend's continuation-merge branch already cancels the prior
+// turn via interrupt("continuation-merge") before resending the merged text —
+// but sendMessage always APPENDS, so the merge still shows up as a second
+// bubble. This closes that gap: a caller-supplied `supersedes` id patches the
+// prior user message in place instead of appending a second one.
+//
+// SUPERSEDE-1 is the signal (one bubble survives, same id, merged content).
+// CTRL-NORMAL-APPENDS is the negative-space control (no supersede option ⇒
+// both sends append) — without it, a supersede implementation that swallowed
+// EVERY send would pass SUPERSEDE-1 and this file would never know.
+//
+// Mechanism used to get the second send past sendMessage's
+// `isStreamingRef.current` early return (:133): call `interrupt()` between
+// the two sends, mirroring flushSend's OWN real ordering — the merge branch
+// calls `chatRef.current.interrupt("continuation-merge")` immediately before
+// `sendMessage` (useAstridrVoice.ts flushSend), which is what clears
+// `isStreamingRef` so the guard is passable at all.
+
+describe("useAstridrChat — continuation-merge supersede path (D-08/188.3-05)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscribeEvent.mockImplementation(() => () => {});
+    mockSendCommand.mockResolvedValue({ status: "ok", session_id: "sess-1" });
+  });
+
+  it("SUPERSEDE-1: a continuation-merge send patches the prior user bubble in place instead of appending a second one", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+
+    await act(async () => {
+      await result.current.sendMessage("do I have any calendar entries this afternoon", {
+        clientMessageId: "voice-msg-1",
+      });
+    });
+    const userMessagesAfterFirst = result.current.messages.filter((m) => m.role === "user");
+    expect(userMessagesAfterFirst).toHaveLength(1);
+    const firstId = userMessagesAfterFirst[0].id;
+
+    // Mirror flushSend's real ordering: the continuation-merge branch calls
+    // interrupt() BEFORE sendMessage, which is what clears isStreamingRef so
+    // the second send's guard (:133) is passable at all.
+    act(() => {
+      result.current.interrupt("continuation-merge");
+    });
+
+    await act(async () => {
+      await result.current.sendMessage(
+        "do I have any calendar entries this afternoon for my personal",
+        { clientMessageId: "voice-msg-2", supersedes: firstId }
+      );
+    });
+
+    const userMessagesAfterSecond = result.current.messages.filter((m) => m.role === "user");
+    // RED before the production edit: the supersede option does not exist
+    // yet, so the second send appends and this is 2, not 1.
+    expect(userMessagesAfterSecond).toHaveLength(1);
+    // The surviving bubble keeps the FIRST message's id — same-id patch-in-
+    // place is what keeps Chat.tsx's key={msg.id} stable across the merge.
+    expect(userMessagesAfterSecond[0].id).toBe(firstId);
+    expect(userMessagesAfterSecond[0].content).toBe(
+      "do I have any calendar entries this afternoon for my personal"
+    );
+    // Only reachable once the assertions above pass (i.e. post-implementation):
+    // confirms the caller-supplied id, not generateId(), became the message id.
+    expect(firstId).toBe("voice-msg-1");
+  });
+
+  it("CTRL-NORMAL-APPENDS: two ordinary sends with no supersede option both append distinct bubbles", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      result.current.interrupt("flush-send");
+    });
+    await act(async () => {
+      await result.current.sendMessage("what about tomorrow");
+    });
+
+    const userMessages = result.current.messages.filter((m) => m.role === "user");
+    expect(userMessages).toHaveLength(2);
+    expect(userMessages[0].content).toBe("what's the weather");
+    expect(userMessages[1].content).toBe("what about tomorrow");
+    expect(userMessages[0].id).not.toBe(userMessages[1].id);
+  });
+});
+
 // ─── VISION-01: vision.frame_request round-trip (backend-initiated see_screen) ──
 // Closes the backend-initiated loop: the server pushes vision.frame_request
 // (T-184-17/18) when the model calls see_screen for a phrasing the client
