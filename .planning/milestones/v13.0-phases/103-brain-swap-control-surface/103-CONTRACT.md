@@ -67,6 +67,15 @@ dispatch, so an invalid scope never falls through to a global apply.
 `restore=true` (`profile_id` omitted) clears the global override and leaves every profile's pin
 intact.
 
+**Verified 2026-08-07 (Phase 108-05): this rule is now implemented and proven live in-process, not
+merely specified.** Before this plan, `swap_model.py`'s `_execute` restore branch unconditionally
+called `clear_global_override()` regardless of `args["profile_id"]` — a scoped restore actually
+cleared the GLOBAL override and left the profile pin intact, the exact inverse of the paragraph
+above. `_execute` now branches on `profile_id`: scoped calls `clear_profile_override(profile_id)`
+only, unscoped calls `clear_global_override()` only (108-05-SUMMARY.md's "Live Proof" section pastes
+the real before/after override state for both cases, captured against a real `ModelRouter`
+instance).
+
 **D-06: no `mode` field, no session TTL.** The per-profile override is **runtime-only**, mirroring
 the global axis exactly — cleared by `restore=true` or a process restart, no expiry bookkeeping on
 the resolve hot path. The considered-and-rejected `GatewayModelSetCommand` shape below still
