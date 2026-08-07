@@ -54,7 +54,10 @@ export const record = internalMutation({
     verb: v.string(),
     target: v.optional(v.string()),
     resolved: v.optional(v.string()),
-    providerAffinity: v.optional(v.string()),
+    // 108-07 gap closure (second round): the emitter always sends a real
+    // JSON array (list[str]) — see schema.ts's providerAffinity comment and
+    // runtimeIngest.ts's isOptionalStringArray.
+    providerAffinity: v.optional(v.array(v.string())),
     voiceId: v.optional(v.string()),
     path: v.string(),
     reason: v.optional(v.string()),

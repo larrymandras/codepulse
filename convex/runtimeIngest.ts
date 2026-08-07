@@ -247,6 +247,26 @@ function normalizeOptional<T>(value: T | null | undefined): T | undefined {
   return value === null ? undefined : value;
 }
 
+/** Runtime type guard: `undefined`, `null`, or an array whose every element
+ * is a `string` — matches `v.optional(v.array(v.string()))` fields. Same
+ * `null`-as-absent rationale as `isOptionalString`/`isOptionalNumber` above
+ * (108-07 gap closure, SECOND round, live proof): astridr's swap_model.py
+ * emits `provider_affinity` as a real `list[str]` on every success path
+ * (astridr/engine/control_verbs/swap_model.py:126,
+ * `get_provider_affinity()` -> `list[str] | None`) — never a scalar. This
+ * guard (and the `v.array(v.string())` validator it protects, schema.ts)
+ * replaces an `isOptionalString` guard that rejected every one of those
+ * arrays, silently skipping every successful swap (the first-round fix only
+ * closed the `null`-session_id gap; this defect was reproduced live
+ * afterward: a real success POST returned `{"skipped":1}`). */
+function isOptionalStringArray(value: unknown): value is string[] | undefined | null {
+  return (
+    value === undefined ||
+    value === null ||
+    (Array.isArray(value) && value.every((item) => typeof item === "string"))
+  );
+}
+
 /**
  * resolveModelRoutingEvent — resolves a `model_routing` event payload into
  * the args for `internal.activeEngine.recordRouting`, or `null` when the
@@ -313,7 +333,7 @@ interface ResolvedControlVerbSwapEvent {
   verb: string;
   target?: string;
   resolved?: string;
-  providerAffinity?: string;
+  providerAffinity?: string[];
   voiceId?: string;
   path: string;
   reason?: string;
@@ -369,7 +389,7 @@ export function resolveControlVerbSwapEvent(
   if (
     !isOptionalString(target) ||
     !isOptionalString(resolved) ||
-    !isOptionalString(providerAffinity) ||
+    !isOptionalStringArray(providerAffinity) ||
     !isOptionalString(voiceId) ||
     !isOptionalString(reason) ||
     !isOptionalString(scope) ||

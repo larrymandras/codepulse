@@ -2094,7 +2094,14 @@ export default defineSchema({
     verb: v.string(), // "swap_model" | "swap_voice"
     target: v.optional(v.string()), // raw utterance/tag target; absent on restore
     resolved: v.optional(v.string()), // resolved model id (swap_model) or voice display name (swap_voice)
-    providerAffinity: v.optional(v.string()), // swap_model only
+    // swap_model only. 108-07 gap closure (second round, live proof): the
+    // emitter (astridr/engine/control_verbs/swap_model.py:126,
+    // get_provider_affinity() -> list[str] | None) always sends a real
+    // JSON array on the success path — never a scalar. A v.string() model
+    // here rejected 100% of successful swaps (isOptionalString refused the
+    // array -> resolveControlVerbSwapEvent returned null -> the row was
+    // silently skipped). See runtimeIngest.ts's isOptionalStringArray.
+    providerAffinity: v.optional(v.array(v.string())),
     voiceId: v.optional(v.string()), // swap_voice only
     path: v.string(), // "claude-native" | "openrouter" | "refused" | "restore" | "swap"
     reason: v.optional(v.string()), // swap_model refusal discriminator only

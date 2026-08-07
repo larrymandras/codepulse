@@ -30,7 +30,7 @@ export type SwapHistoryRow = {
   verb: string;
   target?: string;
   resolved?: string;
-  providerAffinity?: string;
+  providerAffinity?: string[];
   voiceId?: string;
   path: string;
   reason?: string;

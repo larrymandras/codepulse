@@ -71,6 +71,20 @@ describe("record args shape (read from the live validator, not a hand-typed lite
     const fields = recordArgFields();
     expect(fields.timestamp.fieldType.type).toBe("number");
   });
+
+  // 108-07 gap closure (second round, live proof): providerAffinity was
+  // v.optional(v.string()), but astridr's swap_model.py always emits a real
+  // list[str] on the success path — the mismatch silently refused every
+  // successful swap. Reads the live validator (not a hand-typed literal),
+  // so a future regression back to v.string() fails this test.
+  it("declares providerAffinity as an array of strings (matches v.optional(v.array(v.string())), not a scalar)", () => {
+    const fields = recordArgFields();
+    expect(fields.providerAffinity.optional).toBe(true);
+    expect(fields.providerAffinity.fieldType).toEqual({
+      type: "array",
+      value: { type: "string" },
+    });
+  });
 });
 
 describe("isBrainSwap — verb discriminator (pure helper)", () => {

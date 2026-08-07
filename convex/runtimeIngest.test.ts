@@ -856,14 +856,16 @@ describe("resolveControlVerbSwapEvent (real function, convex/runtimeIngest.ts)",
         verb: "swap_model",
         path: "openrouter",
         channel: "voice",
-        provider_affinity: "openrouter",
+        // 108-07 gap closure (second round): providerAffinity is a real
+        // array on the wire (astridr sends list[str]) — not a scalar.
+        provider_affinity: ["anthropic_advisor", "anthropic_direct"],
         voice_id: "v1",
         session_id: "s1",
         profile_id: "personal",
       },
       1000
     );
-    expect(result?.providerAffinity).toBe("openrouter");
+    expect(result?.providerAffinity).toEqual(["anthropic_advisor", "anthropic_direct"]);
     expect(result?.voiceId).toBe("v1");
     expect(result?.sessionId).toBe("s1");
     expect(result?.scope).toBe("personal");
@@ -875,17 +877,89 @@ describe("resolveControlVerbSwapEvent (real function, convex/runtimeIngest.ts)",
         verb: "swap_model",
         path: "openrouter",
         channel: "voice",
-        providerAffinity: "openrouter",
+        providerAffinity: ["anthropic_advisor", "anthropic_direct"],
         voiceId: "v1",
         sessionId: "s1",
         scope: "personal",
       },
       1000
     );
-    expect(result?.providerAffinity).toBe("openrouter");
+    expect(result?.providerAffinity).toEqual(["anthropic_advisor", "anthropic_direct"]);
     expect(result?.voiceId).toBe("v1");
     expect(result?.sessionId).toBe("s1");
     expect(result?.scope).toBe("personal");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 108-07 gap closure (SECOND round) — live-confirmed defect: astridr's
+// swap_model.py emits `provider_affinity` as a real JSON array
+// (list[str] — astridr/engine/control_verbs/swap_model.py:126,
+// get_provider_affinity() -> list[str] | None) on EVERY success path.
+// providerAffinity was modelled as v.optional(v.string()), so
+// isOptionalString rejected the array outright and
+// resolveControlVerbSwapEvent returned null for the WHOLE event — every
+// successful swap was silently refused. Reproduced live: a real success POST
+// returned {"ingested":1,"dropped":0,"skipped":1}.
+// ---------------------------------------------------------------------------
+
+describe("108-07 fix 2 — providerAffinity is modelled as an array, matching the emitter's real list[str]", () => {
+  it("resolves a real success payload with an array-valued providerAffinity (previously silently refused)", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        target: "opus",
+        resolved: "claude-opus-4-8",
+        provider_affinity: ["anthropic_advisor", "anthropic_direct"],
+        path: "claude-native",
+        channel: "codepulse-control-center",
+        scope: "consulting",
+      },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.path).toBe("claude-native");
+    expect(result?.providerAffinity).toEqual(["anthropic_advisor", "anthropic_direct"]);
+  });
+
+  it("still refuses a non-array, non-null providerAffinity (regression lock — a plain string, the PRE-FIX shape, must not silently resolve again)", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        path: "claude-native",
+        channel: "voice",
+        providerAffinity: "anthropic_advisor",
+      },
+      1000
+    );
+    expect(result).toBeNull();
+  });
+
+  it("still refuses an array containing a non-string element", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        path: "claude-native",
+        channel: "voice",
+        providerAffinity: ["anthropic_advisor", 42],
+      },
+      1000
+    );
+    expect(result).toBeNull();
+  });
+
+  it("still resolves when providerAffinity is absent (restore path — astridr sends provider_affinity:null)", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        path: "restore",
+        channel: "voice",
+        provider_affinity: null,
+      },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.providerAffinity).toBeUndefined();
   });
 });
 
