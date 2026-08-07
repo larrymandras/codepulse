@@ -24,9 +24,9 @@ files_reviewed_list:
   - astridr/automation/focus_digest.py
 findings:
   critical: 0
-  warning: 1
+  warning: 2
   info: 0
-  total: 1
+  total: 2
 status: clean
 ---
 
@@ -112,6 +112,46 @@ Confirmed via grep that `_last_routing_emit` is referenced only at its three sit
 for _p in target_profiles:
     _router._last_routing_emit.pop(_p.id, None)
 ```
+
+---
+
+### WR-02: RESOLVED (codepulse `b6f6d540`, 2026-08-07)
+
+**Found at RUNTIME** — in the browser console on the live CodePulse page — *after* this code
+review (above), the phase's security audit, and the phase verifier had all already passed. None
+of those three gates is structured to catch it: it is a bundler-level defect (which files a
+Vite/Rollup build graph actually pulls into `dist/`), not a defect any static source read, unit
+test, or requirement-coverage check would surface on its own.
+
+**File:** `src/hooks/useControlVerbSwaps.ts:22` (introduced by plan 108-06) value-importing
+`SWAP_HISTORY_CAP`/`isBrainSwap` directly from `convex/controlVerbSwaps.ts`, which imports
+`internalMutation`/`query` from `./_generated/server` and defines `record`/`listByScope` — pulling
+the whole Convex server runtime into the client bundle. Symptom: `client:525 Convex functions
+should not be imported in the browser. This will throw an error in future versions of \`convex\`.`
+on every CodePulse page load.
+
+**Fix:** Split `SWAP_HISTORY_CAP`/`isBrainSwap` into a new pure module,
+`convex/controlVerbSwapsFilters.ts` — zero `_generated/server` imports, zero function definitions —
+mirroring the existing `activeEngineFilters.ts` precedent for the active-engine axis.
+`convex/controlVerbSwaps.ts` now imports the constant from the shared module instead of defining
+it, deliberately without re-exporting it, so the old `./controlVerbSwaps` import path stops
+resolving for browser code rather than staying open as a trap for the next consumer. The hook and
+both affected test files were repointed at the pure module; the pre-existing
+`SWAP_HISTORY_CAP`-equals-the-server-value drift-guard test (`useControlVerbSwaps.test.ts`) became
+tautological once both sides import the same shared binding, so it was restructured to instead
+read `convex/controlVerbSwaps.ts`'s own source and assert its `.take()` still consumes the shared
+symbolic constant rather than a hardcoded literal.
+
+**Proof:** Full sweep of every `src/ → convex/` value/type import in the repo confirmed this was
+the only unsafe one (all others are either `import type` — erased at compile time — or target
+already-pure modules). After the fix, `npm run build` was grepped: `providerAffinity`,
+`internalMutation`, and `sessionId` (strings unique to `controlVerbSwaps.ts`'s `record` mutation)
+are absent from every `dist/assets/*.js`, while a known-present control string (`"Showing the
+last"`) and the actually-shipped `GlobalSwapModal` code path (`"Recent swaps"`, `"swap_model"`)
+are present — confirming the fix landed on the live, reachable code path. Full suite (280 files,
+0 failed) re-run clean in an isolated worktree pinned to the fix commit.
+
+**Commit:** `b6f6d540`
 
 ---
 
