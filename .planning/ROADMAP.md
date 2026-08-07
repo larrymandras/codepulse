@@ -694,7 +694,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 108-07-PLAN.md — **ENGINE-05 gate, `autonomous: false`**: self-hosted Convex deploy → astridr rebuild (`prod,war-room`) → in-container freshness probe → live scoped swap + profiled turn + **unscoped control** + fail-closed negative control, evidence pasted as rows (ENGINE-05; D-16)
+- [x] 108-07-PLAN.md — **ENGINE-05 gate, `autonomous: false`**: self-hosted Convex deploy → astridr rebuild (`prod,war-room`) → in-container freshness probe → live scoped swap + profiled turn + **unscoped control** + fail-closed negative control, evidence pasted as rows (ENGINE-05; D-16) — Task 4 operator sign-off received 2026-08-07; ENGINE-05/ENGINE-01/ENGINE-02 marked Complete
 
 ---
 
@@ -786,7 +786,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 6/7 | In Progress|  |
+| 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | In Progress|  |
 | 109. Per-Agent Engine UI | 0/TBD | Not started | - |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
