@@ -25,6 +25,7 @@ import {
   llmByGoal,
   eventCountsByPeriod,
   rollupDaily,
+  repairDayTargets,
 } from "./aggregates";
 import { evaluateBudgets } from "./costBudgetEval";
 import { evaluateToolPolicyAlerts } from "./toolPolicyAlertEval";
@@ -1441,17 +1442,78 @@ describe("aggregates", () => {
         expect(dailyRows[0].bucket_start).toBe(resumeAt);
       });
 
-      test("a finished backfill reports done and writes the terminal sentinel", async () => {
+      // ---------------------------------------------------------------------
+      // COST-01 follow-up (2026-08-07): the cursor used to LATCH on the string
+      // "done", and the handler returned early on it — so the repair tool was
+      // SINGLE-USE. After the first live run it reported `done: true` with
+      // `rowsInserted: 0` forever while reading nothing, which is the same
+      // silent-under-report failure the fix exists to remove, one level up.
+      //
+      // The test that used to live here asserted that latch ("writes the
+      // terminal sentinel"), i.e. it encoded the defect. Replaced, not deleted.
+      // ---------------------------------------------------------------------
+      test("a finished backfill reports done but RESETS the cursor instead of latching", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
         const { ctx, tables } = makeAggregatesCtx({
-          agentConfigs: [{ configKey: DAILY_CURSOR_KEY, value: "done", source: "runtime", updatedAt: 0 }],
+          aggregates: [historicalHourly(yesterday - 86400, 100)],
+          agentConfigs: [
+            { configKey: "retention_days", value: 3, source: "runtime", updatedAt: 0 },
+          ],
+        });
+
+        const result = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 50 });
+
+        expect(result.done).toBe(true); // so an operator "repeat until done" loop still terminates
+        const cursorRows = tables.agentConfigs.filter((r) => r.configKey === DAILY_CURSOR_KEY);
+        const persisted = cursorRows[cursorRows.length - 1].value;
+        expect(persisted).not.toBe("done");
+        expect(persisted).toBe(yesterday); // fresh pass next time
+      });
+
+      test("REGRESSION: a second run after a completed sweep still does work — the latch is gone", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const late = yesterday - 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          agentConfigs: [
+            { configKey: "retention_days", value: 3, source: "runtime", updatedAt: 0 },
+          ],
+        });
+
+        // Pass 1: nothing to do yet (no hourly rows at all), runs to completion.
+        const first = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 50 });
+        expect(first.done).toBe(true);
+        expect(first.rowsInserted).toBe(0);
+
+        // A late hourly write lands for a day the first pass already walked —
+        // exactly the Phase 104 backfillTokenSplit scenario.
+        tables.aggregates.push(historicalHourly(late, 555) as any);
+
+        // Pass 2 must actually look. Under the old latch this returned
+        // {daysProcessed: 0, rowsInserted: 0, done: true} and inserted nothing.
+        const second = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 50 });
+
+        expect(second.rowsInserted).toBe(1);
+        const daily = tables.aggregates.filter(
+          (r) => r.period === "daily" && r.bucket_start === late
+        );
+        expect(daily).toHaveLength(1);
+        expect(daily[0].value).toBe(555);
+      });
+
+      test("un-sticks a legacy \"done\" cursor left in the live DB by the latching version", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [historicalHourly(yesterday - 86400, 321)],
+          agentConfigs: [
+            { configKey: DAILY_CURSOR_KEY, value: "done", source: "runtime", updatedAt: 0 },
+          ],
         });
 
         const result = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 5 });
 
-        expect(result.done).toBe(true);
-        expect(result.daysProcessed).toBe(0);
-        const cursorRows = tables.agentConfigs.filter((r) => r.configKey === DAILY_CURSOR_KEY);
-        expect(cursorRows[cursorRows.length - 1].value).toBe("done");
+        // No hand-editing of agentConfigs required to recover.
+        expect(result.rowsInserted).toBe(1);
+        expect(tables.aggregates.filter((r) => r.period === "daily")).toHaveLength(1);
       });
 
       test("is insert-only — never patches or deletes", async () => {
@@ -1464,6 +1526,146 @@ describe("aggregates", () => {
 
         expect(patchCalls).toHaveLength(0);
         expect(deleteCalls).toHaveLength(0);
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // COST-01 ROOT CAUSE (2026-08-07). Everything above repairs the SYMPTOM.
+    // The cause is that rollupDaily only ever processed yesterday and never
+    // revisited a day, so an hourly row written for an already-past day never
+    // got a daily row — silently and permanently. Phase 104's
+    // backfillTokenSplit did exactly that, and the daily cost series read 3.3x
+    // low ($25.42 against a true $83.90 over 30 days) until repaired by hand.
+    // -----------------------------------------------------------------------
+    describe("repairDayTargets — nightly rotation (COST-01 root cause)", () => {
+      // A fixed epoch day boundary. No clock: the rotation is a pure function
+      // of its inputs, and testing it that way is what makes the coverage
+      // property below provable rather than sampled.
+      const YESTERDAY = 1786060800 - 86400;
+      const offsetsOf = (targets: number[]) => targets.map((t) => (YESTERDAY - t) / 86400);
+
+      test("never targets yesterday itself — that day is rolled up separately", () => {
+        for (let d = 0; d < 40; d++) {
+          expect(offsetsOf(repairDayTargets(YESTERDAY, d, 30, 2))).not.toContain(0);
+        }
+      });
+
+      test("CONTROL: consecutive runs tile the ENTIRE window, missing no day", () => {
+        // retentionDays 31 -> span 30, count 2, gcd(2, 30) = 2. A stride-based
+        // rotation (offset += count each run) would visit only EVEN offsets
+        // here — half the window would never be re-checked, forever, and the
+        // bug would look fixed. This case exists to catch exactly that.
+        const span = 30;
+        const seen = new Set<number>();
+        for (let d = 0; d < span; d++) {
+          for (const o of offsetsOf(repairDayTargets(YESTERDAY, d, 31, 2))) seen.add(o);
+        }
+        expect(seen.size).toBe(span);
+        expect(Math.min(...seen)).toBe(1);
+        expect(Math.max(...seen)).toBe(span);
+      });
+
+      test("stays inside the retention window", () => {
+        for (let d = 0; d < 100; d++) {
+          for (const o of offsetsOf(repairDayTargets(YESTERDAY, d, 30, 3))) {
+            expect(o).toBeGreaterThanOrEqual(1);
+            expect(o).toBeLessThanOrEqual(29);
+          }
+        }
+      });
+
+      test("returns one target per requested day, and none when disabled", () => {
+        expect(repairDayTargets(YESTERDAY, 0, 30, 2)).toHaveLength(2);
+        expect(repairDayTargets(YESTERDAY, 0, 30, 0)).toHaveLength(0);
+      });
+    });
+
+    describe("rollupDaily — nightly repair sweep (COST-01 root cause)", () => {
+      const lateHourly = (dayStart: number, value: number) => ({
+        metric_type: "tokens_prompt",
+        period: "hourly",
+        bucket_start: dayStart + 3600,
+        value,
+        dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" },
+      });
+
+      test("rolls up a historical day whose hourly rows arrived AFTER that day passed", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const late = yesterday - 10 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [lateHourly(late, 777), lateHourly(yesterday, 5)],
+        });
+
+        // repairDays spans the window so the assertion does not depend on which
+        // days today's rotation happens to land on.
+        await (rollupDaily as any)._handler(ctx, { repairDays: 29 });
+
+        const lateDaily = tables.aggregates.filter(
+          (r) => r.period === "daily" && r.bucket_start === late
+        );
+        expect(lateDaily).toHaveLength(1);
+        expect(lateDaily[0].value).toBe(777);
+        // and yesterday is still rolled up as it always was
+        expect(
+          tables.aggregates.filter((r) => r.period === "daily" && r.bucket_start === yesterday)
+        ).toHaveLength(1);
+      });
+
+      test("CONTROL: with the sweep disabled the same late day is silently missed — the pre-fix behaviour", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const late = yesterday - 10 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [lateHourly(late, 777), lateHourly(yesterday, 5)],
+        });
+
+        // Identical fixture, one variable changed: no repair days.
+        await (rollupDaily as any)._handler(ctx, { repairDays: 0 });
+
+        expect(
+          tables.aggregates.filter((r) => r.period === "daily" && r.bucket_start === late)
+        ).toHaveLength(0);
+        expect(
+          tables.aggregates.filter((r) => r.period === "daily" && r.bucket_start === yesterday)
+        ).toHaveLength(1);
+      });
+
+      test("an explicit dayStart does NOT trigger the sweep", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const target = yesterday - 3 * 86400;
+        const other = yesterday - 4 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [lateHourly(target, 11), lateHourly(other, 22)],
+        });
+
+        await (rollupDaily as any)._handler(ctx, { dayStart: target, repairDays: 29 });
+
+        const daily = tables.aggregates.filter((r) => r.period === "daily");
+        expect(daily).toHaveLength(1);
+        expect(daily[0].bucket_start).toBe(target);
+      });
+
+      test("a failing sweep cannot fail the cron — yesterday's rollup still lands", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const { ctx, tables } = makeAggregatesCtx({ aggregates: [lateHourly(yesterday, 9)] });
+
+        // The sweep's first act is reading retention_days from agentConfigs.
+        // Blow that up, the way a syscall-cap timeout would.
+        const realQuery = (ctx.db as any).query.bind(ctx.db);
+        (ctx.db as any).query = (table: string) => {
+          if (table === "agentConfigs") throw new Error("simulated read failure");
+          return realQuery(table);
+        };
+
+        // Must resolve, not reject: a throw here would fail the whole cron
+        // execution and hand it to the retry-backoff loop that got three other
+        // crons disabled on 2026-07-14.
+        await expect((rollupDaily as any)._handler(ctx, {})).resolves.toBeUndefined();
+
+        const daily = tables.aggregates.filter(
+          (r) => r.period === "daily" && r.bucket_start === yesterday
+        );
+        expect(daily).toHaveLength(1);
+        expect(daily[0].value).toBe(9);
       });
     });
 

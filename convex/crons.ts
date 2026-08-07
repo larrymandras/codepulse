@@ -20,6 +20,15 @@ crons.interval(
 // Phase 5: Daily rollup at 01:00 UTC
 // COST-01: rollupDaily gained an optional `dayStart`; passing {} keeps the
 // cron on its default target (yesterday UTC midnight) unchanged.
+//
+// COST-01 root-cause fix (2026-08-07): on the default path this ALSO re-checks
+// a rotating slice of older days (DAILY_REPAIR_DAYS_PER_RUN), so an hourly row
+// written for an already-past day self-heals instead of never getting a daily
+// row. That is not hypothetical — Phase 104's backfillTokenSplit did exactly
+// that and the daily cost series read 3.3x low until it was repaired by hand.
+// The extra work is 2 indexed day-range reads per night and is wrapped in its
+// own try/catch inside the handler, so it can never fail this cron and trigger
+// the retry-backoff storm that got the three crons below disabled.
 crons.daily(
   "aggregate-daily",
   { hourUTC: 1, minuteUTC: 0 },

@@ -486,19 +486,118 @@ async function rollupOneDay(
   return inserted;
 }
 
+/**
+ * Retention window in days, from the SAME `agentConfigs["retention_days"]`
+ * source backfillTokenSplit uses. Extracted so the nightly repair sweep and the
+ * operator backfill cannot drift to two different floors.
+ */
+async function readRetentionDays(ctx: { db: any }): Promise<number> {
+  const retentionConfig = await ctx.db
+    .query("agentConfigs")
+    .withIndex("by_key", (q: any) => q.eq("configKey", "retention_days"))
+    .first();
+  return retentionConfig?.value != null ? Number(retentionConfig.value) : 30;
+}
+
+/**
+ * COST-01 root-cause fix (2026-08-07): which OLDER days tonight's rollup should
+ * re-check, in addition to yesterday.
+ *
+ * Why a rotation and not "just yesterday": rollupDaily only ever processed
+ * yesterday and never revisited a day, so any hourly row written for a day that
+ * had already passed never got a daily row — silently, and permanently. That is
+ * not hypothetical: Phase 104's backfillTokenSplit did exactly this, and the
+ * daily cost series read 3.3x low (measured $25.42 vs a true $83.90 over 30d)
+ * until it was repaired by hand. Re-checking a slice of the window every night
+ * means any future late write self-heals within one full sweep instead of
+ * needing a human to notice a number that looks plausible.
+ *
+ * `offset` walks CONTIGUOUS blocks of `count` days that advance by `count` each
+ * run, so consecutive runs tile the whole window regardless of whether `count`
+ * divides it evenly. (A stride-based rotation would silently cover only every
+ * gcd(count, span)-th day — e.g. count=2 over a 30-day span would revisit only
+ * even offsets, forever. The test asserts full coverage for exactly this
+ * reason.)
+ *
+ * Pure and exported so that coverage property is tested against explicit
+ * inputs, with no clock involved.
+ */
+export function repairDayTargets(
+  yesterday: number,
+  dayIndex: number,
+  retentionDays: number,
+  count: number
+): number[] {
+  // Offsets run 1..span days back from yesterday; yesterday itself (offset 0)
+  // is always rolled up separately, so it is excluded here.
+  const span = Math.max(1, Math.floor(retentionDays) - 1);
+  const n = Math.max(0, Math.floor(count));
+  const targets: number[] = [];
+  for (let i = 0; i < n && i < span; i++) {
+    const offset = ((dayIndex * n + i) % span) + 1;
+    targets.push(yesterday - offset * 86400);
+  }
+  return targets;
+}
+
+/** How many older days each nightly run re-checks. See the try/catch note below. */
+const DAILY_REPAIR_DAYS_PER_RUN = 2;
+
 export const rollupDaily = internalMutation({
   // COST-01: `dayStart` is optional and defaults to yesterday, so the 01:00 UTC
   // cron entry in convex/crons.ts keeps calling this with no args and behaves
   // exactly as before. The arg exists so a specific historical day can be
   // rolled up on demand — see backfillDailyRollup below.
-  args: { dayStart: v.optional(v.float64()) },
+  args: {
+    dayStart: v.optional(v.float64()),
+    repairDays: v.optional(v.float64()),
+  },
   handler: async (ctx, args) => {
     // `args?.` not `args.`: Convex always passes an args object in production,
     // but the fake-ctx tests invoke this raw handler as _handler(ctx) with none
     // — which is exactly how the cron's zero-arg call reads. Tolerating both
     // keeps those tests exercising the real cron path instead of a rewritten one.
-    const dayStart = args?.dayStart ?? yesterdayUtcMidnight();
+    const explicitDay = args?.dayStart;
+    const dayStart = explicitDay ?? yesterdayUtcMidnight();
     await rollupOneDay(ctx, dayStart);
+
+    // An explicit dayStart means "roll up exactly this day" (that is how
+    // backfillDailyRollup and the operator both drive it), so the sweep is
+    // scoped to the default cron path only — otherwise the backfill would
+    // recursively re-sweep on every one of its own day steps.
+    if (explicitDay != null) return;
+
+    // The try/catch is MANDATORY, not defensive boilerplate — same reasoning as
+    // the budget-eval tail in computeHourly above (D-14): a throw here would
+    // fail the whole cron execution, which then retries on its own backoff and
+    // produces exactly the retry-storm that got three other crons disabled on
+    // 2026-07-14 (see convex/crons.ts). Yesterday's rollup has already been
+    // written by this point, so a failed repair sweep degrades to the old
+    // behaviour rather than losing the night's real work.
+    try {
+      const retentionDays = await readRetentionDays(ctx);
+      const targets = repairDayTargets(
+        dayStart,
+        Math.floor(Date.now() / 1000 / 86400),
+        retentionDays,
+        args?.repairDays ?? DAILY_REPAIR_DAYS_PER_RUN
+      );
+      let repaired = 0;
+      for (const day of targets) {
+        repaired += await rollupOneDay(ctx, day);
+      }
+      // Only log when the sweep actually FOUND something. A silent repair would
+      // hide the very condition this exists to catch, and a line every night
+      // saying "0" trains you to ignore it.
+      if (repaired > 0) {
+        console.warn(
+          `[rollupDaily] repair sweep inserted ${repaired} missing daily row(s) for ` +
+            `${targets.join(", ")} — a late hourly write had left these days short.`
+        );
+      }
+    } catch (err) {
+      console.warn("[rollupDaily] repair sweep failed:", (err as Error).message);
+    }
   },
 });
 
@@ -547,12 +646,34 @@ export const backfillDailyRollup = internalMutation({
     // Insert-only cursor: last row (ascending _creationTime) is current.
     const cursorRow = cursorRows.length > 0 ? cursorRows[cursorRows.length - 1] : null;
 
-    if (cursorRow?.value === "done") {
-      return { daysProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true };
-    }
-
+    // COST-01 follow-up (2026-08-07): this cursor used to LATCH. A completed
+    // sweep persisted the string "done", and the handler's first act was to
+    // return early on it — so the repair tool was single-use. Once it had run,
+    // it reported `done: true` and `rowsInserted: 0` forever while doing
+    // nothing, which is the same silent-under-report failure this whole fix
+    // exists to eliminate, one level up: the tool you reach for to check
+    // whether daily rows are missing would answer "all good" without looking.
+    //
+    // A finished sweep now RESETS to yesterday instead of latching, so the next
+    // invocation starts a fresh pass. `done: true` is still returned, so an
+    // operator loop that repeats "until done" still terminates after one pass.
+    //
+    // Reading a legacy "done" (or any non-finite value) as "start fresh" is
+    // deliberate: it un-sticks the row already sitting in the live DB from the
+    // first run, with no hand-editing of agentConfigs.
+    const yesterday = yesterdayUtcMidnight();
+    const rawCursor = cursorRow?.value;
     let cursor: number =
-      cursorRow?.value != null ? Number(cursorRow.value) : yesterdayUtcMidnight();
+      rawCursor == null || rawCursor === "done" || !Number.isFinite(Number(rawCursor))
+        ? yesterday
+        : Number(rawCursor);
+
+    // A cursor outside the window is meaningless — restart the sweep rather
+    // than walking days that can never be rolled up. (Retention shrinking, or a
+    // resumed cursor going stale across days, both land here.)
+    if (cursor > yesterday || cursor < retentionFloorDay) {
+      cursor = yesterday;
+    }
 
     let daysProcessed = 0;
     let rowsInserted = 0;
@@ -572,7 +693,9 @@ export const backfillDailyRollup = internalMutation({
       done = true;
     }
 
-    const nextCursorValue: number | "done" = done ? "done" : cursor;
+    // Reset-on-completion, never latch — see the cursor note above. `done` is
+    // still reported so a "repeat until done" operator loop terminates.
+    const nextCursorValue: number = done ? yesterday : cursor;
     await ctx.db.insert("agentConfigs", {
       configKey: DAILY_ROLLUP_BACKFILL_CURSOR_KEY,
       value: nextCursorValue,
