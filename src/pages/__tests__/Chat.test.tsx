@@ -54,9 +54,19 @@ vi.mock("@/hooks/useTtsPlayback", () => ({
 // calls useQuery(api.inbox.listAll) -- an empty array is sufficient, this
 // suite doesn't exercise the focus-exit toast itself (see
 // FocusExitDigest.test.tsx for that coverage).
+// 188.3-08 pre-flight: Chat also renders <VitalsRail />, whose useLlmMetrics
+// (src/hooks/useLlmMetrics.ts:5) calls usePaginatedQuery. Without it on the
+// mock, VitalsRail threw on every render here and was swallowed by
+// SectionErrorBoundary -- so the Vitals section silently rendered its error
+// fallback in this whole suite rather than the real component.
 vi.mock("convex/react", () => ({
   useMutation: vi.fn(() => vi.fn()),
   useQuery: vi.fn(() => []),
+  usePaginatedQuery: vi.fn(() => ({
+    results: [],
+    status: "Exhausted",
+    loadMore: vi.fn(),
+  })),
 }));
 
 vi.mock("sonner", () => ({
@@ -83,12 +93,23 @@ function getRunBlocksCallback(): ((event: Record<string, unknown>) => void) | nu
   return null;
 }
 
+// 188.3-06 (D-10/D-11) added a session gate to the run.blocks handler
+// (useAstridrChat.ts:306): `!payload.session_id || payload.session_id ===
+// lastSessionRef.current`. lastSessionRef is assigned ONLY in the sendCommand
+// ack path (useAstridrChat.ts:228), and this page-level suite never sends a
+// message -- so it stays null and any session_id here is dropped as foreign.
+// These fixtures deliberately omit session_id, exercising the gate's
+// documented fail-open carve-out (the real control-verb fast-path shape).
+// The gate's own matched/foreign coverage lives by name in
+// useAstridrChat.test.ts: BLOCKS-FOREIGN, CTRL-BLOCKS-NO-SESSION,
+// CTRL-BLOCKS-AFTER-COMPLETED. Do not re-add session_id without also priming
+// lastSessionRef the way that suite does (mockSendCommand resolving
+// { status: "ok", session_id } followed by a real send).
 function injectApprovalBlock(requestId: string, extra: Record<string, unknown> = {}) {
   const cb = getRunBlocksCallback();
   if (!cb) throw new Error("run.blocks subscription not found");
   act(() => {
     cb({
-      session_id: "sess-1",
       blocks: [
         {
           type: "approval",
@@ -110,12 +131,12 @@ function injectResolutionBlock(requestId: string, status: "approved" | "rejected
 }
 
 /** Inject a non-approval block (e.g. markdown) to verify it's never update-matched. */
+/** session_id omitted for the same reason as injectApprovalBlock above (188.3-06 gate). */
 function injectMarkdownBlock(content: string) {
   const cb = getRunBlocksCallback();
   if (!cb) throw new Error("run.blocks subscription not found");
   act(() => {
     cb({
-      session_id: "sess-1",
       blocks: [
         {
           type: "markdown",
