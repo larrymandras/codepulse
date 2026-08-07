@@ -34,6 +34,7 @@
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { SWAP_HISTORY_CAP, type SwapHistoryRow } from "@/hooks/useControlVerbSwaps";
 import type { CatalogueEntry } from "@/lib/brainsApi";
 import {
   GLOBAL_SWAP_CONFIRM_TIMEOUT_MS,
@@ -83,6 +84,19 @@ vi.mock("sonner", () => ({
     error: vi.fn(),
   }),
 }));
+
+// D-15 (108-06): only `useControlVerbSwaps` (the useQuery-backed read) is mocked, the SAME shape
+// as `BrainHeaderBadge.test.tsx` mocking `useActiveEngine` — `filterBrainSwaps`/
+// `describeSwapOutcome`/`SWAP_HISTORY_CAP` stay REAL (via `importOriginal`) so these tests exercise
+// the real filter/outcome logic together with the real render, not a hand-copied mirror of either.
+const mockUseControlVerbSwaps = vi.fn<(profileId: string | undefined) => SwapHistoryRow[]>();
+vi.mock("@/hooks/useControlVerbSwaps", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useControlVerbSwaps")>();
+  return {
+    ...actual,
+    useControlVerbSwaps: (profileId: string | undefined) => mockUseControlVerbSwaps(profileId),
+  };
+});
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -224,6 +238,10 @@ beforeEach(() => {
   mockDispatchSwap.mockReset();
   mockToastFn.mockReset();
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
+  // D-15: honest-empty default, matching what the real hook returns when GlobalSwapModal's
+  // genuinely-global `profileId={undefined}` call skips the query.
+  mockUseControlVerbSwaps.mockReset();
+  mockUseControlVerbSwaps.mockReturnValue([]);
 });
 
 // ─── Confirm state ────────────────────────────────────────────────────────────
@@ -1320,5 +1338,154 @@ describe("GlobalSwapModal — a failed action's row-list header stays honest (UA
     expect(
       screen.queryByText("Profiles unchanged — still on their prior engine:")
     ).not.toBeInTheDocument();
+  });
+});
+
+// ─── Swap-history section (D-15, TELE-02, 108-06) ─────────────────────────────
+//
+// GlobalSwapModal is the ALL-PROFILES axis (103-CONTRACT.md §8) — it has no single profile to
+// scope a history read by, so `SwapHistorySection` always calls `useControlVerbSwaps(undefined)`.
+// These tests mock `useControlVerbSwaps` directly (the same pattern `BrainHeaderBadge.test.tsx`
+// uses for `useActiveEngine`) so the row-rendering/filtering/truncation logic is provable
+// independent of that fact, and one test below asserts the `undefined` call directly.
+
+const SWAP_SUCCESS_ROW: SwapHistoryRow = {
+  _id: "row-success",
+  verb: "swap_model",
+  target: "anthropic-sonnet-5",
+  resolved: "anthropic-sonnet-5",
+  path: "claude-native",
+  channel: "chat",
+  timestamp: 1754530300,
+};
+
+const SWAP_REFUSED_ROW: SwapHistoryRow = {
+  _id: "row-refused",
+  verb: "swap_model",
+  target: "anthropic-opus-4-8",
+  path: "refused",
+  reason: "affinity_guard",
+  channel: "chat",
+  timestamp: 1754530200,
+};
+
+const SWAP_VOICE_ROW: SwapHistoryRow = {
+  _id: "row-voice",
+  verb: "swap_voice",
+  voiceId: "voice-warm",
+  resolved: "voice-warm",
+  path: "claude-native",
+  channel: "voice",
+  timestamp: 1754530400,
+};
+
+describe("GlobalSwapModal swap-history section (D-15, TELE-02)", () => {
+  it("renders a success and a refusal, and the refusal reads as a refusal (T-108-24) — asserted on rendered text, not a prop", () => {
+    mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText("Switched")).toBeInTheDocument();
+    const refusedRow = screen.getByText("Refused — affinity_guard").closest("div");
+    expect(refusedRow).not.toBeNull();
+    expect(refusedRow!.textContent).toContain("anthropic-opus-4-8");
+    // The two outcomes are on separate rows, not merged into one ambiguous line.
+    expect(refusedRow!.textContent).not.toContain("Switched");
+  });
+
+  it("renders an honest empty message and no history rows when there is nothing to show (covers both a genuinely-global call and a real profile with zero rows)", () => {
+    mockUseControlVerbSwaps.mockReturnValue([]);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
+    expect(screen.queryByText("Switched")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Refused/)).not.toBeInTheDocument();
+  });
+
+  it("renders the truncation caption from the imported SWAP_HISTORY_CAP constant and caps the rendered rows at it, never a hardcoded 20", () => {
+    const manyRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP + 5 }, (_, i) => ({
+      ...SWAP_SUCCESS_ROW,
+      _id: `row-${i}`,
+      timestamp: SWAP_SUCCESS_ROW.timestamp + i,
+    }));
+    mockUseControlVerbSwaps.mockReturnValue(manyRows);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
+    expect(screen.getAllByText("Switched")).toHaveLength(SWAP_HISTORY_CAP);
+  });
+
+  it("does not render a swap_voice row — the D-15 brain-only filter guard", () => {
+    mockUseControlVerbSwaps.mockReturnValue([SWAP_VOICE_ROW]);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
+    expect(screen.queryByText("voice-warm")).not.toBeInTheDocument();
+  });
+
+  it("queries with no profile scope — GlobalSwapModal is genuinely global and never invents a profileId (108-06-PLAN.md's own stated fallback)", () => {
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(mockUseControlVerbSwaps).toHaveBeenCalledWith(undefined);
+  });
+
+  it("wraps the section in SectionErrorBoundary so a failing history read cannot take down the rest of the confirm dialog", () => {
+    mockUseControlVerbSwaps.mockImplementation(() => {
+      throw new Error("simulated swap-history read failure");
+    });
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    // The rest of the confirm dialog — including the profile row list — survives.
+    expect(screen.getByText(`Swap all profiles to ${TARGET_NORMAL.name}?`)).toBeInTheDocument();
+    for (const p of THREE_PROFILES) {
+      expect(screen.getByText(p.displayName!)).toBeInTheDocument();
+    }
   });
 });

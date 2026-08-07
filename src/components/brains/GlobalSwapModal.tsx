@@ -50,6 +50,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, Check, Pin, X } from "lucide-react";
 import { toast } from "sonner";
+import SectionErrorBoundary from "@/components/SectionErrorBoundary";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -59,6 +60,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCommandDispatch } from "@/hooks/useCommandDispatch";
+import {
+  describeSwapOutcome,
+  filterBrainSwaps,
+  SWAP_HISTORY_CAP,
+  useControlVerbSwaps,
+} from "@/hooks/useControlVerbSwaps";
 import { useGlobalBrainOverride } from "@/hooks/useResolvedBrain";
 import type { CatalogueEntry } from "@/lib/brainsApi";
 
@@ -216,6 +223,83 @@ function describeOutcome(
         ? `Failed — ${outcome.reason}. Every profile is still on its prior engine.`
         : `Revert failed — ${outcome.reason}. The global override may still be in force.`;
   }
+}
+
+/** D-15: `timestamp` on a `controlVerbSwaps` row is epoch SECONDS
+ * (`runtimeIngest.ts`'s `now = Date.now() / 1000`), never milliseconds — multiply before handing
+ * to `Date`. Short clock-time only; the row list is capped at `SWAP_HISTORY_CAP` so a full date is
+ * rarely needed to disambiguate. */
+function formatSwapTime(timestampSeconds: number): string {
+  return new Date(timestampSeconds * 1000).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * SwapHistorySection — D-15's readout, rendered inside `GlobalSwapModal`'s confirm phase.
+ * Filters to `verb === "swap_model"` (brain) rows via `filterBrainSwaps`; the `swap_voice` rows
+ * D-14 captures stay captured but unsurfaced here (108-CONTEXT.md "Deferred Ideas").
+ *
+ * `profileId` is always `undefined` at this component's only call site: `GlobalSwapModal` is the
+ * ALL-PROFILES axis (103-CONTRACT.md §8 — one live `swap.set` command touches every profile, there
+ * is no single profile this dialog is scoped to), so per 108-06-PLAN.md's own stated fallback this
+ * renders the honest empty state rather than inventing a profile to query. Because
+ * `useControlVerbSwaps` skips the query outright when `profileId` is `undefined` (never fabricates
+ * a read), "genuinely global, nothing to scope by" and "a real profile with zero rows so far" are
+ * the SAME honest-empty render path here — neither is worded to claim a profile scope that does
+ * not exist. `profileId` stays a real parameter (not hardcoded away) so a future per-profile
+ * surface can reuse this same section with a real id.
+ *
+ * `.slice(0, SWAP_HISTORY_CAP)` is a client-side belt-and-suspenders bound on top of the query's
+ * own server-side `.take(SWAP_HISTORY_CAP)` (convex/controlVerbSwaps.ts) — it guarantees the
+ * on-screen "Showing the last N swaps" caption can never be a lie about what's rendered, even if
+ * the read path above it changes.
+ */
+function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
+  const rows = useControlVerbSwaps(profileId);
+  const brainSwaps = filterBrainSwaps(rows).slice(0, SWAP_HISTORY_CAP);
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
+      <p className="text-xs text-muted-foreground">Recent swaps</p>
+      {brainSwaps.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No swap history to show yet.</p>
+      ) : (
+        <>
+          {brainSwaps.map((row) => {
+            const outcome = describeSwapOutcome(row);
+            return (
+              <div key={row._id} className="flex items-center gap-2 text-sm">
+                {outcome.kind === "refused" ? (
+                  <X className="h-4 w-4 shrink-0 text-(--status-error)" aria-hidden="true" />
+                ) : outcome.kind === "unresolved" ? (
+                  <AlertTriangle
+                    className="h-4 w-4 shrink-0 text-(--status-warn)"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  // "success" and "restore" both read as the OK token — neither is a refusal
+                  // and neither leaves the outcome ambiguous the way "unresolved" does.
+                  <Check className="h-4 w-4 shrink-0 text-(--status-ok)" aria-hidden="true" />
+                )}
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {formatSwapTime(row.timestamp)}
+                </span>
+                <span className="flex-1">
+                  {row.target ?? "—"} → {row.resolved ?? "—"}
+                </span>
+                <span className="text-muted-foreground">{outcome.label}</span>
+              </div>
+            );
+          })}
+          <p className="text-xs text-muted-foreground">
+            Showing the last {SWAP_HISTORY_CAP} swaps
+          </p>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function GlobalSwapModal({
@@ -513,6 +597,12 @@ export function GlobalSwapModal({
                   </div>
                 ))}
               </div>
+              {/* D-15 (TELE-02): "what did I last switch this to, and did it take?" — hosted here
+                  rather than a new page/route (108-CONTEXT.md D-15). Wrapped so a failure reading
+                  swap history can never take the whole confirm dialog down with it. */}
+              <SectionErrorBoundary name="Swap history">
+                <SwapHistorySection profileId={undefined} />
+              </SectionErrorBoundary>
             </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
