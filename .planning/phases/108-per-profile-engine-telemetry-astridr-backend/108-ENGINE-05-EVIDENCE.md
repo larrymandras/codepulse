@@ -883,3 +883,294 @@ type (array vs. the schema's `v.optional(v.string())`) was never exercised by th
 own root-cause trace, because the session_id rejection fired first and masked it on every attempt.
 This is a genuine second gap, not a re-discovery of the first one.
 
+---
+
+## Second re-proof — providerAffinity array gap closed (2026-08-07, continuation)
+
+**Objective:** close the SECOND gap found above (`providerAffinity` modelled as a scalar while the
+emitter sends `list[str]`), deploy codepulse's Convex backend ONLY (no astridr rebuild, no
+`docker compose` — astridr already sends the correct shape), and re-prove the scoped + unscoped
+swap-history axis end-to-end. Fix commit: `b43fbca8` (`fix(108-07): model providerAffinity as an
+array, matching the emitter's list[str]`), codepulse `master`.
+
+### Fix
+
+- `convex/schema.ts` / `convex/controlVerbSwaps.ts`: `providerAffinity` changed from
+  `v.optional(v.string())` to `v.optional(v.array(v.string()))`.
+- `convex/runtimeIngest.ts`: new `isOptionalStringArray` guard (`undefined`/`null`/`string[]`,
+  matching the existing `isOptionalString`/`isOptionalNumber` null-as-absent idiom exactly), used
+  at the `providerAffinity` check in `resolveControlVerbSwapEvent`; the resolved-event interface's
+  `providerAffinity` field retyped `string[] | undefined`.
+- `src/hooks/useControlVerbSwaps.ts`: `SwapHistoryRow.providerAffinity` retyped `string[]`.
+  Repo-wide grep (`grep -rn providerAffinity src/`) confirmed **nothing renders this field today**
+  — `describeSwapOutcome`, `filterBrainSwaps`, and `GlobalSwapModal.tsx` never read it — so no
+  component code needed updating, only the type declaration.
+
+### Defect-class sweep — MANDATORY, full field-by-field table
+
+**Pattern, stated abstractly:** a Convex column/validator whose declared type disagrees with the
+type the astridr emitter actually sends for that field. Every field on `controlVerbSwaps` and
+`activeEngineSnapshots` was walked back to its real emit site in
+`astridr/engine/control_verbs/swap_model.py`, `swap_voice.py`, and `astridr/providers/router.py`
+(read directly, not inferred from plan prose).
+
+**`controlVerbSwaps`:**
+
+| Field | Convex validator | Producer type (astridr) | Emit site | Verdict |
+|---|---|---|---|---|
+| `verb` | `v.string()` (required) | Python `str` literal `"swap_model"`/`"swap_voice"` | `swap_model.py:457,483`; `swap_voice.py:211,232` | **Match** |
+| `target` | `v.optional(v.string())` | `str \| None` (`args.get("target","")` on the swap branch, explicit `None` on restore) | `swap_model.py:458,484`; `swap_voice.py:212,233` | **Match** |
+| `resolved` | `v.optional(v.string())` | `str \| None` (`ResolveOutcome.resolved`/`.name`) | `swap_model.py:459,485`; `swap_voice.py:213,234` | **Match** |
+| `providerAffinity` | was `v.optional(v.string())`, now `v.optional(v.array(v.string()))` | `list[str] \| None` — `get_provider_affinity()` returns `list[str] \| None`; every element is a literal `str` from `MODEL_PROVIDER_AFFINITY`/`MODEL_PROVIDER_FALLBACK` dict values (`model_defaults.py:125-150`, all string literals, no non-string elements possible) | `swap_model.py:126,394,409,460,486` | **FIXED this round** — was a scalar/array mismatch |
+| `voiceId` | `v.optional(v.string())` | `str \| None` (`outcome.voice_id`) | `swap_voice.py:214,235` — never sent by `swap_model.py` (field absent, not wrong-typed) | **Match** |
+| `path` | `v.string()` (required) | Python `str` literal (`"claude-native"`/`"openrouter"`/`"refused"`/`"restore"`) | `swap_model.py:461,487`; `swap_voice.py:215,236` | **Match** |
+| `reason` | `v.optional(v.string())` | `str \| None` (`outcome.reason`) — `swap_voice.py` never sends this field at all (absent, not wrong-typed) | `swap_model.py:488,505-506` | **Match** |
+| `scope` | `v.optional(v.string())` | `str \| None` (`profile_id = args.get("profile_id") or None`) — `swap_voice.py` deliberately never sends this key (no per-profile concept for voice; see its own code comment) | `swap_model.py:441,464,491` | **Match** |
+| `sessionId` | `v.optional(v.string())` | `str \| None` (`ControlVerbContext.session_id: str \| None`) | `registry.py:49`; forwarded verbatim at every emit site | **Match** (the session_id-null gap was a runtimeIngest-side `null`-vs-`undefined` handling bug, already fixed in the first re-proof — the *type* itself was always correct) |
+| `channel` | `v.string()` (required) | `str` (`ControlVerbContext.channel: str`, non-optional) | same | **Match** |
+| `timestamp` | `v.float64()` (required) | assigned by the Convex ingest handler (`runtimeIngest.ts`'s `evt.timestamp ?? now`), not by astridr's payload directly | n/a | **Match** (not an astridr-emitted field) |
+
+**`activeEngineSnapshots`:**
+
+| Field | Convex validator | Producer type (astridr) | Emit site | Verdict |
+|---|---|---|---|---|
+| `profileId` | `v.string()` (required) | `str` (`get_profile_context()`, guarded non-empty before emit) | `router.py:493-494,553` | **Match** |
+| `model` | `v.string()` (required) | `str` (`resolved_model`, guarded non-`None`/non-empty before emit — `router.py:505-523`) | `router.py:554` | **Match** |
+| `mode` | `v.string()` (required) | `str` literal, derived once via `_MODE_BY_SELECTION_PATH.get(selection_path, "inherited")` | `router.py:533,556` | **Match** |
+| `selectionPath` | `v.optional(v.string())` | `str` (always present on every live emit — `selection_path` is a required, non-optional parameter of `_emit_model_routing`) | `router.py:555` | **Match** (schema's optionality is a superset of what's ever sent — not a mismatch, just permissive) |
+| `expiresAt` | `v.optional(v.float64())` | **never sent** — `router.py:139` explicitly documents this is "deliberately unused here (D-06): deferred, not dropped" | n/a | **Match** — confirmed intentional, not a live gap |
+
+**No new mismatches found.** `providerAffinity` was the only field wrong on either table; every
+other field's Convex validator already agreed with its real astridr producer type before this
+round started.
+
+### Pre-deploy check — shared checkout
+
+```bash
+git status --porcelain convex/
+```
+Immediately before deploying: clean (no foreign uncommitted `convex/` files). A concurrent
+session's COST-01 rollup-repair work (`convex/aggregates.ts`/`.test.ts`) had briefly shown dirty
+mid-session (observed once, during this executor's own `npx convex codegen` run) but was committed
+by that other session (`25d39c39 fix(COST-01): close the daily-rollup gap at its root...`) before
+this executor staged or deployed anything — verified via `git log --oneline -- convex/aggregates.ts`.
+No foreign work went out in this deploy; the working tree held only this fix's own commit
+(`b43fbca8`).
+
+### Tests — mutation-verified
+
+Full targeted suite green: `npx vitest run convex/controlVerbSwaps.test.ts
+convex/runtimeIngest.test.ts src/hooks/useControlVerbSwaps.test.ts
+src/components/brains/GlobalSwapModal.test.tsx` → **146/146 passed**.
+
+`npx tsc --noEmit` → clean, no output.
+
+**MUTATION-VERIFY (RED confirmed):** reverted `runtimeIngest.ts`'s `providerAffinity` check from
+`isOptionalStringArray` back to `isOptionalString` (backup via `cp`, not `git checkout --`), reran
+the two new regression tests:
+
+```
+FAIL  convex/runtimeIngest.test.ts > 108-07 fix 2 — providerAffinity is modelled as an array, matching the emitter's real list[str] > resolves a real success payload with an array-valued providerAffinity (previously silently refused)
+AssertionError: expected null not to be null
+FAIL  convex/runtimeIngest.test.ts > 108-07 fix 2 — providerAffinity is modelled as an array, matching the emitter's real list[str] > still refuses a non-array, non-null providerAffinity (regression lock — a plain string, the PRE-FIX shape, must not silently resolve again)
+AssertionError: expected { verb: 'swap_model', …(10) } to be null
+Test Files  1 failed (1)
+     Tests  2 failed | 6 passed | 75 skipped (83)
+```
+Both new tests went RED against the pre-fix guard, as expected. Restored via `cp
+runtimeIngest.ts.bak runtimeIngest.ts`, reran → **8/8 passed** (green again).
+
+**Full-suite ground truth (isolated worktree, node_modules junctioned, removed after):**
+`npx vitest run` at commit `b43fbca8` → **280/297 test files passed (17 skipped), 3613/3806 tests
+passed (193 todo), 0 failed.** `npx tsc --noEmit` clean in the same worktree. (Prior baseline
+recorded in the plan dispatch — 279 files/3585 tests — has drifted upward because other sessions'
+commits, including COST-01's new test coverage and this fix's own new tests, landed on `master`
+since that number was recorded; the load-bearing number is **0 failed**, confirmed.)
+
+### Deploy
+
+```bash
+npx convex deploy --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" --yes
+```
+Raw output (tail): `✔ Deployed Convex functions to http://127.0.0.1:3210`. No astridr rebuild, no
+`docker compose` command run — `astridr-agent` (Up, healthy) was untouched this round, per the
+plan's explicit consent scope. This fix is entirely codepulse-side; astridr already emits the
+correct `list[str]` shape (confirmed live in every payload pasted below).
+
+### Freshness / `skipped` counter control
+
+Direct in-container curl reproduction (key read from `$ASTRIDR_INGEST_API_KEY` inside
+`astridr-agent`, never echoed), POSTing a payload byte-shaped exactly like a real success-path
+swap (array `provider_affinity`) to the internal Docker-network Convex endpoint:
+
+```bash
+docker exec astridr-agent sh -c 'curl -s -X POST http://convex-backend:3211/runtime-ingest \
+  -H "Content-Type: application/json" -H "Authorization: Bearer $ASTRIDR_INGEST_API_KEY" \
+  -d "{\"eventType\":\"control_verb_swap\",\"data\":{\"verb\":\"swap_model\",\"path\":\"108-07r2-array-repro\",\"channel\":\"codepulse-control-center\",\"session_id\":null,\"scope\":\"__108-07r2-array-repro__\",\"target\":\"opus\",\"resolved\":\"claude-opus-4-8\",\"provider_affinity\":[\"anthropic_advisor\",\"anthropic_direct\"],\"reason\":null}}"'
+```
+Raw response: **`{"ingested":1,"dropped":0,"skipped":0}`** — `skipped:0` for the exact payload
+shape (`44` bytes different from the first re-proof's `{"ingested":1,"dropped":0,"skipped":1}`
+reproduction of the same shape, before the fix — direct before/after contrast on the identical
+probe). Read-back confirms the row landed with `providerAffinity` as a real array, untouched:
+```json
+[{"_id":"ms7he1sd439cse5q49t956tt0n8c17wv","channel":"codepulse-control-center","path":"108-07r2-array-repro","providerAffinity":["anthropic_advisor","anthropic_direct"],"resolved":"claude-opus-4-8","scope":"__108-07r2-array-repro__","target":"opus","timestamp":1786120411.331,"verb":"swap_model"}]
+```
+
+### Baseline (before-contrast)
+
+```json
+// controlVerbSwaps:listByScope {"profileId":"consulting"} — one stale row from a prior session's proof
+[{"_id":"ms7s05100m6754xzh5c73dg0q58c0qvj","channel":"codepulse-control-center","path":"restore","scope":"consulting","timestamp":1786119087.9178562,"verb":"swap_model"}]
+// controlVerbSwaps:listByScope {"profileId":"personal"} — []
+// activeEngine:latestByProfile — consulting pinned claude-opus-4-8 (profile-swap-override),
+// business pinned claude-haiku-4-5-20251001 (global-swap-override), personal boot-seed default.
+```
+These `consulting`/`business` pins are leftover `activeEngineSnapshots` rows from the PRIOR proof
+round in this same evidence file (Step 6/7 of the "Re-proof after gap closure" section above) —
+documented there as expected/non-defect: `activeEngineSnapshots` does not gain a fresh row on
+restore-to-default (D-02's guard), so the table stays visually stale even though the live engine
+was already proven restored to `claude-sonnet-5` by that round's own confirming turns. Not a live
+regression; re-confirmed restored again at the end of this round below, this time with **fresh**
+rows (see Step: distinct-model supplementary round).
+
+### WS client — real swap.set / chat.send commands
+
+Run inside `astridr-agent` (`ws://localhost:8181/ws/telemetry`, `Authorization: Bearer
+$ASTRIDR_WEB_API_KEY` read from `os.environ`, never printed), `websockets` 16.0 (already present,
+no install).
+
+**Scoped `swap.set` for `consulting` → opus:**
+```json
+{"type": "ack", "request_id": "108r2-scoped", "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Opus 4 8.", "target": "brain"}
+```
+Live `control_verb_swap` fan-out (same WS connection):
+```json
+{"event_type": "control_verb_swap", "data": {"verb": "swap_model", "target": "opus", "resolved": "claude-opus-4-8", "provider_affinity": ["anthropic_advisor", "anthropic_direct", "gemini", "grok", "gemini_openrouter", "openrouter"], "path": "claude-native", "reason": null, "session_id": null, "channel": "codepulse-control-center", "scope": "consulting"}, "timestamp": 1786120294.1927876}
+```
+Confirming turn (`chat.send`, profile `consulting`): `run.completed` → `{"final_text": "OK", "model": "claude-opus-4-8"}` — ran on the swapped model.
+
+**Unscoped `swap.set` → haiku:**
+```json
+{"type": "ack", "request_id": "108r2-global", "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Haiku 4 5 20251001.", "target": "brain"}
+```
+Live fan-out: `{"verb": "swap_model", "target": "haiku", "resolved": "claude-haiku-4-5-20251001", "provider_affinity": [...6 entries...], "path": "claude-native", "session_id": null, "channel": "codepulse-control-center", "scope": null}`. Confirming turn (`chat.send`, profile `business`): `run.completed` → `{"final_text": "OK.", "model": "claude-haiku-4-5-20251001"}`.
+
+### Assertion (c) — scoped-swap row, RAW ROW pasted first, verdict after
+
+```bash
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"consulting"}'
+```
+```json
+{
+  "_creationTime": 1786120295235.0796,
+  "_id": "ms7p1nbx10pcveeam73d2jhvpx8c1brj",
+  "channel": "codepulse-control-center",
+  "path": "claude-native",
+  "providerAffinity": ["anthropic_advisor", "anthropic_direct", "gemini", "grok", "gemini_openrouter", "openrouter"],
+  "resolved": "claude-opus-4-8",
+  "scope": "consulting",
+  "target": "opus",
+  "timestamp": 1786120294.1927876,
+  "verb": "swap_model"
+}
+```
+**VERDICT — PASS.** `verb == "swap_model"` ✓, `scope == "consulting"` ✓, `path == "claude-native"`
+(a real success path, not `"refused"`/`"restore"`) ✓, `providerAffinity` present **as an array**
+(6 elements, every element a string) ✓. This is the exact row class that was silently refused in
+both prior proof rounds.
+
+### Assertion (f) — unscoped-swap row, scope absent, RAW ROW pasted first, verdict after
+
+From the same-window full-table dump (`npx convex data controlVerbSwaps ...`):
+```
+"ms7qn3se74akc6ny7z61g1f7wx8c13hv" | 1786120308841.1958 | "codepulse-control-center" | "claude-native" | ["anthropic_advisor", "anthropic_direct", "gemini", "grok", "gemini_openrouter", "openrouter"] | "claude-haiku-4-5-20251001" | <scope column empty> | "haiku" | 1786120302.024124 | "swap_model"
+```
+**VERDICT — PASS.** `verb == "swap_model"` ✓, `scope` column is **empty/absent** (not the string
+`"business"` or any other value — the unscoped swap correctly carries no scope, exactly as D-13's
+schema comment specifies) ✓, `path == "claude-native"` (success) ✓, `providerAffinity` present as
+an array ✓. `controlVerbSwaps:listByScope {"profileId":"business"}` correctly returns `[]` for this
+row (it queries `by_scope` on `"business"`, which this row does not carry — the row is unscoped by
+design, matching `swap_voice.py`'s own "no per-profile concept" precedent for the analogous case).
+
+### Assertion (e) — core engine axis, no regression (distinct-model supplementary round)
+
+The first swap round above reused the exact same target models (`opus`/`haiku`) as a **prior
+session's leftover pin**, which triggered `router.py`'s D-09 emit-on-change dedup
+(`_last_routing_emit` cache, in-process, never invalidated by a restore-to-default which itself
+skips emitting per D-02) — no *new* `activeEngineSnapshots` row was produced for either profile,
+even though the live turns above already proved the actual model resolution worked. To get an
+unambiguous fresh-row proof, a second scoped+unscoped round was run with target models distinct
+from anything cached (`consulting → fable`, global `→ opus`):
+
+Live `model_routing` telemetry captured directly over the same WS connection (not inferred):
+```json
+{"event_type": "model_routing", "data": {"status": "success", "profileId": "consulting", "model": "claude-fable-5", "selectionPath": "profile-swap-override", "mode": "pinned", ...}, "timestamp": 1786120507.3983033}
+{"event_type": "model_routing", "data": {"status": "success", "profileId": "business", "model": "claude-opus-4-8", "selectionPath": "global-swap-override", "mode": "pinned", ...}, "timestamp": 1786120515.2819335}
+```
+
+```bash
+npx convex run activeEngine:latestByProfile --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"
+```
+```json
+[
+  {"_id": "m97q5215tzz3s5c27wmpjv71qd8c08aa", "mode": "pinned", "model": "claude-opus-4-8", "profileId": "business", "selectionPath": "global-swap-override", "timestamp": 1786120515.2819335},
+  {"_id": "m97zbr3rwgxmxgp1xz2fnxtbfd8c1a1j", "mode": "pinned", "model": "claude-fable-5", "profileId": "consulting", "selectionPath": "profile-swap-override", "timestamp": 1786120507.3983033},
+  {"_id": "m97ymqe4pmnbd5r0sv6vgfgjgd8c0qgh", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "boot-seed", "timestamp": 1786118667.797974}
+]
+```
+**VERDICT — PASS.** `consulting` and `business` both show **fresh** `_id`s/`timestamp`s (different
+from the stale baseline rows), `mode: "pinned"`, correct `selectionPath` per axis
+(`profile-swap-override` vs `global-swap-override`), no sentinel. `personal`'s `_id`
+(`m97ymqe4pmnbd5r0sv6vgfgjgd8c0qgh`) and `timestamp` (`1786118667.797974`) are **byte-identical**
+to the pre-swap baseline — the untouched control profile did not move. The ENGINE-01/ENGINE-02
+core axis is unregressed by this fix.
+
+### Assertion (f-counter) — `skipped == 0` on the real live events
+
+Every real swap event in both rounds above landed a real row (assertions c/f/e all pasted raw
+rows), which is definitionally impossible if `resolveControlVerbSwapEvent` had returned `null` for
+any of them (a `null` result skips the insert entirely — `runtimeIngest.ts`'s `skippedCount++`
+path). Combined with the direct curl reproduction control above (`{"skipped":0}` for the identical
+payload shape), `skipped == 0` is confirmed for the healthy event class this fix targets, both by
+direct counter reproduction and by the data-level fact that every expected row exists.
+
+### Assertion (g) — restore, proven by real turns, not acks alone
+
+Unscoped restore ack: `{"type": "ack", "request_id": "108r2b-restore-global", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}`
+Scoped restore (`consulting`) ack: `{"type": "ack", "request_id": "108r2b-restore-scoped", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}`
+
+Live restore fan-out (positive control — `provider_affinity: null` on the restore path, distinct
+from the array shape on success, landing correctly either way):
+```json
+{"event_type": "control_verb_swap", "data": {"verb": "swap_model", "target": null, "resolved": null, "provider_affinity": null, "path": "restore", "session_id": null, "channel": "codepulse-control-center", "scope": null}, "timestamp": 1786120523.3027391}
+{"event_type": "control_verb_swap", "data": {"verb": "swap_model", "target": null, "resolved": null, "provider_affinity": null, "path": "restore", "session_id": null, "channel": "codepulse-control-center", "scope": "consulting"}, "timestamp": 1786120529.306404}
+```
+`swap.get_state` ack: `{"status": "ok", "model_override": null, "model_source": null, "voice_override_id": null, "voice_override_name": null}` — global override confirmed cleared.
+
+**Fresh confirming turns (the actual proof, not the ack):**
+```json
+{"event_type": "run.completed", "data": {"session_id": "6a3dbaad-...", "final_text": "OK", "model": "claude-sonnet-5"}, ...}
+{"event_type": "run.completed", "data": {"session_id": "4740ae6e-...", "final_text": "OK", "model": "claude-sonnet-5"}, ...}
+```
+`consulting` and `business` — pinned moments earlier to `claude-fable-5` and `claude-opus-4-8`
+respectively — both ran their confirming turn on `claude-sonnet-5`, the pre-test default.
+**VERDICT — PASS. Stack fully restored. Larry's assistant is not left pinned to a test model.**
+
+### Summary of this re-proof
+
+| Assertion | This round |
+|---|---|
+| Defect-class sweep (both tables, every field) | **PASS** — only `providerAffinity` was wrong; no new mismatches found |
+| Freshness/`skipped` counter (direct repro, before/after contrast) | **PASS** — `{"skipped":1}` pre-fix → `{"skipped":0}` post-fix, identical payload shape |
+| (c) scoped swap → real `controlVerbSwaps` row with array `providerAffinity` | **PASS** — raw row pasted |
+| (f) unscoped swap → real `controlVerbSwaps` row, scope absent | **PASS** — raw row pasted |
+| (e) core engine axis (activeEngine) — fresh rows, correct selectionPath/mode, control untouched | **PASS** |
+| `skipped == 0` on healthy events | **PASS** — direct counter + every expected row present |
+| Stack restored, proven via live turns | **PASS** |
+| Mutation-verify (RED on reverted guard, restored, GREEN) | **PASS** — pasted above |
+| Full-suite ground truth | **PASS** — 280/297 files, 3613/3806 tests, 0 failed |
+
+**The swap-history axis (D-13/D-15's actual purpose — showing that a swap succeeded) is now
+satisfied end-to-end for the first time across all three proof rounds in this file.** Both prior
+gaps (session_id-null, providerAffinity-array) are closed and independently re-verified.
+
