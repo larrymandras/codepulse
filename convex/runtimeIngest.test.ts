@@ -10,12 +10,13 @@
  */
 import { describe, it, expect } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
-import { isUnresolvedRouting } from "./activeEngineFilters";
 import {
   resolveGatewayTaskCompleted,
   parseToolPolicyEvent,
   resolveToolExecutionRow,
   resolveCommandExecutionToolRow,
+  resolveModelRoutingEvent,
+  resolveControlVerbSwapEvent,
   TOOL_POLICY_EVENT_KINDS,
   TOOL_POLICY_ERROR_MAX_LEN,
   ASTRIDR_TOOL_PROVIDER,
@@ -679,19 +680,30 @@ describe("tool_policy_event (Phase 105 D-05)", () => {
 
 // ---------------------------------------------------------------------------
 // Phase 108 (TELE-02, D-13/D-14, ENGINE-01) — model_routing failed-status
-// guard + control_verb_swap ingest case. Neither case had any test coverage
-// before this plan (verified: a grep for model_routing|control_verb_swap
-// against this file returned zero hits, 2026-08-07).
+// guard + control_verb_swap ingest case, PLUS the WR-06/168-06
+// batch-poisoning gap closure (adversarial audit on plan 108-03, found:
+// `isUnresolvedRouting` threw on a non-string profileId/model instead of
+// returning true, and the control_verb_swap guard was truthiness-only, not
+// type-checked).
 //
-// Both describe blocks below pair two proof styles:
-//  (1) A LOCAL mirror function (same convention as processSwarmTaskEvent
-//      above) that reproduces the case's guard + coalescing logic and is
-//      genuinely EXECUTED — this is what actually proves a malformed/null
-//      payload cannot throw, since the real case lives inside an httpAction
-//      closure this repo has no convex-test harness to invoke directly.
-//  (2) A bounded static source-check (activeEngine.test.ts:126-155's idiom)
-//      against comment-stripped source, so the mirror function itself cannot
-//      silently drift from the real case body.
+// Both switch-case bodies now delegate to `resolveModelRoutingEvent` /
+// `resolveControlVerbSwapEvent` — real, exported, directly-importable pure
+// functions in convex/runtimeIngest.ts (same convention as
+// `resolveGatewayTaskCompleted` above). The tests below import and execute
+// those REAL functions rather than a hand-copied mirror.
+//
+// (A prior pass of this file hand-copied the case logic into local
+// `simulateModelRoutingCase`/`simulateControlVerbSwapCase` functions and
+// asserted against them. An adversarial audit found 8 of the resulting 14
+// tests could not fail under a real regression — mutating the real case
+// body could not turn them red. This rewrite replaces every one of them
+// with coverage against the real, extracted functions; the extraction
+// itself is what makes the coverage real, not just a rephrasing.)
+//
+// A small number of static source-check tests are retained where no
+// pure-function equivalent exists (proving the case body actually WIRES
+// the resolver's result to the correct mutation — a pure-function test of
+// the resolver alone cannot prove that).
 // ---------------------------------------------------------------------------
 
 /** Strip full-line comments so a docstring mentioning "isUnresolvedRouting"
@@ -705,157 +717,140 @@ function stripCommentLinesForIngestTests(source: string): string {
     .join("\n");
 }
 
-/**
- * Mirrors the model_routing case body exactly (convex/runtimeIngest.ts,
- * plan 108-03): coalesce, skip on status:"failed", skip on
- * isUnresolvedRouting, else return the args that would reach
- * internal.activeEngine.recordRouting. Returns `{ skip: true }` instead of
- * throwing for any malformed input — mirrors the case's own "must break,
- * never throw" contract (WR-06/168-06).
- */
-function simulateModelRoutingCase(
-  data: Record<string, any>,
-  timestamp: number
-): { skip: true } | Record<string, unknown> {
-  const d = data ?? {};
-  const routedProfileId = d.profileId ?? d.profile_id;
-  const routedModel = d.model;
-  if (d.status === "failed") {
-    return { skip: true };
-  }
-  if (isUnresolvedRouting({ profileId: routedProfileId, model: routedModel })) {
-    return { skip: true };
-  }
-  return {
-    profileId: routedProfileId,
-    model: routedModel,
-    mode: d.mode ?? "inherited",
-    selectionPath: d.selectionPath ?? d.selection_path,
-    expiresAt: d.expiresAt ?? d.expires_at,
-    timestamp,
-  };
-}
-
-/**
- * Mirrors the control_verb_swap case body exactly (convex/runtimeIngest.ts,
- * plan 108-03): guard on verb/path/channel, dual-coalesce every other
- * field, else return the args that would reach
- * internal.controlVerbSwaps.record. Returns `{ skip: true }` instead of
- * throwing for any malformed input.
- */
-function simulateControlVerbSwapCase(
-  data: Record<string, any>,
-  timestamp: number
-): { skip: true } | Record<string, unknown> {
-  const d = data ?? {};
-  const verb = d.verb;
-  const pathVal = d.path;
-  const channel = d.channel;
-  if (!verb || !pathVal || !channel) {
-    return { skip: true };
-  }
-  return {
-    verb,
-    target: d.target,
-    resolved: d.resolved,
-    providerAffinity: d.providerAffinity ?? d.provider_affinity,
-    voiceId: d.voiceId ?? d.voice_id,
-    path: pathVal,
-    reason: d.reason,
-    scope: d.scope ?? d.profileId ?? d.profile_id,
-    sessionId: d.sessionId ?? d.session_id,
-    channel,
-    timestamp,
-  };
-}
-
-describe("runtimeIngest — model_routing case", () => {
-  it("does not throw on a malformed/null payload and skips instead (WR-06/168-06 batch-poisoning guard)", () => {
-    expect(() => simulateModelRoutingCase(null as any, 1000)).not.toThrow();
-    expect(() => simulateModelRoutingCase({}, 1000)).not.toThrow();
-    expect(() => simulateModelRoutingCase({ profileId: undefined, model: null }, 1000)).not.toThrow();
-    expect(simulateModelRoutingCase(null as any, 1000)).toEqual({ skip: true });
-    expect(simulateModelRoutingCase({}, 1000)).toEqual({ skip: true });
+describe("resolveModelRoutingEvent (real function, convex/runtimeIngest.ts)", () => {
+  it("does not throw on a malformed/null payload and returns null instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => resolveModelRoutingEvent(null, 1000)).not.toThrow();
+    expect(() => resolveModelRoutingEvent({}, 1000)).not.toThrow();
+    expect(() => resolveModelRoutingEvent({ profileId: undefined, model: null }, 1000)).not.toThrow();
+    expect(resolveModelRoutingEvent(null, 1000)).toBeNull();
+    expect(resolveModelRoutingEvent({}, 1000)).toBeNull();
   });
 
-  it("skips (does not write) a status:'failed' event even with an otherwise-valid profileId/model (ENGINE-01, research Item 6)", () => {
-    const result = simulateModelRoutingCase(
+  it("defect-1 gap closure: a non-string profileId or model does not throw a TypeError — returns null instead", () => {
+    expect(() => resolveModelRoutingEvent({ profileId: 12345, model: "claude-opus-5" }, 1000)).not.toThrow();
+    expect(() => resolveModelRoutingEvent({ profileId: "personal", model: 12345 }, 1000)).not.toThrow();
+    expect(() => resolveModelRoutingEvent({ profileId: true, model: "claude-opus-5" }, 1000)).not.toThrow();
+    expect(() =>
+      resolveModelRoutingEvent({ profileId: "personal", model: { nested: "object" } }, 1000)
+    ).not.toThrow();
+    expect(resolveModelRoutingEvent({ profileId: 12345, model: "claude-opus-5" }, 1000)).toBeNull();
+    expect(resolveModelRoutingEvent({ profileId: "personal", model: 12345 }, 1000)).toBeNull();
+    expect(resolveModelRoutingEvent({ profileId: true, model: "claude-opus-5" }, 1000)).toBeNull();
+    expect(
+      resolveModelRoutingEvent({ profileId: "personal", model: { nested: "object" } }, 1000)
+    ).toBeNull();
+  });
+
+  it("skips (returns null for) a status:'failed' event even with an otherwise-valid profileId/model (ENGINE-01, research Item 6)", () => {
+    const result = resolveModelRoutingEvent(
       { profileId: "personal", model: "claude-opus-5", status: "failed" },
       1000
     );
-    expect(result).toEqual({ skip: true });
+    expect(result).toBeNull();
   });
 
   it("a status other than 'failed' still resolves normally (regression guard on the new guard's scope)", () => {
-    const result = simulateModelRoutingCase(
+    const result = resolveModelRoutingEvent(
       { profileId: "personal", model: "claude-opus-5", status: "resolved" },
       1000
-    ) as Record<string, unknown>;
-    expect(result.profileId).toBe("personal");
-    expect(result.model).toBe("claude-opus-5");
+    );
+    expect(result?.profileId).toBe("personal");
+    expect(result?.model).toBe("claude-opus-5");
   });
 
   it("coalesces profileId from either camelCase or snake_case", () => {
-    const camel = simulateModelRoutingCase({ profileId: "biz", model: "m1" }, 1000) as Record<string, unknown>;
-    const snake = simulateModelRoutingCase({ profile_id: "biz", model: "m1" }, 1000) as Record<string, unknown>;
-    expect(camel.profileId).toBe("biz");
-    expect(snake.profileId).toBe("biz");
+    const camel = resolveModelRoutingEvent({ profileId: "biz", model: "m1" }, 1000);
+    const snake = resolveModelRoutingEvent({ profile_id: "biz", model: "m1" }, 1000);
+    expect(camel?.profileId).toBe("biz");
+    expect(snake?.profileId).toBe("biz");
   });
 
-  it("the case body reads d.model with no selectedModel fallback (D-11's rejected alternative) — static source check", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const source = stripCommentLinesForIngestTests(
-      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+  it("reads d.model with no d.selectedModel fallback (D-11's rejected alternative)", () => {
+    // A payload carrying only `selectedModel` (never `model`) must resolve
+    // to an unresolved (null) event, proving the function does not read
+    // d.selectedModel as a fallback.
+    const result = resolveModelRoutingEvent(
+      { profileId: "personal", selectedModel: "claude-opus-5" },
+      1000
     );
-    const caseMatch = source.match(/case "model_routing": \{[\s\S]*?\n {8}\}/);
-    expect(caseMatch).not.toBeNull();
-    const caseBody = caseMatch![0];
-    expect(caseBody).not.toContain("selectedModel");
-    expect(caseBody).toContain("const routedModel = d.model;");
+    expect(result).toBeNull();
   });
 
-  it("d.status === 'failed' breaks before the isUnresolvedRouting( call, and the case still preserves d.profileId ?? d.profile_id — static source check", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const source = stripCommentLinesForIngestTests(
-      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
-    );
-    const caseMatch = source.match(/case "model_routing": \{[\s\S]*?\n {8}\}/);
-    expect(caseMatch).not.toBeNull();
-    const caseBody = caseMatch![0];
-    const failedIdx = caseBody.indexOf('d.status === "failed"');
-    const unresolvedIdx = caseBody.indexOf("isUnresolvedRouting(");
-    expect(failedIdx).toBeGreaterThan(-1);
-    expect(unresolvedIdx).toBeGreaterThan(-1);
-    expect(failedIdx).toBeLessThan(unresolvedIdx);
-    expect(caseBody).toContain("d.profileId ?? d.profile_id");
+  it("a wrong-typed mode/selectionPath/expiresAt does not throw — returns null instead of reaching the recordRouting validator", () => {
+    expect(() =>
+      resolveModelRoutingEvent({ profileId: "personal", model: "claude-opus-5", mode: 42 }, 1000)
+    ).not.toThrow();
+    expect(
+      resolveModelRoutingEvent({ profileId: "personal", model: "claude-opus-5", mode: 42 }, 1000)
+    ).toBeNull();
+    expect(
+      resolveModelRoutingEvent(
+        { profileId: "personal", model: "claude-opus-5", selectionPath: 42 },
+        1000
+      )
+    ).toBeNull();
+    expect(
+      resolveModelRoutingEvent(
+        { profileId: "personal", model: "claude-opus-5", expiresAt: "not-a-number" },
+        1000
+      )
+    ).toBeNull();
   });
 });
 
-describe("runtimeIngest — control_verb_swap case", () => {
-  it("does not throw on a malformed/null payload and skips instead (WR-06/168-06 batch-poisoning guard)", () => {
-    expect(() => simulateControlVerbSwapCase(null as any, 1000)).not.toThrow();
-    expect(() => simulateControlVerbSwapCase({}, 1000)).not.toThrow();
-    expect(() => simulateControlVerbSwapCase({ verb: "swap_model" }, 1000)).not.toThrow();
-    expect(simulateControlVerbSwapCase(null as any, 1000)).toEqual({ skip: true });
-    expect(simulateControlVerbSwapCase({}, 1000)).toEqual({ skip: true });
+describe("resolveControlVerbSwapEvent (real function, convex/runtimeIngest.ts)", () => {
+  it("does not throw on a malformed/null payload and returns null instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => resolveControlVerbSwapEvent(null, 1000)).not.toThrow();
+    expect(() => resolveControlVerbSwapEvent({}, 1000)).not.toThrow();
+    expect(() => resolveControlVerbSwapEvent({ verb: "swap_model" }, 1000)).not.toThrow();
+    expect(resolveControlVerbSwapEvent(null, 1000)).toBeNull();
+    expect(resolveControlVerbSwapEvent({}, 1000)).toBeNull();
     // verb present but path/channel missing must still skip, not throw.
-    expect(simulateControlVerbSwapCase({ verb: "swap_model" }, 1000)).toEqual({ skip: true });
+    expect(resolveControlVerbSwapEvent({ verb: "swap_model" }, 1000)).toBeNull();
+  });
+
+  it("defect-2 gap closure: a wrong-typed required field (verb/path/channel) does not throw — returns null instead", () => {
+    expect(() =>
+      resolveControlVerbSwapEvent({ verb: 42, path: "openrouter", channel: "voice" }, 1000)
+    ).not.toThrow();
+    expect(
+      resolveControlVerbSwapEvent({ verb: 42, path: "openrouter", channel: "voice" }, 1000)
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent({ verb: "swap_model", path: 42, channel: "voice" }, 1000)
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent({ verb: "swap_model", path: "openrouter", channel: 42 }, 1000)
+    ).toBeNull();
+  });
+
+  it("defect-2 gap closure: a wrong-typed optional field does not throw — returns null instead of reaching the record validator", () => {
+    expect(
+      resolveControlVerbSwapEvent(
+        { verb: "swap_model", path: "openrouter", channel: "voice", providerAffinity: 42 },
+        1000
+      )
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent(
+        { verb: "swap_model", path: "openrouter", channel: "voice", sessionId: { nested: true } },
+        1000
+      )
+    ).toBeNull();
   });
 
   it("D-13: a refusal event (path:'refused') is a valid row, not skipped, unlike model_routing's isUnresolvedRouting guard", () => {
-    const result = simulateControlVerbSwapCase(
+    const result = resolveControlVerbSwapEvent(
       { verb: "swap_model", path: "refused", reason: "affinity-mismatch", channel: "voice" },
       1000
-    ) as Record<string, unknown>;
-    expect(result).not.toEqual({ skip: true });
-    expect(result.path).toBe("refused");
-    expect(result.reason).toBe("affinity-mismatch");
+    );
+    expect(result).not.toBeNull();
+    expect(result?.path).toBe("refused");
+    expect(result?.reason).toBe("affinity-mismatch");
   });
 
   it("dual-coalesces every multi-word field from snake_case", () => {
-    const result = simulateControlVerbSwapCase(
+    const result = resolveControlVerbSwapEvent(
       {
         verb: "swap_model",
         path: "openrouter",
@@ -866,15 +861,15 @@ describe("runtimeIngest — control_verb_swap case", () => {
         profile_id: "personal",
       },
       1000
-    ) as Record<string, unknown>;
-    expect(result.providerAffinity).toBe("openrouter");
-    expect(result.voiceId).toBe("v1");
-    expect(result.sessionId).toBe("s1");
-    expect(result.scope).toBe("personal");
+    );
+    expect(result?.providerAffinity).toBe("openrouter");
+    expect(result?.voiceId).toBe("v1");
+    expect(result?.sessionId).toBe("s1");
+    expect(result?.scope).toBe("personal");
   });
 
   it("dual-coalesces every multi-word field from camelCase", () => {
-    const result = simulateControlVerbSwapCase(
+    const result = resolveControlVerbSwapEvent(
       {
         verb: "swap_model",
         path: "openrouter",
@@ -885,14 +880,29 @@ describe("runtimeIngest — control_verb_swap case", () => {
         scope: "personal",
       },
       1000
-    ) as Record<string, unknown>;
-    expect(result.providerAffinity).toBe("openrouter");
-    expect(result.voiceId).toBe("v1");
-    expect(result.sessionId).toBe("s1");
-    expect(result.scope).toBe("personal");
+    );
+    expect(result?.providerAffinity).toBe("openrouter");
+    expect(result?.voiceId).toBe("v1");
+    expect(result?.sessionId).toBe("s1");
+    expect(result?.scope).toBe("personal");
+  });
+});
+
+describe("runtimeIngest — model_routing / control_verb_swap case wiring (static source check)", () => {
+  it("the model_routing case calls resolveModelRoutingEvent and forwards its result to internal.activeEngine.recordRouting — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "model_routing": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("resolveModelRoutingEvent(");
+    expect(caseBody).toContain("internal.activeEngine.recordRouting");
   });
 
-  it("the case body calls internal.controlVerbSwaps.record and never api.controlVerbSwaps — static source check", async () => {
+  it("the control_verb_swap case calls resolveControlVerbSwapEvent and forwards its result to internal.controlVerbSwaps.record, never api.controlVerbSwaps — static source check", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     const source = stripCommentLinesForIngestTests(
@@ -901,37 +911,12 @@ describe("runtimeIngest — control_verb_swap case", () => {
     const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
     expect(caseMatch).not.toBeNull();
     const caseBody = caseMatch![0];
+    expect(caseBody).toContain("resolveControlVerbSwapEvent(");
     expect(caseBody).toContain("internal.controlVerbSwaps.record");
     expect(caseBody).not.toContain("api.controlVerbSwaps");
   });
 
-  it("the case body coalesces snake_case for provider_affinity, voice_id, and session_id — static source check", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const source = stripCommentLinesForIngestTests(
-      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
-    );
-    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
-    expect(caseMatch).not.toBeNull();
-    const caseBody = caseMatch![0];
-    expect(caseBody).toContain("provider_affinity");
-    expect(caseBody).toContain("voice_id");
-    expect(caseBody).toContain("session_id");
-  });
-
-  it("the case body contains no throw statement — static source check", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { resolve } = await import("node:path");
-    const source = stripCommentLinesForIngestTests(
-      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
-    );
-    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
-    expect(caseMatch).not.toBeNull();
-    const caseBody = caseMatch![0];
-    expect(caseBody).not.toMatch(/throw/);
-  });
-
-  it("D-13: the case body never calls isUnresolvedRouting — a refusal is a valid row here, and this test is what stops a future reader from 'hardening' refusals away — static source check", async () => {
+  it("D-13: the control_verb_swap case body never calls isUnresolvedRouting — a refusal is a valid row here, and this test is what stops a future reader from 'hardening' refusals away — static source check", async () => {
     const { readFileSync } = await import("node:fs");
     const { resolve } = await import("node:path");
     // Comment-stripped: this case's own rationale comment mentions
@@ -944,5 +929,23 @@ describe("runtimeIngest — control_verb_swap case", () => {
     expect(caseMatch).not.toBeNull();
     const caseBody = caseMatch![0];
     expect(caseBody).not.toContain("isUnresolvedRouting(");
+  });
+
+  it("neither resolveModelRoutingEvent nor resolveControlVerbSwapEvent contains an explicit throw statement — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const modelRoutingFn = source.match(
+      /export function resolveModelRoutingEvent\([\s\S]*?\n\}/
+    );
+    const controlVerbSwapFn = source.match(
+      /export function resolveControlVerbSwapEvent\([\s\S]*?\n\}/
+    );
+    expect(modelRoutingFn).not.toBeNull();
+    expect(controlVerbSwapFn).not.toBeNull();
+    expect(modelRoutingFn![0]).not.toMatch(/throw/);
+    expect(controlVerbSwapFn![0]).not.toMatch(/throw/);
   });
 });

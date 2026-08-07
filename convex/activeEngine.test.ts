@@ -149,7 +149,24 @@ describe("UAT test 2 — model_routing never stores an unresolved sentinel (sour
     const caseStart = source.indexOf('case "model_routing"');
     expect(caseStart).toBeGreaterThan(-1);
     const caseBody = source.slice(caseStart, caseStart + 900);
-    expect(caseBody).toMatch(/if\s*\(isUnresolvedRouting\([\s\S]*?\)\)\s*\{\s*break;/);
+    // Phase 108 gap closure (adversarial audit): the isUnresolvedRouting-
+    // guarded skip logic was extracted into `resolveModelRoutingEvent`
+    // (convex/runtimeIngest.ts) so it is a real, directly-testable pure
+    // function (see runtimeIngest.test.ts) instead of inline case-body
+    // logic. The case body itself now just delegates and skips (break) on
+    // a null result — the next assertion pins that the delegate still
+    // applies isUnresolvedRouting and never throws.
+    expect(caseBody).toMatch(/resolveModelRoutingEvent\(/);
+    expect(caseBody).toMatch(/if\s*\(!resolved\)\s*\{\s*break;/);
     expect(caseBody).not.toMatch(/throw\s+new/);
+  });
+
+  it("resolveModelRoutingEvent (the case's delegate) applies isUnresolvedRouting and returns null rather than throwing", () => {
+    const source = stripCommentLines(readFileSync(runtimeIngestPath, "utf-8"));
+    const fnMatch = source.match(/export function resolveModelRoutingEvent\([\s\S]*?\n\}/);
+    expect(fnMatch).not.toBeNull();
+    const fnBody = fnMatch![0];
+    expect(fnBody).toMatch(/if\s*\(isUnresolvedRouting\([\s\S]*?\)\)\s*\{\s*return null;/);
+    expect(fnBody).not.toMatch(/throw\s+new/);
   });
 });
