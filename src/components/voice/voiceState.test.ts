@@ -256,6 +256,37 @@ describe("isBargeInPhrase", () => {
   });
 });
 
+describe("stripWakePhrase — STT wake-word variants (188.3-08)", () => {
+  // Live evidence, 2026-08-07 session: 7 leaks in 10 wake-prefixed attempts.
+  // Chrome rendered the spoken wake word as Alfred/Ashford/Astra, none of which
+  // were in WAKE_PHRASES, so the whole address rode into the dispatched
+  // message — and at 19:12:56 reached the model as a name ("It's Friday,
+  // August 7th, 2026, Ashford.").
+  it.each([
+    ["Hey Alfred, what time is it?", "what time is it?"],
+    ["Hey Ashford, what day is it?", "what day is it?"],
+    ["Hey Astra, is there any news about Supabase?", "is there any news about Supabase?"],
+    ["Hey Astrid, what's the weather today?", "what's the weather today?"],
+  ])("strips the leading address in %j", (input, expected) => {
+    const result = stripWakePhrase(input);
+    expect(result.stripped).toBe(expected);
+    expect(result.matched).not.toBeNull();
+  });
+
+  // CONTROL — the bare variants are deliberately NOT in WAKE_PHRASES.
+  // stripWakePhrase is leading-only, so a bare "alfred" entry would eat the
+  // first word of a real sentence about a person named Alfred.
+  it.each([
+    "Alfred called me yesterday about the contract.",
+    "Ashford is the name of the street.",
+    "Astra Zeneca published new trial data.",
+  ])("leaves a leading bare variant untouched: %j", (input) => {
+    const result = stripWakePhrase(input);
+    expect(result.stripped).toBe(input);
+    expect(result.matched).toBeNull();
+  });
+});
+
 describe("stripWakePhrase", () => {
   it('"Hey Astrid." → whole utterance is the wake phrase: stripped is empty, matched is non-null', () => {
     const result = stripWakePhrase("Hey Astrid.");

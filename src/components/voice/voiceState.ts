@@ -142,7 +142,28 @@ const BARGE_IN_PHRASES = [
 // to be human-readable and exhaustive of the address forms — it is not read
 // by any other matcher in this file. Order does not matter here; matching
 // order is derived by sorting on normalized token count (longest-first).
-const WAKE_PHRASES = ["hey ástríðr", "hey astridr", "hey astrid", "ástríðr", "astridr", "astrid"];
+// 188.3-08 live evidence (2026-08-07 session, 7 leaks in 10 attempts): Chrome's
+// STT renders the spoken wake word as "Alfred", "Ashford" and "Astra" at least
+// as often as it renders "Astrid". Every one of those leaked the address into
+// the dispatched message, and one reached the model as a NAME — she answered
+// "It's Friday, August 7th, 2026, Ashford."
+//
+// Only the "hey <variant>" forms are added, deliberately NOT the bare ones.
+// stripWakePhrase is LEADING-only, so a bare "alfred" entry would strip the
+// first word of a genuine "Alfred called me yesterday"; "hey alfred" as an
+// opener has no plausible non-address reading here. The canonical spellings
+// keep their bare forms because they are her actual name.
+const WAKE_PHRASES = [
+  "hey ástríðr",
+  "hey astridr",
+  "hey astrid",
+  "hey alfred",
+  "hey ashford",
+  "hey astra",
+  "ástríðr",
+  "astridr",
+  "astrid",
+];
 
 /**
  * Returns true if the transcript is a barge-in phrase — a name/attention-getter

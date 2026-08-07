@@ -431,7 +431,7 @@ function editDistance(a: string, b: string): number {
 
 export interface AppendWithOverlapCheckResult {
   text: string;
-  decision: "subsumed" | "repeat-preserved" | "trimmed" | "joined";
+  decision: "subsumed" | "repeat-preserved" | "trimmed" | "superseded" | "joined";
 }
 
 /**
@@ -564,6 +564,33 @@ export function appendWithOverlapCheck(
     const existingSuffix = existingWords.slice(best.s + best.L).join(" ");
     const incomingOverlap = incomingWords.slice(0, best.k).join(" ");
     const incomingSuffix = incomingWords.slice(best.k).join(" ");
+
+    // 188.3-08 (live defect, 2026-08-07): Trim assumes `existing` is an
+    // earlier SEGMENT that `incoming` continues, so it preserves
+    // `existingSuffix` — existing's own leftover continuation. But the duplex
+    // ear also emits early PARTIAL finals that a later full final SUPERSEDES
+    // rather than continues, and there the leftover is a stale
+    // mis-transcription of a word the correction already fixed. Live:
+    //   existing "Give me a couple" + incoming "Give me a complete rundown …"
+    //   → "Give me a couple complete rundown …"   ← dispatched to Ástríðr
+    //
+    // The tell is that the overlap starts at existing's very first word
+    // (best.s === 0): a genuine later segment does not restart with the
+    // opening words of the one before it, whereas a re-transcription of the
+    // same audio always does. Gated further on a SHORT leftover and on
+    // incoming actually extending past the overlap, so a long earlier segment
+    // that merely happens to share an opening still trims normally.
+    const existingSuffixWords = existingSuffix ? wordsOf(existingSuffix).length : 0;
+    const supersedes =
+      best.s === 0 &&
+      existingSuffixWords > 0 &&
+      existingSuffixWords <= TRIM_MAX_TRAILING_SLACK_WORDS &&
+      incomingSuffix.length > 0 &&
+      incomingWords.length > existingWords.length;
+    if (supersedes) {
+      return { text: incomingTrimmed, decision: "superseded" };
+    }
+
     const text = [existingPrefix, incomingOverlap, existingSuffix, incomingSuffix]
       .filter((part) => part.length > 0)
       .join(" ");
@@ -692,6 +719,22 @@ export function useAstridrVoice({
   const [finalText, setFinalText] = useState("");
   const [showInterruptFlash, setShowInterruptFlash] = useState(false);
   const [followUpOpen, setFollowUpOpen] = useState(false);
+  // 188.3-08 (criterion 3): CONV-02 has the interim handler "consume" the
+  // follow-up window, which clears `followUpOpen` — but the noise gate reads
+  // that same flag to decide whether a short utterance is a legitimate
+  // post-wake reply or cold noise. Every spoken command emits an interim
+  // BEFORE its own final, so the window was always already closed by the time
+  // the final it was opened for arrived: two live attempts, both
+  // `final.noise-rejected {"warm":false,"followUpOpen":false}` ~4s after a
+  // `followup.open {"ms":30000}`. The feature could not fire on its own
+  // primary path.
+  //
+  // This ref carries the "a window was open when this utterance started"
+  // signal across that clear. Set ONLY at the interim consume site (never in
+  // clearFollowUpWindow itself — teardown calls that too, and must not arm
+  // anything), latched true-only across an utterance's many interims, and
+  // consumed by the next final that reaches the gate.
+  const followUpArmedRef = useRef(false);
   const [followUpMs, setFollowUpMs] = useState(FOLLOW_UP_WINDOW_MS);
   // 188.1-04 (D-04): session-scoped filtered-drop count. State, not a ref —
   // VoiceStatusPanel must actually re-render when it changes (188.1-UI-SPEC.md
@@ -1007,6 +1050,7 @@ export function useAstridrVoice({
       closePendingRef.current = false;
       longestInterimRef.current = "";
       longestInterimFromSpeakingRef.current = false;
+      followUpArmedRef.current = false; // 188.3-08: never leak an arm across a teardown
       lastSentRef.current = { text: "", at: 0, id: "" };
       setInterimText("");
       setFinalText("");
@@ -1336,6 +1380,11 @@ export function useAstridrVoice({
       resetSilenceTimer();
     }
     clearSendTimer(); // still talking — defer the end-of-turn send
+    // 188.3-08: latch the window's open state BEFORE consuming it, so the
+    // final that this very interim precedes can still see that a wake (or a
+    // just-finished turn) had armed it. Latch-true-only — an utterance emits
+    // many interims and only the first sees `followUpOpen` still true.
+    if (followUpOpen) followUpArmedRef.current = true;
     clearFollowUpWindow(); // CONV-02: a new interim consumes the window
   };
 
@@ -1617,7 +1666,14 @@ export function useAstridrVoice({
 
     // Noise/banter gate (CONV-03): reject cold fragments <3 words; warm
     // conversations accept short replies. Zero UI trace on reject.
-    const isFollowUpWindowOpenForGate = conversationWarmRef.current || followUpOpen;
+    // 188.3-08: read-and-consume the armed latch. `followUpOpen` alone is
+    // structurally always false here (this utterance's own interim cleared it
+    // — see followUpArmedRef's declaration), so it is the latch that actually
+    // carries criterion 3. Consumed by this final so the widening lasts
+    // exactly one utterance and never becomes a permanent noise-floor bypass.
+    const followUpArmed = followUpOpen || followUpArmedRef.current;
+    followUpArmedRef.current = false;
+    const isFollowUpWindowOpenForGate = conversationWarmRef.current || followUpArmed;
     if (shouldReject(text, isFollowUpWindowOpenForGate, confidence)) {
       // D-09/188.1-06 (GLUE-LOSS): a fragment that fails ONLY the word-count
       // floor, while an accumulation is genuinely pending (a previous final
@@ -1682,7 +1738,15 @@ export function useAstridrVoice({
       const failedOnlyWordFloor =
         accumulationPending && !confidenceRejected && wordCount < minWords;
       if (!failedOnlyWordFloor) {
-        trace("final.noise-rejected", { text, warm: conversationWarmRef.current, followUpOpen });
+        // 188.3-08: log the value the gate ACTUALLY consulted. Logging the raw
+        // `followUpOpen` state here printed a constant false and made the
+        // criterion-3 defect unreadable in two live sessions.
+        trace("final.noise-rejected", {
+          text,
+          warm: conversationWarmRef.current,
+          followUpArmed,
+          followUpOpen,
+        });
         return;
       }
       trace("final.fragment-preserved", { text, accumulated: accumulatedRef.current });

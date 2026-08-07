@@ -96,6 +96,37 @@ describe("isResidualEcho", () => {
 
 // ─── appendWithOverlapCheck (188.1-06, D-06/D-07/D-08) ────────────────────────
 
+describe("appendWithOverlapCheck — supersede a corrected re-transcription (188.3-08)", () => {
+  it("GLUE-STALE-HEAD: the duplex ear's early partial does not survive into the corrected full final", () => {
+    // Live defect, 2026-08-07 19:07:10.520. The duplex ear emitted an early
+    // partial final "Give me a couple" (mis-hearing "complete"), then the full
+    // final arrived correctly. Trim preserved existing's leftover "couple" as
+    // if it were a continuation, and Ástríðr received
+    // "Give me a couple complete rundown of ...".
+    const result = appendWithOverlapCheck(
+      "Give me a couple",
+      "Give me a complete rundown of everything on my calendar this week and also tell me which of those things I should move or cancel."
+    );
+    expect(result.decision).toBe("superseded");
+    expect(result.text).toBe(
+      "Give me a complete rundown of everything on my calendar this week and also tell me which of those things I should move or cancel."
+    );
+    expect(result.text).not.toContain("couple");
+  });
+
+  it("CTRL-SUPERSEDE-CONTINUATION: a genuine later segment that shares an opening still trims rather than superseding", () => {
+    // The over-block control. Here existing carries a LONG leftover past the
+    // overlap — a real earlier segment, not a stale one-word mis-hearing — so
+    // dropping it would lose real speech. Must NOT supersede.
+    const result = appendWithOverlapCheck(
+      "tell me about the migration and the rollback and the downtime",
+      "tell me about the deployment too"
+    );
+    expect(result.decision).not.toBe("superseded");
+    expect(result.text).toContain("rollback");
+  });
+});
+
 describe("appendWithOverlapCheck", () => {
   it("subsume, forward: a longer incoming piece that contains the existing one is returned verbatim", () => {
     const result = appendWithOverlapCheck(
@@ -759,6 +790,74 @@ describe("useAstridrVoice", () => {
     chat = setTtsPlaying(rerender, chat, false);
     return chat;
   }
+
+  describe("VOICE-DISPATCH-01: cold-wake follow-up window (188.3-08, criterion 3)", () => {
+    // Every fixture in the sibling suites reaches its assertion through
+    // warmAndOpenFollowUp(), which plays a full TTS turn and therefore sets
+    // conversationWarmRef — satisfying the gate's LEFT operand and leaving
+    // followUpOpen load-bearing on nothing. These tests are deliberately COLD
+    // (no TTS ever), so the follow-up window is the only thing that can open
+    // the gate. That is the exact live path that failed twice on 2026-08-07:
+    //   followup.open {"ms":30000} → interim → final.noise-rejected
+    //   {"warm":false,"followUpOpen":false}, 3.7s apart.
+    it("CRIT-3: a short command after a COLD wake dispatches — its own interim no longer closes the window on it", async () => {
+      const chat = makeChat();
+      const { result } = renderVoice(chat);
+      wake();
+      expect(result.current.followUpOpen).toBe(true);
+
+      // The command's own interim. CONV-02 still consumes the window here —
+      // that behavior is unchanged and asserted, so this test fails if the fix
+      // is ever "solved" by simply not consuming it.
+      act(() => {
+        onInterimResultCallback?.("yes");
+      });
+      expect(result.current.followUpOpen).toBe(false);
+
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Yes.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+        "Yes.",
+        expect.objectContaining({ voice: true })
+      );
+    });
+
+    it("CTRL-CRIT-3-ARM-CONSUMED: a SECOND cold short utterance is still rejected — the widening lasts exactly one utterance", async () => {
+      // The over-block control. If the latch were sticky rather than consumed,
+      // one wake would disable the noise floor for the rest of the
+      // conversation, which is strictly worse than the bug it fixes.
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+
+      act(() => {
+        onInterimResultCallback?.("yes");
+      });
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Yes.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        onInterimResultCallback?.("sure");
+      });
+      act(() => {
+        onDuplexFinalTranscriptCallback?.("Sure.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledTimes(1);
+    });
+  });
 
   describe("VOICE-DISPATCH-01: wake-phrase leak", () => {
     it('WAKE-1: duplex final "Hey Astrid." (wake-phrase-only) is NOT dispatched and the follow-up window is refreshed, not closed', async () => {
