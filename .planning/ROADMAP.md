@@ -675,7 +675,26 @@ Plans:
   3. `control_verb_swap` events route to a queryable domain table (not just the generic `runtime_events` log) and can be listed as per-profile swap history.
   4. The per-profile emit and the scoped `swap.set` are exercised against the live running stack — a real profile swap observed producing a real telemetry row and a real swap-history entry — before Phase 109 begins, closing ENGINE-05.
 
-**Plans**: TBD
+**Plans**: 7 plans (4 waves) — cross-repo (astridr-repo `feature/brain-swap` + codepulse `master`)
+
+**Wave 1**
+
+- [ ] 108-01-PLAN.md — astridr: profile ContextVar lifecycle repair (both live set-points) + `_emit_model_routing` profileId / refuse-to-emit / `selectedModel`→`model` rename + `mode` derivation + emit-on-change (ENGINE-01; D-01, D-02, D-09, D-11, D-12)
+- [ ] 108-02-PLAN.md — codepulse: `controlVerbSwaps` table + internal-only domain module + bounded read + `RETENTION_DAYS` entries for both engine-axis tables (TELE-02; D-10, D-13, D-14)
+
+**Wave 2**
+
+- [ ] 108-03-PLAN.md — codepulse: `case "control_verb_swap"` ingest route + `status:"failed"` skip on `model_routing` + first-ever tests for both cases (TELE-02, ENGINE-01; D-13, D-14)
+- [ ] 108-04-PLAN.md — astridr: per-profile override store + `_resolve_model` precedence rung + scoped `swap.set` with fail-closed validation; **+ codepulse: 103-CONTRACT.md corrected in place** (ENGINE-02; D-04, D-05, D-06, D-08)
+
+**Wave 3**
+
+- [ ] 108-05-PLAN.md — astridr: scope-aware `swap_model` set/restore + `scope` on all four swap-history emits + D-03 boot seed (ENGINE-01, ENGINE-02, TELE-02; D-03, D-07, D-13)
+- [ ] 108-06-PLAN.md — codepulse: `useControlVerbSwaps` hook + swap-history section in the existing `GlobalSwapModal` (TELE-02; D-15)
+
+**Wave 4**
+
+- [ ] 108-07-PLAN.md — **ENGINE-05 gate, `autonomous: false`**: self-hosted Convex deploy → astridr rebuild (`prod,war-room`) → in-container freshness probe → live scoped swap + profiled turn + **unscoped control** + fail-closed negative control, evidence pasted as rows (ENGINE-05; D-16)
 
 ---
 

@@ -1,9 +1,9 @@
 ---
 phase: 108
 slug: per-profile-engine-telemetry-astridr-backend
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: planned
+nyquist_compliant: true
+wave_0_complete: true  # no separate Wave-0 plan: each task creates the test scaffold it needs, in the same task
 created: 2026-08-07
 ---
 
@@ -50,9 +50,35 @@ created: 2026-08-07
 to an automated command or to a Wave 0 dependency, except the ENGINE-05 rows, which are
 manual-only by decision D-16.*
 
+> **Wave 0 disposition (planner, 2026-08-07):** there is no separate Wave-0 scaffold plan. Every
+> test gap listed under "Wave 0 Requirements" below is created by the same task that needs it, in the
+> same commit, so no task ships ahead of its own verification. The two genuinely-new test files
+> (`convex/controlVerbSwaps.test.ts`, `tests/unit/channels/test_agent_processor_profile_context.py`,
+> plus `tests/unit/engine/bootstrap/test_boot_model_routing_seed.py` and
+> `src/hooks/useControlVerbSwaps.test.ts`) are each authored inside their owning task.
+
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| *(planner fills)* | | | | | | | | | ⬜ pending |
+| 108-01 T1 | 108-01 | 1 | ENGINE-01 | T-108-07 | Profile ContextVar token-paired and reset in `finally` at both live set-points — no cross-profile leak | unit | `pytest tests/unit/channels/test_agent_processor_profile_context.py tests/unit/engine/bootstrap/test_wiring_chat_persistence.py -x -q` | ❌ new file | ⬜ pending |
+| 108-01 T2 | 108-01 | 1 | ENGINE-01 | T-108-08 | `profileId` sourced only from the server-set ContextVar; unresolved profile or model refused at emit | unit | `pytest tests/unit/providers/test_router.py -x -q` | ✅ extend | ⬜ pending |
+| 108-01 T3 | 108-01 | 1 | ENGINE-01 | T-108-10 | `mode` derived once with a proven default arm; emit-on-change caps telemetry write volume | unit | `pytest tests/unit/providers/test_router.py -x -q` | ✅ extend | ⬜ pending |
+| 108-02 T1 | 108-02 | 1 | TELE-02 | T-108-05 | Both engine-axis tables bounded by the existing batch-capped prune BEFORE they grow | unit | `npx vitest run convex/retention.test.ts` | ✅ auto-covers new keys | ⬜ pending |
+| 108-02 T2 | 108-02 | 1 | TELE-02 | T-108-03, T-108-12 | Write path `internalMutation`-only; read path `.take()`-bounded | typecheck | `npx tsc --noEmit` | n/a | ⬜ pending |
+| 108-02 T3 | 108-02 | 1 | TELE-02 | T-108-03 | CR-01 authorization-boundary guard, mutation-checked | unit | `npx vitest run convex/controlVerbSwaps.test.ts` | ❌ new file | ⬜ pending |
+| 108-03 T1 | 108-03 | 2 | TELE-02, ENGINE-01 | T-108-14, T-108-15 | Ingest case breaks-never-throws; failed resolution never stored as a current engine | typecheck | `npx tsc --noEmit` | n/a | ⬜ pending |
+| 108-03 T2 | 108-03 | 2 | TELE-02, ENGINE-01 | T-108-15 | Bounded-window source guards on both cases; failed-skip mutation-checked | unit | `npx vitest run convex/runtimeIngest.test.ts` | ⚠ file exists, ZERO coverage of either case today | ⬜ pending |
+| 108-04 T1 | 108-04 | 2 | ENGINE-02 | T-108-19 | Per-profile rung outranks global; unscoped path proven byte-identical by equality | unit | `pytest tests/unit/providers/test_router.py -x -q` | ✅ extend | ⬜ pending |
+| 108-04 T2 | 108-04 | 2 | ENGINE-02 | T-108-02, T-108-17, T-108-18 | Unknown / unvalidatable / voice-target scope rejected before dispatch (verb mock: zero calls) | unit | `pytest tests/unit/engine/test_ws_commands.py -x -q` | ✅ extend | ⬜ pending |
+| 108-04 T3 | 108-04 | 2 | ENGINE-02 (D-08) | — | Contract doc no longer describes an unbuilt axis or a rejected command | doc gate | `! grep -n "Not built" .planning/milestones/v13.0-phases/103-brain-swap-control-surface/103-CONTRACT.md` | ✅ exists | ⬜ pending |
+| 108-05 T1 | 108-05 | 3 | ENGINE-02 | T-108-22 | Scoped write touches only the profile store; unscoped only the global — both asserted negatively too | unit | `pytest tests/unit/engine/test_swap_model.py -x -q` | ✅ extend | ⬜ pending |
+| 108-05 T2 | 108-05 | 3 | TELE-02 | T-108-20 | All four outcomes emit with `scope`; voice disposition guarded | unit | `pytest tests/unit/engine/test_swap_model.py tests/unit/engine/test_swap_voice.py -x -q` | ✅ extend | ⬜ pending |
+| 108-05 T3 | 108-05 | 3 | ENGINE-01 | T-108-21 | Boot seed distinguishable from a live reading; falsy default skipped | unit | `pytest tests/unit/engine/bootstrap/test_boot_model_routing_seed.py -x -q` | ❌ new file | ⬜ pending |
+| 108-06 T1 | 108-06 | 3 | TELE-02 | T-108-24 | Outcome vocabulary derived once, tested against the four real producer shapes | unit | `npx vitest run src/hooks/useControlVerbSwaps.test.ts` | ❌ new file | ⬜ pending |
+| 108-06 T2 | 108-06 | 3 | TELE-02 | T-108-16, T-108-24 | A refusal renders as a refusal; the row cap is stated on screen from the shared constant | unit | `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` | ✅ extend | ⬜ pending |
+| 108-07 T1 | 108-07 | 4 | ENGINE-05 | T-108-26 | Consent before any live deploy or assistant restart | **manual** | MISSING — consent gate (D-16) | n/a | ⬜ pending |
+| 108-07 T2 | 108-07 | 4 | ENGINE-05 | T-108-29 | Every read targets the self-hosted instance explicitly; container freshness probed from inside | **manual** | `npx convex run activeEngine:latestByProfile --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"` | n/a | ⬜ pending |
+| 108-07 T3 | 108-07 | 4 | ENGINE-05, ENGINE-01, ENGINE-02, TELE-02 | T-108-02, T-108-27, T-108-28 | Scoped swap + isolation + **unscoped control** + restore + fail-closed negative control, all as pasted rows | **manual** | MISSING — live gate (D-16), evidence in `108-ENGINE-05-EVIDENCE.md` | n/a | ⬜ pending |
+| 108-07 T4 | 108-07 | 4 | ENGINE-05 | T-108-28 | Operator reviews that every verdict is preceded by the rows supporting it | **manual** | MISSING — sign-off gate (D-16) | n/a | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -86,9 +112,11 @@ manual-only by decision D-16.*
       (unknown profile id → error ack; voice-target handling per research Item 8).
 - [ ] `convex/controlVerbSwaps.test.ts` (codepulse) — **new file**, mirroring
       `convex/activeEngine.test.ts`'s structure: the new ingest case plus the bounded readout query.
-- [ ] **Verify existence** of a `convex/runtimeIngest.test.ts` covering the `model_routing` case.
-      If absent, add one exercising `d.model` only (no `selectedModel` fallback — D-11's rejected
-      alternative) and the `status==="failed"` disposition.
+- [x] **RESOLVED at pattern-mapping (2026-08-07):** `convex/runtimeIngest.test.ts` **exists** but
+      `grep -n "model_routing\|control_verb_swap"` returns **zero hits** — neither case has any
+      coverage. This is a confirmed gap, not an unknown. Closed by plan 108-03 Task 2, which adds
+      both describe blocks to the existing file (`d.model` only — no `selectedModel` fallback, D-11's
+      rejected alternative — plus the `status==="failed"` skip).
 
 ---
 
@@ -112,4 +140,4 @@ manual-only by decision D-16.*
 - [ ] D-16 live proof executed and its **row output pasted as evidence**, not summarized
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** plan-time sections filled 2026-08-07 by the planner; execution-time boxes remain pending.
