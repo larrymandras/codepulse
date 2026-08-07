@@ -690,7 +690,7 @@ Plans:
 **Wave 3**
 
 - [x] 108-05-PLAN.md — astridr: scope-aware `swap_model` set/restore + `scope` on all four swap-history emits + D-03 boot seed (ENGINE-01, ENGINE-02, TELE-02; D-03, D-07, D-13)
-- [ ] 108-06-PLAN.md — codepulse: `useControlVerbSwaps` hook + swap-history section in the existing `GlobalSwapModal` (TELE-02; D-15)
+- [x] 108-06-PLAN.md — codepulse: `useControlVerbSwaps` hook + swap-history section in the existing `GlobalSwapModal` (TELE-02; D-15)
 
 **Wave 4**
 
@@ -784,7 +784,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 3/7 | In Progress|  |
+| 108. Per-Profile Engine Telemetry (astridr backend) | 6/7 | In Progress|  |
 | 109. Per-Agent Engine UI | 0/TBD | Not started | - |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |

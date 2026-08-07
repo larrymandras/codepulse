@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Completed 108-05-PLAN.md (astridr-repo: swap_model._execute now branches on args['profile_id'] -- scoped set/restore write ONLY the per-profile override, unscoped set/restore write ONLY the global one, byte-identical to pre-phase behavior; scope carried on all four control_verb_swap emits; D-03 boot seed -- one model_routing event per profile, mode:'inherited' -- extracted into a testable helper; strengthened one proxy-only rejection test to assert real voice_override state; commits 281b65a9/98eab76c/f644b845 astridr-repo, 783f8407 codepulse contract-verification note); 108-06 remains, 108-07 (deploy) deferred"
-last_updated: "2026-08-07T08:52:00-04:00"
+stopped_at: "Completed 108-06-PLAN.md (codepulse: useControlVerbSwaps hook (D-15) -- honest-empty [] default, skips the query when no profileId is supplied; filterBrainSwaps delegates to convex/controlVerbSwaps.ts's isBrainSwap; describeSwapOutcome derives restore/refused/unresolved/success once, tested against one fixture per swap_model.py emit site (D-13); GlobalSwapModal's confirm phase now renders a SwapHistorySection wrapped in SectionErrorBoundary, honest empty state 'No swap history to show yet.' since the modal is the ALL-PROFILES axis with no single profileId to scope by (103-CONTRACT.md section 8, plan's own stated fallback), on-screen truncation caption reads the imported SWAP_HISTORY_CAP constant; commits d4ce94ad/1aa9cd68; 45/45 targeted tests + 3568/3568 full suite green, tsc clean, build clean); TELE-02 stays Pending (no deploy this plan); 108-07 (deploy gate, ENGINE-05) deferred, NOT run this session"
+last_updated: "2026-08-07T09:32:00-04:00"
 last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 5
+  completed_plans: 6
   percent: 0
 ---
 
@@ -44,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 108 (per-profile-engine-telemetry-astridr-backend) — EXECUTING
-Plan: 5 of 7 (5 of 7 complete: 01, 02, 03, 04, 05; 108-06 next, 108-07 deploy gate deferred)
-Status: Executing Phase 108 (Plans 01, 02, 03, 04, 05 complete)
-Last activity: 2026-08-07 -- Plan 108-05 complete (astridr-repo: swap_model._execute wired to the D-04 per-profile override store -- scoped set/restore write only the profile slot, unscoped set/restore write only the global slot byte-identical to pre-phase behavior; scope field on all four control_verb_swap emits; D-03 boot seed emitting one model_routing event per profile at mode:"inherited"; one proxy-only rejection test strengthened to assert real voice_override state — commits 281b65a9/98eab76c/f644b845 astridr-repo, 783f8407 codepulse)
+Plan: 6 of 7 (6 of 7 complete: 01, 02, 03, 04, 05, 06; 108-07 deploy gate deferred, NOT run this session)
+Status: Executing Phase 108 (Plans 01, 02, 03, 04, 05, 06 complete)
+Last activity: 2026-08-07 -- Plan 108-06 complete (codepulse: D-15's swap-history readout — TELE-02's "and surfaced" half. `src/hooks/useControlVerbSwaps.ts` wraps `api.controlVerbSwaps.listByScope` with an honest-empty `[]` default (skips the query entirely when no profileId is given); `filterBrainSwaps` delegates to `convex/controlVerbSwaps.ts`'s own `isBrainSwap` rather than re-testing the verb string; `describeSwapOutcome` derives the restore/refused/unresolved/success vocabulary once, tested against a fixture per real `swap_model.py` emit site. `GlobalSwapModal.tsx`'s confirm phase now renders a `SwapHistorySection` (wrapped in `SectionErrorBoundary`) reading that hook with `profileId={undefined}` — GlobalSwapModal is the ALL-PROFILES axis (103-CONTRACT.md §8, one live `swap.set` command for every profile) with no single profile to scope a history read by, so per the plan's own stated fallback this renders the same honest-empty "No swap history to show yet." state a real profile with zero rows would get, rather than inventing a profileId. On-screen truncation caption reads the imported `SWAP_HISTORY_CAP` constant and a client-side `.slice()` makes that caption's claim provably true. No new route/nav entry/ModalPhase value; only the four files this plan owns were touched. 45/45 targeted tests pass (11 hook + 34 modal, 6 new), full suite in an isolated worktree pinned to commit `1aa9cd68`: 279 passed / 17 skipped files (296), 3568 passed / 193 todo tests (3761), 0 failed — up from the 278/3551 baseline by exactly the tests this plan added. `npx tsc --noEmit` clean, `npm run build` clean (pre-existing >500kB chunk warnings unrelated, out of scope). Both mutation-checks (describeSwapOutcome's restore branch, the client-side SWAP_HISTORY_CAP slice) confirmed RED then restored byte-identical via backup-copy. TELE-02 remains Pending — nothing is deployed; the self-hosted Convex backend does not yet have `controlVerbSwaps`, so `useQuery` returns `undefined` → `[]` at runtime until 108-07 deploys. Commits `d4ce94ad` (hook), `1aa9cd68` (modal). 108-07 (ENGINE-05 live deploy gate) deferred, not run this session per explicit scope.
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
