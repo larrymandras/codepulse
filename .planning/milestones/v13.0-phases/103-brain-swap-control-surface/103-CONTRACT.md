@@ -199,17 +199,32 @@ export interface ModelRoutingEvent {
   profile_id: string;
   model: string;
   mode: "session" | "pinned" | "inherited";
-  // Corrected 2026-08-07 (Phase 108 D-04/D-11/D-12): selection_path mirrors
-  // router.py's own _resolve_model vocabulary, now 8 live values, not the
-  // original 6 (both "advisor" and "profile-swap-override" were missing):
+  // Corrected 2026-08-07 (Phase 108 D-04/D-11/D-12, cleanup pass same day):
+  // selection_path mirrors router.py's own _resolve_model vocabulary, plus
+  // two synthetic values sent from a separate code path — 10 live values
+  // total, not the 8 this comment previously enumerated ("boot-seed" and
+  // "restore-to-default" were both missing):
   // "override" | "profile-swap-override" | "global-swap-override" |
   // "session-override" | "codepulse-default" | "category-rule" | "default" |
-  // "advisor"
+  // "advisor" | "boot-seed" | "restore-to-default"
   // "advisor" is a hardcoded literal emitted from inside chat() and never
   // flows through _resolve_model. "mode" is derived from selection_path at
   // the single emit helper (_emit_model_routing) via a .get(selection_path,
   // "inherited") mapping with an "inherited" catch-all default — a value
   // with no explicit mapping entry is never left unmapped.
+  //
+  // "boot-seed" and "restore-to-default" are NOT produced by
+  // _resolve_model/_emit_model_routing at all — they're sent directly via
+  // telemetry.send("model_routing", ...) from astridr's
+  // _emit_profile_model_routing_seed (astridr/engine/bootstrap/core.py),
+  // so they never populate _emit_model_routing's own emit-on-change memo.
+  // "boot-seed": one row per configured profile at process start (D-03).
+  // "restore-to-default": sent by the swap_model control verb's restore
+  // branch right after an override is cleared, reusing the same emission
+  // shape as boot-seed — mode is always "inherited" (via the .get(...,
+  // "inherited") catch-all above) and model is the profile's configured
+  // model_default. This is what fixes activeEngineSnapshots reporting a
+  // stale mode:"pinned" row after a restore-to-default (ENGINE-05 cleanup).
   selection_path: string;
   expires_at?: number;   // epoch seconds — set ONLY when mode === "session"
   timestamp: number;
