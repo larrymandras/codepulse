@@ -689,7 +689,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 108-05-PLAN.md — astridr: scope-aware `swap_model` set/restore + `scope` on all four swap-history emits + D-03 boot seed (ENGINE-01, ENGINE-02, TELE-02; D-03, D-07, D-13)
+- [x] 108-05-PLAN.md — astridr: scope-aware `swap_model` set/restore + `scope` on all four swap-history emits + D-03 boot seed (ENGINE-01, ENGINE-02, TELE-02; D-03, D-07, D-13)
 - [ ] 108-06-PLAN.md — codepulse: `useControlVerbSwaps` hook + swap-history section in the existing `GlobalSwapModal` (TELE-02; D-15)
 
 **Wave 4**

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Completed 108-03-PLAN.md (control_verb_swap ingest case routed to internal.controlVerbSwaps.record, D-13 no-refusal-guard; model_routing status:'failed' skip closing ENGINE-01's fabricated-current-engine gap; first-ever test coverage for both cases, 14 new tests, 3 mutation-checked guards); 108-05/108-06 remain, 108-07 (deploy) deferred"
-last_updated: "2026-08-07T08:20:00-04:00"
+stopped_at: "Completed 108-05-PLAN.md (astridr-repo: swap_model._execute now branches on args['profile_id'] -- scoped set/restore write ONLY the per-profile override, unscoped set/restore write ONLY the global one, byte-identical to pre-phase behavior; scope carried on all four control_verb_swap emits; D-03 boot seed -- one model_routing event per profile, mode:'inherited' -- extracted into a testable helper; strengthened one proxy-only rejection test to assert real voice_override state; commits 281b65a9/98eab76c/f644b845 astridr-repo, 783f8407 codepulse contract-verification note); 108-06 remains, 108-07 (deploy) deferred"
+last_updated: "2026-08-07T08:52:00-04:00"
 last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -44,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 108 (per-profile-engine-telemetry-astridr-backend) — EXECUTING
-Plan: 4 of 7 (3 of 7 complete: 01, 02, 04; 03 still pending — independent wave-2 plan)
-Status: Executing Phase 108 (Plans 01, 02, 04 complete)
-Last activity: 2026-08-07 -- Plan 108-04 complete (ModelRouter per-profile override store + D-04 precedence rung in astridr-repo, scoped swap.set profile_id + fail-closed validation in astridr-repo, 103-CONTRACT.md corrected in place in codepulse — commits 9ad3cea6/06b6f4f7 astridr-repo, 3421c816 codepulse)
+Plan: 5 of 7 (5 of 7 complete: 01, 02, 03, 04, 05; 108-06 next, 108-07 deploy gate deferred)
+Status: Executing Phase 108 (Plans 01, 02, 03, 04, 05 complete)
+Last activity: 2026-08-07 -- Plan 108-05 complete (astridr-repo: swap_model._execute wired to the D-04 per-profile override store -- scoped set/restore write only the profile slot, unscoped set/restore write only the global slot byte-identical to pre-phase behavior; scope field on all four control_verb_swap emits; D-03 boot seed emitting one model_routing event per profile at mode:"inherited"; one proxy-only rejection test strengthened to assert real voice_override state — commits 281b65a9/98eab76c/f644b845 astridr-repo, 783f8407 codepulse)
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
@@ -804,6 +804,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 108]: 108-03: model_routing's status:"failed" skip trimmed to a 4-line comment after a first draft's longer comment pushed the stripped-source offset to activeEngine.test.ts's pre-existing isUnresolvedRouting( regex past its fixed 900-char window, which would have broken that unrelated test; verified via a throwaway Node script replicating the test's own strip+slice+regex logic before committing
 - [Phase 108]: 108-03: control_verb_swap's own D-13 rationale comment contains the literal substring "isUnresolvedRouting" in prose, so the regression test asserting the case never CALLS it must comment-strip the source first (`stripCommentLinesForIngestTests`, same convention as activeEngine.test.ts/controlVerbSwaps.test.ts) — a raw non-stripped assertion would have failed on the plan's own required comment, not a real guard call
 - [Phase 108]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 3->4
+- [Phase 108]: 108-05: found this file's own frontmatter `stopped_at` still read "Completed 108-03-PLAN.md" despite the Current Position section below it already saying "Plan 108-04 complete" (108-04's own STATE.md update evidently didn't reach the frontmatter, or a concurrent session's gsd-sdk clobber reverted just that field) — corrected both to agree in this plan's edit, per the Stale Docs rule
+- [Phase 108]: 108-05: ENGINE-02 left Pending in REQUIREMENTS.md despite its literal text now being true in the code and proven live in-process (scoped swap.set genuinely applies only the profile override; unscoped stays byte-identical) — per this plan's explicit instruction to follow 108-04's precedent of not marking a requirement complete before ENGINE-05's live-stack gate (108-07) runs; REQUIREMENTS.md's ENGINE-02 row gets a prose note recording the code-complete state, not a checkbox flip
+- [Phase 108]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 4->5
 
 ### Pending Todos
 
