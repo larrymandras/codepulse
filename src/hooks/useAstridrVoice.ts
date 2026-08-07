@@ -2098,6 +2098,44 @@ export function useAstridrVoice({
     };
   }, []);
 
+  // ─── 188.3-08 verification instrument: force a mid-utterance reset ─────────
+  // Criterion 2 (Chrome's mid-utterance recognizer reset) proved unreachable by
+  // manual provocation. The only manual way to make Chrome cycle is to pause,
+  // but any pause past SEND_DEBOUNCE_MS (2_000, :74) flushes the utterance
+  // FIRST — so the split you get is the debounce's, not a reset's. Two live
+  // sessions (2026-08-06, 2026-08-07) both recorded it NOT OBSERVED for exactly
+  // that reason, the second one having been split by its own instructions.
+  //
+  // recognitionAbort() reaches the SAME `recognition.onend` path a spontaneous
+  // Chrome death takes: intentionalStopRef is set true ONLY inside
+  // teardownConversation (:1013), so an abort issued from here leaves it false
+  // and onend runs the death-without-final salvage plus keep-alive restart
+  // block (:912-:947) verbatim. Only the TRIGGER is synthetic — the audio, the
+  // live interim, the duplex ear and the timing are all real speech.
+  //
+  // The trace records the three salvage preconditions AT the abort instant, so
+  // a run where salvage does NOT fire still says which condition failed rather
+  // than leaving a silent absence to interpret.
+  //
+  // Debug-gated exactly like the COPY TRACE chip (VOICE_DEBUG, :197) — absent
+  // from any build with that flag off.
+  useEffect(() => {
+    if (!VOICE_DEBUG || typeof window === "undefined") return;
+    const w = window as unknown as { __astridrForceRecognizerReset?: () => void };
+    w.__astridrForceRecognizerReset = () => {
+      trace("debug.force-recognizer-reset", {
+        state: voiceStateRef.current,
+        longestInterim: longestInterimRef.current,
+        interimWords: longestInterimRef.current.trim().split(/\s+/).filter(Boolean).length,
+        fromSpeaking: longestInterimFromSpeakingRef.current,
+      });
+      recognitionAbort();
+    };
+    return () => {
+      delete w.__astridrForceRecognizerReset;
+    };
+  }, [recognitionAbort]);
+
   return {
     voiceState,
     interimText,
