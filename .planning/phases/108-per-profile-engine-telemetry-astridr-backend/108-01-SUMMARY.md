@@ -219,6 +219,125 @@ Files/commits (codepulse repo):
 - FOUND: .planning/phases/108-per-profile-engine-telemetry-astridr-backend/108-01-SUMMARY.md
 - FOUND commit: 6163a09a (plan-completion metadata commit)
 
+## Post-execution gap closure (2026-08-07, same day)
+
+An adversarial mutation-testing pass over this already-completed plan found two coverage gaps
+where mutating real production code left every test in the affected file green. Production
+behavior was already correct and independently proven live — no code changed; only the missing
+regression tests were added, in astridr-repo commit `d8a8e1d5` (`test(108-01): close mode-default
+and ws-launcher reset coverage gaps`).
+
+### Gap 1 — `router.py:481`'s `.get(selection_path, "inherited")` default arm
+
+`_MODE_BY_SELECTION_PATH.get(selection_path, "inherited")` is the D-12 mode-derivation default
+arm. The two existing D-12 tests (`test_mode_derivation_covers_all_live_selection_paths`,
+`test_mode_derivation_pinned_and_session_mappings`) call `_MODE_BY_SELECTION_PATH.get(...)`
+**directly in the test body** with their own hardcoded `"inherited"` default — they never invoke
+`_emit_model_routing`, so line 481's live default arm was never executed by any test. Mutating
+`"inherited"` → `"pinned"` left all 82 tests in `tests/unit/providers/test_router.py` passing.
+
+**Fix:** two new end-to-end tests in `TestModelRoutingTelemetry` that drive the real
+`_emit_model_routing` path via `router.chat()` and assert `payload["mode"]` on the actual
+emitted payload — `test_model_routing_mode_default_arm_from_real_payload` (via
+`selectionPath="category-rule"`) and `test_model_routing_mode_default_arm_advisor_path` (via
+the hardcoded `"advisor"` literal at `router.py:324`, which bypasses `_resolve_model` entirely).
+Both selection_path values are absent from `_MODE_BY_SELECTION_PATH`'s keys, so both can only
+resolve through the `.get()` default arm.
+
+**Mutation-check (mutated `"inherited"` → `"pinned"` at `router.py:481`, restored via
+backup-copy):**
+
+```
+FAILED tests/unit/providers/test_router.py::TestModelRoutingTelemetry::test_model_routing_mode_default_arm_from_real_payload
+AssertionError: assert 'pinned' == 'inherited'
+  - inherited
+  + pinned
+
+FAILED tests/unit/providers/test_router.py::TestModelRoutingTelemetry::test_model_routing_mode_default_arm_advisor_path
+AssertionError: assert 'pinned' == 'inherited'
+  - inherited
+  + pinned
+
+2 failed, 82 deselected in 0.20s
+```
+
+Control confirming the original gap under the same mutation — the two pre-existing dict-level
+tests still passed vacuously:
+
+```
+pytest tests/unit/providers/test_router.py -k "test_mode_derivation" -q
+2 passed, 82 deselected in 0.11s
+```
+
+Restored `router.py` from backup-copy; `pytest tests/unit/providers/test_router.py -x -q` → 84
+passed (82 original + 2 new).
+
+### Gap 2 — `wiring.py:615-616`'s `finally: reset_profile_context(_profile_token)`
+
+No test in the repo exercised `_ws_agent_launcher`'s profile-context reset behaviorally. The
+plan's own Task 1 acceptance criterion for `wiring.py` was grep-based only
+(`grep -c "reset_profile_context" astridr/engine/bootstrap/wiring.py >= 1`), which a mutation
+replacing the `finally:` body with `pass` still satisfies. `_ws_agent_launcher` backs
+`chat.send`/`agent.send_task` — every CodePulse chat and task turn, CodePulse's primary chat
+surface — and this is exactly T-108-07's threat (a long-lived or reused task misattributing one
+profile's engine to another).
+
+**Fix:** new file `astridr-repo:tests/unit/engine/bootstrap/test_wiring_profile_context.py`,
+modeled on the sibling set-point's `tests/unit/channels/test_agent_processor_profile_context.py`.
+Extracts the real `_ws_agent_launcher` closure by calling the actual `_setup_ws_telemetry` wiring
+function with `security_pipeline=None` and a not-found `agent_type_registry` (keeping the launcher
+on its simplest live path) and reading `command_dispatcher._agent_launcher` off the returned
+`CommandDispatcher`. Three behavioral tests: profile set during the turn and cleared after
+(happy path), profile cleared after the stub sub-loop **raises** (the exception path — proves the
+`finally`, not just the happy path), and no cross-turn leakage across two sequential launcher
+calls with different profiles.
+
+**Mutation-check (replaced `finally: reset_profile_context(_profile_token)` with `finally: pass`
+at `wiring.py:615-616`, restored via backup-copy):**
+
+```
+FAILED tests/unit/engine/bootstrap/test_wiring_profile_context.py::test_profile_context_set_during_turn_and_cleared_after
+FAILED tests/unit/engine/bootstrap/test_wiring_profile_context.py::test_profile_context_cleared_after_exception
+  AssertionError: assert 'business' is None
+   +  where 'business' = get_profile_context()
+FAILED tests/unit/engine/bootstrap/test_wiring_profile_context.py::test_profile_context_isolated_across_sequential_turns
+  AssertionError: assert 'personal' is None
+   +  where 'personal' = get_profile_context()
+
+3 failed in 0.38s
+```
+
+All 3 new tests fail under the mutation, including the exception-path test specifically. Restored
+`wiring.py` from backup-copy; `pytest tests/unit/engine/bootstrap/test_wiring_profile_context.py -q`
+→ 3 passed.
+
+### Test counts
+
+- `pytest tests/unit/providers/test_router.py tests/unit/engine/bootstrap/ -q` → **195 passed**
+  (84 router + 111 bootstrap, including the 3 new wiring tests).
+- Full suite `pytest tests/ -q` → **1 failed, 9800 passed, 112 skipped, 1 xpassed** (up from 9795
+  passed pre-gap-closure — the +5 delta is exactly the 2 router tests + 3 wiring tests added
+  here). The 1 failure is the same known pre-existing flake already logged in this SUMMARY's
+  "Issues Encountered" section (`tests/unit/automation/test_pipes.py::TestPipeManagerScan::
+  test_scan_updates_changed_pipes`) — not chased, confirmed still unrelated to this change.
+
+### Shared-checkout disclosure
+
+Two concurrent-session artifacts were present in the working tree during this gap-closure pass
+and were **not staged or touched**: `astridr/core/types.py` (modified) and
+`tests/unit/engine/bootstrap/test_identity.py` (new, untracked) — both from another session
+actively committing to `feature/brain-swap`. `git add` named only the 2 files this gap-closure
+touched; `git show --stat HEAD` on commit `d8a8e1d5` confirms only those 2 files landed. Both
+production files this pass mutation-tested (`astridr/providers/router.py`,
+`astridr/engine/bootstrap/wiring.py`) were restored via backup-copy (`cp file file.bak` → mutate
+→ test → `cp file.bak file` → `rm file.bak`) and confirmed byte-identical via `git diff --stat`
+returning empty before commit — no `git checkout`/`git stash` used anywhere in this pass.
+
+### Commit
+
+- `d8a8e1d5` (astridr-repo, `feature/brain-swap`) — `test(108-01): close mode-default and
+  ws-launcher reset coverage gaps`
+
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
 *Plan: 01*
