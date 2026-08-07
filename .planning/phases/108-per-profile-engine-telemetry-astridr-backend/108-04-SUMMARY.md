@@ -158,9 +158,14 @@ branch switch was used anywhere in this plan.
 
 - `astridr-repo:astridr/providers/router.py` — `_profile_model_overrides`/`_profile_override_sources`
   state slots, accessor trio, and the `_resolve_model` precedence rung (D-04)
-- `astridr-repo:tests/unit/providers/test_router.py` — 9 new tests: explicit-wins-over-profile,
+- `astridr-repo:tests/unit/providers/test_router.py` — 7 new tests: explicit-wins-over-profile,
   precedence with BOTH overrides set (the real D-04 assertion), keyed-by-profile isolation, unscoped
   byte-identical control (tuple-equality), clear-unknown-id no-raise, source round-trip, clear-restores-default
+  <!-- CORRECTED 2026-08-07 (adversarial claims-audit): this line originally read "9 new tests" while
+       enumerating only 7. Ground truth: `git show 9ad3cea6 -- tests/unit/providers/test_router.py |
+       grep -c "def test_"` returns 7, and no parametrize is used. The enumerated list was right; the
+       count was wrong. -->
+
 - `astridr-repo:astridr/api/ws_commands.py` — `SwapSetCommand.profile_id`, docstring update, and
   `_handle_swap_set`'s three-stage fail-closed validation + args threading
 - `astridr-repo:astridr/channels/router.py` — `MessageRouter.known_profile_ids()` public accessor
@@ -245,8 +250,17 @@ genuinely detects an unvalidated apply, not merely an exception. Restored from b
 After Task 2's fix, swept the repo for the abstract pattern "a WS command handler dispatches to
 `VERB_REGISTRY`/a control verb without validating a caller-supplied scope field against a known-id
 set before dispatch." `grep -rn "VERB_REGISTRY.get\|VERB_REGISTRY\[" astridr/api/ws_commands.py`
-shows exactly one other dispatch site (`_handle_swap_catalogue`, read-only, no scope field, no
-mutation) — no other instance of the class found. `grep -n "profile_id\|profile:" astridr/api/
+returns exactly ONE hit in total (`ws_commands.py:1117`), and that hit is inside `_handle_swap_set`
+itself — i.e. this file has no OTHER `VERB_REGISTRY` dispatch site at all, so no other instance of the
+class exists here.
+<!-- CORRECTED 2026-08-07 (adversarial claims-audit): this paragraph originally claimed the grep
+     "shows exactly one other dispatch site (`_handle_swap_catalogue`, read-only...)". That misstated
+     what the command returns. Re-run live: one hit total, inside `_handle_swap_set`. And
+     `_handle_swap_catalogue` (ws_commands.py:1167-1200) never references `VERB_REGISTRY` at all — it
+     imports the `swap_model`/`swap_voice` modules directly and reads their module-level singletons.
+     The safety CONCLUSION (no other unvalidated dispatch site) still holds and is now stated from what
+     the grep actually shows; only the evidentiary description was wrong. -->
+ `grep -n "profile_id\|profile:" astridr/api/
 ws_commands.py` confirms the only other WS commands carrying a profile-shaped field
 (`AgentSendTaskCommand.profile`, `ChatSendCommand.profile`) are pre-existing and out of this plan's
 scope (they route through `ProfileManager.resolve_profile`, a different validation path, not
