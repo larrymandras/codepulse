@@ -156,8 +156,16 @@ describe("UAT test 2 — model_routing never stores an unresolved sentinel (sour
     // logic. The case body itself now just delegates and skips (break) on
     // a null result — the next assertion pins that the delegate still
     // applies isUnresolvedRouting and never throws.
+    //
+    // 108-07 gap closure: a null result now also increments skippedCount
+    // and logs a warning before the break (previously silent — the exact
+    // defect the live ENGINE-05 proof found). The regex below allows
+    // arbitrary statements between the `if (!resolved) {` guard and its
+    // `break;` (non-greedy `[\s\S]*?`) so it doesn't over-fit to the old
+    // two-line shape, while still pinning that this IS an if/break skip
+    // block, not a throw.
     expect(caseBody).toMatch(/resolveModelRoutingEvent\(/);
-    expect(caseBody).toMatch(/if\s*\(!resolved\)\s*\{\s*break;/);
+    expect(caseBody).toMatch(/if\s*\(!resolved\)\s*\{[\s\S]*?break;/);
     expect(caseBody).not.toMatch(/throw\s+new/);
   });
 
