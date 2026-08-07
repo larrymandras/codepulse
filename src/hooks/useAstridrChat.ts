@@ -288,6 +288,24 @@ export function useAstridrChat() {
       const blocks = payload?.blocks;
       if (!blocks || blocks.length === 0) return;
 
+      // D-10 (188.3-06, T-188.3-17..20): session gate, mirroring the run.tts
+      // gate above verbatim in shape (:437) — NOT the four activeSessionRef
+      // siblings (:212/:416/:424/:462). run.blocks sits in the same
+      // structural position as run.tts: it typically arrives AFTER run.text
+      // for a normal reply, and activeSessionRef is nulled the instant
+      // run.text's done:true lands (:226/:278) — gating on it here would
+      // suppress the control-verb fast-path reply, which emits ONLY
+      // run.blocks with no preceding run.text at all. lastSessionRef is
+      // never cleared, so it answers "does this belong to the turn we just
+      // had" instead of "is a turn currently streaming" — the question this
+      // handler actually needs answered. Fails OPEN on an absent
+      // session_id, same as run.tts. Early return BEFORE both the backfill
+      // and the append below — the predecessor bug on run.tts was exactly a
+      // session check computed as a trace field that never entered the
+      // gate, with a test asserting the diagnostic instead of the behavior.
+      const sessionOk = !payload.session_id || payload.session_id === lastSessionRef.current;
+      if (!sessionOk) return;
+
       // 186-01 follow-up (fresh live trace, 186-09 swap testing): the
       // control-verb fast-path short-circuit (ws_commands.py::_handle_chat_
       // send — swap refusals/confirmations, focus/quiet-hours toggles,
