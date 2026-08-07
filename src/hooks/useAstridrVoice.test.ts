@@ -1388,6 +1388,75 @@ describe("useAstridrVoice", () => {
     expect(dispatched).toContain("what does my calendar");
   });
 
+  // ─── COLD-FRAGMENT-1 (188.3-03, D-02/D-03/D-17) ───────────────────────────
+  // Criterion 2: observed live 2026-08-06 22:16:18 —
+  // `final.noise-rejected {"text":"like tonight","warm":false}` fired
+  // mid-utterance while the earlier half ("what does my calendar look") sat
+  // as a lost interim the rejoin exists to recover, but the noise gate at
+  // :1573 judges `text` before the rejoin at :1621 ever runs. This fixture
+  // is deliberately COLD: no wake(), no warmAndOpenFollowUp(). D-17 trap —
+  // after 188.3-01 (D-05), wake() alone opens a bounded follow-up window
+  // (minWords = 1), which would let a sub-floor fragment through for the
+  // WRONG reason (the open window, not the widened accumulationPending
+  // leniency). followUpOpen === false is asserted FIRST, before anything
+  // else, as the D-17 precondition proving this run is genuinely cold.
+  it("COLD-FRAGMENT-1: a cold sub-floor fragment with an eligible pending lostInterim survives the noise gate and rejoins (D-02/D-03)", async () => {
+    const chat = makeChat();
+    const { result } = renderVoice(chat);
+
+    // D-17 precondition — the FIRST assertion in the test body: no wake()
+    // was called, so the follow-up window is closed and minWords is the
+    // cold floor (3), not the warm floor (1).
+    expect(result.current.followUpOpen).toBe(false);
+
+    act(() => {
+      // Chrome hears the head as an interim, then resets mid-utterance —
+      // the final carries only the tail. 5 words, non-speaking-era, and not
+      // an echo of the (empty) reply: eligible per the rejoin's own gate
+      // at :1621-1625.
+      onInterimResultCallback?.("what does my calendar look");
+      onFinalResultCallback?.("like tonight"); // 2 words — fails the cold 3-word floor
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what does my calendar look like tonight",
+      { interruptedReply: undefined, voice: true }
+    );
+    const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as string | undefined;
+    expect(dispatched).toContain("what does my calendar look");
+    expect(dispatched).toContain("like tonight");
+  });
+
+  // CTRL-NO-ELIGIBLE-INTERIM (D-03 over-block control) — COLD-FRAGMENT-1
+  // with exactly ONE eligibility term flipped: the pending lostInterim now
+  // has fewer than 3 words, failing the rejoin's own word-count floor.
+  // Nothing else differs (same makeChat(), same final text, same timer
+  // advance, no wake()). This is what stops the widened leniency from
+  // letting a fragment past the noise gate that then gets no rejoin and
+  // dispatches bare — the exact failure mode D-03 exists to prevent.
+  it("CTRL-NO-ELIGIBLE-INTERIM: the same cold sub-floor fragment with an INELIGIBLE pending lostInterim (fewer than 3 words) is still rejected — nothing sends (D-03)", async () => {
+    const chat = makeChat();
+    const { result } = renderVoice(chat);
+
+    expect(result.current.followUpOpen).toBe(false);
+
+    act(() => {
+      // Only the word-count eligibility term is flipped vs COLD-FRAGMENT-1 —
+      // 2 words, below the rejoin's own >= 3 floor.
+      onInterimResultCallback?.("what does");
+      onFinalResultCallback?.("like tonight");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(chat.sendMessage).not.toHaveBeenCalled();
+  });
+
   // ─── 22:07 live-trace regression (186-01 follow-up, Defect B) ─────────────
   // A talk-over interim misclassified during active TTS ("I couldn't find"
   // — Defect A's own failure mode, same live trace) never finalized and sat

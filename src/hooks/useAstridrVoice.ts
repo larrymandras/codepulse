@@ -1579,14 +1579,54 @@ export function useAstridrVoice({
       // between two accepted finals of the same sentence. Scoped narrowly:
       // shouldReject's own confidence floor and barge-in bypass are
       // untouched (this only widens the word-count axis, and only in this
-      // specific context), and Plan 04's wake-strip/duration gates above
-      // this block already ran and would have dropped a wake-phrase-only or
-      // sub-floor-duration utterance before ever reaching here -- so this
-      // leniency cannot reopen that seam. With an EMPTY accumulator or a
-      // cold conversation, accumulationPending is false and the fragment is
-      // rejected exactly as it is today.
+      // specific context).
+      //
+      // D-13 (corrected 188.3-03; the prior version of this comment claimed
+      // that Plan 04's wake-strip AND duration checks had both already
+      // executed by the time text reaches this point). That claim is only
+      // half true now. The wake-strip DOES still run above this
+      // block for the direct path, so a wake-phrase-only utterance is
+      // already dropped before ever reaching here. The duration gate does
+      // NOT run above this block -- 188.1-07 moved it BELOW the rejoin
+      // (`!salvaged && durationMs !== undefined && durationMs < DURATION_FLOOR_MS`),
+      // so a sub-floor-duration final has not yet been judged at the point
+      // this leniency admits a fragment.
+      //
+      // D-13 re-check: does this leniency's safety actually DEPEND on the
+      // duration gate having run first? No -- traced concretely. A fragment
+      // this leniency admits still flows into the rejoin and the duration
+      // gate below, in this SAME pass over this SAME final. If no eligible
+      // lostInterim rejoins it, `salvaged` stays false and the duration gate
+      // still applies to this final exactly as it always has -- the
+      // protection runs LATER in the pass, not earlier, but it still runs.
+      // If the rejoin DOES fire (this leniency's eligibility mirrors the
+      // rejoin's own, so this is the expected case -- D-03), `salvaged`
+      // becomes true and the duration gate is deliberately exempted by the
+      // pre-existing SALVAGE EXEMPTION (188.1-07, proven by CTRL-SALVAGE): a
+      // rejoined final's durationMs measures only the surviving tail and
+      // structurally under-reports the real utterance, so exempting it
+      // predates and is independent of this leniency. No residual seam
+      // found. (Unrelated, pre-existing ceiling: durationMs is permanently
+      // undefined for primary-recognizer-sourced finals, so the duration
+      // gate never protected those regardless of any leniency -- see FAILS
+      // OPEN below.)
+      //
+      // With an EMPTY accumulator, a cold conversation, and no eligible
+      // pending lostInterim, both disjuncts of accumulationPending are false
+      // and the fragment is rejected exactly as it is today.
+      // D-02/D-03: an eligible lost interim is pending -- mirrors the
+      // rejoin's own eligibility set below (:1621-1625) term for term, so
+      // nothing is admitted here that the rejoin will not then go on to
+      // complete: non-empty, non-speaking-era, >= 3 words, not an echo of
+      // the current reply.
+      const eligibleLostInterimPending =
+        lostInterim.length > 0 &&
+        !lostInterimFromSpeaking &&
+        lostInterim.split(/\s+/).filter(Boolean).length >= 3 &&
+        !isEchoOfReply(lostInterim, currentReply());
       const accumulationPending =
-        accumulatedRef.current.trim() !== "" && sendTimerRef.current !== null;
+        (accumulatedRef.current.trim() !== "" && sendTimerRef.current !== null) ||
+        eligibleLostInterimPending;
       const minWords = isFollowUpWindowOpenForGate ? 1 : 3;
       const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
       const confidenceRejected =
