@@ -1174,3 +1174,324 @@ respectively — both ran their confirming turn on `claude-sonnet-5`, the pre-te
 satisfied end-to-end for the first time across all three proof rounds in this file.** Both prior
 gaps (session_id-null, providerAffinity-array) are closed and independently re-verified.
 
+---
+
+## Cleanup: stale-row fix and synthetic-row purge (2026-08-07)
+
+Two cleanups requested by Larry before ENGINE-05 sign-off, executed and live-verified on the
+running self-hosted stack. Nothing in the sections above is edited or retracted — this section is
+additive.
+
+### A. `activeEngineSnapshots` stale `pinned` row after a restore-to-default
+
+**Root cause (traced, not assumed):** `_resolve_model` correctly falls through every named rung to
+the bare `"default"` fallback after a restore clears the applicable override, returning
+`(None, "default")`. `_emit_model_routing`'s D-02 guard then (correctly) refuses to emit for an
+unresolved model. Nothing else in the codebase superseded the pre-restore `pinned` row, so
+`activeEngineSnapshots` kept reporting the last-pinned model as the profile's current engine —
+`consulting` showed `mode: "pinned", model: "claude-fable-5"` while the profile was actually
+running `claude-sonnet-5`.
+
+**Fix:** `astridr/engine/control_verbs/swap_model.py`'s restore branch now emits an honest
+`mode: "inherited"` row after clearing an override, reusing `_emit_profile_model_routing_seed`
+(`astridr/engine/bootstrap/core.py`, built by 108-05) rather than a second emitter — that function
+now accepts optional `profiles=`/`selection_path=` keyword args (boot's own call site passes
+neither, so its behavior is byte-for-byte unchanged). New live value
+`selectionPath: "restore-to-default"`. D-02's refuse-to-emit guard in `_emit_model_routing` is
+completely untouched — a genuinely unresolved model still emits nothing, verified by the
+pre-existing `test_model_routing_refuse_to_emit_unresolved_model`/`test_model_routing_refuse_to_emit_no_profile_context`
+tests in `tests/unit/providers/test_router.py`, which pass unmodified (102 tests, that file plus
+the wiring suite, all green — see Test evidence below).
+
+Scoped restore emits for exactly the restored profile. Unscoped restore emits only for profiles
+that do **not** carry their own per-profile pin (D-04 precedence — a pinned profile's resolution
+never depended on the global slot, so clearing it changes nothing for that profile) **and** only
+when a global override was actually in force immediately before the restore (captured via
+`_router.get_global_override()` **before** `clear_global_override()` runs — reading it after would
+always observe `None`).
+
+`selectionPath` is a free `v.optional(v.string())` in both `convex/schema.ts:2066` and
+`convex/activeEngine.ts:84` (confirmed by reading both files) — no Convex schema change, no Convex
+deploy required for this value itself (Convex was still deployed for Part B below).
+
+**Contract docs updated in the same commits, not a second wrong contract:** `docs/astridr-contract.md`
+§2.37 and codepulse's `103-CONTRACT.md` §4 both now list `restore-to-default` alongside `boot-seed`
+— and, while in that exact section, two **pre-existing** gaps were also closed (Rule 2, same defect
+class, directly adjacent code): `profile-swap-override` (D-04's per-profile rung) was missing from
+`docs/astridr-contract.md`'s rung list entirely, and `boot-seed` itself was missing from **both**
+files' vocabularies even though it has been live since 108-05. Neither of those two was caused by
+this cleanup; both are now documented so this phase doesn't ship a second contract that
+understates its own event's vocabulary.
+
+**Files changed** (astridr commit `55849e2a`): `astridr/engine/bootstrap/core.py`,
+`astridr/engine/bootstrap/wiring.py`, `astridr/engine/control_verbs/swap_model.py`,
+`docs/astridr-contract.md`, plus three test files. codepulse commit `58cdb0e7`:
+`103-CONTRACT.md`.
+
+#### Unit tests — new coverage, mutation-verified
+
+16 new tests across two files (`tests/unit/engine/bootstrap/test_boot_model_routing_seed.py`,
+`tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed`, plus one in
+`tests/unit/engine/test_bootstrap_swap_wiring.py`), all asserting on the **real captured telemetry
+payload dict**, never a bare mock call count. Three mutations applied via backup-copy
+(`cp f f.bak` → mutate → run → `cp f.bak f` → `rm f.bak`), each confirmed RED, each restored to
+GREEN:
+
+**Mutation 1 — disable the restore emission entirely** (`_emit_restore_routing` returns
+immediately):
+```
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_scoped_restore_emits_inherited_row_for_that_profile_only
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_emits_only_for_unpinned_profiles_not_the_pinned_one
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_all_profiles_unpinned_emits_for_every_one
+3 failed, 4 passed in 0.16s
+```
+
+**Mutation 2 — remove the pinned-profile exclusion filter on unscoped restore:**
+```
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_emits_only_for_unpinned_profiles_not_the_pinned_one
+AssertionError: Left contains one more item: {'mode': 'inherited', 'model': 'x-ai/grok-4.5', 'profileId': 'consulting', 'selectionPath': 'restore-to-default', ...}
+1 failed, 6 passed in 0.35s
+```
+
+**Mutation 3 — always claim a prior global override was in force** (skip the pre-clear capture):
+```
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_with_no_prior_global_override_emits_nothing
+AssertionError: assert [{'mode': 'in...efault', ...}] == []
+1 failed, 6 passed in 0.33s
+```
+
+**Mutation 4 — `_emit_profile_model_routing_seed` ignores the `selection_path=` override:**
+```
+FAILED tests/unit/engine/bootstrap/test_boot_model_routing_seed.py::test_selection_path_override_is_stamped_on_every_emitted_row
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_scoped_restore_emits_inherited_row_for_that_profile_only
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_emits_only_for_unpinned_profiles_not_the_pinned_one
+FAILED tests/unit/engine/test_swap_model.py::TestRestoreEmitsModelRoutingSeed::test_unscoped_restore_all_profiles_unpinned_emits_for_every_one
+4 failed, 13 passed in 0.40s
+```
+
+**Mutation 5 — `_emit_profile_model_routing_seed` ignores the `profiles=` override:**
+```
+FAILED tests/unit/engine/bootstrap/test_boot_model_routing_seed.py::test_profiles_override_narrows_emission_to_the_given_subset
+FAILED tests/unit/engine/bootstrap/test_boot_model_routing_seed.py::test_empty_profiles_list_override_sends_nothing
+2 failed, 8 passed in 0.40s
+```
+
+All five restored to GREEN after each mutation (verified individually). Full relevant suite after
+final restore:
+```
+tests/unit/engine/bootstrap/test_boot_model_routing_seed.py .......... (16 tests)
+tests/unit/engine/test_swap_model.py ..................................... (57 tests)
+tests/unit/engine/test_bootstrap_swap_wiring.py ....... (7 tests)
+tests/unit/providers/test_router.py .............................. (D-02 guard, untouched)
+170 passed in 2.50s
+```
+Full astridr-repo suite (unaffected files included, ground truth): **9883 passed, 112 skipped, 5
+deselected, 1 xpassed, 0 failed** in 301.74s. The known flake
+(`test_pipes.py::TestPipeManagerScan::test_scan_updates_changed_pipes`) was not chased and did not
+fail this run.
+
+#### Live re-proof (raw output, quoted first, verdict after)
+
+Rebuild: `COMPOSE_PROFILES=prod,war-room docker compose up --build -d` from `astridr-repo`.
+`astridr-agent` and all 5 `war-room-*` containers recreated and became `healthy`. New code
+confirmed live inside the running containers by grepping for a symbol only this change contains
+(never inferred from timestamps):
+```
+$ MSYS_NO_PATHCONV=1 docker exec astridr-agent grep -c "restore-to-default" /app/astridr/engine/control_verbs/swap_model.py /app/astridr/engine/bootstrap/core.py
+/app/astridr/engine/control_verbs/swap_model.py:2
+/app/astridr/engine/bootstrap/core.py:2
+$ MSYS_NO_PATHCONV=1 docker exec astridr-war-room-astridr grep -c "restore-to-default" /app/astridr/engine/control_verbs/swap_model.py /app/astridr/engine/bootstrap/core.py
+/app/astridr/engine/control_verbs/swap_model.py:2
+/app/astridr/engine/bootstrap/core.py:2
+```
+
+**1. Baseline** `activeEngine:latestByProfile` (fresh boot-seed after the rebuild — in-memory
+overrides don't survive a restart, so the baseline is naturally clean):
+```json
+[
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "boot-seed", "timestamp": 1786125895.819504},
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "business", "selectionPath": "boot-seed", "timestamp": 1786125895.819503},
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "boot-seed", "timestamp": 1786125895.819502}
+]
+```
+
+**2. Scoped swap** `consulting → grok` via WS `swap.set` (real client, `Authorization: Bearer`
+header, run from inside `astridr-agent` reading `ASTRIDR_WEB_API_KEY` from `os.environ`):
+```json
+{"type": "ack", "request_id": "r1", "status": "ok", "handled": true, "spoken_reply": "Switching to Grok 4.5.", "target": "brain"}
+```
+`controlVerbSwaps:listByScope("consulting")` head row: `{"path": "openrouter", "providerAffinity": ["grok"], "resolved": "grok-4.5", "scope": "consulting", "target": "grok", "verb": "swap_model"}` — unchanged/correct swap-history behavior (Part B regression check, folded in here).
+
+To actually reproduce the reported bug (a stale `pinned` row requires a **real turn** to have
+resolved through the pin first — `swap.set` alone only mutates router state + the audit trail, it
+never itself emits `model_routing`), a real `chat.send` was driven for `consulting` while pinned:
+```json
+{"event_type": "run.completed", "data": {"session_id": "fe9b23eb-...", "model": "grok-4.5", "final_text": "I'm Auto, an agent router designed by Cursor."}, ...}
+```
+`activeEngine:latestByProfile` → `consulting`: `{"mode": "pinned", "model": "grok-4.5", "selectionPath": "profile-swap-override", "timestamp": 1786126152.3639026}` — **this is the exact bug scenario reproduced live**, unchanged behavior (pinning still works correctly).
+
+**3. Scoped restore** `consulting` (THE FIX):
+```json
+{"type": "ack", "request_id": "r3", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}
+```
+`activeEngine:latestByProfile` → `consulting`:
+```json
+{"_id": "m97r49te6e3s3ewz5dqy40sd3x8c0t48", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "restore-to-default", "timestamp": 1786126167.6694362}
+```
+**VERDICT — PASS.** No longer `pinned`/`grok-4.5` — the stale row is gone, replaced with an honest
+`mode: "inherited"` row carrying the profile's real configured default and the new, honest
+`selectionPath`.
+
+A real confirming turn was then driven for `consulting`:
+```json
+{"event_type": "run.completed", "data": {"session_id": "242c5de3-...", "model": "claude-sonnet-5", "final_text": "I'm Ástríðr, running on Claude — no separate \"model swap\" active right now. ⚡"}, ...}
+```
+`activeEngine:latestByProfile` re-read immediately after: **unchanged** (same `_id`/`timestamp` as
+above) — confirms D-02's guard correctly refused to emit for this turn (it resolved via the bare
+`"default"` rung, `resolved_model=None`), exactly as designed; the table's `restore-to-default` row
+stands undisturbed.
+
+**Table-vs-reality agreement, stated precisely (not glossed over):** the table stores
+`"anthropic/claude-sonnet-5"` (the config-literal, vendor-prefixed id from `profiles.yaml`); the
+live turn's `run.completed.model` reports `"claude-sonnet-5"` (the bare id the Anthropic provider
+returns). These are **not byte-identical strings**, but they name the **same underlying model** —
+this exact split is a pre-existing, already-documented, already-accepted characteristic of the
+108-05 boot-seed's design (which this fix was explicitly instructed to reuse verbatim, not
+re-litigate): `src/components/brains/BrainPicker.tsx:364` already carries a comment ("UAT cosmetic
+fix: config ids are vendor-prefixed... while live catalogue ids are not... `resolveModelDisplayName`
+tolerates that mismatch") documenting that the CodePulse UI normalizes exactly this split for
+display. It predates this cleanup (present in every boot-seed row too, e.g. `personal`/`business`
+above) and is out of this cleanup's scope to change. The property this re-proof was asked to assert
+— that the table no longer lies about the *pinned* state — is proven; the config-id-vs-live-id
+string format is a separate, pre-existing, already-mitigated-in-the-UI characteristic.
+
+**4. Unscoped restore, with a second profile carrying its own pin.** `personal` was scoped-pinned
+to `haiku`, then a real turn was driven to establish its `pinned` row (mirroring step 2):
+```json
+{"event_type": "run.completed", "data": {"model": "claude-haiku-4-5-20251001", ...}}
+```
+`activeEngine:latestByProfile` → `personal`: `{"_id": "m97r9c3tjmefcdh1j17dy0s9mh8c0ekj", "mode": "pinned", "model": "claude-haiku-4-5-20251001", "selectionPath": "profile-swap-override", "timestamp": 1786126241.210031}`.
+
+A global (unscoped) override was then set (`→ fable`), and an **unscoped** restore issued:
+```json
+{"type": "ack", "request_id": "r8", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}
+```
+`activeEngine:latestByProfile` immediately after:
+```json
+[
+  {"_id": "m97te67hhc3e29cpyxafdmnxcd8c04e2", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "restore-to-default", "timestamp": 1786126262.829035},
+  {"_id": "m97kcp0pxgqzygkxppm96v4hk18c00xq", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "business", "selectionPath": "restore-to-default", "timestamp": 1786126262.829025},
+  {"_id": "m97r9c3tjmefcdh1j17dy0s9mh8c0ekj", "mode": "pinned", "model": "claude-haiku-4-5-20251001", "profileId": "personal", "selectionPath": "profile-swap-override", "timestamp": 1786126241.210031}
+]
+```
+**VERDICT — PASS.** `personal`'s `_id` and `timestamp` are **byte-identical** to before the unscoped
+restore — no new row, its pin genuinely stands. `consulting` and `business` (both unpinned) got
+**fresh** rows (new `_id`s, new `timestamp`s, `restore-to-default`) — exactly the D-04-precedence
+behavior the fix was designed for, live, not just in unit tests.
+
+**5. `controlVerbSwaps` regression check** (Part B's deploys didn't disturb the swap-history axis):
+every `swap.set`/restore issued in this proof session landed a correctly-shaped row (verb, path,
+scope, resolved/providerAffinity as applicable) — confirmed above at step 2 and in the final count
+below (10 genuine rows pre-proof → 16 post-proof, delta of exactly 6, matching the 6 `swap.set`
+calls issued: r1 swap, r3 restore, r5 swap, r7 swap, r8 restore, r9 restore).
+
+**6. Synthetic rows purged, genuine rows intact** — see Part B below for the full before/after.
+
+**7. Stack fully restored.** `personal` was scoped-restored and both `personal`/`consulting` were
+re-confirmed via real turns:
+```json
+{"event_type": "run.completed", "data": {"session_id": "cbf9bd05-...", "model": "claude-sonnet-5", ...}}
+{"event_type": "run.completed", "data": {"session_id": "eeed3344-...", "model": "claude-sonnet-5", ...}}
+```
+A live `model_routing` WS frame was also captured mid-proof, matching the fix's payload exactly:
+```json
+{"event_type": "model_routing", "data": {"profileId": "personal", "model": "anthropic/claude-sonnet-5", "mode": "inherited", "selectionPath": "restore-to-default", "status": "success", ...}}
+```
+Final `activeEngine:latestByProfile`:
+```json
+[
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "restore-to-default", "timestamp": 1786126279.5957391},
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "consulting", "selectionPath": "restore-to-default", "timestamp": 1786126262.829035},
+  {"mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "business", "selectionPath": "restore-to-default", "timestamp": 1786126262.829025}
+]
+```
+**VERDICT — PASS. All three profiles `inherited`, nothing pinned to a test model, proven by real
+turns (`claude-sonnet-5` served for both re-confirmed profiles), not acks alone.**
+
+### B. `controlVerbSwaps` synthetic-row purge
+
+Table re-listed first, per the plan's instruction to confirm the synthetic set myself rather than
+trust the two ids handed in: exactly two rows carried a `__..__` sentinel `scope` —
+`ms7he1sd439cse5q49t956tt0n8c17wv` (`scope: "__108-07r2-array-repro__"`) and
+`ms7q3t64w8pmwqfj4csc05c8cs8c1skg` (`scope: "__108-freshness-probe__"`) — matching exactly the two
+ids given, no more, no fewer. 12 total rows before purge.
+
+A **temporary** internal mutation (`controlVerbSwaps:_purgeSyntheticTestRow`) was added, requiring
+BOTH the verified `_id` AND the row's own `scope` field to match exactly (plus a `__sentinel__`
+shape guard on the expected scope, refusing even a syntactically-plausible-but-wrong call),
+single-document only, no bulk surface. Deployed, exercised, then **deleted from source and
+redeployed** so no permanent delete surface remains.
+
+```
+$ npx convex run controlVerbSwaps:_purgeSyntheticTestRow ... '{"id":"ms7he1sd439cse5q49t956tt0n8c17wv","expectedScope":"__108-07r2-array-repro__"}'
+{"deleted": "ms7he1sd439cse5q49t956tt0n8c17wv", "scope": "__108-07r2-array-repro__"}
+
+$ npx convex run controlVerbSwaps:_purgeSyntheticTestRow ... '{"id":"ms7q3t64w8pmwqfj4csc05c8cs8c1skg","expectedScope":"__108-freshness-probe__"}'
+{"deleted": "ms7q3t64w8pmwqfj4csc05c8cs8c1skg", "scope": "__108-freshness-probe__"}
+```
+
+**Guard controls (mismatch must throw and delete nothing):**
+```
+$ npx convex run controlVerbSwaps:_purgeSyntheticTestRow ... '{"id":"ms7mkdtdayh85becz8zcme6md18c1f1f","expectedScope":"__not-real__"}'
+Uncaught Error: _purgeSyntheticTestRow: refusing -- row ms7mkdtdayh85becz8zcme6md18c1f1f has scope "consulting", expected exactly "__not-real__". Deleted nothing.
+
+$ npx convex run controlVerbSwaps:_purgeSyntheticTestRow ... '{"id":"ms7mkdtdayh85becz8zcme6md18c1f1f","expectedScope":"consulting"}'
+Uncaught Error: _purgeSyntheticTestRow: refusing -- expectedScope "consulting" is not a __sentinel__-shaped scope. This mutation only ever deletes rows injected with a sentinel scope during proof runs.
+```
+
+**Before/after counts:**
+```
+BEFORE: 12 rows
+AFTER:  10 rows   (delta: -2, exactly the two synthetic ids, nothing else)
+```
+Named genuine row `ms7mkdtdayh85becz8zcme6md18c1f1f` (`resolved: "claude-fable-5", scope: "consulting"`)
+confirmed present, byte-identical, after the purge.
+
+**Temporary mutation removal confirmed** — `git diff --stat convex/controlVerbSwaps.ts` showed zero
+diff after the revert (file restored to exactly its pre-edit state), then redeployed and called
+again:
+```
+$ npx convex run controlVerbSwaps:_purgeSyntheticTestRow ...
+Could not find function for 'controlVerbSwaps:_purgeSyntheticTestRow'. Did you forget to run `npx convex dev`?
+```
+Confirmed gone — `controlVerbSwaps:record` and `controlVerbSwaps:listByScope` are the only two
+functions left in that module (visible in the full function catalogue this error prints).
+
+`git status --porcelain convex/` was checked before both deploys — only `convex/controlVerbSwaps.ts`
+was ever dirty; no foreign files went out with either push.
+
+### Summary — this cleanup
+
+| Assertion | Result |
+|---|---|
+| Root cause traced (D-02 guard correctly refuses, nothing else superseded the stale row) | **PASS** |
+| D-02 guard NOT weakened (pre-existing unresolved-model/no-profile-context tests pass unmodified) | **PASS** |
+| Boot-seed emission path reused, not duplicated (`profiles=`/`selection_path=` params) | **PASS** |
+| Falsy `model_default` still emits nothing (D-02 parity, unit-tested + mutation-verified) | **PASS** |
+| Scoped restore emits inherited row for exactly that profile — live-verified | **PASS** |
+| Unscoped restore excludes a profile with its own pin — live-verified, byte-identical `_id` | **PASS** |
+| New `selectionPath` documented in both contract docs, same commits | **PASS** |
+| Table-vs-reality agreement proven by real turn, format split explained (pre-existing) | **PASS** |
+| New code confirmed live inside rebuilt containers (grep, not timestamps) | **PASS** |
+| Synthetic rows purged by verified id+scope; genuine rows intact; before/after counts | **PASS** (12→10) |
+| Temporary delete mutation removed and absence confirmed post-redeploy | **PASS** |
+| `controlVerbSwaps` swap-recording unregressed by Part B's two deploys | **PASS** |
+| Stack fully restored — nothing pinned, proven by real turns | **PASS** |
+| Unit tests: 16 new, 5 mutations each RED→GREEN; full relevant suite 170/170 | **PASS** |
+| Full astridr-repo suite (ground truth) | **PASS** — 9883 passed, 0 failed |
+| Prior proof rounds in this file | **Untouched, unedited** |
+
+**Commits:** astridr `55849e2a139fff8e35e07a05ddf09505bccf0465`, codepulse
+`58cdb0e7b2040aebd802f07d9f2782517b2a411b`. `STATE.md`/`ROADMAP.md`/`REQUIREMENTS.md` deliberately
+left untouched — no requirement marked, per instruction. Returning a checkpoint for sign-off.
+
