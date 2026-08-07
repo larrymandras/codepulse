@@ -725,6 +725,13 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           const d = data as any;
           const routedProfileId = d.profileId ?? d.profile_id;
           const routedModel = d.model;
+          // Phase 108 (ENGINE-01, research Item 6): latestByProfile has no status
+          // filter, so a failed resolution would render as the live engine. Skip,
+          // don't throw (WR-06/168-06). See controlVerbSwaps.ts for the D-13
+          // contrast: refusals ARE valid rows there — this is a different table.
+          if (d.status === "failed") {
+            break;
+          }
           // UAT 2026-07-29 (103-UAT.md test 2): this case used to coalesce BOTH fields to the
           // literal string "unknown" and store the row. That is not a defensive default here the
           // way it is for the display-only fields below — it manufactures a per-profile engine
@@ -742,6 +749,43 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             mode: d.mode ?? "inherited",
             selectionPath: d.selectionPath ?? d.selection_path,
             expiresAt: d.expiresAt ?? d.expires_at,
+            timestamp,
+          });
+          break;
+        }
+        case "control_verb_swap": {
+          // Phase 108 (TELE-02, D-13/D-14): routes a swap-attempt event into
+          // the controlVerbSwaps domain table (convex/controlVerbSwaps.ts,
+          // plan 108-02), in addition to the generic runtime_events row this
+          // file already writes for every event above. Dual snake/camelCase
+          // coalescing on every field, same WR-06/168-06 discipline as the
+          // model_routing case above: a single unhandled null here previously
+          // poisoned an 8-event production batch.
+          //
+          // D-13: unlike model_routing, there is deliberately NO
+          // isUnresolvedRouting-equivalent guard here. A refusal (affinity
+          // guard, resolver failure) IS a valid row for this table — that is
+          // the whole point of the swap-history axis: a history that stores
+          // only successes claims every swap worked. Do not "harden" this
+          // case into dropping refusals.
+          const d = data as any;
+          const verb = d.verb;
+          const path_ = d.path;
+          const channel = d.channel;
+          if (!verb || !path_ || !channel) {
+            break;
+          }
+          await ctx.runMutation(internal.controlVerbSwaps.record, {
+            verb,
+            target: d.target,
+            resolved: d.resolved,
+            providerAffinity: d.providerAffinity ?? d.provider_affinity,
+            voiceId: d.voiceId ?? d.voice_id,
+            path: path_,
+            reason: d.reason,
+            scope: d.scope ?? d.profileId ?? d.profile_id,
+            sessionId: d.sessionId ?? d.session_id,
+            channel,
             timestamp,
           });
           break;
