@@ -193,6 +193,34 @@ hybrid mode, and the remaining Group B event kinds (Phase 112 / TELE-03).
   109 may want to move, and picks a host page on 109's behalf) and query-only with no UI (TELE-02
   says "and surfaced" — closing it on a query no human can see is an unprovable claim).
 
+  **Considered-and-FALSIFIED (2026-08-07, adversarial probe, same-phase gap closure — plan 108-06).**
+  `GlobalSwapModal` cannot host a *per-profile* swap-history readout: it is the **ALL-PROFILES axis**
+  (this document's own `103-CONTRACT.md` §8, cited seven other times in this file for other
+  decisions — D-15 never cross-referenced it, though it was knowable at discuss-phase time), it has
+  exactly **one** mount site app-wide (`src/contexts/GlobalSwapContext.tsx:110`), and that mount site
+  passes a hardcoded `profileId={undefined}` (`src/components/brains/GlobalSwapModal.tsx:604`). Worse,
+  `convex/controlVerbSwaps.ts`'s `listByScope` declares `profileId: v.string()` — **non-optional** —
+  while global swaps are stored with `scope: null`, so the query cannot serve this host even in
+  principle without a signature change. The rejection reasoning above (composes with 109, doesn't
+  plant a surface 109 would need to move) was sound for a *global* readout; it does not hold for a
+  *per-profile* one, which is the readout TELE-02 actually asked for.
+
+  **Corrected position:** the per-profile swap-history readout belongs on a **per-profile surface**,
+  and Phase 109 already owns building those — ROADMAP.md:709 names "the 'This profile' picker scope,
+  the header badge, and the pre-swap confirm modal's current-engine column" as Phase 109 deliverables.
+  Plan 108-06 kept the underlying `useControlVerbSwaps` hook, the pure outcome helpers, their tests,
+  and the `SwapHistorySection` component itself (genuinely forward-compatible), and gated the section
+  to render nothing when `profileId` is `undefined` — see plan 108-06's follow-up fix — rather than
+  permanently showing an empty state that can never populate on the one mount site that exists today.
+
+  **Handoff note for Phase 109's planner:** deciding how `SwapHistorySection` reaches a real
+  `profileId` is a five-minute decision at plan time and a painful one to discover mid-execution.
+  Decide up front whether the new per-profile host wants **per-profile-only** history (`listByScope`'s
+  current `profileId: v.string()` signature is fine as-is) or a **combined/global** view alongside it
+  (the query needs a signature change — `profileId: v.optional(v.string())` or a second query — to
+  also reach the `scope: null` rows). Original text above preserved; this correction does not delete
+  it.
+
 ### Integration gate (ENGINE-05)
 
 - **D-16:** **Proof is a live scoped swap read back from Convex ROWS, not from the UI.** Rebuild the

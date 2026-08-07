@@ -40,6 +40,7 @@ import {
   GLOBAL_SWAP_CONFIRM_TIMEOUT_MS,
   GLOBAL_SWAP_DISPATCH_TIMEOUT_MS,
   GlobalSwapModal,
+  SwapHistorySection,
   type GlobalSwapProfile,
 } from "./GlobalSwapModal";
 
@@ -1379,156 +1380,174 @@ const SWAP_VOICE_ROW: SwapHistoryRow = {
   timestamp: 1754530400,
 };
 
-describe("GlobalSwapModal swap-history section (D-15, TELE-02)", () => {
-  it("renders a success and a refusal, and the refusal reads as a refusal (T-108-24) — asserted on rendered text, not a prop", () => {
-    mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
+describe("GlobalSwapModal swap-history section (D-15, TELE-02, corrected 2026-08-07)", () => {
+  // ── Unscoped: GlobalSwapModal's one real mount site always passes profileId={undefined}
+  // (GlobalSwapContext.tsx:110). D-15's original host choice is considered-and-falsified
+  // (108-CONTEXT.md) precisely because this axis has no per-profile scope — so the render-gate
+  // fix means the section must render NOTHING here, regardless of what the hook returns. ──
+  describe("unscoped (profileId undefined — GlobalSwapModal's only real mount site today)", () => {
+    it("renders nothing at all — no 'Recent swaps' label, no empty-state message, no rows — even when the hook has rows to show", () => {
+      // Deliberately give the mock non-empty data: if the render gate were absent or broken,
+      // this would render real content. It must not.
+      mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={THREE_PROFILES}
+          open
+          selectionNonce={1}
+          onOpenChange={() => {}}
+        />
+      );
 
-    expect(screen.getByText("Switched")).toBeInTheDocument();
-    const refusedRow = screen.getByText("Refused — affinity_guard").closest("div");
-    expect(refusedRow).not.toBeNull();
-    expect(refusedRow!.textContent).toContain("anthropic-opus-4-8");
-    // The two outcomes are on separate rows, not merged into one ambiguous line.
-    expect(refusedRow!.textContent).not.toContain("Switched");
-  });
-
-  it("renders an honest empty message and no history rows when there is nothing to show (covers both a genuinely-global call and a real profile with zero rows)", () => {
-    mockUseControlVerbSwaps.mockReturnValue([]);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
-    expect(screen.queryByText("Switched")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Refused/)).not.toBeInTheDocument();
-  });
-
-  it("renders the truncation caption from the imported SWAP_HISTORY_CAP constant and caps the rendered rows at it, never a hardcoded 20", () => {
-    const manyRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP + 5 }, (_, i) => ({
-      ...SWAP_SUCCESS_ROW,
-      _id: `row-${i}`,
-      timestamp: SWAP_SUCCESS_ROW.timestamp + i,
-    }));
-    mockUseControlVerbSwaps.mockReturnValue(manyRows);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
-    expect(screen.getAllByText("Switched")).toHaveLength(SWAP_HISTORY_CAP);
-  });
-
-  // 108-06 gap closure (adversarial gate): the caption was previously rendered unconditionally for
-  // any non-empty list — a 2-row list said "Showing the last 20 swaps," a fabricated reading of the
-  // data. These two tests pin the fix at the render boundary: the "last N" caption must be ABSENT
-  // below the cap and PRESENT only once the list is genuinely at the cap. Both assert on real
-  // rendered DOM (screen.getByText/queryByText), never a mock's call args.
-  it("does NOT render the 'Showing the last N swaps' caption when the list is below the cap (gap closure)", () => {
-    mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(screen.queryByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).not.toBeInTheDocument();
-    // Truthful count instead — never a number the UI isn't actually showing.
-    expect(screen.getByText("Showing 2 swaps")).toBeInTheDocument();
-  });
-
-  it("renders the 'Showing the last N swaps' caption only once the list is genuinely at the cap (gap closure)", () => {
-    const capRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP }, (_, i) => ({
-      ...SWAP_SUCCESS_ROW,
-      _id: `cap-row-${i}`,
-      timestamp: SWAP_SUCCESS_ROW.timestamp + i,
-    }));
-    mockUseControlVerbSwaps.mockReturnValue(capRows);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
-    expect(screen.queryByText(`Showing ${SWAP_HISTORY_CAP} swaps`)).not.toBeInTheDocument();
-  });
-
-  it("does not render a swap_voice row — the D-15 brain-only filter guard", () => {
-    mockUseControlVerbSwaps.mockReturnValue([SWAP_VOICE_ROW]);
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
-    expect(screen.queryByText("voice-warm")).not.toBeInTheDocument();
-  });
-
-  it("queries with no profile scope — GlobalSwapModal is genuinely global and never invents a profileId (108-06-PLAN.md's own stated fallback)", () => {
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
-
-    expect(mockUseControlVerbSwaps).toHaveBeenCalledWith(undefined);
-  });
-
-  it("wraps the section in SectionErrorBoundary so a failing history read cannot take down the rest of the confirm dialog", () => {
-    mockUseControlVerbSwaps.mockImplementation(() => {
-      throw new Error("simulated swap-history read failure");
+      // The rest of the confirm dialog still renders...
+      expect(screen.getByText(`Swap all profiles to ${TARGET_NORMAL.name}?`)).toBeInTheDocument();
+      // ...but the swap-history section renders nothing: not the label, not the honest
+      // "yet" empty state (that promise can never be kept on this unscoped mount), and
+      // not any row content.
+      expect(screen.queryByText("Recent swaps")).not.toBeInTheDocument();
+      expect(screen.queryByText("No swap history to show yet.")).not.toBeInTheDocument();
+      expect(screen.queryByText("Switched")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Refused/)).not.toBeInTheDocument();
     });
-    render(
-      <GlobalSwapModal
-        target={TARGET_NORMAL}
-        profiles={THREE_PROFILES}
-        open
-        selectionNonce={1}
-        onOpenChange={() => {}}
-      />
-    );
 
-    // The rest of the confirm dialog — including the profile row list — survives.
-    expect(screen.getByText(`Swap all profiles to ${TARGET_NORMAL.name}?`)).toBeInTheDocument();
-    for (const p of THREE_PROFILES) {
-      expect(screen.getByText(p.displayName!)).toBeInTheDocument();
-    }
+    it("renders nothing when the hook genuinely has zero rows either (both inputs collapse to the same nothing-rendered output)", () => {
+      mockUseControlVerbSwaps.mockReturnValue([]);
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={THREE_PROFILES}
+          open
+          selectionNonce={1}
+          onOpenChange={() => {}}
+        />
+      );
+
+      expect(screen.queryByText("Recent swaps")).not.toBeInTheDocument();
+      expect(screen.queryByText("No swap history to show yet.")).not.toBeInTheDocument();
+    });
+
+    it("still queries with no profile scope — GlobalSwapModal never invents a profileId (the hook is still called; only the render is gated)", () => {
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={THREE_PROFILES}
+          open
+          selectionNonce={1}
+          onOpenChange={() => {}}
+        />
+      );
+
+      expect(mockUseControlVerbSwaps).toHaveBeenCalledWith(undefined);
+    });
+
+    it("wraps the section in SectionErrorBoundary so a failing history read cannot take down the rest of the confirm dialog (the hook runs, and can throw, BEFORE the render gate)", () => {
+      mockUseControlVerbSwaps.mockImplementation(() => {
+        throw new Error("simulated swap-history read failure");
+      });
+      render(
+        <GlobalSwapModal
+          target={TARGET_NORMAL}
+          profiles={THREE_PROFILES}
+          open
+          selectionNonce={1}
+          onOpenChange={() => {}}
+        />
+      );
+
+      // The rest of the confirm dialog — including the profile row list — survives.
+      expect(screen.getByText(`Swap all profiles to ${TARGET_NORMAL.name}?`)).toBeInTheDocument();
+      for (const p of THREE_PROFILES) {
+        expect(screen.getByText(p.displayName!)).toBeInTheDocument();
+      }
+    });
+  });
+
+  // ── Scoped: a real profileId, as Phase 109's future per-profile host will supply. Rendered
+  // directly (SwapHistorySection is exported for exactly this reuse) since GlobalSwapModal
+  // itself has no path to pass one today. This is the CONTROL proving the fix gated the render
+  // rather than deleting the component/logic — the exact same rows/filter/truncation coverage
+  // the pre-correction suite ran through GlobalSwapModal now runs against the real, still-live
+  // populated render path. ──
+  describe("scoped (a real profileId supplied — proves the section still renders when given one)", () => {
+    it("renders a success and a refusal, and the refusal reads as a refusal (T-108-24) — asserted on rendered text, not a prop", () => {
+      mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(screen.getByText("Switched")).toBeInTheDocument();
+      const refusedRow = screen.getByText("Refused — affinity_guard").closest("div");
+      expect(refusedRow).not.toBeNull();
+      expect(refusedRow!.textContent).toContain("anthropic-opus-4-8");
+      // The two outcomes are on separate rows, not merged into one ambiguous line.
+      expect(refusedRow!.textContent).not.toContain("Switched");
+    });
+
+    it("renders an honest empty message when scoped to a real profile with zero rows so far", () => {
+      mockUseControlVerbSwaps.mockReturnValue([]);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
+      expect(screen.queryByText("Switched")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Refused/)).not.toBeInTheDocument();
+    });
+
+    it("renders the truncation caption from the imported SWAP_HISTORY_CAP constant and caps the rendered rows at it, never a hardcoded 20", () => {
+      const manyRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP + 5 }, (_, i) => ({
+        ...SWAP_SUCCESS_ROW,
+        _id: `row-${i}`,
+        timestamp: SWAP_SUCCESS_ROW.timestamp + i,
+      }));
+      mockUseControlVerbSwaps.mockReturnValue(manyRows);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
+      expect(screen.getAllByText("Switched")).toHaveLength(SWAP_HISTORY_CAP);
+    });
+
+    // 108-06 gap closure (adversarial gate): the caption was previously rendered unconditionally
+    // for any non-empty list — a 2-row list said "Showing the last 20 swaps," a fabricated
+    // reading of the data. These two tests pin the fix at the render boundary: the "last N"
+    // caption must be ABSENT below the cap and PRESENT only once the list is genuinely at the
+    // cap. Both assert on real rendered DOM (screen.getByText/queryByText), never a mock's call
+    // args.
+    it("does NOT render the 'Showing the last N swaps' caption when the list is below the cap (gap closure)", () => {
+      mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(
+        screen.queryByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)
+      ).not.toBeInTheDocument();
+      // Truthful count instead — never a number the UI isn't actually showing.
+      expect(screen.getByText("Showing 2 swaps")).toBeInTheDocument();
+    });
+
+    it("renders the 'Showing the last N swaps' caption only once the list is genuinely at the cap (gap closure)", () => {
+      const capRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP }, (_, i) => ({
+        ...SWAP_SUCCESS_ROW,
+        _id: `cap-row-${i}`,
+        timestamp: SWAP_SUCCESS_ROW.timestamp + i,
+      }));
+      mockUseControlVerbSwaps.mockReturnValue(capRows);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
+      expect(screen.queryByText(`Showing ${SWAP_HISTORY_CAP} swaps`)).not.toBeInTheDocument();
+    });
+
+    it("does not render a swap_voice row — the D-15 brain-only filter guard", () => {
+      mockUseControlVerbSwaps.mockReturnValue([SWAP_VOICE_ROW]);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(screen.getByText("No swap history to show yet.")).toBeInTheDocument();
+      expect(screen.queryByText("voice-warm")).not.toBeInTheDocument();
+    });
+
+    it("queries with the real profileId it was given, not undefined", () => {
+      mockUseControlVerbSwaps.mockReturnValue([]);
+      render(<SwapHistorySection profileId="business" />);
+
+      expect(mockUseControlVerbSwaps).toHaveBeenCalledWith("business");
+      expect(mockUseControlVerbSwaps).not.toHaveBeenCalledWith(undefined);
+    });
   });
 });

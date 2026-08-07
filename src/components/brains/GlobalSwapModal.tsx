@@ -243,13 +243,17 @@ function formatSwapTime(timestampSeconds: number): string {
  *
  * `profileId` is always `undefined` at this component's only call site: `GlobalSwapModal` is the
  * ALL-PROFILES axis (103-CONTRACT.md §8 — one live `swap.set` command touches every profile, there
- * is no single profile this dialog is scoped to), so per 108-06-PLAN.md's own stated fallback this
- * renders the honest empty state rather than inventing a profile to query. Because
- * `useControlVerbSwaps` skips the query outright when `profileId` is `undefined` (never fabricates
- * a read), "genuinely global, nothing to scope by" and "a real profile with zero rows so far" are
- * the SAME honest-empty render path here — neither is worded to claim a profile scope that does
- * not exist. `profileId` stays a real parameter (not hardcoded away) so a future per-profile
- * surface can reuse this same section with a real id.
+ * is no single profile this dialog is scoped to). `useControlVerbSwaps` skips the query outright
+ * when `profileId` is `undefined` (never fabricates a read).
+ *
+ * **D-15 correction (108-CONTEXT.md, 2026-08-07, considered-and-falsified):** this component
+ * previously rendered an empty state ("No swap history to show yet.") whenever `profileId` was
+ * `undefined`. That copy claims "nothing here YET" — a promise this section will populate once
+ * there is history. On `GlobalSwapModal`'s one real mount site (`GlobalSwapContext.tsx:110`,
+ * hardcoded `profileId={undefined}`) that promise can never be kept: there is no per-profile scope
+ * for this dialog to read history for, ever. Rendering nothing instead of an evergreen "yet" is the
+ * honest behaviour. `profileId` stays a real parameter (not hardcoded away) so a future per-profile
+ * surface can reuse this same section with a real id and get the populated render path below.
  *
  * `.slice(0, SWAP_HISTORY_CAP)` is a client-side belt-and-suspenders bound on top of the query's
  * own server-side `.take(SWAP_HISTORY_CAP)` (convex/controlVerbSwaps.ts) — it guarantees the
@@ -263,8 +267,24 @@ function formatSwapTime(timestampSeconds: number): string {
  * data (the exact class this whole phase exists to eliminate): a genuinely complete list read as
  * truncated. A sub-cap count states its real count instead of inventing one the UI isn't showing.
  */
-function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
+/**
+ * Exported (not just used internally below) so GlobalSwapModal.test.tsx can render it directly
+ * with a real `profileId` — GlobalSwapModal's own only mount site always passes `undefined`
+ * (see the D-15 correction above), so that is the ONLY way to exercise the populated render path
+ * today. This is the intended reuse seam for Phase 109's real per-profile host, not test-only
+ * scaffolding.
+ */
+export function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
   const rows = useControlVerbSwaps(profileId);
+
+  // D-15 correction: an unscoped mount (today's only mount site) has no
+  // profile to show history FOR — render nothing rather than a permanent
+  // "no history yet" that can never resolve. The hook above is still called
+  // unconditionally (Rules of Hooks); only the render is gated.
+  if (profileId === undefined) {
+    return null;
+  }
+
   const brainSwaps = filterBrainSwaps(rows).slice(0, SWAP_HISTORY_CAP);
   const atCap = brainSwaps.length >= SWAP_HISTORY_CAP;
 
@@ -607,9 +627,13 @@ export function GlobalSwapModal({
                   </div>
                 ))}
               </div>
-              {/* D-15 (TELE-02): "what did I last switch this to, and did it take?" — hosted here
-                  rather than a new page/route (108-CONTEXT.md D-15). Wrapped so a failure reading
-                  swap history can never take the whole confirm dialog down with it. */}
+              {/* D-15 (TELE-02), corrected 2026-08-07 (108-CONTEXT.md): the per-profile
+                  swap-history readout does NOT belong on this ALL-PROFILES modal — Phase 109 owns
+                  the real per-profile host. `profileId={undefined}` here renders nothing (see
+                  SwapHistorySection above); kept mounted (not deleted) so the component/hook stay
+                  exercised and ready for Phase 109 to pass a real profileId. Still wrapped so a
+                  failure reading swap history can never take the whole confirm dialog down with
+                  it. */}
               <SectionErrorBoundary name="Swap history">
                 <SwapHistorySection profileId={undefined} />
               </SectionErrorBoundary>
