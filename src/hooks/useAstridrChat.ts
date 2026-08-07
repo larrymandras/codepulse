@@ -124,6 +124,28 @@ export function useAstridrChat() {
         swapHandled?: boolean;
         /** D-07/D-14a: scopes SecurityContext.profile_id server-side only — NOT a persona-voice switch. */
         profile?: string;
+        /** D-08 (188.3-05): caller-supplied id for the appended/patched user
+         *  message. useAstridrVoice's flushSend generates one per send so a
+         *  LATER continuation-merge can name this exact message as its
+         *  supersede target. When absent, behavior is unchanged (generateId()
+         *  as before). Threaded IN only — never returned OUT, so it cannot
+         *  touch the locked Promise<boolean> contract (CR-01, 99-07). */
+        clientMessageId?: string;
+        /** D-08 (188.3-05): supersede path. When set, PATCHES the prior user
+         *  message with this id in place instead of appending a new one — the
+         *  fix for "one utterance produces two bubbles" on a legitimate
+         *  continuation merge (flushSend cancels the prior turn via
+         *  interrupt() but sendMessage always appended). Same-id patch keeps
+         *  Chat.tsx's key={msg.id} stable (no remount/scroll-jump) — mirrors
+         *  correctAssistantMessage's patch-in-place shape (:558-566) with
+         *  role: "user" in place of role: "assistant". Fail-safe: if the
+         *  target id is not found in the current list, APPENDS rather than
+         *  silently dropping the utterance (188.1 D-03 fail-toward-sending —
+         *  a user's words disappearing is strictly worse than an extra
+         *  bubble). This is a client-DISPLAY-ONLY supersede: the wire payload
+         *  below carries no id, so astridr's own session.messages history
+         *  still holds both turns (cancel_session() never prunes it). */
+        supersedes?: string;
       }
     ): Promise<boolean> => {
       // CR-01 (99-07): callers (Chat.tsx auto-send) need a real success signal
@@ -132,10 +154,40 @@ export function useAstridrChat() {
       // only the confirmed-ok path resolves `true`.
       if (!text.trim() || isStreamingRef.current || status !== "connected") return false;
 
-      setMessages((prev) => [
-        ...prev,
-        { id: generateId(), role: "user", content: text, streaming: false, timestamp: Date.now() },
-      ]);
+      if (opts?.supersedes) {
+        const supersedeTarget = opts.supersedes;
+        setMessages((prev) => {
+          const targetExists = prev.some((msg) => msg.role === "user" && msg.id === supersedeTarget);
+          if (targetExists) {
+            return prev.map((msg) =>
+              msg.role === "user" && msg.id === supersedeTarget ? { ...msg, content: text } : msg
+            );
+          }
+          // Fail-safe (188.1 D-03, fail-toward-sending): the supersede target
+          // is gone — append rather than silently dropping the user's words.
+          return [
+            ...prev,
+            {
+              id: opts?.clientMessageId ?? generateId(),
+              role: "user",
+              content: text,
+              streaming: false,
+              timestamp: Date.now(),
+            },
+          ];
+        });
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: opts?.clientMessageId ?? generateId(),
+            role: "user",
+            content: text,
+            streaming: false,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
 
       try {
         // D-12: thread the barged-in partial reply (if any) into this turn so
