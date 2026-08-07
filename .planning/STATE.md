@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Completed 108-02-PLAN.md (controlVerbSwaps table + internal-only write + bounded read, both engine-axis tables bounded in RETENTION_DAYS); next: plan 108-03"
-last_updated: "2026-08-07T10:45:22.000Z"
+stopped_at: "Completed 108-04-PLAN.md (per-profile model override store + precedence rung D-04, scoped swap.set profile_id + fail-closed validation D-05, 103-CONTRACT.md corrected in place D-08); 108-03 (codepulse control_verb_swap ingest case) still pending, independent wave-2 plan"
+last_updated: "2026-08-07T07:41:53-04:00"
 last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
+  completed_plans: 3
   percent: 0
 ---
 
@@ -44,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 108 (per-profile-engine-telemetry-astridr-backend) — EXECUTING
-Plan: 3 of 7
-Status: Executing Phase 108 (Plans 01-02 complete)
-Last activity: 2026-08-07 -- Plan 108-02 complete (controlVerbSwaps table + internal-only write + bounded read, activeEngineSnapshots/controlVerbSwaps both bounded in RETENTION_DAYS at 30 days)
+Plan: 4 of 7 (3 of 7 complete: 01, 02, 04; 03 still pending — independent wave-2 plan)
+Status: Executing Phase 108 (Plans 01, 02, 04 complete)
+Last activity: 2026-08-07 -- Plan 108-04 complete (ModelRouter per-profile override store + D-04 precedence rung in astridr-repo, scoped swap.set profile_id + fail-closed validation in astridr-repo, 103-CONTRACT.md corrected in place in codepulse — commits 9ad3cea6/06b6f4f7 astridr-repo, 3421c816 codepulse)
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
@@ -799,6 +799,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 107]: 107-04: events:listRecent {limit:5000} exceeds the self-hosted instance's 16MB single-execution read cap and errors; limit:1000 works and satisfies the coverage guard - plan 107-06 must reuse limit:1000.
 - [Phase 108]: 108-01: wrapped every existing chat()-driven telemetry test in a profile_context() helper and rewrote test_model_routing_default into test_model_routing_default_refuses_to_emit — D-02's refuse-to-emit guard makes the plan's literal 4-line-rename instruction incomplete for the default rung, and breaks all pre-existing telemetry tests unless they set a profile in context
 - [Phase 108]: 108-02: reworded controlVerbSwaps.ts's listByScope doc-comment (literal ".collect()" text in prose) after it collided with its own Task 3 acceptance-criteria grep — same "comment trips its own grep" defect class Phase 105/107 hit repeatedly; reworded to "unbounded collect" without changing meaning
+- [Phase 108]: 108-04: swap_model.py's _execute left unmodified this plan (still unconditionally calls set_global_override/clear_global_override regardless of args["profile_id"]) — wiring it to branch on the scope and call set_profile_override/clear_profile_override instead is explicitly plan 108-05's job (D-07); confirmed by reading 108-05-PLAN.md before editing, which lists swap_model.py in its own files_modified
+- [Phase 108]: 108-04: gsd-sdk state.advance-plan and state.add-decision both re-clobbered stopped_at/last_activity back to the stale 108-02 narrative on this plan's own STATE.md update (same documented narrative-clobber defect) — restored via `git show HEAD:.planning/STATE.md` each time and re-applied the counter/narrative edits by hand in the same pass as the decision line, rather than trusting either verb's frontmatter sync
 
 ### Pending Todos
 

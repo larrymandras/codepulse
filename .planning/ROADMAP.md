@@ -685,7 +685,7 @@ Plans:
 **Wave 2**
 
 - [ ] 108-03-PLAN.md — codepulse: `case "control_verb_swap"` ingest route + `status:"failed"` skip on `model_routing` + first-ever tests for both cases (TELE-02, ENGINE-01; D-13, D-14)
-- [ ] 108-04-PLAN.md — astridr: per-profile override store + `_resolve_model` precedence rung + scoped `swap.set` with fail-closed validation; **+ codepulse: 103-CONTRACT.md corrected in place** (ENGINE-02; D-04, D-05, D-06, D-08)
+- [x] 108-04-PLAN.md — astridr: per-profile override store + `_resolve_model` precedence rung + scoped `swap.set` with fail-closed validation; **+ codepulse: 103-CONTRACT.md corrected in place** (ENGINE-02; D-04, D-05, D-06, D-08)
 
 **Wave 3**
 
@@ -784,7 +784,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 2/7 | In Progress|  |
+| 108. Per-Profile Engine Telemetry (astridr backend) | 3/7 | In Progress|  |
 | 109. Per-Agent Engine UI | 0/TBD | Not started | - |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
