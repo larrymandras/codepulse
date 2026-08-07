@@ -1,0 +1,68 @@
+/* Quiet Control Room — evolved cyan theme tokens (sketch vocabulary).
+   Derived from the approved 3-model verdict (html-out/ui-premium-redesign-comparison.html):
+   layered matte surfaces, hairline structure, three hue owners
+   (cyan = machine, violet = Ástríðr, status = state), status-ok decoupled from primary. */
+
+:root {
+  /* Surfaces — layered matte, no glass by default */
+  --surface-0: #05060a;   /* page */
+  --surface-1: #0b0d12;   /* card */
+  --surface-2: #12151c;   /* raised / popover */
+  --surface-3: #191d26;   /* hover on raised */
+  --hairline:  #1c2029;   /* all structural borders */
+  --hairline-strong: #2a2f3b;
+
+  /* Ink */
+  --ink:      #e7eaf0;
+  --ink-data: #d9f4fa;    /* numerals, faint cyan cast */
+  --ink-dim:  #8b93a3;
+  --ink-faint:#5c6472;
+
+  /* Hue owners */
+  --primary: #22d3ee;     /* the machine: interactive + live-now ONLY */
+  --astridr: #8b5cf6;     /* Ástríðr the entity, and only her */
+
+  /* Status — ok decoupled from primary (sea-green) */
+  --status-ok:    #34d399;
+  --status-warn:  #f5b84b;
+  --status-error: #ef4444;
+  --status-info:  #60a5fa;
+
+  /* Aurora / horizon */
+  --aurora-a: #14b8a6;
+  --aurora-b: #6366f1;
+  --aurora-c: #22c55e;
+
+  /* Type */
+  --font-sans: 'Geist', 'Geist Variable', Inter, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --font-voice: 'Instrument Serif', Georgia, serif;  /* Ástríðr's voice (variant B) */
+
+  --text-micro: 11px;
+  --text-label: 12px;
+  --text-body:  14px;
+  --text-section: 16px;
+  --text-title: 20px;
+  --text-hero:  40px;
+
+  /* Spacing / density (density toggle rescales) */
+  --density: 1;
+  --pad-card: calc(16px * var(--density));
+  --pad-page: calc(24px * var(--density));
+  --row-h: calc(40px * var(--density));
+
+  /* Shape */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+
+  /* Motion */
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Shadows — depth, not glow */
+  --shadow-raised: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+}

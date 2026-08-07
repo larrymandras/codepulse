@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sketch 001 — Dashboard · Quiet Control Room</title>
+<link rel="stylesheet" href="../themes/default.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    background: var(--surface-0);
+    color: var(--ink);
+    padding-top: 41px; /* variant nav */
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--hairline-strong); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  /* ── Variant nav (sketch chrome, not part of the design) ── */
+  #variant-nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 9998;
+    background: #000; border-bottom: 1px solid #222;
+    padding: 8px 16px; display: flex; gap: 8px; align-items: center;
+    font-family: system-ui; font-size: 12px;
+  }
+  .variant-tab { color: #999; padding: 4px 12px; border: 1px solid #333; border-radius: 999px; transition: all .15s ease; }
+  .variant-tab:hover { color: #fff; border-color: #666; }
+  .variant-tab.active { color: #fff; border-color: #22d3ee; }
+  #variant-nav .note { color: #666; margin-left: auto; }
+
+  /* ══ SHELL ══════════════════════════════════════════════ */
+  .shell { display: grid; grid-template-columns: 232px 1fr; height: calc(100vh - 41px); }
+  body.compact { --density: 0.85; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface-1); border-right: 1px solid var(--hairline);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sb-brand { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--hairline); }
+  .sb-mark {
+    width: 26px; height: 26px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--primary), var(--astridr));
+    display: grid; place-items: center; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: #05060a;
+  }
+  .sb-name { font-weight: 600; font-size: 15px; letter-spacing: -0.01em; }
+  .sb-sub { font-size: var(--text-micro); color: var(--ink-dim); margin-top: 1px; }
+  .sb-nav { flex: 1; overflow-y: auto; padding: 8px 8px 12px; }
+  .sb-group { margin-top: 10px; }
+  .sb-group-label {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 6px 10px 4px;
+    font-family: var(--font-mono); font-size: var(--text-micro); letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  .sb-group-label:hover { color: var(--ink-dim); }
+  .sb-group-label .chev { transition: transform var(--dur-1) ease; font-size: 9px; }
+  .sb-group.closed .chev { transform: rotate(-90deg); }
+  .sb-group.closed .sb-items { display: none; }
+  .sb-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: calc(7px * var(--density)) 10px; border-radius: var(--radius-sm);
+    color: var(--ink-dim); font-size: 13px; position: relative;
+    transition: background var(--dur-1) ease, color var(--dur-1) ease;
+    text-align: left;
+  }
+  .sb-item:hover { background: var(--surface-2); color: var(--ink); }
+  .sb-item.active { color: var(--ink); background: color-mix(in oklab, var(--primary) 6%, transparent); }
+  .sb-item.active::before {
+    content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; border-radius: 2px;
+    background: var(--primary);
+  }
+  .sb-item .ico { width: 15px; text-align: center; opacity: 0.85; font-size: 12px; }
+  .sb-count {
+    margin-left: auto; font-family: var(--font-mono); font-size: 10px;
+    background: var(--surface-3); color: var(--ink-dim);
+    padding: 1px 7px; border-radius: 999px;
+  }
+  .sb-item.active .sb-count { background: color-mix(in oklab, var(--primary) 16%, transparent); color: var(--primary); }
+  .sb-foot {
+    border-top: 1px solid var(--hairline); padding: 10px 16px;
+    display: flex; align-items: center; gap: 8px; font-size: var(--text-label); color: var(--ink-dim);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.ok { background: var(--status-ok); }
+  .dot.err { background: var(--status-error); }
+  .dot.warn { background: var(--status-warn); }
+  .dot.idle { background: var(--ink-faint); }
+
+  /* ── Main column ── */
+  .main-col { display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+  /* ── Header (48px instrument strip) ── */
+  .topbar {
+    height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+    padding: 0 var(--pad-page); background: var(--surface-1);
+  }
+  .crumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-dim); white-space: nowrap; }
+  .crumb b { color: var(--ink); font-weight: 600; }
+  .cmdbar {
+    flex: 1; max-width: 420px; margin: 0 auto;
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface-2); border: 1px solid var(--hairline);
+    border-radius: var(--radius-md); padding: 6px 12px;
+    color: var(--ink-faint); font-size: 13px;
+    transition: border-color var(--dur-1) ease;
+  }
+  .cmdbar:hover { border-color: var(--hairline-strong); color: var(--ink-dim); }
+  .cmdbar kbd {
+    margin-left: auto; font-family: var(--font-mono); font-size: 10px;
+    border: 1px solid var(--hairline-strong); border-radius: 4px; padding: 1px 6px; color: var(--ink-dim);
+  }
+  .top-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .sys-chip {
+    display: flex; align-items: center; gap: 7px; font-size: var(--text-label);
+    color: var(--ink-dim); padding: 5px 10px; border-radius: var(--radius-md);
+    border: 1px solid transparent; transition: all var(--dur-1) ease;
+  }
+  .sys-chip:hover { border-color: var(--hairline); background: var(--surface-2); }
+  .estop {
+    display: flex; align-items: center; gap: 7px;
+    min-width: 96px; justify-content: center;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+    color: color-mix(in oklab, var(--status-error) 80%, var(--ink));
+    border: 1px solid color-mix(in oklab, var(--status-error) 45%, transparent);
+    border-radius: var(--radius-md); padding: 6px 12px; white-space: nowrap;
+    transition: all var(--dur-2) var(--ease-out);
+  }
+  .estop:hover { background: color-mix(in oklab, var(--status-error) 12%, transparent); }
+  body.armed .estop { background: var(--status-error); color: #fff; border-color: var(--status-error); }
+  .overflow-btn { color: var(--ink-dim); padding: 6px 8px; border-radius: var(--radius-sm); }
+  .overflow-btn:hover { background: var(--surface-2); color: var(--ink); }
+
+  /* ── Signal Horizon ── */
+  .horizon {
+    position: relative; height: 2px; flex-shrink: 0; overflow: visible;
+    background: color-mix(in oklab, var(--primary) 18%, var(--hairline));
+    transition: background var(--dur-3) ease, height var(--dur-3) ease;
+  }
+  body.flavor-b .horizon {
+    background: linear-gradient(90deg, var(--aurora-a), var(--aurora-b) 40%, var(--aurora-c) 75%, var(--aurora-a));
+    background-size: 300% 100%;
+    animation: aurora-drift 90s linear infinite;
+  }
+  @keyframes aurora-drift { to { background-position: 300% 0; } }
+  body.state-warn .horizon { background: color-mix(in oklab, var(--status-warn) 55%, var(--hairline)); animation: none; }
+  body.state-crit .horizon, body.armed .horizon { height: 3px; background: var(--status-error); animation: none; }
+  body.state-off .horizon { background: repeating-linear-gradient(90deg, var(--ink-faint) 0 6px, transparent 6px 12px); animation: none; }
+  .packet {
+    position: absolute; top: -1px; height: 4px; width: 48px; border-radius: 2px;
+    background: linear-gradient(90deg, transparent, var(--pk, var(--primary)));
+    box-shadow: 0 0 12px color-mix(in oklab, var(--pk, var(--primary)) 60%, transparent);
+    animation: travel 620ms var(--ease-out) forwards;
+    pointer-events: none;
+  }
+  @keyframes travel { from { left: -60px; opacity: 1; } to { left: 101%; opacity: 0.4; } }
+
+  /* ── Page canvas ── */
+  .canvas { flex: 1; overflow-y: auto; padding: var(--pad-page); }
+  .page-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+  .page-head h1 { font-size: var(--text-title); font-weight: 600; letter-spacing: -0.01em; }
+  .page-ctx { font-family: var(--font-mono); font-size: var(--text-label); color: var(--ink-dim); }
+  .page-actions { margin-left: auto; display: flex; gap: 8px; }
+  .ghost-btn {
+    font-size: var(--text-label); color: var(--ink-dim); border: 1px solid var(--hairline);
+    border-radius: var(--radius-sm); padding: 5px 10px; transition: all var(--dur-1) ease;
+  }
+  .ghost-btn:hover { color: var(--ink); border-color: var(--hairline-strong); background: var(--surface-2); }
+
+  /* Truth sentence — Ástríðr's voice (variant B only) */
+  .truth { display: none; font-family: var(--font-voice); font-style: italic; font-size: 17px; color: color-mix(in oklab, var(--ink) 92%, transparent); margin: 4px 0 18px; }
+  body.flavor-b .truth { display: block; }
+  body:not(.flavor-b) .truth-plain { display: block; font-size: 13px; color: var(--ink-dim); margin: 2px 0 18px; }
+  body.flavor-b .truth-plain { display: none; }
+
+  /* ── Pulse hero ── */
+  .pulse-card {
+    background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card); margin-bottom: 20px; overflow: hidden; position: relative;
+  }
+  body.flavor-b .pulse-card::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(50rem 12rem at 70% -30%, color-mix(in oklab, var(--aurora-b) 7%, transparent), transparent 70%);
+  }
+  .pulse-head { display: flex; align-items: center; gap: 10px; padding: var(--pad-card) var(--pad-card) 0; }
+  .eyebrow { font-family: var(--font-mono); font-size: var(--text-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); }
+  .pulse-legend { margin-left: auto; display: flex; gap: 14px; font-size: var(--text-micro); color: var(--ink-dim); }
+  .pulse-legend span { display: flex; align-items: center; gap: 5px; }
+  .lg { width: 8px; height: 2px; border-radius: 1px; display: inline-block; }
+  canvas#pulse { display: block; width: 100%; height: 96px; }
+  .pulse-foot { display: flex; gap: 18px; padding: 0 var(--pad-card) 12px; font-family: var(--font-mono); font-size: var(--text-micro); color: var(--ink-faint); }
+
+  /* ── Instrument cluster ── */
+  .cluster {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card); margin-bottom: 20px; overflow: hidden;
+  }
+  .cell { padding: var(--pad-card); border-right: 1px solid var(--hairline); position: relative; transition: background var(--dur-2) ease; }
+  .cell:last-child { border-right: none; }
+  .cell .label { font-family: var(--font-mono); font-size: var(--text-micro); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 8px; }
+  .cell .value { font-family: var(--font-mono); font-weight: 300; font-size: calc(var(--text-hero) * var(--density)); line-height: 1; color: var(--ink-data); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .cell .delta { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-family: var(--font-mono); font-size: 11px; padding: 1px 7px; border-radius: 999px; }
+  .delta.up { color: var(--status-ok); background: color-mix(in oklab, var(--status-ok) 10%, transparent); }
+  .delta.flat { color: var(--ink-dim); background: var(--surface-2); }
+  .spark { margin-top: 10px; height: 22px; display: flex; align-items: flex-end; gap: 2px; }
+  .spark i { flex: 1; background: color-mix(in oklab, var(--primary) 55%, transparent); border-radius: 1px 1px 0 0; min-height: 2px; }
+  .cell.nosignal { opacity: 0.55; }
+  .cell.nosignal .value { font-size: 13px; font-family: var(--font-sans); font-style: italic; font-weight: 400; color: var(--ink-dim); padding: 12px 0; }
+  .cell.nosignal .baseline { margin-top: 10px; height: 0; border-bottom: 2px dotted var(--hairline-strong); }
+  .cell.flash { background: color-mix(in oklab, var(--primary) 7%, transparent); }
+
+  /* ── Lower grid ── */
+  .lower { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; align-items: start; }
+  .card { background: var(--surface-1); border: 1px solid var(--hairline); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); overflow: hidden; }
+  .card-head { display: flex; align-items: center; gap: 10px; padding: 14px var(--pad-card); border-bottom: 1px solid var(--hairline); }
+  .card-head .more { margin-left: auto; font-size: var(--text-label); color: var(--ink-faint); }
+  .card-head .more:hover { color: var(--primary); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); text-align: left; padding: 8px var(--pad-card); border-bottom: 1px solid var(--hairline); font-weight: 500; }
+  th.num, td.num { text-align: right; }
+  td { padding: 0 var(--pad-card); height: var(--row-h); border-bottom: 1px solid var(--hairline); font-size: 13px; color: var(--ink-dim); }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background var(--dur-1) ease; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.cmd { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+  td.num { font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+  .badge.quiet { color: var(--ink-dim); }
+  .badge.running { color: var(--primary); font-weight: 500; }
+  .badge.running .dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+  @keyframes pulse-dot { 50% { opacity: 0.35; } }
+  .badge.failed { color: #fff; background: var(--status-error); padding: 2px 10px 2px 7px; border-radius: 999px; font-weight: 500; }
+
+  /* Feed + agents */
+  .right-stack { display: grid; gap: 20px; }
+  .feed { max-height: 220px; overflow-y: auto; }
+  .feed-row { display: flex; align-items: center; gap: 10px; padding: 9px var(--pad-card); border-bottom: 1px solid var(--hairline); font-size: 12.5px; color: var(--ink-dim); }
+  .feed-row:last-child { border-bottom: none; }
+  .feed-row .t { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint); white-space: nowrap; }
+  .feed-row.new { animation: enter var(--dur-3) var(--ease-out); box-shadow: inset 2px 0 0 var(--primary); }
+  @keyframes enter { from { opacity: 0; transform: translateY(-8px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+
+  .agent-row { display: flex; align-items: center; gap: 12px; padding: 11px var(--pad-card); border-bottom: 1px solid var(--hairline); }
+  .agent-row:last-child { border-bottom: none; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--surface-3); color: var(--ink-dim); flex-shrink: 0; }
+  .avatar.her { background: color-mix(in oklab, var(--astridr) 22%, var(--surface-3)); color: #d9ccff; box-shadow: 0 0 0 1px color-mix(in oklab, var(--astridr) 45%, transparent); }
+  .agent-name { font-size: 13px; color: var(--ink); }
+  .agent-sub { font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); margin-top: 1px; }
+  .agent-state { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-dim); }
+  body.armed .agent-state .dot, body.state-off .agent-state .dot { background: var(--ink-faint) !important; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; right: 20px; bottom: 60px; z-index: 900; max-width: 360px;
+    background: var(--surface-2); border: 1px solid var(--hairline-strong);
+    border-left: 2px solid var(--status-ok);
+    border-radius: var(--radius-md); box-shadow: var(--shadow-raised);
+    padding: 12px 16px; font-size: 13px; color: var(--ink);
+    transform: translateY(8px); opacity: 0; transition: all var(--dur-3) var(--ease-out);
+    pointer-events: none;
+  }
+  .toast.show { transform: none; opacity: 1; }
+  .toast .sub { font-size: 11.5px; color: var(--ink-dim); margin-top: 3px; }
+
+  /* ── E-Stop dialog ── */
+  .scrim { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.6); display: none; place-items: center; backdrop-filter: blur(2px); }
+  .scrim.open { display: grid; }
+  .dialog {
+    width: 400px; background: var(--surface-2); border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-lg); box-shadow: var(--shadow-raised); padding: 22px;
+    animation: enter var(--dur-3) var(--ease-out);
+  }
+  .dialog h3 { font-size: 15px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .dialog p { font-size: 13px; color: var(--ink-dim); line-height: 1.55; margin-bottom: 18px; }
+  .dialog .row { display: flex; justify-content: flex-end; gap: 10px; }
+  .btn-danger { background: var(--status-error); color: #fff; font-weight: 600; font-size: 13px; border-radius: var(--radius-sm); padding: 7px 14px; }
+  .btn-danger:hover { filter: brightness(1.1); }
+
+  /* ── Sketch toolbar ── */
+  #sketch-tools {
+    position: fixed; bottom: 12px; right: 12px; z-index: 9999;
+    font-family: system-ui; font-size: 12px; background: rgba(0,0,0,0.75); color: #fff;
+    padding: 8px 12px; border-radius: 8px; opacity: 0.35; transition: opacity .2s;
+    display: flex; gap: 8px; align-items: center;
+  }
+  #sketch-tools:hover { opacity: 1; }
+  #sketch-tools button, #sketch-tools select { background: #222; color: #ddd; border: 1px solid #444; border-radius: 5px; padding: 3px 8px; font-size: 11px; }
+  #sketch-tools button.on { border-color: #22d3ee; color: #22d3ee; }
+</style>
+</head>
+<body>
+
+<div id="variant-nav">
+  <button class="variant-tab active" id="tab-a" onclick="setVariant('a')">A: Signal Horizon — quiet</button>
+  <button class="variant-tab" id="tab-b" onclick="setVariant('b')">B: Borealis blend — aurora resting state + her voice ★ Selected</button>
+  <span class="note">Try: click E-STOP · watch the horizon &amp; pulse · cycle states in the toolbar ↘</span>
+</div>
+
+<div class="shell">
+  <!-- ═══ Sidebar ═══ -->
+  <aside class="sidebar">
+    <div class="sb-brand">
+      <div class="sb-mark">CP</div>
+      <div>
+        <div class="sb-name">CodePulse</div>
+        <div class="sb-sub">Larry Mandras</div>
+      </div>
+    </div>
+    <nav class="sb-nav" id="sbnav">
+      <div class="sb-group">
+        <button class="sb-group-label" onclick="this.parentElement.classList.toggle('closed')">Command <span class="chev">▾</span></button>
+        <div class="sb-items">
+          <button class="sb-item"><span class="ico">◍</span> Chat</button>
+          <button class="sb-item"><span class="ico">∿</span> Live Run</button>
+          <button class="sb-item"><span class="ico">▤</span> Inbox <span class="sb-count">3</span></button>
+          <button class="sb-item"><span class="ico">☰</span> Tasks <span class="sb-count">1</span></button>
+          <button class="sb-item"><span class="ico">◷</span> Reminders</button>
+        </div>
+      </div>
+      <div class="sb-group">
+        <button class="sb-group-label" onclick="this.parentElement.classList.toggle('closed')">Observe <span class="chev">▾</span></button>
+        <div class="sb-items">
+          <button class="sb-item active"><span class="ico">▦</span> Dashboard</button>
+          <button class="sb-item"><span class="ico">⬡</span> Hive</button>
+          <button class="sb-item"><span class="ico">≣</span> Executions</button>
+          <button class="sb-item"><span class="ico">◫</span> Analytics</button>
+          <button class="sb-item"><span class="ico">◎</span> Alerts</button>
+          <button class="sb-item"><span class="ico">◔</span> Quality</button>
+        </div>
+      </div>
+      <div class="sb-group closed">
+        <button class="sb-group-label" onclick="this.parentElement.classList.toggle('closed')">Agents <span class="chev">▾</span></button>
+        <div class="sb-items">
+          <button class="sb-item"><span class="ico">◉</span> Roster</button>
+          <button class="sb-item"><span class="ico">◈</span> Teams</button>
+          <button class="sb-item"><span class="ico">✦</span> Skills</button>
+          <button class="sb-item"><span class="ico">♨</span> Forge</button>
+        </div>
+      </div>
+      <div class="sb-group closed">
+        <button class="sb-group-label" onclick="this.parentElement.classList.toggle('closed')">System <span class="chev">▾</span></button>
+        <div class="sb-items">
+          <button class="sb-item"><span class="ico">▣</span> Infrastructure</button>
+          <button class="sb-item"><span class="ico">🛡</span> Security</button>
+          <button class="sb-item"><span class="ico">◬</span> Memory</button>
+          <button class="sb-item"><span class="ico">⚙</span> Settings</button>
+        </div>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <span class="dot ok" id="conn-dot"></span> <span id="conn-label">Convex · connected</span>
+    </div>
+  </aside>
+
+  <!-- ═══ Main ═══ -->
+  <div class="main-col">
+    <header class="topbar">
+      <div class="crumb">Observe / <b>Dashboard</b></div>
+      <button class="cmdbar">⌕ Search or command… <kbd>⌘K</kbd></button>
+      <div class="top-right">
+        <button class="sys-chip" title="SYS 5% · LAT 7ms · WS connected · Brain: auto">
+          <span class="dot ok" id="sys-dot"></span> <span id="sys-word">Nominal</span>
+        </button>
+        <button class="estop" id="estop" onclick="estopClick()">⬣ E-STOP</button>
+        <button class="overflow-btn" title="Theme · Privacy · Audio · CRT · Help">⋯</button>
+      </div>
+    </header>
+
+    <div class="horizon" id="horizon"></div>
+
+    <main class="canvas">
+      <div class="page-head">
+        <h1>Dashboard</h1>
+        <span class="page-ctx" id="page-ctx">319 sessions today · last event 4s ago</span>
+        <div class="page-actions">
+          <button class="ghost-btn">Customize metrics</button>
+          <button class="ghost-btn">24h ▾</button>
+        </div>
+      </div>
+      <p class="truth" id="truth-b">All quiet — three agents idle, 319 sessions today, nothing needs you.</p>
+      <p class="truth-plain" id="truth-a">All quiet — 3 agents idle · 0 errors this hour · nothing needs you.</p>
+
+      <!-- Pulse hero -->
+      <section class="pulse-card">
+        <div class="pulse-head">
+          <span class="eyebrow">System Pulse</span>
+          <span class="eyebrow" style="color:var(--ink-faint)">live · 60s window</span>
+          <div class="pulse-legend">
+            <span><i class="lg" style="background:var(--primary)"></i> machine</span>
+            <span><i class="lg" style="background:var(--astridr)"></i> Ástríðr</span>
+            <span><i class="lg" style="background:var(--status-error)"></i> errors</span>
+          </div>
+        </div>
+        <canvas id="pulse" height="96"></canvas>
+        <div class="pulse-foot">
+          <span>events/min: <b id="epm" style="color:var(--ink-dim)">6</b></span>
+          <span>error rate: 0.0%</span>
+          <span>ws: 7 ms</span>
+        </div>
+      </section>
+
+      <!-- Instrument cluster -->
+      <section class="cluster">
+        <div class="cell" id="cell-sessions">
+          <div class="label">Sessions</div>
+          <div class="value" id="v-sessions">319</div>
+          <span class="delta up">▲ 12%</span>
+          <div class="spark" id="spark1"></div>
+        </div>
+        <div class="cell">
+          <div class="label">Error rate</div>
+          <div class="value">0.0<span style="font-size:18px;color:var(--ink-dim)">%</span></div>
+          <span class="delta flat">— steady</span>
+          <div class="spark" id="spark2"></div>
+        </div>
+        <div class="cell">
+          <div class="label">Active agents</div>
+          <div class="value" id="v-agents">3</div>
+          <span class="delta flat">of 7 rostered</span>
+          <div class="spark" id="spark3"></div>
+        </div>
+        <div class="cell">
+          <div class="label">LLM cost · today</div>
+          <div class="value" style="font-size:calc(32px * var(--density))">$4.12</div>
+          <span class="delta up">▼ 18% vs avg</span>
+          <div class="spark" id="spark4"></div>
+        </div>
+        <div class="cell nosignal">
+          <div class="label">Memory hit rate</div>
+          <div class="value">no signal yet</div>
+          <div class="baseline"></div>
+        </div>
+        <div class="cell">
+          <div class="label">WS latency</div>
+          <div class="value" id="v-lat">7<span style="font-size:18px;color:var(--ink-dim)">ms</span></div>
+          <span class="delta flat">p95 · 14ms</span>
+          <div class="spark" id="spark5"></div>
+        </div>
+      </section>
+
+      <!-- Lower grid -->
+      <div class="lower">
+        <section class="card">
+          <div class="card-head">
+            <span class="eyebrow">Recent executions</span>
+            <button class="more">View all 500 →</button>
+          </div>
+          <table>
+            <thead><tr><th>Time</th><th>Command</th><th>Origin</th><th class="num">Duration</th><th>Status</th></tr></thead>
+            <tbody id="exec-body">
+              <tr><td class="num">18:17</td><td class="cmd">conversation_recall</td><td>internal</td><td class="num">11 ms</td><td><span class="badge running"><span class="dot" style="background:var(--primary)"></span>Running</span></td></tr>
+              <tr><td class="num">18:16</td><td class="cmd">weather</td><td>internal</td><td class="num">1.1 s</td><td><span class="badge quiet"><span class="dot idle"></span>Done</span></td></tr>
+              <tr><td class="num">17:34</td><td class="cmd">weather</td><td>internal</td><td class="num">1.4 s</td><td><span class="badge quiet"><span class="dot idle"></span>Done</span></td></tr>
+              <tr><td class="num">17:09</td><td class="cmd">graph_snapshot</td><td>cron</td><td class="num">8.2 s</td><td><span class="badge failed">✕ Failed</span></td></tr>
+              <tr><td class="num">16:59</td><td class="cmd">google_consulting</td><td>internal</td><td class="num">101 ms</td><td><span class="badge quiet"><span class="dot idle"></span>Done</span></td></tr>
+              <tr><td class="num">15:44</td><td class="cmd">google_business</td><td>internal</td><td class="num">246 ms</td><td><span class="badge quiet"><span class="dot idle"></span>Done</span></td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <div class="right-stack">
+          <section class="card">
+            <div class="card-head"><span class="eyebrow">Live activity</span><span class="more" id="feed-hint">streaming</span></div>
+            <div class="feed" id="feed"></div>
+          </section>
+          <section class="card">
+            <div class="card-head"><span class="eyebrow">Agents</span><button class="more">Roster →</button></div>
+            <div>
+              <div class="agent-row">
+                <div class="avatar her">Á</div>
+                <div><div class="agent-name">Ástríðr</div><div class="agent-sub">commander · brain: auto</div></div>
+                <div class="agent-state"><span class="dot" style="background:var(--astridr)"></span> listening</div>
+              </div>
+              <div class="agent-row">
+                <div class="avatar">H</div>
+                <div><div class="agent-name">Hervor</div><div class="agent-sub">research · idle 22m</div></div>
+                <div class="agent-state"><span class="dot idle"></span> idle</div>
+              </div>
+              <div class="agent-row">
+                <div class="avatar">I</div>
+                <div><div class="agent-name">Iðunn</div><div class="agent-sub">memory · idle 4m</div></div>
+                <div class="agent-state"><span class="dot idle"></span> idle</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"><div id="toast-msg">Cron completed</div><div class="sub" id="toast-sub">graph:snapshot · 8.2s</div></div>
+
+<!-- E-Stop dialog -->
+<div class="scrim" id="scrim">
+  <div class="dialog">
+    <h3 id="dlg-title">⬣ Arm emergency stop?</h3>
+    <p id="dlg-body">All agents will halt after their current tool call. Queued tasks pause. This does not delete anything and can be disarmed at any time.</p>
+    <div class="row">
+      <button class="ghost-btn" onclick="closeDialog()">Cancel</button>
+      <button class="btn-danger" id="dlg-confirm" onclick="confirmEstop()">Arm E-Stop</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sketch toolbar -->
+<div id="sketch-tools">
+  <select onchange="document.querySelector('link[href*=themes]').href='../themes/'+this.value+'.css'">
+    <option value="default">theme: quiet-cyan</option>
+  </select>
+  <button onclick="document.body.classList.toggle('compact'); this.classList.toggle('on')">density</button>
+  <span style="color:#555">|</span>
+  <button onclick="setState('')" class="on" id="st-calm">calm</button>
+  <button onclick="setState('state-warn')" id="st-warn">warn</button>
+  <button onclick="setState('state-crit')" id="st-crit">critical</button>
+  <button onclick="setState('state-off')" id="st-off">offline</button>
+</div>
+
+<script>
+  // ── Variant switching (A = quiet horizon, B = borealis blend) ──
+  function setVariant(v) {
+    document.body.classList.toggle('flavor-b', v === 'b');
+    document.getElementById('tab-a').classList.toggle('active', v === 'a');
+    document.getElementById('tab-b').classList.toggle('active', v === 'b');
+  }
+
+  setVariant('b'); // ★ winner — open on the selected direction
+
+  // ── State cycling ──
+  const css = getComputedStyle(document.documentElement);
+  const col = (name) => css.getPropertyValue(name).trim();
+  function setState(cls) {
+    document.body.classList.remove('state-warn', 'state-crit', 'state-off');
+    if (cls) document.body.classList.add(cls);
+    ['st-calm','st-warn','st-crit','st-off'].forEach(id => document.getElementById(id).classList.remove('on'));
+    document.getElementById(cls ? 'st-' + cls.split('-')[1] : 'st-calm').classList.add('on');
+    const sysDot = document.getElementById('sys-dot'), sysWord = document.getElementById('sys-word');
+    const connDot = document.getElementById('conn-dot'), connLabel = document.getElementById('conn-label');
+    sysDot.className = 'dot ok'; connDot.className = 'dot ok'; connLabel.textContent = 'Convex · connected';
+    let truthA = 'All quiet — 3 agents idle · 0 errors this hour · nothing needs you.';
+    let truthB = 'All quiet — three agents idle, 319 sessions today, nothing needs you.';
+    if (cls === 'state-warn') { sysDot.className = 'dot warn'; sysWord.textContent = 'Attention';
+      truthA = '1 approval waiting · error rate rising on graph:snapshot.'; truthB = 'Something wants your eyes — one approval is waiting, and graph:snapshot is stumbling.'; }
+    else if (cls === 'state-crit') { sysDot.className = 'dot err'; sysWord.textContent = 'Critical';
+      truthA = 'Blocking failure — convex-backend unreachable for 42s.'; truthB = 'A door has closed — the Convex backend has not answered for 42 seconds.'; }
+    else if (cls === 'state-off') { sysDot.className = 'dot idle'; sysWord.textContent = 'Offline';
+      connDot.className = 'dot idle'; connLabel.textContent = 'Convex · reconnecting…';
+      truthA = 'Disconnected — reconnecting with backoff (4s).'; truthB = 'The line is quiet — I am reaching for the backend again in four seconds.'; }
+    else { sysWord.textContent = 'Nominal'; }
+    if (document.body.classList.contains('armed')) {
+      truthA = 'Emergency stop armed — all agents halting.'; truthB = 'I have stopped everything, as you asked.';
+    }
+    document.getElementById('truth-a').textContent = truthA;
+    document.getElementById('truth-b').textContent = truthB;
+  }
+
+  // ── Signal Horizon packets ──
+  function packet(kind) {
+    const h = document.getElementById('horizon');
+    const p = document.createElement('div');
+    p.className = 'packet';
+    const c = kind === 'error' ? col('--status-error') : kind === 'astridr' ? col('--astridr')
+            : kind === 'warn' ? col('--status-warn') : col('--primary');
+    p.style.setProperty('--pk', c);
+    h.appendChild(p);
+    setTimeout(() => p.remove(), 700);
+  }
+
+  // ── Pulse canvas (event-driven ECG) ──
+  const cv = document.getElementById('pulse');
+  const ctx2 = cv.getContext('2d');
+  let blips = [];   // {t, amp, color}
+  function pushBlip(amp, kind) {
+    const c = kind === 'error' ? col('--status-error') : kind === 'astridr' ? col('--astridr') : col('--primary');
+    blips.push({ t: performance.now(), amp, color: c });
+    packet(kind);
+  }
+  function resize() { cv.width = cv.clientWidth * devicePixelRatio; cv.height = 96 * devicePixelRatio; }
+  window.addEventListener('resize', resize); resize();
+  const WINDOW = 60 * 1000;
+  function draw(now) {
+    const w = cv.width, h = cv.height, mid = h * 0.62;
+    ctx2.clearRect(0, 0, w, h);
+    const breathe = 0.5 + 0.3 * (0.5 + 0.5 * Math.sin(now / 2000));
+    blips = blips.filter(b => now - b.t < WINDOW);
+    // baseline
+    ctx2.globalAlpha = breathe;
+    ctx2.strokeStyle = col('--primary');
+    ctx2.lineWidth = 1 * devicePixelRatio;
+    ctx2.beginPath(); ctx2.moveTo(0, mid); ctx2.lineTo(w, mid); ctx2.stroke();
+    ctx2.globalAlpha = 1;
+    // blips: newest at right edge, drift left across 5 min
+    for (const b of blips) {
+      const age = (now - b.t) / WINDOW;           // 0 fresh → 1 old
+      const x = w - age * w;
+      const decay = Math.max(0, 1 - age * 1.15);
+      const spike = b.amp * h * 0.34 * decay;
+      ctx2.strokeStyle = b.color;
+      ctx2.globalAlpha = 0.25 + 0.75 * decay;
+      ctx2.lineWidth = 1.4 * devicePixelRatio;
+      ctx2.beginPath();
+      ctx2.moveTo(x - 8 * devicePixelRatio, mid);
+      ctx2.lineTo(x - 3 * devicePixelRatio, mid - spike);
+      ctx2.lineTo(x + 1 * devicePixelRatio, mid + spike * 0.35);
+      ctx2.lineTo(x + 6 * devicePixelRatio, mid);
+      ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // ── Sparklines ──
+  for (const id of ['spark1','spark2','spark3','spark4','spark5']) {
+    const el = document.getElementById(id);
+    for (let i = 0; i < 18; i++) {
+      const b = document.createElement('i');
+      b.style.height = (id === 'spark2' ? 2 + Math.random() * 3 : 3 + Math.random() * 17) + 'px';
+      el.appendChild(b);
+    }
+  }
+
+  // ── Simulated live events ──
+  const feedItems = [
+    ['◍', 'Bash · gsd-sdk query state', 'machine'],
+    ['∿', 'Ástríðr · conversation_recall', 'astridr'],
+    ['≣', 'weather · 1.1s · done', 'machine'],
+    ['◬', 'memory write · durable fact', 'astridr'],
+    ['▦', 'docker · convex-backend healthy', 'machine'],
+    ['◎', 'heartbeat · all channels ok', 'machine'],
+  ];
+  let sessions = 319, lastEvent = 0, epm = 6;
+  function fireEvent(kind, label, ico) {
+    pushBlip(kind === 'error' ? -1.0 : kind === 'astridr' ? 0.45 : 0.3 + Math.random() * 0.3, kind);
+    const feed = document.getElementById('feed');
+    const row = document.createElement('div');
+    row.className = 'feed-row new';
+    row.innerHTML = `<span>${ico}</span> ${label} <span class="t">now</span>`;
+    feed.prepend(row);
+    setTimeout(() => row.classList.remove('new'), 600);
+    while (feed.children.length > 7) feed.lastChild.remove();
+    feed.querySelectorAll('.t').forEach((t, i) => { if (i > 0) t.textContent = i * 8 + 's'; });
+    lastEvent = 0;
+    // metric flash
+    if (kind === 'machine' && Math.random() < 0.4) {
+      sessions += 1;
+      const cell = document.getElementById('cell-sessions');
+      document.getElementById('v-sessions').textContent = sessions;
+      cell.classList.add('flash'); setTimeout(() => cell.classList.remove('flash'), 600);
+    }
+  }
+  setInterval(() => {
+    if (document.body.classList.contains('state-off') || document.body.classList.contains('armed')) return;
+    const critical = document.body.classList.contains('state-crit');
+    if (critical && Math.random() < 0.5) { fireEvent('error', 'graph_snapshot · connection refused', '✕'); return; }
+    const [ico, label, kind] = feedItems[Math.floor(Math.random() * feedItems.length)];
+    fireEvent(kind, label, ico);
+  }, 2600);
+  setInterval(() => {
+    lastEvent += 1;
+    document.getElementById('page-ctx').textContent = `${sessions} sessions today · last event ${lastEvent * 1}s ago`;
+  }, 1000);
+
+  // seed the feed
+  fireEvent('machine', 'docker · convex-backend healthy', '▦');
+  setTimeout(() => fireEvent('astridr', 'Ástríðr · conversation_recall', '∿'), 700);
+  setTimeout(() => fireEvent('machine', 'weather · 1.1s · done', '≣'), 1400);
+
+  // toast demo
+  setTimeout(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }, 5000);
+
+  // ── E-Stop: proper dialog, never a toast ──
+  function estopClick() {
+    if (document.body.classList.contains('armed')) {
+      // disarm: dawn easing — crimson → amber → calm
+      document.body.classList.remove('armed');
+      document.body.classList.add('state-warn'); setState('state-warn');
+      setTimeout(() => { setState(''); }, document.body.classList.contains('flavor-b') ? 2600 : 1200);
+      document.getElementById('estop').innerHTML = '⬣ E-STOP';
+      return;
+    }
+    document.getElementById('scrim').classList.add('open');
+  }
+  function closeDialog() { document.getElementById('scrim').classList.remove('open'); }
+  function confirmEstop() {
+    closeDialog();
+    document.body.classList.add('armed');
+    setState('');
+    document.getElementById('estop').innerHTML = '⬣ ARMED — tap to disarm';
+    document.getElementById('sys-word').textContent = 'Halting';
+    document.getElementById('sys-dot').className = 'dot err';
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDialog(); });
+</script>
+</body>
+</html>
