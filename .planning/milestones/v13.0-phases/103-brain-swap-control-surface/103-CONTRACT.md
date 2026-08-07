@@ -1,8 +1,12 @@
 # Phase 103 Client Contract — Per-Profile Brain Swap
 
-**Status:** Draft, ships as a Phase 103 deliverable (D-17). This is the contract Ástríðr Phase
-184.1 implements against. It is not documentation-after-the-fact — no Phase 184.1 code exists yet;
-everything described in sections 2-5 below is a specification, not an observation of running code.
+**Amendment (2026-08-07, CodePulse Phase 108, D-08):** §1, §2, §4, §6, and §7 below are corrected
+in place. This document originally attributed the per-profile backend to "Ástríðr Phase 184.1" — corrected: no such phase exists (`grep -rn "184\.1"` across astridr's `.planning/` returns nothing; `.planning/REQUIREMENTS.md`'s "Scoping evidence" table, gathered 2026-08-06, records the check) — and specified a `gateway.model.set` command that was never built and is now formally superseded (D-05). The axis is delivered by **CodePulse Phase 108** on astridr branch `feature/brain-swap`, via the **scoped `swap.set`** command, not a new one. Corrected loudly rather than quietly: a contract documenting behaviour that does not exist is the same defect class TELE-01 exists to fix one repo over. Superseded text is kept, explicitly labelled, rather than deleted — see each section for what changed and why.
+
+**Status:** Draft, ships as a Phase 103 deliverable (D-17). **Sections 2, 4, and 6 below are now
+corrected against the real Phase 108 implementation (see amendment above); sections 3, 5, 8, and 9
+remain unbuilt specification, not an observation of running code — those are out of scope for
+Phase 108 and their claims are not falsified by it.**
 
 **Scope: per-profile axis only.** The GLOBAL brain swap already ships and works today
 (`swap.set` / `swap.catalogue` / `swap.state`, Ástríðr Phase 185/186 — verified live against
@@ -25,34 +29,69 @@ the real, live, shipped command family the global axis already uses.
 | Axis | Status | Commands |
 |------|--------|----------|
 | Global (all profiles, process-wide, runtime-only, no TTL) | **LIVE today** (Ástríðr Phase 185/186) | `swap.set` (`target: "brain"`), `swap.catalogue` (`target: "brain"`), `swap.state` (pushed) |
-| Per-profile (this document) | **Not built.** Ástríðr Phase 184.1 implements this contract. CodePulse Phase 103 ships a stub adapter conforming to it. | `gateway.model.set`, `models.catalog`, `model_routing` (telemetry), `brain.fallback` (telemetry) |
+| Per-profile (this document) | **Delivered by CodePulse Phase 108** on astridr branch `feature/brain-swap` (D-04/D-05/D-08, corrected 2026-08-07). Its write command is the **scoped `swap.set`** (`target: "brain"` + optional `profile_id`) — **not** `gateway.model.set`, which was never built and is superseded (see §2). | `swap.set` with `profile_id` (scoped), `model_routing` (telemetry, per-profile), `control_verb_swap` (telemetry, swap-history) |
 
 The two axes coexist in the same running Ástríðr process and can genuinely disagree at the same
 moment — see item 9 below. Phase 103's CodePulse UI does not attempt to reconcile or render that
-disagreement; it surfaces the per-profile default only.
+disagreement; it surfaces the per-profile default only. **`models.catalog` and `brain.fallback`
+remain unbuilt** — out of Phase 108's scope, unchanged by this amendment.
 
 ---
 
-## 2. Write command `gateway.model.set`
+## 2. Write command: scoped `swap.set` (supersedes `gateway.model.set`, D-05)
 
-Modeled directly on `SwapSetCommand` (`astridr/api/ws_commands.py:224-240`) — same discriminated
-`type` Literal, same `request_id` convention, same boolean-restore idiom:
+**Corrected 2026-08-07 (Phase 108 D-05/D-08).** The per-profile axis does **not** get a second
+command. It extends the **existing, live** `SwapSetCommand` (`astridr/api/ws_commands.py:224-256`)
+with an optional `profile_id` field — one dispatch path through `VERB_REGISTRY` for both manual and
+spoken swaps, scoped or not:
+
+```python
+class SwapSetCommand(BaseModel):
+    type: Literal["swap.set"] = "swap.set"
+    request_id: str = ""
+    target: Literal["brain", "voice"]
+    value: str | None = None           # required unless restore=True; ignored when target="voice"
+                                        # and profile_id is set (rejected, see below)
+    restore: bool = False              # clears the override; `value` ignored
+    profile_id: str | None = None      # Phase 108 D-04: optional per-profile scope. None (or
+                                        # omitted) is byte-identical to today's global behavior.
+```
+
+**Fail-closed validation (§7):** `profile_id` set + `target="voice"` is rejected — `swap_voice` has
+no per-profile override concept, only a single global override pair. `profile_id` set but not a
+member of the server's known profile set is rejected. Both reject **before** `VERB_REGISTRY`
+dispatch, so an invalid scope never falls through to a global apply.
+
+**Restore semantics when both overrides can be live (Claude's Discretion, resolved by D-04):** a
+**scoped** `restore=true` (`profile_id` set) clears only that profile's override; an **unscoped**
+`restore=true` (`profile_id` omitted) clears the global override and leaves every profile's pin
+intact.
+
+**D-06: no `mode` field, no session TTL.** The per-profile override is **runtime-only**, mirroring
+the global axis exactly — cleared by `restore=true` or a process restart, no expiry bookkeeping on
+the resolve hot path. The considered-and-rejected `GatewayModelSetCommand` shape below still
+carries a `mode: "session" | "default"` field with a 1-hour TTL; that TTL was rejected, not built,
+and is **deferred, not dropped** — `activeEngineSnapshots.expiresAt` (schema) stays present and
+unused, available if a later phase wants session-scoped swaps.
+
+### Considered and rejected: a separate `gateway.model.set` command (D-05)
+
+The original contract specified a distinct command, reproduced here for the deferred-ideas record
+— **do not implement this shape**:
 
 ```python
 class GatewayModelSetCommand(BaseModel):
     type: Literal["gateway.model.set"] = "gateway.model.set"
     request_id: str = ""
-    scope: Literal["profile"]          # global swaps use the EXISTING swap.set — this contract
-                                        # defines only the profile scope; do not add "global" here.
+    scope: Literal["profile"]
     profile_id: str
     model: str | None = None           # required unless restore=True
-    mode: Literal["session", "default"]  # D-02: temporary (1h TTL) vs sticky pinned default
-    restore: bool = False              # mirrors SwapSetCommand.restore — clears the override/default,
-                                        # `model` is ignored when true
+    mode: Literal["session", "default"]  # rejected: session TTL, see D-06 above
+    restore: bool = False
 ```
 
 ```typescript
-// TypeScript mirror (src/lib/brainsApi.ts)
+// Rejected TypeScript mirror — do not implement
 export interface GatewayModelSetCommand {
   type: "gateway.model.set";
   request_id: string;
@@ -64,7 +103,14 @@ export interface GatewayModelSetCommand {
 }
 ```
 
-**Ack shape:**
+**Why rejected (D-05):** `SwapSetCommand`'s docstring makes a load-bearing promise that a manual
+pick and a spoken swap dispatch through the exact same `swap_model`/`swap_voice`
+`ControlVerb.execute` — "never a parallel mutation." A second command is a second path into the
+same override state, which is how two axes end up able to disagree without either knowing.
+Omitting the new `profile_id` field on `SwapSetCommand` is byte-identical to today's behavior,
+which a brand-new command cannot offer for free.
+
+**Ack shape (unchanged):**
 
 ```typescript
 export interface BrainsAck {
@@ -135,24 +181,36 @@ global catalogue. `id` uniqueness across the returned array is a hard requiremen
 **D-14 per-profile readback.** Delivered on the **existing** `/runtime-ingest` HTTP path — **no
 second ingest endpoint** is created by this contract.
 
-**This event name is not new.** `astridr/providers/router.py:426` (`ModelRouter._emit_model_routing`)
+**This event name is not new.** `astridr/providers/router.py` (`ModelRouter._emit_model_routing`)
 already calls `self._telemetry.send("model_routing", payload)` on every resolution — it is a real,
-live emitter today, just not yet profile-scoped or consumed by CodePulse's ingest switch. Phase
-184.1 extends its existing payload; it does not invent a new event.
+live emitter today. corrected 2026-08-07: the originally-cited "Phase 184.1" does not exist; CodePulse Phase 108 extended this existing payload (profileId/model/mode, D-11/D-12) — it did not invent a new event.
 
 ```typescript
 export interface ModelRoutingEvent {
   profile_id: string;
   model: string;
   mode: "session" | "pinned" | "inherited";
-  // selection_path mirrors router.py's own _resolve_model vocabulary (router.py:437-472):
-  // "override" | "global-swap-override" | "session-override" | "codepulse-default" |
-  // "category-rule" | "default"
+  // Corrected 2026-08-07 (Phase 108 D-04/D-11/D-12): selection_path mirrors
+  // router.py's own _resolve_model vocabulary, now 8 live values, not the
+  // original 6 (both "advisor" and "profile-swap-override" were missing):
+  // "override" | "profile-swap-override" | "global-swap-override" |
+  // "session-override" | "codepulse-default" | "category-rule" | "default" |
+  // "advisor"
+  // "advisor" is a hardcoded literal emitted from inside chat() and never
+  // flows through _resolve_model. "mode" is derived from selection_path at
+  // the single emit helper (_emit_model_routing) via a .get(selection_path,
+  // "inherited") mapping with an "inherited" catch-all default — a value
+  // with no explicit mapping entry is never left unmapped.
   selection_path: string;
   expires_at?: number;   // epoch seconds — set ONLY when mode === "session"
   timestamp: number;
 }
 ```
+
+**Field name (corrected 2026-08-07, D-11):** the field above is `model`, matching this contract.
+The astridr emitter previously sent `selectedModel` — renamed in Phase 108 to `model` so the
+contract and the live emitter agree; there is no longer any drift between this document and
+`router.py`'s payload.
 
 The emitter MUST send this event after every resolution change **and** on process start, so the
 Convex-side table is never empty-by-default (an empty table must read as "no data yet," not be
@@ -189,30 +247,44 @@ row). No response/ack is expected — this is a fire-and-forget notification, no
 
 ## 6. Authorization tier (ASVS V4)
 
-`gateway.model.set` and `models.catalog` are **regular, non-admin commands**, matching the existing
-tier of `swap.set` and `config.update`. `astridr/security/command_auth.py:15` defines
+**Corrected 2026-08-07 (Phase 108):** the scoped `swap.set` (§2) — not `gateway.model.set`, which
+was never built — and `models.catalog` (§3, still unbuilt) are **regular, non-admin commands**,
+matching the existing tier of unscoped `swap.set` and `config.update`.
+`astridr/security/command_auth.py:15` defines
 `ADMIN_COMMANDS: frozenset[str] = frozenset({"estop.activate", "estop.deactivate"})` — that is the
-**entire** admin set. Neither new command belongs in it. Phase 184.1 must gate these commands with
-the same service-key tier every other non-estop command uses (`CommandAuth.check`,
-`command_auth.py:30`), never the admin key. Stating this explicitly closes off both failure modes:
-under-gating (no auth check at all) and over-gating (accidentally requiring the admin key, which
-would make the picker unusable for a normal operator session).
+**entire** admin set. Neither command belongs in it, and Phase 108 kept it that way: `swap.set`
+stays out of `ADMIN_COMMANDS` for both scoped and unscoped calls (asserted by
+`grep -c "swap.set" astridr/security/command_auth.py` returning `0`), gated instead by the same
+service-key tier every other non-estop command uses (`CommandAuth.check`, `command_auth.py:30`),
+never the admin key. Stating this explicitly closes off both failure modes: under-gating (no auth
+check at all) and over-gating (accidentally requiring the admin key, which would make the picker
+unusable for a normal operator session — over-gating a routine operator action behind the estop-only
+admin tier is itself the access-control failure this section exists to prevent).
 
 ---
 
 ## 7. Input validation (ASVS V5)
 
-The server MUST validate `model` and `profile_id` via Pydantic exactly as every other command in
+The server MUST validate `value` and `profile_id` via Pydantic exactly as every other command in
 `ws_commands.py` does (field types + the `Literal`/`str` constraints shown in §2/§3 above). An
 unknown or absent `profile_id` is an **error ack**, never a silent global apply — this is the one
 failure mode that would be most dangerous to get wrong, since it would turn a per-profile swap
 request into an unintended global one.
 
-**Client-side canary:** the stub adapter's `validateGatewayModelSet` (in `src/lib/brainsApi.ts`)
-performs the client-side half of this same validation before dispatch, rejecting a malformed
-command with an error ack rather than a thrown exception. This is not a substitute for server-side
-validation — it exists to catch contract drift between this document and the eventual Phase 184.1
-implementation early, in CI, before any live traffic is involved.
+**Corrected 2026-08-07 (Phase 108):** this rule is now implemented, not merely specified.
+`_handle_swap_set` (`astridr/api/ws_commands.py`) validates fail-closed BEFORE `VERB_REGISTRY`
+dispatch: `target="voice"` + `profile_id` is rejected, an unresolvable/absent validation source is
+rejected rather than proceeding, and an unknown `profile_id` (checked against
+`MessageRouter.known_profile_ids()`) is rejected — each path asserted, in the test suite, to leave
+`verb.execute` with **zero calls**, not merely to raise an exception afterward.
+
+**Client-side canary (superseded, not yet re-implemented):** the original text here described a
+`validateGatewayModelSet` stub adapter (in `src/lib/brainsApi.ts`) performing a client-side half of
+this validation before dispatch, and referenced an "eventual Phase 184.1 implementation" — corrected
+at the top of this document: no such phase exists. That stub targeted the now-rejected
+`gateway.model.set` shape (§2) and is superseded by this amendment. A client-side canary for the
+real, scoped `swap.set` is Phase 109's UI-binding work, not built by Phase 108, whose validation
+lives server-side only.
 
 ---
 
@@ -276,5 +348,4 @@ sections 2-5 above and is the executable check that this document is internally 
   verification (`103-RESEARCH.md` "Validation Architecture" — What CAN and CANNOT be proven with a
   stub).
 
-Phase 184.1's implementer can build the entire per-profile backend from sections 1-9 of this
-document without reading any CodePulse source.
+corrected 2026-08-07: the line originally here named "Phase 184.1's implementer" — no such phase exists (see the amendment note at the top of this document). CodePulse Phase 108 built the per-profile backend from the corrected §1/§2/§4/§6/§7 above, on astridr branch `feature/brain-swap`, without needing any CodePulse source beyond this document.
