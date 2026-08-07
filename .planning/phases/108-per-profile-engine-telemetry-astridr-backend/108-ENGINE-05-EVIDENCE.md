@@ -586,3 +586,300 @@ at `astridr/api/ws_commands.py:1137` (`if cmd.profile_id not in known_ids: raise
 rejects BEFORE any dispatch to `swap_model.ControlVerb.execute`, so no override write and no
 telemetry emit for the rejected attempt was even attempted.
 
+---
+
+## Re-proof after gap closure (2026-08-07, same day, continuation)
+
+**Repos:** codepulse (`master`) + astridr-repo (branch unchanged since first proof), same
+self-hosted Convex instance. Three fixes landed since the first proof (codepulse `d78fb5c1`/
+`1521fe2d`, astridr `f632752c`) — see the executor dispatch's `<what_changed_since_the_first_proof>`
+for the full description. This section re-runs only the swap-history portion of Task 3, per the
+re-dispatch's explicit scope.
+
+### Pre-deploy check — concurrent uncommitted work in the shared checkout
+
+Before deploying, `git status --short` in codepulse showed uncommitted changes to
+`convex/aggregates.ts`, `convex/aggregates.test.ts`, `convex/costDerived.ts`, `convex/crons.ts`,
+and two new untracked files (`convex/lib/aggregatePeriod.ts`/`.test.ts`) — a concurrent session's
+in-progress work, unrelated to this plan and not touched by this executor per the shared-checkout
+rules. `npx convex deploy` pushes the **working-tree** state of `convex/`, not just this executor's
+own commits, so that WIP would be deployed alongside the two fix commits regardless. Verified
+before deploying that this was safe to do: `npx tsc --noEmit` (clean, no output) and
+`npx vitest run convex/aggregates.test.ts convex/runtimeIngest.test.ts` (140/140 passed). Disclosed
+here rather than silently deployed.
+
+### Step 1 — Deploy + freshness proof
+
+```bash
+npx convex deploy --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" --yes
+```
+Raw output (tail): `✔ Deployed Convex functions to http://127.0.0.1:3210` — same working
+invocation as the first proof, no new form needed.
+
+**Freshness proof — the `skipped` field, not just function existence.** POSTed a benign,
+well-formed `control_verb_swap` event with every optional field set to an explicit JSON `null`
+(the exact shape the pre-fix code rejected) directly to `/runtime-ingest`:
+```bash
+curl -s -X POST http://127.0.0.1:3211/runtime-ingest -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $INGEST_KEY" \
+  -d '{"eventType":"control_verb_swap","data":{"verb":"swap_model","path":"108-07-freshness-probe","channel":"codepulse-control-center","session_id":null,"scope":"__108-freshness-probe__","target":null,"resolved":null,"reason":null}}'
+```
+Raw response: `{"ingested":1,"dropped":0,"skipped":0}` — the `skipped` key is present (the old
+response shape was `{"ingested","dropped"}` only, confirmed by re-reading the pre-fix code in the
+first proof section above). This is the freshness signal the old build cannot produce.
+
+Read-back, proving the row landed with the nulls actually stripped (not merely accepted and
+silently coerced):
+```bash
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"__108-freshness-probe__"}'
+```
+Raw output:
+```json
+[
+  {
+    "_creationTime": 1786118344759.274,
+    "_id": "ms7q3t64w8pmwqfj4csc05c8cs8c1skg",
+    "channel": "codepulse-control-center",
+    "path": "108-07-freshness-probe",
+    "scope": "__108-freshness-probe__",
+    "timestamp": 1786118343.967,
+    "verb": "swap_model"
+  }
+]
+```
+**Verdict — PASS.** `session_id`, `target`, `resolved`, `reason` are entirely **absent** from the
+stored row (not present-as-`null`) — `normalizeOptional()` stripped every explicit `null` before
+the mutation call, exactly as `108-07-PLAN.md`'s gap-closure fix intends.
+
+### Step 2 — Rebuild astridr
+
+```bash
+COMPOSE_PROFILES=prod,war-room docker compose up --build -d
+```
+All targeted services rebuilt/recreated; `astridr-agent` reported Healthy in the compose output.
+
+**In-container code proof** (not timestamp inference):
+```bash
+docker exec astridr-agent python -c "
+import astridr.engine.telemetry as m, inspect
+for name, obj in inspect.getmembers(m):
+    if inspect.isclass(obj) and hasattr(obj, '_post_to_convex'):
+        print(name, '_strip_none_values' in inspect.getsource(obj._post_to_convex))
+"
+```
+Raw output: `ConvexHandler True` — `_post_to_convex` calls `_strip_none_values`, confirmed inside
+the running container.
+
+**Environment note (disclosed, not silently worked around):** shortly after the rebuild reported
+Healthy, `astridr-agent` was observed to restart once more on its own (`docker ps` showed
+`Up 2 seconds (health: starting)` immediately after the in-container probe above had already
+succeeded once). `docker inspect --format '{{.State.Restarting}} {{.RestartCount}}'` showed
+`false 0` both before and after — this was a **clean single recreate**, not a crash-restart loop
+(RestartCount never incremented). Root cause not chased further since it did not recur; the
+in-container `_strip_none_values` probe was re-run after the container settled to `healthy` and
+still reported `True` on the same `StartedAt`, confirming the settled container held the new code
+before proceeding.
+
+### Step 3 — Baseline (before-contrast)
+
+```bash
+npx convex run activeEngine:latestByProfile --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"
+```
+Raw output: fresh D-03 boot seed — `consulting`/`business`/`personal`, all `model:
+"anthropic/claude-sonnet-5"`, `mode: "inherited"`, `selectionPath: "boot-seed"`.
+
+```bash
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"consulting"}'
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"business"}'
+```
+Raw output for both: `[]` — the before-reading assertion (c)/(f) are contrasted against.
+
+### Step 4 — Scoped swap (consulting → opus) and unscoped swap (→ haiku)
+
+WS client run inside `astridr-agent` (`ws://localhost:8181/ws/telemetry`, `Authorization: Bearer
+$ASTRIDR_WEB_API_KEY` read from `os.environ`, never printed).
+
+**First attempt — genuine transient network loss (disclosed, not swept under the fix).** The
+first scoped+unscoped swap attempt (immediately after the container settled healthy) produced
+normal acks and a successful turn (`model: "claude-opus-4-8"`, `model:
+"claude-haiku-4-5-20251001"`), but `docker logs astridr-agent` showed:
+```
+16:04:51.148553Z warning telemetry.timeout events=30
+16:05:18.159812Z warning telemetry.timeout events=30
+```
+`_post_to_convex`'s `_flush()` snapshots and clears the buffer BEFORE the POST attempt
+(`astridr/engine/telemetry.py:466-467`), so a timed-out batch's events are dropped, not requeued —
+`self.events_dropped += len(events)` at `telemetry.py:559`. This is a startup-settling connectivity
+race (DNS/network reconfiguration after the compose recreate), unrelated to either fix. Confirmed
+resolved: a direct in-container `httpx` POST to `http://convex-backend:3211/runtime-ingest`
+immediately afterward returned `401 {"error":"Unauthorized"}` in milliseconds (fast, no timeout —
+proves connectivity, since 401 is the expected auth-fail response with no key), and the next three
+buffer flushes all logged `telemetry.posted` with no further timeouts. The swap sequence was
+**re-run** once connectivity was confirmed stable (three consecutive clean `telemetry.posted` log
+lines with no `telemetry.timeout`/`telemetry.retrying` in between).
+
+**Second attempt (the one this proof relies on):**
+
+Scoped swap ack:
+```json
+{"type": "ack", "request_id": "108r-scoped", "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Opus 4 8.", "target": "brain"}
+```
+Live `control_verb_swap` fan-out (same WS connection, `telemetry.send()`'s subscriber push):
+```json
+{"event_type": "control_verb_swap", "data": {"verb": "swap_model", "target": "opus", "resolved": "claude-opus-4-8", "provider_affinity": ["anthropic_advisor", "anthropic_direct", "gemini", "grok", "gemini_openrouter", "openrouter"], "path": "claude-native", "reason": null, "session_id": null, "channel": "codepulse-control-center", "scope": "consulting"}, "timestamp": 1786118811.5297928}
+```
+Turn (`chat.send`, profile `consulting`) completion: `{"session_id": "5247b71a-...", "rounds": 1,
+"tokens": 140, "cost": 0.00078, "final_text": "OK", "model": "claude-opus-4-8"}` — turn ran on the
+swapped model, not vacuous.
+
+Unscoped swap ack:
+```json
+{"type": "ack", "request_id": "108r-global", "status": "ok", "handled": true, "spoken_reply": "Switching to Claude Haiku 4 5 20251001.", "target": "brain"}
+```
+Live fan-out: `{"event_type": "control_verb_swap", "data": {..., "resolved": "claude-haiku-4-5-20251001", "provider_affinity": [...], "path": "claude-native", "session_id": null, "scope": null}, ...}`
+Turn (`chat.send`, profile `business`) completion: `model: "claude-haiku-4-5-20251001"`.
+
+Waited past the 5s `telemetry_batch_interval` and confirmed clean flushes in the logs
+(`telemetry.posted events=7`/`8`/`1`, no `telemetry.timeout`) before reading back.
+
+### Step 5 — Assertion (c)/(f): read the rows — STILL FAIL, different root cause than the first proof
+
+```bash
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"consulting"}'
+npx convex run controlVerbSwaps:listByScope --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY" '{"profileId":"business"}'
+```
+Raw output (both): `[]`
+
+```bash
+npx convex data controlVerbSwaps --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"
+```
+Raw output at this point in the sequence:
+```
+_id                                | _creationTime     | channel                    | path                     | scope                     | timestamp      | verb
+"ms7q3t64w8pmwqfj4csc05c8cs8c1skg" | 1786118344759.274 | "codepulse-control-center" | "108-07-freshness-probe" | "__108-freshness-probe__" | 1786118343.967 | "swap_model"
+```
+**Verdict — FAIL, with a full root-cause trace, not a repeat of the first proof's finding.** The
+session_id-null defect IS closed (Step 1's freshness probe proves the guard/normalizer work; the
+restore-path rows below independently prove it too). The rows still do not land because of a
+**second, previously-undiscovered defect on the same resolver**, hit only once the first defect
+stopped masking it:
+
+1. `astridr/engine/control_verbs/swap_model.py:126` types `ResolveOutcome.provider_affinity` as
+   `list[str] | None`. On the success path (`swap_model.py:394-395,409` for the openrouter branch;
+   the equivalent claude-native branch is the one exercised live above), `provider_affinity` is set
+   to a real Python **list**, e.g. `["anthropic_advisor", "anthropic_direct", "gemini", "grok",
+   "gemini_openrouter", "openrouter"]` — confirmed directly in the live WS fan-out payload pasted
+   above, not inferred.
+2. `swap_model.py:486` forwards it verbatim into the telemetry dict: `"provider_affinity":
+   outcome.provider_affinity`. Serialized to JSON, a Python list becomes a JSON **array**.
+3. `convex/runtimeIngest.ts:363` coalesces it: `const providerAffinity = d.providerAffinity ??
+   d.provider_affinity;` — resolves to the array (astridr sends snake_case).
+4. `convex/runtimeIngest.ts:372` (`resolveControlVerbSwapEvent`) checks it with
+   `isOptionalString(providerAffinity)` (defined at `runtimeIngest.ts:225-227`:
+   `value === undefined || value === null || typeof value === "string"`). A JSON array's
+   `typeof` is `"object"`, not `"string"` — the guard returns **`false`** for every non-null
+   `provider_affinity`, so the whole event resolves to `null` and is skipped
+   (`runtimeIngest.ts:1017-1028`, `skippedCount++`).
+5. **Directly reproduced**, not just traced: POSTing a payload byte-shaped like the real event
+   (array `provider_affinity`, everything else identical to the passing freshness-probe payload)
+   to `/runtime-ingest`:
+   ```bash
+   curl -s -X POST http://127.0.0.1:3211/runtime-ingest -H "Content-Type: application/json" \
+     -H "Authorization: Bearer $INGEST_KEY" \
+     -d '{"eventType":"control_verb_swap","data":{"verb":"swap_model","path":"108-07-array-repro","channel":"codepulse-control-center","session_id":null,"scope":"__108-array-repro__","target":"opus","resolved":"claude-opus-4-8","provider_affinity":["anthropic_advisor","anthropic_direct"],"reason":null}}'
+   ```
+   Raw response: **`{"ingested":1,"dropped":0,"skipped":1}`** — `skipped:1`, definitively
+   confirming the mechanism. (Note: an earlier working hypothesis in this session's own scratch
+   reasoning — that a `content-length: 38` response header from the real astridr POST proved
+   `skipped:0` for that batch — was WRONG and is explicitly retracted here: `{"ingested":8,
+   "dropped":0,"skipped":2}` is also 38 bytes, since every field stayed single-digit. The response
+   body was never actually read for the real batch; this reproduction with an identical payload
+   shape, whose body WAS read, is the evidence this verdict rests on, not the content-length
+   inference.)
+
+**Positive control confirming the defect's exact boundary — the restore-path rows DO land:**
+`swap_model.py:460` sets `"provider_affinity": None` (not a list) on the restore path only
+(`swap_model.py:443-465`). Step 6 below drove both a scoped and an unscoped restore, and:
+```bash
+npx convex data controlVerbSwaps --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"
+```
+Raw output (after Step 6's restores):
+```
+_id                                | _creationTime      | channel                    | path                     | scope                     | timestamp          | verb
+"ms7s05100m6754xzh5c73dg0q58c0qvj" | 1786119091365.7546 | "codepulse-control-center" | "restore"                | "consulting"              | 1786119087.9178562 | "swap_model"
+"ms7g61xw5krdkev8mb1m98vnrx8c0tt6" | 1786119091340.4302 | "codepulse-control-center" | "restore"                |                           | 1786119087.9159899 | "swap_model"
+"ms7q3t64w8pmwqfj4csc05c8cs8c1skg" | 1786118344759.274  | "codepulse-control-center" | "108-07-freshness-probe" | "__108-freshness-probe__" | 1786118343.967     | "swap_model"
+```
+Both restore rows (`path: "restore"`, one scoped to `consulting`, one unscoped/global) **landed
+successfully** — same `session_id: null` payload shape as the failed success-path swaps, but
+`provider_affinity: null` instead of an array. This is the exact contrast that pins the defect to
+`provider_affinity`'s type, not to anything else varying between a restore and a live swap.
+
+**Scope of the defect:** every `swap_model` event whose swap actually **resolved to a model**
+(the `claude-native`/`openrouter` success paths — i.e., the one case a swap-history UI most needs
+to show) is silently skipped. Only `restore` and any path where `ResolveOutcome` leaves
+`provider_affinity` at its dataclass default of `None` (refused/unresolved) would land. **This is
+worse than the first proof's finding in one respect: even after the operator fixes the session_id
+defect (done, deployed, verified), the actual "swap succeeded" row — the primary thing D-13/D-15's
+swap-history feature exists to show — still never lands.** Not fixed in this session, per the same
+"this plan authors no code" scope as the first proof; documented as a second named gap.
+
+### Step 6 — Core axis regression check
+
+```bash
+npx convex run activeEngine:latestByProfile --url http://127.0.0.1:3210 --admin-key "$ADMIN_KEY"
+```
+Raw output:
+```json
+[
+  {"_id": "m97vh7z4628bah7zehrsfvst8n8c1qm5", "mode": "pinned", "model": "claude-haiku-4-5-20251001", "profileId": "business", "selectionPath": "global-swap-override", "timestamp": 1786118707.7396743},
+  {"_id": "m97t4p4yjxz65r95wjr2remnz18c1795", "mode": "pinned", "model": "claude-opus-4-8", "profileId": "consulting", "selectionPath": "profile-swap-override", "timestamp": 1786118705.447997},
+  {"_id": "m97ymqe4pmnbd5r0sv6vgfgjgd8c0qgh", "mode": "inherited", "model": "anthropic/claude-sonnet-5", "profileId": "personal", "selectionPath": "boot-seed", "timestamp": 1786118667.797974}
+]
+```
+**Verdict — PASS, no regression.** Identical pattern to the first proof: `consulting` pinned to
+the scoped-swap model with `selectionPath: "profile-swap-override"`, `business` pinned to the
+global-swap model with `selectionPath: "global-swap-override"`, `personal` untouched at its
+boot-seed default. The ENGINE-01/ENGINE-02 axis this plan already proved PASS is unaffected by
+either fix.
+
+### Step 7 — Restore
+
+Unscoped restore ack: `{"type": "ack", "request_id": "108r-restore-global", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}`
+
+Scoped restore (`consulting`) ack: `{"type": "ack", "request_id": "108r-restore-scoped", "status": "ok", "handled": true, "spoken_reply": "Back to my usual brain.", "target": "brain"}`
+(Live fan-out for this one pasted in Step 5's positive-control paragraph above — `provider_affinity: null`, and it landed.)
+
+Fresh confirming turns (not the ack alone):
+```json
+{"event_type": "run.completed", "data": {"session_id": "4da1c71b-...", "final_text": "OK", "model": "claude-sonnet-5"}, ...}
+{"event_type": "run.completed", "data": {"session_id": "dc7a1e30-...", "final_text": "OK", "model": "claude-sonnet-5"}, ...}
+```
+`consulting` and `business` both ran their confirming turn on `claude-sonnet-5` — the pre-test
+default, not the swapped-to opus/haiku models.
+
+`swap.get_state` ack: `{"type": "ack", "status": "ok", "model_override": null, "model_source": null, "voice_override_id": null, "voice_override_name": null}` — global override confirmed cleared.
+
+**Verdict — PASS. Stack fully restored**, proven by actual model used on live turns for both
+affected profiles, not by acks alone. Larry's assistant is not left pinned to a test model.
+
+### Summary of this re-proof
+
+| Assertion | First proof | This re-proof |
+|---|---|---|
+| Freshness (new `skipped` field live) | n/a | **PASS** |
+| `_strip_none_values` present in running container | n/a | **PASS** |
+| (c) scoped swap → real `controlVerbSwaps` row | FAIL (session_id null) | **FAIL** (provider_affinity array — new, different root cause) |
+| (f) unscoped swap → real `controlVerbSwaps` row, scope absent | FAIL (session_id null) | **FAIL** (same new root cause) |
+| Core engine axis (activeEngine) regression | PASS | **PASS**, unchanged |
+| `skipped` counter live and non-zero on the reproduced defect shape | n/a (field didn't exist) | **PASS** (`skipped:1` reproduced directly) |
+| Stack restored | PASS | **PASS**, proven via live turns |
+
+**Both fixes deployed in this session did exactly what they claimed** — the session_id-null
+defect is closed, proven three independent ways (freshness probe, restore-path rows landing,
+`skipped` field literally present in the response). **The swap-history axis (assertions c/f) is
+still not satisfied end-to-end**, for a reason outside either fix's scope: `provider_affinity`'s
+type (array vs. the schema's `v.optional(v.string())`) was never exercised by the first proof's
+own root-cause trace, because the session_id rejection fired first and masked it on every attempt.
+This is a genuine second gap, not a re-discovery of the first one.
+
