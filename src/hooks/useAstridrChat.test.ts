@@ -419,6 +419,81 @@ describe("useAstridrChat — run.blocks text backfill for streamingReplyRef (186
     });
     expect(partial).toBe("");
   });
+
+  // ─── 188.3-06 (D-10/D-11/T-188.3-17..20): run.blocks session gate ─────────
+  // Modeled directly on the run.tts foreign-session suite above (:258-328) —
+  // same swap of event name and observable. The direct predecessor bug on
+  // run.tts was a session check computed as a TRACE FIELD only, with a test
+  // asserting the diagnostic instead of the behavior; that test stayed green
+  // while a foreign session's audio played anyway. These assert BEHAVIOR
+  // (message count + the streamingTextRef mirror via interrupt()), never a
+  // trace field.
+
+  it("BLOCKS-FOREIGN: a run.blocks event carrying a foreign session_id appends no bubble and leaves streamingTextRef untouched", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    // The real terminal event for a normal turn — nulls activeSessionRef, so
+    // the state matches how a foreign run.blocks actually arrives in
+    // production (after the turn's own text/completion already landed).
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    const messagesBefore = result.current.messages.length;
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-999-foreign",
+          blocks: [{ type: "text", text: "a foreign reply that must not land" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    // Behavior 1: no new assistant bubble was appended.
+    expect(result.current.messages.length).toBe(messagesBefore);
+
+    // Behavior 2: streamingTextRef was NOT mutated by the foreign event —
+    // observed through interrupt(), the same observable the existing
+    // control-verb fast-path test (:349-372) uses.
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("");
+  });
+
+  it("CTRL-BLOCKS-NO-SESSION: a run.blocks event with no session_id key at all still backfills and appends (fail open)", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("change your brain to Kimmy K3");
+    });
+
+    const messagesBefore = result.current.messages.length;
+
+    // No session_id key at all — an absent session_id must fail OPEN,
+    // exactly as the run.tts gate does (:437).
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          blocks: [{ type: "text", text: "I couldn't find a 'Kimmy K3' brain." }],
+          round_num: 0,
+        },
+      });
+    });
+
+    // The backfill DID happen and the bubble WAS appended.
+    expect(result.current.messages.length).toBe(messagesBefore + 1);
+
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("I couldn't find a 'Kimmy K3' brain.");
+  });
 });
 
 // ─── 186-09 deferred item option (b): correctAssistantMessage ───────────────
