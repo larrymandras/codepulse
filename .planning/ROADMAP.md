@@ -664,9 +664,9 @@ Plans:
 
 **Goal**: Ástríðr's per-profile engine axis genuinely exists — real telemetry, a scoped swap command, and a queryable swap-history route — verified live before CodePulse UI work depends on it.
 **Depends on**: Nothing (first phase of milestone)
-**Requirements**: ENGINE-01, ENGINE-02, ENGINE-05, TELE-02
+**Requirements**: ENGINE-01, ENGINE-02, ENGINE-05 *(TELE-02 reassigned to Phase 109 on 2026-08-07 — see below)*
 
-*(Sequencing note — TELE-02: `control_verb_swap` shares its emit channel with ENGINE-01 — both events originate from the same astridr swap code path this phase is already touching (`astridr/engine/control_verbs/swap_model.py`), so building its domain route alongside the telemetry emitter avoids a second pass through the same ingest dispatch code. The requirement's "surfaced as per-profile swap history" half is satisfied here as a minimal readout, not a full page — Phase 109 owns the richer current-engine UI.)*
+*(Sequencing note — TELE-02: `control_verb_swap` shares its emit channel with ENGINE-01 — both events originate from the same astridr swap code path this phase is already touching (`astridr/engine/control_verbs/swap_model.py`), so building its domain route alongside the telemetry emitter avoids a second pass through the same ingest dispatch code. ~~The requirement's "surfaced as per-profile swap history" half is satisfied here as a minimal readout, not a full page — Phase 109 owns the richer current-engine UI.~~ **CORRECTED 2026-08-07:** that last sentence turned out to be wrong, and the routing rationale above is unaffected — Phase 108 did build the whole domain route. But the "surfaced" half could not be delivered here: D-15 chose `GlobalSwapModal` as the readout's host without cross-referencing 103-CONTRACT.md §8, which had already established that modal as the ALL-PROFILES axis with no per-profile scope. It has exactly one mount site app-wide and `listByScope` requires a non-optional `profileId` while global swaps store `scope: null`, so the query cannot serve that host at all. **TELE-02 is therefore reassigned to Phase 109**, which owns the per-profile surfaces this readout needs. Phase 108 keeps and completes the routing half; the hook, pure helpers and their tests all ship here and are forward-compatible. See the corrected D-15 in `phases/108-per-profile-engine-telemetry-astridr-backend/108-CONTEXT.md`.)*
 
 **Success Criteria** (what must be TRUE):
 
@@ -702,7 +702,9 @@ Plans:
 
 **Goal**: Operators see and control each profile's current engine in CodePulse, sourced from real telemetry rather than config or optimistic state.
 **Depends on**: Phase 108 (needs real telemetry rows and a working scoped `swap.set` to bind against)
-**Requirements**: ENGINE-03, ENGINE-04
+**Requirements**: ENGINE-03, ENGINE-04, TELE-02 *(TELE-02 reassigned from Phase 108 on 2026-08-07)*
+
+*(TELE-02 inheritance note: Phase 108 shipped the entire **routed** half — the `controlVerbSwaps` table with retention bounds, the `control_verb_swap` ingest case, `scope` on all four emits, and a `useControlVerbSwaps` hook with pure `filterBrainSwaps`/`describeSwapOutcome` helpers, all tested. What remains is the **surfaced** half only: give that readout a host with a real per-profile scope. Phase 108's D-15 chose `GlobalSwapModal` and was falsified — that modal is the all-profiles axis. The surfaces named in criterion 1 below are the natural home. **Decide before planning:** per-profile only, in which case `convex/controlVerbSwaps.ts`'s `listByScope` works as-is; or a combined/global view, in which case its non-optional `profileId: v.string()` needs a signature change to reach the `scope: null` rows a global swap writes. Discovering that mid-execution is expensive; it is a five-minute decision at plan time.)*
 
 **Success Criteria** (what must be TRUE):
 
