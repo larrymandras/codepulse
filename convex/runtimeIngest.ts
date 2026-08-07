@@ -195,6 +195,173 @@ export function parseToolPolicyEvent(d: any, timestamp: number): ToolPolicyEvent
   };
 }
 
+interface ResolvedModelRoutingEvent {
+  profileId: string;
+  model: string;
+  mode: string;
+  selectionPath?: string;
+  expiresAt?: number;
+  timestamp: number;
+}
+
+/** Runtime type guard: `undefined` or a `string` — matches every
+ * `v.optional(v.string())` field this file forwards to a Convex
+ * `internalMutation`. A field of any other type must never reach the
+ * mutation call (its argument validator throws, uncaught, inside the batch
+ * loop — the WR-06/168-06 class). */
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === "string";
+}
+
+/** Runtime type guard: `undefined` or a `number` — matches every
+ * `v.optional(v.float64())` field. */
+function isOptionalNumber(value: unknown): value is number | undefined {
+  return value === undefined || typeof value === "number";
+}
+
+/**
+ * resolveModelRoutingEvent — resolves a `model_routing` event payload into
+ * the args for `internal.activeEngine.recordRouting`, or `null` when the
+ * event must be skipped (status:"failed", an unresolved/sentinel
+ * profileId+model per `isUnresolvedRouting`, or any forwarded field whose
+ * runtime type does not match its `activeEngine.recordRouting` validator).
+ *
+ * Extracted (Phase 108 gap closure) so this logic is a real, directly
+ * importable/executable function for both the httpAction case body below
+ * and `runtimeIngest.test.ts` — the previous test suite hand-copied this
+ * logic into a "mirror" function that could not go red when the real case
+ * broke, which an adversarial audit on plan 108-03 caught as tests
+ * incapable of failing. Mirrors `resolveGatewayTaskCompleted`'s
+ * null-to-skip / object-to-proceed convention above.
+ *
+ * WR-06/168-06 (batch-poisoning): must NEVER throw. A field that is
+ * present but wrong-typed causes a `null` (skip), never a throw — same
+ * discipline as the isUnresolvedRouting guard it composes with.
+ */
+export function resolveModelRoutingEvent(
+  data: unknown,
+  timestamp: number
+): ResolvedModelRoutingEvent | null {
+  const d = (data ?? {}) as Record<string, any>;
+  // Phase 108 (ENGINE-01, research Item 6): latestByProfile has no status
+  // filter, so a failed resolution would render as the live engine. Skip,
+  // don't throw (WR-06/168-06).
+  if (d.status === "failed") {
+    return null;
+  }
+  const routedProfileId = d.profileId ?? d.profile_id;
+  const routedModel = d.model;
+  // UAT 2026-07-29 (103-UAT.md test 2) + defect-1 gap closure: a row with
+  // no resolvable profile/model, or a non-string profileId/model, is the
+  // absence of a reading, not a reading — D-14 forbids manufacturing one.
+  if (isUnresolvedRouting({ profileId: routedProfileId, model: routedModel })) {
+    return null;
+  }
+  const mode = d.mode ?? "inherited";
+  const selectionPath = d.selectionPath ?? d.selection_path;
+  const expiresAt = d.expiresAt ?? d.expires_at;
+  if (
+    typeof mode !== "string" ||
+    !isOptionalString(selectionPath) ||
+    !isOptionalNumber(expiresAt)
+  ) {
+    return null;
+  }
+  // isUnresolvedRouting has already proven both are non-empty strings.
+  return {
+    profileId: routedProfileId as string,
+    model: routedModel as string,
+    mode,
+    selectionPath,
+    expiresAt,
+    timestamp,
+  };
+}
+
+interface ResolvedControlVerbSwapEvent {
+  verb: string;
+  target?: string;
+  resolved?: string;
+  providerAffinity?: string;
+  voiceId?: string;
+  path: string;
+  reason?: string;
+  scope?: string;
+  sessionId?: string;
+  channel: string;
+  timestamp: number;
+}
+
+/**
+ * resolveControlVerbSwapEvent — resolves a `control_verb_swap` event
+ * payload into the args for `internal.controlVerbSwaps.record`, or `null`
+ * when the event must be skipped.
+ *
+ * D-13: unlike model_routing, there is deliberately NO
+ * isUnresolvedRouting-equivalent semantic guard here — a refusal (affinity
+ * guard, resolver failure) IS a valid row for this table. Do not "harden"
+ * this into dropping refusals; only a runtime TYPE mismatch against
+ * `controlVerbSwaps.record`'s validators (`convex/controlVerbSwaps.ts`:
+ * `verb`/`path`/`channel` are required `v.string()`, the rest are
+ * `v.optional(v.string())`) causes a skip.
+ *
+ * Defect-2 gap closure: the previous guard (`if (!verb || !pathVal ||
+ * !channel) break;`) was truthiness-only, not type-checked — a
+ * wrong-typed-but-truthy field (e.g. `verb: 42`) passed it and reached
+ * `ctx.runMutation`, where Convex's argument validator throws. That throw
+ * is uncaught inside this case (no per-event try/catch), so it poisons
+ * every remaining event in the batch — the same WR-06/168-06 mechanism as
+ * defect 1. Extracted to a pure function for the same reason as
+ * `resolveModelRoutingEvent` above: real, directly-testable coverage
+ * instead of a hand-copied test mirror.
+ */
+export function resolveControlVerbSwapEvent(
+  data: unknown,
+  timestamp: number
+): ResolvedControlVerbSwapEvent | null {
+  const d = (data ?? {}) as Record<string, any>;
+  const verb = d.verb;
+  const path_ = d.path;
+  const channel = d.channel;
+  if (typeof verb !== "string" || !verb) return null;
+  if (typeof path_ !== "string" || !path_) return null;
+  if (typeof channel !== "string" || !channel) return null;
+
+  const target = d.target;
+  const resolved = d.resolved;
+  const providerAffinity = d.providerAffinity ?? d.provider_affinity;
+  const voiceId = d.voiceId ?? d.voice_id;
+  const reason = d.reason;
+  const scope = d.scope ?? d.profileId ?? d.profile_id;
+  const sessionId = d.sessionId ?? d.session_id;
+
+  if (
+    !isOptionalString(target) ||
+    !isOptionalString(resolved) ||
+    !isOptionalString(providerAffinity) ||
+    !isOptionalString(voiceId) ||
+    !isOptionalString(reason) ||
+    !isOptionalString(scope) ||
+    !isOptionalString(sessionId)
+  ) {
+    return null;
+  }
+
+  return {
+    verb,
+    target,
+    resolved,
+    providerAffinity,
+    voiceId,
+    path: path_,
+    reason,
+    scope,
+    sessionId,
+    channel,
+    timestamp,
+  };
+}
+
 /**
  * HTTP action: POST /runtime-ingest
  *
@@ -718,76 +885,41 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
           // Phase 103 (BSC-01, D-14): astridr's ModelRouter._emit_model_routing
           // (router.py:426) already sends this event on every resolution — this
           // case extends it into the per-profile activeEngineSnapshots table
-          // (103-CONTRACT.md §4). Dual snake/camelCase coalescing is
-          // load-bearing, not decoration: this file's own WR-06/168-06 lesson
-          // (see the subagent_job case above) records that a single unhandled
-          // null here previously poisoned an 8-event production batch.
-          const d = data as any;
-          const routedProfileId = d.profileId ?? d.profile_id;
-          const routedModel = d.model;
-          // Phase 108 (ENGINE-01, research Item 6): latestByProfile has no status
-          // filter, so a failed resolution would render as the live engine. Skip,
-          // don't throw (WR-06/168-06). See controlVerbSwaps.ts for the D-13
-          // contrast: refusals ARE valid rows there — this is a different table.
-          if (d.status === "failed") {
+          // (103-CONTRACT.md §4). Resolution/skip logic (dual snake/camelCase
+          // coalescing, status:"failed" skip, isUnresolvedRouting guard, and
+          // — gap closure — runtime type-checking of every forwarded field)
+          // lives in `resolveModelRoutingEvent` above: extracted so it is a
+          // real, directly-testable function rather than logic duplicated
+          // between this case and its test suite (WR-06/168-06: one
+          // unhandled/wrong-typed field here previously poisoned/could poison
+          // the rest of the batch — see that function's docstring).
+          const resolved = resolveModelRoutingEvent(data, timestamp);
+          if (!resolved) {
             break;
           }
-          // UAT 2026-07-29 (103-UAT.md test 2): this case used to coalesce BOTH fields to the
-          // literal string "unknown" and store the row. That is not a defensive default here the
-          // way it is for the display-only fields below — it manufactures a per-profile engine
-          // reading out of the absence of one, and D-14 forbids exactly that. One such row
-          // ({profileId:"unknown", model:"unknown"}) reached production and made the
-          // dashboard-wide badge render "unknown" as a confirmed-live engine.
-          // Skipping (never throwing) keeps this file's own WR-06/168-06 lesson intact: one
-          // unusable event must not poison the rest of the batch.
-          if (isUnresolvedRouting({ profileId: routedProfileId, model: routedModel })) {
-            break;
-          }
-          await ctx.runMutation(internal.activeEngine.recordRouting, {
-            profileId: routedProfileId,
-            model: routedModel,
-            mode: d.mode ?? "inherited",
-            selectionPath: d.selectionPath ?? d.selection_path,
-            expiresAt: d.expiresAt ?? d.expires_at,
-            timestamp,
-          });
+          await ctx.runMutation(internal.activeEngine.recordRouting, resolved);
           break;
         }
         case "control_verb_swap": {
           // Phase 108 (TELE-02, D-13/D-14): routes a swap-attempt event into
           // the controlVerbSwaps domain table (convex/controlVerbSwaps.ts,
           // plan 108-02), in addition to the generic runtime_events row this
-          // file already writes for every event above. Dual snake/camelCase
-          // coalescing on every field, same WR-06/168-06 discipline as the
-          // model_routing case above: a single unhandled null here previously
-          // poisoned an 8-event production batch.
+          // file already writes for every event above. Resolution/skip logic
+          // (dual snake/camelCase coalescing, required-field + — gap closure —
+          // runtime type-checking of every forwarded field) lives in
+          // `resolveControlVerbSwapEvent` above, same extraction rationale as
+          // `resolveModelRoutingEvent`.
           //
           // D-13: unlike model_routing, there is deliberately NO
-          // isUnresolvedRouting-equivalent guard here. A refusal (affinity
-          // guard, resolver failure) IS a valid row for this table — that is
-          // the whole point of the swap-history axis: a history that stores
-          // only successes claims every swap worked. Do not "harden" this
-          // case into dropping refusals.
-          const d = data as any;
-          const verb = d.verb;
-          const path_ = d.path;
-          const channel = d.channel;
-          if (!verb || !path_ || !channel) {
+          // isUnresolvedRouting-equivalent SEMANTIC guard in that resolver —
+          // a refusal (affinity guard, resolver failure) IS a valid row for
+          // this table. Do not "harden" it into dropping refusals; only a
+          // runtime TYPE mismatch causes a skip there.
+          const resolved = resolveControlVerbSwapEvent(data, timestamp);
+          if (!resolved) {
             break;
           }
-          await ctx.runMutation(internal.controlVerbSwaps.record, {
-            verb,
-            target: d.target,
-            resolved: d.resolved,
-            providerAffinity: d.providerAffinity ?? d.provider_affinity,
-            voiceId: d.voiceId ?? d.voice_id,
-            path: path_,
-            reason: d.reason,
-            scope: d.scope ?? d.profileId ?? d.profile_id,
-            sessionId: d.sessionId ?? d.session_id,
-            channel,
-            timestamp,
-          });
+          await ctx.runMutation(internal.controlVerbSwaps.record, resolved);
           break;
         }
         case "git_commit": {
