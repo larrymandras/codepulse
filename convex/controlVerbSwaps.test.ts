@@ -2,7 +2,11 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { isBrainSwap, SWAP_HISTORY_CAP, record } from "./controlVerbSwaps";
+import { record } from "./controlVerbSwaps";
+// isBrainSwap/SWAP_HISTORY_CAP moved to controlVerbSwapsFilters.ts (2026-08-07, bundling defect
+// fix — see 108-REVIEW.md); controlVerbSwaps.ts no longer defines or re-exports either, so this
+// test file imports them from their one remaining source, same as controlVerbSwaps.ts itself does.
+import { isBrainSwap, SWAP_HISTORY_CAP } from "./controlVerbSwapsFilters";
 
 // Tests for Phase 108 (TELE-02, D-13/D-14): controlVerbSwaps backend service
 
@@ -135,9 +139,16 @@ describe("bounded read — listByScope never .collect()s", () => {
     expect(source).not.toMatch(/\.collect\(/);
   });
 
-  it("exports SWAP_HISTORY_CAP and uses it (not a duplicated literal) inside .take(", () => {
+  it("imports SWAP_HISTORY_CAP from the shared filters module and uses it (not a duplicated literal) inside .take(", () => {
+    // 2026-08-07 (bundling defect fix, 108-REVIEW.md): SWAP_HISTORY_CAP moved out of this file into
+    // controlVerbSwapsFilters.ts (a pure module with no `_generated/server` import), so this file no
+    // longer DECLARES the constant — it imports it. Asserting the import line (not a re-declaration)
+    // is what keeps this test failing if a future edit reintroduces a hardcoded/duplicated literal.
     const source = stripCommentLines(readFileSync(controlVerbSwapsPath, "utf-8"));
-    expect(source).toMatch(/export const SWAP_HISTORY_CAP\s*=\s*20/);
+    expect(source).toMatch(
+      /import\s*\{[^}]*SWAP_HISTORY_CAP[^}]*\}\s*from\s*["']\.\/controlVerbSwapsFilters["']/
+    );
+    expect(source).not.toMatch(/export const SWAP_HISTORY_CAP/);
     expect(source).toMatch(/\.take\(SWAP_HISTORY_CAP\)/);
   });
 

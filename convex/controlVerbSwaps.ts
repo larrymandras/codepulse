@@ -1,5 +1,6 @@
 import { internalMutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { SWAP_HISTORY_CAP } from "./controlVerbSwapsFilters";
 
 // ============================================================
 // CONTROL VERB SWAPS — Phase 108 (TELE-02, D-13/D-14)
@@ -13,24 +14,17 @@ import { v } from "convex/values";
 // brain AND voice swaps (D-14) — the D-15 readout (GlobalSwapModal) filters
 // to verb:"swap_model" for its history section; voice rows are captured
 // but not yet surfaced (deferred, not dropped).
-
-/** Row cap for the per-scope swap-history read. Exported so the D-15 UI's
- * on-screen truncation caption and this query's `.take()` cannot drift
- * apart — mirrors `activeEngine.ts`'s bounded-read discipline, sized for a
- * modal history section (vs. `latestByProfile`'s 200 for a dashboard-wide
- * read). */
-export const SWAP_HISTORY_CAP = 20;
-
-/**
- * isBrainSwap — Pure helper: true when a controlVerbSwaps row is a brain
- * (swap_model) swap rather than a voice (swap_voice) swap. Exported so it
- * can be unit-tested directly and reused by a future D-15 readout, following
- * `deduplicateByProfile`'s precedent (activeEngine.ts) of exporting a pure
- * predicate solely for testability.
- */
-export function isBrainSwap<T extends { verb: string }>(row: T): boolean {
-  return row.verb === "swap_model";
-}
+//
+// SWAP_HISTORY_CAP and isBrainSwap moved to `controlVerbSwapsFilters.ts`
+// (2026-08-07, bundling defect fix — see 108-REVIEW.md): this file imports
+// `internalMutation`/`query` from `./_generated/server`, so any browser code
+// that value-imported either constant/predicate directly from here pulled
+// the whole Convex server runtime into the client bundle. Not re-exported
+// here on purpose — a re-export would keep the old `./controlVerbSwaps`
+// import path resolving for browser code and let the same defect return
+// silently; `isBrainSwap`/`SWAP_HISTORY_CAP` now have exactly one import
+// path (`./controlVerbSwapsFilters`), used by both this file and
+// `src/hooks/useControlVerbSwaps.ts`.
 
 /**
  * record — Append-only insert of one control_verb_swap row. Never patches or

@@ -19,7 +19,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { isBrainSwap, SWAP_HISTORY_CAP } from "../../convex/controlVerbSwaps";
+import { isBrainSwap, SWAP_HISTORY_CAP } from "../../convex/controlVerbSwapsFilters";
 
 export { SWAP_HISTORY_CAP };
 

@@ -12,6 +12,9 @@
  * `:495` success) rather than invented shapes, per 108-06-PLAN.md's explicit instruction.
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   describeSwapOutcome,
@@ -19,7 +22,9 @@ import {
   SWAP_HISTORY_CAP,
   type SwapHistoryRow,
 } from "./useControlVerbSwaps";
-import { SWAP_HISTORY_CAP as CONVEX_SWAP_HISTORY_CAP } from "../../convex/controlVerbSwaps";
+import { SWAP_HISTORY_CAP as SHARED_SWAP_HISTORY_CAP } from "../../convex/controlVerbSwapsFilters";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── Fixtures — one row per real swap_model.py emit site (D-13) ──────────────────────────────
 
@@ -78,11 +83,31 @@ const VOICE_ROW: SwapHistoryRow = {
 };
 
 // ─── SWAP_HISTORY_CAP re-export ────────────────────────────────────────────────────────────────
+//
+// Restructured (2026-08-07, bundling defect fix — see 108-REVIEW.md): the hook and this test now
+// both import SWAP_HISTORY_CAP from the same pure `controlVerbSwapsFilters.ts` module (previously
+// the hook re-exported a value it imported from `convex/controlVerbSwaps.ts`, which is why THIS
+// test used to import its comparison value from that same file). Comparing the hook's re-export to
+// a second import of the identical binding is now tautological (`x === x`), so the second test
+// below reads convex/controlVerbSwaps.ts's own SOURCE and asserts its `.take()` call still
+// references the shared symbolic constant rather than a hardcoded literal — the real place drift
+// could still be reintroduced (e.g. someone hardcodes `.take(30)` in the server query without
+// touching the shared module or this hook).
 
 describe("SWAP_HISTORY_CAP", () => {
-  it("re-exports the exact same value convex/controlVerbSwaps.ts's query is bounded by, never a duplicated literal", () => {
-    expect(SWAP_HISTORY_CAP).toBe(CONVEX_SWAP_HISTORY_CAP);
+  it("re-exports the same shared constant imported from convex/controlVerbSwapsFilters.ts", () => {
+    expect(SWAP_HISTORY_CAP).toBe(SHARED_SWAP_HISTORY_CAP);
     expect(SWAP_HISTORY_CAP).toBe(20);
+  });
+
+  it("the server query (convex/controlVerbSwaps.ts) actually consumes the shared constant in its .take(), not a hardcoded literal — genuine drift guard, since the assertion above alone would now pass even if the server file stopped importing the shared constant", () => {
+    const controlVerbSwapsPath = path.resolve(__dirname, "../../convex/controlVerbSwaps.ts");
+    const source = readFileSync(controlVerbSwapsPath, "utf-8");
+    expect(source).toMatch(
+      /import\s*\{[^}]*SWAP_HISTORY_CAP[^}]*\}\s*from\s*["']\.\/controlVerbSwapsFilters["']/
+    );
+    expect(source).toMatch(/\.take\(SWAP_HISTORY_CAP\)/);
+    expect(source).not.toMatch(/\.take\(\s*20\s*\)/);
   });
 });
 
