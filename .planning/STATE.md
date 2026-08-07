@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Completed 108-01-PLAN.md (model_routing telemetry now carries profileId/model/mode with refuse-to-emit + emit-on-change); next: plan 108-02"
-last_updated: "2026-08-07T10:33:11.674Z"
+stopped_at: "Completed 108-02-PLAN.md (controlVerbSwaps table + internal-only write + bounded read, both engine-axis tables bounded in RETENTION_DAYS); next: plan 108-03"
+last_updated: "2026-08-07T10:45:22.000Z"
 last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -44,9 +44,9 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 108 (per-profile-engine-telemetry-astridr-backend) — EXECUTING
-Plan: 2 of 7
-Status: Executing Phase 108 (Plan 01 complete)
-Last activity: 2026-08-07 -- Plan 108-01 complete (model_routing telemetry: profileId/model/mode, refuse-to-emit, emit-on-change)
+Plan: 3 of 7
+Status: Executing Phase 108 (Plans 01-02 complete)
+Last activity: 2026-08-07 -- Plan 108-02 complete (controlVerbSwaps table + internal-only write + bounded read, activeEngineSnapshots/controlVerbSwaps both bounded in RETENTION_DAYS at 30 days)
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
@@ -798,6 +798,7 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 107]: 107-04: Split the OCC baseline artifact across two task commits (Section A, then Sections B/C) matching the plan's task boundary.
 - [Phase 107]: 107-04: events:listRecent {limit:5000} exceeds the self-hosted instance's 16MB single-execution read cap and errors; limit:1000 works and satisfies the coverage guard - plan 107-06 must reuse limit:1000.
 - [Phase 108]: 108-01: wrapped every existing chat()-driven telemetry test in a profile_context() helper and rewrote test_model_routing_default into test_model_routing_default_refuses_to_emit — D-02's refuse-to-emit guard makes the plan's literal 4-line-rename instruction incomplete for the default rung, and breaks all pre-existing telemetry tests unless they set a profile in context
+- [Phase 108]: 108-02: reworded controlVerbSwaps.ts's listByScope doc-comment (literal ".collect()" text in prose) after it collided with its own Task 3 acceptance-criteria grep — same "comment trips its own grep" defect class Phase 105/107 hit repeatedly; reworded to "unbounded collect" without changing meaning
 
 ### Pending Todos
 
@@ -832,11 +833,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 107 P03 | 18min | 3 tasks | 4 files |
 | Phase 107 P04 | 20min | 2 tasks | 1 files |
 | Phase 108 P01 | 25min | 3 tasks | 5 files |
+| Phase 108 P02 | 10min | 3 tasks | 4 files |
 
 ## Session Continuity
 
-Last session: 2026-08-07T10:33:11.660Z
-Stopped at: Completed 108-01-PLAN.md (model_routing telemetry now carries profileId/model/mode with refuse-to-emit + emit-on-change); next: plan 108-02
+Last session: 2026-08-07T10:45:22.000Z
+Stopped at: Completed 108-02-PLAN.md (controlVerbSwaps table + internal-only write + bounded read, both engine-axis tables bounded in RETENTION_DAYS at 30 days); next: plan 108-03
 Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
 
 --- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.
