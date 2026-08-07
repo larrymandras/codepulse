@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Completed 108-04-PLAN.md (per-profile model override store + precedence rung D-04, scoped swap.set profile_id + fail-closed validation D-05, 103-CONTRACT.md corrected in place D-08); 108-03 (codepulse control_verb_swap ingest case) still pending, independent wave-2 plan"
-last_updated: "2026-08-07T07:41:53-04:00"
+stopped_at: "Completed 108-03-PLAN.md (control_verb_swap ingest case routed to internal.controlVerbSwaps.record, D-13 no-refusal-guard; model_routing status:'failed' skip closing ENGINE-01's fabricated-current-engine gap; first-ever test coverage for both cases, 14 new tests, 3 mutation-checked guards); 108-05/108-06 remain, 108-07 (deploy) deferred"
+last_updated: "2026-08-07T08:20:00-04:00"
 last_activity: 2026-08-07
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -801,6 +801,9 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 108]: 108-02: reworded controlVerbSwaps.ts's listByScope doc-comment (literal ".collect()" text in prose) after it collided with its own Task 3 acceptance-criteria grep — same "comment trips its own grep" defect class Phase 105/107 hit repeatedly; reworded to "unbounded collect" without changing meaning
 - [Phase 108]: 108-04: swap_model.py's _execute left unmodified this plan (still unconditionally calls set_global_override/clear_global_override regardless of args["profile_id"]) — wiring it to branch on the scope and call set_profile_override/clear_profile_override instead is explicitly plan 108-05's job (D-07); confirmed by reading 108-05-PLAN.md before editing, which lists swap_model.py in its own files_modified
 - [Phase 108]: 108-04: gsd-sdk state.advance-plan and state.add-decision both re-clobbered stopped_at/last_activity back to the stale 108-02 narrative on this plan's own STATE.md update (same documented narrative-clobber defect) — restored via `git show HEAD:.planning/STATE.md` each time and re-applied the counter/narrative edits by hand in the same pass as the decision line, rather than trusting either verb's frontmatter sync
+- [Phase 108]: 108-03: model_routing's status:"failed" skip trimmed to a 4-line comment after a first draft's longer comment pushed the stripped-source offset to activeEngine.test.ts's pre-existing isUnresolvedRouting( regex past its fixed 900-char window, which would have broken that unrelated test; verified via a throwaway Node script replicating the test's own strip+slice+regex logic before committing
+- [Phase 108]: 108-03: control_verb_swap's own D-13 rationale comment contains the literal substring "isUnresolvedRouting" in prose, so the regression test asserting the case never CALLS it must comment-strip the source first (`stripCommentLinesForIngestTests`, same convention as activeEngine.test.ts/controlVerbSwaps.test.ts) — a raw non-stripped assertion would have failed on the plan's own required comment, not a real guard call
+- [Phase 108]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 3->4
 
 ### Pending Todos
 
@@ -836,11 +839,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 107 P04 | 20min | 2 tasks | 1 files |
 | Phase 108 P01 | 25min | 3 tasks | 5 files |
 | Phase 108 P02 | 10min | 3 tasks | 4 files |
+| Phase 108 P03 | 35min | 2 tasks | 3 files |
 
 ## Session Continuity
 
-Last session: 2026-08-07T10:45:22.000Z
-Stopped at: Completed 108-02-PLAN.md (controlVerbSwaps table + internal-only write + bounded read, both engine-axis tables bounded in RETENTION_DAYS at 30 days); next: plan 108-03
+Last session: 2026-08-07T08:20:00-04:00
+Stopped at: Completed 108-03-PLAN.md (control_verb_swap ingest case routed to internal.controlVerbSwaps.record, D-13 no-refusal-guard preserved; model_routing status:"failed" skip closing ENGINE-01's fabricated-current-engine gap; 14 new tests, 3 mutation-checked); next: plan 108-05 (independent wave-2/3 plans 108-05, 108-06 remain; 108-07 deploy deferred)
 Next action: `/gsd:plan-phase 107` to break down the sharding fix into tasks. Root cause: convex/analyticsRollup.ts's incrementEventBucket/incrementSankeyEdge do a read-patch-or-insert on ONE shared aggregates row per (metric_type, period, bucket_start, dimensions) tuple, causing sustained OCC retries under concurrent Astridr ingest (1135+ in 24h per 2026-08-05 diagnosis) that built up MVCC memory pressure until events-table index-head queries timed out — 2nd occurrence of this mechanism (also 2026-07-30), each time only cleared by a container recreate (done again 2026-08-05), never root-caused until now. See 107-CONTEXT.md for the full locked decisions (8-way random sharding on events/sankey_edge only, no bulk migration of existing rows, live OCC-log-count verification).
 
 --- Prior (superseded by the above) --- Phase 106 Plan 06 complete (skill-lifecycle UAT session A, DEBT-04 Session-A scope closed, 4/4 live tests pass, zero uat106-* residue). Plan 106-03 remains blocked NO-GO (per Plan 01's cloud-Convex sweep, independent of Plan 06) until Larry resolves the manual `.env*` checks or the CI-workflow repointing is folded into 106-03's scope. Plans 106-07 and 106-08 continue extending `106-HUMAN-UAT.md` (status still in-progress). See `106-06-SUMMARY.md` for the full DEBT-04 Session-A closure record.

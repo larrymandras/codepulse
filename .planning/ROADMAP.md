@@ -684,7 +684,7 @@ Plans:
 
 **Wave 2**
 
-- [ ] 108-03-PLAN.md — codepulse: `case "control_verb_swap"` ingest route + `status:"failed"` skip on `model_routing` + first-ever tests for both cases (TELE-02, ENGINE-01; D-13, D-14)
+- [x] 108-03-PLAN.md — codepulse: `case "control_verb_swap"` ingest route + `status:"failed"` skip on `model_routing` + first-ever tests for both cases (TELE-02, ENGINE-01; D-13, D-14)
 - [x] 108-04-PLAN.md — astridr: per-profile override store + `_resolve_model` precedence rung + scoped `swap.set` with fail-closed validation; **+ codepulse: 103-CONTRACT.md corrected in place** (ENGINE-02; D-04, D-05, D-06, D-08)
 
 **Wave 3**

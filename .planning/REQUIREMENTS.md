@@ -29,7 +29,7 @@ Recorded here because three of this milestone's five areas were scoped from inhe
 
 Closes **BSC-01**, the one requirement v13.0 left PARTIAL. Cross-repo: the astridr half is the critical path and is owned from this roadmap, same pattern as v11.0's Forge-daemon phase.
 
-- [ ] **ENGINE-01** — Ástríðr emits per-profile active-engine telemetry whenever a profile's reasoning engine is resolved or swapped, carrying a real `profileId` and model id. An unresolved value is refused at emit rather than written as an `unknown` sentinel. *(v13.0 pruned 93 rows that were **all** `{profileId:"unknown", model:"unknown"}` — the axis has never carried a single valid row.)*
+- [x] **ENGINE-01** — Ástríðr emits per-profile active-engine telemetry whenever a profile's reasoning engine is resolved or swapped, carrying a real `profileId` and model id. An unresolved value is refused at emit rather than written as an `unknown` sentinel. *(v13.0 pruned 93 rows that were **all** `{profileId:"unknown", model:"unknown"}` — the axis has never carried a single valid row.)* **Complete (2026-08-07):** 108-01 delivered the astridr-side emit + profileId/model + refuse-to-emit; 108-03 closed the remaining ingest-side gap (research Item 6 — a `status:"failed"` resolution could still render as a profile's live engine before this plan's skip). Live-stack verification is separately gated by ENGINE-05, deferred to 108-07.
 - [ ] **ENGINE-02** — `swap.set` accepts a profile scope, so an operator can swap one agent's engine without affecting the others. An unscoped call keeps today's global behaviour byte-identical.
 - [ ] **ENGINE-03** — Operator can see each profile's **current** engine in CodePulse — the picker's "This profile" scope, the header badge, and the pre-swap confirm modal's current-engine column — sourced from telemetry, never from a config read. *(The D-14 boundary v13.0 established stays intact: config may drive a "has a pinned default" signal, but never the current-engine column itself.)*
 - [ ] **ENGINE-04** — A per-profile swap reports honest live status: in-flight → success/failure → the *resulting* active engine reconciled back from Ástríðr, server-confirmed rather than optimistic. Matches the global axis contract BSC-04 already holds to.
@@ -81,7 +81,7 @@ Filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ENGINE-01 | Phase 108 | Pending |
+| ENGINE-01 | Phase 108 | Complete |
 | ENGINE-02 | Phase 108 | Pending |
 | ENGINE-03 | Phase 109 | Pending |
 | ENGINE-04 | Phase 109 | Pending |
