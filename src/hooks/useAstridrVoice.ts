@@ -63,6 +63,13 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+/** D-08 (188.3-05): same shape as useAstridrChat.ts's own generateId() — a
+ *  per-send client message id so a later continuation-merge can name a
+ *  specific prior send as its supersede target (lastSentRef). */
+function generateId(): string {
+  return crypto.randomUUID();
+}
+
 const SILENCE_TIMEOUT_MS = 30_000;
 const SEND_DEBOUNCE_MS = 2_000;
 /** Adaptive send: a short complete answer in a warm conversation. */
@@ -795,8 +802,11 @@ export function useAstridrVoice({
   // Continuation merge: the last voice message sent + when. A mid-sentence
   // pause slightly over the debounce chops the sentence — the fragment then
   // cancelled the real question's in-flight answer (live trace: "…this
-  // afternoon" / "for my personal").
-  const lastSentRef = useRef<{ text: string; at: number }>({ text: "", at: 0 });
+  // afternoon" / "for my personal"). `id` (D-08, 188.3-05) is the client
+  // message id that send carried — the supersede target for a LATER
+  // continuation merge, so the merge patches that exact bubble in place
+  // instead of appending a second one.
+  const lastSentRef = useRef<{ text: string; at: number; id: string }>({ text: "", at: 0, id: "" });
 
   // ─── Timer helpers ─────────────────────────────────────────────────────────
 
@@ -997,7 +1007,7 @@ export function useAstridrVoice({
       closePendingRef.current = false;
       longestInterimRef.current = "";
       longestInterimFromSpeakingRef.current = false;
-      lastSentRef.current = { text: "", at: 0 };
+      lastSentRef.current = { text: "", at: 0, id: "" };
       setInterimText("");
       setFinalText("");
       intentionalStopRef.current = true; // the coming recognizer end is ours
@@ -1125,14 +1135,25 @@ export function useAstridrVoice({
       chatRef.current.isStreaming &&
       !chatRef.current.ttsIsPlaying;
 
+    // D-08 (188.3-05): every send gets its own client message id so a LATER
+    // continuation-merge can name it as a supersede target.
+    const clientMessageId = generateId();
+
     if (continuing) {
       const mergedResult = appendWithOverlapCheck(prev.text, message);
       const merged = mergedResult.text;
       trace("flushSend.merged-continuation", { merged, decision: mergedResult.decision });
       chatRef.current.interrupt("continuation-merge"); // cancel the half-question turn
       interruptedReplyRef.current = ""; // our own continuation, not her reply
-      lastSentRef.current = { text: merged, at: Date.now() };
-      await chatRef.current.sendMessage(merged, { voice: true });
+      lastSentRef.current = { text: merged, at: Date.now(), id: clientMessageId };
+      // D-08: supersede the PRIOR send's bubble (prev.id) in place — one
+      // utterance, one bubble — instead of appending a second one. Client-
+      // display-only: astridr's own session.messages still holds both turns.
+      await chatRef.current.sendMessage(merged, {
+        voice: true,
+        clientMessageId,
+        supersedes: prev.id,
+      });
       return;
     }
 
@@ -1145,8 +1166,8 @@ export function useAstridrVoice({
     const partial = chatRef.current.interrupt("flush-send");
     const interruptedReply = prior || partial || undefined;
 
-    lastSentRef.current = { text: message, at: Date.now() };
-    await chatRef.current.sendMessage(message, { interruptedReply, voice: true });
+    lastSentRef.current = { text: message, at: Date.now(), id: clientMessageId };
+    await chatRef.current.sendMessage(message, { interruptedReply, voice: true, clientMessageId });
   }, [clearSendTimer, clearSilenceTimer]);
 
   // ─── Barge-in (CONV-01, D-06/D-08/D-11/D-12) ──────────────────────────────

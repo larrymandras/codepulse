@@ -490,10 +490,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("what's the weather like tomorrow", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what's the weather like tomorrow",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   it("mid-thought pause: two finals accumulate into one send", async () => {
@@ -516,7 +516,7 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).toHaveBeenCalledTimes(1);
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "remind me to call the vet tomorrow at nine am",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
   });
 
@@ -551,10 +551,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("continue", {
-      interruptedReply: "partial reply so far",
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "continue",
+      expect.objectContaining({ interruptedReply: "partial reply so far", voice: true, })
+    );
   });
 
   // ─── 7. Pure "stop" while thinking ─────────────────────────────────────────
@@ -595,10 +595,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(50); // graceful close sends immediately, no debounce
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("Goodbye.", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Goodbye.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
     // Conversation stays live so her warm close can play…
     expect(result.current.voiceState).not.toBe("idle");
 
@@ -621,10 +621,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(50);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("Thanks.", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Thanks.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   it("'stop' alone does NOT end an idle-listening conversation", () => {
@@ -695,7 +695,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("yes", { interruptedReply: undefined, voice: true });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "yes",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
   });
 
   it("follow-up window is the FULL 30s (no more 14s undercut) and expiry re-arms", () => {
@@ -794,9 +797,9 @@ describe("useAstridrVoice", () => {
       });
 
       expect(chat.sendMessage).toHaveBeenCalledWith(
-        "What's the weather like tomorrow in Cumming, Georgia?",
-        { interruptedReply: undefined, voice: true }
-      );
+      "What's the weather like tomorrow in Cumming, Georgia?",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
       expect(result.current.filteredCount).toBe(0);
     });
   });
@@ -881,10 +884,10 @@ describe("useAstridrVoice", () => {
         vi.advanceTimersByTime(3000);
       });
 
-      expect(chat.sendMessage).toHaveBeenCalledWith("Kulitnya.", {
-        interruptedReply: undefined,
-        voice: true,
-      });
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Kulitnya.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
       expect(result.current.filteredCount).toBe(0);
     });
 
@@ -913,10 +916,10 @@ describe("useAstridrVoice", () => {
       // the dispatch outcome here, not filteredCount, since that field does
       // not exist pre-fix and would make the "green before" half of the
       // requirement impossible to satisfy by construction.
-      expect(chat.sendMessage).toHaveBeenCalledWith("Yes.", {
-        interruptedReply: undefined,
-        voice: true,
-      });
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Yes.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
     });
   });
 
@@ -948,10 +951,10 @@ describe("useAstridrVoice", () => {
       await act(async () => {
         vi.advanceTimersByTime(3000);
       });
-      expect(chat.sendMessage).toHaveBeenCalledWith("Right now.", {
-        interruptedReply: undefined,
-        voice: true,
-      });
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Right now.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
     });
 
     it('CTRL-NOWAKE: the SAME "Right now." with NO preceding wake() still gets the cold 3-word floor — nothing sends', async () => {
@@ -1075,10 +1078,10 @@ describe("useAstridrVoice", () => {
       vi.advanceTimersByTime(2100);
     });
     // Without expiry this would be anchored → stripped to "" → dropped.
-    expect(chat.sendMessage).toHaveBeenCalledWith(" is there anything else I can assist".trim(), {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      " is there anything else I can assist".trim(),
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   it("keep-alive storm guard: restarts are capped inside the window", () => {
@@ -1217,7 +1220,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(900);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("no", { interruptedReply: undefined, voice: true });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "no",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
   });
 
   it("stay-hot: her reply ending in a question opens a 45s window instead of 30s", () => {
@@ -1287,7 +1293,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "do I have any on my personal account",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
   });
 
@@ -1329,7 +1335,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "do I have any on my personal account",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
   });
 
@@ -1346,7 +1352,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "what is the weather in Cumming Georgia",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
   });
 
@@ -1380,7 +1386,7 @@ describe("useAstridrVoice", () => {
     // had been dropped instead of correctly re-stripped.
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "what does my calendar look like tonight",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
     const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
       .calls[0]?.[0] as string | undefined;
@@ -1423,7 +1429,7 @@ describe("useAstridrVoice", () => {
 
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "what does my calendar look like tonight",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
     const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
       .calls[0]?.[0] as string | undefined;
@@ -1499,7 +1505,7 @@ describe("useAstridrVoice", () => {
     // substring checks alone (the live option-object shape allows it).
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "what does my calendar like tonight",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
     const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
       .calls[0]?.[0] as string | undefined;
@@ -1566,10 +1572,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2100);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("what's on my calendar today", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what's on my calendar today",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   it("end-to-end 22:07 trace shape: the stale 'I couldn't find' fragment does not leak into the swap-dispatched 'Tryon Rock' turn (Defects B+C together)", async () => {
@@ -1593,10 +1599,10 @@ describe("useAstridrVoice", () => {
     });
     // Defect C: the grammar-join fix makes this dispatch as a swap fast-path
     // immediately (no debounce) — it never even reaches the rejoin logic.
-    expect(chat.sendMessage).toHaveBeenCalledWith("Tryon Rock", {
-      voice: true,
-      swapHandled: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "Tryon Rock",
+      expect.objectContaining({ voice: true, swapHandled: true, })
+    );
   });
 
   it("a NON-speaking-era lost interim still rejoins normally (the fix does not widen)", async () => {
@@ -1615,7 +1621,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "do I have any on my personal account",
-      { interruptedReply: undefined, voice: true }
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
     );
   });
 
@@ -1636,10 +1642,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(900);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("continue", {
-      interruptedReply: "The forecast for tomorrow shows",
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "continue",
+      expect.objectContaining({ interruptedReply: "The forecast for tomorrow shows", voice: true, })
+    );
   });
 
   it("a longer resume sentence is NOT normalized — user's qualifiers survive", async () => {
@@ -1658,7 +1664,7 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenCalledWith(
       "continue but only give me tomorrow's forecast",
-      { interruptedReply: "The forecast for tomorrow shows", voice: true }
+      expect.objectContaining({ interruptedReply: "The forecast for tomorrow shows", voice: true })
     );
   });
 
@@ -1684,8 +1690,24 @@ describe("useAstridrVoice", () => {
     });
     expect(chat.sendMessage).toHaveBeenLastCalledWith(
       "do I have any calendar entries this afternoon for my personal",
-      { voice: true }
+      expect.objectContaining({ voice: true })
     );
+
+    // D-08 (188.3-05): the actual gap this closes — one utterance should
+    // produce ONE user bubble, not two separate sendMessage calls with the
+    // first left un-superseded. Assert the call COUNT and the supersede
+    // linkage, not just the merged string (which the assertion above already
+    // proved correct on its own).
+    expect(chat.sendMessage).toHaveBeenCalledTimes(2);
+    const sendMessageMock = chat.sendMessage as unknown as ReturnType<typeof vi.fn>;
+    const firstCallOpts = sendMessageMock.mock.calls[0][1] as { clientMessageId?: string };
+    const secondCallOpts = sendMessageMock.mock.calls[1][1] as {
+      clientMessageId?: string;
+      supersedes?: string;
+    };
+    expect(typeof firstCallOpts.clientMessageId).toBe("string");
+    expect(firstCallOpts.clientMessageId).toBeTruthy();
+    expect(secondCallOpts.supersedes).toBe(firstCallOpts.clientMessageId);
   });
 
   it("post-TTS single-word echo residue is dropped, but a fresh short answer still sends", async () => {
@@ -1714,10 +1736,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(900);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("no", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "no",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   // ─── 18:36 live-trace regressions ─────────────────────────────────────────
@@ -1780,10 +1802,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2100); // normal accept path debounce
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("do I have any entries on", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "do I have any entries on",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   // ─── 12:32 live-trace regression (186-01, D-16) ────────────────────────────
@@ -1818,10 +1840,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(50); // synthesized end-phrase sends immediately, no debounce
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("goodbye", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "goodbye",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
     // Conversation stays live so her warm close can play — NOT wedged in
     // "transcribing" (the bug's actual mechanism).
     expect(result.current.voiceState).not.toBe("idle");
@@ -1890,10 +1912,10 @@ describe("useAstridrVoice", () => {
       vi.advanceTimersByTime(2100);
     });
     expect(chat.sendMessage).toHaveBeenCalledTimes(1);
-    expect(chat.sendMessage).toHaveBeenCalledWith("no I'm good thank you", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "no I'm good thank you",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   it("echo tail: pure echo final is dropped entirely — nothing sends", async () => {
@@ -1978,10 +2000,10 @@ describe("useAstridrVoice", () => {
       onFinalResultCallback?.("try on grok");
     });
     // Zero-latency: no debounce wait needed, unlike the normal accumulate path.
-    expect(chat.sendMessage).toHaveBeenCalledWith("try on grok", {
-      voice: true,
-      swapHandled: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "try on grok",
+      expect.objectContaining({ voice: true, swapHandled: true, })
+    );
     await act(async () => {
       vi.advanceTimersByTime(3000);
     });
@@ -1996,10 +2018,10 @@ describe("useAstridrVoice", () => {
     act(() => {
       onFinalResultCallback?.("switch your voice to rachel");
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("switch your voice to rachel", {
-      voice: true,
-      swapHandled: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "switch your voice to rachel",
+      expect.objectContaining({ voice: true, swapHandled: true, })
+    );
     expect(chat.sendMessage).toHaveBeenCalledTimes(1);
   });
 
@@ -2013,10 +2035,10 @@ describe("useAstridrVoice", () => {
     await act(async () => {
       vi.advanceTimersByTime(2000);
     });
-    expect(chat.sendMessage).toHaveBeenCalledWith("what's the weather like tomorrow", {
-      interruptedReply: undefined,
-      voice: true,
-    });
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what's the weather like tomorrow",
+      expect.objectContaining({ interruptedReply: undefined, voice: true, })
+    );
   });
 
   // ─── 184 code-review CR-03: vision fast-path capture failure ──────────────
@@ -2348,10 +2370,10 @@ describe("useAstridrVoice", () => {
       });
       // Same dispatch shape as the 183 recognizer's swap fast-path (line
       // 1237 above): no debounce, swapHandled:true dedup marker.
-      expect(chat.sendMessage).toHaveBeenCalledWith("try on grok", {
-        voice: true,
-        swapHandled: true,
-      });
+      expect(chat.sendMessage).toHaveBeenCalledWith(
+      "try on grok",
+      expect.objectContaining({ voice: true, swapHandled: true, })
+    );
     });
 
     it("duplex unavailable is silent (D-08)", () => {
@@ -2459,9 +2481,9 @@ describe("useAstridrVoice", () => {
       });
       expect(chat.sendMessage).toHaveBeenCalledTimes(1);
       expect(chat.sendMessage).toHaveBeenCalledWith(
-        "what does my business calendar look like today",
-        { interruptedReply: undefined, voice: true }
-      );
+      "what does my business calendar look like today",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
     });
 
     it('GLUE-B: a rejoin trim dispatches the shared span exactly once ("do you have access to higgsfield" + "Access to Higgs Field CLI")', async () => {
@@ -2477,9 +2499,9 @@ describe("useAstridrVoice", () => {
       });
       expect(chat.sendMessage).toHaveBeenCalledTimes(1);
       expect(chat.sendMessage).toHaveBeenCalledWith(
-        "do you have Access to Higgs Field CLI",
-        { interruptedReply: undefined, voice: true }
-      );
+      "do you have Access to Higgs Field CLI",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
     });
 
     it("GLUE-COMPOUND: the accepted clause followed by a self-glued rejoin product dispatches the opening clause exactly once, never the observed triple", async () => {
@@ -2544,9 +2566,9 @@ describe("useAstridrVoice", () => {
       });
       expect(chat.sendMessage).toHaveBeenCalledTimes(1);
       expect(chat.sendMessage).toHaveBeenCalledWith(
-        "Right now. Right now.",
-        { interruptedReply: undefined, voice: true }
-      );
+      "Right now. Right now.",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
     });
 
     it("existing regression: does NOT send the question twice when both ears finalize it (both-ears dedup is upstream of this helper)", async () => {
@@ -2652,9 +2674,9 @@ describe("useAstridrVoice", () => {
       });
       expect(chat.sendMessage).toHaveBeenCalledTimes(1);
       expect(chat.sendMessage).toHaveBeenCalledWith(
-        "Is there anything",
-        { interruptedReply: undefined, voice: true }
-      );
+      "Is there anything",
+      expect.objectContaining({ interruptedReply: undefined, voice: true })
+    );
       expect(result.current.filteredCount).toBe(2);
     });
   });
