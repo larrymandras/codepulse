@@ -8,7 +8,7 @@
  *
  * Uses plain vitest mocks (convex-test is not installed in this repo).
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
 import {
   resolveGatewayTaskCompleted,
@@ -20,6 +20,7 @@ import {
   TOOL_POLICY_EVENT_KINDS,
   TOOL_POLICY_ERROR_MAX_LEN,
   ASTRIDR_TOOL_PROVIDER,
+  runtimeIngest,
 } from "./runtimeIngest";
 
 // ---------------------------------------------------------------------------
@@ -947,5 +948,169 @@ describe("runtimeIngest — model_routing / control_verb_swap case wiring (stati
     expect(controlVerbSwapFn).not.toBeNull();
     expect(modelRoutingFn![0]).not.toMatch(/throw/);
     expect(controlVerbSwapFn![0]).not.toMatch(/throw/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 108 gap closure (WR-06/168-06) — per-event batch isolation at the
+// runtimeIngest dispatch LOOP. Prior to this fix, all ~80 ctx.runMutation
+// call sites sat under a single batch-wide try (only the narrow
+// gateway_task_completed recordCall guard was isolated) — one event whose
+// forwarded fields hit a Convex argument-validator throw poisoned every
+// remaining event in the same POST, and the whole request 400'd.
+//
+// These tests invoke the REAL httpAction handler via `._handler` (see
+// remindersIngest.test.ts:8-14 for the precedent and why this is real
+// coverage, not a hand-copied mirror — Convex's httpAction() wrapper stores
+// the original handler at `q._handler = func`). `ctx.runMutation` is a
+// plain vi.fn() whose mock implementation throws only for a specific,
+// marked call — simulating a Convex argument-validator throw without
+// needing a live Convex instance (convex-test is not installed here).
+// ---------------------------------------------------------------------------
+
+function makeIngestCtx(runMutationImpl?: (fnRef: any, args: any) => any) {
+  return {
+    runMutation: vi.fn(runMutationImpl ?? (async () => undefined)),
+  };
+}
+
+function ingestRequest(events: any[]) {
+  return new Request("http://localhost/runtime-ingest", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer test-key" },
+    body: JSON.stringify({ events }),
+  });
+}
+
+describe("runtimeIngest httpAction — per-event batch isolation (WR-06/168-06 gap closure)", () => {
+  it("one malformed event does not poison sibling events: both the event BEFORE and the event AFTER it in the batch still land, and the batch completes with 200", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // A distinctive value that would only appear in the log line if the
+    // full payload were dumped — must NOT leak into console.error (PII rule).
+    const SECRET_MARKER = "sk-should-never-be-logged-verbatim";
+
+    const runMutation = vi.fn(async (_fnRef: any, args: any) => {
+      // Simulates a Convex argument-validator throw for the one poisoned
+      // call — the real mechanism is a wrong-typed field reaching a
+      // required v.string() validator (defect-1/defect-2 class); here the
+      // mock throws deterministically for a marked call so the test does
+      // not depend on live Convex validation.
+      if (args && args.model === "POISON_MARKER") {
+        throw new Error("ArgumentValidationError: model must be a string");
+      }
+      return undefined;
+    });
+
+    const req = ingestRequest([
+      {
+        eventType: "swarm_task",
+        data: {
+          goal_id: "g-sibling-before",
+          subtask_id: "s-1",
+          state: "pending",
+          subtask: "task before the poison",
+          depends_on: [],
+        },
+      },
+      {
+        eventType: "llm_call",
+        data: {
+          provider: "anthropic",
+          model: "POISON_MARKER",
+          apiKeySecret: SECRET_MARKER,
+        },
+      },
+      {
+        eventType: "llm_call",
+        data: {
+          provider: "openai",
+          model: "gpt-5-sibling-after",
+        },
+      },
+    ]);
+
+    const res = await (runtimeIngest as any)._handler(
+      { runMutation },
+      req
+    );
+    const body = JSON.parse(await res.text());
+
+    // The batch still completes (200), not a 400 that aborts the whole POST.
+    expect(res.status).toBe(200);
+    expect(body.ingested).toBe(3);
+    // Exactly one event was dropped — the counter is real, not decoration.
+    expect(body.dropped).toBe(1);
+
+    // The event BEFORE the poisoned one landed (swarmTasks.upsert call with
+    // its goalId reached runMutation).
+    const swarmCall = runMutation.mock.calls.find(
+      ([, args]) => args && args.goalId === "g-sibling-before"
+    );
+    expect(swarmCall).toBeDefined();
+
+    // The event AFTER the poisoned one also landed — proving the dispatch
+    // loop continued past the poisoned event rather than merely catching
+    // its own throw and then still aborting the remaining iterations.
+    const siblingAfterCall = runMutation.mock.calls.find(
+      ([, args]) => args && args.model === "gpt-5-sibling-after"
+    );
+    expect(siblingAfterCall).toBeDefined();
+
+    // Logged loudly (not silently swallowed)...
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
+    const loggedMessage = consoleErrorSpy.mock.calls[0].join(" ");
+    expect(loggedMessage).toContain("llm_call");
+    // ...but the raw payload (PII-bearing secret field) must never appear
+    // in the log line.
+    expect(loggedMessage).not.toContain(SECRET_MARKER);
+
+    consoleErrorSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("dropped counter is 0 for an all-valid batch (control — proves the counter isn't hardcoded to fire)", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = ingestRequest([
+      { eventType: "swarm_task", data: { goal_id: "g1", subtask_id: "s1", state: "pending", subtask: "t", depends_on: [] } },
+      { eventType: "llm_call", data: { provider: "anthropic", model: "sonnet" } },
+    ]);
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+    expect(res.status).toBe(200);
+    expect(body.dropped).toBe(0);
+    vi.unstubAllEnvs();
+  });
+
+  it("dropped counter increments once per malformed event — 2 poisoned events in a 4-event batch produce dropped === 2, and both non-poisoned events still land", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const runMutation = vi.fn(async (_fnRef: any, args: any) => {
+      if (args && args.model === "POISON_MARKER") {
+        throw new Error("ArgumentValidationError: model must be a string");
+      }
+      return undefined;
+    });
+    const req = ingestRequest([
+      { eventType: "llm_call", data: { provider: "a", model: "POISON_MARKER" } },
+      { eventType: "swarm_task", data: { goal_id: "g-ok-1", subtask_id: "s1", state: "pending", subtask: "t", depends_on: [] } },
+      { eventType: "llm_call", data: { provider: "b", model: "POISON_MARKER" } },
+      { eventType: "swarm_task", data: { goal_id: "g-ok-2", subtask_id: "s2", state: "pending", subtask: "t", depends_on: [] } },
+    ]);
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+    expect(res.status).toBe(200);
+    expect(body.dropped).toBe(2);
+    expect(
+      runMutation.mock.calls.find(([, args]) => args && args.goalId === "g-ok-1")
+    ).toBeDefined();
+    expect(
+      runMutation.mock.calls.find(([, args]) => args && args.goalId === "g-ok-2")
+    ).toBeDefined();
+    expect(consoleErrorSpy).toHaveBeenCalledTimes(2);
+    consoleErrorSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 });
