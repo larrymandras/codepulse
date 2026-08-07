@@ -2104,5 +2104,15 @@ export default defineSchema({
     timestamp: v.float64(),
   })
     .index("by_scope", ["scope", "timestamp"])
+    // by_timestamp: currently UNCONSUMED (adversarial-gate finding, gap 3,
+    // post-108-02). No query in this repo reads it — controlVerbSwaps.ts's
+    // only query (listByScope) uses by_scope, and the retention sweep
+    // (convex/retention.ts) uses the built-in by_creation_time, not this
+    // index. It was an explicit acceptance criterion in 108-02-PLAN.md
+    // (lines 26, 116, 306) for a future cross-profile "recent swaps across
+    // all scopes" read that hasn't been built yet — left in place rather
+    // than removed so that plan's stated gate still holds. Do not assume
+    // it is load-bearing; a future reader adding that cross-profile query
+    // is what will finally consume it.
     .index("by_timestamp", ["timestamp"]),
 });

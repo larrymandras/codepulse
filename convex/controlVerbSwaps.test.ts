@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { isBrainSwap, SWAP_HISTORY_CAP } from "./controlVerbSwaps";
+import { isBrainSwap, SWAP_HISTORY_CAP, record } from "./controlVerbSwaps";
 
 // Tests for Phase 108 (TELE-02, D-13/D-14): controlVerbSwaps backend service
 
@@ -19,37 +19,57 @@ function stripCommentLines(source: string): string {
     .join("\n");
 }
 
-describe("record args shape", () => {
-  it("accepts the required fields plus all optional ones", () => {
-    const args = {
-      verb: "swap_model",
-      target: "claude-opus-5",
-      resolved: "claude-opus-5",
-      providerAffinity: undefined,
-      voiceId: undefined,
-      path: "claude-native",
-      reason: undefined,
-      scope: "personal",
-      sessionId: "sess-123",
-      channel: "voice",
-      timestamp: Date.now() / 1000,
-    };
-    expect(args).toHaveProperty("verb");
-    expect(args).toHaveProperty("path");
-    expect(args).toHaveProperty("channel");
-    expect(args).toHaveProperty("timestamp");
-    expect(args.providerAffinity).toBeUndefined();
+// Post-execution gap closure (adversarial verification, 2026-08-07): the
+// original version of this block built a hand-typed plain-object literal and
+// asserted properties against that SAME literal — it never touched `record`
+// at all (the import above didn't even exist), so it would have passed
+// unchanged even if record's real arg validators were deleted or rewritten.
+// This version reads `record.exportArgs()` — a real Convex runtime API that
+// serializes the mutation's ACTUAL `v.*` validator object to JSON — so a
+// changed validator in controlVerbSwaps.ts makes these tests fail. Verified
+// by mutation: temporarily changing `providerAffinity` from
+// `v.optional(v.string())` to `v.string()` (required) flipped the first
+// assertion below from pass to fail; reverted after confirming.
+describe("record args shape (read from the live validator, not a hand-typed literal)", () => {
+  /** `exportArgs` is a real but TypeScript-untyped runtime property that
+   * Convex's internalMutation()/mutation() builders attach to the returned
+   * function object (see node_modules/convex/dist/esm/server/impl/registration_impl.js,
+   * internalMutationGeneric) specifically so the CLI can serialize a
+   * function's validators for the deploy manifest. It isn't part of the
+   * public `RegisteredMutation` TS type, hence the narrow `as` cast — this
+   * reads the same object `npx convex deploy` reads, not a mock. */
+  function recordArgFields(): Record<string, { fieldType: { type: string }; optional: boolean }> {
+    const exportArgs = (record as unknown as { exportArgs: () => string }).exportArgs;
+    const schema = JSON.parse(exportArgs());
+    return schema.value;
+  }
+
+  it("declares verb/path/channel/timestamp as required (non-optional)", () => {
+    const fields = recordArgFields();
+    expect(fields.verb.optional).toBe(false);
+    expect(fields.path.optional).toBe(false);
+    expect(fields.channel.optional).toBe(false);
+    expect(fields.timestamp.optional).toBe(false);
   });
 
-  it("accepts a global (unscoped) row with scope absent", () => {
-    const args = {
-      verb: "swap_model",
-      path: "restore",
-      channel: "voice",
-      timestamp: Date.now() / 1000,
-      scope: undefined,
-    };
-    expect(args.scope).toBeUndefined();
+  it("declares target/resolved/providerAffinity/voiceId/reason/scope/sessionId as optional", () => {
+    const fields = recordArgFields();
+    for (const key of [
+      "target",
+      "resolved",
+      "providerAffinity",
+      "voiceId",
+      "reason",
+      "scope",
+      "sessionId",
+    ] as const) {
+      expect(fields[key].optional).toBe(true);
+    }
+  });
+
+  it("declares timestamp as a numeric field (matches v.float64())", () => {
+    const fields = recordArgFields();
+    expect(fields.timestamp.fieldType.type).toBe("number");
   });
 });
 
