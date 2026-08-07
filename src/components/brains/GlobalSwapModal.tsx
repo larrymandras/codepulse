@@ -255,10 +255,18 @@ function formatSwapTime(timestampSeconds: number): string {
  * own server-side `.take(SWAP_HISTORY_CAP)` (convex/controlVerbSwaps.ts) — it guarantees the
  * on-screen "Showing the last N swaps" caption can never be a lie about what's rendered, even if
  * the read path above it changes.
+ *
+ * Gap closure (108-06 adversarial gate): the caption only claims truncation when `brainSwaps` is
+ * genuinely AT the cap (`length >= SWAP_HISTORY_CAP`). It previously rendered unconditionally
+ * inside the `length === 0` else-branch — i.e. for any non-empty list, including 1 or 2 rows — so
+ * "Showing the last 20 swaps" was shown over a 2-row list. That is a fabricated reading of the
+ * data (the exact class this whole phase exists to eliminate): a genuinely complete list read as
+ * truncated. A sub-cap count states its real count instead of inventing one the UI isn't showing.
  */
 function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
   const rows = useControlVerbSwaps(profileId);
   const brainSwaps = filterBrainSwaps(rows).slice(0, SWAP_HISTORY_CAP);
+  const atCap = brainSwaps.length >= SWAP_HISTORY_CAP;
 
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border p-2">
@@ -294,7 +302,9 @@ function SwapHistorySection({ profileId }: { profileId: string | undefined }) {
             );
           })}
           <p className="text-xs text-muted-foreground">
-            Showing the last {SWAP_HISTORY_CAP} swaps
+            {atCap
+              ? `Showing the last ${SWAP_HISTORY_CAP} swaps`
+              : `Showing ${brainSwaps.length} swap${brainSwaps.length === 1 ? "" : "s"}`}
           </p>
         </>
       )}

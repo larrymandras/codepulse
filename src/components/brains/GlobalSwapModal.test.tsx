@@ -1438,6 +1438,49 @@ describe("GlobalSwapModal swap-history section (D-15, TELE-02)", () => {
     expect(screen.getAllByText("Switched")).toHaveLength(SWAP_HISTORY_CAP);
   });
 
+  // 108-06 gap closure (adversarial gate): the caption was previously rendered unconditionally for
+  // any non-empty list — a 2-row list said "Showing the last 20 swaps," a fabricated reading of the
+  // data. These two tests pin the fix at the render boundary: the "last N" caption must be ABSENT
+  // below the cap and PRESENT only once the list is genuinely at the cap. Both assert on real
+  // rendered DOM (screen.getByText/queryByText), never a mock's call args.
+  it("does NOT render the 'Showing the last N swaps' caption when the list is below the cap (gap closure)", () => {
+    mockUseControlVerbSwaps.mockReturnValue([SWAP_SUCCESS_ROW, SWAP_REFUSED_ROW]);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.queryByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).not.toBeInTheDocument();
+    // Truthful count instead — never a number the UI isn't actually showing.
+    expect(screen.getByText("Showing 2 swaps")).toBeInTheDocument();
+  });
+
+  it("renders the 'Showing the last N swaps' caption only once the list is genuinely at the cap (gap closure)", () => {
+    const capRows: SwapHistoryRow[] = Array.from({ length: SWAP_HISTORY_CAP }, (_, i) => ({
+      ...SWAP_SUCCESS_ROW,
+      _id: `cap-row-${i}`,
+      timestamp: SWAP_SUCCESS_ROW.timestamp + i,
+    }));
+    mockUseControlVerbSwaps.mockReturnValue(capRows);
+    render(
+      <GlobalSwapModal
+        target={TARGET_NORMAL}
+        profiles={THREE_PROFILES}
+        open
+        selectionNonce={1}
+        onOpenChange={() => {}}
+      />
+    );
+
+    expect(screen.getByText(`Showing the last ${SWAP_HISTORY_CAP} swaps`)).toBeInTheDocument();
+    expect(screen.queryByText(`Showing ${SWAP_HISTORY_CAP} swaps`)).not.toBeInTheDocument();
+  });
+
   it("does not render a swap_voice row — the D-15 brain-only filter guard", () => {
     mockUseControlVerbSwaps.mockReturnValue([SWAP_VOICE_ROW]);
     render(
