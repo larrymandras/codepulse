@@ -649,7 +649,7 @@ Plans:
 
 **Phase summary:**
 
-- [ ] **Phase 108 — Per-Profile Engine Telemetry (astridr backend)** — real per-profile active-engine telemetry, a scoped `swap.set`, and a `control_verb_swap` domain route, verified live before the dependent UI is built
+- [x] **Phase 108 — Per-Profile Engine Telemetry (astridr backend)** — real per-profile active-engine telemetry, a scoped `swap.set`, and a `control_verb_swap` domain route, verified live before the dependent UI is built (completed 2026-08-07)
 - [ ] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status
 - [ ] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented
 - [ ] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` upgraded into a real mission board on today's data — live cards, humanized tool labels, honest orphan recovery
@@ -786,7 +786,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | In Progress|  |
+| 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
 | 109. Per-Agent Engine UI | 0/TBD | Not started | - |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |

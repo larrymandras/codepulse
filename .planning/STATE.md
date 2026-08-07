@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
-status: executing
-stopped_at: "Completed 108-07-PLAN.md (Task 4 operator sign-off, 2026-08-07): Larry reviewed all three live-proof rounds plus the cleanup section in 108-ENGINE-05-EVIDENCE.md and replied 'approved'. ENGINE-05 (the integration gate), ENGINE-01, and ENGINE-02 marked Complete in REQUIREMENTS.md's checklist and traceability table -- ENGINE-01/ENGINE-02 approved on the same live evidence per the operator's explicit instruction. Three real defects were found and closed en route to sign-off: session_id-explicit-null silently dropping every control_verb_swap row (fixed + deployed + re-verified), providerAffinity modelled as a scalar while the emitter sends list[str] (fixed + deployed + re-verified, closing the swap-history axis end-to-end for the first time), and a stale pinned activeEngineSnapshots row surviving a restore-to-default (fixed + deployed + re-verified, two synthetic test rows purged from the live table by verified id+scope). Stack confirmed restored to its pre-test default via live turns. TELE-02 verified unchanged (Phase 109 / Pending) -- it was reassigned to Phase 109 on 2026-08-07 (routed half code-complete in Phase 108, surfaced half needs a real per-profile host). Two carry-forward items recorded for Phase 109: the model-id format split (inherited rows carry provider-prefixed ids, pinned rows carry bare ids) and the listByScope non-optional profileId signature. Phase 108 is now 7/7 plans complete; Phase 109 may begin."
-last_updated: "2026-08-07T14:35:00-04:00"
+status: ready_to_plan
+stopped_at: Phase 108 complete (7/7) — ready to discuss Phase 109
+last_updated: 2026-08-07T19:47:35.375Z
 last_activity: 2026-08-07
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
   completed_plans: 7
-  percent: 0
+  percent: 17
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 108 — per-profile-engine-telemetry-astridr-backend
+**Current focus:** Phase 109 — per agent engine ui
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,10 +43,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 108 (per-profile-engine-telemetry-astridr-backend) — 7/7 plans complete, awaiting orchestrator's remaining phase-close gates
-Plan: 7 of 7 (7 of 7 complete: 01, 02, 03, 04, 05, 06, 07; 108-07's Task 4 operator sign-off received 2026-08-07 -- ENGINE-05/ENGINE-01/ENGINE-02 marked Complete)
-Status: Phase 108 plans complete; phase.complete NOT yet run (orchestrator-owned)
-Last activity: 2026-08-07 -- Plan 108-07 Task 4 (operator sign-off) complete (codepulse: D-15's swap-history readout — TELE-02's "and surfaced" half. `src/hooks/useControlVerbSwaps.ts` wraps `api.controlVerbSwaps.listByScope` with an honest-empty `[]` default (skips the query entirely when no profileId is given); `filterBrainSwaps` delegates to `convex/controlVerbSwaps.ts`'s own `isBrainSwap` rather than re-testing the verb string; `describeSwapOutcome` derives the restore/refused/unresolved/success vocabulary once, tested against a fixture per real `swap_model.py` emit site. `GlobalSwapModal.tsx`'s confirm phase now renders a `SwapHistorySection` (wrapped in `SectionErrorBoundary`) reading that hook with `profileId={undefined}` — GlobalSwapModal is the ALL-PROFILES axis (103-CONTRACT.md §8, one live `swap.set` command for every profile) with no single profile to scope a history read by, so per the plan's own stated fallback this renders the same honest-empty "No swap history to show yet." state a real profile with zero rows would get, rather than inventing a profileId. On-screen truncation caption reads the imported `SWAP_HISTORY_CAP` constant and a client-side `.slice()` makes that caption's claim provably true. No new route/nav entry/ModalPhase value; only the four files this plan owns were touched. 45/45 targeted tests pass (11 hook + 34 modal, 6 new), full suite in an isolated worktree pinned to commit `1aa9cd68`: 279 passed / 17 skipped files (296), 3568 passed / 193 todo tests (3761), 0 failed — up from the 278/3551 baseline by exactly the tests this plan added. `npx tsc --noEmit` clean, `npm run build` clean (pre-existing >500kB chunk warnings unrelated, out of scope). Both mutation-checks (describeSwapOutcome's restore branch, the client-side SWAP_HISTORY_CAP slice) confirmed RED then restored byte-identical via backup-copy. TELE-02 remains Pending — nothing is deployed; the self-hosted Convex backend does not yet have `controlVerbSwaps`, so `useQuery` returns `undefined` → `[]` at runtime until 108-07 deploys. Commits `d4ce94ad` (hook), `1aa9cd68` (modal). 108-07 (ENGINE-05 live deploy gate) deferred, not run this session per explicit scope.
+Phase: 109
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-08-07
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
