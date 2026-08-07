@@ -10,7 +10,7 @@ requires:
     provides: "scope-aware swap_model set/restore, scope on all four control_verb_swap emit sites, D-03 boot seed"
   - phase: 108-06
     provides: "useControlVerbSwaps hook + swap-history section (codepulse-side, not exercised live by this plan)"
-provides: "Live-stack proof for ENGINE-01/ENGINE-02 (activeEngineSnapshots axis): PASS (confirmed again on re-proof). Live-stack proof for the control_verb_swap swap-history axis: FAIL, TWICE, on two DIFFERENT root causes — session_id-null (first proof, fixed+deployed+verified in the re-proof) and provider_affinity array-vs-string (re-proof, newly discovered, not fixed)."
+provides: "Live-stack proof for ENGINE-01/ENGINE-02/ENGINE-05, all marked Complete 2026-08-07 on operator sign-off. Three real defects found and closed en route: session_id-null drop, provider_affinity array-vs-string, and a stale activeEngineSnapshots row surviving a restore. Both the activeEngineSnapshots axis and the control_verb_swap swap-history axis are now proven live end-to-end."
 affects: [109]
 
 # Tech tracking
@@ -24,29 +24,33 @@ key-files:
   modified: []
 
 key-decisions:
-  - "STOPPED at Task 4 (blocking human-verify checkpoint) per this plan's autonomous:false gate and the executor's explicit dispatch instructions. Task 4 was NOT self-approved and no requirement was marked complete. This remains true after the re-proof: STOPPED again before sign-off, per the re-proof dispatch's own explicit instruction."
+  - "STOPPED at Task 4 (blocking human-verify checkpoint) per this plan's autonomous:false gate and the executor's explicit dispatch instructions, across every proof round — Task 4 was never self-approved by any executor. Resolved 2026-08-07 when a fresh continuation agent received the operator's explicit 'approved' and executed Task 4 (see the later Task 4 decision entry below)."
   - "A real, live-discovered defect (control_verb_swap telemetry silently dropped for every WS swap.set dispatch, root cause: session_id explicit null rejected by isOptionalString) was found during Task 3 Step 4 of the first proof. It was documented with a full root-cause chain and NOT fixed in that plan run, per its 'this plan authors no code' scope."
   - "That defect was fixed and deployed in a later session (codepulse d78fb5c1/1521fe2d, astridr f632752c) and this re-proof VERIFIED the fix works: a direct freshness probe with explicit-null optional fields landed a row with the nulls correctly stripped, and both Step 7 restore-path events (which also carry session_id:null) landed live rows."
   - "The re-proof found a SECOND, previously-masked defect on the same resolver: swap_model.py's provider_affinity field is a real list/array on every success path, but convex/runtimeIngest.ts's isOptionalString() guard only accepts undefined/null/string, so the array fails the type check and the event is skipped — this affects only success-path swaps (restore/refused paths have provider_affinity:null and are unaffected, proven by direct positive control). This is NOT the same defect as the first proof's finding; it was invisible until the first defect stopped masking it. NOT fixed in this session, per the same 'authors no code' scope — documented as a second named gap for the operator's Task 4 decision."
   - "Task 2's two commits (deploy verification + rebuild/freshness proof) and Task 3's live-proof work were committed as a single evidence-file commit (87738401) rather than two separate ones, because all edits were made to the same new file in one continuous session before the first commit — splitting after the fact would require artificial hunk surgery with no benefit, matching the 108-05 precedent for genuinely inseparable diffs."
+  - "The provider_affinity gap was fixed and re-verified live (commits b43fbca8/d5dfb715), and a third defect (a stale pinned activeEngineSnapshots row surviving a restore-to-default) was found, fixed, and live-verified before Task 4 was dispatched (astridr 55849e2a, codepulse 58cdb0e7). Two synthetic test rows were purged from the live controlVerbSwaps table by verified id+scope."
+  - "Task 4 (2026-08-07): Larry reviewed all three proof rounds plus the cleanup section and replied 'approved.' He explicitly approved marking ENGINE-01 and ENGINE-02 Complete on the same evidence as ENGINE-05, since both map to Phase 108 in REQUIREMENTS.md's traceability table and are now proven live, not merely code-complete. All three requirements marked Complete in REQUIREMENTS.md's checklist and traceability table in this same commit; TELE-02 verified untouched (Phase 109 / Pending)."
 
 patterns-established: []
-requirements-completed: []
-# ENGINE-01, ENGINE-02, ENGINE-05: none marked. Per this plan's explicit instruction, no
-# requirement is marked complete until operator sign-off at Task 4 (a fresh continuation agent).
-# ENGINE-01's core telemetry axis (real profileId+model, refuse-to-emit, per-profile isolation,
-# unscoped-vs-scoped precedence) is PROVEN LIVE in this plan's evidence — but the sign-off gate
-# is Task 4, not this executor.
+requirements-completed: [ENGINE-05, ENGINE-01, ENGINE-02]
+# Marked Complete 2026-08-07 (Task 4, continuation agent) on the operator's explicit "approved"
+# after review. ENGINE-05 is the integration gate this plan exists to close. ENGINE-01/ENGINE-02
+# are marked on the SAME evidence per the operator's explicit instruction: both are mapped to
+# Phase 108 in REQUIREMENTS.md's traceability table and both are now proven live (not merely
+# code-complete) by the rows this plan's three proof rounds pasted. See 108-ENGINE-05-EVIDENCE.md's
+# "Task 4 — Operator sign-off" section for the full sign-off record.
 
 # Metrics
-duration: "~50 min (first proof) + ~35 min (re-proof: deploy, rebuild, freshness probe, swap re-run including one network-timeout retry, restore, defect #2 diagnosis)"
-completed: "IN PROGRESS — stopped at Task 4 checkpoint again after re-proof, 2026-08-07"
+duration: "~50 min (first proof) + ~35 min (re-proof) + ~40 min (three gap-closure rounds) + Task 4 sign-off"
+completed: "2026-08-07 — Task 4 operator sign-off received; ENGINE-05/ENGINE-01/ENGINE-02 marked Complete"
 ---
 
 # Phase 108 Plan 7: ENGINE-05 Live Integration Gate Summary
 
-**Tasks 1-3 complete and committed; Task 4 (operator sign-off) is a blocking checkpoint and this
-run STOPPED there, as instructed — no requirement is marked complete.**
+**All four tasks complete. Larry reviewed the full evidence (three proof rounds + the cleanup
+section) and replied "approved" on 2026-08-07. ENGINE-05, ENGINE-01, and ENGINE-02 are marked
+Complete in `REQUIREMENTS.md`.**
 
 ## Status
 
@@ -59,7 +63,11 @@ run STOPPED there, as instructed — no requirement is marked complete.**
   --build -d`. Four in-container symbol probes all report `True`/present. D-03 boot seed captured:
   3 rows (`personal`/`business`/`consulting`), all real `profileId`+`model`
   (`anthropic/claude-sonnet-5`), `mode: "inherited"` — no sentinels.
-- **Task 3 (the live proof):** COMPLETE, with a mixed result — see below.
+- **Task 3 (the live proof):** COMPLETE, with a mixed result — see below. Both defects found during
+  Task 3 (and a third, found during the requested cleanup) were subsequently fixed and re-verified
+  live; see "Second re-proof" and "Cleanup" sections below.
+- **Task 4 (operator sign-off):** COMPLETE 2026-08-07. Larry reviewed and replied "approved."
+  ENGINE-05, ENGINE-01, ENGINE-02 marked Complete in `REQUIREMENTS.md`.
 
 ## Live Proof Results (see `108-ENGINE-05-EVIDENCE.md` for every raw row and command)
 
@@ -147,12 +155,97 @@ designed. ENGINE-05's swap-history axis is still not closed — for a new, disti
 reason discovered only because the first defect stopped masking it. This is presented to the
 operator as two separate, sequential findings, not conflated into one.
 
+## Second re-proof — providerAffinity gap closed (2026-08-07, continuation)
+
+The `providerAffinity` defect above was fixed (`convex/schema.ts`/`controlVerbSwaps.ts` retyped
+`v.optional(v.string())` → `v.optional(v.array(v.string()))`; new `isOptionalStringArray` guard in
+`runtimeIngest.ts`), deployed (codepulse-only — astridr already emitted the correct `list[str]`
+shape), and re-proved end-to-end. A mandatory field-by-field defect-class sweep across both
+`controlVerbSwaps` and `activeEngineSnapshots` found no further mismatches. Mutation-verify
+confirmed RED on the reverted guard, GREEN restored; full-suite ground truth 280/297 files,
+3613/3806 tests, 0 failed. A real scoped swap (`consulting`) and a real unscoped swap each produced
+a genuine `controlVerbSwaps` row with `providerAffinity` present as an array, `scope`
+present/absent correctly, `path: "claude-native"` — the swap-history axis (D-13/D-15's actual
+purpose) was proven live for the first time across all three rounds. Core engine axis
+(`activeEngine`) re-confirmed unregressed with fresh rows, control profile untouched. Stack
+restored, proven via live turns. Fix commit `b43fbca8`, re-proof commit `d5dfb715`.
+
+## Cleanup — stale-row fix and synthetic-row purge (2026-08-07, requested by Larry before sign-off)
+
+Two additional items closed before Task 4 was dispatched:
+
+- **`activeEngineSnapshots` stale `pinned` row after a restore-to-default.** The restore path
+  cleared the router's override correctly but never emitted anything to supersede the last-pinned
+  row, so the table kept reporting a profile's last-swapped model as current even after a genuine
+  restore. Fixed in astridr (`swap_model.py`'s restore branch now emits an honest
+  `mode: "inherited"` row via the existing D-03 boot-seed emitter, new `selectionPath:
+  "restore-to-default"`); D-02's refuse-to-emit guard for genuinely unresolved models is untouched
+  and its pre-existing tests pass unmodified. 16 new unit tests, 5 separate mutations each
+  RED→GREEN. Live-verified: scoped restore emits for exactly that profile; unscoped restore
+  correctly excludes a profile carrying its own pin (byte-identical `_id`/`timestamp`). Full
+  astridr-repo suite: 9883 passed, 0 failed. Commits: astridr `55849e2a`, codepulse `58cdb0e7`.
+- **Two synthetic test rows purged from `controlVerbSwaps`.** Both carried `__sentinel__`-shaped
+  `scope` values left over from the freshness probes above. Purged via a temporary,
+  single-document, id+scope-verified internal mutation, exercised, then removed from source and
+  redeployed — confirmed gone by a post-redeploy call failing with "Could not find function." 12
+  rows before, 10 after; genuine rows confirmed byte-identical.
+
+Full detail, raw rows, and every verdict for both items: `108-ENGINE-05-EVIDENCE.md`'s "Cleanup:
+stale-row fix and synthetic-row purge" section.
+
+## Task 4 — Operator Sign-off (2026-08-07)
+
+Larry reviewed all three proof rounds and the cleanup section — every raw row, every root-cause
+trace, the restore-to-pre-test-state confirmation, and the two Phase 109 carry-forward items — and
+replied **"approved."** He explicitly approved marking **ENGINE-01 and ENGINE-02 on the same
+evidence** as ENGINE-05, since both are mapped to Phase 108 in `REQUIREMENTS.md`'s traceability
+table and both are now proven live by this plan's rows, not merely code-complete.
+
+**Marked Complete in `REQUIREMENTS.md`:** ENGINE-05 (the integration gate itself), ENGINE-01 (the
+per-profile telemetry emit — proven live via `activeEngine:latestByProfile` reads across the boot
+seed, a scoped swap, an unscoped swap, and a restore), ENGINE-02 (the scoped `swap.set` — proven
+live via the same reads plus the fail-closed negative control). Both the checklist bullets and the
+traceability table rows were updated; `TELE-02` was left untouched (`Phase 109` / `Pending`),
+verified after the edit.
+
+Full sign-off text (date, requirements covered, and an honest statement of what the gate found and
+closed) is appended to `108-ENGINE-05-EVIDENCE.md` under its own "Task 4 — Operator sign-off"
+heading — nothing in the file's prior sections was edited or retracted.
+
+## Carry-Forward Items for Phase 109
+
+Recorded here as explicit inputs so they are not rediscovered mid-execution:
+
+1. **TELE-02's surfaced half.** Needs a host with a real per-profile scope. D-15's choice of
+   `GlobalSwapModal` was falsified during Phase 108 execution: it is the all-profiles axis
+   (`103-CONTRACT.md` §8) with exactly one mount site app-wide and a hardcoded `profileId={undefined}`.
+   `convex/controlVerbSwaps.ts`'s `listByScope` declares `profileId: v.string()` non-optional, so it
+   cannot serve a combined/global view without a signature change (per-profile-only works as-is).
+2. **Model-id format split.** `mode: "inherited"` rows carry provider-prefixed ids
+   (`anthropic/claude-sonnet-5`); `mode: "pinned"` rows carry bare ids (`grok-4.5`,
+   `claude-haiku-4-5-20251001`) — directly visible throughout this plan's own evidence rows. The
+   three components ENGINE-03 will bind to (`src/hooks/useActiveEngine.ts`,
+   `src/components/brains/BrainHeaderBadge.tsx`, `src/components/brains/BrainPicker.tsx`) contain
+   zero `/`-handling or normalization today — the `.split("/").pop()` idiom that exists lives in
+   `AgentNode.tsx`/`SwarmTaskNode.tsx`, a different component reading a different data source. Any
+   comparison against a model catalogue will match in one mode and silently miss in the other until
+   this is normalized.
+3. **`listByScope` signature.** `profileId: v.string()` is non-optional while global swaps store
+   `scope: null` — a per-profile-only surface works as-is; a combined/global view needs the
+   signature changed to reach the `scope: null` rows.
+
 ## Task Commits
 
 1. **Tasks 2+3 combined (evidence file, deploy + rebuild + live proof + defect finding)**
    (codepulse) - `87738401` (docs)
+2. **Re-proof after session_id-null fix** (codepulse) - `a413adf5` (docs)
+3. **providerAffinity array fix** (codepulse) - `b43fbca8` (fix)
+4. **Second re-proof — providerAffinity gap closed** (codepulse) - `d5dfb715` (docs)
+5. **Cleanup evidence — stale-row fix + synthetic-row purge** (codepulse) - `bc62d0a5` (docs)
+6. **Task 4 — sign-off + requirements marked Complete** (codepulse) - recorded below in this run's
+   Self-Check
 
-`git show --stat HEAD` confirmed the commit contains only
+`git show --stat HEAD` confirmed the first commit contains only
 `108-ENGINE-05-EVIDENCE.md` — no unintended files swept in.
 
 ## Files Created
@@ -196,27 +289,32 @@ reference `"$ADMIN_KEY"`, never a resolved secret value.
 
 ## Next Phase Readiness
 
-**STILL BLOCKED at Task 4, after the re-proof.** Phase 109 depends on ENGINE-05 being closed
-(ROADMAP: "Phase 109 does not start" until these rows are real), and ENGINE-05 is NOT marked
-satisfied by this executor — that requires explicit operator sign-off on a fresh continuation
-agent, per Task 4's protocol. The re-proof confirms the operator's first fix works exactly as
-intended, but surfaces a SECOND defect (`provider_affinity` array-vs-string) that must also be
-resolved before the swap-history axis can be proven live. This directly affects Phase 109's
-TELE-02 inheritance (reassigned to Phase 109 per the re-proof dispatch — not marked or re-added
-here) — the per-profile swap-history surface it is meant to build reads from exactly the table
-both defects silently starved.
+**UNBLOCKED — ENGINE-05, ENGINE-01, and ENGINE-02 are Complete.** Both defects the re-proofs found
+(`session_id`-null, `providerAffinity` array-vs-string) were fixed, deployed, and re-verified live;
+a third defect (stale `activeEngineSnapshots` row surviving a restore) was found, fixed, and
+verified before sign-off. The operator reviewed and approved on 2026-08-07. Phase 109 may now
+begin, carrying forward the three items listed above under "Carry-Forward Items for Phase 109" —
+in particular, TELE-02's surfaced half and the model-id format split, both of which bear directly
+on Phase 109's own success criteria (the per-profile picker, header badge, and confirm-modal
+current-engine column).
 
 ## Self-Check: PASSED
 
 Files (codepulse):
 - FOUND: `.planning/phases/108-per-profile-engine-telemetry-astridr-backend/108-ENGINE-05-EVIDENCE.md`
-- FOUND: `.planning/phases/108-per-profile-engine-telemetry-astridr-backend/108-07-SUMMARY.md` (this file, re-proof section)
+- FOUND: `.planning/phases/108-per-profile-engine-telemetry-astridr-backend/108-07-SUMMARY.md` (this file, Task 4 sign-off section)
+- FOUND: `.planning/REQUIREMENTS.md` (ENGINE-05/ENGINE-01/ENGINE-02 marked Complete in checklist + traceability table; TELE-02 verified unchanged)
 
 Commits (codepulse, `git log --oneline --all | grep <hash>`):
 - FOUND: `87738401` (Tasks 2-3 evidence, first proof)
 - FOUND: `a413adf5` (re-proof evidence + SUMMARY update)
+- FOUND: `b43fbca8` (providerAffinity array fix)
+- FOUND: `d5dfb715` (second re-proof — providerAffinity gap closed)
+- FOUND: `bc62d0a5` (cleanup evidence — stale-row fix + synthetic-row purge)
+- Task 4 sign-off commit hash recorded at commit time (this run) — see final commit list in the
+  executor's completion report.
 
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
 *Plan: 07*
-*Status: IN PROGRESS — awaiting Task 4 operator sign-off (re-proof complete, second defect found)*
+*Status: COMPLETE — Task 4 operator sign-off received 2026-08-07; ENGINE-05/ENGINE-01/ENGINE-02 marked Complete*

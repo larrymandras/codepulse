@@ -1495,3 +1495,64 @@ was ever dirty; no foreign files went out with either push.
 `58cdb0e7b2040aebd802f07d9f2782517b2a411b`. `STATE.md`/`ROADMAP.md`/`REQUIREMENTS.md` deliberately
 left untouched — no requirement marked, per instruction. Returning a checkpoint for sign-off.
 
+---
+
+## Task 4 — Operator sign-off (2026-08-07)
+
+**Larry reviewed the evidence above (all three proof rounds plus the cleanup section) and replied
+"approved" on 2026-08-07.** He was shown: all four Phase 108 success criteria passing live, the
+three defects this gate found and closed, confirmation the stack was restored to its pre-test
+state, and the two items carried forward to Phase 109.
+
+**Requirements covered by this sign-off:** ENGINE-05, and — on the same evidence, explicitly
+approved by the operator — ENGINE-01 and ENGINE-02. Both are mapped to Phase 108 in
+`REQUIREMENTS.md`'s traceability table and both are now proven live by the rows pasted throughout
+this file, not merely code-complete.
+
+**Honest statement of what this gate found and closed, in the order it was found:**
+
+1. **`session_id` explicit `null` silently dropped every `control_verb_swap` row.**
+   `ws_commands.py:1149` unconditionally set `session_id=None` on the WS command path;
+   `runtimeIngest.ts`'s `isOptionalString()` guard rejected an explicit `null` (only
+   `undefined`/`string` passed); the event resolved to `null` and was skipped with no exception, no
+   dropped-counter increment. **Fixed** (`_strip_none_values` on the buffered post path;
+   `normalizeOptional()` on the ingest side), deployed, and re-verified live: a freshness probe with
+   every optional field set to explicit `null` landed with those fields absent, not merely
+   null-coerced.
+2. **`providerAffinity` modelled as a scalar while the emitter sends `list[str]`.** Masked by defect
+   1 until that fix stopped masking it — the first re-proof still found zero swap-history rows, for
+   a different reason. `runtimeIngest.ts`'s `isOptionalString()` guard rejected the JSON array;
+   `resolveControlVerbSwapEvent()` returned `null` for the whole event. **Fixed** (schema + ingest
+   guard retyped to `v.optional(v.array(v.string()))` / `isOptionalStringArray`), deployed, and
+   re-verified: a real scoped swap and a real unscoped swap each produced a real `controlVerbSwaps`
+   row with `providerAffinity` present as a genuine array — the swap-history axis (D-13/D-15's actual
+   purpose) was proven end-to-end for the first time in this file.
+3. **`activeEngineSnapshots` kept reporting a stale `pinned` row after a restore-to-default.** Not a
+   telemetry-drop defect — the restore path never emitted anything to supersede the last-pinned row,
+   so the table visually lied about a profile's current engine even though the live router had
+   correctly reverted. **Fixed** (restore now emits an honest `mode: "inherited"` row with a new
+   `selectionPath: "restore-to-default"`, reusing the existing D-03 boot-seed emitter rather than a
+   second one), deployed, and re-verified live with both a scoped and an unscoped restore, including
+   the case where a second profile's own pin must NOT be disturbed by an unscoped restore
+   (byte-identical `_id`/`timestamp` confirmed).
+
+**Also confirmed, not a defect:** two synthetic test rows (sentinel `scope` values injected during
+the freshness probes) were purged from the live `controlVerbSwaps` table by verified `_id`+`scope`,
+using a temporary single-document mutation that was deployed, exercised, and then removed from
+source and redeployed so no permanent delete surface remains. 12 rows before, 10 after — exactly
+the two synthetic ids, all genuine rows intact.
+
+**Stack state at close:** restored to its pre-test default (`claude-sonnet-5` on all three
+profiles, `mode: "inherited"`), proven by live confirming turns, not acks alone. No astridr code
+outside this phase's own scope was touched. Full astridr-repo suite ground truth: 9883 passed, 0
+failed.
+
+**Two items explicitly NOT resolved by this gate, carried forward to Phase 109** (see
+`108-07-SUMMARY.md`'s Carry-Forward section for full detail): TELE-02's surfaced half (needs a host
+with a real per-profile scope — `GlobalSwapModal` is the all-profiles axis) and the model-id format
+split between `inherited` (provider-prefixed) and `pinned` (bare) rows, which the three components
+ENGINE-03 will bind to currently do nothing to normalize.
+
+**Sign-off recorded. Requirements ENGINE-05, ENGINE-01, ENGINE-02 are marked Complete in
+`REQUIREMENTS.md` in the same commit that adds this section.**
+
