@@ -177,6 +177,81 @@ None — no external service configuration required. This plan authors frontend 
 
 None. This plan's only new client-visible surface (the swap-history section, reading the already-registered public `api.controlVerbSwaps.listByScope` query) is fully covered by 108-06-PLAN.md's own `<threat_model>` (T-108-16, T-108-23, T-108-12, T-108-24, T-108-SC) — no new network endpoint, auth path, or trust-boundary-crossing surface was introduced beyond what the plan already registered. No `dangerouslySetInnerHTML` / `innerHTML` was added (verified by inspection — all row fields render as plain JSX text children).
 
+## Post-execution gap closure (2026-08-07, adversarial gate)
+
+An adversarial gate on this plan found a caption-honesty defect that the original 34-test suite
+(and the plan's own mutation checks above) did not catch.
+
+**Defect.** `SwapHistorySection`'s "Showing the last {SWAP_HISTORY_CAP} swaps" caption rendered
+inside the `else` branch of `brainSwaps.length === 0` — i.e. **unconditionally** whenever
+`length > 0`, not gated on the list actually being at the cap. With 2 rows the caption told the
+operator 20 were being shown. This is a fabricated reading of the data: T-108-12's stated intent
+("a truncated list is never mistaken for a complete one") delivered its exact inverse — a
+*complete* list mistaken for a truncated one.
+
+Confirmed empirically: a mutation test that changed the condition to
+`brainSwaps.length >= SWAP_HISTORY_CAP` versus leaving the caption unconditional left all 45
+existing tests (34 in this file + 11 in `useControlVerbSwaps.test.ts`) passing either way —
+nothing guarded the sub-cap case at all.
+
+**Fix.** `src/components/brains/GlobalSwapModal.tsx`: gated the caption on
+`atCap = brainSwaps.length >= SWAP_HISTORY_CAP`. At-cap keeps the original "Showing the last N
+swaps" wording; sub-cap now renders a truthful `"Showing N swap(s)"` count instead of stating a
+number the UI is not actually showing. No `convex/` file, query signature, or server-side
+`.take(SWAP_HISTORY_CAP)` bound was touched — purely a client-side render decision using data the
+component already holds (`brainSwaps.length`, the already-imported `SWAP_HISTORY_CAP`), consistent
+with the plan's original reasoning for a static caption over adding a truncation flag to the query.
+
+**Test coverage added** (`GlobalSwapModal.test.tsx`, both asserting on real rendered DOM via
+Testing Library, never a mock's call args):
+- Sub-cap (2 rows): `"Showing the last 20 swaps"` asserted **absent**, `"Showing 2 swaps"` asserted
+  present.
+- At-cap (`SWAP_HISTORY_CAP` rows exactly): `"Showing the last 20 swaps"` asserted present.
+
+**Mutation verification** (revert-and-confirm-RED, per this gap closure's own instructions):
+reverted the caption JSX to the old unconditional form (backup-copied the fixed file first, never
+`git checkout --`), ran only the new sub-cap test, confirmed RED, then restored the fix from the
+backup copy and confirmed all 36 tests green again. RED output:
+
+```
+FAIL  src/components/brains/GlobalSwapModal.test.tsx > GlobalSwapModal swap-history section (D-15, TELE-02) > does NOT render the 'Showing the last N swaps' caption when the list is below the cap (gap closure)
+Error: expect(element).not.toBeInTheDocument()
+
+expected document not to contain element, found <p
+  class="text-xs text-muted-foreground"
+>
+  Showing the last
+  20
+   swaps
+</p> instead
+ ❯ src/components/brains/GlobalSwapModal.test.tsx:1458:82
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 35 skipped (36)
+```
+
+**Verification after restore:**
+- `npx tsc --noEmit` → clean
+- `npx vitest run src/components/brains/GlobalSwapModal.test.tsx` → **36/36 passed** (34 pre-existing
+  + 2 new)
+- No hardcoded hex colours introduced (`grep -n "#[0-9a-fA-F]{3,6}"` on the modified file → no hits)
+- `git show --stat HEAD` after the fix commit → exactly `GlobalSwapModal.tsx` +
+  `GlobalSwapModal.test.tsx`, no unintended sweep-in
+- No `convex/` file touched; `listByScope`'s query signature and server-side
+  `.take(SWAP_HISTORY_CAP)` bound are byte-unchanged
+
+**Full-suite verification** (isolated git worktree, `--detach` pinned to `2c4906b5`, `node_modules`
+junctioned via PowerShell `New-Item -ItemType Junction`, removed via `git worktree remove --force`
+immediately after): **279 files passed / 17 skipped (296 total), 3570 tests passed / 193 todo (3763
+total), 0 failed** — exactly the stated baseline (279/3568) + 2, matching this gap closure's 2 new
+tests. No regressions elsewhere in the tree.
+
+**Commit:** `2c4906b5` — `fix(108-06): show the truncation caption only when the list is actually
+capped`
+
+TELE-02 remains Pending as stated above — this gap closure is a client-side honesty fix within the
+already-inert (undeployed) surface and does not itself close the requirement.
+
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
 *Completed: 2026-08-07*
