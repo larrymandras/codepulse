@@ -1454,6 +1454,18 @@ export function useAstridrVoice({
       closePendingRef.current = false;
       clearFollowUpWindow();
       clearSendTimer();
+      // D-14 (188.3-04): additive-only trace of what this fast-path silently
+      // discards. Every OTHER drop path in this function traces before
+      // returning (final.noise-rejected, final.duration-rejected,
+      // final.wake-phrase-only-dropped); this fast-path and its two siblings
+      // below (swap, end-phrase) were the three exceptions. ZERO behavior
+      // change — whether discarding a pending accumulator here is CORRECT
+      // stays explicitly UNDECIDED; no test or comment states the intent
+      // either way, and that decision needs real trace data, deferred to a
+      // later phase (188.3-CONTEXT.md D-14).
+      if (accumulatedRef.current.trim()) {
+        trace("final.accumulator-discarded-vision-intent", { discarded: accumulatedRef.current });
+      }
       accumulatedRef.current = "";
       setFinalText("");
 
@@ -1543,6 +1555,11 @@ export function useAstridrVoice({
       trace("final.swap-dispatch", { text });
       clearFollowUpWindow();
       clearSendTimer();
+      // D-14 (188.3-04): see the vision-intent fast-path's comment above for
+      // the full note. Same additive-only trace, zero behavior change.
+      if (accumulatedRef.current.trim()) {
+        trace("final.accumulator-discarded-swap", { discarded: accumulatedRef.current });
+      }
       accumulatedRef.current = "";
       setFinalText("");
       dispatch({ type: "FINAL_RESULT" });
@@ -1561,6 +1578,16 @@ export function useAstridrVoice({
       closePendingRef.current = true;
       clearFollowUpWindow();
       clearSendTimer();
+      // D-14 (188.3-04): see the vision-intent fast-path's comment above for
+      // the full note. This site OVERWRITES rather than blanks the
+      // accumulator, so the payload carries BOTH sides — the discarded value
+      // AND the replacing text — a reader needs both to judge the loss.
+      if (accumulatedRef.current.trim()) {
+        trace("final.accumulator-discarded-end-phrase", {
+          discarded: accumulatedRef.current,
+          replacing: text.trim(),
+        });
+      }
       accumulatedRef.current = text.trim();
       setFinalText(accumulatedRef.current);
       void flushSend(); // no debounce — the goodbye goes out immediately

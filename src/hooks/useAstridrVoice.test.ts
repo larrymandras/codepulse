@@ -1457,6 +1457,61 @@ describe("useAstridrVoice", () => {
     expect(chat.sendMessage).not.toHaveBeenCalled();
   });
 
+  // ─── ORDER-INVARIANT (188.3-04, D-04) ──────────────────────────────────────
+  // A class guard, not a fourth instance patch. This fixture is the UNION of
+  // WAKE-REJOIN-1 (188.3-02) and COLD-FRAGMENT-1 (188.3-03) in ONE input: the
+  // lostInterim carries a wake phrase at its head AND is long enough to clear
+  // the rejoin's own >= 3 word eligibility floor, while the final is a
+  // sub-word-floor tail that fails the cold 3-word noise-gate floor on its
+  // own. Reaching the rejoin at all depends on Plan 03's leniency
+  // (eligibleLostInterimPending); coming out of it clean depends on Plan 02's
+  // guarded re-strip (gated on salvaged === true). It fails if EITHER ordering
+  // regresses: a mutator (the rejoin's `appendWithOverlapCheck` text rebuild)
+  // moved above an inspector (the wake-strip or the noise gate), or an
+  // inspector moved below a mutator. It observes the DISPATCHED STRING only —
+  // no assertion here reads voiceState.ts or useAstridrVoice.ts source text.
+  it("ORDER-INVARIANT: a lostInterim carrying a wake phrase AND enough tokens to rejoin, glued to a sub-floor final, dispatches with no wake residue, the rescued interim, and the tail all present (D-04)", async () => {
+    const chat = makeChat();
+    const { result } = renderVoice(chat);
+
+    // D-17 precondition, asserted FIRST: no wake() was called, so the
+    // follow-up window is closed and the noise gate uses the cold 3-word
+    // floor, not the warm 1-word floor. Run warm, the sub-floor tail would
+    // dispatch for the wrong reason (the open window) and this guard would
+    // measure nothing — the same confound class COLD-FRAGMENT-1 guards
+    // against.
+    expect(result.current.followUpOpen).toBe(false);
+
+    act(() => {
+      // 6 tokens, wake phrase ("hey astrid") at the head — clears the
+      // rejoin's own >= 3 word eligibility floor (D-03) and the mirrored
+      // noise-gate leniency (D-02) with tokens to spare.
+      onInterimResultCallback?.("hey astrid what does my calendar");
+      // 2 words — fails the cold 3-word noise-gate floor on its own; only
+      // D-02/D-03's leniency lets it survive to the rejoin.
+      onFinalResultCallback?.("like tonight");
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    // Exact dispatched string, asserted with toHaveBeenCalledWith rather than
+    // substring checks alone (the live option-object shape allows it).
+    expect(chat.sendMessage).toHaveBeenCalledWith(
+      "what does my calendar like tonight",
+      { interruptedReply: undefined, voice: true }
+    );
+    const dispatched = (chat.sendMessage as ReturnType<typeof vi.fn>).mock
+      .calls[0]?.[0] as string | undefined;
+    // (1) no wake-phrase residue — the rejoin-site re-strip (Plan 02) ran.
+    expect(dispatched).not.toContain("hey astrid");
+    // (2) the rescued interim content survived the rejoin (Plan 03's
+    // leniency let the fragment reach it).
+    expect(dispatched).toContain("what does my calendar");
+    // (3) the sub-floor tail survived — it was not itself dropped.
+    expect(dispatched).toContain("like tonight");
+  });
+
   // ─── 22:07 live-trace regression (186-01 follow-up, Defect B) ─────────────
   // A talk-over interim misclassified during active TTS ("I couldn't find"
   // — Defect A's own failure mode, same live trace) never finalized and sat
