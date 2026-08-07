@@ -7,7 +7,7 @@ stopped_at: "v14.0 opened 2026-08-06 via /gsd-new-milestone. Defining requiremen
 last_updated: "2026-08-06T23:59:00.000Z"
 last_activity: 2026-08-06
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0

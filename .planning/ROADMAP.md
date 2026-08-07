@@ -11,7 +11,8 @@
 - ✅ **v10.0 Eval & Trace Observability + Hardening** — Phases 93-96 (**shipped 2026-07-07**; Phase 96 UI deep-dive cleanup addendum completed 2026-07-13) — eval pipeline + ingest, native trace waterfall, security audit + key rotation + dependency majors, UI truth/consistency sweep — [archive](milestones/v10.0-ROADMAP.md)
 - ✅ **v11.0 Skills Command Center — Full Lifecycle & Launch** — Phases 97-100 (**shipped 2026-07-25**, 22/22 requirements; tagged `v11.0`) — real skill intake, full lifecycle mutations (archive/restore/move/delete), skill launch/dispatch to Chat/Forge-agent/Ástríðr, control-surface UX — cross-repo Forge daemon executor — [archive](milestones/v11.0-ROADMAP.md) · [audit](milestones/v11.0-MILESTONE-AUDIT.md)
 - ✅ **v12.0 Personal Productivity — Reminders & Calendar** — Phases 101-102 (**shipped 2026-07-23**, 10/10 plans; tagged `v12.0`) — profile-segmented reminders (personal/business/consulting) with bidirectional CodePulse↔Ástríðr sync, recurrence, proactive nudges, and a read-only Google Calendar overlay per profile — cross-repo (codepulse + astridr-repo) — [archive](milestones/v12.0-ROADMAP.md)
-- 🚧 **v13.0 Brain-Swap Control, Cost Intelligence & Consolidation** — Phases 103-106 (**in progress**, formalized 2026-07-27) — CodePulse control surface for Ástríðr's on-the-fly reasoning-engine swap (keyed API models + subscription CLIs), per-model cost intelligence + budget alerts, tool-usage + tool-filter-signal analytics + deeper trace waterfall, and a consolidation/hardening pass (typed-api sweep, retire cloud Convex, chunk code-split, deferred UAT)
+- ✅ **v13.0 Brain-Swap Control, Cost Intelligence & Consolidation** — Phases 103-107 (**shipped 2026-08-06**, 53 plans, 14/15 requirements — BSC-01 PARTIAL by design) — CodePulse control surface for Ástríðr's on-the-fly reasoning-engine swap, per-model cost intelligence + budget alerts, tool/trace observability, and a consolidation/hardening pass — [archive](milestones/v13.0-ROADMAP.md)
+- 🚧 **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board** — Phases 108-113 (**in progress**, formalized 2026-08-06) — closes BSC-01's deferred per-agent axis (cross-repo astridr emitter + scoped `swap.set`), Convex durability (aggregates pruning, retention verification, memory-growth root cause), a frontend-only mission board, telemetry-coverage closure, and a small-debt sweep
 
 ## Phases
 
@@ -639,3 +640,138 @@ Plans:
 ---
 
 *Last updated: 2026-08-06 — **v13.0 CLOSED**. 5 phases, 53/53 plans, 14/15 requirements (BSC-01 PARTIAL by design). Closed by hand — no `gsd-sdk milestone.complete` — with all counters re-derived from disk and git rather than copied from STATE.md; they matched exactly, which they only did because each phase close hand-reconciled them. The close itself caught two marker defects that a narrative-driven audit would have missed: `OCC-01` carried **no verdict marker at all** in REQUIREMENTS.md despite being proven PASS and recorded in four other places, and `BSC-03` was satisfied but phrased un-machine-checkably. Next: `/gsd-new-milestone`.*
+
+## v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board — 🚧 IN PROGRESS
+
+> **Started 2026-08-06** via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108-113**. No research/SUMMARY.md exists for this milestone — every requirement is grounded in repo evidence recorded in REQUIREMENTS.md's "Scoping evidence" table (gathered 2026-08-06, before any requirement was written).
+
+**Milestone goal:** Finish the per-agent half of brain-swap that v13.0 deliberately deferred (BSC-01), make the self-hosted Convex instance durable rather than nightly-restarted, and turn the leftover jobs surface into a real mission board.
+
+**Phase summary:**
+
+- [ ] **Phase 108 — Per-Profile Engine Telemetry (astridr backend)** — real per-profile active-engine telemetry, a scoped `swap.set`, and a `control_verb_swap` domain route, verified live before the dependent UI is built
+- [ ] **Phase 109 — Per-Agent Engine UI** — the already-built picker/badge/confirm-modal surfaces light up on real telemetry with honest server-confirmed swap status
+- [ ] **Phase 110 — Convex Durability** — `aggregates` bounded by the existing batch-capped retention machinery, a verified full nightly prune pass, and the memory-growth root cause documented
+- [ ] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` upgraded into a real mission board on today's data — live cards, humanized tool labels, honest orphan recovery
+- [ ] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition
+- [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
+
+**Execution order:** 108 → 109 (109 depends on 108's real telemetry + scoped swap.set — the D-14 boundary forbids a config-sourced current-engine column) · 110, 111, 113 are each independent of everything else in this milestone and can run in any order · 112 depends on 108 (reuses the per-kind routing precedent set by TELE-02/`control_verb_swap`).
+
+## Phase Details
+
+### Phase 108: Per-Profile Engine Telemetry (astridr backend)
+
+**Goal**: Ástríðr's per-profile engine axis genuinely exists — real telemetry, a scoped swap command, and a queryable swap-history route — verified live before CodePulse UI work depends on it.
+**Depends on**: Nothing (first phase of milestone)
+**Requirements**: ENGINE-01, ENGINE-02, ENGINE-05, TELE-02
+
+*(Sequencing note — TELE-02: `control_verb_swap` shares its emit channel with ENGINE-01 — both events originate from the same astridr swap code path this phase is already touching (`astridr/engine/control_verbs/swap_model.py`), so building its domain route alongside the telemetry emitter avoids a second pass through the same ingest dispatch code. The requirement's "surfaced as per-profile swap history" half is satisfied here as a minimal readout, not a full page — Phase 109 owns the richer current-engine UI.)*
+
+**Success Criteria** (what must be TRUE):
+
+  1. A profile's engine resolution or swap on the running astridr stack produces a telemetry row carrying a real `profileId` and model id — never an `unknown` sentinel — and an unresolved value is refused at emit, not written. (Contrast: v13.0's 93 pruned rows were *all* `{profileId:"unknown", model:"unknown"}` — the axis has never carried one valid row.)
+  2. `swap.set` accepts an explicit profile scope and swaps only that profile's engine; an unscoped call still produces today's global behaviour byte-identical.
+  3. `control_verb_swap` events route to a queryable domain table (not just the generic `runtime_events` log) and can be listed as per-profile swap history.
+  4. The per-profile emit and the scoped `swap.set` are exercised against the live running stack — a real profile swap observed producing a real telemetry row and a real swap-history entry — before Phase 109 begins, closing ENGINE-05.
+
+**Plans**: TBD
+
+---
+
+### Phase 109: Per-Agent Engine UI
+
+**Goal**: Operators see and control each profile's current engine in CodePulse, sourced from real telemetry rather than config or optimistic state.
+**Depends on**: Phase 108 (needs real telemetry rows and a working scoped `swap.set` to bind against)
+**Requirements**: ENGINE-03, ENGINE-04
+
+**Success Criteria** (what must be TRUE):
+
+  1. The "This profile" picker scope, the header badge, and the pre-swap confirm modal's current-engine column each show a profile's actual current engine, sourced from telemetry — never from a config read.
+  2. Triggering a per-profile swap shows honest live status (in-flight → success/failure) and reconciles to the *resulting* active engine read back from Ástríðr — no optimistic-only success state, matching the global axis's BSC-04 contract.
+  3. A profile with no engine telemetry yet renders an honest absent/unknown state, not a fabricated current engine.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 110: Convex Durability
+
+**Goal**: The self-hosted Convex instance is durable by design rather than nightly-restarted by mitigation — every table (including `aggregates`) is actually pruned, and the memory-growth driver is understood.
+**Depends on**: Nothing (independent of ENGINE/MISSION/TELE work)
+**Requirements**: DUR-01, DUR-02, DUR-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. `aggregates` rows past its retention window are pruned in the same batch-capped, cursor-seeked manner as the 15 other tables in `RETENTION_DAYS` — no bulk delete, no new tombstone storm.
+  2. Operator can observe a complete nightly prune pass across *every* table in `RETENTION_DAYS` (aggregates included) on the live self-hosted instance — confirmed from the running system, not just read from code.
+  3. The convex-backend memory-growth root cause is documented with supporting evidence, or genuinely fixed — and `ConvexNightlyRestart` is recorded as a deliberate, understood mitigation rather than an unexplained workaround. *(Does not presuppose a code fix exists — DUR-03 may legitimately close as "root cause identified and documented.")*
+
+**Plans**: TBD
+
+---
+
+### Phase 111: Mission Board
+
+**Goal**: The leftover `JobsPanel`/`subagentJobs` surface becomes a real mission board operators can trust, built entirely on data that streams today.
+**Depends on**: Nothing (frontend-only, independent of every other v14.0 phase)
+**Requirements**: MISSION-01, MISSION-02, MISSION-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. Background missions render as live cards carrying status and duration; a job orphaned by a restart renders honestly as failed, never as silently still-running.
+  2. Tool activity on a mission renders as humanized labels ("reading Gmail…", "Write index.html") rather than raw tool/function names.
+  3. No per-mission cost, confirm-card, or squad-grouping affordance appears anywhere on the board — each stays fully absent rather than showing as empty or zeroed.
+
+**Plans**: TBD
+**UI hint**: yes
+
+---
+
+### Phase 112: Telemetry Coverage Closure
+
+**Goal**: astridr's telemetry contract documentation matches what the system actually emits, and every remaining ambiguous event kind has a recorded, justified disposition.
+**Depends on**: Phase 108 (reuses the per-kind routing precedent and decision record established for `control_verb_swap`/TELE-02)
+**Requirements**: TELE-01, TELE-03
+
+**Success Criteria** (what must be TRUE):
+
+  1. `docs/astridr-contract.md` no longer documents the 5 Group A kinds (`instructions_loaded`, `loop_lifecycle`, `worktree_lifecycle`, `batch_execution`, `auto_memory`) as live behaviour — each entry is corrected to reflect the zero-emitter reality or explicitly marked aspirational.
+  2. Every remaining Group B event kind (excluding `control_verb_swap`, already disposed in Phase 108) has a recorded disposition — routed to a domain table and surfaced, or explicitly kept generic-table-by-design — with a stated reason per kind, none left ambiguous.
+  3. `governor_decision` (the one kind confirmed arriving live) is evaluated as the strongest routing candidate, and whatever disposition it receives is justified in writing rather than built purely for switch-coverage symmetry.
+
+**Plans**: TBD
+
+---
+
+### Phase 113: Debt Sweep
+
+**Goal**: Three small, independent tech-debt items are closed — none blocks the other v14.0 work, so this phase can run at any point in the sequence.
+**Depends on**: Nothing (independent of every other v14.0 phase)
+**Requirements**: DEBT-05, DEBT-06, DEBT-07
+
+**Success Criteria** (what must be TRUE):
+
+  1. `computeSkillPrunes` no longer drops live plugin skills on a transient/partial catalog scan — the skill count stays stable across a scan cycle that previously showed 185 → 131 → 185.
+  2. The intermittent `Chat.test.tsx` brain-pill failure runs deterministically (fixed from a captured root cause) rather than being masked by a widened `waitFor`.
+  3. `convex-selfhost/`'s compose `logging:` block and restart scripts are committed to version control and reproducible from a fresh checkout.
+
+**Plans**: TBD
+
+---
+
+## Progress
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 108. Per-Profile Engine Telemetry (astridr backend) | 0/TBD | Not started | - |
+| 109. Per-Agent Engine UI | 0/TBD | Not started | - |
+| 110. Convex Durability | 0/TBD | Not started | - |
+| 111. Mission Board | 0/TBD | Not started | - |
+| 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
+| 113. Debt Sweep | 0/TBD | Not started | - |
+
+---
+
+*Last updated: 2026-08-06 — **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board started** via `/gsd-new-milestone`. 6 phases (108-113) derived from this milestone's 17 requirements (ENGINE-01..05, DUR-01..03, MISSION-01..03, TELE-01..03, DEBT-05..07), 100% coverage. No phases started. Continues phase numbering from v13.0 → Phases 108-113. Prior: v13.0 SHIPPED & ARCHIVED 2026-08-06 (5 phases 103-107, 53 plans, 14/15 requirements, tagged `v13.0`).*

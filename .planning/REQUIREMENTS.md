@@ -81,23 +81,23 @@ Filled by the roadmapper.
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| ENGINE-01 | — | Pending |
-| ENGINE-02 | — | Pending |
-| ENGINE-03 | — | Pending |
-| ENGINE-04 | — | Pending |
-| ENGINE-05 | — | Pending |
-| DUR-01 | — | Pending |
-| DUR-02 | — | Pending |
-| DUR-03 | — | Pending |
-| MISSION-01 | — | Pending |
-| MISSION-02 | — | Pending |
-| MISSION-03 | — | Pending |
-| TELE-01 | — | Pending |
-| TELE-02 | — | Pending |
-| TELE-03 | — | Pending |
-| DEBT-05 | — | Pending |
-| DEBT-06 | — | Pending |
-| DEBT-07 | — | Pending |
+| ENGINE-01 | Phase 108 | Pending |
+| ENGINE-02 | Phase 108 | Pending |
+| ENGINE-03 | Phase 109 | Pending |
+| ENGINE-04 | Phase 109 | Pending |
+| ENGINE-05 | Phase 108 | Pending |
+| DUR-01 | Phase 110 | Pending |
+| DUR-02 | Phase 110 | Pending |
+| DUR-03 | Phase 110 | Pending |
+| MISSION-01 | Phase 111 | Pending |
+| MISSION-02 | Phase 111 | Pending |
+| MISSION-03 | Phase 111 | Pending |
+| TELE-01 | Phase 112 | Pending |
+| TELE-02 | Phase 108 | Pending |
+| TELE-03 | Phase 112 | Pending |
+| DEBT-05 | Phase 113 | Pending |
+| DEBT-06 | Phase 113 | Pending |
+| DEBT-07 | Phase 113 | Pending |
 
 ---
 
