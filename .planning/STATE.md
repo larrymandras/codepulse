@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
-status: planning
-stopped_at: "Phase 108 context gathered 2026-08-07 (108-CONTEXT.md + 108-DISCUSSION-LOG.md, commit adb36cf6) — 4 gray areas, 16 decisions D-01..D-16, no plans yet. Next: /gsd-plan-phase 108. Two stale claims in this file's own Current Position item 1 were corrected from code read during that discussion: the per-profile emitter DOES exist as model_routing (router.py:399-427) and is missing profileId + sends selectedModel where the consumer reads model; and the retention tombstone self-defeat was already fixed 2026-07-30. v14.0 opened 2026-08-06 via /gsd-new-milestone. v13.0 closed 2026-08-06 (5 phases 103-107, 53/53 plans, 14/15 requirements, tagged v13.0) — its full close narrative is preserved in milestones/v13.0-MILESTONE-AUDIT.md and the per-phase SUMMARYs under milestones/v13.0-phases/, and the prior contents of this field are preserved verbatim under Current Position > v13.0 close (archived narrative) below rather than discarded. v14.0 scope: BSC-01 per-agent axis (cross-repo, astridr emitter + scoped swap.set owned from this roadmap), Convex durability (aggregates never pruned, retention tombstone self-defeat, memory-growth root cause), frontend-only mission board on today's subagentJobs data, astridr telemetry-coverage closure, small-debt sweep. Continues phase numbering -> Phases 108+."
-last_updated: "2026-08-07T08:56:00.000Z"
-last_activity: 2026-08-07
+status: executing
+stopped_at: "Phase 108 PLANNED 2026-08-07 (7 plans, 4 waves, commit 6a2aeaae) — NOT yet executing; next: /gsd-plan-phase is done, run /gsd-execute-phase 108. Gates: REQ 4/4 (ENGINE-01/02/05, TELE-02), decision coverage 16/16 with skipped=false and total=16 cross-checked against CONTEXT.md's D-01..D-16, plan-checker VERIFICATION PASSED. Research + pattern map changed the shape of the work in two ways worth carrying forward: (a) D-01's ContextVar already exists — _current_profile_id at astridr telemetry.py:95, already set per message at channels/agent_processor.py:117 — so the phase reads it rather than building one, but reset_profile_context() is called nowhere in astridr-repo and becomes load-bearing the moment providers/router.py reads it; (b) chat.send has no profile set-point at all (wiring.py:332 computes a profile for the security context only), which under D-02 would have silenced the axis on CodePulse's own chat surface and made ENGINE-05 unreachable without an inbound WhatsApp/Telegram/email message. Both are fixed in 108-01. NOTE: this stopped_at was rewritten by hand after `gsd-sdk query state.planned-phase` regressed it to a stale Phase 107 entry ('Completed 107-04-PLAN.md ... next: plan 107-05') — the documented clobber signature; only total_plans 0->7 from that verb was kept. Phase 108 context gathered 2026-08-07 (108-CONTEXT.md + 108-DISCUSSION-LOG.md, commit adb36cf6) — 4 gray areas, 16 decisions D-01..D-16. Two stale claims in this file's own Current Position item 1 were corrected from code read during that discussion: the per-profile emitter DOES exist as model_routing (router.py:399-427) and is missing profileId + sends selectedModel where the consumer reads model; and the retention tombstone self-defeat was already fixed 2026-07-30. v14.0 opened 2026-08-06 via /gsd-new-milestone. v13.0 closed 2026-08-06 (5 phases 103-107, 53/53 plans, 14/15 requirements, tagged v13.0) — its full close narrative is preserved in milestones/v13.0-MILESTONE-AUDIT.md and the per-phase SUMMARYs under milestones/v13.0-phases/, and the prior contents of this field are preserved verbatim under Current Position > v13.0 close (archived narrative) below rather than discarded. v14.0 scope: BSC-01 per-agent axis (cross-repo, astridr emitter + scoped swap.set owned from this roadmap), Convex durability (aggregates never pruned, retention tombstone self-defeat, memory-growth root cause), frontend-only mission board on today's subagentJobs data, astridr telemetry-coverage closure, small-debt sweep. Continues phase numbering -> Phases 108+."
+last_updated: "2026-08-07T09:53:29.394Z"
+last_activity: 2026-08-07 — Phase 108 planning complete
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 7
   completed_plans: 0
   percent: 0
 ---
@@ -43,10 +43,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 108 (per-profile-engine-telemetry-astridr-backend) — CONTEXT GATHERED 2026-08-07, no plans yet
-Plan: —
-Status: Ready to plan (`/gsd-plan-phase 108`)
-Last activity: 2026-08-07 — Phase 108 context gathered (16 decisions, D-01..D-16)
+Phase: 108 (per-profile-engine-telemetry-astridr-backend) — PLANNED 2026-08-07, 7 plans in 4 waves
+Plan: — (none started)
+Status: Ready to execute (`/gsd-execute-phase 108`)
+Last activity: 2026-08-07 — Phase 108 planned (7 plans, REQ 4/4, decisions 16/16, plan-checker passed)
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 

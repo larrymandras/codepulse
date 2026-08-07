@@ -379,14 +379,24 @@ Not applicable — this phase introduces no new external package dependencies on
 | A3 | No existing `runtimeIngest.test.ts` file covers the `model_routing` ingest case's coalescing behavior (stated as unverified in Wave 0 Gaps, not confirmed absent by an exhaustive search) | Item 10 | Low — worst case, the planner discovers the file exists during Wave 0 and the gap entry is a no-op |
 | A4 | A `websockets`-capable Python package is available in the astridr environment for D-16's live WS client (inferred from FastAPI/uvicorn's typical dependency tree, not directly confirmed via `pip index`/`uv.lock` grep this session) | Item 9, Environment Availability | Low — if absent, `websockets` is a well-known, easily-added stdlib-adjacent package; would need a Package Legitimacy Audit entry at plan time if actually added as a new dependency |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+*Both questions were resolved during planning (2026-08-07). Resolutions recorded inline below.*
 
 1. **Does the `profile_id` field on `SwapSetCommand` apply to `target: "voice"` at all?**
+   - **RESOLVED — option (a), reject.** `108-04-PLAN.md` Task 2(c)(1) rejects `profile_id` at the
+     command layer when `target == "voice"`. Consequence followed through: `swap_voice.py` therefore
+     needs no code change, since a voice row can never carry a scope — `108-05-PLAN.md` Task 2(c)
+     records that disposition as a comment plus a regression test rather than leaving it as silence.
    - What we know: `SwapSetCommand` is one Pydantic model shared by both targets (`ws_commands.py:224-240`); `swap_voice.py` has no per-profile override concept today (confirmed — only a single global `set_voice_override`/`clear_voice_override` pair).
    - What's unclear: whether the plan should reject/ignore `profile_id` when `target=="voice"`, or silently accept-and-no-op it.
    - Recommendation: reject/ignore explicitly (Item 8's option (a)) — cheap, and prevents a misleading `scope`-populated `control_verb_swap` row for an event that had no actual scoped effect.
 
 2. **Should `docs/astridr-contract.md` gain a `### model_routing` section as part of this phase?**
+   - **RESOLVED — single-field correction only, no new section.** `108-01-PLAN.md` Task 2 corrects
+     `docs/astridr-contract.md:1175` (`selectedModel` → `model`) in the same commit as the rename;
+     `108-05-PLAN.md` Task 2 adds the new `scope` field row. The planner exercised the stated
+     discretion NOT to author a full `### model_routing` section in this phase's budget.
    - What we know: the file has zero dedicated section for this event today (confirmed by grep); it's astridr's own telemetry contract doc, and D-08 already sets the precedent of correcting an out-of-date contract doc in the same commit as the code that makes it accurate.
    - What's unclear: ENGINE-01/TELE-02 don't explicitly require this file to be touched (only `103-CONTRACT.md`, which lives in codepulse's `.planning/`, is named by D-08).
    - Recommendation: in scope for `docs/astridr-contract.md:1175`'s single-field-name correction (required, since it currently documents `selectedModel` as correct); a full new `### model_routing` section is a nice-to-have, not a requirement — leave to planner discretion on whether it fits this phase's budget.
