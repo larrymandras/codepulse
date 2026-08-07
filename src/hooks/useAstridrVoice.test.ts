@@ -459,9 +459,17 @@ describe("useAstridrVoice", () => {
   // ─── 3/4/5. Noise gate + pause-to-send ─────────────────────────────────────
 
   it("cold <3-word fragment is rejected — nothing sends", async () => {
+    // 188.3 D-05/D-17: wake() alone now opens a bounded follow-up window
+    // (minWords = 1), so this fixture's COLD intent can no longer rely on
+    // wake() being non-warming. Repaired per D-17's cold-window requirement
+    // by removing the wake() call outright — firing onFinalResultCallback
+    // directly still reaches the same gate chain (proven by this plan's own
+    // CTRL-NOWAKE control) without opening any window. Advancing fake timers
+    // past FOLLOW_UP_WINDOW_MS instead was considered and rejected: the
+    // window's own expiry calls teardownConversation("stop"), which would
+    // make this fixture pass for the wrong reason.
     const chat = makeChat();
     renderVoice(chat);
-    wake();
     act(() => {
       onFinalResultCallback?.("hello there");
     });
@@ -909,6 +917,88 @@ describe("useAstridrVoice", () => {
         interruptedReply: undefined,
         voice: true,
       });
+    });
+  });
+
+  describe("VOICE-DISPATCH-01: wake-warmth (criterion 3, D-05/D-06/D-07)", () => {
+    it('WAKE-WARMTH-1: a short command spoken right after the wake word ("Right now.") is dispatched, not eaten by the cold 3-word floor', async () => {
+      // SIGNAL. Built from the live "cold <3-word fragment is rejected" fixture
+      // (:461-472) by changing only the assertion: after D-05, wake() alone
+      // opens a bounded follow-up window, so the 1-word floor applies and this
+      // dispatches. Before D-05, wake() opens nothing and this fixture is RED.
+      //
+      // Text choice deviates from the plan draft, which specified "Stop." —
+      // corrected here because "Stop." normalizes to an EXACT match in
+      // BARGE_IN_PHRASES (voiceState.ts) and is intercepted by the pure-barge
+      // reflex (useAstridrVoice.ts ~:1506, "NEVER send it to Ástríðr as a
+      // literal message") before the utterance ever reaches the noise gate
+      // D-05 targets — that gate is permanent and unrelated to this plan, so
+      // "Stop." can never dispatch regardless of D-05 and is not a valid
+      // signal text. "Right now." is the ACTUAL live-evidence text from the
+      // 22:13:08 2026-08-06 trace this plan's objective quotes verbatim
+      // (final {"text":"Right now.","durationMs":765} →
+      // final.noise-rejected {"warm":false,"followUpOpen":false}) and is
+      // confirmed not a barge-in/vision/swap/end-phrase match.
+      const chat = makeChat();
+      renderVoice(chat);
+      wake();
+      act(() => {
+        onFinalResultCallback?.("Right now.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).toHaveBeenCalledWith("Right now.", {
+        interruptedReply: undefined,
+        voice: true,
+      });
+    });
+
+    it('CTRL-NOWAKE: the SAME "Right now." with NO preceding wake() still gets the cold 3-word floor — nothing sends', async () => {
+      // D-07 over-block control. This is WAKE-WARMTH-1 with exactly the
+      // wake() call removed and nothing else changed — same makeChat(), same
+      // renderVoice(chat), same onFinalResultCallback("Right now."), same
+      // 3000ms advance. The one-variable difference between this and
+      // WAKE-WARMTH-1 is the entire point: D-05 must not become a blanket
+      // widening. This fixture must stay green before AND after the
+      // production change.
+      const chat = makeChat();
+      renderVoice(chat);
+      act(() => {
+        onFinalResultCallback?.("Right now.");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(chat.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it("CTRL-WAKE-IGNORED: a wake landing on an already-open conversation (wake.ignored) does not refresh the follow-up countdown", () => {
+      // D-06 control. First wake() opens the conversation; a second wake() at
+      // t=25_000 hits the `conversationOpenRef.current` early-return branch
+      // (wake.ignored) because the conversation is already open. If the
+      // ignored wake refreshed the window, followUpOpen would still be true
+      // at t=31_000 (25_000 + 6_000 > the original 30_000s window only if
+      // refreshed from t=25_000). The assertion of record is followUpOpen at
+      // t=31_000 — a window that had been refreshed would still be open then.
+      const { result } = renderVoice(makeChat());
+      wake();
+      act(() => {
+        vi.advanceTimersByTime(25_000);
+      });
+      window.__astridrVoiceTrace = [];
+      wake(); // hits wake.ignored — conversationOpenRef.current is already true
+      // Precondition check only (NOT the assertion of record): confirms the
+      // second wake() actually took the ignored branch rather than, say,
+      // silently no-op'ing for an unrelated reason.
+      const traceAfterSecondWake = window.__astridrVoiceTrace ?? [];
+      expect(traceAfterSecondWake.some((e) => e.ev === "wake.ignored")).toBe(true);
+      act(() => {
+        vi.advanceTimersByTime(6_000); // total elapsed 31_000ms
+      });
+      // Assertion of record: an ignored wake grants nothing. A refreshed
+      // window would still be open here.
+      expect(result.current.followUpOpen).toBe(false);
     });
   });
 
@@ -1664,18 +1754,35 @@ describe("useAstridrVoice", () => {
   });
 
   it("a barge-in-caused TTS end does not open a follow-up window", () => {
+    // 188.3 D-05 repair (bucket a — legitimately now warm, assertion-level
+    // variant): wake() alone now opens a follow-up window immediately
+    // (D-05), so `followUpOpen` is `true` by the time this sequence even
+    // starts — a plain boolean read can no longer distinguish "wake already
+    // opened one" from "the barge-caused TTS end opened ANOTHER one", which
+    // is the actual invariant this fixture protects (useAstridrVoice.ts
+    // :1852-1855: a barge-caused tts.end calls resetSilenceTimer(), NOT
+    // onTurnEnd()/openFollowUpWindow() — that production code is untouched
+    // by this plan). wake() cannot be deleted per the usual bucket-(a) repair
+    // here: it is structurally required to reach the speaking/barge state
+    // this fixture exercises. Repair: reset the trace buffer right after
+    // wake() (which itself fires exactly one "followup.open"), then assert
+    // NO SECOND "followup.open" trace fires from the barge-caused end —
+    // that is the precise, D-05-proof form of the original assertion.
     let chat = makeChat({
       interrupt: vi.fn(() => "partial"),
       streamingReplyRef: { current: "Tomorrow brings rain showers near ninety degrees" },
     } as Partial<AstridrChat>);
     const { result, rerender } = renderVoice(chat);
     wake();
+    expect(result.current.followUpOpen).toBe(true); // D-05: wake alone opened it
+    window.__astridrVoiceTrace = [];
     chat = setTtsPlaying(rerender, chat, true);
     act(() => {
       onInterimResultCallback?.("stop"); // barge-in cuts TTS
     });
     chat = setTtsPlaying(rerender, chat, false); // TTS stops BECAUSE of the barge
-    expect(result.current.followUpOpen).toBe(false);
+    const trace = window.__astridrVoiceTrace ?? [];
+    expect(trace.some((entry) => entry.ev === "followup.open")).toBe(false);
   });
 
   // ─── 11. Spoken strict-mode command ────────────────────────────────────────
@@ -2055,9 +2162,12 @@ describe("useAstridrVoice", () => {
       // "um" is 1 word and neither a barge-in phrase, end-phrase, nor
       // control verb, so it is a real input the current gate rejects --
       // verified by reading shouldReject directly, not guessed.
+      //
+      // 188.3 D-05/D-17: wake() call removed (same repair as the fixture at
+      // :461) since wake() alone now opens a follow-up window; the duplex
+      // callback reaches the same handleFinalResultRef sink without it.
       const chat = makeChat();
       renderVoice(chat);
-      wake();
       act(() => {
         onDuplexFinalTranscriptCallback?.("um");
       });
@@ -2341,9 +2451,11 @@ describe("useAstridrVoice", () => {
     });
 
     it("scoping: a cold 1-word fragment with NO accumulation pending is still rejected", async () => {
+      // 188.3 D-05/D-17: wake() call removed — same repair as :461/:2134,
+      // since wake() alone now opens a follow-up window and this fixture's
+      // intent is specifically the COLD floor.
       const chat = makeChat();
       renderVoice(chat);
-      wake();
       window.__astridrVoiceTrace = [];
       act(() => {
         onFinalResultCallback?.("On");

@@ -1929,6 +1929,14 @@ export function useAstridrVoice({
       recognitionStart();
       duplexStartRef.current(); // D-10: opens on the same wake as the 183 fallback
       resetSilenceTimer();
+      // 188.3 D-05: wake → conversation open grants a bounded follow-up
+      // window, mirroring the shipped policy at :1438 (wake phrase arriving
+      // as transcript text already calls openFollowUpWindow() there) — this
+      // is consistency with 188.1 D-02, not new policy. Guarded on
+      // !strictModeRef.current because openFollowUpWindow()'s strict-ON
+      // branch calls teardownConversation("stop") immediately, which would
+      // tear down the conversation in the same tick the wake just opened it.
+      if (!strictModeRef.current) openFollowUpWindow();
     },
     debug: VOICE_DEBUG,
   });
