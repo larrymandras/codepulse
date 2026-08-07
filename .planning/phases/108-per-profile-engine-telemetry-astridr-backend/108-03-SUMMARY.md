@@ -27,6 +27,10 @@ key-files:
     - convex/runtimeIngest.ts
     - convex/runtimeIngest.test.ts
     - convex/_generated/api.d.ts
+    # Added 2026-08-07 (gap closure, adversarial audit):
+    - convex/activeEngineFilters.ts
+    - convex/activeEngine.test.ts
+    - .planning/REQUIREMENTS.md
 
 key-decisions:
   - "D-13 followed verbatim: control_verb_swap has no isUnresolvedRouting-equivalent guard — a refusal (affinity-refused, resolver failure) is a valid history row, proven by a dedicated regression test asserting the case body never calls isUnresolvedRouting"
@@ -35,17 +39,29 @@ key-decisions:
 patterns-established:
   - "A case's own explanatory comment can contain the exact string a negative source-check test asserts against (e.g. this case's D-13 comment literally says 'isUnresolvedRouting') — always comment-strip before asserting on case-body text, confirmed live during this plan"
 
-requirements-completed: [ENGINE-01]
+requirements-completed: []
+# CORRECTED 2026-08-07 (adversarial claims-audit, gap closure): this field
+# originally read `[ENGINE-01]` and the comment below it argued ENGINE-01
+# was "now genuinely complete". That was premature. ENGINE-01's text is a
+# present-tense behavioral claim ("Ástríðr emits... carrying a real
+# profileId and model id"), and nothing had been deployed or exercised
+# end-to-end: the running astridr-agent container held pre-phase code, the
+# Convex functions were not deployed, and the two halves had never run
+# together. 108-CONTEXT.md created ENGINE-05 as the EXPLICIT separate gate
+# for exactly this ("verified working end-to-end on the running stack
+# BEFORE the dependent UI is enabled... closed during execution, not
+# claimed after") — ENGINE-05 remains deferred to plan 108-07, which has
+# not run. REQUIREMENTS.md's checklist and traceability table are both
+# reverted to Pending in the same gap-closure pass that added this note.
 # TELE-02 stays Pending, matching 108-02-SUMMARY's own corrected precedent:
 # its full text is "routed to a domain table AND surfaced as per-profile
 # swap history" — this plan (with 108-02) delivers the routing half, but
 # the "surfaced" half is 108-06's GlobalSwapModal readout, not yet built.
-# ENGINE-01 is now genuinely complete: 108-01 delivered the astridr-side
-# emit + refuse-to-emit behavior (its own SUMMARY already declared this,
-# though REQUIREMENTS.md's traceability table was never actually flipped —
-# checked live before writing this line: still "Pending" as of this plan's
-# start), and this plan closes the remaining correctness gap research Item
-# 6 identified (a failed resolution rendering as a profile's live engine).
+# What this plan DID close: the model_routing ingest-side correctness gap
+# research Item 6 identified (a status:"failed" resolution rendering as a
+# profile's live engine), plus — closed in the same 2026-08-07 gap-closure
+# pass — the isUnresolvedRouting TypeError/batch-poisoning defect an
+# adversarial audit found in this plan's own delivered code.
 
 # Metrics
 duration: ~35min
@@ -82,7 +98,25 @@ Each task was committed atomically:
 
 ## Files Created/Modified
 - `convex/runtimeIngest.ts` - added `case "control_verb_swap"` (44 net new lines) and the `d.status === "failed"` skip inside `case "model_routing"`
-- `convex/runtimeIngest.test.ts` - added `describe("runtimeIngest — model_routing case", ...)` (5 tests) and `describe("runtimeIngest — control_verb_swap case", ...)` (9 tests), plus a local `stripCommentLinesForIngestTests` helper and two mirror functions (`simulateModelRoutingCase`, `simulateControlVerbSwapCase`)
+- `convex/runtimeIngest.test.ts` - added `describe("runtimeIngest — model_routing case", ...)` (6 tests) and `describe("runtimeIngest — control_verb_swap case", ...)` (8 tests), plus a local `stripCommentLinesForIngestTests` helper and two mirror functions (`simulateModelRoutingCase`, `simulateControlVerbSwapCase`)
+  <!-- CORRECTED 2026-08-07 (adversarial claims-audit): this line originally read "(5 tests)" and
+       "(9 tests)" — the total of 14 was right but the per-block split was wrong. Ground truth
+       (`git show 9e705f2d:convex/runtimeIngest.test.ts`, counting `it(` between each describe's
+       braces): "runtimeIngest — model_routing case" has 6 `it(` blocks, "runtimeIngest —
+       control_verb_swap case" has 8. 6 + 8 = 14, matching the correct total elsewhere in this
+       file. Note: both describe blocks (and the two mirror functions named here) were replaced
+       with real-function coverage against `resolveModelRoutingEvent`/`resolveControlVerbSwapEvent`
+       in the same 2026-08-07 gap-closure pass — this line is now a historical record of what plan
+       108-03 itself delivered, not a description of the current file. -->
+- **2026-08-07 gap closure (adversarial audit on this plan):** `convex/activeEngineFilters.ts`'s
+  `isUnresolvedRouting` threw a `TypeError` on a non-string `profileId`/`model` instead of treating
+  it as unresolved — a batch-poisoning defect in exactly the class this plan's own D-13/WR-06/168-06
+  comments claim immunity to. `convex/runtimeIngest.ts`'s `control_verb_swap` case guard was
+  truthiness-only, not type-checked, with the same failure mode. Both fixed; the case-body logic for
+  both `model_routing` and `control_verb_swap` was extracted into real, exported, directly-testable
+  functions (`resolveModelRoutingEvent`, `resolveControlVerbSwapEvent`), and every mirror test this
+  plan added was replaced with coverage against those real functions (mutation-verified RED/restored;
+  see "## Mutation-Check Transcripts" below, appended for this pass).
 - `convex/_generated/api.d.ts` - regenerated via `npx convex codegen` (local typegen), 2-line additive diff adding `controlVerbSwaps` to the generated `internal.*` namespace
 
 ## Decisions Made
@@ -124,7 +158,7 @@ None - no external service configuration required. No deploy was run (deferred t
 ## Next Phase Readiness
 
 - Plan 108-06 (GlobalSwapModal swap-history readout) can now rely on live `controlVerbSwaps` rows actually arriving from astridr's `control_verb_swap` events — the full write path (ingest case → `internal.controlVerbSwaps.record` → table) is wired and tested. TELE-02 itself stays Pending until 108-06 lands the "surfaced as per-profile swap history" half of its own definition.
-- ENGINE-01's "fabricated current-engine reading" gap (research Item 6) is closed: a failed routing resolution can no longer reach `activeEngineSnapshots`.
+- ENGINE-01's ingest-side correctness gaps are closed at the code level: the `status:"failed"` fabrication gap (research Item 6) AND (2026-08-07 gap closure) the `isUnresolvedRouting` TypeError/batch-poisoning gap an adversarial audit found in this plan's own delivered code. **ENGINE-01 itself remains Pending** (reverted from a premature Complete in the same gap-closure pass) — its text is a present-tense behavioral claim and nothing has been deployed or exercised end-to-end yet. It closes only when ENGINE-05 (deferred to 108-07) verifies the full astridr→Convex path working live on the running stack.
 - No blockers for 108-06.
 - Deploy is still deferred to 108-07 — the self-hosted backend has NOT received these function changes beyond what `npx convex codegen`'s local-bindings-only pull already touched.
 
@@ -190,11 +224,78 @@ Error("mutation-test"); ... }' to not match /throw/
 ```
 Restored; re-ran → 64/64 passed. `git diff --stat convex/runtimeIngest.ts` empty after final restore; `npx tsc --noEmit` clean.
 
+### 2026-08-07 gap-closure mutation transcripts (adversarial audit)
+
+Same discipline as the three mutations above: applied directly to the real file via `Edit`, run, restored via `cp <scratchpad>/*.bak <file>`, re-verified byte-identical via `diff`, then `npx tsc --noEmit` + the full targeted suite re-run green.
+
+**Mutation 4 — reverted `isUnresolvedRouting` (`convex/activeEngineFilters.ts`) to `row.profileId?.trim()`/`row.model?.trim()` (the original throwing form):**
+```
+FAIL convex/runtimeIngest.test.ts > resolveModelRoutingEvent (real function, convex/runtimeIngest.ts) >
+defect-1 gap closure: a non-string profileId or model does not throw a TypeError — returns null instead
+AssertionError: expected [Function] to not throw an error but 'TypeError: row.profileId?.trim is not…' was thrown
+- Expected: undefined
++ Received: "TypeError: row.profileId?.trim is not a function"
+```
+Restored via `cp`; `diff` against backup empty; re-ran → all passing.
+
+**Mutation 5 — reverted `resolveControlVerbSwapEvent`'s type-checked guard to the original truthiness-only `if (!verb || !path_ || !channel) return null;`:**
+```
+FAIL convex/runtimeIngest.test.ts > resolveControlVerbSwapEvent (real function, convex/runtimeIngest.ts) >
+defect-2 gap closure: a wrong-typed required field (verb/path/channel) does not throw — returns null instead
+AssertionError: expected { verb: 42, target: undefined, … } to be null
+FAIL convex/runtimeIngest.test.ts > resolveControlVerbSwapEvent (real function, convex/runtimeIngest.ts) >
+defect-2 gap closure: a wrong-typed optional field does not throw — returns null instead of reaching the record validator
+AssertionError: expected { verb: 'swap_model', …, providerAffinity: 42, … } to be null
+```
+Restored via `cp`; `diff` against backup empty; re-ran → all passing.
+
+**Mutation 6 — broke the `status:"failed"` skip (changed to an unreachable sentinel string) and the profileId snake_case coalesce (dropped `?? d.profile_id`) in `resolveModelRoutingEvent`:**
+```
+FAIL convex/runtimeIngest.test.ts > resolveModelRoutingEvent (real function, convex/runtimeIngest.ts) >
+skips (returns null for) a status:'failed' event even with an otherwise-valid profileId/model (ENGINE-01, research Item 6)
+AssertionError: expected { profileId: 'personal', … } to be null
+FAIL convex/runtimeIngest.test.ts > resolveModelRoutingEvent (real function, convex/runtimeIngest.ts) >
+coalesces profileId from either camelCase or snake_case
+AssertionError: expected undefined to be 'biz'
+```
+Restored via `cp`; `diff` against backup empty; `npx tsc --noEmit` clean; re-ran `convex/runtimeIngest.test.ts convex/activeEngineFilters.test.ts convex/activeEngine.test.ts convex/controlVerbSwaps.test.ts` → 98/98 passed.
+
 ## Defect-Class Sweep
 
 After Task 1, swept the repo for other instances of the class this plan's own critical-correctness rules guard against:
 - `grep -rn "api\.controlVerbSwaps" src/ convex/` → 2 hits, both prose (a doc-comment in `controlVerbSwaps.ts` explaining why the mutation must stay internal-only, and this plan's own new test asserting its absence) — no live `api.controlVerbSwaps` reference anywhere.
+  <!-- CORRECTED 2026-08-07 (adversarial claims-audit): re-ran this exact grep against the file as
+       it stood at commit 9e705f2d (`git show 9e705f2d:convex/runtimeIngest.test.ts` +
+       `git show 9e705f2d:convex/controlVerbSwaps.ts`) and got 3 hits, not 2:
+       `controlVerbSwaps.ts:48` (the doc-comment) and TWO in `runtimeIngest.test.ts` — the test's
+       title string (line 895, prose) AND the literal assertion target
+       `expect(caseBody).not.toContain("api.controlVerbSwaps")` (line 905, not prose — the actual
+       check content). The substance holds regardless: none of the 3 is a live `api.` namespace
+       call, so "no live api.controlVerbSwaps reference" was and remains correct — only the count
+       and the "both prose" description were wrong. -->
 - `grep -rln "control_verb_swap"` → exactly the 4 files expected (`controlVerbSwaps.ts`, `runtimeIngest.ts`, `runtimeIngest.test.ts`, `schema.ts`); nothing stray in `src/`.
+- **2026-08-07 gap-closure sweep (adversarial audit, mandatory defect-class sweep):** grepped the
+  whole repo (`convex/`, `src/`, tests/fixtures included) for the broader class — "a method call on
+  a field taken from an untrusted ingest payload without a runtime type check, inside a code path
+  that has no per-event catch" — via `?.trim(`, `?.toLowerCase(`, `?.toUpperCase(`, `?.split(`,
+  `?.replace(`, `?.startsWith(`, and unguarded `.length` on payload-derived values. Hits outside
+  `convex/runtimeIngest.ts`'s own `model_routing`/`control_verb_swap` cases (already fixed above):
+  `convex/forge.ts:120` (`match?.[1]?.trim()` — `match` is a `RegExp.exec` result, `[1]` is
+  guaranteed a string when `match` is non-null; SAFE), `src/lib/skills.ts:126,217,224` and
+  `src/components/*` (`AgentNode.tsx`, `SwarmTaskNode.tsx`, `ChatBubble.tsx`, `KanbanCard.tsx`,
+  `CodeVaultGraph.tsx`, `control-center/BrainControl.tsx`) — all frontend, either already
+  truthy-guarded before the call or consuming a value typed via a Convex table schema (post-
+  validator, so type-guaranteed by the time it's read) or a non-ingest data source (a filesystem
+  scan / graph library); none reachable from the batch-poisoning ingest loop. `convex/integrations.ts:67`
+  reads an already-stored `events` table row (`eventType: v.string()`, required — Convex's own
+  arg validator already enforced this at write time) behind a truthy AND-guard; SAFE.
+  `convex/ingest.ts` (`buildIngest`, the `/ingest` httpAction) processes ONE event per request, not
+  a batch loop — a malformed field there 500s that single request but cannot poison a batch the way
+  `runtimeIngest.ts`'s `for (const evt of events)` loop can; out of scope for this defect class.
+  NOT audited: whether every one of `runtimeIngest.ts`'s ~70 other `ctx.runMutation` call sites
+  forwards untyped payload fields to a REQUIRED validator (the same mechanism as defect 2, just
+  without an explicit `.method()` call) — that is a materially larger effort than this sweep's
+  scoped method-call pattern and is flagged here as a follow-up, not fixed.
 
 ## Shared-Checkout Disclosure
 
