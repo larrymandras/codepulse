@@ -204,19 +204,47 @@ interface ResolvedModelRoutingEvent {
   timestamp: number;
 }
 
-/** Runtime type guard: `undefined` or a `string` — matches every
+/** Runtime type guard: `undefined`, `null`, or a `string` — matches every
  * `v.optional(v.string())` field this file forwards to a Convex
  * `internalMutation`. A field of any other type must never reach the
  * mutation call (its argument validator throws, uncaught, inside the batch
- * loop — the WR-06/168-06 class). */
-function isOptionalString(value: unknown): value is string | undefined {
-  return value === undefined || typeof value === "string";
+ * loop — the WR-06/168-06 class).
+ *
+ * 108-07 gap closure: `null` is treated as "field absent", same as
+ * `undefined`. A producer can legitimately serialize an absent optional
+ * field as an explicit JSON `null` rather than omitting the key (confirmed
+ * live: astridr's buffered `_post_to_convex()` did exactly this for
+ * `session_id` on every WS-originated `control_verb_swap`) — Convex's own
+ * `v.optional(v.string())` validator does NOT accept an explicit `null`, so
+ * this guard used to reject it, `resolveControlVerbSwapEvent` returned
+ * `null` for the WHOLE event, and the insert was silently skipped with no
+ * exception and no counter increment. This guard only decides SKIP vs
+ * PROCEED — it never forwards a `null` itself. See `normalizeOptional`
+ * below, which is what strips the `null` out of the value actually
+ * returned to the caller. */
+function isOptionalString(value: unknown): value is string | undefined | null {
+  return value === undefined || value === null || typeof value === "string";
 }
 
-/** Runtime type guard: `undefined` or a `number` — matches every
- * `v.optional(v.float64())` field. */
-function isOptionalNumber(value: unknown): value is number | undefined {
-  return value === undefined || typeof value === "number";
+/** Runtime type guard: `undefined`, `null`, or a `number` — matches every
+ * `v.optional(v.float64())` field. Same `null`-as-absent rationale as
+ * `isOptionalString` above (108-07 gap closure). */
+function isOptionalNumber(value: unknown): value is number | undefined | null {
+  return value === undefined || value === null || typeof value === "number";
+}
+
+/**
+ * normalizeOptional — converts an explicit `null` to `undefined`, passing
+ * every other value through unchanged. Convex's `v.optional(...)`
+ * validators accept an omitted key or `undefined` but reject an explicit
+ * `null` outright, so any value that survives an `isOptionalString`/
+ * `isOptionalNumber` check (which now treats `null` as valid-because-absent)
+ * MUST be passed through this before it reaches a mutation arg — otherwise
+ * the type guard's own `null` allowance would just relocate the throw from
+ * the guard to the validator. 108-07 gap closure.
+ */
+function normalizeOptional<T>(value: T | null | undefined): T | undefined {
+  return value === null ? undefined : value;
 }
 
 /**
@@ -268,12 +296,15 @@ export function resolveModelRoutingEvent(
     return null;
   }
   // isUnresolvedRouting has already proven both are non-empty strings.
+  // normalizeOptional: selectionPath/expiresAt may have survived the guards
+  // above as an explicit `null` (108-07 gap closure) — strip it to
+  // `undefined` before it reaches recordRouting's v.optional() validators.
   return {
     profileId: routedProfileId as string,
     model: routedModel as string,
     mode,
-    selectionPath,
-    expiresAt,
+    selectionPath: normalizeOptional(selectionPath),
+    expiresAt: normalizeOptional(expiresAt),
     timestamp,
   };
 }
@@ -347,16 +378,23 @@ export function resolveControlVerbSwapEvent(
     return null;
   }
 
+  // normalizeOptional: any of these may have survived the guards above as
+  // an explicit `null` (108-07 gap closure — this is the exact defect
+  // confirmed live: astridr's WS `swap.set` dispatch always constructs
+  // `ControlVerbContext(session_id=None, ...)`, and the buffered telemetry
+  // post serialized that as literal `"session_id": null`) — strip it to
+  // `undefined` before it reaches controlVerbSwaps.record's v.optional()
+  // validators, which reject an explicit `null`.
   return {
     verb,
-    target,
-    resolved,
-    providerAffinity,
-    voiceId,
+    target: normalizeOptional(target),
+    resolved: normalizeOptional(resolved),
+    providerAffinity: normalizeOptional(providerAffinity),
+    voiceId: normalizeOptional(voiceId),
     path: path_,
-    reason,
-    scope,
-    sessionId,
+    reason: normalizeOptional(reason),
+    scope: normalizeOptional(scope),
+    sessionId: normalizeOptional(sessionId),
     channel,
     timestamp,
   };
@@ -404,6 +442,22 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
     // metric) so a caller polling ingest health can see loss without a
     // separate dashboard query.
     let droppedCount = 0;
+
+    // 108-07 gap closure: a resolver (resolveModelRoutingEvent /
+    // resolveControlVerbSwapEvent) returning `null` skips the domain-table
+    // insert with no exception — the always-run events.insertEvent write
+    // above still lands, so the request never throws and `droppedCount`
+    // (which counts only THROWS caught below) never sees it. That made a
+    // 100%-skip-rate event kind (confirmed live: every WS `swap.set`
+    // dispatch's `control_verb_swap` event, for the reason documented on
+    // `isOptionalString` above) invisible to any caller polling ingest
+    // health via this response body. `skippedCount` is the distinct,
+    // real counter for that class: incremented exactly once per resolver
+    // refusal, at the two call sites below, and nowhere else. Proven by
+    // runtimeIngest.test.ts's "resolver refusal increments the skipped
+    // counter" test, which asserts the response body's `skipped` field on a
+    // genuine refusal, not merely that the field exists.
+    let skippedCount = 0;
 
     for (const evt of events) {
       // Per-event isolation (WR-06/168-06, Phase 108 gap closure, adversarial
@@ -932,6 +986,14 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             // the rest of the batch — see that function's docstring).
             const resolved = resolveModelRoutingEvent(data, timestamp);
             if (!resolved) {
+              // 108-07 gap closure: visible, not silent — a refused
+              // resolution (failed status, unresolved/sentinel
+              // profileId+model, or a wrong-typed optional field) is real
+              // signal loss, distinct from a throw.
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped model_routing event: resolveModelRoutingEvent rejected the payload (failed status, unresolved profileId/model, or a wrong-typed optional field)"
+              );
               break;
             }
             await ctx.runMutation(internal.activeEngine.recordRouting, resolved);
@@ -954,6 +1016,14 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
             // runtime TYPE mismatch causes a skip there.
             const resolved = resolveControlVerbSwapEvent(data, timestamp);
             if (!resolved) {
+              // 108-07 gap closure: this is the exact defect the live
+              // ENGINE-05 proof found — every WS swap.set dispatch used to
+              // be refused here (an explicit `session_id: null` rejected by
+              // the pre-fix isOptionalString) with zero visible signal.
+              skippedCount++;
+              console.warn(
+                "[runtimeIngest] skipped control_verb_swap event: resolveControlVerbSwapEvent rejected the payload (missing/wrong-typed verb, path, or channel, or a wrong-typed optional field)"
+              );
               break;
             }
             await ctx.runMutation(internal.controlVerbSwaps.record, resolved);
@@ -1542,7 +1612,7 @@ export const runtimeIngest = httpAction(async (ctx, request) => {
     // cron once that is re-enabled — see convex/crons.ts.)
 
     return new Response(
-      JSON.stringify({ ingested: events.length, dropped: droppedCount }),
+      JSON.stringify({ ingested: events.length, dropped: droppedCount, skipped: skippedCount }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...getCorsHeaders(request) },

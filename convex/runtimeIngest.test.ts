@@ -1114,3 +1114,215 @@ describe("runtimeIngest httpAction — per-event batch isolation (WR-06/168-06 g
     vi.unstubAllEnvs();
   });
 });
+
+// ---------------------------------------------------------------------------
+// 108-07 gap closure — live-confirmed defect: a WS `swap.set` dispatch
+// (astridr/api/ws_commands.py:1149) always constructs
+// `ControlVerbContext(session_id=None, ...)`, and astridr's buffered
+// telemetry post (`_post_to_convex()`) did not strip `None`-valued keys, so
+// the payload carried a literal `"session_id": null`. `isOptionalString`
+// rejected that explicit `null` (it only accepted `undefined`), so
+// `resolveControlVerbSwapEvent` returned `null` for the WHOLE event and the
+// insert was silently skipped — no exception, invisible to `dropped`.
+// Captured live payload (2026-08-07 ENGINE-05 proof):
+//   {"event_type":"control_verb_swap","data":{"verb":"swap_model",
+//    "target":null,"resolved":null,"provider_affinity":null,"path":"restore",
+//    "session_id":null,"channel":"codepulse-control-center","scope":"consulting"}}
+// ---------------------------------------------------------------------------
+
+describe("108-07 fix 1 — null-valued optional fields are treated as absent, not rejected", () => {
+  it("resolveControlVerbSwapEvent resolves the exact live-captured payload with 3 explicit-null optional fields (previously returned null)", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        target: null,
+        resolved: null,
+        provider_affinity: null,
+        path: "restore",
+        session_id: null,
+        channel: "codepulse-control-center",
+        scope: "consulting",
+      },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.verb).toBe("swap_model");
+    expect(result?.path).toBe("restore");
+    expect(result?.channel).toBe("codepulse-control-center");
+    expect(result?.scope).toBe("consulting");
+  });
+
+  it("resolveControlVerbSwapEvent normalizes every null optional field to undefined — never forwards a literal null (Convex v.optional(v.string()) rejects an explicit null)", () => {
+    const result = resolveControlVerbSwapEvent(
+      {
+        verb: "swap_model",
+        path: "restore",
+        channel: "c",
+        target: null,
+        resolved: null,
+        providerAffinity: null,
+        voiceId: null,
+        reason: null,
+        scope: null,
+        sessionId: null,
+      },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.target).toBeUndefined();
+    expect(result?.resolved).toBeUndefined();
+    expect(result?.providerAffinity).toBeUndefined();
+    expect(result?.voiceId).toBeUndefined();
+    expect(result?.reason).toBeUndefined();
+    expect(result?.scope).toBeUndefined();
+    expect(result?.sessionId).toBeUndefined();
+    // The observable difference that matters to the Convex validator: a
+    // JSON-serialized `null` key survives; an `undefined` key is dropped.
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+  });
+
+  it("resolveModelRoutingEvent resolves a payload with explicit-null selectionPath/expiresAt (previously returned null) and normalizes both to undefined", () => {
+    const result = resolveModelRoutingEvent(
+      { profileId: "personal", model: "claude-opus-5", selectionPath: null, expiresAt: null },
+      1000
+    );
+    expect(result).not.toBeNull();
+    expect(result?.selectionPath).toBeUndefined();
+    expect(result?.expiresAt).toBeUndefined();
+    expect(JSON.stringify(result)).not.toMatch(/:null/);
+  });
+
+  it("a genuinely wrong-typed optional field (not null) is still rejected — the null carve-out does not widen to arbitrary types", () => {
+    expect(
+      resolveControlVerbSwapEvent(
+        { verb: "swap_model", path: "restore", channel: "c", target: 42 },
+        1000
+      )
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent(
+        { verb: "swap_model", path: "restore", channel: "c", sessionId: { nested: true } },
+        1000
+      )
+    ).toBeNull();
+    expect(
+      resolveModelRoutingEvent({ profileId: "personal", model: "m", selectionPath: 42 }, 1000)
+    ).toBeNull();
+  });
+
+  it("required (non-optional) fields are unaffected by the null carve-out — a null verb/path/channel still refuses the event", () => {
+    expect(
+      resolveControlVerbSwapEvent({ verb: null, path: "restore", channel: "c" }, 1000)
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent({ verb: "swap_model", path: null, channel: "c" }, 1000)
+    ).toBeNull();
+    expect(
+      resolveControlVerbSwapEvent({ verb: "swap_model", path: "restore", channel: null }, 1000)
+    ).toBeNull();
+  });
+});
+
+describe("108-07 fix 2 — silent resolver skips are now counted and surfaced as `skipped` (httpAction, real handler)", () => {
+  it("a control_verb_swap event the resolver refuses (missing path/channel) increments `skipped`, not `dropped`, logs a warning, and the batch still 200s", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = ingestRequest([
+      { eventType: "control_verb_swap", data: { verb: "swap_model" } }, // path/channel absent -> resolver refuses
+    ]);
+
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+
+    expect(res.status).toBe(200);
+    expect(body.skipped).toBe(1);
+    expect(body.dropped).toBe(0);
+    // Only the always-run events.insertEvent call landed — the refused
+    // resolver result never reached internal.controlVerbSwaps.record.
+    expect(runMutation).toHaveBeenCalledTimes(1);
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    const warnedMessage = consoleWarnSpy.mock.calls.map((c) => c.join(" ")).join("\n");
+    expect(warnedMessage).toContain("control_verb_swap");
+    consoleWarnSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("`skipped` is 0 for the live-captured payload (explicit-null optional fields, previously refused) — the counter is real, not hardcoded to fire", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = ingestRequest([
+      {
+        eventType: "control_verb_swap",
+        data: {
+          verb: "swap_model",
+          target: null,
+          resolved: null,
+          path: "restore",
+          session_id: null,
+          channel: "codepulse-control-center",
+          scope: "consulting",
+        },
+      },
+    ]);
+
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+
+    expect(res.status).toBe(200);
+    expect(body.skipped).toBe(0);
+    expect(body.dropped).toBe(0);
+    // Two calls: events.insertEvent (always) + internal.controlVerbSwaps.record.
+    expect(runMutation).toHaveBeenCalledTimes(2);
+    const recordCall = runMutation.mock.calls.find(([, args]) => args && args.verb === "swap_model");
+    expect(recordCall).toBeDefined();
+    expect(recordCall![1].scope).toBe("consulting");
+    expect(recordCall![1].sessionId).toBeUndefined();
+    vi.unstubAllEnvs();
+  });
+
+  it("a model_routing event the resolver refuses (unresolved profileId/model) increments `skipped`, not `dropped`", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runMutation = vi.fn().mockResolvedValue(undefined);
+    const req = ingestRequest([
+      { eventType: "model_routing", data: { profileId: "unknown", model: "unknown" } },
+    ]);
+
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+
+    expect(res.status).toBe(200);
+    expect(body.skipped).toBe(1);
+    expect(body.dropped).toBe(0);
+    expect(runMutation).toHaveBeenCalledTimes(1); // only events.insertEvent
+    consoleWarnSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("skipped and dropped are independent counters within the same batch — one of each is reported correctly", async () => {
+    vi.stubEnv("ASTRIDR_INGEST_API_KEY", "test-key");
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const runMutation = vi.fn(async (_fnRef: any, args: any) => {
+      if (args && args.model === "POISON_MARKER") {
+        throw new Error("ArgumentValidationError: model must be a string");
+      }
+      return undefined;
+    });
+    const req = ingestRequest([
+      { eventType: "control_verb_swap", data: { verb: "swap_model" } }, // resolver refuses -> skipped
+      { eventType: "llm_call", data: { provider: "a", model: "POISON_MARKER" } }, // throws -> dropped
+    ]);
+
+    const res = await (runtimeIngest as any)._handler({ runMutation }, req);
+    const body = JSON.parse(await res.text());
+
+    expect(res.status).toBe(200);
+    expect(body.skipped).toBe(1);
+    expect(body.dropped).toBe(1);
+    consoleErrorSpy.mockRestore();
+    consoleWarnSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+});
