@@ -104,3 +104,74 @@ describe("cacheStats hit rate", () => {
     expect(cacheStats([]).byModel).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// COST-01 (2026-08-07): the tests above MIRROR the logic rather than calling
+// it, which is why they stayed green while the real handler did an UNBOUNDED
+// `.collect()` over the runtime firehose table — the read shape CLAUDE.md's
+// "Self-Hosted Convex — Operational Rules" blames for the 2026-07-21/22 outage
+// and the 2026-08-02 Analytics blackout, and which its own neighbour
+// `sessionCalls` was capped for at Phase 105 D-12.
+//
+// These exercise the REAL exported handler via `._handler` (the aggregates.test.ts
+// convention), so a future regression in production code actually fails here.
+// ---------------------------------------------------------------------------
+import { cacheStats as cacheStatsQuery, CACHE_STATS_READ_CAP } from "./llm";
+
+function makeLlmCtx(rows: any[]) {
+  const chain = {
+    withIndex: () => chain,
+    filter: () => chain,
+    order: () => chain,
+    take: (n: number) => Promise.resolve(rows.slice(0, n)),
+    collect: () => Promise.resolve(rows),
+  };
+  return { db: { query: () => chain } } as any;
+}
+
+const anthropicRow = (i: number) => ({
+  provider: "anthropic_direct",
+  model: "claude-sonnet-5",
+  promptTokens: 10,
+  cacheReadInputTokens: 90,
+  cacheCreationInputTokens: 0,
+  timestamp: i,
+});
+
+describe("cacheStats — real handler, bounded read (COST-01)", () => {
+  it("CONTROL: computes the same hit rate the mirrored spec does", async () => {
+    const ctx = makeLlmCtx([
+      { provider: "anthropic_advisor", model: "claude-sonnet-4-6", promptTokens: 20, cacheReadInputTokens: 8402, cacheCreationInputTokens: 0 },
+      { provider: "anthropic_direct", model: "claude-sonnet-4-6", promptTokens: 100, cacheReadInputTokens: 0, cacheCreationInputTokens: 1000 },
+      { provider: "openrouter", model: "gpt-4.1", promptTokens: 5000 },
+    ]);
+    const r = await (cacheStatsQuery as any)._handler(ctx, {});
+    expect(r.overall.calls).toBe(2);
+    expect(r.overall.totalPromptTokens).toBe(9522);
+    expect(r.overall.hitRate).toBeCloseTo(8402 / 9522, 6);
+  });
+
+  it("caps the read instead of collecting the whole window", async () => {
+    const rows = Array.from({ length: CACHE_STATS_READ_CAP + 500 }, (_, i) => anthropicRow(i));
+    const r = await (cacheStatsQuery as any)._handler(makeLlmCtx(rows), {});
+    // Only the capped slice is aggregated — never all 8500.
+    expect(r.overall.calls).toBe(CACHE_STATS_READ_CAP);
+    expect(r.truncated).toBe(true);
+    expect(r.cap).toBe(CACHE_STATS_READ_CAP);
+  });
+
+  it("reports truncated:false when the window fits under the cap", async () => {
+    const r = await (cacheStatsQuery as any)._handler(makeLlmCtx([anthropicRow(1)]), {});
+    expect(r.truncated).toBe(false);
+    expect(r.overall.calls).toBe(1);
+  });
+
+  it("still ignores non-anthropic providers through the real handler", async () => {
+    const r = await (cacheStatsQuery as any)._handler(
+      makeLlmCtx([{ provider: "openrouter", model: "gpt-4.1", promptTokens: 100 }]),
+      {}
+    );
+    expect(r.overall.calls).toBe(0);
+    expect(r.overall.hitRate).toBe(0); // no divide-by-zero
+  });
+});

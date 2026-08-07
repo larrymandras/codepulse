@@ -70,6 +70,25 @@ function shapeCacheAcc(a: CacheAcc) {
   };
 }
 
+/**
+ * Bounded read cap for `cacheStats` (COST-01, 2026-08-07).
+ *
+ * This query previously did an UNBOUNDED `.collect()` over `llmMetrics` with
+ * only a timestamp lower bound — the exact read shape its neighbour
+ * `sessionCalls` was capped for at Phase 105 D-12, and the one CLAUDE.md's
+ * "Self-Hosted Convex — Operational Rules" blames for the 2026-07-21/22 outage
+ * and the 2026-08-02 Analytics blackout. It is called on every Analytics page
+ * load (`src/pages/Analytics.tsx:69`) against the runtime firehose table, and
+ * a Convex query that throws unmounts the React tree — so blowing the syscall
+ * cap here blanks the whole page, not one tile.
+ *
+ * Sized above `LLM_WINDOW_READ_CAP` (4000, aggregates.ts) because that cap
+ * covers ONE hour while this query's default window is 24. Measured live on
+ * 2026-08-07: 191 rows/24h and 727 rows/168h, so this leaves ~10x headroom at
+ * the default window.
+ */
+export const CACHE_STATS_READ_CAP = 8000;
+
 export const cacheStats = query({
   args: { windowHours: v.optional(v.float64()), sessionId: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -77,6 +96,12 @@ export const cacheStats = query({
     const cutoff = Date.now() / 1000 - hours * 3600;
     // Per-session rollup when sessionId is given (uses the existing by_session index);
     // otherwise the global window. Both feed the same aggregation below.
+    //
+    // `.take(CACHE_STATS_READ_CAP)` not `.collect()`: bounded by construction.
+    // Truncation is REPORTED (see `truncated` in the return) rather than
+    // silently under-reporting a hit rate — an undercounted cache ratio reads
+    // as a real efficiency problem and would send someone optimizing a prompt
+    // that was fine.
     const all = args.sessionId
       ? await ctx.db
           .query("llmMetrics")
@@ -84,12 +109,13 @@ export const cacheStats = query({
             q.eq("sessionId", args.sessionId!).gte("timestamp", cutoff)
           )
           .filter((q) => q.neq(q.field("archived"), true))
-          .collect()
+          .take(CACHE_STATS_READ_CAP)
       : await ctx.db
           .query("llmMetrics")
           .withIndex("by_timestamp", (q) => q.gte("timestamp", cutoff))
           .filter((q) => q.neq(q.field("archived"), true))
-          .collect();
+          .take(CACHE_STATS_READ_CAP);
+    const truncated = all.length >= CACHE_STATS_READ_CAP;
 
     const overall: CacheAcc = { calls: 0, read: 0, creation: 0, uncached: 0 };
     const perModel: Record<string, CacheAcc> = {};
@@ -114,7 +140,13 @@ export const cacheStats = query({
       .map(([model, a]) => ({ model, ...shapeCacheAcc(a) }))
       .sort((x, y) => y.totalPromptTokens - x.totalPromptTokens);
 
-    return { windowHours: hours, overall: shapeCacheAcc(overall), byModel };
+    return {
+      windowHours: hours,
+      overall: shapeCacheAcc(overall),
+      byModel,
+      truncated,
+      cap: CACHE_STATS_READ_CAP,
+    };
   },
 });
 
