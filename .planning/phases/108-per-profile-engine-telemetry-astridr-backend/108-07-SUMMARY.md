@@ -214,7 +214,7 @@ Files (codepulse):
 
 Commits (codepulse, `git log --oneline --all | grep <hash>`):
 - FOUND: `87738401` (Tasks 2-3 evidence, first proof)
-- Re-proof commit hash recorded below once created.
+- FOUND: `a413adf5` (re-proof evidence + SUMMARY update)
 
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
