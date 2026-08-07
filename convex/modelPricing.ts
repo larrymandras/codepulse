@@ -303,10 +303,30 @@ const SEED_MODELS: SeedEntry[] = [
   { model: "claude-haiku-4-5-20251001", inputPerToken: 0.80 / PER_MTOK, outputPerToken: 4.00 / PER_MTOK },
   { model: "google/gemini-2.5-flash", inputPerToken: 0.30 / PER_MTOK, outputPerToken: 2.50 / PER_MTOK },
 
-  // Deliberately NOT seeded: google/gemini-3.6-flash, gpt-4.1, grok-4.5 —
-  // no verified rate exists for these; leaving them unseeded lets D-03's
-  // Unpriced path and plan 104-09's nudge surface them for an operator to
-  // price, rather than shipping a guessed rate.
+  // ---- COST-01 (2026-08-07): the three ids that were previously listed here
+  // as "deliberately NOT seeded — no verified rate exists".
+  //
+  // That was the correct call at the time, and D-03's Unpriced path did its
+  // job: it surfaced them rather than hiding a guess. They accounted for ALL
+  // 682,491 unpriced tokens in the live 30-day window (gpt-4.1 396,461 /
+  // grok-4.5 148,349 / google/gemini-3.6-flash 137,681), which is why they are
+  // now worth pricing instead of leaving unpriced.
+  //
+  // Rates below were verified against vendor pricing on 2026-08-07 — they are
+  // NOT inferred from a comparable model. Model strings are exact: resolveRate
+  // matches on `index.byModel.get(dims.model)` with no normalization, so the
+  // openrouter-style `google/` prefix is load bearing.
+  { model: "gpt-4.1", inputPerToken: 2.00 / PER_MTOK, outputPerToken: 8.00 / PER_MTOK,
+    notes: "Verified 2026-08-07 against OpenAI API pricing ($2/$8 per MTok)." },
+  { model: "grok-4.5", inputPerToken: 2.00 / PER_MTOK, outputPerToken: 6.00 / PER_MTOK,
+    notes:
+      "Verified 2026-08-07 against xAI pricing ($2/$6 per MTok). CAVEAT: xAI doubles " +
+      "to $4/$12 above a 200K-token request, and prices cached input at $0.50/MTok — " +
+      "neither is modelled here (this table has one flat input rate, and the " +
+      "cacheReadPerToken column is not read by any pricing code). Long-context grok " +
+      "turns are therefore UNDER-priced and heavily-cached ones OVER-priced." },
+  { model: "google/gemini-3.6-flash", inputPerToken: 1.50 / PER_MTOK, outputPerToken: 7.50 / PER_MTOK,
+    notes: "Verified 2026-08-07 against Google Gemini API pricing ($1.50/$7.50 per MTok)." },
 ];
 
 const SHADOW_MTOK_OPUS = { input: 5.00 / PER_MTOK, output: 25.00 / PER_MTOK };
