@@ -494,6 +494,45 @@ describe("useAstridrChat — run.blocks text backfill for streamingReplyRef (186
     });
     expect(partial).toBe("I couldn't find a 'Kimmy K3' brain.");
   });
+
+  // The control that keeps the fix from over-blocking: the NORMAL case is
+  // run.blocks arriving after run.completed already nulled activeSessionRef
+  // (TTS/blocks synthesis can trail run.completed the same way run.tts does).
+  // If the gate compared against activeSessionRef instead of lastSessionRef
+  // it would suppress this in-session event — the direct run.blocks analogue
+  // of the run.tts control at :311-328. This fixture is what makes the ref
+  // choice load-bearing: added after Task 3's mutation proved the prior three
+  // fixtures alone could not distinguish the two refs (both reject a foreign
+  // session_id equally, and both accept when session_id is absent).
+  it("CTRL-BLOCKS-AFTER-COMPLETED: an in-session run.blocks event arriving AFTER run.completed still backfills and appends", async () => {
+    const { result } = renderHook(() => useAstridrChat());
+    await act(async () => {
+      await result.current.sendMessage("what's the weather");
+    });
+    act(() => {
+      getHandler("run.completed")?.({ data: { session_id: "sess-1" } });
+    });
+
+    const messagesBefore = result.current.messages.length;
+
+    act(() => {
+      getHandler("run.blocks")?.({
+        data: {
+          session_id: "sess-1",
+          blocks: [{ type: "text", text: "a late in-session reply" }],
+          round_num: 0,
+        },
+      });
+    });
+
+    expect(result.current.messages.length).toBe(messagesBefore + 1);
+
+    let partial = "";
+    act(() => {
+      partial = result.current.interrupt();
+    });
+    expect(partial).toBe("a late in-session reply");
+  });
 });
 
 // ─── 186-09 deferred item option (b): correctAssistantMessage ───────────────
