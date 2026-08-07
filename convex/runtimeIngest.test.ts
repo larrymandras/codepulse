@@ -10,6 +10,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { processTaskQualityEvent } from "./evalScores";
+import { isUnresolvedRouting } from "./activeEngineFilters";
 import {
   resolveGatewayTaskCompleted,
   parseToolPolicyEvent,
@@ -673,5 +674,275 @@ describe("tool_policy_event (Phase 105 D-05)", () => {
     // would mask a fifth future kind's absence the same way the original
     // missing case masked all four of today's kinds.
     expect(ingestSource).not.toMatch(/\n\s+default:\s*\{/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 108 (TELE-02, D-13/D-14, ENGINE-01) — model_routing failed-status
+// guard + control_verb_swap ingest case. Neither case had any test coverage
+// before this plan (verified: a grep for model_routing|control_verb_swap
+// against this file returned zero hits, 2026-08-07).
+//
+// Both describe blocks below pair two proof styles:
+//  (1) A LOCAL mirror function (same convention as processSwarmTaskEvent
+//      above) that reproduces the case's guard + coalescing logic and is
+//      genuinely EXECUTED — this is what actually proves a malformed/null
+//      payload cannot throw, since the real case lives inside an httpAction
+//      closure this repo has no convex-test harness to invoke directly.
+//  (2) A bounded static source-check (activeEngine.test.ts:126-155's idiom)
+//      against comment-stripped source, so the mirror function itself cannot
+//      silently drift from the real case body.
+// ---------------------------------------------------------------------------
+
+/** Strip full-line comments so a docstring mentioning "isUnresolvedRouting"
+ * or "throw" in prose cannot pollute a source-level assertion. Duplicated
+ * per-file, matching the existing convention in activeEngine.test.ts and
+ * controlVerbSwaps.test.ts (both already have their own private copy). */
+function stripCommentLinesForIngestTests(source: string): string {
+  return source
+    .split("\n")
+    .filter((line) => !/^\s*(\/\/|\*|\/\*)/.test(line))
+    .join("\n");
+}
+
+/**
+ * Mirrors the model_routing case body exactly (convex/runtimeIngest.ts,
+ * plan 108-03): coalesce, skip on status:"failed", skip on
+ * isUnresolvedRouting, else return the args that would reach
+ * internal.activeEngine.recordRouting. Returns `{ skip: true }` instead of
+ * throwing for any malformed input — mirrors the case's own "must break,
+ * never throw" contract (WR-06/168-06).
+ */
+function simulateModelRoutingCase(
+  data: Record<string, any>,
+  timestamp: number
+): { skip: true } | Record<string, unknown> {
+  const d = data ?? {};
+  const routedProfileId = d.profileId ?? d.profile_id;
+  const routedModel = d.model;
+  if (d.status === "failed") {
+    return { skip: true };
+  }
+  if (isUnresolvedRouting({ profileId: routedProfileId, model: routedModel })) {
+    return { skip: true };
+  }
+  return {
+    profileId: routedProfileId,
+    model: routedModel,
+    mode: d.mode ?? "inherited",
+    selectionPath: d.selectionPath ?? d.selection_path,
+    expiresAt: d.expiresAt ?? d.expires_at,
+    timestamp,
+  };
+}
+
+/**
+ * Mirrors the control_verb_swap case body exactly (convex/runtimeIngest.ts,
+ * plan 108-03): guard on verb/path/channel, dual-coalesce every other
+ * field, else return the args that would reach
+ * internal.controlVerbSwaps.record. Returns `{ skip: true }` instead of
+ * throwing for any malformed input.
+ */
+function simulateControlVerbSwapCase(
+  data: Record<string, any>,
+  timestamp: number
+): { skip: true } | Record<string, unknown> {
+  const d = data ?? {};
+  const verb = d.verb;
+  const pathVal = d.path;
+  const channel = d.channel;
+  if (!verb || !pathVal || !channel) {
+    return { skip: true };
+  }
+  return {
+    verb,
+    target: d.target,
+    resolved: d.resolved,
+    providerAffinity: d.providerAffinity ?? d.provider_affinity,
+    voiceId: d.voiceId ?? d.voice_id,
+    path: pathVal,
+    reason: d.reason,
+    scope: d.scope ?? d.profileId ?? d.profile_id,
+    sessionId: d.sessionId ?? d.session_id,
+    channel,
+    timestamp,
+  };
+}
+
+describe("runtimeIngest — model_routing case", () => {
+  it("does not throw on a malformed/null payload and skips instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => simulateModelRoutingCase(null as any, 1000)).not.toThrow();
+    expect(() => simulateModelRoutingCase({}, 1000)).not.toThrow();
+    expect(() => simulateModelRoutingCase({ profileId: undefined, model: null }, 1000)).not.toThrow();
+    expect(simulateModelRoutingCase(null as any, 1000)).toEqual({ skip: true });
+    expect(simulateModelRoutingCase({}, 1000)).toEqual({ skip: true });
+  });
+
+  it("skips (does not write) a status:'failed' event even with an otherwise-valid profileId/model (ENGINE-01, research Item 6)", () => {
+    const result = simulateModelRoutingCase(
+      { profileId: "personal", model: "claude-opus-5", status: "failed" },
+      1000
+    );
+    expect(result).toEqual({ skip: true });
+  });
+
+  it("a status other than 'failed' still resolves normally (regression guard on the new guard's scope)", () => {
+    const result = simulateModelRoutingCase(
+      { profileId: "personal", model: "claude-opus-5", status: "resolved" },
+      1000
+    ) as Record<string, unknown>;
+    expect(result.profileId).toBe("personal");
+    expect(result.model).toBe("claude-opus-5");
+  });
+
+  it("coalesces profileId from either camelCase or snake_case", () => {
+    const camel = simulateModelRoutingCase({ profileId: "biz", model: "m1" }, 1000) as Record<string, unknown>;
+    const snake = simulateModelRoutingCase({ profile_id: "biz", model: "m1" }, 1000) as Record<string, unknown>;
+    expect(camel.profileId).toBe("biz");
+    expect(snake.profileId).toBe("biz");
+  });
+
+  it("the case body reads d.model with no selectedModel fallback (D-11's rejected alternative) — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "model_routing": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).not.toContain("selectedModel");
+    expect(caseBody).toContain("const routedModel = d.model;");
+  });
+
+  it("d.status === 'failed' breaks before the isUnresolvedRouting( call, and the case still preserves d.profileId ?? d.profile_id — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "model_routing": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    const failedIdx = caseBody.indexOf('d.status === "failed"');
+    const unresolvedIdx = caseBody.indexOf("isUnresolvedRouting(");
+    expect(failedIdx).toBeGreaterThan(-1);
+    expect(unresolvedIdx).toBeGreaterThan(-1);
+    expect(failedIdx).toBeLessThan(unresolvedIdx);
+    expect(caseBody).toContain("d.profileId ?? d.profile_id");
+  });
+});
+
+describe("runtimeIngest — control_verb_swap case", () => {
+  it("does not throw on a malformed/null payload and skips instead (WR-06/168-06 batch-poisoning guard)", () => {
+    expect(() => simulateControlVerbSwapCase(null as any, 1000)).not.toThrow();
+    expect(() => simulateControlVerbSwapCase({}, 1000)).not.toThrow();
+    expect(() => simulateControlVerbSwapCase({ verb: "swap_model" }, 1000)).not.toThrow();
+    expect(simulateControlVerbSwapCase(null as any, 1000)).toEqual({ skip: true });
+    expect(simulateControlVerbSwapCase({}, 1000)).toEqual({ skip: true });
+    // verb present but path/channel missing must still skip, not throw.
+    expect(simulateControlVerbSwapCase({ verb: "swap_model" }, 1000)).toEqual({ skip: true });
+  });
+
+  it("D-13: a refusal event (path:'refused') is a valid row, not skipped, unlike model_routing's isUnresolvedRouting guard", () => {
+    const result = simulateControlVerbSwapCase(
+      { verb: "swap_model", path: "refused", reason: "affinity-mismatch", channel: "voice" },
+      1000
+    ) as Record<string, unknown>;
+    expect(result).not.toEqual({ skip: true });
+    expect(result.path).toBe("refused");
+    expect(result.reason).toBe("affinity-mismatch");
+  });
+
+  it("dual-coalesces every multi-word field from snake_case", () => {
+    const result = simulateControlVerbSwapCase(
+      {
+        verb: "swap_model",
+        path: "openrouter",
+        channel: "voice",
+        provider_affinity: "openrouter",
+        voice_id: "v1",
+        session_id: "s1",
+        profile_id: "personal",
+      },
+      1000
+    ) as Record<string, unknown>;
+    expect(result.providerAffinity).toBe("openrouter");
+    expect(result.voiceId).toBe("v1");
+    expect(result.sessionId).toBe("s1");
+    expect(result.scope).toBe("personal");
+  });
+
+  it("dual-coalesces every multi-word field from camelCase", () => {
+    const result = simulateControlVerbSwapCase(
+      {
+        verb: "swap_model",
+        path: "openrouter",
+        channel: "voice",
+        providerAffinity: "openrouter",
+        voiceId: "v1",
+        sessionId: "s1",
+        scope: "personal",
+      },
+      1000
+    ) as Record<string, unknown>;
+    expect(result.providerAffinity).toBe("openrouter");
+    expect(result.voiceId).toBe("v1");
+    expect(result.sessionId).toBe("s1");
+    expect(result.scope).toBe("personal");
+  });
+
+  it("the case body calls internal.controlVerbSwaps.record and never api.controlVerbSwaps — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("internal.controlVerbSwaps.record");
+    expect(caseBody).not.toContain("api.controlVerbSwaps");
+  });
+
+  it("the case body coalesces snake_case for provider_affinity, voice_id, and session_id — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).toContain("provider_affinity");
+    expect(caseBody).toContain("voice_id");
+    expect(caseBody).toContain("session_id");
+  });
+
+  it("the case body contains no throw statement — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).not.toMatch(/throw/);
+  });
+
+  it("D-13: the case body never calls isUnresolvedRouting — a refusal is a valid row here, and this test is what stops a future reader from 'hardening' refusals away — static source check", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+    // Comment-stripped: this case's own rationale comment mentions
+    // "isUnresolvedRouting" in prose, which would otherwise falsely satisfy
+    // (or, for a naive negative assertion, falsely trip) this check.
+    const source = stripCommentLinesForIngestTests(
+      readFileSync(resolve(process.cwd(), "convex/runtimeIngest.ts"), "utf-8")
+    );
+    const caseMatch = source.match(/case "control_verb_swap": \{[\s\S]*?\n {8}\}/);
+    expect(caseMatch).not.toBeNull();
+    const caseBody = caseMatch![0];
+    expect(caseBody).not.toContain("isUnresolvedRouting(");
   });
 });
