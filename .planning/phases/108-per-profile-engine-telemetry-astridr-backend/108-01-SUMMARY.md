@@ -200,6 +200,25 @@ None beyond what the plan's own `<threat_model>` already covers (T-108-07 throug
 - `_MODE_BY_SELECTION_PATH` already has `"profile-swap-override": "pinned"` pre-registered — plan 108-04 (the per-profile override itself) needs no mapping code addition when it lands.
 - No blockers for 108-02 through 108-07. This plan's `<verification>` steps 1-3 are all satisfied; step 4 (per-commit disclosure) is satisfied and documented above.
 
+## Self-Check: PASSED
+
+Files (astridr-repo):
+- FOUND: astridr/channels/agent_processor.py
+- FOUND: astridr/engine/bootstrap/wiring.py
+- FOUND: astridr/providers/router.py
+- FOUND: docs/astridr-contract.md
+- FOUND: tests/unit/providers/test_router.py
+- FOUND: tests/unit/channels/test_agent_processor_profile_context.py
+
+Commits (astridr-repo, `git log --oneline --all | grep <hash>`):
+- FOUND: 84f91104 (Task 1)
+- FOUND: 948d5d5e (Task 2)
+- FOUND: 96a30539 (Task 3)
+
+Files/commits (codepulse repo):
+- FOUND: .planning/phases/108-per-profile-engine-telemetry-astridr-backend/108-01-SUMMARY.md
+- FOUND commit: 6163a09a (plan-completion metadata commit)
+
 ---
 *Phase: 108-per-profile-engine-telemetry-astridr-backend*
 *Plan: 01*
