@@ -2,6 +2,7 @@ import { internalMutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { getBillingType } from "./lib/providers";
+import { assertAggregatePeriod } from "./lib/aggregatePeriod";
 import { buildRateIndex } from "./modelPricing";
 import { deriveBucketDollars } from "./costDerived";
 import { evaluateBudgets } from "./costBudgetEval";
@@ -420,54 +421,166 @@ export const computeHourly = internalMutation({
 // by metric_type + JSON.stringify(dimensions), so any metric_type (including the
 // two new ones) rolls into daily buckets automatically. Do not "fix" this by
 // adding a tokens_prompt/tokens_completion-specific branch.
+/** Yesterday's UTC midnight in epoch seconds — the cron's default target day. */
+function yesterdayUtcMidnight(): number {
+  return Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+}
+
+/**
+ * Roll one UTC day's hourly rows into daily rows. Returns how many daily rows
+ * were inserted, so the COST-01 backfill can report progress.
+ *
+ * INSERT-ONLY and idempotent per (metric_type, dimensions): a key that already
+ * has a daily row for this day is skipped, never re-summed. That guard is load
+ * bearing for the backfill below, which walks days the cron may have already
+ * covered.
+ */
+async function rollupOneDay(
+  ctx: { db: any },
+  dayStart: number
+): Promise<number> {
+  const hourlyRows = await ctx.db
+    .query("aggregates")
+    .withIndex("by_period_bucket", (q: any) =>
+      q.eq("period", "hourly").gte("bucket_start", dayStart).lt("bucket_start", dayStart + 86400)
+    )
+    .collect();
+
+  // Group by metric_type + dimensions key
+  const rollup: Record<string, { metric_type: string; value: number; dimensions: unknown }> = {};
+  for (const row of hourlyRows) {
+    const dimKey = JSON.stringify(row.dimensions ?? {});
+    const key = `${row.metric_type}::${dimKey}`;
+    if (!rollup[key]) {
+      rollup[key] = { metric_type: row.metric_type, value: 0, dimensions: row.dimensions };
+    }
+    rollup[key].value += row.value;
+  }
+
+  // Idempotency guard: check existing daily rows for this day
+  const existingDailyRows = await ctx.db
+    .query("aggregates")
+    .withIndex("by_period_bucket", (q: any) =>
+      q.eq("period", "daily").gte("bucket_start", dayStart).lt("bucket_start", dayStart + 86400)
+    )
+    .collect();
+  const existingDailyKeys = new Set(
+    existingDailyRows.map((r: any) => {
+      const dimKey = JSON.stringify(r.dimensions ?? {});
+      return `${r.metric_type}::${dimKey}`;
+    })
+  );
+
+  let inserted = 0;
+  for (const [key, entry] of Object.entries(rollup)) {
+    if (existingDailyKeys.has(key)) continue;
+    await ctx.db.insert("aggregates", {
+      metric_type: entry.metric_type,
+      period: "daily",
+      bucket_start: dayStart,
+      value: entry.value,
+      dimensions: entry.dimensions,
+    });
+    inserted++;
+  }
+  return inserted;
+}
+
 export const rollupDaily = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const now = Date.now() / 1000;
-    const dayStart = Math.floor(now / 86400) * 86400 - 86400; // yesterday UTC midnight
+  // COST-01: `dayStart` is optional and defaults to yesterday, so the 01:00 UTC
+  // cron entry in convex/crons.ts keeps calling this with no args and behaves
+  // exactly as before. The arg exists so a specific historical day can be
+  // rolled up on demand — see backfillDailyRollup below.
+  args: { dayStart: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    // `args?.` not `args.`: Convex always passes an args object in production,
+    // but the fake-ctx tests invoke this raw handler as _handler(ctx) with none
+    // — which is exactly how the cron's zero-arg call reads. Tolerating both
+    // keeps those tests exercising the real cron path instead of a rewritten one.
+    const dayStart = args?.dayStart ?? yesterdayUtcMidnight();
+    await rollupOneDay(ctx, dayStart);
+  },
+});
 
-    const hourlyRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_period_bucket", (q) =>
-        q.eq("period", "hourly").gte("bucket_start", dayStart).lt("bucket_start", dayStart + 86400)
-      )
+// ---- COST-01 (2026-08-07): resumable backfill of MISSING daily rows ---------
+//
+// Why this exists: rollupDaily only ever processed yesterday and never revisited
+// a day. Phase 104's backfillTokenSplit wrote historical HOURLY token buckets
+// long after those days had passed, so those hours never got daily rows. Live
+// measurement on 2026-08-07 (self-hosted, 127.0.0.1:3210):
+//
+//   lookbackHours   costBreakdown(hourly)   costBreakdown(daily)
+//   168                          $26.28                  $21.99
+//   336                          $44.76                  $25.42
+//   720                          $88.86                  $25.42   <- flatlined
+//
+// The daily series simply stops ~14 days back while hourly runs the full 30.
+//
+// Same operator-driven shape as backfillTokenSplit above (NOT a cron — see the
+// disabled-cron incident note in convex/crons.ts): small hard-capped work per
+// invocation, resumable via a cursor, insert-only.
+//
+//   npx convex run aggregates:backfillDailyRollup '{"maxDays": 7}'
+//
+// Repeat until the returned `done` is true.
+const DAILY_ROLLUP_BACKFILL_CURSOR_KEY = "cost01.dailyRollupBackfill.cursor";
+
+export const backfillDailyRollup = internalMutation({
+  args: { maxDays: v.optional(v.float64()) },
+  handler: async (ctx, args) => {
+    const maxDays = args.maxDays ?? 7;
+
+    // Same retention floor source as backfillTokenSplit — deliberately reusing
+    // agentConfigs["retention_days"] rather than inventing a second number.
+    const retentionConfig = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", "retention_days"))
+      .first();
+    const retentionDays = retentionConfig?.value != null ? Number(retentionConfig.value) : 30;
+    const retentionFloorDay =
+      Math.floor((Date.now() / 1000 - retentionDays * 86400) / 86400) * 86400;
+
+    const cursorRows = await ctx.db
+      .query("agentConfigs")
+      .withIndex("by_key", (q) => q.eq("configKey", DAILY_ROLLUP_BACKFILL_CURSOR_KEY))
       .collect();
+    // Insert-only cursor: last row (ascending _creationTime) is current.
+    const cursorRow = cursorRows.length > 0 ? cursorRows[cursorRows.length - 1] : null;
 
-    // Group by metric_type + dimensions key
-    const rollup: Record<string, { metric_type: string; value: number; dimensions: unknown }> = {};
-    for (const row of hourlyRows) {
-      const dimKey = JSON.stringify(row.dimensions ?? {});
-      const key = `${row.metric_type}::${dimKey}`;
-      if (!rollup[key]) {
-        rollup[key] = { metric_type: row.metric_type, value: 0, dimensions: row.dimensions };
+    if (cursorRow?.value === "done") {
+      return { daysProcessed: 0, rowsInserted: 0, nextCursor: "done" as const, done: true };
+    }
+
+    let cursor: number =
+      cursorRow?.value != null ? Number(cursorRow.value) : yesterdayUtcMidnight();
+
+    let daysProcessed = 0;
+    let rowsInserted = 0;
+    let done = false;
+
+    while (daysProcessed < maxDays) {
+      if (cursor < retentionFloorDay) {
+        done = true;
+        break;
       }
-      rollup[key].value += row.value;
+      rowsInserted += await rollupOneDay(ctx, cursor);
+      daysProcessed++;
+      cursor = cursor - 86400;
     }
 
-    // Idempotency guard: check existing daily rows for this day
-    const existingDailyRows = await ctx.db
-      .query("aggregates")
-      .withIndex("by_period_bucket", (q) =>
-        q.eq("period", "daily").gte("bucket_start", dayStart).lt("bucket_start", dayStart + 86400)
-      )
-      .collect();
-    const existingDailyKeys = new Set(
-      existingDailyRows.map((r) => {
-        const dimKey = JSON.stringify(r.dimensions ?? {});
-        return `${r.metric_type}::${dimKey}`;
-      })
-    );
-
-    for (const [key, entry] of Object.entries(rollup)) {
-      if (existingDailyKeys.has(key)) continue;
-      await ctx.db.insert("aggregates", {
-        metric_type: entry.metric_type,
-        period: "daily",
-        bucket_start: dayStart,
-        value: entry.value,
-        dimensions: entry.dimensions,
-      });
+    if (!done && cursor < retentionFloorDay) {
+      done = true;
     }
+
+    const nextCursorValue: number | "done" = done ? "done" : cursor;
+    await ctx.db.insert("agentConfigs", {
+      configKey: DAILY_ROLLUP_BACKFILL_CURSOR_KEY,
+      value: nextCursorValue,
+      source: "runtime",
+      updatedAt: Date.now() / 1000,
+    });
+
+    return { daysProcessed, rowsInserted, nextCursor: nextCursorValue, done };
   },
 });
 
@@ -606,6 +719,7 @@ export const costByPeriod = query({
     billingType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "costByPeriod"); // COST-01
     const lookback = (args.lookbackDays ?? 30) * 86400;
     const cutoff = Date.now() / 1000 - lookback;
 
@@ -642,6 +756,7 @@ export const costByPeriodByProvider = query({
     billingType: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "costByPeriodByProvider"); // COST-01
     const lookback = (args.lookbackHours ?? 24) * 3600;
     const cutoff = Date.now() / 1000 - lookback;
     const rows = await ctx.db
@@ -682,6 +797,7 @@ export const errorTrendByPeriod = query({
     lookbackHours: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "errorTrendByPeriod"); // COST-01
     const lookback = (args.lookbackHours ?? 24) * 3600;
     const cutoff = Date.now() / 1000 - lookback;
 
@@ -824,6 +940,7 @@ export const eventCountsByPeriod = query({
     lookbackDays: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "eventCountsByPeriod"); // COST-01
     const lookback = (args.lookbackDays ?? 30) * 86400;
     const cutoff = Date.now() / 1000 - lookback;
 

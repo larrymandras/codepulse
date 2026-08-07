@@ -18,10 +18,13 @@ crons.interval(
 );
 
 // Phase 5: Daily rollup at 01:00 UTC
+// COST-01: rollupDaily gained an optional `dayStart`; passing {} keeps the
+// cron on its default target (yesterday UTC midnight) unchanged.
 crons.daily(
   "aggregate-daily",
   { hourUTC: 1, minuteUTC: 0 },
-  internal.aggregates.rollupDaily
+  internal.aggregates.rollupDaily,
+  {}
 );
 
 // DISABLED 2026-07-14 (self-hosted migration incident): markStaleArchived,

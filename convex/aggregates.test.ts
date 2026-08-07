@@ -20,6 +20,7 @@ vi.mock("./toolPolicyAlertEval", async (importOriginal) => {
 import {
   computeHourly,
   backfillTokenSplit,
+  backfillDailyRollup,
   costByGoalPeriod,
   llmByGoal,
   eventCountsByPeriod,
@@ -1304,6 +1305,166 @@ describe("aggregates", () => {
       expect(dailyRows.every((r) => !("shard" in r))).toBe(true);
       expect(patchCalls).toHaveLength(0);
       expect(deleteCalls).toHaveLength(0);
+    });
+
+    // -----------------------------------------------------------------------
+    // COST-01 (2026-08-07): rollupDaily only ever processed YESTERDAY and never
+    // revisited a day. The Phase 104 backfillTokenSplit wrote historical HOURLY
+    // token buckets long after those days had passed, so they never got daily
+    // rows — measured live, costBreakdown(period:"daily") flatlined at $25.42
+    // beyond a 336h lookback while period:"hourly" kept climbing to $88.86 over
+    // 720h. Two surfaces, same table, 71% apart.
+    // -----------------------------------------------------------------------
+    describe("rollupDaily — explicit dayStart (COST-01)", () => {
+      test("rolls up the REQUESTED day, not yesterday", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const tenDaysAgo = yesterday - 9 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [
+            { metric_type: "tokens_prompt", period: "hourly", bucket_start: tenDaysAgo + 3600, value: 500, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" } },
+            { metric_type: "tokens_prompt", period: "hourly", bucket_start: yesterday + 3600, value: 42, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" } },
+          ],
+        });
+
+        await (rollupDaily as any)._handler(ctx, { dayStart: tenDaysAgo });
+
+        const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
+        expect(dailyRows).toHaveLength(1);
+        expect(dailyRows[0].bucket_start).toBe(tenDaysAgo);
+        expect(dailyRows[0].value).toBe(500);
+      });
+
+      test("CONTROL: no dayStart arg still rolls up yesterday", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const tenDaysAgo = yesterday - 9 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [
+            { metric_type: "tokens_prompt", period: "hourly", bucket_start: tenDaysAgo + 3600, value: 500, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" } },
+            { metric_type: "tokens_prompt", period: "hourly", bucket_start: yesterday + 3600, value: 42, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" } },
+          ],
+        });
+
+        await (rollupDaily as any)._handler(ctx, {});
+
+        const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
+        expect(dailyRows).toHaveLength(1);
+        expect(dailyRows[0].bucket_start).toBe(yesterday);
+        expect(dailyRows[0].value).toBe(42);
+      });
+    });
+
+    describe("backfillDailyRollup (COST-01)", () => {
+      const DAILY_CURSOR_KEY = "cost01.dailyRollupBackfill.cursor";
+
+      function historicalHourly(dayStart: number, value: number) {
+        return {
+          metric_type: "tokens_prompt",
+          period: "hourly",
+          bucket_start: dayStart + 3600,
+          value,
+          dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" },
+        };
+      }
+
+      test("creates daily rows for historical days that have hourly rows but none daily", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [
+            historicalHourly(yesterday - 86400, 100),
+            historicalHourly(yesterday - 2 * 86400, 200),
+          ],
+        });
+
+        const result = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 5 });
+
+        const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
+        expect(dailyRows.map((r) => r.value).sort((a, b) => a - b)).toEqual([100, 200]);
+        expect(result.rowsInserted).toBe(2);
+      });
+
+      test("leaves an already-rolled-up day untouched but still fills the day before it", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const covered = yesterday - 86400;
+        const uncovered = yesterday - 2 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [
+            historicalHourly(covered, 100),
+            historicalHourly(uncovered, 200),
+            // Pre-existing daily row for `covered`, deliberately a value no
+            // fresh sum would produce — a re-sum would overwrite it to 100.
+            { metric_type: "tokens_prompt", period: "daily", bucket_start: covered, value: 999, dimensions: { provider: "anthropic_direct", model: "claude-sonnet-5" } },
+          ],
+        });
+
+        await (backfillDailyRollup as any)._handler(ctx, { maxDays: 5 });
+
+        const dailyForCovered = tables.aggregates.filter((r) => r.period === "daily" && r.bucket_start === covered);
+        const dailyForUncovered = tables.aggregates.filter((r) => r.period === "daily" && r.bucket_start === uncovered);
+        expect(dailyForCovered).toHaveLength(1);
+        expect(dailyForCovered[0].value).toBe(999);
+        expect(dailyForUncovered).toHaveLength(1);
+        expect(dailyForUncovered[0].value).toBe(200);
+      });
+
+      test("honours maxDays and returns a resumable cursor", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const { ctx } = makeAggregatesCtx({
+          aggregates: [
+            historicalHourly(yesterday - 86400, 10),
+            historicalHourly(yesterday - 2 * 86400, 20),
+            historicalHourly(yesterday - 3 * 86400, 30),
+          ],
+        });
+
+        const result = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 2 });
+
+        expect(result.daysProcessed).toBe(2);
+        expect(result.done).toBe(false);
+        expect(typeof result.nextCursor).toBe("number");
+      });
+
+      test("resumes from a stored cursor rather than restarting at yesterday", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const resumeAt = yesterday - 3 * 86400;
+        const { ctx, tables } = makeAggregatesCtx({
+          aggregates: [
+            historicalHourly(yesterday - 86400, 10),
+            historicalHourly(resumeAt, 30),
+          ],
+          agentConfigs: [{ configKey: DAILY_CURSOR_KEY, value: resumeAt, source: "runtime", updatedAt: 0 }],
+        });
+
+        await (backfillDailyRollup as any)._handler(ctx, { maxDays: 1 });
+
+        const dailyRows = tables.aggregates.filter((r) => r.period === "daily");
+        expect(dailyRows).toHaveLength(1);
+        expect(dailyRows[0].bucket_start).toBe(resumeAt);
+      });
+
+      test("a finished backfill reports done and writes the terminal sentinel", async () => {
+        const { ctx, tables } = makeAggregatesCtx({
+          agentConfigs: [{ configKey: DAILY_CURSOR_KEY, value: "done", source: "runtime", updatedAt: 0 }],
+        });
+
+        const result = await (backfillDailyRollup as any)._handler(ctx, { maxDays: 5 });
+
+        expect(result.done).toBe(true);
+        expect(result.daysProcessed).toBe(0);
+        const cursorRows = tables.agentConfigs.filter((r) => r.configKey === DAILY_CURSOR_KEY);
+        expect(cursorRows[cursorRows.length - 1].value).toBe("done");
+      });
+
+      test("is insert-only — never patches or deletes", async () => {
+        const yesterday = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400;
+        const { ctx, patchCalls, deleteCalls } = makeAggregatesCtx({
+          aggregates: [historicalHourly(yesterday - 86400, 100)],
+        });
+
+        await (backfillDailyRollup as any)._handler(ctx, { maxDays: 3 });
+
+        expect(patchCalls).toHaveLength(0);
+        expect(deleteCalls).toHaveLength(0);
+      });
     });
 
     test("rollupDaily idempotency guard still holds for sharded hourly rows", async () => {

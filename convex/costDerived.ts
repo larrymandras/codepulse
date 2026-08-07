@@ -26,6 +26,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import type { DatabaseReader } from "./_generated/server";
+import { assertAggregatePeriod } from "./lib/aggregatePeriod";
 import {
   buildRateIndex,
   resolveRate,
@@ -185,6 +186,7 @@ export const costOverTime = query({
     lookbackHours: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "costOverTime"); // COST-01
     const cutoff = Date.now() / 1000 - (args.lookbackHours ?? 24) * 3600;
 
     const promptRows = await fetchAggregateRows(ctx, "tokens_prompt", args.period, cutoff);
@@ -348,7 +350,10 @@ export const costBreakdown = query({
     period: v.string(),
     lookbackHours: v.optional(v.float64()),
   },
-  handler: async (ctx, args) => deriveBreakdown(ctx, args.period, args.lookbackHours ?? 24),
+  handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "costBreakdown"); // COST-01
+    return deriveBreakdown(ctx, args.period, args.lookbackHours ?? 24);
+  },
 });
 
 // ============================================================
@@ -586,6 +591,7 @@ export const billedOverTime = query({
     lookbackHours: v.optional(v.float64()),
   },
   handler: async (ctx, args) => {
+    assertAggregatePeriod(args.period, "billedOverTime"); // COST-01
     const cutoff = Date.now() / 1000 - (args.lookbackHours ?? 24) * 3600;
     const { byBucket, unpricedTokens } = await deriveBilledByBucket(ctx, args.period, cutoff);
     const buckets = Object.keys(byBucket)
