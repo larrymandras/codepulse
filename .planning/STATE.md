@@ -7,11 +7,11 @@ stopped_at: Phase 109 UI-SPEC approved
 last_updated: "2026-08-08T11:19:19.000Z"
 last_activity: 2026-08-08
 progress:
-  total_phases: 6
+  total_phases: 12
   completed_phases: 1
   total_plans: 7
   completed_plans: 7
-  percent: 17
+  percent: 8
 ---
 
 <!-- Counters hand-reconciled 2026-07-24 (gsd-sdk state.*/milestone.complete verbs miscount + clobber — NOT used; Phase 100 close done BY HAND per the established workaround, no gsd-sdk state.*/phase.complete/milestone.complete verbs run).
@@ -240,6 +240,12 @@ The `v10.0-MILESTONE-AUDIT.md` (2026-07-06, `gaps_found`) was a stale **mid-flig
 - v11.0 roadmap created (2026-07-17): 4 phases (97-100) derived from the 22 v11.0 requirements. The backlog-promoted "Phase 97: Skill Lifecycle Management" (999.1) is renumbered to Phase 98 — the daemon-executor + real-intake foundation (INTAKE-01..04, DAEMON-01/03/04) was sequenced first as Phase 97 per the dependency analysis (nothing mutates the host without the daemon executor existing). Phase 99 (Launch/Dispatch) is independent of the daemon work (rides existing chat/Forge/Ástríðr channels) and can run in parallel with 97/98. Phase 100 (Control-Surface UX) depends on both 98 and 99 and is sequenced last.
 - Phase 102 added: Address tech debt: reminders dead code + astridr comment cleanup
 - Phase 107 added (2026-08-05): Aggregates Rollup Sharding — eliminate OCC write contention on the shared `aggregates` counter rows written by `events.ingest` (`convex/analyticsRollup.ts`), root-caused during the 2026-08-05 self-hosted Convex retention-health incident (2nd occurrence of this mechanism, also seen 2026-07-30, previously only mitigated by container recreate, never fixed).
+- Phase 114 added (2026-08-08): Workspace Map view — ARMS radial workspace map, two lenses (Larry's workspace ↔ Ástríðr's world). Source: agentic-os-second-brain design (vault note, approved 2026-08-07).
+- Phase 115 added (2026-08-08): Workspace scanner — host-side classifier walking workspace roots, versioned `kind:"workspace"` snapshot rows. Source: same design as 114.
+- Phase 116 added (2026-08-08): Galdr prompt library — `prompts`/`promptVersions` tables, `/galdr` live-fetch skills, send-to-Chat/clipboard. Source: Seiðr Suite design (SEED-005, `docs/proposals/2026-08-07-seidr-suite-design.md`, approved 2026-08-08).
+- Phase 117 added (2026-08-08): Bifrost link hub — `links` table, command-palette jump, liveness dots (SEED-005; /gsd-quick-shaped).
+- Phase 118 added (2026-08-08): Studio media gallery — media-vault dir + sidecar provenance, thumbs-only in Convex, watcher ingest, styles/model recipe cards, G-drive backup task (SEED-005).
+- Phase 119 added (2026-08-08): Loom curated pipelines — `pipelines`/`pipelineRuns`, React Flow view, `loom-emit.mjs` step events via Convex subscriptions (SEED-005). Note: 114-119 frontmatter counter change (total_phases 6→12, percent 17→8) done in the same pass BY HAND — no gsd-sdk state verbs run, per this file's standing anti-clobber rule.
 
 ### Decisions
 

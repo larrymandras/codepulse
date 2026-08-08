@@ -646,6 +646,8 @@ Plans:
 ## v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board — 🚧 IN PROGRESS
 
 > **Started 2026-08-06** via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108-113**. No research/SUMMARY.md exists for this milestone — every requirement is grounded in repo evidence recorded in REQUIREMENTS.md's "Scoping evidence" table (gathered 2026-08-06, before any requirement was written).
+>
+> **Appended 2026-08-08 → Phases 114-119** (two approved design workstreams, requirements to be derived at each phase's discuss/plan step, not in this milestone's REQUIREMENTS.md): 114-115 from the agentic-os-second-brain design (vault `02-projects/agentic-os-second-brain.md`, approved 2026-08-07); 116-119 from the Seiðr Suite design (`docs/proposals/2026-08-07-seidr-suite-design.md` + SEED-005, approved 2026-08-08).
 
 **Milestone goal:** Finish the per-agent half of brain-swap that v13.0 deliberately deferred (BSC-01), make the self-hosted Convex instance durable rather than nightly-restarted, and turn the leftover jobs surface into a real mission board.
 
@@ -657,8 +659,14 @@ Plans:
 - [ ] **Phase 111 — Mission Board** — `JobsPanel`/`subagentJobs` upgraded into a real mission board on today's data — live cards, humanized tool labels, honest orphan recovery
 - [ ] **Phase 112 — Telemetry Coverage Closure** — the contract doc corrected for Group A, every remaining Group B kind given a justified disposition
 - [ ] **Phase 113 — Debt Sweep** — skill-registry prune churn, the intermittent `Chat.test.tsx` failure, and `convex-selfhost/` under version control
+- [ ] **Phase 114 — Workspace Map view** — ARMS radial map on `ForceGraphCanvas`, two switchable lenses (Larry's workspace ↔ Ástríðr's world)
+- [ ] **Phase 115 — Workspace scanner** — host-side classifier over workspace roots, versioned `kind:"workspace"` snapshot ingest
+- [ ] **Phase 116 — Galdr prompt library** — `prompts` tables + `/galdr` live-fetch skills + send-to-Chat/clipboard (Seiðr Suite)
+- [ ] **Phase 117 — Bifrost link hub** — `links` table, command-palette jump, liveness dots (Seiðr Suite; /gsd-quick-shaped)
+- [ ] **Phase 118 — Studio media gallery** — media-vault + sidecar provenance, thumbs-only in Convex, watcher, styles/models, G-drive backup (Seiðr Suite)
+- [ ] **Phase 119 — Loom curated pipelines** — `pipelines`/`pipelineRuns` + React Flow view + step-event emits over Convex subscriptions (Seiðr Suite)
 
-**Execution order:** 108 → 109 (109 depends on 108's real telemetry + scoped swap.set — the D-14 boundary forbids a config-sourced current-engine column) · 110, 111, 113 are each independent of everything else in this milestone and can run in any order · 112 depends on 108 (reuses the per-kind routing precedent set by TELE-02/`control_verb_swap`).
+**Execution order:** 108 → 109 (109 depends on 108's real telemetry + scoped swap.set — the D-14 boundary forbids a config-sourced current-engine column) · 110, 111, 113 are each independent of everything else in this milestone and can run in any order · 112 depends on 108 (reuses the per-kind routing precedent set by TELE-02/`control_verb_swap`). · **114-119 (appended 2026-08-08):** despite the auto-generated "Depends on: previous phase" lines in their detail stubs, 116-119 are independent of everything (order 116 → 117 → 118 → 119 is daily-value preference, not dependency); 114 pairs with 115 (115 feeds 114's workspace lens; 114 can start against fixtures) and 114's Ástríðr lens waits on astridr v29 A3 — sequencing, not a blocker.
 
 ## Phase Details
 
@@ -795,6 +803,66 @@ Plans:
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |
 | 113. Debt Sweep | 0/TBD | Not started | - |
 
+### Phase 114: Workspace Map view
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 113
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 114 to break down)
+
+### Phase 115: Workspace scanner
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 114
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 115 to break down)
+
+### Phase 116: Galdr prompt library
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 115
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 116 to break down)
+
+### Phase 117: Bifrost link hub
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 116
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 117 to break down)
+
+### Phase 118: Studio media gallery
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 117
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 118 to break down)
+
+### Phase 119: Loom curated pipelines
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 118
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 119 to break down)
+
 ---
 
-*Last updated: 2026-08-06 — **v14.0 Per-Agent Engine Visibility, Convex Durability & Mission Board started** via `/gsd-new-milestone`. 6 phases (108-113) derived from this milestone's 17 requirements (ENGINE-01..05, DUR-01..03, MISSION-01..03, TELE-01..03, DEBT-05..07), 100% coverage. No phases started. Continues phase numbering from v13.0 → Phases 108-113. Prior: v13.0 SHIPPED & ARCHIVED 2026-08-06 (5 phases 103-107, 53 plans, 14/15 requirements, tagged `v13.0`).*
+*Last updated: 2026-08-08 — **Phases 114-119 appended to v14.0** via `gsd-sdk query phase.add` ×6 (114-115: agentic-os-second-brain workspace map/scanner; 116-119: Seiðr Suite — Galdr/Bifröst/Studio/Loom, SEED-005). Milestone now 12 phases (108-119); requirements for 114-119 derive at each phase's discuss/plan step. Prior: 2026-08-06 — v14.0 started via `/gsd-new-milestone`, 6 phases (108-113) from 17 requirements (ENGINE-01..05, DUR-01..03, MISSION-01..03, TELE-01..03, DEBT-05..07), 100% coverage; v13.0 SHIPPED & ARCHIVED 2026-08-06 (5 phases 103-107, 53 plans, 14/15 requirements, tagged `v13.0`).*
