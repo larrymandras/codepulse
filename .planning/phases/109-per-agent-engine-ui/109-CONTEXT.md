@@ -241,7 +241,45 @@ D-03's `default_profile_id` on an existing ack, and D-05's per-profile overrides
 forward from v13.0): `feature/brain-swap` is far behind `main`, and that divergence is a live
 consideration for any astridr commit this phase makes.
 
+### Planning-time resolutions (added 2026-08-08, operator-decided during `/gsd-plan-phase 109`)
+
+Both of these were open items above; research (`109-RESEARCH.md`) produced evidence that made them
+decidable, and the operator decided them before the planner ran. They are locked, not suggestions.
+
+- **D-13:** **D-09's mapping is an alias plus an OpenRouter catch-all — not a literal key lookup.**
+  D-09's text assumed a roughly 1:1 alias table ("catalogue reports `anthropic`, registry keys are
+  `anthropic_direct`). Research falsified that: `swap.catalogue`'s `vendor` means *model manufacturer*
+  (hardcoded `"anthropic"` for the pinned Claude tier at `ws_commands.py:1202`; otherwise
+  `model_id.split("/", 1)[0]` at `:1225`, i.e. an OpenRouter routing slug like `google` / `x-ai` /
+  `meta-llama`), while `PROVIDER_BILLING`'s keys mean *execution/billing channel*. **A literal lookup
+  matches nothing** — not even the Claude tier. **Rule:** map `"anthropic"` → `anthropic_direct`;
+  every other non-empty vendor reaching this catalogue arrived via
+  `swap_model._openrouter.get_models()` (`ws_commands.py:1206-1238` — verified, there is no third
+  source) and is therefore billed per-token as `api`. **D-09's honesty clause survives unchanged:**
+  an empty/missing vendor renders in the explicit **"Unclassified"** group and is never silently
+  defaulted to `api`. **Consequence to state on screen, not hide:** the Subscription and Local groups
+  are structurally unreachable from `swap.catalogue` today (`grep -in "ollama"` across `swap_model.py`
+  and `ws_commands.py` returns zero hits; no CLI-gateway provider appears either), so they render
+  empty via the existing empty-group filter. That is honest — it matches what the server can actually
+  report. Populating them is the already-deferred `swap.catalogue` enrichment, not this phase.
+  **Rejected:** the literal per-vendor-slug lookup — most conservative reading of "never silently
+  default", but it puts nearly the entire live catalogue in "Unclassified" and fires the
+  expensive-model confirm on almost every row, landing close to the flattening D-09 exists to undo.
+
+- **D-14:** **`Settings.tsx`'s per-profile engine label reads `useResolvedBrain(profileId)`, not raw
+  telemetry.** D-10 mounts swap history directly beneath that row; leaving the label on raw telemetry
+  means a freshly-pinned profile can render a **stale** engine directly above history proving the pin
+  succeeded — the precise two-surface disagreement D-06 exists to remove, reintroduced one line away
+  from itself. SC1 names the picker's "This profile" scope, and that picker is embedded in this row,
+  so the row is already within SC1's blast radius. Honors the standing rule that every brain surface
+  reads ONE resolver so they cannot disagree. **Rejected:** leaving it on raw telemetry because
+  `Settings.tsx` is not literally one of SC1's three named surfaces — tight to the letter of scope,
+  but knowingly ships the disagreement this phase is about.
+
 ### Claude's Discretion
+
+*(Two items below are now CLOSED by D-13 and D-14 above and are retained only for traceability;
+do not re-derive them.)*
 
 - **A live-verification gate for the UI, mirroring ENGINE-05.** Not discussed explicitly, but
   strongly indicated: Phase 108's live gate found **five real defects** that unit tests, a
@@ -256,8 +294,10 @@ consideration for any astridr commit this phase makes.
   mandatory to decide.
 - **Which existing ack carries `default_profile_id`** (`swap.catalogue` vs `readiness.get`) — D-03
   does not pick.
-- **The `vendor` → provider-registry key mapping** for D-09 (the catalogue reports e.g. `anthropic`,
-  the registry keys are e.g. `anthropic_direct`), and what "Local" means for Ollama.
+- ~~**The `vendor` → provider-registry key mapping** for D-09 (the catalogue reports e.g. `anthropic`,
+  the registry keys are e.g. `anthropic_direct`), and what "Local" means for Ollama.~~
+  **CLOSED by D-13.** Note the premise in this line was itself wrong — the two fields describe
+  different axes, so no alias table alone can close it. "Local" is honestly-always-empty this phase.
 - **The new `source` discriminant name** for D-06's rung, and whether
   `GLOBAL_SWAP_CONFIRM_TIMEOUT_MS` needs a different value on the per-profile path.
 - **Scoped-restore confirmation semantics** — derive from D-05: the readback is the *absence* of that
