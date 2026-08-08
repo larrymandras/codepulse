@@ -722,7 +722,38 @@ Plans:
   2. Triggering a per-profile swap shows honest live status (in-flight → success/failure) and reconciles to the *resulting* active engine read back from Ástríðr — no optimistic-only success state, matching the global axis's BSC-04 contract.
   3. A profile with no engine telemetry yet renders an honest absent/unknown state, not a fabricated current engine.
 
-**Plans**: TBD
+**Plans**: 9 plans (7 waves) — cross-repo (astridr-repo `feature/brain-swap` + codepulse `master`)
+
+**Wave 1**
+
+- [ ] 109-01-PLAN.md — astridr: `ModelRouter` override enumerators + `profile_overrides` on `build_swap_state_payload` + `default_profile_id` on the `swap.catalogue` ack (ENGINE-03, ENGINE-04; D-03, D-05)
+- [ ] 109-02-PLAN.md — codepulse Convex: bounded `listGlobal` (matches absent `scope`, not `null`) + `mergeSwapHistory` on the WR-02-safe side + 103-CONTRACT.md §3/§8/§9 corrected in place (TELE-02; D-11)
+
+**Wave 2**
+
+- [ ] 109-03-PLAN.md — retire the D-16 stub seam whole: flag/adapter/fixtures/registrar/validator/e2e spec deleted, one `useBrainCatalogue`, real scoped `swap.set` dispatch (ENGINE-03, ENGINE-04; D-01, D-02, D-04)
+
+**Wave 3**
+
+- [ ] 109-04-PLAN.md — `useProfileBrainOverrides` + the override rung above global, fleet-only `lastTurn`, canonical "Not reported", confirm-column + Settings row on one resolver (ENGINE-03; D-06, D-07, D-14)
+
+**Wave 4**
+
+- [ ] 109-05-PLAN.md — `modelIdsMatch` applied at all SEVEN model-id equality sites with a behavioral guard each (ENGINE-03; D-08)
+
+**Wave 5**
+
+- [ ] 109-06-PLAN.md — `useProfileSwap`: the 5-state server-confirmed outcome machine, confirming against the override slot, with the bounded "not yet confirmed" state on all four surfaces (ENGINE-04; D-05)
+
+**Wave 6**
+
+- [ ] 109-07-PLAN.md — D-13 vendor mapping + Unclassified group/chip/`costTier` + the hoisted scope-aware confirm gate with a mouse/keyboard parity test (ENGINE-03; D-09, D-13)
+- [ ] 109-08-PLAN.md — combined bounded history read, one shared `SwapHistoryList`, and the collapsible per-profile section on Settings with a live-derived pinned note (TELE-02; D-10, D-11, D-12)
+
+**Wave 7**
+
+- [ ] 109-09-PLAN.md — **operator-attended live gate, `autonomous: false`**: astridr rebuild + in-container freshness probe, then D-03/D-05/D-06/D-11 probes each paired with a control, evidence pasted as rows (ENGINE-03, ENGINE-04, TELE-02)
+
 **UI hint**: yes
 
 ---
