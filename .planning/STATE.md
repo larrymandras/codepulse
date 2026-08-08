@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: planning
-stopped_at: Phase 109 context gathered
-last_updated: "2026-08-07T21:57:40.811Z"
-last_activity: 2026-08-07
+stopped_at: Phase 109 UI-SPEC approved
+last_updated: "2026-08-08T11:19:19.000Z"
+last_activity: 2026-08-08
 progress:
   total_phases: 6
   completed_phases: 1
@@ -45,8 +45,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 Phase: 109
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-08-07
+Status: Ready to plan — UI-SPEC approved
+Last activity: 2026-08-08
+
+**Phase 109 UI-SPEC approved 2026-08-08** (`109-UI-SPEC.md`, commit `87ce5c53`; no plans yet — counters unchanged, 109 has no plans). `/gsd-plan-phase 109` stopped at the pre-flight gate because a UI phase had no UI-SPEC; `/gsd-ui-phase 109` was run first at Larry's direction. `gsd-ui-checker` returned 6/6 dimensions after **three** revisions (the workflow's cap is 2; Larry authorized the third), and each revision closed a distinct defect verified against live code rather than a style note — all three were found by the checker and independently re-verified in the main session before being relayed. (1) §G cited the wrong mechanism: the placeholder actually on screen is the `"Auto"` literal in `BrainPicker.tsx:358-360`'s ternary false branch, rendered at `GlobalSwapModal.tsx:624` — `resolveModelDisplayName` is only reached when `engine` is truthy, so a planner following the original text would have patched a path that never runs and left the placeholder visible. (2) D-09's `costTier: "unknown"` makes `needsCostConfirm` (`BrainPickerRow.tsx:83-85`) fire for the first time, stacking the row's inline confirm with `GlobalSwapModal`'s own `needsCostWarning` line — the double-confirm 103-UI-SPEC §3 forbids, and exactly what `BrainPicker.tsx:114-123`'s docstring hardcoded `costTier: "normal"` to prevent. (3) The rev-2 fix guarded `BrainPicker.tsx`'s `handleActivate` only, which a mouse click on a fresh row never reaches — `BrainPickerRow.tsx:146-153` has its own scope-blind local gate that returns at `:149` without calling `onSelect`, and the second click short-circuits at `expandedId === entry.id` before the new condition — so it fixed keyboard, left mouse stacking, and *broke* the mouse/keyboard parity `BrainPicker.tsx:389-396` documents as a guarantee. Final fix hoists the gate: `BrainPicker` computes `shouldConfirmCost = scope !== "global" && needsCostConfirm(entry)` once and passes it to `BrainPickerRow` as a `needsConfirm` prop, making `BrainPickerRow.tsx` a modified file this phase. **Consequence for planning:** the spec now prescribes a two-file confirm-gate refactor in a shipped component — a required consequence of locked D-09, not invented scope — and recommends a mouse/keyboard parity test across every (scope, costTier) pair, since a single-path test passed all three broken revisions. Contract highlights: one canonical `"Not reported"` absent state replacing three disagreeing shipped strings; the 5-state per-profile outcome machine reusing `GlobalSwapModal`'s BSC-04 pattern with the bounded "accepted, not yet confirmed" state specified never to read as success; an explicit "Unclassified" catalogue group that must never silently default to `api` — with a planner note that unmapped-vendor detection must test `PROVIDER_BILLING` membership directly, never `getBillingType()`'s `?? "api"` fallback (`providers.ts:32-35`); and D-10's new collapsible per-profile swap-history section on Settings. Next: `/gsd-plan-phase 109`.
 
 **Milestone v14.0 — Per-Agent Engine Visibility, Convex Durability & Mission Board**, opened 2026-08-06 via `/gsd-new-milestone`. Continues phase numbering from v13.0 (103–107) → **Phases 108+**.
 
