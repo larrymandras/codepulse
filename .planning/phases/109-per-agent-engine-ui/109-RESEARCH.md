@@ -484,7 +484,24 @@ CONTEXT.md file:line citations checked against live source this session, with di
 
 **Everything not listed above as drifted was either confirmed exactly, or not independently re-checked this session** (astridr changes are scoped to exactly 2 items per CONTEXT.md, so most astridr-side citations outside D-03/D-05's direct evidence chain were not re-traced).
 
-## Open Questions for the Planner
+## Open Questions for the Planner (RESOLVED)
+
+*All five closed during `/gsd-plan-phase 109` on 2026-08-08. Resolution recorded inline per question
+below; the original text of each question is preserved unchanged for traceability.*
+
+- **Q1 → RESOLVED as `109-CONTEXT.md` D-13** (operator decision): the alias + OpenRouter catch-all
+  rule. Implemented by plan `109-07`.
+- **Q2 → RESOLVED as `109-CONTEXT.md` D-14** (operator decision): yes, upgrade the Settings row label
+  to `useResolvedBrain(profileId)`. Implemented by plan `109-04`.
+- **Q3 → RESOLVED in plan `109-04` Task 2**: `LlmStatusPanel.tsx`'s `"Auto"` fallback becomes
+  UI-SPEC §A's canonical `"Not reported"`, with the reason recorded in that task.
+- **Q4 → DELEGATED to execution, deliberately**: plan `109-01`'s `<read_first>` requires reading
+  `_handle_swap_catalogue`'s dependency injection before writing the D-03 change, with explicit
+  either-branch guidance. Not answerable from research without reading the DI, so it is pinned as a
+  read-first obligation rather than a guess.
+- **Q5 → RESOLVED as report-don't-fix in plan `109-01` Task 3**: the stale `web.py:973` CORS default
+  is surfaced to the operator with pasted evidence. Fixing it would breach this phase's locked
+  two-change astridr scope fence.
 
 1. **D-09's vendor-mapping resolution (§C.9) — genuinely undecided, not a research gap.** Should `"Unclassified"` be reachable only on malformed/missing vendor data (my proposed `anthropic`-alias + openrouter-catch-all rule, which makes Subscription/Local permanently empty but classifies ~100% of real entries as API), or should it be a literal per-vendor-slug `PROVIDER_BILLING` lookup with no aliasing (which makes Unclassified the common case for nearly the whole live catalogue, satisfying the letter of "never silently default" most conservatively but defeating the cost-tier confirm's usefulness for almost every row)? **What would settle it:** ask whether the cost-tier confirm gate is meant to protect against genuinely-uncertain billing (favor my proposed rule) or against ANY vendor CodePulse hasn't explicitly reviewed (favor the literal lookup). This is a product/UX call, not something more code-reading resolves.
 2. **Should `Settings.tsx`'s per-profile engine display (§D.12) also be upgraded to `useResolvedBrain(profileId)`?** Not one of ENGINE-03 SC1's three named surfaces, and UI-SPEC §B explicitly conditions its rule rather than mandating it here. Given D-10 mounts swap history directly under this exact row, leaving it on raw telemetry means a freshly-pinned profile's own row can show a stale engine right next to history proving the pin succeeded. **What would settle it:** whether the planner considers this row's data-source correctness in-scope for "the picker's This profile scope... shows a profile's actual current engine" (SC1's wording doesn't literally name Settings, but the row's own embedded `BrainPicker` IS the "This profile" scope surface — arguably SC1 already covers it via that embedded picker, just not the row's OWN label above it).
