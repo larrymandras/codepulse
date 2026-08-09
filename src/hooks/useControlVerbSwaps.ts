@@ -15,11 +15,23 @@
  * 108-06-PLAN.md's own stated fallback, passing `undefined` skips the query outright
  * (`useQuery(..., "skip")`) rather than inventing a profile id to query with — that is the
  * honest-absent state, not a loading state and not an error.
+ *
+ * Phase 109 (D-10/D-11, TELE-02's surfaced half): `useCombinedSwapHistory` below adds a SECOND
+ * read, combining this profile's own scoped rows with the global (fleet-wide) swap rows via
+ * `mergeSwapHistory` (convex/controlVerbSwapsFilters.ts). It exists because D-04's corrected
+ * precedence means a global swap genuinely CAN change an unpinned profile's engine — a
+ * scoped-only history (this hook, unchanged, still the ALL-PROFILES-axis's own read) would claim
+ * nothing happened at a moment the profile's engine actually did change. Each of
+ * `listByScope`/`listGlobal` is independently bounded at `SWAP_HISTORY_CAP` server-side, so a
+ * naive concatenation could reach 2x cap — `mergeSwapHistory` re-caps the merged list and reports
+ * the true pre-truncation `totalCount` separately, so a consumer can render both a bounded list
+ * and an honest on-screen truncation statement (this repo's standing Phase 105 D-11/D-12 rule)
+ * instead of silently dropping rows.
  */
 
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { isBrainSwap, SWAP_HISTORY_CAP } from "../../convex/controlVerbSwapsFilters";
+import { isBrainSwap, mergeSwapHistory, SWAP_HISTORY_CAP } from "../../convex/controlVerbSwapsFilters";
 
 export { SWAP_HISTORY_CAP };
 
@@ -55,6 +67,60 @@ export function useControlVerbSwaps(profileId: string | undefined): SwapHistoryR
       profileId ? { profileId } : "skip"
     ) as SwapHistoryRow[] | undefined) ?? EMPTY_ROWS
   );
+}
+
+/** A merged row, tagged with which query it came from (D-11/D-12) — the ONLY signal that
+ * distinguishes "this profile's own swap" (`origin: "scoped"`, no badge) from "a fleet-wide swap"
+ * (`origin: "global"`, GLOBAL badge) at render time. */
+export type CombinedSwapHistoryRow = SwapHistoryRow & { origin: "scoped" | "global" };
+
+export interface CombinedSwapHistory {
+  rows: CombinedSwapHistoryRow[];
+  /** True pre-truncation count of BRAIN swaps across both sources — never the capped
+   * `rows.length` — so a consumer's count badge can state the honest total even when it exceeds
+   * the display cap (UI-SPEC §H: "Swap history (37)" alongside a 20-row truncation caption). */
+  totalCount: number;
+  /** `rows.length >= SWAP_HISTORY_CAP` — the merged list is genuinely at the display cap. */
+  atCap: boolean;
+}
+
+const EMPTY_COMBINED: CombinedSwapHistory = { rows: [], totalCount: 0, atCap: false };
+
+/**
+ * useCombinedSwapHistory — Phase 109 (D-10/D-11, TELE-02's surfaced half). Combines
+ * `listByScope(profileId)` with the new `listGlobal()` (109-02) into one bounded,
+ * newest-first, brain-swap-only list for D-10's Settings-hosted per-profile history section.
+ *
+ * `profileId === undefined` skips BOTH underlying queries (`useQuery(..., "skip")`) and returns
+ * the same honest-absent `{ rows: [], totalCount: 0, atCap: false }` this file's other hook
+ * already establishes for "no profile to scope by" — never a loading state, never an error.
+ *
+ * Filtering (`filterBrainSwaps`) is applied to EACH source before merging, not after, so
+ * `totalCount` reports the number of BRAIN swaps the operator could actually see rather than a
+ * raw row count that silently includes voice rows — otherwise the on-screen count badge would
+ * claim history the list deliberately never shows. A voice swap can never be per-profile anyway
+ * (Ástríðr rejects `profile_id` for `target='voice'`), but filtering before merging makes that
+ * structural here rather than incidental.
+ */
+export function useCombinedSwapHistory(profileId: string | undefined): CombinedSwapHistory {
+  const scopedRaw = useQuery(
+    api.controlVerbSwaps.listByScope,
+    profileId ? { profileId } : "skip"
+  ) as SwapHistoryRow[] | undefined;
+  const globalRaw = useQuery(
+    api.controlVerbSwaps.listGlobal,
+    profileId ? {} : "skip"
+  ) as SwapHistoryRow[] | undefined;
+
+  if (profileId === undefined) {
+    return EMPTY_COMBINED;
+  }
+
+  const scoped = filterBrainSwaps(scopedRaw ?? EMPTY_ROWS);
+  const global = filterBrainSwaps(globalRaw ?? EMPTY_ROWS);
+  const { rows, totalCount } = mergeSwapHistory(scoped, global);
+
+  return { rows, totalCount, atCap: rows.length >= SWAP_HISTORY_CAP };
 }
 
 /**

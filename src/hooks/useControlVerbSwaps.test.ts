@@ -15,16 +15,38 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { renderHook } from "@testing-library/react";
 import {
   describeSwapOutcome,
   filterBrainSwaps,
   SWAP_HISTORY_CAP,
+  useCombinedSwapHistory,
   type SwapHistoryRow,
 } from "./useControlVerbSwaps";
 import { SWAP_HISTORY_CAP as SHARED_SWAP_HISTORY_CAP } from "../../convex/controlVerbSwapsFilters";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ─── Mocks (Task 1, Phase 109 D-11) — `useCombinedSwapHistory` hook-level coverage ────────────
+//
+// Follows this repo's established hook-test idiom (src/hooks/useActiveEngine.test.ts): mock
+// `convex/react`'s `useQuery` directly and a minimal `api` shape, rather than a real Convex
+// runtime. The pure-function tests below this block do not touch either mock.
+
+const mockUseQuery = vi.fn();
+vi.mock("convex/react", () => ({
+  useQuery: (...args: unknown[]) => mockUseQuery(...args),
+}));
+
+vi.mock("../../convex/_generated/api", () => ({
+  api: {
+    controlVerbSwaps: {
+      listByScope: "controlVerbSwaps:listByScope",
+      listGlobal: "controlVerbSwaps:listGlobal",
+    },
+  },
+}));
 
 // ─── Fixtures — one row per real swap_model.py emit site (D-13) ──────────────────────────────
 
@@ -81,6 +103,133 @@ const VOICE_ROW: SwapHistoryRow = {
   channel: "voice",
   timestamp: 1754530400,
 };
+
+// ─── useCombinedSwapHistory (Task 1, Phase 109 D-11) ──────────────────────────────────────────
+
+function makeBrainRow(id: string, timestamp: number): SwapHistoryRow {
+  return {
+    _id: id,
+    verb: "swap_model",
+    target: "anthropic-sonnet-5",
+    resolved: "anthropic-sonnet-5",
+    path: "claude-native",
+    channel: "chat",
+    timestamp,
+  };
+}
+
+function makeVoiceRow(id: string, timestamp: number): SwapHistoryRow {
+  return {
+    _id: id,
+    verb: "swap_voice",
+    voiceId: "voice-warm",
+    resolved: "voice-warm",
+    path: "claude-native",
+    channel: "voice",
+    timestamp,
+  };
+}
+
+function makeBrainRows(count: number, prefix: string, startTimestamp: number): SwapHistoryRow[] {
+  return Array.from({ length: count }, (_, i) => makeBrainRow(`${prefix}-${i}`, startTimestamp + i));
+}
+
+describe("useCombinedSwapHistory", () => {
+  beforeEach(() => {
+    mockUseQuery.mockReset();
+  });
+
+  it("skips BOTH queries and returns the honest-absent default when profileId is undefined — never a loading state, never an error", () => {
+    mockUseQuery.mockReturnValue(undefined);
+
+    const { result } = renderHook(() => useCombinedSwapHistory(undefined));
+
+    expect(mockUseQuery).toHaveBeenCalledWith("controlVerbSwaps:listByScope", "skip");
+    expect(mockUseQuery).toHaveBeenCalledWith("controlVerbSwaps:listGlobal", "skip");
+    expect(result.current).toEqual({ rows: [], totalCount: 0, atCap: false });
+  });
+
+  it("calls listByScope with {profileId} and listGlobal with {} when a real profileId is supplied", () => {
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "controlVerbSwaps:listByScope") return [];
+      if (queryRef === "controlVerbSwaps:listGlobal") return [];
+      return undefined;
+    });
+
+    renderHook(() => useCombinedSwapHistory("personal"));
+
+    expect(mockUseQuery).toHaveBeenCalledWith("controlVerbSwaps:listByScope", {
+      profileId: "personal",
+    });
+    expect(mockUseQuery).toHaveBeenCalledWith("controlVerbSwaps:listGlobal", {});
+  });
+
+  it("caps the merged list at SWAP_HISTORY_CAP and reports the true pre-truncation totalCount (20 scoped + 20 global -> 20 rows, totalCount 40, atCap true)", () => {
+    const scoped = makeBrainRows(20, "scoped", 1000);
+    const global = makeBrainRows(20, "global", 2000);
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "controlVerbSwaps:listByScope") return scoped;
+      if (queryRef === "controlVerbSwaps:listGlobal") return global;
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useCombinedSwapHistory("personal"));
+
+    expect(result.current.rows).toHaveLength(SWAP_HISTORY_CAP);
+    expect(result.current.totalCount).toBe(40);
+    expect(result.current.atCap).toBe(true);
+  });
+
+  it("CONTROL: a combined list under the cap is not truncated and atCap is false (3 scoped + 2 global -> 5 rows, totalCount 5, atCap false)", () => {
+    const scoped = makeBrainRows(3, "scoped", 1000);
+    const global = makeBrainRows(2, "global", 2000);
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "controlVerbSwaps:listByScope") return scoped;
+      if (queryRef === "controlVerbSwaps:listGlobal") return global;
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useCombinedSwapHistory("personal"));
+
+    expect(result.current.rows).toHaveLength(5);
+    expect(result.current.totalCount).toBe(5);
+    expect(result.current.atCap).toBe(false);
+  });
+
+  it("a voice swap present in either source appears in NEITHER rows NOR totalCount — filtering happens before the merge", () => {
+    const scoped = [makeBrainRow("scoped-brain", 1000), makeVoiceRow("scoped-voice", 1001)];
+    const global = [makeBrainRow("global-brain", 2000), makeVoiceRow("global-voice", 2001)];
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "controlVerbSwaps:listByScope") return scoped;
+      if (queryRef === "controlVerbSwaps:listGlobal") return global;
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useCombinedSwapHistory("personal"));
+
+    expect(result.current.totalCount).toBe(2);
+    expect(result.current.rows.map((r) => r._id).sort()).toEqual(
+      ["global-brain", "scoped-brain"].sort()
+    );
+    expect(result.current.rows.some((r) => r._id.includes("voice"))).toBe(false);
+  });
+
+  it("each row carries an origin discriminant matching which query it came from", () => {
+    const scoped = [makeBrainRow("scoped-a", 1000)];
+    const global = [makeBrainRow("global-a", 2000)];
+    mockUseQuery.mockImplementation((queryRef: unknown) => {
+      if (queryRef === "controlVerbSwaps:listByScope") return scoped;
+      if (queryRef === "controlVerbSwaps:listGlobal") return global;
+      return undefined;
+    });
+
+    const { result } = renderHook(() => useCombinedSwapHistory("personal"));
+
+    const byId = Object.fromEntries(result.current.rows.map((r) => [r._id, r.origin]));
+    expect(byId["scoped-a"]).toBe("scoped");
+    expect(byId["global-a"]).toBe("global");
+  });
+});
 
 // ─── SWAP_HISTORY_CAP re-export ────────────────────────────────────────────────────────────────
 //
