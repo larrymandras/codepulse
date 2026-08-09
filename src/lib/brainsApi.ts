@@ -62,9 +62,35 @@ export interface ActiveEngine {
 // same class of dishonesty D-14 exists to prevent.
 
 /** Strips a leading vendor namespace: "anthropic/claude-sonnet-5" -> "claude-sonnet-5". */
-function stripVendorPrefix(modelId: string): string {
+export function stripVendorPrefix(modelId: string): string {
   const slash = modelId.lastIndexOf("/");
   return slash === -1 ? modelId : modelId.slice(slash + 1);
+}
+
+/**
+ * modelIdsMatch — D-08's single shared model-id comparator. Replaces raw `===` at all seven
+ * equality sites that were comparing model ids: `BrainHeaderBadge.tsx`'s vendor-dot lookup,
+ * `useActiveEngine.ts`'s `deriveMixedState` distinct-model fold, `BrainPicker.tsx`'s `isCurrent`
+ * highlight (both scopes) and its genuinely-landed success-toast gate, `GlobalSwapModal.tsx`'s
+ * prior-override display-name lookup, and the vendor-dot lookups in `Chat.tsx`'s composer pill and
+ * `Settings.tsx`'s per-profile rows. It exists so those seven sites cannot silently diverge on the
+ * id-format question the way `===` let them.
+ *
+ * Root cause (recorded above): `profileConfigs.modelPreferences.primary` — and therefore any
+ * `mode:"inherited"` telemetry row seeded from it — is vendor-prefixed
+ * ("anthropic/claude-sonnet-5"), while live `swap.catalogue` ids and `mode:"pinned"` rows are bare
+ * ("claude-sonnet-5"). An exact `===` between the two formats can never hit even though they name
+ * the same model.
+ *
+ * Two-step match, mirroring `resolveModelDisplayName`: exact equality first, then equality of the
+ * vendor-stripped suffix. Deliberate consequence, stated rather than left implicit: two DIFFERENT
+ * vendor namespaces that happen to share a bare suffix (e.g. "anthropic/x" vs "openai/x") compare
+ * equal too — acceptable because the bare suffix is what identifies the model in this catalogue,
+ * and the alternative (canonicalizing the stored rows so only one format ever exists) is exactly
+ * what D-08 rejects: it would make `useActiveEngine` stop returning what Ástríðr actually reported.
+ */
+export function modelIdsMatch(a: string, b: string): boolean {
+  return a === b || stripVendorPrefix(a) === stripVendorPrefix(b);
 }
 
 /**

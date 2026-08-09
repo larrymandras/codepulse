@@ -105,6 +105,52 @@ describe("deriveMixedState", () => {
 });
 
 // ---------------------------------------------------------------------------
+// deriveMixedState — model-id format tolerance (Phase 109 Plan 05, D-08)
+// ---------------------------------------------------------------------------
+
+describe("deriveMixedState — model-id format tolerance (D-08)", () => {
+  it("reports NOT mixed when one model is reported in two id formats — the case a raw Set judged as two distinct models", () => {
+    const engines: ActiveEngineMap = {
+      "assistant-default": makeEngine("assistant-default", "anthropic/claude-sonnet-5"),
+      consulting: makeEngine("consulting", "claude-sonnet-5"),
+    };
+
+    const result = deriveMixedState(engines);
+
+    expect(result.mixed).toBe(false);
+    expect(result.distinctModels).toHaveLength(1);
+    expect(result.single).toBeDefined();
+  });
+
+  it("CONTROL: still reports mixed for two genuinely different models — an always-not-mixed implementation must fail this", () => {
+    const engines: ActiveEngineMap = {
+      "assistant-default": makeEngine("assistant-default", "anthropic/claude-opus-4-8"),
+      consulting: makeEngine("consulting", "claude-sonnet-5"),
+    };
+
+    const result = deriveMixedState(engines);
+
+    expect(result.mixed).toBe(true);
+    expect(result.distinctModels).toHaveLength(2);
+  });
+
+  it("keeps the FIRST-seen literal id as the representative — never a stripped/synthesized form", () => {
+    const engines: ActiveEngineMap = {
+      "assistant-default": makeEngine("assistant-default", "anthropic/claude-sonnet-5"),
+      consulting: makeEngine("consulting", "claude-sonnet-5"),
+    };
+
+    const result = deriveMixedState(engines);
+
+    // The value must be byte-identical to ONE of the two input strings — not a
+    // stripVendorPrefix-canonicalized value that was never actually reported by either profile.
+    expect(["anthropic/claude-sonnet-5", "claude-sonnet-5"]).toContain(result.distinctModels[0]);
+    // Specifically the FIRST-seen one, per Object.values(engines) iteration order.
+    expect(result.distinctModels[0]).toBe("anthropic/claude-sonnet-5");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // useActiveEngine (hook)
 // ---------------------------------------------------------------------------
 

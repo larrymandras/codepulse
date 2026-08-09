@@ -2,7 +2,7 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { isUnresolvedRouting } from "../../convex/activeEngineFilters";
 import { useProfileConfigs } from "./useProfileConfigs";
-import type { ActiveEngine } from "../lib/brainsApi";
+import { modelIdsMatch, type ActiveEngine } from "../lib/brainsApi";
 
 /**
  * useActiveEngine.ts — the single reactive per-profile active-engine map (BSC-01's
@@ -46,7 +46,20 @@ export function deriveMixedState(engines: ActiveEngineMap): MixedState {
     return { mixed: false, distinctModels: [] };
   }
 
-  const distinctModels = Array.from(new Set(reported.map((e) => e.model)));
+  // D-08: fold with modelIdsMatch instead of a raw `Set` — a raw Set splits one model reported in
+  // two id formats (e.g. "anthropic/claude-sonnet-5" vs "claude-sonnet-5") into two distinct
+  // entries, which is exactly the false "Mixed brains" defect this rule exists to prevent. This
+  // changes ONLY the comparison; the accumulator keeps the FIRST-seen literal id as the
+  // representative, so `distinctModels` still contains a byte-faithful value the server actually
+  // reported, never a synthesized canonical form. Canonicalizing here (stripping every id before
+  // storing it) is D-08's explicitly rejected option: it would make this hook stop returning what
+  // Ástríðr actually said.
+  const distinctModels: string[] = [];
+  for (const engine of reported) {
+    if (!distinctModels.some((m) => modelIdsMatch(m, engine.model))) {
+      distinctModels.push(engine.model);
+    }
+  }
 
   if (distinctModels.length === 1) {
     return { mixed: false, distinctModels, single: reported[0] };
