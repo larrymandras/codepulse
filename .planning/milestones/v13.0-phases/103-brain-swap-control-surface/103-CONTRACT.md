@@ -140,6 +140,21 @@ followed by a separate `swap.state` push, and the UI renders only the push, neve
 
 ## 3. Catalogue read `models.catalog`
 
+**Corrected 2026-08-09 (CodePulse Phase 109, D-03).** `default_profile_id` (defined below) is no
+longer aspirational specification — Ástríðr now reports it on the **existing, live** `swap.catalogue`
+ack (`_handle_swap_catalogue`, `astridr/api/ws_commands.py:1258`), sourced from
+`config.profiles[0].id` (`astridr/engine/bootstrap/core.py:1298`, threaded through
+`astridr/engine/bootstrap/wiring.py:344-350`) — Ástríðr's own resolved chat-channel default profile,
+i.e. what an unattributed `chat.send` actually routes to. Verified live in astridr-repo:
+`tests/unit/engine/test_ws_commands.py:2034-2086` (labeled "Phase 109 D-03") asserts the ack's
+`default_profile_id` equals the first configured profile's id. **Rejected:** deriving it from Convex
+`profileConfigs` ordering (CodePulse's `BrainHeaderBadge.tsx`'s `profiles[0]?.profileId` fallback) —
+that is a *different* ordering from Ástríðr's config, so the badge could dispatch a per-profile swap
+at a profile the operator never named. This section's `ModelsCatalogCommand`/`CatalogueEntry` shape
+below otherwise remains unbuilt specification, not an observation of running code — only
+`default_profile_id` is real as of Phase 109; the standalone `models.catalog` command itself was
+never built (D-02 instead reuses the existing `swap.catalogue` for both scopes).
+
 **Transport: WS, not REST.** Rationale — avoids a second auth path (the WS bearer-subprotocol
 handshake already gates every command; a REST catalogue endpoint would need its own
 `authHeaders()`-based auth flow for no benefit) and there is a real, working precedent
@@ -315,13 +330,23 @@ lives server-side only.
 ## 8. No server-side batch command
 
 A **global** swap is **N client-dispatched single-profile `gateway.model.set` commands**, aggregated
-client-side with `Promise.allSettled`. This contract does **not** define, and Phase 184.1 **must
-NOT design**, any server-side batch/fan-out command in its first cut. This falls directly out of
+client-side with `Promise.allSettled`. This contract does **not** define, and no future phase
+**must design**, any server-side batch/fan-out command in its first cut. This falls directly out of
 D-12 (per-row honesty for partial failure) — a `Promise.allSettled` result is naturally one outcome
 per profile with no additional server-side aggregation logic required. Note also that "All profiles"
 scope in the Phase 103 UI dispatches the **existing live** `swap.set` (global axis), not N
 `gateway.model.set` calls — this per-profile fan-out pattern is Claude's discretion to reuse in a
 future global-per-profile-command world, not something this phase's UI actually exercises.
+
+**Corrected 2026-08-09 (CodePulse Phase 109, D-10).** This section's argument for why the global
+axis has no per-profile batch/fan-out concept — the all-profiles axis is genuinely one command with
+one outcome, not N per-profile outcomes to enumerate — is **confirmed correct**, and is the
+resolution `GlobalSwapModal` (the all-profiles surface, §"1. Scope and status header") was waiting
+on: it has no per-profile identity to key a per-profile history readout by, so it structurally
+cannot host TELE-02's swap-history readout. Phase 109 D-10 hosts that readout instead on
+`Settings.tsx`'s per-profile engine rows — the one surface in the app that already lists every
+profile with a real, unambiguous `profileId` — combining that profile's `listByScope` rows with the
+global rows from `listGlobal` (D-11) via `mergeSwapHistory` (`convex/controlVerbSwapsFilters.ts`).
 
 ---
 
@@ -342,7 +367,7 @@ resolve (rung 4). This means a per-profile pinned default set through this contr
 is in force — the profile's own row would show its pinned default, but the profile is actually
 running on the global override.
 
-**Recorded here so Phase 184.1 does not have to rediscover it.** Phase 103's CodePulse UI does
+**Recorded here so a future reader does not have to rediscover it.** Phase 103's CodePulse UI does
 **not** attempt to render this shadowing (operator decision, `103-CONTEXT.md` OQ1 resolution,
 2026-07-28) — it surfaces the per-profile default/session-override state as reported by
 `model_routing`, full stop. **Carry-forward risk for whoever builds against this contract:** once
@@ -351,6 +376,20 @@ running engine while a global override actually governs that turn recreates exac
 config read presented as live state" failure this whole phase (BSC-01) exists to kill — the only
 reason it's safe to defer here is that the per-profile axis is stub-backed this phase, so the
 conflict cannot manifest for real yet.
+
+**Corrected 2026-08-09 (CodePulse Phase 109, D-06).** The precedence inversion this section
+describes is **FIXED as of Phase 109.** The per-profile override is now the TOP rung of
+`resolveActiveBrain` (`src/hooks/useResolvedBrain.ts`), ahead of the global override, mirroring
+Ástríðr's own `_resolve_model` chain (D-05's `swap.state` extension reports the per-profile override
+map so the read side can rank it correctly): **per-profile override → global override → per-profile
+telemetry row → lastTurn (fleet only) → none.** This resolves the shadowing described above for the
+CASE this contract worried about (a per-profile default silently inactive under a global override)
+by ranking the per-profile override ahead of it, rather than by rendering the disagreement. This
+section's own original proposal — rendering the two-axis disagreement explicitly, e.g.
+`claude-opus-4-8 (pinned for this profile) · global override: grok-4.5` — was considered and
+deliberately set aside in favour of D-06's simpler rung insertion; it is recorded as a **DEFERRED**
+idea in `109-CONTEXT.md`'s Deferred Ideas section, not discarded — revisit if operators find the
+resolved single value hides something they need.
 
 ---
 
