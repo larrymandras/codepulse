@@ -747,7 +747,7 @@ Plans:
 
 **Wave 6**
 
-- [ ] 109-07-PLAN.md — D-13 vendor mapping + Unclassified group/chip/`costTier` + the hoisted scope-aware confirm gate with a mouse/keyboard parity test (ENGINE-03; D-09, D-13)
+- [x] 109-07-PLAN.md — D-13 vendor mapping + Unclassified group/chip/`costTier` + the hoisted scope-aware confirm gate with a mouse/keyboard parity test (ENGINE-03; D-09, D-13)
 - [ ] 109-08-PLAN.md — combined bounded history read, one shared `SwapHistoryList`, and the collapsible per-profile section on Settings with a live-derived pinned note (TELE-02; D-10, D-11, D-12)
 
 **Wave 7**
@@ -828,7 +828,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 108. Per-Profile Engine Telemetry (astridr backend) | 7/7 | Complete    | 2026-08-07 |
-| 109. Per-Agent Engine UI | 6/9 | In Progress|  |
+| 109. Per-Agent Engine UI | 7/9 | In Progress|  |
 | 110. Convex Durability | 0/TBD | Not started | - |
 | 111. Mission Board | 0/TBD | Not started | - |
 | 112. Telemetry Coverage Closure | 0/TBD | Not started | - |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: Completed 109-06-PLAN.md
-last_updated: "2026-08-09T15:27:43.677Z"
+stopped_at: Completed 109-07-PLAN.md
+last_updated: "2026-08-09T15:51:24.761Z"
 last_activity: 2026-08-09
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 16
-  completed_plans: 13
+  completed_plans: 14
   percent: 8
 ---
 
@@ -44,9 +44,11 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 ## Current Position
 
 Phase: 109 (per-agent-engine-ui) — EXECUTING
-Plan: 6 of 9 complete (next: Plan 7)
+Plan: 7 of 9 complete (next: Plan 8)
 Status: Ready to execute
 Last activity: 2026-08-09
+
+**Plan 109-07 complete (2026-08-09).** Restored real grouping/billing metadata to the picker from CodePulse's own `PROVIDER_BILLING` registry and fixed the confirm-gate collision it exposed. `mapCatalogueVendorToBilling` (new, `src/lib/catalogueBilling.ts`) implements D-13's corrected rule: `"anthropic"` maps to the `anthropic_direct` registry entry; every other non-empty vendor (the OpenRouter routing-slug family) is billed as the OpenRouter catch-all; only an empty/missing vendor reaches `group:"unclassified"`/`costTier:"unknown"` — detection is by emptiness, never by calling the registry's own unmapped-provider fallback, which would make "unclassified" undetectable. `normalizeCatalogueEntry` (`BrainPicker.tsx`) no longer hardcodes `group:"api", billing:"api", costTier:"normal"` for every row. `GROUP_ORDER` gains a fourth, last "Unclassified" entry with a deliberately irregular full-word "UNCLASSIFIED" chip (dashed `--status-warn` border). Because `costTier:"unknown"` now reaches live entries, `needsCostConfirm` can fire for the first time — exposing a mouse/keyboard confirm-gate collision UI-SPEC §F revision 3 already specified the fix for: `BrainPicker.tsx` now computes one hoisted `shouldConfirmCost = scope !== "global" && needsCostConfirm(entry)` and passes it to `BrainPickerRow` as a required `needsConfirm` prop, consumed identically by both the row's own mouse click and the enclosing cmdk keyboard path — the row no longer decides that condition itself. A six-combination (scope × costTier) mouse/keyboard parity test proves the two paths agree in every case, including the specific stacking defect (global scope + unknown cost-tier: modal opens, inline confirm never appears). Rule 1 fix folded in: `BrainPickerRow`'s hardcoded hex vendor-dot fallback (`#6b7280`) replaced with `var(--muted-foreground)`, matching `BrainHeaderBadge`'s existing pattern. `CatalogueEntry["group"]` widened in `src/lib/brainsApi.ts` (named by the plan's own task text but omitted from its declared file list — documented as a deviation). Full suite: 283 passed | 17 skipped (baseline 282/17), 3717 passed | 193 todo (baseline 3699/193) — 18 net new tests, zero regressions. `npx tsc --noEmit` exits 0. No file belonging to plan 109-08's declared scope was touched. Executed sequentially on `master`, no worktree. See `109-07-SUMMARY.md`. Next: Plan 109-08.
 
 **Plan 109-04 complete (2026-08-09).** Fixed the read path so every brain surface answers "what engine is this profile on?" the same way Ástríðr does. `useProfileBrainOverrides()` (new hook, mirrors `useGlobalBrainOverride`'s pull+push shape over `swap.state`'s `profile_overrides` map, delivered by 109-01) feeds a new top rung in `resolveActiveBrain`: a live per-profile override now wins even while a DIFFERENT global override is simultaneously active — the precedence-inversion fix (D-06). The scoped `lastTurn` fallback rung is removed (D-07): a scoped read with no telemetry and no override now returns `source:"none"` instead of rendering a different profile's most-recently-answered model as this profile's own; the fleet-wide (no-`profileId`) `lastTurn` rung is untouched. Three disagreeing absent-state strings ("No brain reported", two independent "Auto" fallbacks) are replaced by the one canonical "Not reported" (italic, muted, no dot) across `BrainHeaderBadge`, Chat's composer pill, `BrainPicker`'s trigger/confirm-modal column, Settings' per-profile row, and `LlmStatusPanel`. `BrainPicker`'s trigger base label, `isCurrent` row highlight, and the pre-swap confirm modal's per-row current-engine column now resolve through the full `resolveActiveBrain` chain instead of raw `activeEngines` telemetry — a profile pinned moments ago shows its pin immediately everywhere, never a stale pre-pin reading. Settings' per-profile engine label reads the same full chain (D-14), so it cannot disagree with the swap-history section plan 109-08 mounts beneath it. `useLastTurnModel`'s docstring, which cited a falsified premise (an emitter bug Phase 108 already fixed, and a nonexistent future astridr phase), is corrected in place. `BrainPicker.tsx:350`'s separate lowercase `"auto"` sentinel (feeds two non-user-visible consumers) is deliberately left unchanged, per the plan's own instruction — an explicit, still-open follow-up. Full suite: 281 passed | 17 skipped (unchanged file count), 3658 passed | 193 todo (baseline 3639) — 19 net new tests, zero regressions. `npx tsc --noEmit` exits 0. Executed sequentially on `master`, no worktree. See `109-04-SUMMARY.md`. Next: Plan 109-05.
 
@@ -845,6 +847,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 109-05]: deriveMixedState folds with modelIdsMatch but keeps the first-seen literal id as the distinctModels representative, never a canonicalized synthetic value
 - [Phase 109]: useProfileSwap confirms via profileOverrides[profileId] (swap.state override slot) with a raw === comparison, matching GlobalSwapModal's own override-slot readback precedent -- not a D-08 modelIdsMatch site, since the override slot echoes back exactly what was dispatched.
 - [Phase 109]: onPendingChange widened from string|null to {label,kind:inflight|uncertain}|null so the accepted (bounded-timeout) state can render distinctly from in-progress on every mirrored per-profile brain surface, per 109-UI-SPEC.md section C.
+- [Phase 109]: D-13 implemented: anthropic maps to anthropic_direct; every other non-empty vendor is the OpenRouter catch-all; unclassified detection is by vendor emptiness, never getBillingType's api fallback
+- [Phase 109]: shouldConfirmCost hoisted into one formula in BrainPicker.tsx, consumed identically by the row-render loop and handleActivate; needsCostConfirm stays the pure scope-independent predicate
 
 ### Pending Todos
 
@@ -885,11 +889,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 109 P03 | 40min | 3 tasks | 23 files |
 | Phase 109 P05 | 15min | 3 tasks | 14 files |
 | Phase 109 P06 | 55min | 3 tasks | 10 files |
+| Phase 109 P07 | 12min | 3 tasks | 7 files |
 
 ## Session Continuity
 
-Last session: 2026-08-09T15:27:43.662Z
-Stopped at: Completed 109-06-PLAN.md
+Last session: 2026-08-09T15:51:24.747Z
+Stopped at: Completed 109-07-PLAN.md
 
 --- Prior (superseded by the above) --- Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
 
