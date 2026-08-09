@@ -54,7 +54,7 @@ import {
   useResolvedBrain,
 } from "@/hooks/useResolvedBrain";
 import { useBrainCatalogue } from "@/hooks/useBrainCatalogue";
-import { resolveModelDisplayName } from "@/lib/brainsApi";
+import { modelIdsMatch, resolveModelDisplayName } from "@/lib/brainsApi";
 import { PROVIDER_COLORS } from "@/lib/providers";
 import { useAstridrChat } from "@/hooks/useAstridrChat";
 import { useAstridrVoice, VOICE_DEBUG_ENABLED, speakSystemLine } from "@/hooks/useAstridrVoice";
@@ -173,7 +173,11 @@ function BrainComposerPill() {
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
 
   const globalModelNames = useGlobalModelNames();
-  const vendor = catalogue?.find((e) => e.id === resolved.model)?.vendor;
+  // D-08: the catalogue's ids are bare while an `inherited`-mode resolved reading can be
+  // vendor-prefixed — a raw `===` here missed every such row and the dot fell back to neutral.
+  const vendor = resolved.model
+    ? catalogue?.find((e) => modelIdsMatch(e.id, resolved.model as string))?.vendor
+    : undefined;
   const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
   const isGlobal = resolved.source === "global";
   const isAbsent = resolved.source === "none";

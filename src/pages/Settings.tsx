@@ -29,6 +29,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { ScrollArea } from "../components/ui/scroll-area";
 import { useBrainCatalogue } from "../hooks/useBrainCatalogue";
 import { PROVIDER_COLORS } from "../lib/providers";
+import { modelIdsMatch } from "../lib/brainsApi";
 import type { AgentProfile, Avatar } from "../types";
 
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL ?? "";
@@ -254,7 +255,12 @@ export function AgentProfileRows({
           profileId: c.profileId,
           profileOverrides,
         });
-        const vendor = engineCatalogue?.find((entry) => entry.id === resolvedRow.model)?.vendor;
+        // D-08: the catalogue's ids are bare while an `inherited`-mode resolved reading can be
+        // vendor-prefixed — a raw `===` here missed every such row and the dot fell back to neutral.
+        const vendor = resolvedRow.model
+          ? engineCatalogue?.find((entry) => modelIdsMatch(entry.id, resolvedRow.model as string))
+              ?.vendor
+          : undefined;
         const dotColor = vendor ? PROVIDER_COLORS[vendor] : undefined;
         const pending = pendingByProfile[c.profileId] ?? null;
 

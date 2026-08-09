@@ -158,6 +158,40 @@ describe("AgentProfileRows — live engine wins over stale config (D-06/BSC-01)"
   });
 });
 
+describe("AgentProfileRows — provider dot tolerates a model-id vendor-prefix mismatch (Phase 109 Plan 05, D-08)", () => {
+  it("resolves the real vendor color when the reported model is vendor-prefixed but the catalogue id is bare", () => {
+    mockCatalogueEntries = [
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+    ];
+    mockActiveEngineMap = { personal: { model: "anthropic/claude-sonnet-5", mode: "inherited" } };
+    renderRows({
+      profileConfigs: [makeConfig("personal")],
+      profiles: [makeAgentProfile("personal")],
+    });
+
+    const nameSpan = screen.getByTestId("settings-engine-name-personal");
+    const dot = nameSpan.previousElementSibling as HTMLElement | null;
+    expect(dot).not.toBeNull();
+    expect(dot!.style.backgroundColor).not.toBe("var(--muted-foreground)");
+  });
+
+  it("CONTROL: still falls back to the neutral dot when the reported model matches nothing in the catalogue — a change that made the lookup always succeed must fail this", () => {
+    mockCatalogueEntries = [
+      { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+    ];
+    mockActiveEngineMap = { personal: { model: "anthropic/claude-opus-4-8", mode: "inherited" } };
+    renderRows({
+      profileConfigs: [makeConfig("personal")],
+      profiles: [makeAgentProfile("personal")],
+    });
+
+    const nameSpan = screen.getByTestId("settings-engine-name-personal");
+    const dot = nameSpan.previousElementSibling as HTMLElement | null;
+    expect(dot).not.toBeNull();
+    expect(dot!.style.backgroundColor).toBe("var(--muted-foreground)");
+  });
+});
+
 describe("AgentProfileRows — engine label reads useResolvedBrain's full chain (109-04, D-06/D-14)", () => {
   it("shows the OVERRIDE's model for a profile with an active live override, paired with a control profile (same fixture, telemetry only) showing the telemetry model", () => {
     mockActiveEngineMap = {

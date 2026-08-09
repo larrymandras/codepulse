@@ -136,6 +136,7 @@ vi.mock("@/lib/brainsApi", async (importOriginal) => {
   return {
     resolveModelDisplayName: actual.resolveModelDisplayName,
     buildModelNameMap: actual.buildModelNameMap,
+    modelIdsMatch: actual.modelIdsMatch,
   };
 });
 
@@ -659,6 +660,40 @@ describe("Chat — composer brain pill (103-07-T2, D-01/D-03/D-15)", () => {
     expect(
       screen.getByRole("button", { name: "Active brain: Not reported — opens the brain picker" })
     ).toBeInTheDocument();
+  });
+
+  describe("Chat — composer pill provider dot tolerates a model-id vendor-prefix mismatch (Phase 109 Plan 05, D-08)", () => {
+    it("resolves the real vendor color when the reported model is vendor-prefixed but the catalogue id is bare", async () => {
+      mockCatalogueEntries = [
+        { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+      ];
+      mockActiveEngineMap = {
+        "assistant-default": { model: "anthropic/claude-sonnet-5", mode: "inherited" },
+      };
+      renderPlainChat();
+
+      await screen.findByTestId("chat-brain-pill-label");
+      const trigger = screen.getByRole("button", { name: /Active brain/ });
+      const dot = trigger.querySelector('span[aria-hidden="true"].rounded-full:not(.animate-pulse)');
+      expect(dot).not.toBeNull();
+      expect((dot as HTMLElement).style.backgroundColor).not.toBe("var(--muted-foreground)");
+    });
+
+    it("CONTROL: still falls back to the neutral dot when the reported model matches nothing in the catalogue — a change that made the lookup always succeed must fail this", async () => {
+      mockCatalogueEntries = [
+        { id: "claude-sonnet-5", name: "Claude Sonnet 5", vendor: "anthropic_direct" },
+      ];
+      mockActiveEngineMap = {
+        "assistant-default": { model: "anthropic/claude-opus-4-8", mode: "inherited" },
+      };
+      renderPlainChat();
+
+      await screen.findByTestId("chat-brain-pill-label");
+      const trigger = screen.getByRole("button", { name: /Active brain/ });
+      const dot = trigger.querySelector('span[aria-hidden="true"].rounded-full:not(.animate-pulse)');
+      expect(dot).not.toBeNull();
+      expect((dot as HTMLElement).style.backgroundColor).toBe("var(--muted-foreground)");
+    });
   });
 
   describe("Chat — composer pill, D-06 override rung invisibility (UI-SPEC §B)", () => {
