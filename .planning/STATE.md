@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v14.0
 milestone_name: Per-Agent Engine Visibility, Convex Durability & Mission Board
 status: executing
-stopped_at: "Phase 109 (Per-Agent Engine UI) PLANNED — 9 plans in 7 waves, committed. Research (`109-RESEARCH.md`) verified all 14 locked decisions against live source in both repos and produced four load-bearing corrections now folded into the plans: D-11 `listGlobal` must match `scope` as `undefined` not `null` (a `null` query returns zero rows silently and is indistinguishable from empty history); D-05 needs a NEW per-profile-override enumerator on `ModelRouter` (no such method exists) and its CONTEXT.md accessor citations were drifted; D-09 is not a key lookup at all (catalogue `vendor` = model manufacturer, `PROVIDER_BILLING` keys = billing channel — nothing matches literally); and `e2e/brain-swap.spec.ts` cannot be repointed. Research also found three model-id equality sites D-08 never named (`Chat.tsx:178`, `Settings.tsx:251`, `BrainPicker.tsx:291` — the last silently suppresses the success toast). Two decisions were added at plan time by operator choice: D-13 (alias + OpenRouter catch-all for vendor billing; Subscription/Local groups honestly always empty) and D-14 (Settings row label reads `useResolvedBrain(profileId)`). Plan-checker found 1 blocker — missing `depends_on` edges where plans share files across waves — fixed inline for THREE edges (109-06→109-05, 109-08→109-05, 109-08→109-06; the checker found two, a full-graph derivation found the third), verified with a control probe. Wave 7 (`109-09`) is an `autonomous: false` operator-attended live gate against the running self-hosted stack; ENGINE-03/ENGINE-04/TELE-02 are NOT markable from tests alone. Next action: `/gsd-execute-phase 109`."
-last_updated: "2026-08-08T23:16:06.400Z"
-last_activity: 2026-08-08 -- Phase 109 planned (9 plans, 7 waves)
+stopped_at: Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
+last_updated: "2026-08-09T12:41:47.055Z"
+last_activity: 2026-08-09
 progress:
   total_phases: 12
   completed_phases: 1
   total_plans: 16
-  completed_plans: 7
+  completed_plans: 8
   percent: 8
 ---
 
@@ -31,7 +31,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-17)
 
 **Core value:** Operators can see the complete operational state of Ástríðr — what's running, what's broken, what it costs — in real time, from a single dashboard, and drive its coding agents from it.
-**Current focus:** Phase 109 — per agent engine ui
+**Current focus:** Phase 109 — per-agent-engine-ui
 
 **LIVE-VERIFY — status 2026-07-27** (a Clerk-signed-in session cleared the auth-gate blocker):
 
@@ -43,10 +43,10 @@ See: .planning/PROJECT.md (updated 2026-07-17)
 
 ## Current Position
 
-Phase: 109
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-08 -- Phase 109 planning complete
+Phase: 109 (per-agent-engine-ui) — EXECUTING
+Plan: 2 of 9
+Status: Executing Phase 109
+Last activity: 2026-08-09 -- Plan 109-01 complete (Astridr D-05/D-03)
 
 **Phase 109 UI-SPEC approved 2026-08-08** (`109-UI-SPEC.md`, commit `87ce5c53`; no plans yet — counters unchanged, 109 has no plans). `/gsd-plan-phase 109` stopped at the pre-flight gate because a UI phase had no UI-SPEC; `/gsd-ui-phase 109` was run first at Larry's direction. `gsd-ui-checker` returned 6/6 dimensions after **three** revisions (the workflow's cap is 2; Larry authorized the third), and each revision closed a distinct defect verified against live code rather than a style note — all three were found by the checker and independently re-verified in the main session before being relayed. (1) §G cited the wrong mechanism: the placeholder actually on screen is the `"Auto"` literal in `BrainPicker.tsx:358-360`'s ternary false branch, rendered at `GlobalSwapModal.tsx:624` — `resolveModelDisplayName` is only reached when `engine` is truthy, so a planner following the original text would have patched a path that never runs and left the placeholder visible. (2) D-09's `costTier: "unknown"` makes `needsCostConfirm` (`BrainPickerRow.tsx:83-85`) fire for the first time, stacking the row's inline confirm with `GlobalSwapModal`'s own `needsCostWarning` line — the double-confirm 103-UI-SPEC §3 forbids, and exactly what `BrainPicker.tsx:114-123`'s docstring hardcoded `costTier: "normal"` to prevent. (3) The rev-2 fix guarded `BrainPicker.tsx`'s `handleActivate` only, which a mouse click on a fresh row never reaches — `BrainPickerRow.tsx:146-153` has its own scope-blind local gate that returns at `:149` without calling `onSelect`, and the second click short-circuits at `expandedId === entry.id` before the new condition — so it fixed keyboard, left mouse stacking, and *broke* the mouse/keyboard parity `BrainPicker.tsx:389-396` documents as a guarantee. Final fix hoists the gate: `BrainPicker` computes `shouldConfirmCost = scope !== "global" && needsCostConfirm(entry)` once and passes it to `BrainPickerRow` as a `needsConfirm` prop, making `BrainPickerRow.tsx` a modified file this phase. **Consequence for planning:** the spec now prescribes a two-file confirm-gate refactor in a shipped component — a required consequence of locked D-09, not invented scope — and recommends a mouse/keyboard parity test across every (scope, costTier) pair, since a single-path test passed all three broken revisions. Contract highlights: one canonical `"Not reported"` absent state replacing three disagreeing shipped strings; the 5-state per-profile outcome machine reusing `GlobalSwapModal`'s BSC-04 pattern with the bounded "accepted, not yet confirmed" state specified never to read as success; an explicit "Unclassified" catalogue group that must never silently default to `api` — with a planner note that unmapped-vendor detection must test `PROVIDER_BILLING` membership directly, never `getBillingType()`'s `?? "api"` fallback (`providers.ts:32-35`); and D-10's new collapsible per-profile swap-history section on Settings. **Planned 2026-08-08** — 9 plans, 7 waves (see frontmatter `stopped_at` for the four research corrections and the two plan-time decisions D-13/D-14). Next: `/gsd-execute-phase 109`.
 
@@ -817,6 +817,8 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 - [Phase 108]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 4->5
 - [Phase 108]: 108-07 Task 4 (2026-08-07, continuation agent): Larry reviewed the full evidence in `108-ENGINE-05-EVIDENCE.md` (three live-proof rounds + the cleanup section) and replied "approved" — ENGINE-05, ENGINE-01, and ENGINE-02 all marked Complete in REQUIREMENTS.md's checklist and traceability table in the same commit. He explicitly approved marking ENGINE-01/ENGINE-02 on the same evidence as ENGINE-05, since both were already mapped to Phase 108 and are now proven live, not merely code-complete. TELE-02 verified unchanged (Phase 109/Pending) after the edit, per its own 2026-08-07 reassignment. `phase.complete` deliberately NOT run — orchestrator-owned per this task's explicit instruction.
 - [Phase 108]: STATE.md hand-edited per this file's established anti-clobber workaround (gsd-sdk state.* verbs not run) — completed_plans 6->7
+- [Phase 109]: D-05 profile_overrides on swap.state: empty dict (never omitted) when router is None or no overrides; cleared/restored profile absent-not-null
+- [Phase 109]: D-03 default_profile_id lands on swap.catalogue brain-target ack only, threaded via a new CommandDispatcher constructor param fed from bootstrap/core.py's existing config.profiles[0].id computation
 
 ### Pending Todos
 
@@ -853,11 +855,12 @@ The 8 build plans were all GREEN in `convex-test`/jsdom, but the feature had **n
 | Phase 108 P01 | 25min | 3 tasks | 5 files |
 | Phase 108 P02 | 10min | 3 tasks | 4 files |
 | Phase 108 P03 | 35min | 2 tasks | 3 files |
+| Phase 109 P01 | 17min | 3 tasks | 6 files |
 
 ## Session Continuity
 
-Last session: 2026-08-07T21:57:40.798Z
-Stopped at: Phase 109 (Per-Agent Engine UI) context gathered — `109-CONTEXT.md` + `109-DISCUSSION-LOG.md` written and committed (`5c23f009`). 12 decisions locked across 4 discussed areas. Scouting found the phase is NOT "light up the waiting UI": the per-profile client seam dispatches `gateway.model.set`/`models.catalog`, which `astridr/api/ws_commands.py:405-435` registers NEITHER of (D-05 of Phase 108 rejected the former in favour of scoped `swap.set`), so the picker's DEFAULT scope cannot work as written. Also found: `resolveActiveBrain` checks the global override first (`useResolvedBrain.ts:250-254`) while astridr's D-04 puts the per-profile override above it, so a pinned profile renders the global model (103-CONTRACT.md §9); and `useLastTurnModel`'s stated premise was falsified by Phase 108's D-01+D-11 while it still feeds a fleet-wide model into per-profile reads. Locked: retire the D-16 stub seam entirely (D-01), one catalogue for both scopes (D-02), extend `build_swap_state_payload` with per-profile overrides so confirmation reads back the override exactly as BSC-04 does (D-05), per-profile override as the top rung of `resolveActiveBrain` (D-06), shared `modelIdsMatch` at every equality site (D-08), swap history on Settings' per-profile rows with a new bounded `listGlobal` (D-10/D-11). Two astridr changes in scope on `feature/brain-swap`: `default_profile_id` on an existing ack, per-profile overrides in `swap.state`. Next action: `/gsd-plan-phase 109` (UI hint: yes — `/gsd-ui-phase 109` is available first if a design contract is wanted).
+Last session: 2026-08-09T12:41:47.037Z
+Stopped at: Completed 109-01-PLAN.md (Astridr D-05 profile_overrides + D-03 default_profile_id, feature/brain-swap commits 10503e4f/effb7a48/411e0253/8c4842f1)
 
 --- Prior (superseded by the above; re-added by hand 2026-08-07 — `state.record-session` replaced this narrative without demoting it to a Prior entry, per the established anti-clobber convention in this file) --- Completed 108-07-PLAN.md Task 4 (operator sign-off, 2026-08-07). Larry reviewed all three live-proof rounds plus the cleanup section in 108-ENGINE-05-EVIDENCE.md and replied "approved". ENGINE-05, ENGINE-01, ENGINE-02 marked Complete in REQUIREMENTS.md. Phase 108 is 7/7 plans complete. `phase.complete` deliberately NOT run that session — orchestrator-owned. The three carry-forward items it named (TELE-02's surfaced half, the model-id format split, `listByScope`'s signature decision) are now resolved as Phase 109's D-05/D-08/D-11.
 
@@ -872,7 +875,7 @@ Stopped at: Phase 109 (Per-Agent Engine UI) context gathered — `109-CONTEXT.md
 --- Prior (Phase 103, superseded by the above) --- Phase 103's gap-closure cycle is 18/18 plans CODE-complete (103-18 closed WR-01, 2026-07-29). Next step is an operator-attended LIVE re-verification against the running Ástríðr stack covering 103-16 (reselect gets a fresh confirm prompt), 103-17 (pinned-default count reads config), and 103-18 (revert survives navigating away from the Chat composer pill) — a green unit suite is explicitly not accepted as proof per this cycle's established pattern (see 103-VERIFICATION.md). Only after that should BSC-01..05 be re-marked complete in REQUIREMENTS.md and the phase checkbox flipped in ROADMAP.md.
 
 --- Historical (v11.0, closed 2026-07-25) --- Execute Plan 100-04 (Skills.tsx integration — Wave 3, depends on 100-01/02/03). This was the LAST remaining plan in Phase 100 (and v11.0). Plan 100-05 shipped `SkillRow`'s optimistic-pending visual treatment (opacity-70 + pulsing `--status-info` bar, read from the 100-02 `SkillControlSurfaceProvider` context via `usePendingMove`) plus `onDragStart`/`onDragEnd` reporting the dragged skill via `setDraggingSkill` — both pieces 100-04 needs to wire a real drag-drop lifecycle mutation with honest optimistic UI against `ScopeRail` (100-03). Plan 100-05's Task 2 audit also confirmed (not assumed) that the ⋯ `SkillLifecycleMenu` already renders consistently across `AllSkillsOverview`/`SkillsInCategory`/`ColdStorageView` and that no `/manage-skills` string survives anywhere in source — closing UX-01/UX-04's completeness-audit scope with zero production-code changes needed. Plan 100-03 shipped `ScopeRail` (`src/components/skills/ScopeRail.tsx`) — 3 always-visible Global/Project/Cold Storage native HTML5 drop targets mirroring `CategoryGrid`'s markup/highlight pattern verbatim, per-entry valid/invalid/idle states computed from `useDraggingSkill()` (100-02) + `resolveScopeDrop()` (100-01), inline destructive reject hint, presentational + event-forwarding only (props: `dropTargetScope`/`onDragOverScope`/`onDragLeaveScope`/`onDropOnScope`) — Plan 100-04 must import and mount this component directly beneath `CategoryGrid` and wire its callback props to real state + `enqueueLifecycle`/dialog dispatch, no duplication. Locked decisions carried forward from 100-01/02/03: droppable scope rail beneath Categories (D-01); drag matrix mirrors the ⋯ menu exactly via the shared `resolveLifecycleActions`/`resolveScopeDrop` predicate (D-02); drop-on-Project opens MoveToProjectDialog picker (D-03); drag never deletes (D-04); optimistic move + honest rollback reconciled against the lifecycle command-row status (D-05, implemented by 100-02, visualized by 100-05); UX-01/UX-04 treated as completeness+verification, not net-new (D-06, closed by 100-05). **Codepulse-only, frontend-focused — no new daemon/Convex mutation expected** (rides 98's `enqueueLifecycle` + 99's launch). UX-02/UX-01/UX-03/UX-04 requirements NOT yet marked complete in REQUIREMENTS.md — deferred to full end-to-end delivery at Plan 100-04's completion, matching this project's established per-plan-vs-full-delivery precedent (e.g. Phase 98's LIFE-01..06). Non-blocking carryovers: (1) Phase 99 CR-03 `isStreamingRef` desync (`useAstridrChat.ts` L189) — needs a live trace before fixing (99-REVIEW.md); (2) Phase 98's two MANUAL verification steps (live G: repro + transient-unmount — need a live Forge daemon + Google Drive mount); (3) `102-REVIEW.md`'s 4 advisory warnings; (4) a concurrent unrelated session is mid-edit on `src/pages/Inbox.tsx`/`src/components/InboxFilterBar.tsx` (introduces 4 pre-existing TS7006 errors, logged to Phase 100's `deferred-items.md`, not touched by this plan) — noted per the shared-branch-concurrency lesson.
-Resume file: .planning/phases/109-per-agent-engine-ui/109-CONTEXT.md
+Resume file: None
 
 ## Operator Next Steps
 
