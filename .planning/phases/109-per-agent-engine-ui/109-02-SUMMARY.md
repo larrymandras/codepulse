@@ -155,3 +155,7 @@ None - no external service configuration required. No `npx convex deploy` was ru
 ---
 *Phase: 109-per-agent-engine-ui*
 *Completed: 2026-08-09*
+
+## Self-Check: PASSED
+
+All 6 created/modified files confirmed present on disk; all 4 commit hashes (cf0e0676, f554b99d, b42e038e, 7d70c9e3) confirmed present in git log.
