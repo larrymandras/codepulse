@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { AgentProfileRows } from "./Settings";
+import type { SwapHistoryRow } from "../hooks/useControlVerbSwaps";
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,27 @@ vi.mock("../hooks/useBrainCatalogue", () => ({
   }),
 }));
 
+// Phase 109 plan 08 (D-10/D-11): `useCombinedSwapHistory` mocked keyed by profileId — consumed
+// both by `ProfileSwapHistorySection` (the collapsed trigger's count badge) and, once expanded, by
+// the REAL `SwapHistoryList` mounted inside it (kept real, not mocked, so this file also proves the
+// disclosure's actual row-rendering behavior, not a stand-in). `describeSwapOutcome`/
+// `filterBrainSwaps`/`SWAP_HISTORY_CAP`/`CombinedSwapHistoryRow` stay real via `importOriginal`.
+type MockCombined = {
+  rows: (SwapHistoryRow & { origin: "scoped" | "global" })[];
+  totalCount: number;
+  atCap: boolean;
+};
+const EMPTY_COMBINED: MockCombined = { rows: [], totalCount: 0, atCap: false };
+let mockCombinedByProfile: Record<string, MockCombined> = {};
+vi.mock("../hooks/useControlVerbSwaps", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../hooks/useControlVerbSwaps")>();
+  return {
+    ...actual,
+    useCombinedSwapHistory: (profileId: string | undefined) =>
+      (profileId && mockCombinedByProfile[profileId]) || EMPTY_COMBINED,
+  };
+});
+
 type MockPending = { label: string; kind: "inflight" | "uncertain" } | null;
 
 let lastPickerProps: { profileId: string; trigger?: ReactNode } | null = null;
@@ -84,6 +106,7 @@ beforeEach(() => {
   lastPickerProps = null;
   mockGlobalOverride = { modelOverride: null, voiceOverride: null };
   mockProfileOverrides = {};
+  mockCombinedByProfile = {};
   for (const key of Object.keys(pendingChangeByProfile)) delete pendingChangeByProfile[key];
 });
 
@@ -345,5 +368,112 @@ describe("AgentProfileRows — the bounded 'accepted, not yet confirmed' state r
     expect(pending.querySelector('[class*="status-info"].animate-pulse')).not.toBeInTheDocument();
     expect(pending.querySelector("svg.lucide-triangle-alert")).toBeInTheDocument();
     expect(pending).toHaveTextContent("not yet confirmed");
+  });
+});
+
+// ─── Swap-history disclosure (Phase 109 plan 08, D-10/D-11/D-12) ──────────────
+
+function makeSwapRow(
+  id: string,
+  timestamp: number,
+  origin: "scoped" | "global" = "scoped"
+): SwapHistoryRow & { origin: "scoped" | "global" } {
+  return {
+    _id: id,
+    verb: "swap_model",
+    target: "anthropic-sonnet-5",
+    resolved: "anthropic-sonnet-5",
+    path: "claude-native",
+    channel: "chat",
+    timestamp,
+    origin,
+  };
+}
+
+describe("AgentProfileRows — per-profile swap-history disclosure (Phase 109 plan 08, D-10)", () => {
+  it("is collapsed on first render — no history rows in the document until the trigger is activated", () => {
+    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
+    mockCombinedByProfile = {
+      personal: { rows: [makeSwapRow("row-1", 1000)], totalCount: 1, atCap: false },
+    };
+    renderRows({ profileConfigs: [makeConfig("personal")] });
+
+    // The trigger (with its true count) is present...
+    expect(screen.getByTestId("settings-swap-history-trigger-personal")).toHaveTextContent(
+      "Swap history (1)"
+    );
+    // ...but no row content or caption is in the document yet.
+    expect(screen.queryByText("Switched")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Showing 1 swap (per-profile + global).")
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("settings-swap-history-trigger-personal"));
+
+    expect(screen.getByText("Switched")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 swap (per-profile + global).")).toBeInTheDocument();
+  });
+
+  it("shows the true pre-truncation count on the badge even though it exceeds the display cap, while the expanded content simultaneously shows the at-cap truncation caption — badge and caption disagree numerically, which is the honest reading", () => {
+    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
+    const capRows = Array.from({ length: 20 }, (_, i) => makeSwapRow(`row-${i}`, 1000 + i));
+    mockCombinedByProfile = {
+      personal: { rows: capRows, totalCount: 37, atCap: true },
+    };
+    renderRows({ profileConfigs: [makeConfig("personal")] });
+
+    expect(screen.getByTestId("settings-swap-history-trigger-personal")).toHaveTextContent(
+      "Swap history (37)"
+    );
+
+    fireEvent.click(screen.getByTestId("settings-swap-history-trigger-personal"));
+
+    expect(
+      screen.getByText(
+        "Showing the last 20 combined swaps (per-profile + global) — earlier swaps may exist."
+      )
+    ).toBeInTheDocument();
+    // The badge's "(37)" and the caption's "20" genuinely disagree — that disagreement IS the
+    // honest reading (37 total, 20 rendered), never a rounded or capped-looking badge number.
+    expect(screen.getByTestId("settings-swap-history-trigger-personal")).not.toHaveTextContent(
+      "Swap history (20)"
+    );
+  });
+
+  it("opens and closes two profiles' disclosures independently", () => {
+    mockActiveEngineMap = {
+      personal: { model: "claude-sonnet-5", mode: "inherited" },
+      consulting: { model: "claude-opus-4-8", mode: "inherited" },
+    };
+    mockCombinedByProfile = {
+      personal: { rows: [makeSwapRow("personal-row", 1000)], totalCount: 1, atCap: false },
+      consulting: { rows: [makeSwapRow("consulting-row", 2000)], totalCount: 1, atCap: false },
+    };
+    renderRows({ profileConfigs: [makeConfig("personal"), makeConfig("consulting")] });
+
+    fireEvent.click(screen.getByTestId("settings-swap-history-trigger-personal"));
+
+    // personal's history is visible; consulting's own trigger is present but still collapsed.
+    expect(screen.getByText("Showing 1 swap (per-profile + global).")).toBeInTheDocument();
+    expect(screen.getByTestId("settings-swap-history-trigger-consulting")).toHaveTextContent(
+      "Swap history (1)"
+    );
+
+    fireEvent.click(screen.getByTestId("settings-swap-history-trigger-consulting"));
+
+    // Both are now expanded, independently.
+    expect(screen.getAllByText("Showing 1 swap (per-profile + global).")).toHaveLength(2);
+
+    fireEvent.click(screen.getByTestId("settings-swap-history-trigger-personal"));
+
+    // Closing personal's disclosure does not affect consulting's, which stays open.
+    expect(screen.getAllByText("Showing 1 swap (per-profile + global).")).toHaveLength(1);
+  });
+
+  it("no nav entry or route was added — the disclosure lives entirely inside the existing Settings/Agents surface", () => {
+    mockActiveEngineMap = { personal: { model: "claude-sonnet-5", mode: "inherited" } };
+    renderRows({ profileConfigs: [makeConfig("personal")] });
+
+    expect(screen.getByTestId("settings-swap-history-trigger-personal")).toBeInTheDocument();
   });
 });

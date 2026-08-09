@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Loader2, Clock, Pin, AlertTriangle } from "lucide-react";
+import { Loader2, Clock, Pin, AlertTriangle, ChevronRight, ChevronDown, History } from "lucide-react";
 import { toast } from "sonner";
 import { useAgentProfiles } from "../hooks/useAgentProfiles";
 import { useAvatars } from "../hooks/useAvatars";
 import { useProfileConfigs } from "../hooks/useProfileConfigs";
 import { useActiveEngine } from "../hooks/useActiveEngine";
 import { useGlobalBrainOverride, useProfileBrainOverrides, resolveActiveBrain } from "../hooks/useResolvedBrain";
+import { useCombinedSwapHistory } from "../hooks/useControlVerbSwaps";
 import { usePrivacy } from "../contexts/PrivacyContext";
 import { useAmbient, type PresetName, type Category } from "../contexts/AmbientContext";
 import AgentAvatar from "../components/AgentAvatar";
@@ -23,10 +24,12 @@ import ProviderControls from "../components/ProviderControls";
 import CostBudgetsAdmin from "../components/CostBudgetsAdmin";
 import ModelPricingAdmin from "../components/ModelPricingAdmin";
 import { BrainPicker } from "../components/brains/BrainPicker";
+import { SwapHistoryList } from "../components/brains/SwapHistoryList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "../components/ui/sheet";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../components/ui/collapsible";
 import { useBrainCatalogue } from "../hooks/useBrainCatalogue";
 import { PROVIDER_COLORS } from "../lib/providers";
 import { modelIdsMatch } from "../lib/brainsApi";
@@ -182,6 +185,56 @@ function formatTtl(expiresAt?: number): string {
 }
 
 /**
+ * ProfileSwapHistorySection — Phase 109 (D-10). The collapsible swap-history disclosure mounted
+ * directly beneath each per-profile row.
+ *
+ * A small SEPARATE component — not inlined in `AgentProfileRows`' `.map()` callback — specifically
+ * so its own `open` state and its `useCombinedSwapHistory` count read are each a real per-row hook
+ * call from a real per-row component instance, not a hook called directly inside a `.map()`
+ * callback (the Rules of Hooks forbid the latter). Mirrors the same constraint plan 109-04 handled
+ * for the per-row engine label by hoisting the two live override axes to `AgentProfileRows` and
+ * keeping only pure derivations inside the `.map()` — here the disclosure's state genuinely is
+ * per-row (each profile's history and open/closed state are independent), so it gets its own
+ * component instead of a hoisted-then-indexed value.
+ *
+ * The count badge reads `totalCount` (the TRUE pre-truncation combined count) directly from this
+ * component's own `useCombinedSwapHistory` call — deliberately a SEPARATE subscription from the one
+ * `SwapHistoryList` (mounted inside `CollapsibleContent`, below) makes internally. Convex dedupes
+ * identical `useQuery` calls at the client-cache layer, so this costs nothing extra in practice, and
+ * it means the badge shows the honest total even while the section is collapsed and
+ * `CollapsibleContent`'s children (and therefore `SwapHistoryList`) are not mounted at all — a
+ * badge that could only resolve once expanded would defeat the point of showing a count on the
+ * collapsed trigger.
+ */
+function ProfileSwapHistorySection({ profileId }: { profileId: string }) {
+  const [open, setOpen] = useState(false);
+  const { totalCount } = useCombinedSwapHistory(profileId);
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="pl-4">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          data-testid={`settings-swap-history-trigger-${profileId}`}
+          className="flex items-center gap-1 px-1 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          {open ? (
+            <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="h-3 w-3 shrink-0" aria-hidden="true" />
+          )}
+          <History className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span>Swap history ({totalCount})</span>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-1">
+        <SwapHistoryList profileId={profileId} />
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+/**
  * AgentProfileRows — 103-07-T1. Renders one row per REAL, populated profile
  * (`profileConfigs`, via `useProfileConfigs()`), never per the legacy `agentProfiles` table (zero
  * rows in production, `convex/profiles.ts:113`). `agentProfiles` is consulted only as an optional
@@ -270,8 +323,8 @@ export function AgentProfileRows({
         const pending = pendingByProfile[c.profileId] ?? null;
 
         return (
+          <div key={c._id} className="flex flex-col gap-1">
           <div
-            key={c._id}
             className="flex items-center gap-3 bg-background rounded-lg px-3 py-2"
           >
             <AgentAvatar avatar={getAvatar(linkedProfile?.avatarId)} size="sm" />
@@ -367,6 +420,8 @@ export function AgentProfileRows({
             >
               Edit
             </button>
+          </div>
+          <ProfileSwapHistorySection profileId={c.profileId} />
           </div>
         );
       })}
